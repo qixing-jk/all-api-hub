@@ -66,7 +66,10 @@ function sanitizeState(value: unknown): ProductAnnouncementState {
     lastShownAt: sanitizeNumberRecord(value.lastShownAt),
   }
 
-  if (typeof value.lastFetchedAt === "number") {
+  if (
+    typeof value.lastFetchedAt === "number" &&
+    Number.isFinite(value.lastFetchedAt)
+  ) {
     state.lastFetchedAt = value.lastFetchedAt
   }
 

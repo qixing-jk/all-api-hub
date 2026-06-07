@@ -53,6 +53,44 @@ describe("product announcement runtime message resolvers", () => {
     })
   })
 
+  it("returns current state with default version and current time", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        schemaVersion: 1,
+        defaultLocale: "zh-CN",
+        announcements: [
+          {
+            id: "always",
+            revision: 1,
+            severity: "info",
+            priority: 1,
+            affectedVersions: "*",
+            startsAt: "2026-01-01T00:00:00Z",
+            expiresAt: "2099-01-01T00:00:00Z",
+            content: {
+              "zh-CN": {
+                title: "Always visible",
+                message: "Uses default request values.",
+              },
+            },
+          },
+        ],
+      }),
+    })
+
+    await resolveProductAnnouncementRefreshMessage()
+
+    const response = await resolveProductAnnouncementGetStateMessage({
+      locale: "zh-CN",
+    })
+
+    expect(response.success).toBe(true)
+    expect(response.success ? response.data.view.notices[0]?.id : null).toBe(
+      "always",
+    )
+  })
+
   it("handles refresh, seen, dismiss, and restore messages", async () => {
     await expect(resolveProductAnnouncementRefreshMessage()).resolves.toEqual({
       success: true,
@@ -60,6 +98,7 @@ describe("product announcement runtime message resolvers", () => {
     })
     expect(fetchMock).toHaveBeenCalledWith(PRODUCT_ANNOUNCEMENT_REMOTE_URL, {
       cache: "no-store",
+      signal: expect.any(AbortSignal),
     })
     await expect(
       resolveProductAnnouncementMarkSeenMessage({
@@ -206,5 +245,63 @@ describe("product announcement runtime message resolvers", () => {
         error: "Invalid product announcement restore request",
       })
     }
+  })
+
+  it("returns failure responses when service operations throw", async () => {
+    const getStateSpy = vi
+      .spyOn(productAnnouncementService, "getCurrentState")
+      .mockRejectedValueOnce(new Error("state failed"))
+    await expect(
+      resolveProductAnnouncementGetStateMessage({ locale: "zh-CN" }),
+    ).resolves.toEqual({
+      success: false,
+      error: "state failed",
+    })
+    getStateSpy.mockRestore()
+
+    const refreshSpy = vi
+      .spyOn(productAnnouncementService, "refreshRemoteFeed")
+      .mockRejectedValueOnce(new Error("refresh failed"))
+    await expect(resolveProductAnnouncementRefreshMessage()).resolves.toEqual({
+      success: false,
+      error: "refresh failed",
+    })
+    refreshSpy.mockRestore()
+
+    const markSeenSpy = vi
+      .spyOn(productAnnouncementService, "markSeen")
+      .mockRejectedValueOnce(new Error("seen failed"))
+    await expect(
+      resolveProductAnnouncementMarkSeenMessage({ ids: ["notice-a"] }),
+    ).resolves.toEqual({
+      success: false,
+      error: "seen failed",
+    })
+    markSeenSpy.mockRestore()
+
+    const dismissSpy = vi
+      .spyOn(productAnnouncementService, "dismiss")
+      .mockRejectedValueOnce(new Error("dismiss failed"))
+    await expect(
+      resolveProductAnnouncementDismissMessage({
+        id: "notice-a",
+        revision: 1,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "dismiss failed",
+    })
+    dismissSpy.mockRestore()
+
+    const restoreSpy = vi
+      .spyOn(productAnnouncementService, "restore")
+      .mockRejectedValueOnce(new Error("restore failed"))
+    await expect(
+      resolveProductAnnouncementRestoreMessage({ id: "notice-a" }),
+    ).resolves.toEqual({
+      success: false,
+      error: "restore failed",
+    })
+    restoreSpy.mockRestore()
   })
 })

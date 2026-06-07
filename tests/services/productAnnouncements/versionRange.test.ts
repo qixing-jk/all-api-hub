@@ -22,6 +22,13 @@ describe("product announcement version ranges", () => {
     expect(isVersionInRange("v3.44.1", "=3.44.0")).toBe(false)
   })
 
+  it("supports greater-than and less-than comparators", () => {
+    expect(isVersionInRange("3.44.1", ">3.44.0")).toBe(true)
+    expect(isVersionInRange("3.44.0", ">3.44.0")).toBe(false)
+    expect(isVersionInRange("3.43.9", "<3.44.0")).toBe(true)
+    expect(isVersionInRange("3.44.0", "<3.44.0")).toBe(false)
+  })
+
   it("fails closed for invalid ranges or versions", () => {
     expect(isVersionInRange("dev", ">=3.44.0")).toBe(false)
     expect(isVersionInRange("3.44.0", "=>3.44.0")).toBe(false)

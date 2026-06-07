@@ -1,4 +1,3 @@
-import type { TFunction } from "i18next"
 import { ExternalLink } from "lucide-react"
 import type { ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
@@ -7,7 +6,10 @@ import { Badge, Button } from "~/components/ui"
 import { cn } from "~/lib/utils"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 
-import { PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES } from "./presentation"
+import {
+  getProductAnnouncementSeverityLabel,
+  PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES,
+} from "./presentation"
 
 interface ProductAnnouncementListProps {
   notices: ProductAnnouncement[]
@@ -28,24 +30,6 @@ const SEVERITY_BADGE_VARIANTS: Record<
   critical: "danger",
   warning: "warning",
   info: "info",
-}
-
-/**
- * Returns localized copy for the fixed product announcement severity set.
- */
-function getSeverityLabel(
-  severity: ProductAnnouncement["severity"],
-  t: TFunction<"productAnnouncements">,
-) {
-  if (severity === "critical") {
-    return t("labels.critical")
-  }
-
-  if (severity === "warning") {
-    return t("labels.warning")
-  }
-
-  return t("labels.info")
 }
 
 /**
@@ -142,7 +126,7 @@ export function ProductAnnouncementList({
                     PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES[notice.severity].badge,
                   )}
                 >
-                  {getSeverityLabel(notice.severity, t)}
+                  {getProductAnnouncementSeverityLabel(notice.severity, t)}
                 </Badge>
                 {notice.title}
               </h3>

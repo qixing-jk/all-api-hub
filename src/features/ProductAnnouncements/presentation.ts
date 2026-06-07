@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next"
+
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 
 export const PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES: Record<
@@ -22,4 +24,22 @@ export const PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES: Record<
       "border-blue-200/80 bg-blue-500/10 text-blue-700 dark:border-blue-900/60 dark:bg-blue-500/15 dark:text-blue-300",
     icon: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300",
   },
+}
+
+/**
+ * Returns localized copy for the fixed product announcement severity set.
+ */
+export function getProductAnnouncementSeverityLabel(
+  severity: ProductAnnouncement["severity"],
+  t: TFunction<"productAnnouncements">,
+) {
+  if (severity === "critical") {
+    return t("labels.critical")
+  }
+
+  if (severity === "warning") {
+    return t("labels.warning")
+  }
+
+  return t("labels.info")
 }

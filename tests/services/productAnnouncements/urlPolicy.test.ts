@@ -44,6 +44,18 @@ describe("product announcement CTA URL policy", () => {
         url: "https://github.com/qixing-jk/all-api-hub",
       }),
     ).toBeNull()
+    expect(
+      sanitizeProductAnnouncementCta({
+        label: "Broken",
+        url: "not a url",
+      }),
+    ).toBeNull()
+    expect(
+      sanitizeProductAnnouncementCta({
+        label: "Other repo",
+        url: "https://github.com/qixing-jk/other-project/issues/1",
+      }),
+    ).toBeNull()
   })
 
   it("trims labels and normalizes accepted URLs", () => {

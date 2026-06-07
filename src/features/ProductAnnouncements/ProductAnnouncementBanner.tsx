@@ -11,7 +11,10 @@ import {
   PRODUCT_ANNOUNCEMENT_ANALYTICS_ACTION_KINDS,
   trackProductAnnouncementAction,
 } from "./analytics"
-import { PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES } from "./presentation"
+import {
+  getProductAnnouncementSeverityLabel,
+  PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES,
+} from "./presentation"
 
 interface ProductAnnouncementBannerProps {
   notice: ProductAnnouncement
@@ -29,24 +32,6 @@ const SEVERITY_BADGE_VARIANTS: Record<
   critical: "danger",
   warning: "warning",
   info: "info",
-}
-
-/**
- * Returns localized copy for the fixed product announcement severity set.
- */
-function getSeverityLabel(
-  severity: ProductAnnouncement["severity"],
-  t: TFunction<"productAnnouncements">,
-) {
-  if (severity === "critical") {
-    return t("labels.critical")
-  }
-
-  if (severity === "warning") {
-    return t("labels.warning")
-  }
-
-  return t("labels.info")
 }
 
 /**
@@ -120,7 +105,7 @@ export function ProductAnnouncementBanner({
                 size="sm"
                 className={cn("shrink-0", severityStyles.badge)}
               >
-                {getSeverityLabel(notice.severity, t)}
+                {getProductAnnouncementSeverityLabel(notice.severity, t)}
               </Badge>
             </div>
             <p className="dark:text-dark-text-secondary text-sm leading-5 break-words whitespace-pre-wrap text-slate-600">

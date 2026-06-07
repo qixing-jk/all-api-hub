@@ -403,4 +403,34 @@ describe("ProductAnnouncementBanner", () => {
       screen.getByText("productAnnouncements:summary.additional_other"),
     ).toBeInTheDocument()
   })
+
+  it("renders localized labels for every severity", () => {
+    const severities: ProductAnnouncement["severity"][] = [
+      "critical",
+      "warning",
+      "info",
+    ]
+
+    for (const severity of severities) {
+      const { unmount } = render(
+        <ProductAnnouncementBanner
+          notice={{ ...riskNotice, severity }}
+          additionalCount={0}
+          onViewAll={vi.fn()}
+          onDismiss={vi.fn()}
+        />,
+        {
+          withReleaseUpdateStatusProvider: false,
+          withThemeProvider: false,
+          withUserPreferencesProvider: false,
+        },
+      )
+
+      expect(
+        screen.getByText(`productAnnouncements:labels.${severity}`),
+      ).toBeInTheDocument()
+
+      unmount()
+    }
+  })
 })

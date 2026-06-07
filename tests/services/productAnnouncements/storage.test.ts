@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -80,5 +80,34 @@ describe("product announcement storage", () => {
         announcements: [],
       },
     })
+  })
+
+  it("drops non-finite persisted last fetch timestamps", async () => {
+    await storage.set(STORAGE_KEYS.PRODUCT_ANNOUNCEMENTS_STATE, {
+      schemaVersion: 1,
+      dismissed: {},
+      seenAt: {},
+      lastShownAt: {},
+      lastFetchedAt: Number.POSITIVE_INFINITY,
+    })
+
+    await expect(
+      productAnnouncementStorage.getState(),
+    ).resolves.not.toHaveProperty("lastFetchedAt")
+  })
+
+  it("returns an empty state when storage read fails", async () => {
+    const getSpy = vi
+      .spyOn((productAnnouncementStorage as any).storage, "get")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+
+    await expect(productAnnouncementStorage.getState()).resolves.toEqual({
+      schemaVersion: 1,
+      dismissed: {},
+      seenAt: {},
+      lastShownAt: {},
+    })
+
+    getSpy.mockRestore()
   })
 })

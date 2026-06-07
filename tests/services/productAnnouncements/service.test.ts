@@ -251,6 +251,28 @@ describe("product announcement service", () => {
     expect(state.cachedFeed).toBeUndefined()
   })
 
+  it("times out a stuck remote refresh and clears the single-flight promise", async () => {
+    vi.useFakeTimers()
+    fetchMock.mockImplementation((_, init?: RequestInit) => {
+      return new Promise((_, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("Aborted", "AbortError"))
+        })
+      })
+    })
+
+    try {
+      const refresh = productAnnouncementService.refreshRemoteFeed(123)
+
+      await vi.advanceTimersByTimeAsync(15_000)
+
+      await expect(refresh).resolves.toBe(false)
+      expect((productAnnouncementService as any).refreshPromise).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("falls back to bundled notices when persisted cached feed is malformed", async () => {
     await productAnnouncementStorage.updateState((state) => {
       state.lastFetchedAt = 100
@@ -441,6 +463,24 @@ describe("product announcement service", () => {
 
     expect(browserApiMocks.onAlarm).toHaveBeenCalledTimes(1)
     expect(browserApiMocks.getAlarm).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("ignores unrelated alarms and creates the refresh alarm when missing", async () => {
+    browserApiMocks.getAlarm.mockResolvedValue(null)
+
+    await productAnnouncementService.initialize()
+
+    const alarmHandler = browserApiMocks.onAlarm.mock.calls[0]?.[0]
+    await alarmHandler({ name: "other-alarm" })
+
+    expect(browserApiMocks.createAlarm).toHaveBeenCalledWith(
+      PRODUCT_ANNOUNCEMENT_REFRESH_ALARM,
+      {
+        delayInMinutes: 720,
+        periodInMinutes: 720,
+      },
+    )
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

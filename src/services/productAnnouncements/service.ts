@@ -36,6 +36,7 @@ import {
 const logger = createLogger("ProductAnnouncementService")
 const REFRESH_INTERVAL_MS =
   PRODUCT_ANNOUNCEMENT_REFRESH_INTERVAL_MINUTES * 60 * 1000
+const REMOTE_FEED_FETCH_TIMEOUT_MS = 15_000
 const INVALID_PRODUCT_ANNOUNCEMENT_STATE_REQUEST_ERROR =
   "Invalid product announcement state request"
 const INVALID_PRODUCT_ANNOUNCEMENT_MARK_SEEN_REQUEST_ERROR =
@@ -194,9 +195,15 @@ class ProductAnnouncementService {
   }
 
   private async performRemoteFeedRefresh(now: number): Promise<boolean> {
+    const abortController = new AbortController()
+    const timeoutId = globalThis.setTimeout(() => {
+      abortController.abort()
+    }, REMOTE_FEED_FETCH_TIMEOUT_MS)
+
     try {
       const response = await fetch(PRODUCT_ANNOUNCEMENT_REMOTE_URL, {
         cache: "no-store",
+        signal: abortController.signal,
       })
       if (!response.ok) {
         logger.warn("Failed to refresh product announcement feed", {
@@ -233,6 +240,8 @@ class ProductAnnouncementService {
     } catch (error) {
       logger.warn("Failed to refresh product announcement feed", error)
       return false
+    } finally {
+      globalThis.clearTimeout(timeoutId)
     }
   }
 
