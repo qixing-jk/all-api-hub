@@ -19,6 +19,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
+import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 import { act, render, screen } from "~~/tests/test-utils/render"
 
 const {
@@ -335,6 +336,19 @@ const setupViewModel: OptionsOverviewViewModel = {
   ],
 }
 
+const riskNotice = {
+  id: "risk",
+  revision: 1,
+  severity: "warning",
+  priority: 10,
+  startsAt: 1,
+  expiresAt: 2,
+  title: "Risk notice",
+  message: "Please review.",
+  seen: false,
+  dismissed: false,
+} satisfies ProductAnnouncement
+
 describe("OptionsOverview", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -391,6 +405,58 @@ describe("OptionsOverview", () => {
         name: "optionsOverview:configurationOverview.open",
       }),
     ).not.toBeInTheDocument()
+  })
+
+  it("surfaces product risk announcements and opens the header popover request", async () => {
+    const dismiss = vi.fn()
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: setupViewModel,
+      reload: vi.fn(),
+    })
+    useProductAnnouncementsMock.mockReturnValue({
+      state: {
+        view: {
+          notices: [riskNotice],
+          activeNotices: [
+            riskNotice,
+            { ...riskNotice, id: "info", severity: "info" },
+            { ...riskNotice, id: "dismissed", dismissed: true },
+            { ...riskNotice, id: "critical", severity: "critical" },
+          ],
+          dismissedNotices: [
+            { ...riskNotice, id: "dismissed", dismissed: true },
+          ],
+          primaryRiskNotice: riskNotice,
+          unseenActiveCount: 1,
+        },
+      },
+      isLoading: false,
+      reload: vi.fn(),
+      markSeen: vi.fn().mockResolvedValue(true),
+      dismiss,
+    })
+
+    renderOverview()
+
+    expect(screen.getByText("Risk notice")).toBeVisible()
+    expect(
+      screen.getByText("productAnnouncements:summary.additional_one"),
+    ).toBeVisible()
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "productAnnouncements:actions.viewAll",
+      }),
+    )
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "productAnnouncements:actions.dismiss",
+      }),
+    )
+
+    expect(dismiss).toHaveBeenCalledWith("risk", 1)
   })
 
   it("opens permissions onboarding from Overview URL state", async () => {

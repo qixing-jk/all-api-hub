@@ -155,6 +155,15 @@ describe("product announcement service", () => {
     })
   })
 
+  it("ignores empty seen id batches", async () => {
+    await productAnnouncementService.markSeen([" notice-a "], 123)
+    await productAnnouncementService.markSeen(["   "], 456)
+
+    await expect(productAnnouncementStorage.getState()).resolves.toMatchObject({
+      seenAt: { "notice-a": 123 },
+    })
+  })
+
   it("dismisses a notice revision", async () => {
     await productAnnouncementService.dismiss(" notice-a ", 2)
 
@@ -175,6 +184,16 @@ describe("product announcement service", () => {
       storage.get(STORAGE_KEYS.PRODUCT_ANNOUNCEMENTS_STATE),
     ).resolves.toMatchObject({
       dismissed: {},
+    })
+  })
+
+  it("ignores whitespace-only restore ids", async () => {
+    await productAnnouncementService.dismiss(" notice-a ", 2)
+
+    await productAnnouncementService.restore("   ")
+
+    await expect(productAnnouncementStorage.getState()).resolves.toMatchObject({
+      dismissed: { "notice-a": 2 },
     })
   })
 
@@ -221,6 +240,24 @@ describe("product announcement service", () => {
         defaultLocale: "zh-CN",
         announcements: [],
       }),
+    })
+
+    await expect(
+      productAnnouncementService.refreshRemoteFeed(123),
+    ).resolves.toBe(false)
+
+    const state = await productAnnouncementStorage.getState()
+    expect(state.lastFetchedAt).toBeUndefined()
+    expect(state.cachedFeed).toBeUndefined()
+  })
+
+  it("treats non-success remote responses as refresh failures", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => {
+        throw new Error("body should not be read")
+      },
     })
 
     await expect(
@@ -482,5 +519,17 @@ describe("product announcement service", () => {
       },
     )
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("refreshes the remote feed when the product announcement alarm fires", async () => {
+    await productAnnouncementService.initialize()
+    await vi.waitFor(() => {
+      expect((productAnnouncementService as any).refreshPromise).toBeNull()
+    })
+
+    const alarmHandler = browserApiMocks.onAlarm.mock.calls[0]?.[0]
+    await alarmHandler({ name: PRODUCT_ANNOUNCEMENT_REFRESH_ALARM })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

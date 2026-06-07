@@ -8,10 +8,25 @@ import {
   resolveProductAnnouncementMarkSeenMessage,
   resolveProductAnnouncementRefreshMessage,
   resolveProductAnnouncementRestoreMessage,
+  setupProductAnnouncementMessagingListeners,
 } from "~/services/productAnnouncements/service"
 import { productAnnouncementStorage } from "~/services/productAnnouncements/storage"
+import { ProductAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 
 const fetchMock = vi.fn()
+const onMessageMock = vi.hoisted(() => vi.fn())
+
+vi.mock("~/services/productAnnouncements/messaging", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/productAnnouncements/messaging")
+    >()
+
+  return {
+    ...actual,
+    onProductAnnouncementsMessage: onMessageMock,
+  }
+})
 
 function resetProductAnnouncementServiceState() {
   ;(productAnnouncementService as any).isInitialized = false
@@ -22,6 +37,7 @@ describe("product announcement runtime message resolvers", () => {
   beforeEach(async () => {
     resetProductAnnouncementServiceState()
     vi.clearAllMocks()
+    onMessageMock.mockReturnValue(() => {})
     vi.stubGlobal("fetch", fetchMock)
     fetchMock.mockResolvedValue({
       ok: true,
@@ -126,6 +142,58 @@ describe("product announcement runtime message resolvers", () => {
     await expect(productAnnouncementStorage.getState()).resolves.toMatchObject({
       dismissed: {},
     })
+  })
+
+  it("registers product announcement messaging listeners once", async () => {
+    setupProductAnnouncementMessagingListeners()
+    setupProductAnnouncementMessagingListeners()
+
+    expect(onMessageMock).toHaveBeenCalledTimes(5)
+    expect(onMessageMock.mock.calls.map(([type]) => type)).toEqual([
+      ProductAnnouncementsMessageTypes.GetState,
+      ProductAnnouncementsMessageTypes.Refresh,
+      ProductAnnouncementsMessageTypes.MarkSeen,
+      ProductAnnouncementsMessageTypes.Dismiss,
+      ProductAnnouncementsMessageTypes.Restore,
+    ])
+
+    const findHandler = (
+      messageType: (typeof ProductAnnouncementsMessageTypes)[keyof typeof ProductAnnouncementsMessageTypes],
+    ) => {
+      const handler = onMessageMock.mock.calls.find(
+        ([type]) => type === messageType,
+      )?.[1] as ((payload: { data: unknown }) => Promise<unknown>) | undefined
+
+      if (!handler) {
+        throw new Error(`Missing handler for ${messageType}`)
+      }
+
+      return handler
+    }
+
+    await expect(
+      findHandler(ProductAnnouncementsMessageTypes.GetState)({
+        data: { locale: "zh-CN" },
+      }),
+    ).resolves.toMatchObject({ success: true })
+    await expect(
+      findHandler(ProductAnnouncementsMessageTypes.Refresh)({ data: {} }),
+    ).resolves.toEqual({ success: true, data: true })
+    await expect(
+      findHandler(ProductAnnouncementsMessageTypes.MarkSeen)({
+        data: { ids: ["notice-a"] },
+      }),
+    ).resolves.toEqual({ success: true, data: undefined })
+    await expect(
+      findHandler(ProductAnnouncementsMessageTypes.Dismiss)({
+        data: { id: "notice-a", revision: 1 },
+      }),
+    ).resolves.toEqual({ success: true, data: undefined })
+    await expect(
+      findHandler(ProductAnnouncementsMessageTypes.Restore)({
+        data: { id: "notice-a" },
+      }),
+    ).resolves.toEqual({ success: true, data: undefined })
   })
 
   it("returns failure responses for malformed get-state messages", async () => {

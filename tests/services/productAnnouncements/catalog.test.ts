@@ -120,6 +120,85 @@ describe("product announcement feed normalization", () => {
     }
   })
 
+  it("uses the built-in default locale when the feed default is blank", () => {
+    const normalized = normalizeProductAnnouncementFeed(
+      {
+        ...baseFeed,
+        defaultLocale: "   ",
+      },
+      {
+        currentVersion: "3.44.0",
+        locale: "zh-TW",
+        now,
+        dismissed: {},
+        seenAt: {},
+      },
+    )
+
+    expect(normalized.notices[0]).toMatchObject({
+      id: "critical-risk",
+      title: "关键风险",
+    })
+  })
+
+  it("rejects announcements with invalid severity, version range, or content shape", () => {
+    const feed = {
+      ...baseFeed,
+      announcements: [
+        {
+          id: "invalid-severity",
+          revision: 1,
+          severity: "notice",
+          priority: 1,
+          affectedVersions: "*",
+          startsAt: "2026-06-01T00:00:00.000Z",
+          expiresAt: "2026-06-20T00:00:00.000Z",
+          content: {
+            "zh-CN": {
+              title: "无效级别",
+              message: "不应展示。",
+            },
+          },
+        },
+        {
+          id: "invalid-version-range",
+          revision: 1,
+          severity: PRODUCT_ANNOUNCEMENT_SEVERITIES.Info,
+          priority: 1,
+          affectedVersions: 3,
+          startsAt: "2026-06-01T00:00:00.000Z",
+          expiresAt: "2026-06-20T00:00:00.000Z",
+          content: {
+            "zh-CN": {
+              title: "无效版本范围",
+              message: "不应展示。",
+            },
+          },
+        },
+        {
+          id: "invalid-content",
+          revision: 1,
+          severity: PRODUCT_ANNOUNCEMENT_SEVERITIES.Info,
+          priority: 1,
+          affectedVersions: "*",
+          startsAt: "2026-06-01T00:00:00.000Z",
+          expiresAt: "2026-06-20T00:00:00.000Z",
+          content: "zh-CN",
+        },
+      ],
+    }
+
+    const normalized = normalizeProductAnnouncementFeed(feed, {
+      currentVersion: "3.44.0",
+      locale: "zh-CN",
+      now,
+      dismissed: {},
+      seenAt: {},
+    })
+
+    expect(normalized).toEqual({ notices: [], errors: [] })
+  })
+
   it("filters by version and resolves localized content with fallback", () => {
     const normalized = normalizeProductAnnouncementFeed(baseFeed, {
       currentVersion: "3.44.0",
