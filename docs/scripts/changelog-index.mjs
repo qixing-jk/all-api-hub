@@ -36,7 +36,8 @@ export function extractChangelogVersions(markdown) {
   let inFence = false
 
   for (const line of markdown.split(/\r?\n/)) {
-    if (line.trimStart().startsWith("```")) {
+    const trimmedLine = line.trimStart()
+    if (trimmedLine.startsWith("```") || trimmedLine.startsWith("~~~")) {
       inFence = !inFence
       continue
     }

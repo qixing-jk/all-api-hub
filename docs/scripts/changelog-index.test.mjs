@@ -1,15 +1,59 @@
 import assert from "node:assert/strict"
+import { spawnSync } from "node:child_process"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
+import { fileURLToPath } from "node:url"
 
 import {
   buildChangelogIndex,
+  checkChangelogIndex,
   extractChangelogVersions,
   normalizeVersion,
   writeChangelogIndex,
 } from "./changelog-index.mjs"
+
+const scriptPath = fileURLToPath(import.meta.url).replace(
+  /changelog-index\.test\.mjs$/,
+  "changelog-index.mjs",
+)
+
+function createTempChangelogFixture(t, markdown = "## 3.44.0\n") {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "changelog-index-"))
+  t.after(() => {
+    fs.rmSync(tempDir, { force: true, recursive: true })
+  })
+
+  const changelogPath = path.join(tempDir, "docs", "changelog.md")
+  const outputPath = path.join(
+    tempDir,
+    "docs",
+    ".vuepress",
+    "public",
+    "data",
+    "changelog-index.json",
+  )
+
+  fs.mkdirSync(path.dirname(changelogPath), { recursive: true })
+  fs.writeFileSync(changelogPath, markdown)
+
+  return { changelogPath, outputPath, tempDir }
+}
+
+function createTempCliFixture(t, markdown = "## 3.44.0\n") {
+  const fixture = createTempChangelogFixture(t, markdown)
+  const tempScriptPath = path.join(
+    fixture.tempDir,
+    "scripts",
+    "changelog-index.mjs",
+  )
+
+  fs.mkdirSync(path.dirname(tempScriptPath), { recursive: true })
+  fs.copyFileSync(scriptPath, tempScriptPath)
+
+  return { ...fixture, scriptPath: tempScriptPath }
+}
 
 test("normalizeVersion accepts dotted versions with optional v prefix", () => {
   assert.equal(normalizeVersion(" 3.44.0 "), "3.44.0")
@@ -35,6 +79,10 @@ test("extractChangelogVersions reads second-level version headings only", () => 
     "```",
     "## 3.42.0",
     "```",
+    "",
+    "~~~",
+    "## 3.41.0",
+    "~~~",
     "",
     "## v3.43.0 - 2026-06-01",
   ].join("\n")
@@ -77,4 +125,33 @@ test("writeChangelogIndex writes stable formatted JSON", () => {
 
   assert.equal(json, expected)
   assert.equal(fs.readFileSync(outputPath, "utf8"), expected)
+})
+
+test("checkChangelogIndex returns false when the index file is missing", (t) => {
+  const { changelogPath, outputPath } = createTempChangelogFixture(t)
+
+  assert.equal(checkChangelogIndex({ changelogPath, outputPath }), false)
+})
+
+test("checkChangelogIndex returns false when the index file is stale", (t) => {
+  const { changelogPath, outputPath } = createTempChangelogFixture(t)
+
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true })
+  fs.writeFileSync(
+    outputPath,
+    JSON.stringify({ schemaVersion: 1, versions: ["3.43.0"] }, null, 2),
+  )
+
+  assert.equal(checkChangelogIndex({ changelogPath, outputPath }), false)
+})
+
+test("CLI --check exits non-zero when the generated index is missing", (t) => {
+  const { scriptPath: tempScriptPath } = createTempCliFixture(t)
+
+  const result = spawnSync(process.execPath, [tempScriptPath, "--check"], {
+    encoding: "utf8",
+  })
+
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /changelog-index\.json is out of date/)
 })

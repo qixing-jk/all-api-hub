@@ -205,6 +205,22 @@ Extension side:
 - Apply the decision before `changelogOnUpdateState.setPendingVersion`.
 - Keep `ChangelogOnUpdateStateService` as a simple pending-version store.
 
+## Security & Privacy
+
+The changelog-index client fetches only fixed project-owned documentation
+sources: the published docs index, the GitHub raw index, and the GitHub raw
+changelog markdown exposed by the docs-link helpers. Browser CSP/CORS must allow
+those fixed origins; a blocked or failed response is treated as an unavailable
+source rather than a runtime failure.
+
+The bounded 2,000ms fetch timeout limits update-flow latency and avoids
+amplifying release-day request spikes. The first implementation does not add
+retry/backoff/queueing; each update checks each source at most once before
+`ChangelogOnUpdateStateService` and `changelogOnUpdateState.setPendingVersion`
+use the fallback decision. Requests do not include account URLs, API keys,
+tokens, prompts, or user-entered text; only ordinary browser request metadata is
+sent to the fixed docs/GitHub raw origins.
+
 ## Testing
 
 Unit tests should cover:

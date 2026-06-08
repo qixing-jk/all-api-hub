@@ -913,6 +913,18 @@ export async function shouldAutoOpenChangelogForUpdate(options: {
 }
 ```
 
+External fetch constraints: `fetchWithTimeout` requests only the fixed docs and
+GitHub raw changelog URLs exposed by the docs-link helpers, so no user-entered
+URL is fetched. Extension CSP/CORS must allow those fixed origins; when a source
+is blocked, times out, returns non-OK, or cannot be parsed, `fetchWithTimeout`
+returns `null` and the client falls through to the next source or the final
+version-direction fallback. `CHANGELOG_SOURCE_FETCH_TIMEOUT_MS` stays at 2,000ms
+to cap update-flow latency and limit abuse from slow external responses; raising
+it would let release-day fetch spikes or hostile network conditions hold the
+update UI open longer. The first implementation intentionally uses no retry loop
+or backoff, so each update checks each source at most once and surfaces no hard
+user error for transient network failure.
+
 - [ ] **Step 11: Run helper tests**
 
 Run:

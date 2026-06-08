@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { delay, http, HttpResponse } from "msw"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   fetchFirstAvailableChangelogVersionSource,
@@ -6,49 +7,64 @@ import {
   parseChangelogMarkdownVersions,
   shouldAutoOpenChangelogForUpdate,
 } from "~/services/updates/changelogIndex"
+import { server } from "~~/tests/msw/server"
 
-vi.mock("~/utils/navigation/docsLinks", () => ({
-  getDocsChangelogIndexUrl: () =>
-    "https://docs.example.test/data/changelog-index.json",
-  getGitHubRawChangelogIndexUrl: () =>
-    "https://raw.example.test/changelog-index.json",
-  getGitHubRawChangelogMarkdownUrl: () =>
-    "https://raw.example.test/changelog.md",
+const changelogSourceUrls = vi.hoisted(() => ({
+  docsIndex: "https://docs.example.test/data/changelog-index.json",
+  rawIndex: "https://raw.example.test/changelog-index.json",
+  rawMarkdown: "https://raw.example.test/changelog.md",
 }))
 
-const createJsonResponse = (value: unknown, ok = true) =>
-  new Response(JSON.stringify(value), {
-    status: ok ? 200 : 500,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  })
+vi.mock("~/utils/navigation/docsLinks", () => ({
+  getDocsChangelogIndexUrl: () => changelogSourceUrls.docsIndex,
+  getGitHubRawChangelogIndexUrl: () => changelogSourceUrls.rawIndex,
+  getGitHubRawChangelogMarkdownUrl: () => changelogSourceUrls.rawMarkdown,
+}))
 
-const createTextResponse = (value: string, ok = true) =>
-  new Response(value, {
-    status: ok ? 200 : 500,
-    headers: {
-      "Content-Type": "text/markdown",
-    },
-  })
+const validIndex = (versions: string[]) => ({
+  schemaVersion: 1,
+  versions,
+})
 
-const createStalledJsonResponse = () =>
-  ({
-    ok: true,
-    json: vi.fn(() => new Promise(() => undefined)),
-  }) as unknown as Response
+const useJsonSource = (
+  url: string,
+  value: Parameters<typeof HttpResponse.json>[0],
+  options: { status?: number; onRequest?: (request: Request) => void } = {},
+) => {
+  server.use(
+    http.get(url, ({ request }) => {
+      options.onRequest?.(request)
+      return HttpResponse.json(value, { status: options.status ?? 200 })
+    }),
+  )
+}
 
-const createStalledTextResponse = () =>
-  ({
-    ok: true,
-    text: vi.fn(() => new Promise(() => undefined)),
-  }) as unknown as Response
+const useTextSource = (url: string, value: string) => {
+  server.use(
+    http.get(url, () => {
+      return new HttpResponse(value, {
+        headers: {
+          "Content-Type": "text/markdown",
+        },
+      })
+    }),
+  )
+}
+
+const useUnavailableSource = (url: string) => {
+  server.use(http.get(url, () => new HttpResponse(null, { status: 503 })))
+}
+
+const useStalledSource = (url: string) => {
+  server.use(
+    http.get(url, async () => {
+      await delay("infinite")
+      return new HttpResponse(null, { status: 204 })
+    }),
+  )
+}
 
 describe("changelogIndex", () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-  })
-
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
@@ -67,6 +83,7 @@ describe("changelogIndex", () => {
   })
 
   it("rejects unsupported or invalid changelog indexes", () => {
+    expect(parseChangelogIndex(null)).toEqual({ ok: false })
     expect(
       parseChangelogIndex({
         schemaVersion: 2,
@@ -136,18 +153,36 @@ describe("changelogIndex", () => {
     })
   })
 
+  it("ignores release-like headings inside tilde-fenced code blocks", () => {
+    const result = parseChangelogMarkdownVersions(`
+# Changelog
+
+~~~md
+## 9.9.9
+~~~
+
+## 3.44.0
+`)
+
+    expect(result).toEqual({
+      ok: true,
+      versions: new Set(["3.44.0"]),
+    })
+  })
+
   it("rejects markdown without release headings", () => {
     expect(parseChangelogMarkdownVersions("# Changelog")).toEqual({ ok: false })
   })
 
   it("uses the docs index first with no-cache fetch options and an abort signal", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      createJsonResponse({
-        schemaVersion: 1,
-        versions: ["3.44.0"],
-      }),
-    )
-    vi.stubGlobal("fetch", fetchMock)
+    let requestCount = 0
+    let capturedRequest: Request | undefined
+    useJsonSource(changelogSourceUrls.docsIndex, validIndex(["3.44.0"]), {
+      onRequest: (request) => {
+        requestCount += 1
+        capturedRequest = request
+      },
+    })
 
     const result = await fetchFirstAvailableChangelogVersionSource()
 
@@ -156,27 +191,19 @@ describe("changelogIndex", () => {
       source: "docs-index",
       versions: new Set(["3.44.0"]),
     })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://docs.example.test/data/changelog-index.json",
-      expect.objectContaining({
-        cache: "no-cache",
-        signal: expect.any(AbortSignal),
-      }),
-    )
+    expect(requestCount).toBe(1)
+    expect(capturedRequest?.cache).toBe("no-cache")
+    expect(capturedRequest?.signal).toBeInstanceOf(AbortSignal)
   })
 
   it("falls back to the raw index when the docs index is unavailable", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("docs unavailable"))
-      .mockResolvedValueOnce(
-        createJsonResponse({
-          schemaVersion: 1,
-          versions: ["3.43.0"],
-        }),
-      )
-    vi.stubGlobal("fetch", fetchMock)
+    let rawIndexRequests = 0
+    useUnavailableSource(changelogSourceUrls.docsIndex)
+    useJsonSource(changelogSourceUrls.rawIndex, validIndex(["3.43.0"]), {
+      onRequest: () => {
+        rawIndexRequests += 1
+      },
+    })
 
     const result = await fetchFirstAvailableChangelogVersionSource()
 
@@ -185,28 +212,13 @@ describe("changelogIndex", () => {
       source: "raw-index",
       versions: new Set(["3.43.0"]),
     })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "https://raw.example.test/changelog-index.json",
-      expect.objectContaining({
-        cache: "no-cache",
-        signal: expect.any(AbortSignal),
-      }),
-    )
+    expect(rawIndexRequests).toBe(1)
   })
 
   it("falls back to the raw index when docs index body parsing stalls", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(createStalledJsonResponse())
-      .mockResolvedValueOnce(
-        createJsonResponse({
-          schemaVersion: 1,
-          versions: ["3.43.0"],
-        }),
-      )
-    vi.stubGlobal("fetch", fetchMock)
+    vi.useFakeTimers()
+    useStalledSource(changelogSourceUrls.docsIndex)
+    useJsonSource(changelogSourceUrls.rawIndex, validIndex(["3.43.0"]))
 
     const resultPromise = fetchFirstAvailableChangelogVersionSource()
 
@@ -220,16 +232,12 @@ describe("changelogIndex", () => {
       source: "raw-index",
       versions: new Set(["3.43.0"]),
     })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("falls back to raw markdown when both index sources are unavailable", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("docs unavailable"))
-      .mockRejectedValueOnce(new Error("raw index unavailable"))
-      .mockResolvedValueOnce(createTextResponse("## 3.42.0"))
-    vi.stubGlobal("fetch", fetchMock)
+    useUnavailableSource(changelogSourceUrls.docsIndex)
+    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useTextSource(changelogSourceUrls.rawMarkdown, "## 3.42.0")
 
     const result = await fetchFirstAvailableChangelogVersionSource()
 
@@ -238,16 +246,13 @@ describe("changelogIndex", () => {
       source: "raw-markdown",
       versions: new Set(["3.42.0"]),
     })
-    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   it("returns unavailable when raw markdown body parsing stalls", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("docs unavailable"))
-      .mockRejectedValueOnce(new Error("raw index unavailable"))
-      .mockResolvedValueOnce(createStalledTextResponse())
-    vi.stubGlobal("fetch", fetchMock)
+    vi.useFakeTimers()
+    useUnavailableSource(changelogSourceUrls.docsIndex)
+    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useStalledSource(changelogSourceUrls.rawMarkdown)
 
     const resultPromise = fetchFirstAvailableChangelogVersionSource()
 
@@ -257,17 +262,15 @@ describe("changelogIndex", () => {
     const result = await Promise.race([resultPromise, Promise.resolve(pending)])
 
     expect(result).toEqual({ ok: false })
-    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   it("does not continue to raw sources when a valid docs index misses the current version", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      createJsonResponse({
-        schemaVersion: 1,
-        versions: ["3.44.0"],
-      }),
-    )
-    vi.stubGlobal("fetch", fetchMock)
+    let docsIndexRequests = 0
+    useJsonSource(changelogSourceUrls.docsIndex, validIndex(["3.44.0"]), {
+      onRequest: () => {
+        docsIndexRequests += 1
+      },
+    })
 
     await expect(
       shouldAutoOpenChangelogForUpdate({
@@ -275,16 +278,25 @@ describe("changelogIndex", () => {
         previousVersion: "3.44.0",
       }),
     ).resolves.toBe(false)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(docsIndexRequests).toBe(1)
+  })
+
+  it("falls back closed for invalid current versions without fetching sources", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+
+    await expect(
+      shouldAutoOpenChangelogForUpdate({
+        currentVersion: "nightly",
+        previousVersion: "3.44.0",
+      }),
+    ).resolves.toBe(false)
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it("treats all changelog source failures as unavailable", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("docs unavailable"))
-      .mockRejectedValueOnce(new Error("raw index unavailable"))
-      .mockRejectedValueOnce(new Error("raw markdown unavailable"))
-    vi.stubGlobal("fetch", fetchMock)
+    useUnavailableSource(changelogSourceUrls.docsIndex)
+    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.rawMarkdown)
 
     await expect(fetchFirstAvailableChangelogVersionSource()).resolves.toEqual({
       ok: false,
@@ -292,13 +304,7 @@ describe("changelogIndex", () => {
   })
 
   it("uses source membership before version direction", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      createJsonResponse({
-        schemaVersion: 1,
-        versions: ["3.43.0"],
-      }),
-    )
-    vi.stubGlobal("fetch", fetchMock)
+    useJsonSource(changelogSourceUrls.docsIndex, validIndex(["3.43.0"]))
 
     await expect(
       shouldAutoOpenChangelogForUpdate({
@@ -309,8 +315,9 @@ describe("changelogIndex", () => {
   })
 
   it("falls back closed for rollbacks when all sources are unavailable", async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error("unavailable"))
-    vi.stubGlobal("fetch", fetchMock)
+    useUnavailableSource(changelogSourceUrls.docsIndex)
+    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.rawMarkdown)
 
     await expect(
       shouldAutoOpenChangelogForUpdate({
@@ -321,8 +328,9 @@ describe("changelogIndex", () => {
   })
 
   it("falls back closed for same-version checks when all sources are unavailable", async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error("unavailable"))
-    vi.stubGlobal("fetch", fetchMock)
+    useUnavailableSource(changelogSourceUrls.docsIndex)
+    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.rawMarkdown)
 
     await expect(
       shouldAutoOpenChangelogForUpdate({
@@ -333,8 +341,9 @@ describe("changelogIndex", () => {
   })
 
   it("falls back open for upgrades or unknown previous versions when all sources are unavailable", async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error("unavailable"))
-    vi.stubGlobal("fetch", fetchMock)
+    useUnavailableSource(changelogSourceUrls.docsIndex)
+    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.rawMarkdown)
 
     await expect(
       shouldAutoOpenChangelogForUpdate({

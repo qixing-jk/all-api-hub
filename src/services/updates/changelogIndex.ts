@@ -79,7 +79,7 @@ export function parseChangelogMarkdownVersions(
   for (const line of markdown.split(/\r?\n/)) {
     const trimmedLine = line.trim()
 
-    if (trimmedLine.startsWith("```")) {
+    if (trimmedLine.startsWith("```") || trimmedLine.startsWith("~~~")) {
       isInsideFence = !isInsideFence
       continue
     }
