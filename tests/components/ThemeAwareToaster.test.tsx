@@ -193,6 +193,9 @@ describe("ThemeAwareToaster", () => {
           <button type="button" onClick={() => setIsModalOpen(true)}>
             Open modal
           </button>
+          <button type="button" onClick={() => setIsModalOpen(false)}>
+            Close modal
+          </button>
           <div data-testid="layout-toaster-slot">
             <ThemeAwareToaster />
           </div>
@@ -219,6 +222,13 @@ describe("ThemeAwareToaster", () => {
     expect(screen.getByTestId("layout-toaster-slot")).not.toContainElement(
       screen.getByTestId("mock-toaster"),
     )
+
+    fireEvent.click(screen.getByRole("button", { name: "Close modal" }))
+
+    expect(screen.getByTestId("layout-toaster-slot")).toContainElement(
+      screen.getByTestId("mock-toaster"),
+    )
+    expect(screen.queryByTestId("modal-shell")).not.toBeInTheDocument()
   })
 
   it("returns the toaster to the previous modal host when the top host closes", () => {
@@ -239,6 +249,9 @@ describe("ThemeAwareToaster", () => {
           </button>
           <button type="button" onClick={() => setIsSecondModalOpen(false)}>
             Close second modal
+          </button>
+          <button type="button" onClick={() => setIsFirstModalOpen(false)}>
+            Close first modal
           </button>
           {isFirstModalOpen ? (
             <div data-testid="first-modal-shell">
@@ -273,5 +286,12 @@ describe("ThemeAwareToaster", () => {
     expect(screen.getByTestId("first-modal-shell")).toContainElement(
       screen.getByTestId("mock-toaster"),
     )
+
+    fireEvent.click(screen.getByRole("button", { name: "Close first modal" }))
+
+    expect(screen.getByTestId("layout-toaster-slot")).toContainElement(
+      screen.getByTestId("mock-toaster"),
+    )
+    expect(screen.queryByTestId("first-modal-shell")).not.toBeInTheDocument()
   })
 })
