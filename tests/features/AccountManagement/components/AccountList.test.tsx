@@ -592,6 +592,44 @@ describe("AccountList", () => {
     expect(clearSortConfig).toHaveBeenCalledTimes(1)
   })
 
+  it("hides the clear sort action when field sorting has been cleared", () => {
+    const clearSortConfig = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        clearSortConfig,
+        sortField: null,
+        sortOrder: "asc",
+      }),
+    )
+
+    render(<AccountList />)
+
+    expect(
+      screen.queryByRole("button", { name: "account:list.clearSort" }),
+    ).not.toBeInTheDocument()
+    expect(clearSortConfig).not.toHaveBeenCalled()
+  })
+
+  it("hides the clear sort action while search mode is active", () => {
+    const clearSortConfig = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        clearSortConfig,
+        sortField: "name",
+        sortOrder: "asc",
+      }),
+    )
+
+    render(<AccountList initialSearchQuery="Alpha" />)
+
+    expect(
+      screen.queryByRole("button", { name: "account:list.clearSort" }),
+    ).not.toBeInTheDocument()
+    expect(clearSortConfig).not.toHaveBeenCalled()
+  })
+
   it("auto-loads dnd during idle time after the first render settles", async () => {
     mockUseAccountDataContext.mockReturnValue(
       createAccountDataContextValue({
