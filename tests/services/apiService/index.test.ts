@@ -8,19 +8,25 @@ const {
   commonFetchModelPricing,
   commonFetchAccountTokens,
   commonResolveApiTokenKey,
+  commonExtractDefaultExchangeRate,
   aihubmixFetchAccountTokens,
   oneHubFetchModelPricing,
   oneHubFetchAccountTokens,
   wongResolveApiTokenKey,
+  sub2apiFetchUserInfo,
+  sub2apiExtractDefaultExchangeRate,
 } = vi.hoisted(() => ({
   commonFetchUserInfo: vi.fn(),
   commonFetchModelPricing: vi.fn(),
   commonFetchAccountTokens: vi.fn(),
   commonResolveApiTokenKey: vi.fn(),
+  commonExtractDefaultExchangeRate: vi.fn(),
   aihubmixFetchAccountTokens: vi.fn(),
   oneHubFetchModelPricing: vi.fn(),
   oneHubFetchAccountTokens: vi.fn(),
   wongResolveApiTokenKey: vi.fn(),
+  sub2apiFetchUserInfo: vi.fn(),
+  sub2apiExtractDefaultExchangeRate: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/common", () => ({
@@ -28,6 +34,7 @@ vi.mock("~/services/apiService/common", () => ({
   fetchModelPricing: commonFetchModelPricing,
   fetchAccountTokens: commonFetchAccountTokens,
   resolveApiTokenKey: commonResolveApiTokenKey,
+  extractDefaultExchangeRate: commonExtractDefaultExchangeRate,
 }))
 
 vi.mock("~/services/apiService/oneHub", () => ({
@@ -42,6 +49,12 @@ vi.mock("~/services/apiService/aihubmix", () => ({
 
 vi.mock("~/services/apiService/wong", () => ({
   resolveApiTokenKey: wongResolveApiTokenKey,
+}))
+
+vi.mock("~/services/apiService/sub2api", () => ({
+  fetchUserInfo: sub2apiFetchUserInfo,
+  extractDefaultExchangeRate: sub2apiExtractDefaultExchangeRate,
+  // Intentionally omit fetchModelPricing so strict override behavior can be asserted.
 }))
 
 describe("apiService index wrapper", () => {
@@ -217,6 +230,56 @@ describe("apiService index wrapper", () => {
       (getApiService(SITE_TYPES.AIHUBMIX).fetchModelPricing as any)(request),
     ).toThrow(
       `apiService.fetchModelPricing is not implemented for ${SITE_TYPES.AIHUBMIX}`,
+    )
+
+    expect(commonFetchModelPricing).not.toHaveBeenCalled()
+  })
+
+  it("should route Sub2API fetchUserInfo through the site override", async () => {
+    sub2apiFetchUserInfo.mockResolvedValue({ id: "7" } as any)
+
+    const request = {
+      baseUrl: "https://sub2.example.com",
+      auth: { authType: "access_token", accessToken: "jwt-token" },
+    }
+
+    await (getApiService(SITE_TYPES.SUB2API).fetchUserInfo as any)(request)
+
+    expect(sub2apiFetchUserInfo).toHaveBeenCalledTimes(1)
+    expect(sub2apiFetchUserInfo).toHaveBeenCalledWith(request)
+    expect(commonFetchUserInfo).not.toHaveBeenCalled()
+  })
+
+  it("should route Sub2API exchange-rate extraction through the site override", () => {
+    sub2apiExtractDefaultExchangeRate.mockReturnValue(7.2)
+
+    const siteStatus = {
+      checkin_enabled: false,
+      price: 7.2,
+    }
+
+    const rate = (
+      getApiService(SITE_TYPES.SUB2API).extractDefaultExchangeRate as any
+    )(siteStatus)
+
+    expect(rate).toBe(7.2)
+    expect(sub2apiExtractDefaultExchangeRate).toHaveBeenCalledTimes(1)
+    expect(sub2apiExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
+    expect(commonExtractDefaultExchangeRate).not.toHaveBeenCalled()
+  })
+
+  it("should not silently fall back to common for missing Sub2API overrides", async () => {
+    commonFetchModelPricing.mockResolvedValue({} as any)
+
+    const request = {
+      baseUrl: "https://sub2.example.com",
+      auth: { authType: "access_token", accessToken: "jwt-token" },
+    }
+
+    expect(() =>
+      (getApiService(SITE_TYPES.SUB2API).fetchModelPricing as any)(request),
+    ).toThrow(
+      `apiService.fetchModelPricing is not implemented for ${SITE_TYPES.SUB2API}`,
     )
 
     expect(commonFetchModelPricing).not.toHaveBeenCalled()

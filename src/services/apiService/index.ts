@@ -33,7 +33,10 @@ type SiteOverrideMap = typeof siteOverrideMap
 
 export type ApiOverrideSite = keyof SiteOverrideMap
 
-const strictOverrideSites = new Set<ApiOverrideSite>([SITE_TYPES.AIHUBMIX])
+const strictOverrideSites = new Set<ApiOverrideSite>([
+  SITE_TYPES.AIHUBMIX,
+  SITE_TYPES.SUB2API,
+])
 
 const hasOwnOverrideSite = (value: unknown): value is ApiOverrideSite =>
   typeof value === "string" &&
