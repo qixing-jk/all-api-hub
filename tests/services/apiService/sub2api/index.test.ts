@@ -10,6 +10,7 @@ import { fetchApi } from "~/services/apiService/common/utils"
 import {
   createApiToken,
   deleteApiToken,
+  extractDefaultExchangeRate,
   fetchAccountAvailableModels,
   fetchAccountData,
   fetchAccountTokens,
@@ -22,6 +23,8 @@ import {
   fetchTodayUsage,
   fetchTokenById,
   fetchUserGroups,
+  fetchUserInfo,
+  getOrCreateAccessToken,
   markSub2ApiAnnouncementRead,
   refreshAccountData,
   updateApiToken,
@@ -55,6 +58,9 @@ vi.mock("~/services/apiService/common", () => ({
     status: SiteHealthStatus.Unknown,
     message: "determineHealthStatus",
   })),
+  extractDefaultExchangeRate: (
+    statusInfo: { price?: number; stripe_unit_price?: number } | null,
+  ) => statusInfo?.price ?? statusInfo?.stripe_unit_price ?? null,
 }))
 
 vi.mock("~/services/apiService/common/utils", () => ({
@@ -1144,6 +1150,277 @@ describe("apiService sub2api exported operations", () => {
     })
   })
 
+  it("fetchUserInfo returns the shared compatibility shape from /api/v1/auth/me", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 12,
+        username: "alice",
+        email: "alice@example.com",
+        balance: "1.5",
+      },
+    } as any)
+
+    await expect(
+      fetchUserInfo({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "jwt-token",
+        },
+      }),
+    ).resolves.toEqual({
+      id: "12",
+      username: "alice",
+      access_token: "jwt-token",
+      user: {
+        id: 12,
+        username: "alice",
+        email: "alice@example.com",
+        balance: "1.5",
+      },
+    })
+
+    expect(fetchApi).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "jwt-token",
+        }),
+      }),
+      expect.objectContaining({
+        endpoint: "/api/v1/auth/me",
+        options: expect.objectContaining({
+          method: "GET",
+          cache: "no-store",
+        }),
+      }),
+      true,
+    )
+  })
+
+  it("getOrCreateAccessToken reuses the existing Sub2API JWT when present", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 12,
+        username: "alice",
+        email: "alice@example.com",
+        balance: "1.5",
+      },
+    } as any)
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "jwt-token",
+        },
+      }),
+    ).resolves.toEqual({
+      username: "alice",
+      access_token: "jwt-token",
+    })
+
+    expect(fetchApi).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+  })
+
+  it("getOrCreateAccessToken refreshes the Sub2API JWT when only refresh token state is usable", async () => {
+    const now = 1_700_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 0,
+          message: "ok",
+          data: {
+            access_token: "refreshed-jwt",
+            refresh_token: "rotated-refresh",
+            expires_in: 3600,
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 12,
+        username: "alice",
+        email: "alice@example.com",
+        balance: "1.5",
+      },
+    } as any)
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "expired-jwt",
+          refreshToken: "stored-refresh",
+          tokenExpiresAt: now - 1,
+        },
+      }),
+    ).resolves.toEqual({
+      username: "alice",
+      access_token: "refreshed-jwt",
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    nowSpy.mockRestore()
+  })
+
+  it("getOrCreateAccessToken refreshes and retries when a JWT without expiry metadata is stale", async () => {
+    const now = 1_700_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 0,
+          message: "ok",
+          data: {
+            access_token: "refreshed-jwt",
+            refresh_token: "rotated-refresh",
+            expires_in: 3600,
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          id: 12,
+          username: "alice",
+          email: "alice@example.com",
+          balance: "1.5",
+        },
+      } as any)
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "stale-jwt",
+          refreshToken: "stored-refresh",
+        },
+      }),
+    ).resolves.toEqual({
+      username: "alice",
+      access_token: "refreshed-jwt",
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchApi).toHaveBeenCalledTimes(2)
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect(
+      (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
+    ).toBe("refreshed-jwt")
+    nowSpy.mockRestore()
+  })
+
+  it("getOrCreateAccessToken falls back to browser-session re-sync when refresh token restore fails", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("network down"))
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "resynced-jwt",
+      source: "existing_tab",
+    })
+
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          id: 12,
+          username: "alice",
+          email: "alice@example.com",
+          balance: "1.5",
+        },
+      } as any)
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "expired-jwt",
+          refreshToken: "stored-refresh",
+        },
+      }),
+    ).resolves.toEqual({
+      username: "alice",
+      access_token: "resynced-jwt",
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      "https://sub2.example.com",
+    )
+    expect(fetchApi).toHaveBeenCalledTimes(2)
+    expect(
+      (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
+    ).toBe("resynced-jwt")
+  })
+
+  it("getOrCreateAccessToken falls back to browser-session re-sync when no refresh token is available", async () => {
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "resynced-jwt",
+      source: "existing_tab",
+    })
+
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 12,
+        username: "alice",
+        email: "alice@example.com",
+        balance: "1.5",
+      },
+    } as any)
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "",
+        },
+      }),
+    ).resolves.toEqual({
+      username: "alice",
+      access_token: "resynced-jwt",
+    })
+
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      "https://sub2.example.com",
+    )
+  })
+
   it("fetches account data with check-in detection forcibly disabled", async () => {
     vi.mocked(fetchApi).mockResolvedValueOnce({
       code: 0,
@@ -1178,6 +1455,18 @@ describe("apiService sub2api exported operations", () => {
     })
 
     expect(vi.mocked(fetchApi)).not.toHaveBeenCalled()
+  })
+
+  it("reuses the common exchange-rate extraction contract for status payloads", () => {
+    expect(
+      extractDefaultExchangeRate({
+        checkin_enabled: false,
+        price: 7.2,
+      } as any),
+    ).toBe(7.2)
+    expect(extractDefaultExchangeRate({ checkin_enabled: false } as any)).toBe(
+      null,
+    )
   })
 
   it("fetches user groups by combining available groups and rates", async () => {

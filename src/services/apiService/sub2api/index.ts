@@ -8,9 +8,13 @@ import {
   AccountUpdateUserTimestampMode,
   type AccountUpdateUserTimestampMode as AccountUpdateUserTimestampModeValue,
 } from "~/services/accounts/accountDefaults"
-import { determineHealthStatus } from "~/services/apiService/common"
+import {
+  determineHealthStatus,
+  extractDefaultExchangeRate as extractCommonDefaultExchangeRate,
+} from "~/services/apiService/common"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type {
+  AccessTokenInfo,
   AccountData,
   ApiServiceAccountRequest,
   ApiServiceRequest,
@@ -21,6 +25,7 @@ import type {
   TodayIncomeData,
   TodayUsageData,
   UserGroupInfo,
+  UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import {
@@ -784,6 +789,168 @@ export async function fetchCurrentUser(
 }
 
 /**
+ * Sub2API compatibility overrides for shared account-detection callers.
+ *
+ * Upstream identity lives at `/api/v1/auth/me` behind bearer JWT auth.
+ * This adapter intentionally does not fall back to common `/api/user/self`
+ * or `/api/user/token` semantics.
+ */
+export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
+  id: string
+  username: string
+  access_token: string
+  user: UserInfo
+}> {
+  const jwtRequest = normalizeJwtRequest(request)
+  const accessToken = normalizeAccessToken(jwtRequest.auth.accessToken)
+  const body = (await fetchApi<Sub2ApiAuthMeResponse>(
+    jwtRequest,
+    {
+      endpoint: SUB2API_AUTH_ME_ENDPOINT,
+      options: {
+        method: "GET",
+        cache: "no-store",
+      },
+    },
+    true,
+  )) as Sub2ApiAuthMeResponse
+
+  const data = parseSub2ApiEnvelope<Sub2ApiAuthMeData>(
+    body,
+    SUB2API_AUTH_ME_ENDPOINT,
+  )
+  const identity = parseSub2ApiUserIdentity(data)
+
+  return {
+    id: String(identity.userId),
+    username: identity.username,
+    access_token: accessToken,
+    user: data as UserInfo,
+  }
+}
+
+const fetchSub2ApiAccessTokenInfo = async (
+  request: ApiServiceRequest,
+): Promise<AccessTokenInfo> => {
+  const userInfo = await fetchUserInfo(request)
+
+  return {
+    username: userInfo.username,
+    access_token: userInfo.access_token,
+  }
+}
+
+const fetchSub2ApiAccessTokenInfoWithResyncedAuth = async (params: {
+  request: ApiServiceRequest
+  accountStorageRef: Sub2ApiAccountStorageRef
+}): Promise<AccessTokenInfo> => {
+  const resyncedRequest = await resyncSub2ApiRequestAuth({
+    request: params.request,
+    endpoint: SUB2API_AUTH_ME_ENDPOINT,
+    accountStorageRef: params.accountStorageRef,
+  })
+
+  try {
+    return await fetchSub2ApiAccessTokenInfo(resyncedRequest)
+  } catch (retryError) {
+    if (isUnauthorizedError(retryError)) {
+      throw createLoginRequiredError(SUB2API_AUTH_ME_ENDPOINT)
+    }
+
+    throw retryError
+  }
+}
+
+const fetchSub2ApiAccessTokenInfoWithAuthRecovery = async (params: {
+  request: ApiServiceRequest
+  refreshToken: string
+  accountStorageRef: Sub2ApiAccountStorageRef
+}): Promise<AccessTokenInfo> => {
+  try {
+    return await fetchSub2ApiAccessTokenInfo(params.request)
+  } catch (error) {
+    if (!isUnauthorizedError(error)) {
+      throw error
+    }
+
+    if (params.refreshToken) {
+      try {
+        const refreshed = await refreshSub2ApiRequestAuth({
+          request: params.request,
+          refreshToken: params.refreshToken,
+          accountStorageRef: params.accountStorageRef,
+        })
+
+        return await fetchSub2ApiAccessTokenInfo(refreshed.request)
+      } catch (refreshError) {
+        logger.warn("Failed to restore Sub2API user info via refresh token", {
+          endpoint: SUB2API_AUTH_ME_ENDPOINT,
+          error: getSafeErrorMessage(refreshError),
+        })
+      }
+    }
+
+    return await fetchSub2ApiAccessTokenInfoWithResyncedAuth({
+      request: params.request,
+      accountStorageRef: params.accountStorageRef,
+    })
+  }
+}
+
+/**
+ * Return a reusable Sub2API JWT for shared token-detection callers.
+ */
+export async function getOrCreateAccessToken(
+  request: ApiServiceRequest,
+): Promise<AccessTokenInfo> {
+  const hydrated = await hydrateSub2ApiAuthRequest(request)
+  let effectiveRequest = hydrated.request
+  let accessToken = normalizeAccessToken(effectiveRequest.auth?.accessToken)
+  const refreshToken = normalizeRefreshToken(
+    effectiveRequest.auth?.refreshToken,
+  )
+  const tokenExpiresAt = normalizeTokenExpiresAt(
+    effectiveRequest.auth?.tokenExpiresAt,
+  )
+
+  if (accessToken && (!tokenExpiresAt || !isCloseToExpiry(tokenExpiresAt))) {
+    return await fetchSub2ApiAccessTokenInfoWithAuthRecovery({
+      request: effectiveRequest,
+      refreshToken,
+      accountStorageRef: hydrated.accountStorageRef,
+    })
+  }
+
+  if (refreshToken) {
+    try {
+      const refreshed = await refreshSub2ApiRequestAuth({
+        request: effectiveRequest,
+        refreshToken,
+        accountStorageRef: hydrated.accountStorageRef,
+      })
+      effectiveRequest = refreshed.request
+      accessToken = normalizeAccessToken(effectiveRequest.auth?.accessToken)
+
+      const userInfo = await fetchUserInfo(effectiveRequest)
+      return {
+        username: userInfo.username,
+        access_token: accessToken,
+      }
+    } catch (refreshError) {
+      logger.warn("Failed to restore Sub2API user info via refresh token", {
+        endpoint: SUB2API_AUTH_ME_ENDPOINT,
+        error: getSafeErrorMessage(refreshError),
+      })
+    }
+  }
+
+  return await fetchSub2ApiAccessTokenInfoWithResyncedAuth({
+    request: effectiveRequest,
+    accountStorageRef: hydrated.accountStorageRef,
+  })
+}
+
+/**
  * Sub2API does not expose the One-API-style public `/api/status` endpoint.
  * Return a synthetic status payload so shared callers can skip that request and
  * still treat built-in check-in as unsupported.
@@ -795,6 +962,12 @@ export async function fetchSiteStatus(
     checkin_enabled: false,
   }
 }
+
+/**
+ * Keep strict Sub2API routing compatible with shared account completion code
+ * while reusing the common status exchange-rate fallback order.
+ */
+export const extractDefaultExchangeRate = extractCommonDefaultExchangeRate
 
 /**
  * Sub2API does not support the extension's built-in check-in flow.
