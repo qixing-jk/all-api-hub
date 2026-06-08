@@ -8,6 +8,7 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
+import { AuthTypeEnum } from "~/types"
 
 const {
   mockFetchUserInfo,
@@ -254,6 +255,47 @@ describe("autoDetectSmart", () => {
         origin: "https://example.com",
         incognito: true,
         cookieStoreId: "1-incognito",
+      },
+    })
+  })
+
+  it("does not report Sub2API API fallback success from cookie-auth user-info calls", async () => {
+    mockGetAccountSiteType.mockResolvedValueOnce(SITE_TYPES.SUB2API)
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 201,
+        active: true,
+        url: "https://sub2.example.com/dashboard",
+      },
+    ])
+    browserAny.tabs.sendMessage.mockResolvedValue({
+      success: false,
+      error: "no local storage user",
+    })
+    mockFetchUserInfo.mockRejectedValue(
+      new Error("messages:sub2api.loginRequired"),
+    )
+
+    const result = await autoDetectSmart("https://sub2.example.com/console")
+
+    expect(result.success).toBe(false)
+    expect(result.data).toBeUndefined()
+    expect(mockFetchUserInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+        },
+      }),
+    )
+    expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      baseUrl: "https://sub2.example.com/console",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+      },
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 201,
+        origin: "https://sub2.example.com",
       },
     })
   })

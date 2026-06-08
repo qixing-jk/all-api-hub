@@ -121,6 +121,37 @@ describe("accountOperations autoDetectAccount", () => {
     expect(result.data?.exchangeRate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
   })
 
+  it("uses detected Sub2API access-token semantics during auto-detect completion", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "12",
+        user: { id: 12, username: "alice" },
+        siteType: SITE_TYPES.SUB2API,
+        accessToken: "jwt-token",
+        fetchContext: currentTabFetchContext("https://sub2.example.com"),
+      },
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce(null)
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://sub2.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    expect(result.data).toMatchObject({
+      siteType: SITE_TYPES.SUB2API,
+      username: "alice",
+      accessToken: "jwt-token",
+      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+    })
+  })
+
   it("continues detection when cookie-interceptor tracking fails", async () => {
     mockSendRuntimeMessage.mockRejectedValueOnce(new Error("track failed"))
     mockAutoDetectSmart.mockResolvedValueOnce({
