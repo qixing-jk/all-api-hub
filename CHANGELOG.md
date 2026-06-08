@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.45.0](https://github.com/qixing-jk/all-api-hub/compare/v3.44.0...v3.45.0) (2026-06-08)
+
+
+### Features
+
+* **account-management:** allow clearing account list sort ([#928](https://github.com/qixing-jk/all-api-hub/issues/928)) ([96c3591](https://github.com/qixing-jk/all-api-hub/commit/96c359194bb0c793dd062222232f45b97f0068aa))
+* **product-announcements:** add product risk notice channel ([#925](https://github.com/qixing-jk/all-api-hub/issues/925)) ([67d8350](https://github.com/qixing-jk/all-api-hub/commit/67d8350d80b60ad5b7e7cfd2740269d0c743cc1c))
+* **updates:** gate changelog auto-open by published index ([#927](https://github.com/qixing-jk/all-api-hub/issues/927)) ([3077242](https://github.com/qixing-jk/all-api-hub/commit/3077242ff535d9c5d89ef4184644a761b91bf972))
+
+
+### Bug Fixes
+
+* **account:** prioritize matched open tabs before user sort ([#929](https://github.com/qixing-jk/all-api-hub/issues/929)) ([a0e6fe3](https://github.com/qixing-jk/all-api-hub/commit/a0e6fe3076d0d3b6428a7050c84dbbf31325f03a))
+* **e2e:** stabilize low Chrome compatibility checks ([#922](https://github.com/qixing-jk/all-api-hub/issues/922)) ([98b4533](https://github.com/qixing-jk/all-api-hub/commit/98b45335b34dcad534c976b3027b81e1b8174363))
+* **toast:** prevent duplicate notifications in dialogs ([#931](https://github.com/qixing-jk/all-api-hub/issues/931)) ([9e67b10](https://github.com/qixing-jk/all-api-hub/commit/9e67b10d4d21a1638ee07bdbc34e2c0eb36cb965))
+* **updates:** read changelog index from gh-pages ([#933](https://github.com/qixing-jk/all-api-hub/issues/933)) ([aba545d](https://github.com/qixing-jk/all-api-hub/commit/aba545d1045230070fe5350eb8c72bdc8ab8f871))
+
 ## [3.44.0](https://github.com/qixing-jk/all-api-hub/compare/v3.43.0...v3.44.0) (2026-06-05)
 
 
