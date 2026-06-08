@@ -23,9 +23,10 @@ import {
   triggerStartupSiteEcosystemSnapshot,
 } from "~/services/productAnalytics/runtime"
 import { tagStorage } from "~/services/tags/tagStorage"
+import { shouldAutoOpenChangelogForUpdate } from "~/services/updates/changelogIndex"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import {
-  getManifest,
+  getExtensionVersion,
   getRuntimeId,
   onInstalled,
   onStartup,
@@ -129,8 +130,14 @@ export default defineBackground(() => {
         }
 
         if (details.reason === "update") {
-          const { version } = getManifest()
-          if (version) {
+          const version = getExtensionVersion("")
+          if (
+            version &&
+            (await shouldAutoOpenChangelogForUpdate({
+              currentVersion: version,
+              previousVersion: details.previousVersion,
+            }))
+          ) {
             await changelogOnUpdateState.setPendingVersion(version)
           }
         }

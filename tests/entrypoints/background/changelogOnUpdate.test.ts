@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-type InstalledListener = (details: { reason: string }) => void
+type InstalledListener = (details: {
+  reason: string
+  previousVersion?: string
+}) => void
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -27,6 +30,7 @@ describe("background onInstalled changelog opening", () => {
   let optionalPermissions: string[]
   let setPendingVersionMock: ReturnType<typeof vi.fn>
   let setLastSeenOptionalPermissionsMock: ReturnType<typeof vi.fn>
+  let shouldAutoOpenChangelogForUpdateMock: ReturnType<typeof vi.fn>
   let isTestModeMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
@@ -51,6 +55,7 @@ describe("background onInstalled changelog opening", () => {
     optionalPermissions = []
     setPendingVersionMock = vi.fn().mockResolvedValue(undefined)
     setLastSeenOptionalPermissionsMock = vi.fn().mockResolvedValue(undefined)
+    shouldAutoOpenChangelogForUpdateMock = vi.fn().mockResolvedValue(true)
     isTestModeMock = vi.fn().mockReturnValue(true)
 
     vi.resetModules()
@@ -63,6 +68,9 @@ describe("background onInstalled changelog opening", () => {
       return {
         ...actual,
         createTab: createTabMock,
+        getExtensionVersion: vi.fn(
+          (fallback = "0.0.0") => getManifestMock().version?.trim() || fallback,
+        ),
         getManifest: getManifestMock,
         onInstalled: vi.fn((listener: InstalledListener) => {
           onInstalledListener = listener
@@ -90,6 +98,10 @@ describe("background onInstalled changelog opening", () => {
       },
     }))
 
+    vi.doMock("~/services/updates/changelogIndex", () => ({
+      shouldAutoOpenChangelogForUpdate: shouldAutoOpenChangelogForUpdateMock,
+    }))
+
     // Avoid heavy side effects from the background entrypoint; only the update
     // flow under test needs to run.
     vi.doMock("~/entrypoints/background/runtimeMessages", () => ({
@@ -114,6 +126,13 @@ describe("background onInstalled changelog opening", () => {
     }))
     vi.doMock("~/entrypoints/background/actionClickBehavior", () => ({
       applyActionClickBehavior: vi.fn().mockResolvedValue(undefined),
+    }))
+    vi.doMock("~/services/productAnalytics/runtime", () => ({
+      setupProductAnalyticsAccountChangeListener: vi.fn(),
+      setupProductAnalyticsPreferencesChangeListener: vi.fn(),
+      triggerStartupSettingsSnapshot: vi.fn(),
+      triggerStartupShieldBypassDailySummary: vi.fn(),
+      triggerStartupSiteEcosystemSnapshot: vi.fn(),
     }))
     vi.doMock("~/services/tags/tagStorage", () => ({
       tagStorage: {
@@ -160,6 +179,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/utils/navigation/docsLinks")
     vi.doUnmock("~/services/updates/changelogOnUpdateState")
+    vi.doUnmock("~/services/updates/changelogIndex")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/entrypoints/background/runtimeMessages")
     vi.doUnmock("~/entrypoints/background/tempWindowPool")
@@ -168,6 +188,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doUnmock("~/entrypoints/background/devActionBranding")
     vi.doUnmock("~/entrypoints/background/servicesInit")
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
+    vi.doUnmock("~/services/productAnalytics/runtime")
     vi.doUnmock("~/services/tags/tagStorage")
     vi.doUnmock("~/services/accounts/accountStorage")
     vi.doUnmock("~/services/accounts/migrations/accountDataMigration")
@@ -194,6 +215,42 @@ describe("background onInstalled changelog opening", () => {
     expect(setPendingVersionMock).toHaveBeenCalledWith("2.39.0")
     expect(getDocsChangelogUrlMock).not.toHaveBeenCalled()
     expect(createTabMock).not.toHaveBeenCalled()
+  })
+
+  it("passes current and previous versions to the changelog index gate", async () => {
+    await import("~/entrypoints/background/index")
+
+    expect(onInstalledListener).toBeTypeOf("function")
+    await onInstalledListener?.({
+      reason: "update",
+      previousVersion: "2.38.0",
+    })
+    await flushPromises()
+
+    expect(shouldAutoOpenChangelogForUpdateMock).toHaveBeenCalledWith({
+      currentVersion: "2.39.0",
+      previousVersion: "2.38.0",
+    })
+    expect(setPendingVersionMock).toHaveBeenCalledWith("2.39.0")
+  })
+
+  it("skips pending-version state when the changelog index gate rejects the version", async () => {
+    shouldAutoOpenChangelogForUpdateMock.mockResolvedValue(false)
+
+    await import("~/entrypoints/background/index")
+
+    expect(onInstalledListener).toBeTypeOf("function")
+    await onInstalledListener?.({
+      reason: "update",
+      previousVersion: "2.40.0",
+    })
+    await flushPromises()
+
+    expect(shouldAutoOpenChangelogForUpdateMock).toHaveBeenCalledWith({
+      currentVersion: "2.39.0",
+      previousVersion: "2.40.0",
+    })
+    expect(setPendingVersionMock).not.toHaveBeenCalled()
   })
 
   it("marks pending version even when openChangelogOnUpdate is disabled", async () => {

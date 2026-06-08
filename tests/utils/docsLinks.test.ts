@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { getChangelogAnchorId } from "~/utils/navigation/changelogAnchor"
 import {
   getDocsAutoDetectUrl,
+  getDocsChangelogIndexUrl,
   getDocsChangelogUrl,
   getDocsCommunityUrl,
   getDocsGetStartedUrl,
@@ -10,6 +11,8 @@ import {
   getDocsPageUrl,
   getDocsTaskNotificationsDingtalkUrl,
   getDocsTaskNotificationsNtfyUrl,
+  getGitHubRawChangelogIndexUrl,
+  getGitHubRawChangelogMarkdownUrl,
 } from "~/utils/navigation/docsLinks"
 import { getDocsLocalePath } from "~/utils/navigation/docsLocale"
 import { getHomepage } from "~/utils/navigation/packageMeta"
@@ -28,6 +31,18 @@ describe("docsLinks", () => {
 
   it("builds changelog url without an anchor when no version is provided", () => {
     expect(getDocsChangelogUrl()).toBe(getDocsPageUrl("changelog.html"))
+  })
+
+  it("builds changelog source URLs", () => {
+    expect(getDocsChangelogIndexUrl()).toBe(
+      getDocsPageUrl("data/changelog-index.json"),
+    )
+    expect(getGitHubRawChangelogIndexUrl()).toBe(
+      "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/docs/docs/.vuepress/public/data/changelog-index.json",
+    )
+    expect(getGitHubRawChangelogMarkdownUrl()).toBe(
+      "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/docs/docs/changelog.md",
+    )
   })
 
   it("maps extension language to docs locale path", () => {

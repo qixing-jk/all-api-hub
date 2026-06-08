@@ -83,3 +83,12 @@ export const getDocsChangelogUrl = (version?: string, language?: string) => {
   const anchorId = getChangelogAnchorId(version)
   return `${url}#${anchorId}`
 }
+
+export const getDocsChangelogIndexUrl = () =>
+  getDocsPageUrl("data/changelog-index.json")
+
+export const getGitHubRawChangelogIndexUrl = () =>
+  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/docs/docs/.vuepress/public/data/changelog-index.json"
+
+export const getGitHubRawChangelogMarkdownUrl = () =>
+  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/docs/docs/changelog.md"
