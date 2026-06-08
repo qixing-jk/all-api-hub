@@ -40,6 +40,7 @@ dist/
 /docs/docs/.vuepress/dist/
 /docs/docs/.vuepress/.cache/
 /docs/docs/.vuepress/.temp/
+/docs/docs/.vuepress/public/data/changelog-index.json
 
 # 其他可能的文档生成器特定忽略项 (例如 Docusaurus 的 build 目录)
 # /docs/build/

@@ -18,6 +18,10 @@ const scriptPath = fileURLToPath(import.meta.url).replace(
   /changelog-index\.test\.mjs$/,
   "changelog-index.mjs",
 )
+const docsPackagePath = fileURLToPath(import.meta.url).replace(
+  /scripts[\\/]changelog-index\.test\.mjs$/,
+  "package.json",
+)
 
 function createTempChangelogFixture(t, markdown = "## 3.44.0\n") {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "changelog-index-"))
@@ -170,4 +174,17 @@ test("CLI --check exits zero when the generated index is current", (t) => {
 
   assert.equal(result.status, 0)
   assert.match(result.stdout, /changelog-index\.json is up to date/)
+})
+
+test("docs:check does not require committed changelog index freshness", () => {
+  const packageJson = JSON.parse(fs.readFileSync(docsPackagePath, "utf8"))
+
+  assert.doesNotMatch(
+    packageJson.scripts["docs:check"],
+    /docs:check-changelog-index/,
+  )
+  assert.match(
+    packageJson.scripts["docs:build"],
+    /docs:generate-changelog-index/,
+  )
 })

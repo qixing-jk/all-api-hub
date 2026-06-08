@@ -11,13 +11,13 @@ import { server } from "~~/tests/msw/server"
 
 const changelogSourceUrls = vi.hoisted(() => ({
   docsIndex: "https://docs.example.test/data/changelog-index.json",
-  rawIndex: "https://raw.example.test/changelog-index.json",
+  ghPagesIndex: "https://raw.example.test/gh-pages/changelog-index.json",
   rawMarkdown: "https://raw.example.test/changelog.md",
 }))
 
 vi.mock("~/utils/navigation/docsLinks", () => ({
   getDocsChangelogIndexUrl: () => changelogSourceUrls.docsIndex,
-  getGitHubRawChangelogIndexUrl: () => changelogSourceUrls.rawIndex,
+  getGitHubPagesRawChangelogIndexUrl: () => changelogSourceUrls.ghPagesIndex,
   getGitHubRawChangelogMarkdownUrl: () => changelogSourceUrls.rawMarkdown,
 }))
 
@@ -196,10 +196,10 @@ describe("changelogIndex", () => {
     expect(capturedRequest?.signal).toBeInstanceOf(AbortSignal)
   })
 
-  it("falls back to the raw index when the docs index is unavailable", async () => {
+  it("falls back to the gh-pages raw index when the docs index is unavailable", async () => {
     let rawIndexRequests = 0
     useUnavailableSource(changelogSourceUrls.docsIndex)
-    useJsonSource(changelogSourceUrls.rawIndex, validIndex(["3.43.0"]), {
+    useJsonSource(changelogSourceUrls.ghPagesIndex, validIndex(["3.43.0"]), {
       onRequest: () => {
         rawIndexRequests += 1
       },
@@ -209,16 +209,16 @@ describe("changelogIndex", () => {
 
     expect(result).toEqual({
       ok: true,
-      source: "raw-index",
+      source: "gh-pages-index",
       versions: new Set(["3.43.0"]),
     })
     expect(rawIndexRequests).toBe(1)
   })
 
-  it("falls back to the raw index when docs index body parsing stalls", async () => {
+  it("falls back to the gh-pages raw index when docs index body parsing stalls", async () => {
     vi.useFakeTimers()
     useStalledSource(changelogSourceUrls.docsIndex)
-    useJsonSource(changelogSourceUrls.rawIndex, validIndex(["3.43.0"]))
+    useJsonSource(changelogSourceUrls.ghPagesIndex, validIndex(["3.43.0"]))
 
     const resultPromise = fetchFirstAvailableChangelogVersionSource()
 
@@ -229,14 +229,14 @@ describe("changelogIndex", () => {
 
     expect(result).toEqual({
       ok: true,
-      source: "raw-index",
+      source: "gh-pages-index",
       versions: new Set(["3.43.0"]),
     })
   })
 
   it("falls back to raw markdown when both index sources are unavailable", async () => {
     useUnavailableSource(changelogSourceUrls.docsIndex)
-    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.ghPagesIndex)
     useTextSource(changelogSourceUrls.rawMarkdown, "## 3.42.0")
 
     const result = await fetchFirstAvailableChangelogVersionSource()
@@ -251,7 +251,7 @@ describe("changelogIndex", () => {
   it("returns unavailable when raw markdown body parsing stalls", async () => {
     vi.useFakeTimers()
     useUnavailableSource(changelogSourceUrls.docsIndex)
-    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.ghPagesIndex)
     useStalledSource(changelogSourceUrls.rawMarkdown)
 
     const resultPromise = fetchFirstAvailableChangelogVersionSource()
@@ -295,7 +295,7 @@ describe("changelogIndex", () => {
 
   it("treats all changelog source failures as unavailable", async () => {
     useUnavailableSource(changelogSourceUrls.docsIndex)
-    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.ghPagesIndex)
     useUnavailableSource(changelogSourceUrls.rawMarkdown)
 
     await expect(fetchFirstAvailableChangelogVersionSource()).resolves.toEqual({
@@ -316,7 +316,7 @@ describe("changelogIndex", () => {
 
   it("falls back closed for rollbacks when all sources are unavailable", async () => {
     useUnavailableSource(changelogSourceUrls.docsIndex)
-    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.ghPagesIndex)
     useUnavailableSource(changelogSourceUrls.rawMarkdown)
 
     await expect(
@@ -329,7 +329,7 @@ describe("changelogIndex", () => {
 
   it("falls back closed for same-version checks when all sources are unavailable", async () => {
     useUnavailableSource(changelogSourceUrls.docsIndex)
-    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.ghPagesIndex)
     useUnavailableSource(changelogSourceUrls.rawMarkdown)
 
     await expect(
@@ -342,7 +342,7 @@ describe("changelogIndex", () => {
 
   it("falls back open for upgrades or unknown previous versions when all sources are unavailable", async () => {
     useUnavailableSource(changelogSourceUrls.docsIndex)
-    useUnavailableSource(changelogSourceUrls.rawIndex)
+    useUnavailableSource(changelogSourceUrls.ghPagesIndex)
     useUnavailableSource(changelogSourceUrls.rawMarkdown)
 
     await expect(

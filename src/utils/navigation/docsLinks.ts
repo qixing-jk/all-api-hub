@@ -9,6 +9,8 @@ const DOCS_TASK_NOTIFICATIONS_WECOM_ANCHOR = "wecom"
 const DOCS_TASK_NOTIFICATIONS_NTFY_ANCHOR = "ntfy"
 const GITHUB_RAW_DOCS_BASE_URL =
   "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/docs/docs"
+const GITHUB_PAGES_RAW_BASE_URL =
+  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/gh-pages"
 
 /**
  * Resolve the documentation homepage URL for a given language.
@@ -89,8 +91,8 @@ export const getDocsChangelogUrl = (version?: string, language?: string) => {
 export const getDocsChangelogIndexUrl = () =>
   getDocsPageUrl("data/changelog-index.json")
 
-export const getGitHubRawChangelogIndexUrl = () =>
-  `${GITHUB_RAW_DOCS_BASE_URL}/.vuepress/public/data/changelog-index.json`
+export const getGitHubPagesRawChangelogIndexUrl = () =>
+  `${GITHUB_PAGES_RAW_BASE_URL}/data/changelog-index.json`
 
 export const getGitHubRawChangelogMarkdownUrl = () =>
   `${GITHUB_RAW_DOCS_BASE_URL}/changelog.md`

@@ -16,7 +16,7 @@
     "docs:generate-changelog-index": "node scripts/changelog-index.mjs",
     "docs:check-changelog-index": "node scripts/changelog-index.mjs --check",
     "docs:test": "node --test scripts/*.test.mjs",
-    "docs:check": "pnpm run docs:test && pnpm run docs:check-links && pnpm run docs:check-changelog-index && pnpm run docs:build",
+    "docs:check": "pnpm run docs:test && pnpm run docs:check-links && pnpm run docs:build",
     "docs:update-package": "pnpm dlx vp-update"
   },
   "devDependencies": {

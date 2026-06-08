@@ -11,7 +11,7 @@ import {
   getDocsPageUrl,
   getDocsTaskNotificationsDingtalkUrl,
   getDocsTaskNotificationsNtfyUrl,
-  getGitHubRawChangelogIndexUrl,
+  getGitHubPagesRawChangelogIndexUrl,
   getGitHubRawChangelogMarkdownUrl,
 } from "~/utils/navigation/docsLinks"
 import { getDocsLocalePath } from "~/utils/navigation/docsLocale"
@@ -37,8 +37,8 @@ describe("docsLinks", () => {
     expect(getDocsChangelogIndexUrl()).toBe(
       getDocsPageUrl("data/changelog-index.json"),
     )
-    expect(getGitHubRawChangelogIndexUrl()).toBe(
-      "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/docs/docs/.vuepress/public/data/changelog-index.json",
+    expect(getGitHubPagesRawChangelogIndexUrl()).toBe(
+      "https://raw.githubusercontent.com/qixing-jk/all-api-hub/gh-pages/data/changelog-index.json",
     )
     expect(getGitHubRawChangelogMarkdownUrl()).toBe(
       "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/docs/docs/changelog.md",

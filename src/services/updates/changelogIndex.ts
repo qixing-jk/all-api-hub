@@ -1,6 +1,6 @@
 import {
   getDocsChangelogIndexUrl,
-  getGitHubRawChangelogIndexUrl,
+  getGitHubPagesRawChangelogIndexUrl,
   getGitHubRawChangelogMarkdownUrl,
 } from "~/utils/navigation/docsLinks"
 
@@ -14,7 +14,7 @@ const CHANGELOG_SOURCE_FETCH_TIMEOUT_MS = 2_000
 
 const CHANGELOG_VERSION_SOURCES = {
   DOCS_INDEX: "docs-index",
-  RAW_INDEX: "raw-index",
+  GH_PAGES_INDEX: "gh-pages-index",
   RAW_MARKDOWN: "raw-markdown",
 } as const
 
@@ -200,8 +200,8 @@ export async function fetchFirstAvailableChangelogVersionSource(): Promise<Chang
   }
 
   const rawIndex = await fetchIndexSource(
-    CHANGELOG_VERSION_SOURCES.RAW_INDEX,
-    getGitHubRawChangelogIndexUrl(),
+    CHANGELOG_VERSION_SOURCES.GH_PAGES_INDEX,
+    getGitHubPagesRawChangelogIndexUrl(),
   )
   if (rawIndex.ok) {
     return rawIndex
