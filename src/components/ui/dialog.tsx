@@ -6,6 +6,7 @@ import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import { t } from "~/utils/i18n/core"
 
+import { ToasterPortalHost } from "../toast/ToasterPortal"
 import { FloatingLayerProvider } from "./floating-layer"
 
 /**
@@ -78,6 +79,7 @@ function DialogContent({
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
+      <ToasterPortalHost />
       <FloatingLayerProvider layer="modal-contained">
         <DialogPrimitive.Content
           data-slot="dialog-content"

@@ -1,8 +1,10 @@
 import { XMarkIcon } from "@heroicons/react/24/outline"
 import type { CSSProperties } from "react"
+import { createPortal } from "react-dom"
 import toast, { ToastBar, Toaster } from "react-hot-toast"
 
 import { getThemeAwareToastStyles } from "~/components/toast/themeAwareToastStyles"
+import { useToasterPortalHost } from "~/components/toast/ToasterPortal"
 import { useTheme } from "~/contexts/ThemeContext"
 
 interface ThemeAwareToasterProps {
@@ -25,8 +27,9 @@ export const ThemeAwareToaster = ({
   containerStyle,
 }: ThemeAwareToasterProps) => {
   const { resolvedTheme } = useTheme()
+  const portalHost = useToasterPortalHost()
 
-  return (
+  const toaster = (
     <Toaster
       position={position}
       reverseOrder={reverseOrder}
@@ -78,4 +81,6 @@ export const ThemeAwareToaster = ({
       )}
     </Toaster>
   )
+
+  return portalHost ? createPortal(toaster, portalHost) : toaster
 }

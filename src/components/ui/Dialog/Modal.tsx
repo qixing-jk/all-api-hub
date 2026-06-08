@@ -6,6 +6,7 @@ import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import { t } from "~/utils/i18n/core"
 
+import { ToasterPortalHost } from "../../toast/ToasterPortal"
 import { FloatingLayerProvider } from "../floating-layer"
 
 type Size = "sm" | "md" | "lg"
@@ -94,6 +95,7 @@ export function Modal({
           />
         </Transition.Child>
 
+        <ToasterPortalHost />
         {floatingContent}
 
         <div className="fixed inset-0 flex items-center justify-center p-4">

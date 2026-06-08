@@ -2,7 +2,6 @@ import { InformationCircleIcon } from "@heroicons/react/24/outline"
 import { useEffect, useState, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { AIHUBMIX_API_ORIGIN } from "~/constants/siteType"
@@ -208,12 +207,6 @@ export default function AccountDialog({
         onClose={handlers.handleClose}
         size="lg"
         panelTestId={ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog}
-        floatingContent={
-          <ThemeAwareToaster
-            position="top-center"
-            containerStyle={{ zIndex: 75 }}
-          />
-        }
         header={<DialogHeader mode={mode} />}
         footer={
           <ActionButtons
