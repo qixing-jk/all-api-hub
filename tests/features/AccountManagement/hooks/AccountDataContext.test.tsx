@@ -2025,6 +2025,32 @@ describe("AccountDataContext sorting behavior", () => {
     )
   })
 
+  it("clears the active field sort without resetting the current sort direction", async () => {
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      sortField: DATA_TYPE_BALANCE,
+      sortOrder: "desc",
+    }
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().sortField).toBe(DATA_TYPE_BALANCE)
+      expect(getLatestCtx().sortOrder).toBe("desc")
+    })
+
+    act(() => {
+      getLatestCtx().clearSortConfig()
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().sortField).toBeNull()
+      expect(getLatestCtx().sortOrder).toBe("desc")
+    })
+
+    expect(mockUpdateSortConfig).toHaveBeenCalledWith(null, "desc")
+  })
+
   it("initializes created-time sorting to newest first and then toggles", async () => {
     const getLatestCtx = await renderAccountDataProvider()
 

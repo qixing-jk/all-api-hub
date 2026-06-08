@@ -360,6 +360,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     displayData,
     isInitialLoad,
     handleSort,
+    clearSortConfig,
     sortField,
     sortOrder,
     handleReorder,
@@ -1288,6 +1289,18 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
               <span className="text-[10px] font-medium sm:text-xs">
                 {t("common:total") + ": " + displayedResults.length}
               </span>
+              {sortField !== null && !inSearchMode ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 shrink-0 px-2 text-xs"
+                  onClick={clearSortConfig}
+                  aria-label={t("account:list.clearSort")}
+                >
+                  {t("account:list.clearSort")}
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant={isBulkMode ? "secondary" : "outline"}

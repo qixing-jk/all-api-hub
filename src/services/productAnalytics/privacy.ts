@@ -38,6 +38,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SITE_TYPES,
+  PRODUCT_ANALYTICS_SORT_FIELDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS,
   PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
@@ -509,7 +510,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   skip_reason: Object.values(PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS),
   source_managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   source_kind: Object.values(PRODUCT_ANALYTICS_SOURCE_KINDS),
-  sort_field: SORT_FIELDS,
+  sort_field: [...SORT_FIELDS, ...Object.values(PRODUCT_ANALYTICS_SORT_FIELDS)],
   sort_order: SORT_ORDERS,
   sponsor_action_kind: Object.values(PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS),
   sponsor_catalog_source: Object.values(

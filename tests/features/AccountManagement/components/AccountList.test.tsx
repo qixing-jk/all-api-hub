@@ -448,6 +448,7 @@ function createAccountDataContextValue(
     displayData: [enabledAlpha, disabledBeta, enabledGamma, unsyncedDelta],
     isInitialLoad: false,
     handleSort: vi.fn(),
+    clearSortConfig: vi.fn(),
     sortField: "name",
     sortOrder: "asc",
     handleReorder: vi.fn(),
@@ -568,6 +569,27 @@ describe("AccountList", () => {
         name: "account:list.sort account:list.header.createdAt",
       }),
     ).toBeInTheDocument()
+  })
+
+  it("shows a clear sort action when field sorting is active", async () => {
+    const user = userEvent.setup()
+    const clearSortConfig = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        clearSortConfig,
+        sortField: "name",
+        sortOrder: "asc",
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.clearSort" }),
+    )
+
+    expect(clearSortConfig).toHaveBeenCalledTimes(1)
   })
 
   it("auto-loads dnd during idle time after the first render settles", async () => {

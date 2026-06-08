@@ -120,6 +120,7 @@
       "refreshCashflow": "Nhấp để làm mới tiêu dùng hôm nay",
       "refreshIncome": "Nhấp để làm mới thu nhập hôm nay"
     },
+    "clearSort": "Xóa sắp xếp",
     "dragHandle": "Kéo để sắp xếp",
     "header": {
       "account": "Tài khoản",

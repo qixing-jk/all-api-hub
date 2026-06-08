@@ -120,6 +120,7 @@
       "refreshCashflow": "點擊重新整理今日消費",
       "refreshIncome": "點擊重新整理今日收入"
     },
+    "clearSort": "清除排序",
     "dragHandle": "拖動排序",
     "header": {
       "account": "帳號",

@@ -38,6 +38,7 @@ import {
 import { tagStorage } from "~/services/tags/tagStorage"
 import type {
   AccountStats,
+  ActiveSortField,
   CurrencyAmount,
   CurrencyAmountMap,
   DisplaySiteData,
@@ -189,7 +190,8 @@ interface AccountDataContextType {
     latestSyncTime?: number
   }>
   handleSort: (field: SortField) => void
-  sortField: SortField
+  clearSortConfig: () => void
+  sortField: ActiveSortField
   sortOrder: SortOrder
   isPinFeatureEnabled: boolean
   isManualSortFeatureEnabled: boolean
@@ -253,7 +255,7 @@ export const AccountDataProvider = ({
     totalAccounts: 0,
   })
   const [prevBalances, setPrevBalances] = useState<CurrencyAmountMap>({})
-  const [sortField, setSortField] = useState<SortField>(initialSortField)
+  const [sortField, setSortField] = useState<ActiveSortField>(initialSortField)
   const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder)
   const [detectedSiteAccounts, setDetectedSiteAccounts] = useState<
     SiteAccount[]
@@ -980,6 +982,11 @@ export const AccountDataProvider = ({
     [showTodayCashflow, sortField, sortOrder, updateSortConfig],
   )
 
+  const clearSortConfig = useCallback(() => {
+    setSortField(null)
+    void updateSortConfig(null, sortOrder)
+  }, [sortOrder, updateSortConfig])
+
   useEffect(() => {
     if (showTodayCashflow !== false) return
 
@@ -1340,6 +1347,7 @@ export const AccountDataProvider = ({
       handleRefresh,
       handleRefreshDisabledAccounts,
       handleSort,
+      clearSortConfig,
       sortField,
       sortOrder,
       isPinFeatureEnabled,
@@ -1379,6 +1387,7 @@ export const AccountDataProvider = ({
       handleRefresh,
       handleRefreshDisabledAccounts,
       handleSort,
+      clearSortConfig,
       sortField,
       sortOrder,
       isPinFeatureEnabled,

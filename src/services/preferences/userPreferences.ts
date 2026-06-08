@@ -25,7 +25,12 @@ import {
   patchTouchesSharedPreferences,
   restoreWebdavLocalOnlyPreferences,
 } from "~/services/preferences/webdavSharedPreferences"
-import { CurrencyType, DashboardTabType, SortField, SortOrder } from "~/types"
+import {
+  ActiveSortField,
+  CurrencyType,
+  DashboardTabType,
+  SortOrder,
+} from "~/types"
 import {
   AccountAutoRefresh,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
@@ -275,7 +280,7 @@ export interface UserPreferences {
   /**
    * 用户自定义排序字段
    */
-  sortField: SortField
+  sortField: ActiveSortField
   /**
    * 用户自定义排序顺序
    */
@@ -795,7 +800,7 @@ class UserPreferencesService {
    * Update sort field/order.
    */
   async updateSortConfig(
-    sortField: SortField,
+    sortField: ActiveSortField,
     sortOrder: SortOrder,
   ): Promise<boolean> {
     return this.savePreferences({ sortField, sortOrder })

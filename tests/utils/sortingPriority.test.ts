@@ -815,6 +815,47 @@ describe("createDynamicSortComparator", () => {
   })
 
   describe("USER_SORT_FIELD criterion - name", () => {
+    it("should skip user field sorting when no sort field is active", () => {
+      const matchedAccount = createDisplaySiteData({
+        id: "matched",
+        name: "Zulu",
+        balance: { USD: 1, CNY: 7 },
+      })
+      const unmatchedAccount = createDisplaySiteData({
+        id: "unmatched",
+        name: "Alpha",
+        balance: { USD: 100, CNY: 700 },
+      })
+
+      const config: SortingPriorityConfig = {
+        criteria: [
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 0,
+          },
+          {
+            id: SortingCriteriaType.MATCHED_OPEN_TABS,
+            enabled: true,
+            priority: 1,
+          },
+        ],
+        lastModified: Date.now(),
+      }
+
+      const comparator = createDynamicSortComparator(
+        config,
+        null,
+        null,
+        "USD",
+        "asc",
+        { matched: 5 },
+      )
+
+      expect(comparator(matchedAccount, unmatchedAccount)).toBeLessThan(0)
+      expect(comparator(unmatchedAccount, matchedAccount)).toBeGreaterThan(0)
+    })
+
     it("should sort by name in ascending order", () => {
       const accountA = createDisplaySiteData({ id: "a", name: "Alpha" })
       const accountB = createDisplaySiteData({ id: "b", name: "Beta" })

@@ -26,6 +26,7 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
+  PRODUCT_ANALYTICS_SORT_FIELDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS,
   PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
@@ -649,6 +650,23 @@ describe("product analytics privacy filtering", () => {
       auto_detect_enhanced_enabled: true,
       reminder_dismissed: true,
       task_notifications_balance_history_capture_task_enabled: false,
+    })
+  })
+
+  it("keeps the cleared sort sentinel in settings snapshots", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      {
+        setting_id: "display_preferences_snapshot",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        sort_field: PRODUCT_ANALYTICS_SORT_FIELDS.None,
+      },
+    )
+
+    expect(sanitized).toEqual({
+      setting_id: "display_preferences_snapshot",
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      sort_field: PRODUCT_ANALYTICS_SORT_FIELDS.None,
     })
   })
 

@@ -241,6 +241,14 @@ export const PRODUCT_ANALYTICS_STATUS_KINDS = {
 export type ProductAnalyticsStatusKind =
   (typeof PRODUCT_ANALYTICS_STATUS_KINDS)[keyof typeof PRODUCT_ANALYTICS_STATUS_KINDS]
 
+export const PRODUCT_ANALYTICS_SORT_FIELDS = {
+  None: "none",
+} as const
+
+export type ProductAnalyticsSortField =
+  | SortField
+  | (typeof PRODUCT_ANALYTICS_SORT_FIELDS)[keyof typeof PRODUCT_ANALYTICS_SORT_FIELDS]
+
 export const PRODUCT_ANALYTICS_TELEMETRY_SOURCES = {
   Models: "models",
   OpenAiBilling: "openaiBilling",
@@ -1003,7 +1011,7 @@ export type ProductAnalyticsEventPayloadMap = {
     open_changelog_on_update_enabled?: boolean
     active_tab?: DashboardTabType
     currency_type?: CurrencyType
-    sort_field?: SortField
+    sort_field?: ProductAnalyticsSortField
     sort_order?: SortOrder
     sorting_priority_configured?: boolean
     sorting_priority_customized?: boolean
@@ -1100,7 +1108,7 @@ export type ProductAnalyticsEventPayloadMap = {
     open_changelog_on_update_enabled?: boolean
     active_tab?: DashboardTabType
     currency_type?: CurrencyType
-    sort_field?: SortField
+    sort_field?: ProductAnalyticsSortField
     sort_order?: SortOrder
     sorting_priority_configured?: boolean
     sorting_priority_customized?: boolean

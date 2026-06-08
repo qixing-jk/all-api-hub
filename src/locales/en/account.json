@@ -129,6 +129,7 @@
       "refreshCashflow": "Click to refresh today's consumption",
       "refreshIncome": "Click to refresh today's income"
     },
+    "clearSort": "Clear sort",
     "dragHandle": "Drag to reorder",
     "header": {
       "account": "Account",

@@ -29,6 +29,7 @@ import {
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_SETTING_IDS,
+  PRODUCT_ANALYTICS_SORT_FIELDS,
   trackProductAnalyticsEvent,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsEventPayload,
@@ -256,7 +257,7 @@ function buildDisplayPreferencesSnapshot(
     active_tab: preferences.activeTab,
     currency_type: preferences.currencyType,
     show_today_cashflow_enabled: preferences.showTodayCashflow !== false,
-    sort_field: preferences.sortField,
+    sort_field: preferences.sortField ?? PRODUCT_ANALYTICS_SORT_FIELDS.None,
     sort_order: preferences.sortOrder,
     sorting_priority_configured: Boolean(sortingPriorityConfig),
     sorting_priority_customized: isSortingPriorityCustomized(

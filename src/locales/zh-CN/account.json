@@ -120,6 +120,7 @@
       "refreshCashflow": "点击刷新今日消费",
       "refreshIncome": "点击刷新今日收入"
     },
+    "clearSort": "清除排序",
     "dragHandle": "拖动排序",
     "header": {
       "account": "账号",

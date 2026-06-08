@@ -477,6 +477,17 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.showTodayCashflow).toBe(false)
   })
 
+  it("preserves a cleared active sort field from persisted preferences", async () => {
+    const preferences = clonePreferences()
+    preferences.sortField = null
+
+    await renderProvider(preferences)
+
+    expect((latestContext as any)?.sortField).toBeNull()
+    expect((latestContext as any)?.preferences.sortField).toBeNull()
+    expect(mockedUserPreferences.savePreferences).not.toHaveBeenCalled()
+  })
+
   it("falls back to default task notification preferences when they are missing", async () => {
     const preferences = clonePreferences()
     delete (preferences as Partial<UserPreferences>).taskNotifications

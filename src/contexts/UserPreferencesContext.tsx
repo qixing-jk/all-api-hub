@@ -56,9 +56,9 @@ import {
 import { sendSiteAnnouncementsMessage } from "~/services/siteAnnouncements/messaging"
 import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
 import type {
+  ActiveSortField,
   CurrencyType,
   DashboardTabType,
-  SortField,
   SortOrder,
 } from "~/types"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
@@ -243,7 +243,7 @@ interface UserPreferencesContextType {
   currencyType: CurrencyType
   showTodayCashflow: boolean
   sortingPriorityConfig: SortingPriorityConfig
-  sortField: SortField
+  sortField: ActiveSortField
   sortOrder: SortOrder
   autoRefresh: boolean
   refreshInterval: number
@@ -292,7 +292,7 @@ interface UserPreferencesContextType {
   updateCurrencyType: (currencyType: CurrencyType) => Promise<boolean>
   updateShowTodayCashflow: (enabled: boolean) => Promise<boolean>
   updateSortConfig: (
-    sortField: SortField,
+    sortField: ActiveSortField,
     sortOrder: SortOrder,
   ) => Promise<boolean>
   updateSortingPriorityConfig: (
@@ -848,7 +848,7 @@ export const UserPreferencesProvider = ({
   )
 
   const updateSortConfig = useCallback(
-    async (sortField: SortField, sortOrder: SortOrder) => {
+    async (sortField: ActiveSortField, sortOrder: SortOrder) => {
       const success = await userPreferences.updateSortConfig(
         sortField,
         sortOrder,
@@ -2025,7 +2025,10 @@ export const UserPreferencesProvider = ({
     activeTab: preferences?.activeTab || DATA_TYPE_CASHFLOW,
     currencyType: preferences?.currencyType || "USD",
     showTodayCashflow: preferences?.showTodayCashflow ?? true,
-    sortField: preferences?.sortField || UI_CONSTANTS.SORT.DEFAULT_FIELD,
+    sortField:
+      preferences?.sortField === undefined
+        ? UI_CONSTANTS.SORT.DEFAULT_FIELD
+        : preferences.sortField,
     sortOrder: preferences?.sortOrder || UI_CONSTANTS.SORT.DEFAULT_ORDER,
     sortingPriorityConfig:
       preferences?.sortingPriorityConfig || DEFAULT_SORTING_PRIORITY_CONFIG,

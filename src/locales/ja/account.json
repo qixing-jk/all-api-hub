@@ -120,6 +120,7 @@
       "refreshCashflow": "クリックして本日の消費を更新",
       "refreshIncome": "クリックして本日の収入を更新"
     },
+    "clearSort": "並び替えを解除",
     "dragHandle": "ドラッグして並び替え",
     "header": {
       "account": "アカウント",

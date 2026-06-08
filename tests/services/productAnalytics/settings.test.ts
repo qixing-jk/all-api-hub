@@ -12,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_SETTING_IDS,
+  PRODUCT_ANALYTICS_SORT_FIELDS,
   trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
 import {
@@ -491,6 +492,32 @@ describe("settings product analytics snapshots", () => {
     expect(snapshot).not.toHaveProperty("setting_id")
     expect(JSON.stringify(snapshot)).not.toContain("private")
     expect(JSON.stringify(snapshot)).not.toContain("https://")
+  })
+
+  it("reports cleared display sort as none in settings snapshots", () => {
+    const preferences = createPreferences({ sortField: null })
+
+    const [displaySnapshot] = buildSettingsSnapshotEvents(
+      preferences,
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      { sortField: null },
+    )
+    const aggregateSnapshot = buildAggregateSettingsSnapshotEvent(
+      preferences,
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    )
+
+    expect(displaySnapshot).toEqual(
+      expect.objectContaining({
+        setting_id: "display_preferences_snapshot",
+        sort_field: PRODUCT_ANALYTICS_SORT_FIELDS.None,
+      }),
+    )
+    expect(aggregateSnapshot).toEqual(
+      expect.objectContaining({
+        sort_field: PRODUCT_ANALYTICS_SORT_FIELDS.None,
+      }),
+    )
   })
 
   it("tracks only affected snapshots for a preference patch", () => {

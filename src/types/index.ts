@@ -400,6 +400,7 @@ export const SORT_FIELDS = [
   DATA_TYPE_CREATED_AT,
 ] as const
 export type SortField = (typeof SORT_FIELDS)[number]
+export type ActiveSortField = SortField | null
 
 export const SORT_ORDERS = ["asc", "desc"] as const
 export type SortOrder = (typeof SORT_ORDERS)[number]

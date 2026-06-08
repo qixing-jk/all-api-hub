@@ -679,6 +679,16 @@ describe("preferencesMigration", () => {
       expect(result.language).toBe("zh-CN")
     })
 
+    it("preserves a cleared active sort field during migration", () => {
+      const prefs = createV0Preferences({
+        sortField: null,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.sortField).toBeNull()
+    })
+
     it("canonicalizes legacy zh_CN language values during migration", () => {
       const prefs = createV0Preferences({
         language: "zh_CN",

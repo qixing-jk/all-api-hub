@@ -6,6 +6,7 @@ import {
 } from "~/constants"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import type {
+  ActiveSortField,
   CurrencyType,
   DisplaySiteData,
   SiteAccount,
@@ -144,7 +145,7 @@ function compareByUserSortField(
  * @param b Second display entry for comparison.
  * @param criteriaId Sorting criteria identifier.
  * @param detectedAccount Account currently detected in browser context.
- * @param userSortField Field selected by user for tie-breaking.
+ * @param userSortField Field selected by user for tie-breaking, or null when field sorting is cleared.
  * @param currencyType Currency type referenced by balance/consumption fields.
  * @param sortOrder Sort direction (`asc` or `desc`).
  * @param matchedAccountScores Map of account IDs to open-tab match scores.
@@ -156,7 +157,7 @@ function applySortingCriteria(
   b: DisplaySiteData,
   criteriaId: SortingCriteriaType,
   detectedAccount: SiteAccount | null,
-  userSortField: SortField,
+  userSortField: ActiveSortField,
   currencyType: CurrencyType,
   sortOrder: "asc" | "desc",
   matchedAccountScores: Record<string, number>,
@@ -248,6 +249,7 @@ function applySortingCriteria(
     } // Higher score = higher priority
 
     case SortingCriteriaType.USER_SORT_FIELD:
+      if (userSortField === null) return 0
       return compareByUserSortField(
         a,
         b,
@@ -277,7 +279,7 @@ function applySortingCriteria(
  * Creates a dynamic comparator function for sorting site data based on a data-only configuration.
  * @param config Sorting priority configuration containing data-only fields.
  * @param detectedAccount Currently detected site account, used for 'current_site' priority.
- * @param userSortField Field selected by the user for sorting ('name', 'balance', 'consumption', 'income').
+ * @param userSortField Field selected by the user for sorting, or null when field sorting is cleared.
  * @param currencyType Currency used for balance/consumption/income comparisons.
  * @param sortOrder Sort order ('asc' or 'desc').
  * @param matchedAccountScores Map of account IDs to matching scores from open tabs.
@@ -288,7 +290,7 @@ function applySortingCriteria(
 export function createDynamicSortComparator(
   config: SortingPriorityConfig,
   detectedAccount: SiteAccount | null,
-  userSortField: SortField,
+  userSortField: ActiveSortField,
   currencyType: CurrencyType,
   sortOrder: "asc" | "desc",
   matchedAccountScores: Record<string, number> = {},
