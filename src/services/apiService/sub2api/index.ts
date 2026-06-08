@@ -791,6 +791,7 @@ export async function fetchCurrentUser(
 /**
  * Sub2API compatibility overrides for shared account-detection callers.
  *
+ * Source: https://github.com/Wei-Shaw/sub2api
  * Upstream identity lives at `/api/v1/auth/me` behind bearer JWT auth.
  * This adapter intentionally does not fall back to common `/api/user/self`
  * or `/api/user/token` semantics.
@@ -825,7 +826,12 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
     id: String(identity.userId),
     username: identity.username,
     access_token: accessToken,
-    user: data as UserInfo,
+    user: {
+      ...(data as Record<string, unknown>),
+      id: String(identity.userId),
+      username: identity.username,
+      access_token: accessToken,
+    } as UserInfo,
   }
 }
 

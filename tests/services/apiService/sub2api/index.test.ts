@@ -1175,8 +1175,9 @@ describe("apiService sub2api exported operations", () => {
       username: "alice",
       access_token: "jwt-token",
       user: {
-        id: 12,
+        id: "12",
         username: "alice",
+        access_token: "jwt-token",
         email: "alice@example.com",
         balance: "1.5",
       },
@@ -1277,6 +1278,53 @@ describe("apiService sub2api exported operations", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    nowSpy.mockRestore()
+  })
+
+  it("getOrCreateAccessToken falls back to browser-session re-sync when proactive refresh fails", async () => {
+    const now = 1_700_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+    const fetchMock = vi.fn().mockRejectedValue(new Error("refresh failed"))
+    vi.stubGlobal("fetch", fetchMock as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "resynced-jwt",
+      source: "existing_tab",
+    })
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 12,
+        username: "alice",
+        email: "alice@example.com",
+        balance: "1.5",
+      },
+    } as any)
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "expired-jwt",
+          refreshToken: "stored-refresh",
+          tokenExpiresAt: now - 1,
+        },
+      }),
+    ).resolves.toEqual({
+      username: "alice",
+      access_token: "resynced-jwt",
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      "https://sub2.example.com",
+    )
+    expect((vi.mocked(fetchApi).mock.calls[0]?.[0] as any)?.auth).toMatchObject(
+      {
+        accessToken: "resynced-jwt",
+      },
+    )
     nowSpy.mockRestore()
   })
 
@@ -1419,6 +1467,68 @@ describe("apiService sub2api exported operations", () => {
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       "https://sub2.example.com",
     )
+  })
+
+  it("getOrCreateAccessToken returns login-required when re-sync is unavailable", async () => {
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce(null)
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "",
+        },
+      }),
+    ).rejects.toMatchObject({
+      message: "messages:sub2api.loginRequired",
+      code: API_ERROR_CODES.HTTP_401,
+    })
+
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      "https://sub2.example.com",
+    )
+  })
+
+  it("getOrCreateAccessToken converts 401 after re-sync into login-required", async () => {
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "resynced-jwt",
+      source: "existing_tab",
+    })
+    vi.mocked(fetchApi).mockRejectedValueOnce(
+      new ApiError("still unauthorized", 401, "/api/v1/auth/me"),
+    )
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "",
+        },
+      }),
+    ).rejects.toMatchObject({
+      message: "messages:sub2api.loginRequired",
+      code: API_ERROR_CODES.HTTP_401,
+    })
+  })
+
+  it("getOrCreateAccessToken preserves non-auth errors after re-sync retry", async () => {
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "resynced-jwt",
+      source: "existing_tab",
+    })
+    vi.mocked(fetchApi).mockRejectedValueOnce(new Error("server exploded"))
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "",
+        },
+      }),
+    ).rejects.toThrow("server exploded")
   })
 
   it("fetches account data with check-in detection forcibly disabled", async () => {
