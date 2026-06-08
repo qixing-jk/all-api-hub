@@ -1447,6 +1447,31 @@ describe("createDynamicSortComparator", () => {
   })
 
   describe("Complex sorting scenarios", () => {
+    it("should let matched open tabs outrank the user sort field by default", () => {
+      const matchedAccount = createDisplaySiteData({
+        id: "matched",
+        name: "Zulu",
+        balance: { USD: 1, CNY: 7 },
+      })
+      const unmatchedAccount = createDisplaySiteData({
+        id: "unmatched",
+        name: "Alpha",
+        balance: { USD: 100, CNY: 700 },
+      })
+
+      const comparator = createDynamicSortComparator(
+        DEFAULT_SORTING_PRIORITY_CONFIG,
+        null,
+        "name",
+        "USD",
+        "asc",
+        { matched: 5 },
+      )
+
+      expect(comparator(matchedAccount, unmatchedAccount)).toBeLessThan(0)
+      expect(comparator(unmatchedAccount, matchedAccount)).toBeGreaterThan(0)
+    })
+
     it("should apply default sorting priority correctly", () => {
       const account1 = createDisplaySiteData({
         id: "account-1",

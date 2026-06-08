@@ -93,6 +93,27 @@ describe("sortingConfigMigration", () => {
       expect(result).toBe(true)
     })
 
+    it("returns true when USER_SORT_FIELD still precedes MATCHED_OPEN_TABS", () => {
+      const config = {
+        ...DEFAULT_SORTING_PRIORITY_CONFIG,
+        criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((criterion) => {
+          if (criterion.id === SortingCriteriaType.USER_SORT_FIELD) {
+            return { ...criterion, priority: 3 }
+          }
+          if (criterion.id === SortingCriteriaType.MATCHED_OPEN_TABS) {
+            return { ...criterion, priority: 4 }
+          }
+          return criterion.priority === 3
+            ? { ...criterion, priority: 5 }
+            : criterion
+        }),
+      }
+
+      const result = needsSortingConfigMigration(config)
+
+      expect(result).toBe(true)
+    })
+
     it("returns true for custom user order that still keeps MANUAL_ORDER ahead of USER_SORT_FIELD", () => {
       const config = {
         ...DEFAULT_SORTING_PRIORITY_CONFIG,
@@ -230,10 +251,10 @@ describe("sortingConfigMigration", () => {
       const result = migrateSortingConfig(config)
       const ids = result.criteria.map((criterion) => criterion.id)
 
-      expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(3)
-      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(4)
-      expect(ids.indexOf(SortingCriteriaType.CHECK_IN_REQUIREMENT)).toBe(5)
-      expect(ids.indexOf(SortingCriteriaType.MATCHED_OPEN_TABS)).toBe(6)
+      expect(ids.indexOf(SortingCriteriaType.MATCHED_OPEN_TABS)).toBe(3)
+      expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(4)
+      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(5)
+      expect(ids.indexOf(SortingCriteriaType.CHECK_IN_REQUIREMENT)).toBe(6)
       expect(ids.indexOf(SortingCriteriaType.HEALTH_STATUS)).toBe(7)
       expect(ids.indexOf(SortingCriteriaType.CUSTOM_CHECK_IN_URL)).toBe(8)
       expect(ids.indexOf(SortingCriteriaType.CUSTOM_REDEEM_URL)).toBe(9)
@@ -288,8 +309,9 @@ describe("sortingConfigMigration", () => {
       const ids = result.criteria.map((criterion) => criterion.id)
 
       expect(ids.indexOf(SortingCriteriaType.PINNED)).toBe(2)
-      expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(3)
-      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(4)
+      expect(ids.indexOf(SortingCriteriaType.MATCHED_OPEN_TABS)).toBe(3)
+      expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(4)
+      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(5)
     })
 
     it("adds PINNED criterion when missing", () => {
@@ -541,7 +563,7 @@ describe("sortingConfigMigration", () => {
       expect(healthStatus?.enabled).toBe(true)
     })
 
-    it("places DISABLED_ACCOUNT, CURRENT_SITE, PINNED, USER_SORT_FIELD, and MANUAL_ORDER at the top in that order", () => {
+    it("places DISABLED_ACCOUNT, CURRENT_SITE, PINNED, MATCHED_OPEN_TABS, USER_SORT_FIELD, and MANUAL_ORDER at the top in that order", () => {
       const config = {
         criteria: [
           {
@@ -565,8 +587,9 @@ describe("sortingConfigMigration", () => {
       expect(ids.indexOf(SortingCriteriaType.DISABLED_ACCOUNT)).toBe(0)
       expect(ids.indexOf(SortingCriteriaType.CURRENT_SITE)).toBe(1)
       expect(ids.indexOf(SortingCriteriaType.PINNED)).toBe(2)
-      expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(3)
-      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(4)
+      expect(ids.indexOf(SortingCriteriaType.MATCHED_OPEN_TABS)).toBe(3)
+      expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(4)
+      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(5)
     })
   })
 })

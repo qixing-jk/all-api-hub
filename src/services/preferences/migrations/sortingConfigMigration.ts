@@ -16,13 +16,13 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("SortingConfigMigration")
 
 /**
- * Detects configs that still prioritize MANUAL_ORDER ahead of USER_SORT_FIELD.
+ * Detects configs that still use an older canonical sorting priority.
  *
  * This is intentionally broad: v18 treats the new canonical order as
  * authoritative and upgrades all older layouts to it, even if the user had
  * customized this relative ordering before.
  */
-function hasLegacyManualOrderPriority(
+function hasLegacySortingPriority(
   config: SortingPriorityConfig | undefined,
 ): boolean {
   if (!config) return true
@@ -33,12 +33,18 @@ function hasLegacyManualOrderPriority(
   const userSortField = config.criteria.find(
     (criterion) => criterion.id === SortingCriteriaType.USER_SORT_FIELD,
   )
+  const matchedOpenTabs = config.criteria.find(
+    (criterion) => criterion.id === SortingCriteriaType.MATCHED_OPEN_TABS,
+  )
 
-  if (!manualOrder || !userSortField) {
+  if (!manualOrder || !userSortField || !matchedOpenTabs) {
     return true
   }
 
-  return manualOrder.priority < userSortField.priority
+  return (
+    manualOrder.priority < userSortField.priority ||
+    userSortField.priority < matchedOpenTabs.priority
+  )
 }
 
 /**
@@ -52,7 +58,7 @@ export function needsSortingConfigMigration(
   const dst = new Set(DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((c) => c.id))
   if (src.size !== dst.size) return true
   for (const id of dst) if (!src.has(id)) return true
-  if (hasLegacyManualOrderPriority(config)) return true
+  if (hasLegacySortingPriority(config)) return true
   return false
 }
 
@@ -161,7 +167,7 @@ export function migrateSortingConfig(
     })
   }
 
-  if (!modified && !hasLegacyManualOrderPriority(config)) {
+  if (!modified && !hasLegacySortingPriority(config)) {
     return config
   }
 
@@ -176,12 +182,14 @@ export function migrateSortingConfig(
             return 0
           case SortingCriteriaType.PINNED:
             return 1
-          case SortingCriteriaType.USER_SORT_FIELD:
+          case SortingCriteriaType.MATCHED_OPEN_TABS:
             return 2
-          case SortingCriteriaType.MANUAL_ORDER:
+          case SortingCriteriaType.USER_SORT_FIELD:
             return 3
-          default:
+          case SortingCriteriaType.MANUAL_ORDER:
             return 4
+          default:
+            return 5
         }
       }
 

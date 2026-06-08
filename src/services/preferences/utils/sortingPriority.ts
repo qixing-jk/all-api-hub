@@ -39,22 +39,22 @@ export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
       priority: 2,
     },
     {
-      id: SortingCriteriaType.USER_SORT_FIELD,
+      id: SortingCriteriaType.MATCHED_OPEN_TABS,
       enabled: true,
       priority: 3,
     },
     {
-      id: SortingCriteriaType.MANUAL_ORDER,
+      id: SortingCriteriaType.USER_SORT_FIELD,
       enabled: true,
       priority: 4,
     },
     {
-      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
+      id: SortingCriteriaType.MANUAL_ORDER,
       enabled: true,
       priority: 5,
     },
     {
-      id: SortingCriteriaType.MATCHED_OPEN_TABS,
+      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
       enabled: true,
       priority: 6,
     },
