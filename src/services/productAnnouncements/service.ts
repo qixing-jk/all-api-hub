@@ -16,7 +16,7 @@ import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import {
   createAlarm,
   getAlarm,
-  getManifest,
+  getExtensionVersion,
   onAlarm,
 } from "~/utils/browser/browserApi"
 import { isDevelopmentMode } from "~/utils/core/environment"
@@ -137,7 +137,7 @@ class ProductAnnouncementService {
   ): Promise<ProductAnnouncementRuntimeState> {
     const state = await productAnnouncementStorage.getState()
     const currentVersion =
-      options.currentVersion?.trim() || getManifest().version || "0.0.0"
+      options.currentVersion?.trim() || getExtensionVersion()
     const now = options.now ?? Date.now()
     const normalizeOptions = {
       currentVersion,
@@ -219,7 +219,7 @@ class ProductAnnouncementService {
       }
 
       const normalized = normalizeProductAnnouncementFeed(feed, {
-        currentVersion: getManifest().version || "0.0.0",
+        currentVersion: getExtensionVersion(),
         locale: "zh-CN",
         now,
         dismissed: {},

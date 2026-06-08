@@ -5,7 +5,7 @@ import { Badge } from "~/components/ui"
 import { useReleaseUpdateStatus } from "~/contexts/ReleaseUpdateStatusContext"
 import { cn } from "~/lib/utils"
 import { hasAvailableReleaseUpdate } from "~/services/updates/presentation"
-import { getManifest } from "~/utils/browser/browserApi"
+import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { getDocsChangelogUrl } from "~/utils/navigation/docsLinks"
 
 export type VersionBadgeProps = {
@@ -35,7 +35,7 @@ export function VersionBadge({
   variant = "secondary",
   className,
 }: VersionBadgeProps) {
-  const { version } = getManifest()
+  const version = getExtensionVersion("")
   const { t } = useTranslation("settings")
   const { status } = useReleaseUpdateStatus()
   if (!version) return null

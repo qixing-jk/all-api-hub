@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
-import { getManifest } from "~/utils/browser/browserApi"
+import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { openPermissionsOnboardingPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -26,6 +26,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 
   return {
     ...actual,
+    getExtensionVersion: vi.fn(() => ""),
     getManifest: vi.fn(() => ({
       manifest_version: 3,
       optional_permissions: [],
@@ -43,7 +44,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 })
 
 const mockedUseUpdateLogDialogContext = vi.mocked(useUpdateLogDialogContext)
-const mockedGetManifest = vi.mocked(getManifest)
+const mockedGetExtensionVersion = vi.mocked(getExtensionVersion)
 const mockedOpenPermissionsOnboardingPage = vi.mocked(
   openPermissionsOnboardingPage,
 )
@@ -57,11 +58,7 @@ describe("DevDialogDebugMenu", () => {
       openDialog: vi.fn(),
       closeDialog: vi.fn(),
     })
-    mockedGetManifest.mockReturnValue({
-      manifest_version: 3,
-      optional_permissions: [],
-      version: "3.37.0",
-    } as any)
+    mockedGetExtensionVersion.mockReturnValue("3.37.0")
     mockedOpenPermissionsOnboardingPage.mockResolvedValue(undefined)
     vi.spyOn(changelogOnUpdateState, "setPendingVersion").mockResolvedValue(
       undefined,

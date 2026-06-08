@@ -12,6 +12,7 @@ const storage = new Storage({ area: "local" })
 const browserApiMocks = vi.hoisted(() => ({
   createAlarm: vi.fn(),
   getAlarm: vi.fn(),
+  getExtensionVersion: vi.fn(),
   getManifest: vi.fn(),
   onAlarm: vi.fn(),
 }))
@@ -67,6 +68,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     ...actual,
     createAlarm: browserApiMocks.createAlarm,
     getAlarm: browserApiMocks.getAlarm,
+    getExtensionVersion: browserApiMocks.getExtensionVersion,
     getManifest: browserApiMocks.getManifest,
     onAlarm: browserApiMocks.onAlarm,
   }
@@ -100,6 +102,7 @@ describe("product announcement service", () => {
       name: "All API Hub",
       version: "3.44.0",
     })
+    browserApiMocks.getExtensionVersion.mockReturnValue("3.44.0")
     browserApiMocks.onAlarm.mockReturnValue(() => {})
     await productAnnouncementStorage.setState({
       schemaVersion: 1,

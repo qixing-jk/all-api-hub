@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-named-as-default
 import posthog, { type Properties } from "posthog-js/dist/module.no-external"
 
-import { getManifest } from "~/utils/browser/browserApi"
+import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { detectBrowserFamily } from "~/utils/browser/userAgent"
 import { isDevBuild } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
@@ -87,7 +87,7 @@ function resolveLanguage(): string {
  */
 function buildSharedContext() {
   return {
-    app_version: getManifest().version ?? "unknown",
+    app_version: getExtensionVersion("unknown"),
     browser_family: detectBrowserFamily(),
     ui_language: resolveLanguage(),
   }

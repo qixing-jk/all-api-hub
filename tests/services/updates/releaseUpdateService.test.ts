@@ -6,6 +6,7 @@ import { STORAGE_KEYS } from "~/services/core/storageKeys"
 const {
   createAlarmMock,
   getAlarmMock,
+  getExtensionVersionMock,
   getExtensionUrlMock,
   getManagementSelfMock,
   getManifestMock,
@@ -16,6 +17,7 @@ const {
 } = vi.hoisted(() => ({
   createAlarmMock: vi.fn(),
   getAlarmMock: vi.fn(),
+  getExtensionVersionMock: vi.fn(() => "3.32.0"),
   getExtensionUrlMock: vi.fn((path: string) =>
     (globalThis as any).browser.runtime.getURL(path),
   ),
@@ -61,6 +63,7 @@ vi.mock("~/services/core/storageWriteLock", () => ({
 vi.mock("~/utils/browser/browserApi", () => ({
   createAlarm: createAlarmMock,
   getAlarm: getAlarmMock,
+  getExtensionVersion: getExtensionVersionMock,
   getExtensionURL: getExtensionUrlMock,
   getManagementSelf: getManagementSelfMock,
   getManifest: getManifestMock,

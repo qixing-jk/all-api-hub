@@ -25,6 +25,7 @@ import {
   getBrowserApiCapabilities,
   getBrowserI18nMessage,
   getExtensionURL,
+  getExtensionVersion,
   getManagementSelf,
   getManifest,
   getManifestVersion,
@@ -1288,6 +1289,28 @@ describe("browserApi window and manifest helpers", () => {
       optional_permissions: [],
     })
     expect(getManifestVersion()).toBe(3)
+  })
+
+  it("returns the trimmed runtime extension version", () => {
+    ;(globalThis as any).browser.runtime.getManifest = vi.fn(() => ({
+      manifest_version: 3,
+      name: "Test",
+      version: " 1.2.3 ",
+      optional_permissions: [],
+    }))
+
+    expect(getExtensionVersion()).toBe("1.2.3")
+  })
+
+  it("returns a custom extension version fallback when the runtime version is blank", () => {
+    ;(globalThis as any).browser.runtime.getManifest = vi.fn(() => ({
+      manifest_version: 3,
+      name: "Test",
+      version: " ",
+      optional_permissions: [],
+    }))
+
+    expect(getExtensionVersion("unknown")).toBe("unknown")
   })
 
   it("delegates extension reload to browser.runtime.reload when available", () => {

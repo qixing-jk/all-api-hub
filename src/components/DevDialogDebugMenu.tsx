@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
-import { getManifest } from "~/utils/browser/browserApi"
+import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -32,7 +32,7 @@ function DevDialogDebugMenuContent() {
 
   const handleTriggerUpdateLog = useCallback(async () => {
     try {
-      const { version } = getManifest()
+      const version = getExtensionVersion("")
       if (!version) return
 
       await changelogOnUpdateState.setPendingVersion(version)

@@ -1203,6 +1203,13 @@ export function getManifest(): browser._manifest.WebExtensionManifest {
 }
 
 /**
+ * Returns the current packaged extension version from the runtime manifest.
+ */
+export function getExtensionVersion(fallback = "0.0.0"): string {
+  return getManifest().version?.trim() || fallback
+}
+
+/**
  * Convenience helper returning the manifest_version number from runtime manifest.
  * Falls back to {@link getManifest} when the runtime manifest cannot be read.
  */

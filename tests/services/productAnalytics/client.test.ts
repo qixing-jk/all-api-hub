@@ -12,7 +12,7 @@ import {
 const {
   posthogMocks,
   preferenceMocks,
-  getManifestMock,
+  getExtensionVersionMock,
   i18nCoreMock,
   mockIsDevBuild,
   mockLoggerDebug,
@@ -28,7 +28,7 @@ const {
     getAnonymousIdIfEnabled: vi.fn(),
     withAnonymousIdIfEnabled: vi.fn(),
   },
-  getManifestMock: vi.fn(() => ({ version: "3.37.0" })),
+  getExtensionVersionMock: vi.fn(() => "3.37.0"),
   i18nCoreMock: {
     resolvedLanguage: "en" as string | undefined,
     language: "en",
@@ -46,7 +46,7 @@ vi.mock("~/services/productAnalytics/preferences", () => ({
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({
-  getManifest: getManifestMock,
+  getExtensionVersion: getExtensionVersionMock,
 }))
 
 vi.mock("~/utils/core/environment", () => ({
@@ -89,7 +89,7 @@ describe("productAnalyticsClient", () => {
         await work("analytics-123"),
     )
     posthogMocks.getFeatureFlagPayload.mockReturnValue(null)
-    getManifestMock.mockReturnValue({ version: "3.37.0" })
+    getExtensionVersionMock.mockReturnValue("3.37.0")
     i18nCoreMock.resolvedLanguage = "en"
     i18nCoreMock.language = "en"
     mockIsDevBuild.mockReturnValue(false)

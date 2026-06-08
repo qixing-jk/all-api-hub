@@ -8,8 +8,8 @@ import {
   createAlarm,
   getAlarm,
   getExtensionURL,
+  getExtensionVersion,
   getManagementSelf,
-  getManifest,
   getRuntimeId,
   hasAlarmsAPI,
   onAlarm,
@@ -308,7 +308,7 @@ async function detectInstallEligibility(): Promise<DetectInstallEligibilityResul
  * Read the packaged extension version from the runtime manifest.
  */
 function getCurrentManifestVersion(): string {
-  return getManifest().version?.trim() || "0.0.0"
+  return getExtensionVersion()
 }
 
 /**

@@ -28,6 +28,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
+    getExtensionVersion: vi.fn(() => "0.0.0"),
     getManifest: vi.fn(() => ({
       manifest_version: 3,
       version: "0.0.0",
@@ -53,10 +54,10 @@ vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
 
 describe("VersionBadge", () => {
   it("renders current version and links to changelog", async () => {
-    const { getManifest } = await import("~/utils/browser/browserApi")
+    const { getExtensionVersion } = await import("~/utils/browser/browserApi")
     const { getDocsChangelogUrl } = await import("~/utils/navigation/docsLinks")
 
-    vi.mocked(getManifest).mockReturnValue({ version: "1.2.3" } as any)
+    vi.mocked(getExtensionVersion).mockReturnValue("1.2.3")
     vi.mocked(getDocsChangelogUrl).mockReturnValue(
       "https://example.com/changelog.html#_1-2-3",
     )
@@ -73,9 +74,9 @@ describe("VersionBadge", () => {
   })
 
   it("renders nothing when version is missing", async () => {
-    const { getManifest } = await import("~/utils/browser/browserApi")
+    const { getExtensionVersion } = await import("~/utils/browser/browserApi")
 
-    vi.mocked(getManifest).mockReturnValue({} as any)
+    vi.mocked(getExtensionVersion).mockReturnValue("")
 
     render(<VersionBadge />, { withReleaseUpdateStatusProvider: false })
 
@@ -83,12 +84,12 @@ describe("VersionBadge", () => {
   })
 
   it("links to the latest release and shows a marker when an update is available", async () => {
-    const { getManifest } = await import("~/utils/browser/browserApi")
+    const { getExtensionVersion } = await import("~/utils/browser/browserApi")
     const { useReleaseUpdateStatus } = await import(
       "~/contexts/ReleaseUpdateStatusContext"
     )
 
-    vi.mocked(getManifest).mockReturnValue({ version: "1.2.3" } as any)
+    vi.mocked(getExtensionVersion).mockReturnValue("1.2.3")
     vi.mocked(useReleaseUpdateStatus).mockReturnValue({
       status: {
         eligible: true,
@@ -119,13 +120,13 @@ describe("VersionBadge", () => {
   })
 
   it("uses the translated aria label while keeping the visible version compact", async () => {
-    const { getManifest } = await import("~/utils/browser/browserApi")
+    const { getExtensionVersion } = await import("~/utils/browser/browserApi")
     const { getDocsChangelogUrl } = await import("~/utils/navigation/docsLinks")
     const { useReleaseUpdateStatus } = await import(
       "~/contexts/ReleaseUpdateStatusContext"
     )
 
-    vi.mocked(getManifest).mockReturnValue({ version: "2.0.0" } as any)
+    vi.mocked(getExtensionVersion).mockReturnValue("2.0.0")
     vi.mocked(getDocsChangelogUrl).mockReturnValue(
       "https://example.com/changelog.html#_2-0-0",
     )
