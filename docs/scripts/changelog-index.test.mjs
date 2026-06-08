@@ -155,3 +155,19 @@ test("CLI --check exits non-zero when the generated index is missing", (t) => {
   assert.equal(result.status, 1)
   assert.match(result.stderr, /changelog-index\.json is out of date/)
 })
+
+test("CLI --check exits zero when the generated index is current", (t) => {
+  const {
+    changelogPath,
+    outputPath,
+    scriptPath: tempScriptPath,
+  } = createTempCliFixture(t)
+  writeChangelogIndex({ changelogPath, outputPath })
+
+  const result = spawnSync(process.execPath, [tempScriptPath, "--check"], {
+    encoding: "utf8",
+  })
+
+  assert.equal(result.status, 0)
+  assert.match(result.stdout, /changelog-index\.json is up to date/)
+})
