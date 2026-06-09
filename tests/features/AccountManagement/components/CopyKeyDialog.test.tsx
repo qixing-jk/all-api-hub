@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
@@ -110,7 +111,7 @@ const AIHUBMIX_ACCOUNT = {
   ...ACCOUNT,
   id: "aihubmix-1",
   name: "AIHubMix",
-  siteType: "AIHubMix",
+  siteType: SITE_TYPES.AIHUBMIX,
   baseUrl: "https://aihubmix.com",
 }
 

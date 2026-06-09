@@ -231,6 +231,35 @@ describe("apiService sub2api key management service", () => {
     expect(fetchApiMock.mock.calls[0]?.[1]?.endpoint).toBe("/api/v1/keys/1")
   })
 
+  it("resolves masked inventory keys from the Sub2API key detail endpoint", async () => {
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 1,
+        user_id: 1,
+        key: "sub2api-detail-full-secret",
+        name: "demo key",
+        status: "active",
+        quota: 1.5,
+        quota_used: 0,
+        created_at: "2026-03-06T00:00:00.000Z",
+        updated_at: "2026-03-06T00:00:00.000Z",
+        expires_at: null,
+      },
+    })
+
+    await expect(
+      resolveApiTokenKey(createRequest(), {
+        id: 1,
+        key: "sk-still********masked",
+      }),
+    ).resolves.toBe("sub2api-detail-full-secret")
+
+    expect(fetchApiMock).toHaveBeenCalledTimes(1)
+    expect(fetchApiMock.mock.calls[0]?.[1]?.endpoint).toBe("/api/v1/keys/1")
+  })
+
   it("resolves the current group and strips unsupported fields on create", async () => {
     const now = Date.UTC(2026, 2, 6, 0, 0, 0)
     vi.spyOn(Date, "now").mockReturnValue(now)

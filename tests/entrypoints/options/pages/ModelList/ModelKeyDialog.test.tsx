@@ -1,6 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
 import {
@@ -109,7 +110,7 @@ const AIHUBMIX_ACCOUNT = {
   ...ACCOUNT,
   id: "aihubmix-1",
   name: "AIHubMix",
-  siteType: "AIHubMix",
+  siteType: SITE_TYPES.AIHUBMIX,
   baseUrl: "https://aihubmix.com",
 }
 

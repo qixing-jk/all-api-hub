@@ -8,6 +8,7 @@ import {
   submitTokenCreationFromKeyManagementPage,
 } from "~~/e2e/utils/accountLifecycle"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
+import { formatScenarioError } from "~~/e2e/utils/scenarioErrors"
 
 type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
 
@@ -50,14 +51,6 @@ function throwScenarioError(params: {
   if (params.cleanupError) {
     throw params.cleanupError
   }
-}
-
-function formatScenarioError(error: unknown) {
-  if (error instanceof Error) {
-    return error.message
-  }
-
-  return String(error)
 }
 
 type AccountKeyLifecycleEnvironment = {
