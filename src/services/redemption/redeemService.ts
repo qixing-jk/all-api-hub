@@ -44,7 +44,15 @@ class RedeemService {
         }
       }
 
-      const creditedAmount = await getApiService(account.site_type).redeemCode(
+      const service = getApiService(account.site_type)
+      if (!service.capabilities.redeemCode) {
+        return {
+          success: false,
+          message: t("redemptionAssist:messages.redeemFailed"),
+        }
+      }
+
+      const creditedAmount = await service.redeemCode(
         {
           baseUrl: account.site_url,
           accountId,
