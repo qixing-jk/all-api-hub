@@ -1413,6 +1413,30 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     })
   }
 
+  const removeTokenFromInventory = (
+    token: Pick<AccountToken, "accountId" | "id">,
+  ) => {
+    setTokenInventories((prev) => {
+      const inventory = prev[token.accountId]
+      if (!inventory) {
+        return prev
+      }
+
+      const nextTokens = inventory.tokens.filter((item) => item.id !== token.id)
+      if (nextTokens.length === inventory.tokens.length) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        [token.accountId]: {
+          ...inventory,
+          tokens: nextTokens,
+        },
+      }
+    })
+  }
+
   const handleAddToken = () => {
     setIsAddTokenOpen(true)
   }
@@ -1452,6 +1476,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const { service, request } = createDisplayAccountApiContext(account)
       await service.deleteApiToken(request, token.id)
       clearTokenVisibilityState(token)
+      removeTokenFromInventory(token)
       invalidateManagedSiteStatusForToken(token)
       toast.success(
         t("keyManagement:messages.deleteSuccess", { name: token.name }),

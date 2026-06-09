@@ -86,6 +86,39 @@ describe("CopyKeyDialog sub2api support", () => {
     })
   })
 
+  it("refreshes inventory instead of showing one-time UI when Sub2API create returns a token DTO", async () => {
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([TOKEN])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      vip: { desc: "VIP", ratio: 2 },
+    })
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 9,
+      key: "sk-sub2api-created-full-secret",
+      name: "sub2api-created",
+    })
+
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+  })
+
   it("requires explicit group selection when multiple Sub2API groups exist", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     fetchUserGroupsMock

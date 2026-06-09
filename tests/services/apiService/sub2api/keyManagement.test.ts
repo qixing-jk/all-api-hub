@@ -285,6 +285,58 @@ describe("apiService sub2api key management service", () => {
     })
   })
 
+  it("uses hydrated auth user id when create returns a key DTO without user_id", async () => {
+    getAccountByIdMock.mockResolvedValue({
+      account_info: {
+        id: "42",
+        access_token: "stored-jwt",
+      },
+    })
+    fetchApiMock
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: [{ id: 9, name: "vip", description: "VIP plan" }],
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          id: 1,
+          key: "new-key",
+          name: "demo key",
+          status: "active",
+          quota: 1.5,
+          quota_used: 0,
+          created_at: "2026-03-06T00:00:00.000Z",
+          updated_at: "2026-03-06T00:00:00.000Z",
+          expires_at: null,
+          group: { id: 9, name: "vip" },
+        },
+      })
+
+    await expect(
+      createApiToken(
+        createRequest({
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "stale-jwt",
+          },
+        }),
+        createTokenRequest(),
+      ),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        id: 1,
+        user_id: 42,
+        key: "new-key",
+      }),
+    )
+    expect((fetchApiMock.mock.calls[1]?.[0] as any)?.auth?.accessToken).toBe(
+      "stored-jwt",
+    )
+  })
+
   it("preserves consumed quota when translating shared edit payloads", async () => {
     const editedRemainQuota = 1500000
     const preservedConsumedQuotaUsd = 0.5

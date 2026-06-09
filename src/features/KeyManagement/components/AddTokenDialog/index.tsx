@@ -22,6 +22,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
+import { shouldShowOneTimeKeyDialogForCreatedToken } from "../../utils"
 import { buildOneTimeApiKeyProfileSaveAction } from "../../utils/apiCredentialProfileSaveAction"
 import { OneTimeApiKeyDialog } from "../OneTimeApiKeyDialog"
 import { DialogHeader } from "./DialogHeader"
@@ -193,8 +194,15 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
               currentAccount.siteType,
             )
           : undefined
+        const shouldShowOneTimeKeyDialog =
+          !!createdToken &&
+          showOneTimeKeyDialog &&
+          shouldShowOneTimeKeyDialogForCreatedToken(
+            currentAccount,
+            createdToken,
+          )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-        if (createdToken && showOneTimeKeyDialog) {
+        if (shouldShowOneTimeKeyDialog) {
           setOneTimeToken(displayCreatedToken ?? createdToken)
         } else {
           toast.success(t("dialog.createSuccess"))
@@ -207,7 +215,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
           }
         }
 
-        if (createdToken && showOneTimeKeyDialog) {
+        if (shouldShowOneTimeKeyDialog) {
           return
         }
       }

@@ -105,6 +105,14 @@ const ACCOUNT = {
   tagIds: ["tag-a"],
 } as any
 
+const AIHUBMIX_ACCOUNT = {
+  ...ACCOUNT,
+  id: "aihubmix-1",
+  name: "AIHubMix",
+  siteType: "AIHubMix",
+  baseUrl: "https://aihubmix.com",
+}
+
 const TOKEN = {
   id: 1,
   user_id: 1,
@@ -280,7 +288,7 @@ describe("ModelKeyDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("shows a one-time key dialog when default create returns a full token", async () => {
+  it("shows a one-time key dialog when AIHubMix default create returns a full token", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     createApiTokenMock.mockResolvedValueOnce({
       ...TOKEN,
@@ -298,7 +306,7 @@ describe("ModelKeyDialog", () => {
       <ModelKeyDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
+        account={AIHUBMIX_ACCOUNT}
         modelId="gpt-4"
         modelEnableGroups={["default"]}
       />,
@@ -338,7 +346,7 @@ describe("ModelKeyDialog", () => {
     )
   })
 
-  it("saves a default-created one-time key to an API credential profile without closing the dialog", async () => {
+  it("saves an AIHubMix default-created one-time key to an API credential profile without closing the dialog", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     createApiTokenMock.mockResolvedValueOnce({
       ...TOKEN,
@@ -348,11 +356,11 @@ describe("ModelKeyDialog", () => {
     })
     createApiCredentialProfileMock.mockResolvedValueOnce({
       id: "profile-1",
-      name: "Example - model-key",
+      name: "AIHubMix - model-key",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: ACCOUNT.baseUrl,
+      baseUrl: AIHUBMIX_ACCOUNT.baseUrl,
       apiKey: "sk-created-full-secret",
-      tagIds: ACCOUNT.tagIds,
+      tagIds: AIHUBMIX_ACCOUNT.tagIds,
       notes: "",
       createdAt: 1,
       updatedAt: 1,
@@ -366,7 +374,7 @@ describe("ModelKeyDialog", () => {
       <ModelKeyDialog
         isOpen={true}
         onClose={onClose}
-        account={ACCOUNT}
+        account={AIHUBMIX_ACCOUNT}
         modelId="gpt-4"
         modelEnableGroups={["default"]}
       />,
@@ -383,11 +391,11 @@ describe("ModelKeyDialog", () => {
 
     await waitFor(() => {
       expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
-        name: "Example - model-key",
+        name: "AIHubMix - model-key",
         apiType: API_TYPES.OPENAI_COMPATIBLE,
-        baseUrl: ACCOUNT.baseUrl,
+        baseUrl: AIHUBMIX_ACCOUNT.baseUrl,
         apiKey: "sk-created-full-secret",
-        tagIds: ACCOUNT.tagIds,
+        tagIds: AIHUBMIX_ACCOUNT.tagIds,
       })
     })
     expect(toastSuccessMock).toHaveBeenCalledWith(
@@ -399,7 +407,7 @@ describe("ModelKeyDialog", () => {
     ).toHaveValue("sk-created-full-secret")
   })
 
-  it("formats optional-prefix compatible created keys before showing the one-time dialog", async () => {
+  it("keeps AIHubMix created keys unchanged before showing the one-time dialog", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     createApiTokenMock.mockResolvedValueOnce({
       ...TOKEN,
@@ -417,7 +425,7 @@ describe("ModelKeyDialog", () => {
       <ModelKeyDialog
         isOpen={true}
         onClose={() => {}}
-        account={{ ...ACCOUNT, siteType: "Veloera" }}
+        account={AIHUBMIX_ACCOUNT}
         modelId="gpt-4"
         modelEnableGroups={["default"]}
       />,
@@ -434,11 +442,60 @@ describe("ModelKeyDialog", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
-    ).toHaveValue("sk-created-full-secret")
+    ).toHaveValue("created-full-secret")
 
     await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
+      expect(writeText).toHaveBeenCalledWith("created-full-secret")
     })
+  })
+
+  it("refreshes instead of showing a one-time key when AIHubMix create returns a masked key", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        ...TOKEN,
+        id: 11,
+        key: "sk-refreshed-compatible",
+        name: "refreshed",
+      },
+    ])
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 8,
+      key: "sk-created********masked",
+      name: "masked-created-token",
+    })
+
+    const user = userEvent.setup()
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={AIHUBMIX_ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
+    })
+
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", { name: "common:actions.copyKey" }),
+    ).toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("shows a compatibility error when default create returns an incompatible full token", async () => {
@@ -460,7 +517,7 @@ describe("ModelKeyDialog", () => {
       <ModelKeyDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
+        account={AIHUBMIX_ACCOUNT}
         modelId="gpt-4"
         modelEnableGroups={["default"]}
       />,
@@ -509,7 +566,7 @@ describe("ModelKeyDialog", () => {
       <ModelKeyDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
+        account={AIHUBMIX_ACCOUNT}
         modelId="gpt-4"
         modelEnableGroups={["default"]}
       />,

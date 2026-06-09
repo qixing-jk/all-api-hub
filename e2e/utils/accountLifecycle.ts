@@ -250,10 +250,21 @@ async function submitCreateTokenForm(params: {
 }
 
 async function closeOneTimeKeyDialogIfPresent(page: Page) {
-  await page
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.oneTimeKeyCloseButton)
-    .click({ timeout: 5_000 })
-    .catch(() => undefined)
+  const closeButton = page.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.oneTimeKeyCloseButton,
+  )
+  const isVisible = await closeButton
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false)
+
+  if (!isVisible) {
+    return false
+  }
+
+  await closeButton.click()
+  await expect(closeButton).toBeHidden({ timeout: 30_000 })
+  return true
 }
 
 async function closeAddTokenDialogIfPresent(page: Page) {
@@ -268,7 +279,12 @@ async function closeAddTokenDialogIfPresent(page: Page) {
 }
 
 async function closeTokenCreationDialogsIfPresent(page: Page) {
-  await closeOneTimeKeyDialogIfPresent(page)
+  const closedOneTimeKeyDialog = await closeOneTimeKeyDialogIfPresent(page)
+  if (closedOneTimeKeyDialog) {
+    await expect(
+      page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenDialog),
+    ).toBeHidden({ timeout: 30_000 })
+  }
   await closeAddTokenDialogIfPresent(page)
 }
 

@@ -1383,22 +1383,23 @@ export async function createApiToken(
     const groupId = await resolveSelectedGroupId(request, tokenData.group)
     const payload = translateSub2ApiCreateTokenRequest(tokenData, groupId)
 
-    const created = await fetchSub2ApiData<Sub2ApiKeyData | undefined>(
-      request,
-      SUB2API_KEYS_ENDPOINT,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      },
-      { allowMissingData: true },
-    )
+    const { data: created, request: hydratedRequest } =
+      await fetchSub2ApiDataWithRequest<Sub2ApiKeyData | undefined>(
+        request,
+        SUB2API_KEYS_ENDPOINT,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+        { allowMissingData: true },
+      )
 
     if (!created || typeof created !== "object" || !("id" in created)) {
       return true
     }
 
     return parseSub2ApiKey(created, {
-      defaultUserId: request.auth?.userId,
+      defaultUserId: hydratedRequest.auth?.userId,
       endpoint: SUB2API_KEYS_ENDPOINT,
     })
   } catch (error) {

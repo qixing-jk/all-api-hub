@@ -91,6 +91,14 @@ const ACCOUNT = {
   tagIds: ["tag-a"],
 } as any
 
+const AIHUBMIX_ACCOUNT = {
+  ...ACCOUNT,
+  id: "aihubmix-1",
+  name: "AIHubMix",
+  siteType: SITE_TYPES.AIHUBMIX,
+  baseUrl: "https://aihubmix.com",
+}
+
 describe("AddTokenDialog prefill", () => {
   beforeEach(() => {
     createApiTokenMock.mockReset()
@@ -407,7 +415,7 @@ describe("AddTokenDialog prefill", () => {
     )
   })
 
-  it("shows a one-time key dialog when create returns a full token", async () => {
+  it("shows a one-time key dialog when AIHubMix create returns a full token", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
@@ -435,8 +443,8 @@ describe("AddTokenDialog prefill", () => {
       <AddTokenDialog
         isOpen={true}
         onClose={() => {}}
-        availableAccounts={[ACCOUNT]}
-        preSelectedAccountId={ACCOUNT.id}
+        availableAccounts={[AIHUBMIX_ACCOUNT]}
+        preSelectedAccountId={AIHUBMIX_ACCOUNT.id}
       />,
     )
 
@@ -462,7 +470,7 @@ describe("AddTokenDialog prefill", () => {
     })
   })
 
-  it("keeps the one-time key dialog open and shows a fallback when clipboard copy fails", async () => {
+  it("keeps the AIHubMix one-time key dialog open and shows a fallback when clipboard copy fails", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
@@ -490,8 +498,8 @@ describe("AddTokenDialog prefill", () => {
       <AddTokenDialog
         isOpen={true}
         onClose={() => {}}
-        availableAccounts={[ACCOUNT]}
-        preSelectedAccountId={ACCOUNT.id}
+        availableAccounts={[AIHUBMIX_ACCOUNT]}
+        preSelectedAccountId={AIHUBMIX_ACCOUNT.id}
       />,
     )
 
@@ -517,7 +525,7 @@ describe("AddTokenDialog prefill", () => {
     ).toHaveValue("sk-created-full-secret")
   })
 
-  it("saves a created one-time key to an API credential profile without closing the dialog", async () => {
+  it("saves a created AIHubMix one-time key to an API credential profile without closing the dialog", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
@@ -537,11 +545,11 @@ describe("AddTokenDialog prefill", () => {
     })
     createApiCredentialProfileMock.mockResolvedValueOnce({
       id: "profile-1",
-      name: "Example - My Key",
+      name: "AIHubMix - My Key",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: ACCOUNT.baseUrl,
+      baseUrl: AIHUBMIX_ACCOUNT.baseUrl,
       apiKey: "sk-created-full-secret",
-      tagIds: ACCOUNT.tagIds,
+      tagIds: AIHUBMIX_ACCOUNT.tagIds,
       notes: "",
       createdAt: 1,
       updatedAt: 1,
@@ -555,8 +563,8 @@ describe("AddTokenDialog prefill", () => {
       <AddTokenDialog
         isOpen={true}
         onClose={onClose}
-        availableAccounts={[ACCOUNT]}
-        preSelectedAccountId={ACCOUNT.id}
+        availableAccounts={[AIHUBMIX_ACCOUNT]}
+        preSelectedAccountId={AIHUBMIX_ACCOUNT.id}
       />,
     )
 
@@ -573,11 +581,11 @@ describe("AddTokenDialog prefill", () => {
 
     await waitFor(() => {
       expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
-        name: "Example - My Key",
+        name: "AIHubMix - My Key",
         apiType: API_TYPES.OPENAI_COMPATIBLE,
-        baseUrl: ACCOUNT.baseUrl,
+        baseUrl: AIHUBMIX_ACCOUNT.baseUrl,
         apiKey: "sk-created-full-secret",
-        tagIds: ACCOUNT.tagIds,
+        tagIds: AIHUBMIX_ACCOUNT.tagIds,
       })
     })
     expect(toastSuccessMock).toHaveBeenCalledWith(
@@ -609,8 +617,8 @@ describe("AddTokenDialog prefill", () => {
         isOpen={true}
         onClose={onClose}
         onSuccess={onSuccess}
-        availableAccounts={[ACCOUNT]}
-        preSelectedAccountId={ACCOUNT.id}
+        availableAccounts={[AIHUBMIX_ACCOUNT]}
+        preSelectedAccountId={AIHUBMIX_ACCOUNT.id}
       />,
     )
 
@@ -631,6 +639,61 @@ describe("AddTokenDialog prefill", () => {
       expect(onClose).toHaveBeenCalled()
     })
 
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show a one-time key dialog for masked AIHubMix create responses", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    const createdToken = {
+      id: 7,
+      user_id: 1,
+      key: "sk-aihub********masked",
+      status: 1,
+      name: "Masked AIHubMix Key",
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+    createApiTokenMock.mockResolvedValueOnce(createdToken)
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        availableAccounts={[AIHUBMIX_ACCOUNT]}
+        preSelectedAccountId={AIHUBMIX_ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "Masked AIHubMix Key",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.createSuccess",
+      )
+      expect(onSuccess).toHaveBeenCalledWith(createdToken)
+      expect(onClose).toHaveBeenCalled()
+    })
     expect(
       screen.queryByText("keyManagement:oneTimeKey.title"),
     ).not.toBeInTheDocument()
@@ -688,6 +751,65 @@ describe("AddTokenDialog prefill", () => {
       expect(onClose).toHaveBeenCalled()
     })
 
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show a one-time key dialog for Sub2API create responses", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    const createdToken = {
+      id: 8,
+      user_id: 1,
+      key: "sk-sub2api-created-full-secret",
+      status: 1,
+      name: "Sub2API Key",
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+    createApiTokenMock.mockResolvedValueOnce(createdToken)
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const sub2ApiAccount = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.SUB2API,
+    }
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        availableAccounts={[sub2ApiAccount]}
+        preSelectedAccountId={sub2ApiAccount.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "Sub2API Key",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.createSuccess",
+      )
+      expect(onSuccess).toHaveBeenCalledWith(createdToken)
+      expect(onClose).toHaveBeenCalledOnce()
+    })
     expect(
       screen.queryByText("keyManagement:oneTimeKey.title"),
     ).not.toBeInTheDocument()
@@ -888,7 +1010,7 @@ describe("AddTokenDialog prefill", () => {
     })
   })
 
-  it("closes through the one-time key dialog acknowledgement", async () => {
+  it("closes through the AIHubMix one-time key dialog acknowledgement", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
@@ -915,8 +1037,8 @@ describe("AddTokenDialog prefill", () => {
       <AddTokenDialog
         isOpen={true}
         onClose={onClose}
-        availableAccounts={[ACCOUNT]}
-        preSelectedAccountId={ACCOUNT.id}
+        availableAccounts={[AIHUBMIX_ACCOUNT]}
+        preSelectedAccountId={AIHUBMIX_ACCOUNT.id}
       />,
     )
 
@@ -995,20 +1117,12 @@ describe("AddTokenDialog prefill", () => {
     createApiTokenMock.mockResolvedValueOnce(true)
 
     const user = userEvent.setup()
-    const aihubmixAccount = {
-      ...ACCOUNT,
-      id: "aihubmix-1",
-      name: "AIHubMix",
-      siteType: SITE_TYPES.AIHUBMIX,
-      baseUrl: "https://aihubmix.com",
-    }
-
     render(
       <AddTokenDialog
         isOpen={true}
         onClose={() => {}}
-        availableAccounts={[aihubmixAccount]}
-        preSelectedAccountId={aihubmixAccount.id}
+        availableAccounts={[AIHUBMIX_ACCOUNT]}
+        preSelectedAccountId={AIHUBMIX_ACCOUNT.id}
       />,
     )
 

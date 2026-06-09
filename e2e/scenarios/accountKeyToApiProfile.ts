@@ -83,7 +83,7 @@ function throwScenarioError(params: {
   if (params.primaryError && params.cleanupError) {
     throw new AggregateError(
       [params.primaryError, params.cleanupError],
-      params.message,
+      `${params.message}: primary=${formatScenarioError(params.primaryError)}; cleanup=${formatScenarioError(params.cleanupError)}`,
     )
   }
 
@@ -94,6 +94,14 @@ function throwScenarioError(params: {
   if (params.cleanupError) {
     throw params.cleanupError
   }
+}
+
+function formatScenarioError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return String(error)
 }
 
 export async function runAccountKeyToApiProfileScenario(

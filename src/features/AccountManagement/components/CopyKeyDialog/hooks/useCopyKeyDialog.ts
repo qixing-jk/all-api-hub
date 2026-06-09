@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/features/KeyManagement/utils"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { resolveSub2ApiQuickCreateResolution } from "~/services/accounts/accountOperations"
 import {
@@ -203,7 +204,11 @@ export function useCopyKeyDialog(
       setCreateError(null)
 
       try {
-        if (createdToken) {
+        const shouldShowOneTimeKeyDialog =
+          !!createdToken &&
+          shouldShowOneTimeKeyDialogForCreatedToken(account, createdToken)
+
+        if (createdToken && shouldShowOneTimeKeyDialog) {
           setTokens((currentTokens) => {
             const withoutCreated = currentTokens.filter(
               (token) => token.id !== createdToken.id,
