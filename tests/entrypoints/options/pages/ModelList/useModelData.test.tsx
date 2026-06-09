@@ -138,6 +138,22 @@ const createDeferred = <T,>() => {
   return { promise, resolve, reject }
 }
 
+const createMockApiService = (
+  fetchModelPricing: ReturnType<typeof vi.fn>,
+  overrides: {
+    capabilities?: {
+      modelPricing?: boolean
+    }
+  } = {},
+) =>
+  ({
+    fetchModelPricing,
+    capabilities: {
+      modelPricing: true,
+      ...overrides.capabilities,
+    },
+  }) as any
+
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -271,7 +287,7 @@ describe("useModelData all-accounts loading", () => {
       usable_group: {},
     })
     const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue({ fetchModelPricing } as any)
+    mockedGetApiService.mockReturnValue(createMockApiService(fetchModelPricing))
 
     const accounts = [
       createDisplayAccount({
@@ -310,7 +326,7 @@ describe("useModelData all-accounts loading", () => {
       usable_group: {},
     })
     const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue({ fetchModelPricing } as any)
+    mockedGetApiService.mockReturnValue(createMockApiService(fetchModelPricing))
 
     const accounts = [
       createDisplayAccount({
@@ -339,6 +355,45 @@ describe("useModelData all-accounts loading", () => {
       (call) => call[0]?.accountId,
     )
     expect(calledAccountIds).toEqual(expect.arrayContaining(["a", "b"]))
+  })
+
+  it("does not invoke model pricing for unsupported Sub2API accounts", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+    const fetchModelPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("fetch should not be called"))
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing, {
+        capabilities: { modelPricing: false },
+      }),
+    )
+
+    const account = createDisplayAccount({
+      id: "unsupported-sub2api",
+      baseUrl: "https://sub2api.example.com",
+      siteType: SITE_TYPES.SUB2API,
+      userId: "sub2api-user",
+    })
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(result.current.loadErrorMessage).toBe(
+          "modelList:status.loadFailed",
+        )
+      },
+      { timeout: 3000 },
+    )
+    expect(fetchModelPricing).not.toHaveBeenCalled()
   })
 
   it("tracks single-account pricing load success with model-count insight once", async () => {
@@ -370,7 +425,9 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: { default: true },
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const account = createDisplayAccount({
       id: "analytics-single-success",
@@ -421,7 +478,9 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: {},
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const account = createDisplayAccount({
       id: "analytics-invalid-format",
@@ -483,7 +542,9 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.reject(new Error("private backend failure"))
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const accounts = [
       createDisplayAccount({
@@ -553,7 +614,9 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.reject(new TypeError("Failed to fetch"))
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const accounts = [
       createDisplayAccount({
@@ -628,7 +691,9 @@ describe("useModelData all-accounts loading", () => {
         usable_group: {},
       })
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const accounts = [
       createDisplayAccount({
@@ -695,7 +760,9 @@ describe("useModelData all-accounts loading", () => {
         usable_group: {},
       })
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const accounts = [
       createDisplayAccount({
@@ -810,7 +877,9 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const fallbackToken = {
       id: 8,
@@ -935,7 +1004,9 @@ describe("useModelData all-accounts loading", () => {
         success: true,
         usable_group: { default: true },
       })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const firstAccount = createDisplayAccount({
       id: "credential-change-account",
@@ -1007,7 +1078,9 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchModelPricing = vi.fn()
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const account = createDisplayAccount({
       id: "cached-pricing-account",
@@ -1071,6 +1144,74 @@ describe("useModelData all-accounts loading", () => {
     await modelPricingCache.invalidate(cacheKey)
   })
 
+  it("does not return cached pricing for unsupported Sub2API accounts", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi.fn()
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing, {
+        capabilities: { modelPricing: false },
+      }),
+    )
+
+    const account = createDisplayAccount({
+      id: "cached-unsupported-sub2api",
+      baseUrl: "https://cached-sub2api.example.com",
+      siteType: SITE_TYPES.SUB2API,
+      userId: "cached-sub2api-user",
+    })
+    const cacheKey = [
+      account.id,
+      account.baseUrl,
+      account.userId,
+      account.siteType,
+      account.authType,
+    ].join("|")
+
+    await modelPricingCache.invalidate(cacheKey)
+    await modelPricingCache.set(cacheKey, {
+      data: [
+        {
+          model_name: "stale-sub2api-model",
+          quota_type: 0,
+          model_ratio: 1,
+          model_price: 1,
+          completion_ratio: 1,
+          enable_groups: ["default"],
+          supported_endpoint_types: [],
+        },
+      ],
+      group_ratio: { default: 1 },
+      success: true,
+      usable_group: { default: "default" },
+    })
+
+    try {
+      const { result } = renderHook(
+        () =>
+          useModelData({
+            selectedSource: createAccountSource(account),
+            accounts: [account],
+          }),
+        { wrapper: createWrapper() },
+      )
+
+      await waitFor(
+        () => {
+          expect(result.current.loadErrorMessage).toBe(
+            "modelList:status.loadFailed",
+          )
+        },
+        { timeout: 3000 },
+      )
+      expect(fetchModelPricing).not.toHaveBeenCalled()
+      expect(result.current.pricingData).toBeNull()
+    } finally {
+      await modelPricingCache.invalidate(cacheKey)
+    }
+  })
+
   it("marks all-account queries as loading before each account returns data", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
@@ -1090,7 +1231,9 @@ describe("useModelData all-accounts loading", () => {
     const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
       return accountId === "a" ? firstDeferred.promise : secondDeferred.promise
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const accounts = [
       createDisplayAccount({
@@ -1174,7 +1317,7 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
     const fetchModelPricing = vi.fn()
     const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue({ fetchModelPricing } as any)
+    mockedGetApiService.mockReturnValue(createMockApiService(fetchModelPricing))
     mockFetchApiCredentialModelIds.mockResolvedValueOnce([
       "gpt-4o-mini",
       "claude-3-5-sonnet",
@@ -1224,7 +1367,9 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const account = createDisplayAccount({
       id: "error-account",
@@ -1270,7 +1415,9 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const account = createDisplayAccount({
       id: "fallback-account",
@@ -1404,7 +1551,9 @@ describe("useModelData all-accounts loading", () => {
         success: true,
         usable_group: { default: true },
       })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const account = createDisplayAccount({
       id: "fallback-reset-account",
@@ -1510,7 +1659,9 @@ describe("useModelData all-accounts loading", () => {
         success: true,
         usable_group: {},
       })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
     mockFetchDisplayAccountTokens.mockReturnValueOnce(deferredTokens.promise)
 
     const firstAccount = createDisplayAccount({
@@ -1592,7 +1743,9 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
     mockFetchDisplayAccountTokens.mockRejectedValueOnce(
       new InvalidTokenPayloadError({
         accountId: "invalid-token-account",
@@ -1639,7 +1792,9 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const fallbackToken = {
       id: 5,
@@ -1710,7 +1865,9 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const fallbackToken = {
       id: 6,
@@ -1803,7 +1960,9 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.reject(new Error("boom"))
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const accounts = [
       createDisplayAccount({
@@ -1864,7 +2023,9 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: {},
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing),
+    )
 
     const account = createDisplayAccount({
       id: "single-invalid-format",

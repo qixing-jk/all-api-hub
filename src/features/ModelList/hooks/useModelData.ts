@@ -111,6 +111,9 @@ function createInvalidFormatError() {
   return error
 }
 
+const createUnsupportedModelPricingError = () =>
+  new Error("model_pricing_unsupported")
+
 /** Counts only valid model rows so analytics never includes raw model ids. */
 function getPricingModelCount(pricing: PricingResponse | null | undefined) {
   return Array.isArray(pricing?.data) ? pricing.data.length : 0
@@ -509,6 +512,11 @@ function useSingleAccountModelData(params: {
         throw new Error("No account selected")
       }
 
+      const service = getApiService(currentAccount.siteType)
+      if (!service.capabilities.modelPricing) {
+        throw createUnsupportedModelPricingError()
+      }
+
       const cacheKey = createModelPricingCacheKey(currentAccount)
 
       const cached = await modelPricingCache.get(cacheKey)
@@ -518,9 +526,7 @@ function useSingleAccountModelData(params: {
       }
       directLoadCacheHitRef.current = false
 
-      const data = await getApiService(
-        currentAccount.siteType,
-      ).fetchModelPricing({
+      const data = await service.fetchModelPricing({
         baseUrl: currentAccount.baseUrl,
         accountId: currentAccount.id,
         auth: {
@@ -913,13 +919,18 @@ function useAllAccountsModelData(
       refetchOnWindowFocus: false,
       retry: 1,
       queryFn: async () => {
+        const service = getApiService(account.siteType)
+        if (!service.capabilities.modelPricing) {
+          throw createUnsupportedModelPricingError()
+        }
+
         const cacheKey = createModelPricingCacheKey(account)
         const cached = await modelPricingCache.get(cacheKey)
         if (cached && Array.isArray(cached.data)) {
           return cached
         }
 
-        const data = await getApiService(account.siteType).fetchModelPricing({
+        const data = await service.fetchModelPricing({
           baseUrl: account.baseUrl,
           accountId: account.id,
           auth: {
