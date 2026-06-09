@@ -1315,7 +1315,10 @@ export async function fetchTokenById(
  *
  * Source: https://github.com/Wei-Shaw/sub2api
  * User key routes live under `/api/v1/keys`; upstream exposes list/get/create
- * DTOs with `key` directly and does not define a separate reveal endpoint.
+ * DTOs with a full `key` directly and does not define a separate reveal
+ * endpoint. The detail fallback below is defensive for forks or unexpected
+ * cached/masked inventory data; it must stay inside Sub2API routes instead of
+ * falling through to One/New API's `/api/token/{id}/key` contract.
  */
 export async function resolveApiTokenKey(
   request: ApiServiceRequest,
