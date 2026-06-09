@@ -38,7 +38,7 @@ const strictOverrideSites = new Set<ApiOverrideSite>([
   SITE_TYPES.SUB2API,
 ])
 
-type ApiServiceCapabilities = {
+export type ApiServiceCapabilities = {
   keyManagement: boolean
   modelPricing: boolean
   redeemCode: boolean

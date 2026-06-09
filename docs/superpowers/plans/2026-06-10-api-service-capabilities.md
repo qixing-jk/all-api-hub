@@ -29,7 +29,7 @@
   - Check `getApiService(account.siteType).capabilities.modelPricing` before calling `fetchModelPricing`.
   - For unsupported accounts, throw a local unsupported error so the existing query error state handles the skipped source.
 
-- Modify `tests/entrypoints/options/pages/ModelList/useModelListData.test.tsx`
+- Modify `tests/entrypoints/options/pages/ModelList/useModelData.test.tsx`
   - Add or update a focused test proving Sub2API does not call `fetchModelPricing` when model pricing is unsupported.
   - If existing mock setup is easier in `useModelData` tests, use the closest existing test file that already exercises the direct and all-accounts model-data hook paths.
 
@@ -37,7 +37,7 @@
   - Check `getApiService(account.site_type).capabilities.redeemCode` before calling `redeemCode`.
   - Return a localized unsupported failure result instead of relying on `apiService.redeemCode is not implemented...`.
 
-- Modify `tests/services/redemption/redeemService.test.ts`
+- Modify `tests/services/redeemService.test.ts`
   - Add tests for unsupported Sub2API and AIHubMix redemption.
   - If this file does not exist, create it and mock `accountStorage` plus `getApiService`.
 
@@ -264,7 +264,7 @@ Only stage the two task-scoped files. If unrelated staged files already exist, d
 
 **Files:**
 - Modify: `src/features/ModelList/hooks/useModelData.ts`
-- Test: `tests/entrypoints/options/pages/ModelList/useModelListData.test.tsx`
+- Test: `tests/entrypoints/options/pages/ModelList/useModelData.test.tsx`
 
 - [ ] **Step 1: Inspect existing model-list hook tests**
 
@@ -308,7 +308,7 @@ If the existing test helper expects per-site responses, configure only the Sub2A
 Run the focused test file:
 
 ```bash
-pnpm vitest run tests/entrypoints/options/pages/ModelList/useModelListData.test.tsx
+pnpm vitest run tests/entrypoints/options/pages/ModelList/useModelData.test.tsx
 ```
 
 Expected: FAIL because current code calls `fetchModelPricing` before any capability check.
@@ -399,7 +399,7 @@ const data = await service.fetchModelPricing({
 Run:
 
 ```bash
-pnpm vitest run tests/entrypoints/options/pages/ModelList/useModelListData.test.tsx
+pnpm vitest run tests/entrypoints/options/pages/ModelList/useModelData.test.tsx
 ```
 
 Expected: PASS.
@@ -410,7 +410,7 @@ Run:
 
 ```bash
 git status --porcelain
-git add src/features/ModelList/hooks/useModelData.ts tests/entrypoints/options/pages/ModelList/useModelListData.test.tsx
+git add src/features/ModelList/hooks/useModelData.ts tests/entrypoints/options/pages/ModelList/useModelData.test.tsx
 git commit -m "fix(model-list): skip unsupported model pricing"
 ```
 
@@ -420,7 +420,7 @@ Only stage the two task-scoped files. If the final test file differs because the
 
 **Files:**
 - Modify: `src/services/redemption/redeemService.ts`
-- Test: `tests/services/redemption/redeemService.test.ts`
+- Test: `tests/services/redeemService.test.ts`
 
 - [ ] **Step 1: Check whether redemption tests already exist**
 
@@ -430,7 +430,7 @@ Run:
 rg -n "redeemCodeForAccount|redeemService|redeemCode" tests/services tests/features src/services/redemption
 ```
 
-If `tests/services/redemption/redeemService.test.ts` already exists, add the new tests there. If it does not exist, create it.
+If `tests/services/redeemService.test.ts` already exists, add the new tests there. If it does not exist, create it.
 
 - [ ] **Step 2: Write failing unsupported redemption tests**
 
@@ -526,7 +526,7 @@ describe("redeemService", () => {
 Run:
 
 ```bash
-pnpm vitest run tests/services/redemption/redeemService.test.ts
+pnpm vitest run tests/services/redeemService.test.ts
 ```
 
 Expected: FAIL because `redeemService` still calls `redeemCode` even when capabilities say unsupported.
@@ -584,7 +584,7 @@ If product copy review requires a more specific unsupported message, add `redemp
 Run:
 
 ```bash
-pnpm vitest run tests/services/redemption/redeemService.test.ts
+pnpm vitest run tests/services/redeemService.test.ts
 ```
 
 Expected: PASS.
@@ -595,7 +595,7 @@ Run:
 
 ```bash
 git status --porcelain
-git add src/services/redemption/redeemService.ts tests/services/redemption/redeemService.test.ts
+git add src/services/redemption/redeemService.ts tests/services/redeemService.test.ts
 git commit -m "fix(redemption): skip unsupported site adapters"
 ```
 
@@ -612,7 +612,7 @@ Only stage the two task-scoped files. If locale files were added, stage those ta
 Run:
 
 ```bash
-pnpm vitest run tests/services/apiService/index.test.ts tests/entrypoints/options/pages/ModelList/useModelListData.test.tsx tests/services/redemption/redeemService.test.ts
+pnpm vitest run tests/services/apiService/index.test.ts tests/entrypoints/options/pages/ModelList/useModelData.test.tsx tests/services/redeemService.test.ts
 ```
 
 Expected: PASS.

@@ -12,7 +12,10 @@ import {
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
 import { InvalidTokenPayloadError } from "~/services/accounts/utils/apiServiceRequest"
-import { getApiService } from "~/services/apiService"
+import {
+  getApiService,
+  type ApiServiceCapabilities,
+} from "~/services/apiService"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { modelPricingCache } from "~/services/models/modelPricingCache"
 import {
@@ -141,9 +144,7 @@ const createDeferred = <T,>() => {
 const createMockApiService = (
   fetchModelPricing: ReturnType<typeof vi.fn>,
   overrides: {
-    capabilities?: {
-      modelPricing?: boolean
-    }
+    capabilities?: Partial<Pick<ApiServiceCapabilities, "modelPricing">>
   } = {},
 ) =>
   ({
@@ -381,6 +382,53 @@ describe("useModelData all-accounts loading", () => {
         useModelData({
           selectedSource: createAccountSource(account),
           accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(result.current.loadErrorMessage).toBe(
+          "modelList:status.loadFailed",
+        )
+      },
+      { timeout: 3000 },
+    )
+    expect(fetchModelPricing).not.toHaveBeenCalled()
+  })
+
+  it("does not invoke all-account pricing when capability is disabled", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+    const fetchModelPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("fetch should not be called"))
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing, {
+        capabilities: { modelPricing: false },
+      }),
+    )
+
+    const accounts = [
+      createDisplayAccount({
+        id: "unsupported-all-a",
+        baseUrl: "https://unsupported-a.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        userId: "unsupported-a-user",
+      }),
+      createDisplayAccount({
+        id: "unsupported-all-b",
+        baseUrl: "https://unsupported-b.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        userId: "unsupported-b-user",
+      }),
+    ]
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts,
         }),
       { wrapper: createWrapper() },
     )
