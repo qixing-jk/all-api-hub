@@ -12,7 +12,9 @@ import {
   determineHealthStatus,
   extractDefaultExchangeRate as extractCommonDefaultExchangeRate,
 } from "~/services/apiService/common"
+import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { resolveApiTokenKeyWithFetcher } from "~/services/apiService/common/tokenKeyResolver"
 import type {
   AccessTokenInfo,
   AccountData,
@@ -1308,6 +1310,32 @@ export async function fetchTokenById(
 }
 
 /**
+ * Resolve a Sub2API key secret without falling back to One/New API-compatible
+ * `/api/token/{id}/key` semantics.
+ *
+ * Source: https://github.com/Wei-Shaw/sub2api
+ * User key routes live under `/api/v1/keys`; upstream exposes list/get/create
+ * DTOs with `key` directly and does not define a separate reveal endpoint.
+ */
+export async function resolveApiTokenKey(
+  request: ApiServiceRequest,
+  token: Pick<ApiToken, "id" | "key">,
+): Promise<string> {
+  return await resolveApiTokenKeyWithFetcher(
+    request,
+    token,
+    async (detailRequest, tokenId) => {
+      const detail = await fetchTokenById(detailRequest, tokenId)
+      if (!hasUsableApiTokenKey(detail.key)) {
+        throw new Error("token_secret_key_unresolvable")
+      }
+
+      return detail.key
+    },
+  )
+}
+
+/**
  * Fetch the list of user groups available in Sub2API and their associated rates, then build a mapping of group name to `UserGroupInfo` for use in the extension.
  */
 export async function fetchUserGroups(
@@ -1352,12 +1380,24 @@ export async function createApiToken(
     const groupId = await resolveSelectedGroupId(request, tokenData.group)
     const payload = translateSub2ApiCreateTokenRequest(tokenData, groupId)
 
-    await fetchSub2ApiData<unknown>(request, SUB2API_KEYS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    })
+    const created = await fetchSub2ApiData<Sub2ApiKeyData | undefined>(
+      request,
+      SUB2API_KEYS_ENDPOINT,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      { allowMissingData: true },
+    )
 
-    return true
+    if (!created || typeof created !== "object" || !("id" in created)) {
+      return true
+    }
+
+    return parseSub2ApiKey(created, {
+      defaultUserId: request.auth?.userId,
+      endpoint: SUB2API_KEYS_ENDPOINT,
+    })
   } catch (error) {
     logger.error("Failed to create Sub2API key", {
       accountId: request.accountId,
