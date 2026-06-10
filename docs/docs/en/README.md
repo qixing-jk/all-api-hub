@@ -117,6 +117,17 @@ Have questions or want to share useful sites? Join the community:
   </p>
 </div>
 
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://runapi.co/register?aff=cvDm">
+      <img class="readme-sponsor-logo-small" src="../../../resources/partners/runapi.jpg" alt="RunAPI">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to RunAPI for sponsoring this project! RunAPI is a stable and efficient alternative to API OpenRouter. With one API Key, you can access over 150 mainstream models including OpenAI, Claude, Gemini, DeepSeek, and Grok, at prices as low as 10% of the original. It is extremely stable and seamlessly compatible with tools like Claude Code and OpenClaw. RunAPI offers exclusive benefits for All API Hub users: register using <a href="https://runapi.co/register?aff=cvDm">this link</a> and contact the RunAPI administrator to receive a ¥7 free credit.
+  </p>
+</div>
+
 <style>
 .readme-sponsor {
   display: flex;
@@ -131,9 +142,13 @@ Have questions or want to share useful sites? Join the community:
 }
 
 .readme-sponsor-logo img {
-  width: 150px;
+  width: 128px;
   max-width: 100%;
   height: auto;
+}
+
+.readme-sponsor-logo img.readme-sponsor-logo-small {
+  width: 64px;
 }
 
 .readme-sponsor-copy {
@@ -157,6 +172,10 @@ Have questions or want to share useful sites? Join the community:
 
   .readme-sponsor-logo img {
     width: 128px;
+  }
+
+  .readme-sponsor-logo img.readme-sponsor-logo-small {
+    width: 64px;
   }
 }
 </style>

@@ -34,7 +34,18 @@
     </td>
     <td>
       <strong>PackyCode</strong><br/>
-      Offers relay services for Claude Code, Codex, Gemini, and more. Register using <a href="https://www.packyapi.com/register?aff=all-api-hub">this link</a> and enter the "all-api-hub" promo code during first recharge to get <strong>10% off</strong>!
+      Claude Code、Codex、Gemini などの多様なプロキシサービスを提供しています。<a href="https://www.packyapi.com/register?aff=all-api-hub">こちらのリンク</a>から登録し、初回チャージ時に "all-api-hub" クーポンコードを入力すると、<strong>10% オフ</strong>になります！
+    </td>
+  </tr>
+  <tr>
+    <td width="160" align="center">
+      <a href="https://runapi.co/register?aff=cvDm">
+        <img src="../../../resources/partners/runapi.jpg" alt="RunAPI" width="64">
+      </a>
+    </td>
+    <td>
+      <strong>RunAPI</strong><br/>
+      高効率で安定した API OpenRouter の代替プラットフォーム。1 つの API Key で OpenAI、Claude、Gemini、DeepSeek、Grok など 150 以上の主要モデルにアクセス可能。最低 10% オフで、Claude Code、OpenClaw などのツールとも互換性があります。<a href="https://runapi.co/register?aff=cvDm">こちらのリンク</a>から登録し、RunAPI 管理者に連絡すると、<strong>7 円の無料クレジット</strong>を受け取ることができます。
     </td>
   </tr>
 </table>

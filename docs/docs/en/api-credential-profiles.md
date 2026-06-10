@@ -27,7 +27,7 @@
 If you have already obtained a key for an upstream site in `Key Management`, you can also verify or organize it before saving it to the `API Credential Library` for easier later use.
 
 ::: tip Looking for High-Quality API Interfaces?
-If you need stable and CLI-supported API interfaces to fill your credential library, try our partner [PackyCode](https://www.packyapi.com/register?aff=all-api-hub) (enter the `all-api-hub` promo code during recharge to get 10% off).
+If you need stable and CLI-supported API interfaces to fill your credential library, try our partner [PackyCode](https://www.packyapi.com/register?aff=all-api-hub) (enter the `all-api-hub` promo code during recharge to get 10% off), or [RunAPI](https://runapi.co/register?aff=cvDm) (register and contact RunAPI administrator to receive a ￥7 free credit).
 :::
 
 ## How to Add Credentials

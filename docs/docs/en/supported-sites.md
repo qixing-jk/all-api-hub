@@ -37,6 +37,17 @@ If you are looking for stable, efficient, and highly compatible AI relay service
       Offers relay services for Claude Code, Codex, Gemini, and more. Register using <a href="https://www.packyapi.com/register?aff=all-api-hub">this link</a> and enter the "all-api-hub" promo code during first recharge to get <strong>10% off</strong>!
     </td>
   </tr>
+  <tr>
+    <td width="160" align="center">
+      <a href="https://runapi.co/register?aff=cvDm">
+        <img src="../../../resources/partners/runapi.jpg" alt="RunAPI" width="64">
+      </a>
+    </td>
+    <td>
+      <strong>RunAPI</strong><br/>
+      An efficient and stable alternative to API OpenRouter. A single API Key can access 150+ mainstream models including OpenAI, Claude, Gemini, DeepSeek, Grok, etc., starting from 10% of the price. Compatible with tools like Claude Code and OpenClaw. Register using <a href="https://runapi.co/register?aff=cvDm">this link</a> and contact the RunAPI administrator to receive a <strong>￥7 free credit</strong>.
+    </td>
+  </tr>
 </table>
 
 ## Compatible Variants with Limited Public Information

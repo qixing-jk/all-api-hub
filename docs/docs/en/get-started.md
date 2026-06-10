@@ -41,7 +41,7 @@ Open and log in to your AI proxy station website in your browser first.
 5. After confirming the information is correct, click **`Confirm Addition`**.
 
 ::: tip Don't have an account yet?
-If you are looking for stable, efficient, and highly compatible AI relay services, try our partner [PackyCode](https://www.packyapi.com/register?aff=all-api-hub) (enter the `all-api-hub` promo code during recharge to get 10% off).
+If you are looking for stable, efficient, and highly compatible AI relay services, try our partner [PackyCode](https://www.packyapi.com/register?aff=all-api-hub) (enter the `all-api-hub` promo code during recharge to get 10% off), or [RunAPI](https://runapi.co/register?aff=cvDm) (register and contact a RunAPI administrator to receive a ￥7 free credit).
 :::
 
 > **Shield Bypass Tip**: If the site has Cloudflare verification (5-second shield), the plugin will automatically pop up a window to assist with bypassing it. Once verified, it will continue the recognition process automatically.

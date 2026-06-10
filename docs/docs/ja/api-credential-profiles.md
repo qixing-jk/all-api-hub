@@ -27,7 +27,7 @@
 `キー管理` でアップストリームサイトのキーを取得した場合は、まずそこで検証または整理してから `API 認証情報庫` に保存すると、後で使いやすくなります。
 
 ::: tip 高品質な API インターフェースをお探しですか？
-認証情報庫を充実させるために、安定しており、CLI をサポートする API インターフェースが必要な場合は、当社のパートナー [PackyCode](https://www.packyapi.com/register?aff=all-api-hub) をお試しください（チャージ時に `all-api-hub` クーポンコードを入力すると 10% オフになります）。
+認証情報庫を充実させるために、安定しており、CLI をサポートする API インターフェースが必要な場合は、当社のパートナー [PackyCode](https://www.packyapi.com/register?aff=all-api-hub)（登録およびチャージ時に `all-api-hub` クーポンコードを入力すると 10% オフになります）、または [RunAPI](https://runapi.co/register?aff=cvDm)（登録後 RunAPI 管理者に連絡すると ￥7 の無料クレジットを受け取れます）をお試しください。
 :::
 
 ## 認証情報の追加方法
