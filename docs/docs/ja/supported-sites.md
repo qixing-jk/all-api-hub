@@ -45,7 +45,7 @@
     </td>
     <td>
       <strong>RunAPI</strong><br/>
-      高効率で安定した API OpenRouter の代替プラットフォーム。1 つの API Key で OpenAI、Claude、Gemini、DeepSeek、Grok など 150 以上の主要モデルにアクセス可能。最低 10% オフで、Claude Code、OpenClaw などのツールとも互換性があります。<a href="https://runapi.co/register?aff=cvDm">こちらのリンク</a>から登録し、RunAPI 管理者に連絡すると、<strong>7 円の無料クレジット</strong>を受け取ることができます。
+      高効率で安定した API OpenRouter の代替プラットフォーム。1 つの API Key で OpenAI、Claude、Gemini、DeepSeek、Grok など 150 以上の主要モデルにアクセス可能。元価格の 10% から利用でき、Claude Code、OpenClaw などのツールとも互換性があります。<a href="https://runapi.co/register?aff=cvDm">こちらのリンク</a>から登録し、RunAPI 管理者に連絡すると、<strong>￥7 の無料クレジット</strong>を受け取ることができます。
     </td>
   </tr>
 </table>
