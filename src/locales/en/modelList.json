@@ -21,7 +21,9 @@
   },
   "actions": {
     "copyModelName": "Copy model name",
+    "copySiteUrl": "Copy site URL",
     "keyForModel": "Key for this model",
+    "openSite": "Open site",
     "verifyApi": "Verify API",
     "verifyCliSupport": "Verify CLI Support"
   },
@@ -148,7 +150,8 @@
   "messages": {
     "copyFailed": "Copy failed",
     "modelNameCopied": "Model name copied",
-    "modelNamesCopied": "Model names copied"
+    "modelNamesCopied": "Model names copied",
+    "siteUrlCopied": "Site URL copied"
   },
   "noMatchingModels": "No matching models found",
   "noSourcesDescription": "Add a site account or API credential before viewing the model list.",

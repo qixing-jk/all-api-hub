@@ -29,6 +29,10 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
+vi.mock("~/utils/browser/browserApi", () => ({
+  createTab: vi.fn(),
+}))
+
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({
     debug: vi.fn(),
@@ -66,12 +70,33 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
   ModelItemHeader: ({
     model,
     trailingContent,
+    onOpenKeyDialog,
+    onVerifyApi,
+    onVerifyCliSupport,
   }: {
     model: { model_name: string }
     trailingContent?: React.ReactNode
+    onOpenKeyDialog?: () => void
+    onVerifyApi?: () => void
+    onVerifyCliSupport?: () => void
   }) => (
     <div>
       {model.model_name}
+      {onOpenKeyDialog ? (
+        <button type="button" onClick={onOpenKeyDialog}>
+          key
+        </button>
+      ) : null}
+      {onVerifyApi ? (
+        <button type="button" onClick={onVerifyApi}>
+          verify-api
+        </button>
+      ) : null}
+      {onVerifyCliSupport ? (
+        <button type="button" onClick={onVerifyCliSupport}>
+          verify-cli
+        </button>
+      ) : null}
       {trailingContent ? (
         <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto">
           {trailingContent}
@@ -260,6 +285,60 @@ describe("ModelItem", () => {
     )
   })
 
+  it("keeps row-level account actions available when an aggregate display source disables them", async () => {
+    const user = userEvent.setup()
+    const onOpenModelKeyDialog = vi.fn()
+    const onVerifyModel = vi.fn()
+    const onVerifyCliSupport = vi.fn()
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        source={{
+          ...props.source,
+          capabilities: {
+            ...props.source.capabilities,
+            supportsTokenCompatibility: true,
+            supportsCredentialVerification: true,
+            supportsCliVerification: true,
+          },
+        }}
+        displayCapabilities={{
+          supportsPricing: true,
+          supportsRatioDisplay: true,
+          supportsGroupFiltering: true,
+          supportsAccountSummary: true,
+          supportsTokenCompatibility: false,
+          supportsCredentialVerification: false,
+          supportsBatchCredentialVerification: true,
+          supportsCliVerification: false,
+        }}
+        onOpenModelKeyDialog={onOpenModelKeyDialog}
+        onVerifyModel={onVerifyModel}
+        onVerifyCliSupport={onVerifyCliSupport}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "key" }))
+    await user.click(screen.getByRole("button", { name: "verify-api" }))
+    await user.click(screen.getByRole("button", { name: "verify-cli" }))
+
+    expect(onOpenModelKeyDialog).toHaveBeenCalledWith(
+      props.source.account,
+      props.model.model_name,
+      props.model.enable_groups,
+    )
+    expect(onVerifyModel).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "account" }),
+      props.model.model_name,
+    )
+    expect(onVerifyCliSupport).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "account" }),
+      props.model.model_name,
+    )
+  })
+
   it("uses internal expansion state when expansion props are omitted", async () => {
     const user = userEvent.setup()
 
@@ -290,15 +369,35 @@ describe("ModelItem", () => {
   })
 
   it("keeps source controls in the header trailing area", () => {
-    render(<ModelItem {...createDefaultProps()} />)
+    render(
+      <ModelItem
+        {...createDefaultProps()}
+        source={{
+          ...createDefaultProps().source,
+          account: {
+            ...createDefaultProps().source.account,
+            baseUrl: "https://api.example.com",
+          },
+        }}
+      />,
+    )
 
-    const sourceBadge = screen.getByText("Account One").closest("[data-slot]")
+    const sourceBadge = screen
+      .getByText("Account One · api.example.com")
+      .closest("[data-slot]")
     expect(sourceBadge).toHaveClass("max-w-full", "min-w-0")
     expect(sourceBadge?.parentElement).toHaveClass(
       "flex-wrap",
       "items-center",
       "sm:ml-auto",
     )
+    expect(sourceBadge).toHaveAttribute("title", "https://api.example.com")
+    expect(
+      screen.getByRole("button", { name: "actions.copySiteUrl" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "actions.openSite" }),
+    ).toBeInTheDocument()
   })
 
   it("treats expansion as controlled only when both props are provided", async () => {

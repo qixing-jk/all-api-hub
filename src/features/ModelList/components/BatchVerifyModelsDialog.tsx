@@ -30,6 +30,7 @@ import {
   type BatchVerifyModelItem,
 } from "~/features/ModelList/batchVerification"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
 import {
   getBatchVerifyModelCheckboxTestId,
   getBatchVerifyRowTestId,
@@ -867,81 +868,98 @@ export function BatchVerifyModelsDialog({
     return "outline"
   }
 
-  const renderRow = (row: BatchVerifyRow) => (
-    <div
-      data-testid={getBatchVerifyRowTestId(row.item.key)}
-      className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <Checkbox
-          checked={selectedModelKeySet.has(row.item.key)}
-          onCheckedChange={() => toggleModel(row.item.key)}
-          disabled={isRunning}
-          aria-label={t("modelList:batchVerify.modelSelection.toggle", {
-            model: row.item.modelId,
-          })}
-          data-testid={getBatchVerifyModelCheckboxTestId(row.item.key)}
-          className="mt-0.5"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">
-              {row.item.modelId}
+  const renderRow = (row: BatchVerifyRow) => {
+    const sourceLabel = formatModelListSourceLabel(row.item.source, {
+      formatProfileLabel: ({ name, host }) =>
+        t("modelList:sourceLabels.profileBadge", { name, host }),
+    })
+
+    return (
+      <div
+        data-testid={getBatchVerifyRowTestId(row.item.key)}
+        className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <Checkbox
+            checked={selectedModelKeySet.has(row.item.key)}
+            onCheckedChange={() => toggleModel(row.item.key)}
+            disabled={isRunning}
+            aria-label={t("modelList:batchVerify.modelSelection.toggle", {
+              model: row.item.modelId,
+            })}
+            data-testid={getBatchVerifyModelCheckboxTestId(row.item.key)}
+            className="mt-0.5"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">
+                {row.item.modelId}
+              </div>
+              <Badge
+                variant="outline"
+                size="sm"
+                className="max-w-full min-w-0"
+                title={sourceLabel.title ?? sourceLabel.label}
+              >
+                <span className="min-w-0 truncate">{sourceLabel.label}</span>
+              </Badge>
+              <Badge variant={statusVariant(row.status)} size="sm">
+                {row.status === BATCH_VERIFY_ROW_STATUSES.PASS
+                  ? t("modelList:batchVerify.status.pass")
+                  : row.status === BATCH_VERIFY_ROW_STATUSES.FAIL
+                    ? t("modelList:batchVerify.status.fail")
+                    : row.status === BATCH_VERIFY_ROW_STATUSES.SKIPPED
+                      ? t("modelList:batchVerify.status.skipped")
+                      : row.status === BATCH_VERIFY_ROW_STATUSES.RUNNING
+                        ? t("modelList:batchVerify.status.running")
+                        : t("modelList:batchVerify.status.pending")}
+              </Badge>
+              <span className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                {formatLatency(row.latencyMs)}
+              </span>
             </div>
-            <Badge variant={statusVariant(row.status)} size="sm">
-              {row.status === BATCH_VERIFY_ROW_STATUSES.PASS
-                ? t("modelList:batchVerify.status.pass")
-                : row.status === BATCH_VERIFY_ROW_STATUSES.FAIL
-                  ? t("modelList:batchVerify.status.fail")
-                  : row.status === BATCH_VERIFY_ROW_STATUSES.SKIPPED
-                    ? t("modelList:batchVerify.status.skipped")
-                    : row.status === BATCH_VERIFY_ROW_STATUSES.RUNNING
-                      ? t("modelList:batchVerify.status.running")
-                      : t("modelList:batchVerify.status.pending")}
-            </Badge>
-            <span className="dark:text-dark-text-tertiary text-xs text-gray-500">
-              {formatLatency(row.latencyMs)}
-            </span>
+            <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
+              {row.summary || t("modelList:batchVerify.messages.pending")}
+            </div>
+            {row.tokenName ? (
+              <div className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
+                {t("modelList:batchVerify.tokenUsed", {
+                  name: row.tokenName,
+                })}
+              </div>
+            ) : null}
+            {row.results.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {row.results.map((result) => (
+                  <Badge
+                    key={result.id}
+                    variant={statusVariant(
+                      result.status === "unsupported"
+                        ? BATCH_VERIFY_ROW_STATUSES.SKIPPED
+                        : result.status,
+                    )}
+                    size="sm"
+                  >
+                    {getApiVerificationProbeLabel(t, result.id)}
+                    {" · "}
+                    {result.status === "pass"
+                      ? t("modelList:batchVerify.status.pass")
+                      : result.status === "fail"
+                        ? t("modelList:batchVerify.status.fail")
+                        : t(
+                            "aiApiVerification:verifyDialog.status.unsupported",
+                          )}
+                    {" · "}
+                    {formatLatency(result.latencyMs)}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
-            {row.summary || t("modelList:batchVerify.messages.pending")}
-          </div>
-          {row.tokenName ? (
-            <div className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
-              {t("modelList:batchVerify.tokenUsed", {
-                name: row.tokenName,
-              })}
-            </div>
-          ) : null}
-          {row.results.length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {row.results.map((result) => (
-                <Badge
-                  key={result.id}
-                  variant={statusVariant(
-                    result.status === "unsupported"
-                      ? BATCH_VERIFY_ROW_STATUSES.SKIPPED
-                      : result.status,
-                  )}
-                  size="sm"
-                >
-                  {getApiVerificationProbeLabel(t, result.id)}
-                  {" · "}
-                  {result.status === "pass"
-                    ? t("modelList:batchVerify.status.pass")
-                    : result.status === "fail"
-                      ? t("modelList:batchVerify.status.fail")
-                      : t("aiApiVerification:verifyDialog.status.unsupported")}
-                  {" · "}
-                  {formatLatency(result.latencyMs)}
-                </Badge>
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const header = (
     <div className="min-w-0">

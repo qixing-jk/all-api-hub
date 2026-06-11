@@ -1,8 +1,9 @@
+import { Copy, ExternalLink } from "lucide-react"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { Badge, Card, CardContent } from "~/components/ui"
+import { Badge, Card, CardContent, IconButton } from "~/components/ui"
 import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
   type ModelListGroupSelectionScope,
@@ -22,11 +23,12 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
+import { createTab } from "~/utils/browser/browserApi"
 import { isProdBuild } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
-import { tryParseUrl } from "~/utils/core/urlParsing"
 
 import { formatGroupLabelFromRatios } from "../../groupLabels"
+import { formatModelListSourceLabel } from "../../sourceLabels"
 import { ModelItemDescription } from "./ModelItemDescription"
 import { ModelItemDetails } from "./ModelItemDetails"
 import { ModelItemExpandButton } from "./ModelItemExpandButton"
@@ -145,21 +147,33 @@ export default function ModelItem(props: ModelItemProps) {
     }
   }
 
-  const profileBaseUrl =
-    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-      ? source.profile.baseUrl.trim()
-      : ""
-  const profileHost =
-    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-      ? tryParseUrl(source.profile.baseUrl)?.host || profileBaseUrl || undefined
-      : undefined
-  const sourceLabel =
-    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-      ? t("sourceLabels.profileBadge", {
-          name: source.profile.name,
-          host: profileHost,
-        })
-      : source.account.name
+  const sourceBaseUrl =
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+      ? source.account.baseUrl?.trim()
+      : source.profile.baseUrl.trim()
+  const canUseSourceUrl = Boolean(sourceBaseUrl)
+
+  const handleCopySourceUrl = async () => {
+    if (!sourceBaseUrl) return
+
+    try {
+      await navigator.clipboard.writeText(sourceBaseUrl)
+      toast.success(t("messages.siteUrlCopied"))
+    } catch {
+      toast.error(t("messages.copyFailed"))
+    }
+  }
+
+  const handleOpenSourceUrl = () => {
+    if (!sourceBaseUrl) return
+
+    void createTab(sourceBaseUrl, true)
+  }
+
+  const sourceLabel = formatModelListSourceLabel(source, {
+    formatProfileLabel: ({ name, host }) =>
+      t("sourceLabels.profileBadge", { name, host }),
+  })
   const handleFilterAccount =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && onFilterAccount
       ? () => onFilterAccount(source.account.id)
@@ -178,18 +192,12 @@ export default function ModelItem(props: ModelItemProps) {
     supportsAccountSummary:
       source.capabilities.supportsAccountSummary &&
       displayCapabilities.supportsAccountSummary,
-    supportsTokenCompatibility:
-      source.capabilities.supportsTokenCompatibility &&
-      displayCapabilities.supportsTokenCompatibility,
+    supportsTokenCompatibility: source.capabilities.supportsTokenCompatibility,
     supportsCredentialVerification:
-      source.capabilities.supportsCredentialVerification &&
-      displayCapabilities.supportsCredentialVerification,
+      source.capabilities.supportsCredentialVerification,
     supportsBatchCredentialVerification:
-      source.capabilities.supportsBatchCredentialVerification &&
-      displayCapabilities.supportsBatchCredentialVerification,
-    supportsCliVerification:
-      source.capabilities.supportsCliVerification &&
-      displayCapabilities.supportsCliVerification,
+      source.capabilities.supportsBatchCredentialVerification,
+    supportsCliVerification: source.capabilities.supportsCliVerification,
   }
 
   const showPricing =
@@ -210,7 +218,7 @@ export default function ModelItem(props: ModelItemProps) {
         ? activeGroups.some((group) => model.enable_groups.includes(group))
         : true
 
-  const sourceBadge = sourceLabel ? (
+  const sourceBadge = sourceLabel.label ? (
     handleFilterAccount ? (
       <Badge
         asChild
@@ -221,18 +229,57 @@ export default function ModelItem(props: ModelItemProps) {
         <button
           type="button"
           onClick={handleFilterAccount}
-          title={sourceLabel}
-          aria-label={sourceLabel}
+          title={sourceLabel.title ?? sourceLabel.label}
+          aria-label={sourceLabel.label}
           className="max-w-full min-w-0 cursor-pointer hover:border-blue-300 hover:text-blue-700 dark:hover:border-blue-400 dark:hover:text-blue-300"
         >
-          <span className="min-w-0 truncate">{sourceLabel}</span>
+          <span className="min-w-0 truncate">{sourceLabel.label}</span>
         </button>
       </Badge>
     ) : (
-      <Badge variant="outline" size="default" className="max-w-full min-w-0">
-        <span className="min-w-0 truncate">{sourceLabel}</span>
+      <Badge
+        variant="outline"
+        size="default"
+        className="max-w-full min-w-0"
+        title={sourceLabel.title ?? sourceLabel.label}
+      >
+        <span className="min-w-0 truncate">{sourceLabel.label}</span>
       </Badge>
     )
+  ) : null
+  const sourceUrlActions = canUseSourceUrl ? (
+    <>
+      <IconButton
+        variant="ghost"
+        size="sm"
+        onClick={handleCopySourceUrl}
+        title={t("actions.copySiteUrl")}
+        aria-label={t("actions.copySiteUrl")}
+        className="shrink-0"
+        analyticsAction={
+          source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+            ? PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountSiteUrl
+            : PRODUCT_ANALYTICS_ACTION_IDS.CopyBaseUrl
+        }
+      >
+        <Copy className="h-3 w-3 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300" />
+      </IconButton>
+      <IconButton
+        variant="ghost"
+        size="sm"
+        onClick={handleOpenSourceUrl}
+        title={t("actions.openSite")}
+        aria-label={t("actions.openSite")}
+        className="shrink-0"
+        analyticsAction={
+          source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+            ? PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountSite
+            : undefined
+        }
+      >
+        <ExternalLink className="h-3 w-3 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300" />
+      </IconButton>
+    </>
   ) : null
 
   return (
@@ -278,9 +325,10 @@ export default function ModelItem(props: ModelItemProps) {
                 : undefined
             }
             trailingContent={
-              sourceBadge || canExpand ? (
+              sourceBadge || sourceUrlActions || canExpand ? (
                 <>
                   {sourceBadge}
+                  {sourceUrlActions}
                   {canExpand && (
                     <ModelItemExpandButton
                       isExpanded={isExpanded}

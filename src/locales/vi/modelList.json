@@ -19,7 +19,9 @@
   },
   "actions": {
     "copyModelName": "Sao chép tên mô hình",
+    "copySiteUrl": "Sao chép URL trang",
     "keyForModel": "Khóa tương ứng với mô hình",
+    "openSite": "Mở trang",
     "verifyApi": "Xác minh API",
     "verifyCliSupport": "Xác minh khả năng tương thích CLI"
   },
@@ -142,7 +144,8 @@
   "messages": {
     "copyFailed": "Sao chép thất bại",
     "modelNameCopied": "Đã sao chép tên mô hình",
-    "modelNamesCopied": "Đã sao chép tên các mô hình"
+    "modelNamesCopied": "Đã sao chép tên các mô hình",
+    "siteUrlCopied": "Đã sao chép URL trang"
   },
   "noMatchingModels": "Không tìm thấy mô hình nào phù hợp",
   "noSourcesDescription": "Vui lòng thêm tài khoản trang web hoặc thông tin xác thực API trước, sau đó xem danh sách mô hình.",

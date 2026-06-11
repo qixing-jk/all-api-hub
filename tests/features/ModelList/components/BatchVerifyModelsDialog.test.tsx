@@ -233,6 +233,23 @@ describe("BatchVerifyModelsDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows each row source account and site host before running", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    const row = await screen.findByTestId(
+      getBatchVerifyRowTestId("account:acc-1:model:gpt-4o"),
+    )
+
+    expect(row).toHaveTextContent("Account One · api.example.com")
+  })
+
   it("shrinks the virtual row container to the measured content height", async () => {
     renderDialog([
       {

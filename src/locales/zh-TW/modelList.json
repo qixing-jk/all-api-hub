@@ -19,7 +19,9 @@
   },
   "actions": {
     "copyModelName": "複製模型名稱",
+    "copySiteUrl": "複製站點 URL",
     "keyForModel": "模型對應金鑰",
+    "openSite": "打開站點",
     "verifyApi": "驗證介面",
     "verifyCliSupport": "驗證 CLI 相容性"
   },
@@ -142,7 +144,8 @@
   "messages": {
     "copyFailed": "複製失敗",
     "modelNameCopied": "模型名稱已複製",
-    "modelNamesCopied": "模型名稱已複製"
+    "modelNamesCopied": "模型名稱已複製",
+    "siteUrlCopied": "站點 URL 已複製"
   },
   "noMatchingModels": "沒有找到匹配的模型",
   "noSourcesDescription": "請先新增站點帳號或 API 憑據，然後查看模型列表。",
