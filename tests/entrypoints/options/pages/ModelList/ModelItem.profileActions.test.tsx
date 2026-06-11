@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
 import {
@@ -16,7 +16,23 @@ import {
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
+const mockCreateTab = vi.hoisted(() => vi.fn())
+
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+
+  return {
+    ...actual,
+    createTab: mockCreateTab,
+  }
+})
+
 describe("ModelItem profile actions", () => {
+  beforeEach(() => {
+    mockCreateTab.mockReset()
+  })
+
   it("exposes credential-based API and CLI verification for profile-backed rows", async () => {
     const user = userEvent.setup()
     const onVerifyModel = vi.fn()
@@ -235,6 +251,13 @@ describe("ModelItem profile actions", () => {
   })
 
   it("falls back to the raw profile baseUrl when the URL is malformed", async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+
     const profileSource = createProfileSource({
       id: "profile-legacy",
       name: "Legacy Key",
@@ -278,6 +301,25 @@ describe("ModelItem profile actions", () => {
     expect(
       await screen.findByText("modelList:sourceLabels.profileBadge"),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:actions.copySiteUrl",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "modelList:actions.openSite",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "modelList:actions.copySiteUrl",
+      }),
+    )
+
+    expect(writeText).toHaveBeenCalledWith("not-a-valid-url")
+    expect(mockCreateTab).not.toHaveBeenCalled()
   })
 
   it("shows the owning account name as the source badge for account-backed rows", async () => {
@@ -327,8 +369,12 @@ describe("ModelItem profile actions", () => {
       />,
     )
 
-    const sourceBadge = await screen.findByText("Example Account")
+    const sourceBadge = await screen.findByText("Example Account · example.com")
     expect(sourceBadge).toBeInTheDocument()
+    expect(sourceBadge.closest("[data-slot]")).toHaveAttribute(
+      "title",
+      "https://example.com",
+    )
     expect(sourceBadge.closest("button")).toBeNull()
   })
 
@@ -384,9 +430,10 @@ describe("ModelItem profile actions", () => {
     )
 
     const sourceBadgeButton = (
-      await screen.findByText("Example Account")
+      await screen.findByText("Example Account · example.com")
     ).closest("button")
     expect(sourceBadgeButton).not.toBeNull()
+    expect(sourceBadgeButton).toHaveAttribute("title", "https://example.com")
 
     await user.click(sourceBadgeButton!)
 

@@ -13,6 +13,7 @@ import type {
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
@@ -26,9 +27,9 @@ import type { ApiVerificationHistorySummary } from "~/services/verification/veri
 import { createTab } from "~/utils/browser/browserApi"
 import { isProdBuild } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
+import { tryParseUrl } from "~/utils/core/urlParsing"
 
 import { formatGroupLabelFromRatios } from "../../groupLabels"
-import { formatModelListSourceLabel } from "../../sourceLabels"
 import { ModelItemDescription } from "./ModelItemDescription"
 import { ModelItemDetails } from "./ModelItemDetails"
 import { ModelItemExpandButton } from "./ModelItemExpandButton"
@@ -152,6 +153,10 @@ export default function ModelItem(props: ModelItemProps) {
       ? source.account.baseUrl?.trim()
       : source.profile.baseUrl.trim()
   const canUseSourceUrl = Boolean(sourceBaseUrl)
+  const parsedSourceUrl = tryParseUrl(sourceBaseUrl)
+  const canOpenSourceUrl =
+    parsedSourceUrl?.protocol === "http:" ||
+    parsedSourceUrl?.protocol === "https:"
 
   const handleCopySourceUrl = async () => {
     if (!sourceBaseUrl) return
@@ -165,9 +170,9 @@ export default function ModelItem(props: ModelItemProps) {
   }
 
   const handleOpenSourceUrl = () => {
-    if (!sourceBaseUrl) return
+    if (!canOpenSourceUrl || !parsedSourceUrl) return
 
-    void createTab(sourceBaseUrl, true)
+    void createTab(parsedSourceUrl.toString(), true)
   }
 
   const sourceLabel = formatModelListSourceLabel(source, {
@@ -264,21 +269,23 @@ export default function ModelItem(props: ModelItemProps) {
       >
         <Copy className="h-3 w-3 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300" />
       </IconButton>
-      <IconButton
-        variant="ghost"
-        size="sm"
-        onClick={handleOpenSourceUrl}
-        title={t("actions.openSite")}
-        aria-label={t("actions.openSite")}
-        className="shrink-0"
-        analyticsAction={
-          source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-            ? PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountSite
-            : undefined
-        }
-      >
-        <ExternalLink className="h-3 w-3 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300" />
-      </IconButton>
+      {canOpenSourceUrl ? (
+        <IconButton
+          variant="ghost"
+          size="sm"
+          onClick={handleOpenSourceUrl}
+          title={t("actions.openSite")}
+          aria-label={t("actions.openSite")}
+          className="shrink-0"
+          analyticsAction={
+            source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+              ? PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountSite
+              : undefined
+          }
+        >
+          <ExternalLink className="h-3 w-3 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300" />
+        </IconButton>
+      ) : null}
     </>
   ) : null
 

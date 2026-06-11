@@ -1563,6 +1563,18 @@ describe("BatchVerifyModelsDialog", () => {
       },
     ])
 
+    const row = await screen.findByTestId(
+      getBatchVerifyRowTestId("profile:profile-1:model:claude-3-5-sonnet"),
+    )
+    const sourceBadge = row
+      .querySelector('[title="https://anthropic.example.com"]')
+      ?.closest("[data-slot]")
+    expect(sourceBadge).toHaveTextContent("modelList:sourceLabels.profileBadge")
+    expect(sourceBadge).toHaveAttribute(
+      "title",
+      "https://anthropic.example.com",
+    )
+
     fireEvent.click(
       await screen.findByRole("button", {
         name: "modelList:batchVerify.actions.start",
