@@ -248,6 +248,10 @@ describe("BatchVerifyModelsDialog", () => {
     )
 
     expect(row).toHaveTextContent("Account One · api.example.com")
+    const sourceBadge = row.querySelector(
+      '[data-slot="badge"][title="https://api.example.com"]',
+    )
+    expect(sourceBadge).toHaveTextContent("Account One · api.example.com")
   })
 
   it("shrinks the virtual row container to the measured content height", async () => {
@@ -1566,9 +1570,9 @@ describe("BatchVerifyModelsDialog", () => {
     const row = await screen.findByTestId(
       getBatchVerifyRowTestId("profile:profile-1:model:claude-3-5-sonnet"),
     )
-    const sourceBadge = row
-      .querySelector('[title="https://anthropic.example.com"]')
-      ?.closest("[data-slot]")
+    const sourceBadge = row.querySelector(
+      '[data-slot="badge"][title="https://anthropic.example.com"]',
+    )
     expect(sourceBadge).toHaveTextContent("modelList:sourceLabels.profileBadge")
     expect(sourceBadge).toHaveAttribute(
       "title",

@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type React from "react"
+import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
@@ -13,6 +14,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { createTab } from "~/utils/browser/browserApi"
 
 const { loggerWarnSpy } = vi.hoisted(() => ({
   loggerWarnSpy: vi.fn(),
@@ -368,7 +370,14 @@ describe("ModelItem", () => {
     )
   })
 
-  it("keeps source controls in the header trailing area", () => {
+  it("keeps source controls in the header trailing area", async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn().mockRejectedValue(new Error("clipboard denied"))
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+
     render(
       <ModelItem
         {...createDefaultProps()}
@@ -398,6 +407,15 @@ describe("ModelItem", () => {
     expect(
       screen.getByRole("button", { name: "actions.openSite" }),
     ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "actions.openSite" }))
+    expect(createTab).toHaveBeenCalledWith("https://api.example.com/", true)
+
+    await user.click(
+      screen.getByRole("button", { name: "actions.copySiteUrl" }),
+    )
+    expect(writeText).toHaveBeenCalledWith("https://api.example.com")
+    expect(toast.error).toHaveBeenCalledWith("messages.copyFailed")
   })
 
   it("treats expansion as controlled only when both props are provided", async () => {
