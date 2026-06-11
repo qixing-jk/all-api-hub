@@ -38,7 +38,10 @@ import {
   getHealthStatusDisplay,
   getStatusIndicatorColor,
 } from "~/features/AccountManagement/utils/healthStatusUtils"
-import { getTempWindowFallbackSettingsTab } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
+import {
+  getTempWindowFallbackSettingsAnchor,
+  getTempWindowFallbackSettingsTab,
+} from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import {
@@ -143,6 +146,10 @@ export default function SiteInfo({
     canOpenHealthSettings && healthCode
       ? getTempWindowFallbackSettingsTab(healthCode)
       : null
+  const healthSettingsAnchor =
+    canOpenHealthSettings && healthCode
+      ? getTempWindowFallbackSettingsAnchor(healthCode)
+      : undefined
 
   const handleOpenAccountSite = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -415,6 +422,7 @@ export default function SiteInfo({
                         e.preventDefault()
                         e.stopPropagation()
                         void openSettingsTab(healthSettingsTab, {
+                          anchor: healthSettingsAnchor,
                           preserveHistory: true,
                         }).catch((error) => {
                           const errorMessage = getErrorMessage(

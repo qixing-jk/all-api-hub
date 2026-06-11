@@ -81,8 +81,11 @@ export function TempWindowFallbackReminderDialog({
 
   const handleOpenSettings = useCallback(async () => {
     onClose()
-    await openSettingsTab(issue.settingsTab, { preserveHistory: true })
-  }, [issue.settingsTab, onClose])
+    await openSettingsTab(issue.settingsTab, {
+      anchor: issue.settingsAnchor,
+      preserveHistory: true,
+    })
+  }, [issue.settingsAnchor, issue.settingsTab, onClose])
 
   const handleNeverRemind = useCallback(async () => {
     await onNeverRemind()

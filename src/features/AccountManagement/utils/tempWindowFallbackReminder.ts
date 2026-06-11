@@ -5,12 +5,14 @@ import {
 } from "~/types"
 
 export type TempWindowFallbackSettingsTab = "refresh" | "permissions"
+export type TempWindowFallbackSettingsAnchor = "shield-settings"
 
 export interface TempWindowFallbackIssue {
   code: HealthStatusCode
   accountId: string
   accountName: string
   settingsTab: TempWindowFallbackSettingsTab
+  settingsAnchor?: TempWindowFallbackSettingsAnchor
 }
 
 /**
@@ -23,6 +25,19 @@ export function getTempWindowFallbackSettingsTab(
     return "permissions"
   }
   return "refresh"
+}
+
+/**
+ * Maps a health status code to the most relevant in-tab Settings anchor.
+ */
+export function getTempWindowFallbackSettingsAnchor(
+  code: HealthStatusCode,
+): TempWindowFallbackSettingsAnchor | undefined {
+  if (code === TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED) {
+    return "shield-settings"
+  }
+
+  return undefined
 }
 
 /**
@@ -48,6 +63,7 @@ export function getTempWindowFallbackIssue(
       accountId: site.id,
       accountName: site.name,
       settingsTab: getTempWindowFallbackSettingsTab(code),
+      settingsAnchor: getTempWindowFallbackSettingsAnchor(code),
     }
   }
 

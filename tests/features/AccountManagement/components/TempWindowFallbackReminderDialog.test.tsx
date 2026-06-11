@@ -172,6 +172,7 @@ describe("TempWindowFallbackReminderDialog", () => {
           accountId: "acc-2",
           accountName: "Blocked account",
           settingsTab: "refresh",
+          settingsAnchor: "shield-settings",
         }}
         onClose={onClose}
         onNeverRemind={onNeverRemind}
@@ -219,6 +220,41 @@ describe("TempWindowFallbackReminderDialog", () => {
     expect(openSettingsTabMock).not.toHaveBeenCalled()
   })
 
+  it("opens the shield settings anchor when temp-window fallback is disabled", async () => {
+    const onClose = vi.fn()
+
+    render(
+      <TempWindowFallbackReminderDialog
+        isOpen
+        issue={{
+          code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+          accountId: "acc-4",
+          accountName: "Blocked account",
+          settingsTab: "refresh",
+          settingsAnchor: "shield-settings",
+        }}
+        onClose={onClose}
+        onNeverRemind={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: JSON.stringify({
+          key: "ui:dialog.tempWindowFallbackReminder.actions.openSettings",
+        }),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(openSettingsTabMock).toHaveBeenCalledWith("refresh", {
+        anchor: "shield-settings",
+        preserveHistory: true,
+      })
+    })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it.each([
     {
       issueCode: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
@@ -251,6 +287,10 @@ describe("TempWindowFallbackReminderDialog", () => {
               issueCode === TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED
                 ? "permissions"
                 : "refresh",
+            settingsAnchor:
+              issueCode === TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED
+                ? undefined
+                : "shield-settings",
           }}
           onClose={vi.fn()}
           onNeverRemind={vi.fn()}

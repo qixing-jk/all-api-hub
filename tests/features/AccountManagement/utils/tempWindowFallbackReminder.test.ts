@@ -53,7 +53,7 @@ describe("tempWindowFallbackReminder", () => {
     expect(issue).toBeNull()
   })
 
-  it("returns an issue for TEMP_WINDOW_DISABLED and maps to refresh tab", () => {
+  it("returns an issue for TEMP_WINDOW_DISABLED and maps to the shield settings anchor", () => {
     const issue = getTempWindowFallbackIssue([
       makeSite({
         id: "acc-2",
@@ -68,6 +68,7 @@ describe("tempWindowFallbackReminder", () => {
 
     expect(issue).not.toBeNull()
     expect(issue?.settingsTab).toBe("refresh")
+    expect(issue?.settingsAnchor).toBe("shield-settings")
     expect(issue?.accountName).toBe("Relay")
   })
 
@@ -86,6 +87,7 @@ describe("tempWindowFallbackReminder", () => {
 
     expect(issue).not.toBeNull()
     expect(issue?.settingsTab).toBe("permissions")
+    expect(issue?.settingsAnchor).toBeUndefined()
   })
 
   it("returns the first matching issue when multiple sites are blocked", () => {
@@ -115,6 +117,7 @@ describe("tempWindowFallbackReminder", () => {
       accountId: "acc-10",
       accountName: "First blocked",
       settingsTab: "refresh",
+      settingsAnchor: "shield-settings",
     })
   })
 })

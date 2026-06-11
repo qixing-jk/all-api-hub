@@ -337,6 +337,39 @@ describe("SiteInfo", () => {
     })
   })
 
+  it("opens the shield settings anchor from the disabled temp-window health reason", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: {
+            status: "warning",
+            code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+            reason: "Temp window fallback disabled",
+          },
+        })}
+      />,
+    )
+
+    await user.hover(
+      screen.getByRole("button", {
+        name: "account:list.site.refreshHealthStatus",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Temp window fallback disabled",
+      }),
+    )
+
+    expect(mockOpenSettingsTab).toHaveBeenCalledWith("refresh", {
+      anchor: "shield-settings",
+      preserveHistory: true,
+    })
+  })
+
   it("shows a toast when opening the related settings tab fails", async () => {
     const user = userEvent.setup()
     mockOpenSettingsTab.mockRejectedValueOnce(new Error("settings page failed"))
