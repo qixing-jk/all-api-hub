@@ -159,6 +159,7 @@
   },
   "managedSiteStatus": {
     "actions": {
+      "configureChecks": "配置管理站点校验",
       "refresh": "刷新管理站点渠道状态",
       "refreshing": "正在刷新管理站点渠道状态",
       "reviewChannels": "查看候选渠道",
@@ -177,7 +178,7 @@
     "descriptions": {
       "backendSearchFailed": "管理站点校验暂时无法完成。",
       "baseUrlSearchUnsupported": "该功能在当前托管站点上不受支持，因为当前托管站点不支持按基础地址搜索渠道。",
-      "configMissing": "请先配置管理站点管理员凭据后再进行校验。",
+      "configMissingOptional": "可选的管理站点渠道校验尚未启用；不影响密钥查看、复制或创建。",
       "inputPreparationFailed": "无法准备可比对的渠道输入，暂时无法完成校验。",
       "newApiRetrieveKeyHint": "对于 New API，完整的 key 比对依赖渠道 key，而查看渠道 key 本身需要先完成 2FA 验证，因此当前暂无法完成完整 key 比对。"
     },

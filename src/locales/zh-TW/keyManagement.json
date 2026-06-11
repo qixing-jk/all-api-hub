@@ -159,6 +159,7 @@
   },
   "managedSiteStatus": {
     "actions": {
+      "configureChecks": "設定管理站點校驗",
       "refresh": "重新整理管理站點渠道狀態",
       "refreshing": "正在重新整理管理站點渠道狀態",
       "reviewChannels": "檢視候選渠道",
@@ -177,7 +178,7 @@
     "descriptions": {
       "backendSearchFailed": "管理站點校驗暫時無法完成。",
       "baseUrlSearchUnsupported": "該功能在目前的託管站點上不受支援，因為目前的託管站點不支援按基礎地址搜尋渠道。",
-      "configMissing": "請先配置管理站點管理員憑據後再進行校驗。",
+      "configMissingOptional": "可選的管理站點渠道校驗尚未啟用；不影響金鑰檢視、複製或建立。",
       "inputPreparationFailed": "無法準備可比對的渠道輸入，暫時無法完成校驗。",
       "newApiRetrieveKeyHint": "對於 New API，完整的 key 比對依賴渠道 key，而檢視渠道 key 本身需要先完成 2FA 驗證，因此當前暫無法完成完整 key 比對。"
     },

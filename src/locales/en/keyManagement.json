@@ -164,6 +164,7 @@
   },
   "managedSiteStatus": {
     "actions": {
+      "configureChecks": "Configure managed-site checks",
       "refresh": "Refresh Managed-Site Channel Status",
       "refreshing": "Refreshing Managed-Site Channel Status",
       "reviewChannels": "Review channels",
@@ -182,7 +183,7 @@
     "descriptions": {
       "backendSearchFailed": "Managed-site checks could not be completed.",
       "baseUrlSearchUnsupported": "This feature is not supported on the current managed site because it does not support base URL search for channel lookup.",
-      "configMissing": "Configure managed-site admin credentials before checks can run.",
+      "configMissingOptional": "Optional managed-site channel checks are not enabled yet. Viewing, copying, and creating keys still work.",
       "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
       "newApiRetrieveKeyHint": "For New API, full key comparison depends on the channel key, and viewing that channel key itself requires 2FA verification, so full key comparison is currently unavailable."
     },

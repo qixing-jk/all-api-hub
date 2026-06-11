@@ -159,6 +159,7 @@
   },
   "managedSiteStatus": {
     "actions": {
+      "configureChecks": "Cấu hình kiểm tra trang web quản lý",
       "refresh": "Làm mới trạng thái kênh trang web quản lý",
       "refreshing": "Đang làm mới trạng thái kênh trang web quản lý",
       "reviewChannels": "Xem các kênh ứng viên",
@@ -177,7 +178,7 @@
     "descriptions": {
       "backendSearchFailed": "Kiểm tra trang web quản lý tạm thời không thể hoàn tất.",
       "baseUrlSearchUnsupported": "Tính năng này không được hỗ trợ trên trang web lưu trữ hiện tại vì trang web lưu trữ hiện tại không hỗ trợ tìm kiếm kênh theo địa chỉ cơ sở.",
-      "configMissing": "Vui lòng định cấu hình thông tin xác thực quản trị viên của trang web quản lý trước khi kiểm tra.",
+      "configMissingOptional": "Kiểm tra kênh trang web quản lý là tùy chọn và chưa được bật; việc xem, sao chép hoặc tạo khóa vẫn hoạt động.",
       "inputPreparationFailed": "Không thể chuẩn bị dữ liệu nhập kênh có thể so sánh, tạm thời không thể hoàn tất kiểm tra.",
       "newApiRetrieveKeyHint": "Đối với New API, việc so sánh toàn bộ key phụ thuộc vào key kênh, và việc xem key kênh yêu cầu phải hoàn tất xác minh 2FA trước, do đó hiện tại chưa thể hoàn tất so sánh toàn bộ key."
     },

@@ -886,6 +886,71 @@ describe("TokenHeader save to API profiles", () => {
     ).toBeInTheDocument()
   })
 
+  it("explains missing managed-site admin credentials as an optional check and opens the setup anchor", async () => {
+    const user = userEvent.setup()
+    const account = createAccountStub()
+
+    const token = {
+      id: 9_2,
+      user_id: 1,
+      key: "sk-managed-site-config-missing",
+      status: 1,
+      name: "Managed Site Config Missing Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.CONFIG_MISSING,
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByText("keyManagement:managedSiteStatus.badges.configMissing"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.descriptions.configMissingOptional",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "keyManagement:managedSiteStatus.descriptions.configMissing",
+      ),
+    ).toBeNull()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.verifyNow",
+      }),
+    ).toBeNull()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.configureChecks",
+      }),
+    )
+
+    expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite", {
+      preserveHistory: true,
+    })
+  })
+
   it("logs a settings navigation failure instead of leaving the rejection unhandled", async () => {
     const user = userEvent.setup()
     const account = createAccountStub()

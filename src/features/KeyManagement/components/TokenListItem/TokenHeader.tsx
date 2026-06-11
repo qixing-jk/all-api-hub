@@ -214,7 +214,9 @@ const getManagedSiteStatusDescription = (
 
   switch (managedSiteStatus.reason) {
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.CONFIG_MISSING:
-      return t("keyManagement:managedSiteStatus.descriptions.configMissing")
+      return t(
+        "keyManagement:managedSiteStatus.descriptions.configMissingOptional",
+      )
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.INPUT_PREPARATION_FAILED:
       return t(
         "keyManagement:managedSiteStatus.descriptions.inputPreparationFailed",
@@ -616,8 +618,13 @@ export function TokenHeader({
       managedSiteStatus &&
       onManagedSiteVerificationRetry,
   )
+  const isManagedSiteConfigMissing =
+    managedSiteStatus?.status === MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN &&
+    managedSiteStatus.reason ===
+      MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.CONFIG_MISSING
   const shouldShowManagedSiteSettingsAction = Boolean(
-    managedSiteRecovery && !canRetryManagedSiteVerification,
+    (managedSiteRecovery && !canRetryManagedSiteVerification) ||
+      isManagedSiteConfigMissing,
   )
   const managedSiteRecoveryMessage = managedSiteRecovery
     ? canRetryManagedSiteVerification
@@ -652,8 +659,12 @@ export function TokenHeader({
   }
 
   const handleOpenManagedSiteSettings = () => {
-    void openSettingsTab("managedSite", { preserveHistory: true }).catch(
-      (error) => logger.error("Failed to open managed-site settings", error),
+    void Promise.resolve(
+      openSettingsTab("managedSite", {
+        preserveHistory: true,
+      }),
+    ).catch((error) =>
+      logger.error("Failed to open managed-site settings", error),
     )
   }
 
@@ -784,7 +795,9 @@ export function TokenHeader({
                 onClick={handleOpenManagedSiteSettings}
                 title={managedSiteRecoveryMessage ?? undefined}
               >
-                {t("common:labels.settings")}
+                {isManagedSiteConfigMissing
+                  ? t("managedSiteStatus.actions.configureChecks")
+                  : t("common:labels.settings")}
               </WorkflowTransitionButton>
             ) : null}
           </div>
