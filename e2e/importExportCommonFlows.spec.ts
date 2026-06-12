@@ -1133,13 +1133,23 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   const stagedBackups = new Map<string, string>()
   const tempDeleteUrls: string[] = []
   let remoteBackup = ""
+  const webdavBackupFile = new URL(webdavFileUrl)
+  const webdavBackupDirectoryPath = webdavBackupFile.pathname.replace(
+    /\/[^/]*$/,
+    "",
+  )
+  const webdavBackupFileName = webdavBackupFile.pathname.split("/").pop() ?? ""
 
   await context.route("https://webdav.example.com/**", async (route) => {
     const method = route.request().method()
     const url = new URL(route.request().url())
     const isBackupFile = url.href === webdavFileUrl
+    const requestDirectoryPath = url.pathname.replace(/\/[^/]*$/, "")
+    const requestFileName = url.pathname.split("/").pop() ?? ""
     const isTempBackupFile =
-      url.pathname.startsWith("/.") && url.pathname.includes(".tmp.")
+      requestDirectoryPath === webdavBackupDirectoryPath &&
+      (requestFileName.startsWith(`${webdavBackupFileName}.tmp.`) ||
+        requestFileName.startsWith(`.${webdavBackupFileName}.tmp.`))
 
     if (method === "GET" && (isBackupFile || isTempBackupFile)) {
       const body = isTempBackupFile ? stagedBackups.get(url.href) : remoteBackup

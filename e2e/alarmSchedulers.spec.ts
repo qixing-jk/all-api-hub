@@ -412,16 +412,20 @@ async function stubWebdavBackupRoutes(
   const uploadedPayloads: unknown[] = []
   const tempDeleteUrls: string[] = []
   const backupFileUrl = new URL(options.backupFileUrl)
+  const backupDirectoryPath = backupFileUrl.pathname.replace(/\/[^/]*$/, "")
+  const backupFileName = backupFileUrl.pathname.split("/").pop() ?? ""
 
   await context.route(`${backupFileUrl.origin}/**`, async (route: Route) => {
     const request = route.request()
     const method = request.method()
     const url = new URL(request.url())
     const isBackupFile = url.href === options.backupFileUrl
+    const requestDirectoryPath = url.pathname.replace(/\/[^/]*$/, "")
+    const requestFileName = url.pathname.split("/").pop() ?? ""
     const isTempBackupFile =
-      url.pathname.startsWith(
-        `${backupFileUrl.pathname.replace(/\/[^/]*$/, "")}/.`,
-      ) && url.pathname.includes(".tmp.")
+      requestDirectoryPath === backupDirectoryPath &&
+      (requestFileName.startsWith(`${backupFileName}.tmp.`) ||
+        requestFileName.startsWith(`.${backupFileName}.tmp.`))
 
     if (method === "GET" && (isBackupFile || isTempBackupFile)) {
       const body = isTempBackupFile ? stagedBackups.get(url.href) : remoteBackup
