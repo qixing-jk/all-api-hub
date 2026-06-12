@@ -20,7 +20,9 @@ Provider compatibility checks:
 
 - WebDAV providers: verify the live provider's UI-driven save, connection
   test, upload overwrite, and download/import flow. Nutstore is included as a
-  regression target for existing-file `MOVE` compatibility.
+  regression target for existing-file `MOVE` compatibility. CTFile is included
+  as a regression target for providers that reject hidden temporary upload
+  names.
 
 For current coverage details, inspect the specs in this directory and the shared
 helpers under `e2e/scenarios/`.
@@ -40,6 +42,7 @@ Run the shared WebDAV provider flow locally:
 
 ```bash
 pnpm e2e:real-site:nutstore
+pnpm e2e:real-site:ctfile
 pnpm e2e:real-site:webdav
 ```
 
@@ -136,6 +139,19 @@ runner selects these variables by default.
 AAH_E2E_NUTSTORE_WEBDAV_URL=https://dav.jianguoyun.com/dav/all-api-hub-e2e/all-api-hub-nutstore-move.json
 AAH_E2E_NUTSTORE_WEBDAV_USERNAME=test-user@example.com
 AAH_E2E_NUTSTORE_WEBDAV_PASSWORD=replace-with-nutstore-app-password
+```
+
+## CTFile WebDAV
+
+Use a dedicated low-value CTFile test file URL. The shared provider flow uploads
+through the extension UI, overwrites the same JSON file, imports it back, and
+deletes the exact test file before and after the run. This provider covers
+WebDAV servers that reject hidden `PUT` target names.
+
+```env
+AAH_E2E_CTFILE_WEBDAV_URL=https://dav.ctfile.com/test-space/all-api-hub-e2e/all-api-hub-ctfile.json
+AAH_E2E_CTFILE_WEBDAV_USERNAME=test-user
+AAH_E2E_CTFILE_WEBDAV_PASSWORD=replace-with-ctfile-password
 ```
 
 ## Additional WebDAV Providers

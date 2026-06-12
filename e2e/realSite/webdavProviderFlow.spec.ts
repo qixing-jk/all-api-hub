@@ -258,7 +258,7 @@ test.describe("real-site E2E: WebDAV provider flow", () => {
   test.beforeEach(async ({ context, page }) => {
     installExtensionPageGuards(page, {
       ignoreConsoleErrorPatterns: [
-        /Failed to load resource: .*status of (404|409)/u,
+        /Failed to load resource: .*status of (404|405|409)/u,
       ],
     })
     await forceExtensionLanguage(page, "en")

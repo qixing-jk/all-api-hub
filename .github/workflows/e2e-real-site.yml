@@ -43,6 +43,12 @@ jobs:
             provider_name: Nutstore
             provider_account_prefix: nutstore
             spec: e2e/realSite/webdavProviderFlow.spec.ts
+          - label: CTFile WebDAV
+            env_prefix: CTFILE_WEBDAV
+            kind: webdav
+            provider_name: CTFile
+            provider_account_prefix: ctfile
+            spec: e2e/realSite/webdavProviderFlow.spec.ts
 
     steps:
       - name: Checkout code

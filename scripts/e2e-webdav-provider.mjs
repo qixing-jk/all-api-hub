@@ -14,6 +14,14 @@ const providerAliases = new Map([
       accountPrefix: "nutstore",
     },
   ],
+  [
+    "ctfile",
+    {
+      providerPrefix: "CTFILE_WEBDAV",
+      providerName: "CTFile",
+      accountPrefix: "ctfile",
+    },
+  ],
 ])
 
 const { providerArg, extraPlaywrightArgs } = parseArgs(process.argv.slice(2))
@@ -133,7 +141,9 @@ function printUsage() {
   console.log(`Usage:
   pnpm e2e:real-site:webdav
   pnpm e2e:real-site:webdav nutstore
+  pnpm e2e:real-site:webdav ctfile
   pnpm e2e:real-site:nutstore
+  pnpm e2e:real-site:ctfile
   pnpm e2e:real-site:webdav CUSTOM_WEBDAV -- --headed
 
 The provider argument selects AAH_E2E_<PROVIDER>_URL, USERNAME, and PASSWORD
