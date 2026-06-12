@@ -1197,6 +1197,64 @@ describe("WebDAVSettings", () => {
     )
   })
 
+  it("saves dirty WebDAV settings after unrelated preference timestamp changes before testing", async () => {
+    render(
+      <>
+        <WebDAVSettings />
+        <WebDAVAutoSyncSettings />
+      </>,
+    )
+
+    const webdavUrlInput = (await screen.findByDisplayValue(
+      "https://dav.example.com/backup.json",
+    )) as HTMLInputElement
+
+    fireEvent.change(webdavUrlInput, {
+      target: {
+        value: "http://127.0.0.1:1900/configSync/ALL-API-HUB",
+      },
+    })
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("custom sync ok")
+    })
+
+    clickWebdavAction("webdav-test-connection")
+
+    await waitFor(() => {
+      expect(
+        mockUserPreferences.savePreferencesWithResult,
+      ).toHaveBeenCalledWith(
+        {
+          webdav: expect.objectContaining({
+            url: "http://127.0.0.1:1900/configSync/ALL-API-HUB",
+            username: "alice",
+            password: "pw",
+          }),
+        },
+        {
+          expectedLastUpdated: 1,
+        },
+      )
+      expect(mockTestWebdavConnection).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: "http://127.0.0.1:1900/configSync/ALL-API-HUB",
+          username: "alice",
+          password: "pw",
+        }),
+      )
+    })
+    expect(toast.success).toHaveBeenCalledWith(
+      "importExport:webdav.testSuccess",
+    )
+  })
+
   it("explains when manual WebDAV actions will save draft changes first", async () => {
     render(<WebDAVSettings />)
 
@@ -1385,7 +1443,7 @@ describe("WebDAVSettings", () => {
     )
   })
 
-  it("shows the action-specific connection failure message when persisting settings fails", async () => {
+  it("shows a local save failure when persisting settings before connection test fails", async () => {
     mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
 
     render(<WebDAVSettings />)
@@ -1398,12 +1456,14 @@ describe("WebDAVSettings", () => {
     clickWebdavAction("webdav-test-connection")
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("importExport:webdav.testFailed")
+      expect(toast.error).toHaveBeenCalledWith(
+        "settings:messages.saveSettingsFailed",
+      )
     })
     expect(mockTestWebdavConnection).not.toHaveBeenCalled()
   })
 
-  it("shows the action-specific upload failure message when persisting settings fails", async () => {
+  it("shows a local save failure when persisting settings before upload fails", async () => {
     mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
 
     render(<WebDAVSettings />)
@@ -1417,7 +1477,7 @@ describe("WebDAVSettings", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "importExport:webdav.uploadFailed",
+        "settings:messages.saveSettingsFailed",
       )
     })
     expect(mockUploadBackup).not.toHaveBeenCalled()

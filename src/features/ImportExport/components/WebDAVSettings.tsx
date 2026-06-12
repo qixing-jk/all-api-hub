@@ -218,7 +218,6 @@ export default function WebDAVSettings() {
     draft: localConfig,
     setDraft: setLocalConfig,
     isDirty: webdavConfigDirty,
-    expectedLastUpdated,
   } = usePreferenceDraft({
     savedValue: savedConfig,
     savedVersion: preferences.lastUpdated,
@@ -306,7 +305,7 @@ export default function WebDAVSettings() {
     try {
       success = await updateWebdavSettings(updates, {
         expectedLastUpdated:
-          options?.expectedLastUpdated ?? expectedLastUpdated,
+          options?.expectedLastUpdated ?? preferences.lastUpdated,
       })
     } catch (error) {
       throw new PersistWebdavConfigError(error)
@@ -365,7 +364,7 @@ export default function WebDAVSettings() {
       logger.error("WebDAV connection test failed", e)
       toast.error(
         e instanceof PersistWebdavConfigError
-          ? t("webdav.testFailed")
+          ? t("settings:messages.saveSettingsFailed")
           : e?.message || t("webdav.testFailed"),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -513,7 +512,7 @@ export default function WebDAVSettings() {
       logger.error("Failed to upload backup to WebDAV", e)
       toast.error(
         e instanceof PersistWebdavConfigError
-          ? t("webdav.uploadFailed")
+          ? t("settings:messages.saveSettingsFailed")
           : e?.message || t("webdav.uploadFailed"),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -676,7 +675,7 @@ export default function WebDAVSettings() {
       logger.error("Failed to download/import WebDAV backup", e)
       toast.error(
         e instanceof PersistWebdavConfigError
-          ? t("importExport:import.downloadImportFailed")
+          ? t("settings:messages.saveSettingsFailed")
           : e?.message || t("importExport:import.downloadImportFailed"),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {

@@ -145,6 +145,26 @@ describe("webdavService", () => {
       expect((init as RequestInit).method).toBe("GET")
     })
 
+    it("tests directory-like WebDAV URLs without expanding them to backup files", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        webdav: {
+          ...basePrefs.webdav,
+          url: "http://127.0.0.1:1900/configSync/ALL-API-HUB",
+        },
+      })
+      globalAny.fetch.mockResolvedValue({ status: 200 })
+
+      const ok = await testWebdavConnection()
+
+      expect(ok).toBe(true)
+      expect(globalAny.fetch).toHaveBeenCalledWith(
+        "http://127.0.0.1:1900/configSync/ALL-API-HUB",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      )
+    })
+
     it("returns true when status is 404 (file missing but auth ok)", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({ status: 404 })
