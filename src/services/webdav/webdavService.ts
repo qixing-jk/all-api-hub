@@ -122,9 +122,13 @@ function ensureFilename(url: string, version: string = CONFIG_VERSION) {
  * For directory-style settings, probe the configured collection itself instead
  * of the generated backup file path so first-time valid endpoints are not
  * rejected before the backup file exists.
+ *
+ * Both directory-style URLs (e.g., "http://host/webdav/") and file-style URLs
+ * (e.g., "http://host/webdav/backup.json") are returned unchanged, ensuring
+ * connection tests probe the user's exact configuration.
  */
 function resolveConnectionTestUrl(url: string) {
-  return /\.json($|\?)/i.test(url) ? ensureFilename(url) : url
+  return url
 }
 
 /**
