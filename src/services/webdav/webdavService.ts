@@ -166,7 +166,14 @@ function createTimestampForTempFile(now: number = Date.now()) {
 function createSafeCommitTempPrefix(targetUrl: string) {
   const officialName =
     getBackupFileName(targetUrl) || `${PROGRAM_NAME}-${CONFIG_VERSION}.json`
-  return `.${officialName}.tmp.`
+  return `${officialName}.tmp.`
+}
+
+/**
+ * Creates the hidden temp prefix used by older builds.
+ */
+function createLegacySafeCommitTempPrefix(targetUrl: string) {
+  return `.${createSafeCommitTempPrefix(targetUrl)}`
 }
 
 /**
@@ -522,7 +529,7 @@ function resolveHrefToCollectionUrl(collectionUrl: string, href: string) {
  */
 async function cleanupStaleTempBackupsBestEffort(params: {
   collectionUrl: string
-  tempPrefix: string
+  tempPrefixes: string[]
   username: string
   password: string
   now?: number
@@ -545,11 +552,15 @@ async function cleanupStaleTempBackupsBestEffort(params: {
       const fileName = decodeURIComponent(
         href.split("/").filter(Boolean).pop() || "",
       )
-      const createdAt = parseTempTimestampFromFileName({
-        fileName,
-        tempPrefix: params.tempPrefix,
-      })
-      if (createdAt === null || now - createdAt <= STALE_TEMP_MAX_AGE_MS) {
+      const createdAt = params.tempPrefixes
+        .map((tempPrefix) =>
+          parseTempTimestampFromFileName({
+            fileName,
+            tempPrefix,
+          }),
+        )
+        .find((value): value is number => value !== null)
+      if (createdAt === undefined || now - createdAt <= STALE_TEMP_MAX_AGE_MS) {
         continue
       }
 
@@ -768,7 +779,10 @@ export async function uploadBackup(
   await prepareWebdavBackupTargetForWrite(context)
   void cleanupStaleTempBackupsBestEffort({
     collectionUrl: getBackupDirUrl(targetUrl),
-    tempPrefix: createSafeCommitTempPrefix(targetUrl),
+    tempPrefixes: [
+      createSafeCommitTempPrefix(targetUrl),
+      createLegacySafeCommitTempPrefix(targetUrl),
+    ],
     username: cfg.username,
     password: cfg.password,
   }).catch(() => {

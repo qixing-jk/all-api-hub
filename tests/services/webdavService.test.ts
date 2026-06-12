@@ -565,7 +565,27 @@ describe("webdavService", () => {
       await expect(uploadBackup('{"random":true}')).resolves.toBe(true)
 
       expect(globalAny.fetch.mock.calls[2][0]).toBe(
-        "https://example.com/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20260531T041500Z.4fzzzxjylrx",
+        "https://example.com/webdav/all-api-hub-backup/all-api-hub-1-0.json.tmp.20260531T041500Z.4fzzzxjylrx",
+      )
+    })
+
+    it("uses non-hidden temp file names for provider compatibility", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"visibleTemp":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
+
+      await expect(uploadBackup('{"visibleTemp":true}')).resolves.toBe(true)
+
+      expect(globalAny.fetch.mock.calls[2][0]).toMatch(
+        /^https:\/\/example\.com\/webdav\/all-api-hub-backup\/all-api-hub-1-0\.json\.tmp\.\d{8}T\d{6}Z\.[a-z0-9]+$/,
       )
     })
 
@@ -581,7 +601,7 @@ describe("webdavService", () => {
             .mockResolvedValue(`<?xml version="1.0" encoding="utf-8"?>
         <d:multistatus xmlns:d="DAV:">
           <d:response>
-            <d:href>/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20260231T000000Z.invaliddate</d:href>
+            <d:href>/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20261301T000000Z.invaliddate</d:href>
           </d:response>
         </d:multistatus>`),
         })
@@ -597,7 +617,7 @@ describe("webdavService", () => {
       expect(
         globalAny.fetch.mock.calls.some(
           ([url, init]: [unknown, RequestInit]) =>
-            String(url).includes("20260231T000000Z.invaliddate") &&
+            String(url).includes("20261301T000000Z.invaliddate") &&
             init?.method === "DELETE",
         ),
       ).toBe(false)
@@ -777,7 +797,7 @@ describe("webdavService", () => {
       expect((putInit as RequestInit).method).toBe("PUT")
       expect((putInit as RequestInit).body).toBe('{"foo":"bar"}')
       expect(String(tempUrl)).toMatch(
-        /^https:\/\/example\.com\/webdav\/all-api-hub-backup\/\.all-api-hub-1-0\.json\.tmp\.\d{8}T\d{6}Z\.[a-z0-9]+$/,
+        /^https:\/\/example\.com\/webdav\/all-api-hub-backup\/all-api-hub-1-0\.json\.tmp\.\d{8}T\d{6}Z\.[a-z0-9]+$/,
       )
       expect(putUrl).toBe(tempUrl)
       expect((getInit as RequestInit).method).toBe("GET")
@@ -1305,7 +1325,7 @@ describe("webdavService", () => {
         "https://example.com/custom-backups/",
       )
       expect(globalAny.fetch.mock.calls[3][0]).toMatch(
-        /^https:\/\/example\.com\/custom-backups\/\.custom\.json\.tmp\.\d{8}T\d{6}Z\.[a-z0-9]+$/,
+        /^https:\/\/example\.com\/custom-backups\/custom\.json\.tmp\.\d{8}T\d{6}Z\.[a-z0-9]+$/,
       )
       expect(globalAny.fetch.mock.calls[5][0]).toBe(
         globalAny.fetch.mock.calls[3][0],
