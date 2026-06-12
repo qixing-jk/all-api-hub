@@ -22,6 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Account-backed real-site flows.
           - label: New API
             env_prefix: NEW_API
             spec: e2e/realSite/newApiAccountAdd.spec.ts
@@ -37,6 +38,7 @@ jobs:
           - label: Sub2API
             env_prefix: SUB2API
             spec: e2e/realSite/sub2apiAccountAdd.spec.ts
+          # WebDAV provider compatibility flows.
           - label: Nutstore WebDAV
             env_prefix: NUTSTORE_WEBDAV
             kind: webdav
