@@ -14,8 +14,19 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import { isDevBuild } from "~/utils/core/environment"
 
 import i18n from "./core"
-import { resolveInitialAppLanguage } from "./language"
+import { normalizeAppLanguage, resolveInitialAppLanguage } from "./language"
 import { mapToDayjsLocale, resources } from "./resources"
+
+/**
+ * Keep the extension page root language aligned with the active UI locale.
+ */
+function syncDocumentLanguage(language: string) {
+  if (typeof document === "undefined") {
+    return
+  }
+
+  document.documentElement.lang = normalizeAppLanguage(language) ?? language
+}
 
 i18n
   .use(LanguageDetector)
@@ -53,10 +64,12 @@ i18n
     }
 
     dayjs.locale(mapToDayjsLocale(initialLanguage))
+    syncDocumentLanguage(initialLanguage)
   })
 
 export default i18n
 
 i18n.on("languageChanged", async (lng) => {
   dayjs.locale(mapToDayjsLocale(lng))
+  syncDocumentLanguage(lng)
 })

@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import dayjs from "dayjs"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -38,6 +40,19 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 }))
 
 vi.mock("~/utils/i18n/language", () => ({
+  normalizeAppLanguage: (language?: string | null) => {
+    const normalized = language?.trim().replace(/_/g, "-")
+    if (!normalized) return undefined
+
+    const languageFamily = normalized.toLowerCase().split("-")[0]
+    if (languageFamily === "en") return "en"
+    if (languageFamily === "ja") return "ja"
+    if (languageFamily === "vi") return "vi"
+    if (normalized.toLowerCase() === "zh-tw") return "zh-TW"
+    if (languageFamily === "zh") return "zh-CN"
+
+    return undefined
+  },
   resolveInitialAppLanguage: resolveInitialAppLanguageMock,
 }))
 
@@ -61,6 +76,7 @@ describe("app i18n initialization", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.unstubAllEnvs()
+    document.documentElement.lang = "en"
 
     i18nCoreMock.use.mockReset()
     i18nCoreMock.use.mockImplementation(() => i18nCoreMock)
@@ -130,6 +146,7 @@ describe("app i18n initialization", () => {
       })
       expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith("ja")
       expect(localeSpy).toHaveBeenCalledWith("ja")
+      expect(document.documentElement.lang).toBe("ja")
 
       const languageChangedHandler = i18nCoreMock.on.mock.calls.find(
         ([eventName]) => eventName === "languageChanged",
@@ -139,6 +156,7 @@ describe("app i18n initialization", () => {
       languageChangedHandler?.("zh_TW")
 
       expect(localeSpy).toHaveBeenLastCalledWith("zh-tw")
+      expect(document.documentElement.lang).toBe("zh-TW")
     } finally {
       localeSpy.mockRestore()
     }
@@ -186,6 +204,7 @@ describe("app i18n initialization", () => {
       )
       expect(i18nCoreMock.changeLanguage).not.toHaveBeenCalled()
       expect(localeSpy).toHaveBeenCalledWith("ja")
+      expect(document.documentElement.lang).toBe("ja")
     } finally {
       localeSpy.mockRestore()
     }
