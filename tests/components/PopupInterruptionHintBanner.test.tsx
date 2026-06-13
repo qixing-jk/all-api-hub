@@ -2,7 +2,10 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanner"
-import { clearPopupInterruptionHint } from "~/services/popupInterruptionHint"
+import {
+  clearPopupInterruptionHint,
+  POPUP_CRITICAL_FLOWS,
+} from "~/services/popupInterruptionHint"
 import { openSidePanelPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -68,7 +71,7 @@ describe("PopupInterruptionHintBanner", () => {
 
   it("shows a sidebar guidance banner when account auto-detect was interrupted", async () => {
     mockGetPopupInterruptionHint.mockResolvedValue({
-      flow: "account-auto-detect",
+      flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
       status: "pending",
       startedAt: 1,
       interruptedAt: 2,
@@ -85,7 +88,7 @@ describe("PopupInterruptionHintBanner", () => {
   it("saves the sidepanel preference, opens it, and clears the hint", async () => {
     const user = userEvent.setup()
     mockGetPopupInterruptionHint.mockResolvedValue({
-      flow: "account-auto-detect",
+      flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
       status: "pending",
       startedAt: 1,
       interruptedAt: 2,
@@ -113,7 +116,7 @@ describe("PopupInterruptionHintBanner", () => {
     const user = userEvent.setup()
     mockUpdateActionClickBehavior.mockResolvedValue(false)
     mockGetPopupInterruptionHint.mockResolvedValue({
-      flow: "account-auto-detect",
+      flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
       status: "pending",
       startedAt: 1,
       interruptedAt: 2,
@@ -139,7 +142,7 @@ describe("PopupInterruptionHintBanner", () => {
   it("clears the hint when the user keeps using the popup", async () => {
     const user = userEvent.setup()
     mockGetPopupInterruptionHint.mockResolvedValue({
-      flow: "account-auto-detect",
+      flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
       status: "pending",
       startedAt: 1,
       interruptedAt: 2,

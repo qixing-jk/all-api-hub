@@ -9,6 +9,18 @@ import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { openPermissionsOnboardingPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+const { toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+}))
+
+vi.mock("react-hot-toast", () => ({
+  default: {
+    error: toastErrorMock,
+    success: toastSuccessMock,
+  },
+}))
+
 vi.mock("~/components/dialogs/UpdateLogDialog", async (importOriginal) => {
   const actual =
     await importOriginal<
@@ -77,6 +89,8 @@ describe("DevDialogDebugMenu", () => {
     mockedOpenPermissionsOnboardingPage.mockResolvedValue(undefined)
     mockedDebugQueuePopupInterruptionHint.mockReset()
     mockedDebugQueuePopupInterruptionHint.mockResolvedValue(undefined)
+    toastErrorMock.mockReset()
+    toastSuccessMock.mockReset()
     vi.spyOn(changelogOnUpdateState, "setPendingVersion").mockResolvedValue(
       undefined,
     )
@@ -142,6 +156,37 @@ describe("DevDialogDebugMenu", () => {
     )
 
     expect(mockedDebugQueuePopupInterruptionHint).toHaveBeenCalledOnce()
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "Queued popup interruption hint (dev)",
+    )
+  })
+
+  it("reports popup hint debug failures", async () => {
+    const user = userEvent.setup()
+    mockedDebugQueuePopupInterruptionHint.mockRejectedValueOnce(
+      new Error("storage blocked"),
+    )
+
+    render(<DevDialogDebugMenu />, {
+      withReleaseUpdateStatusProvider: false,
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await user.click(
+      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "Dev: Queue popup interruption hint",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "Failed to queue popup interruption hint (dev): storage blocked",
+      )
+    })
   })
 
   it("does not render outside development mode", () => {

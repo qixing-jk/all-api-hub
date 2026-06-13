@@ -9,7 +9,12 @@ import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("PopupInterruptionHint")
 
-export type PopupCriticalFlow = "account-auto-detect"
+export const POPUP_CRITICAL_FLOWS = {
+  AccountAutoDetect: "account-auto-detect",
+} as const
+
+export type PopupCriticalFlow =
+  (typeof POPUP_CRITICAL_FLOWS)[keyof typeof POPUP_CRITICAL_FLOWS]
 
 export interface PopupInterruptionHint {
   flow: PopupCriticalFlow
@@ -50,7 +55,7 @@ function isPopupInterruptionHint(
 
   const candidate = value as Partial<PopupInterruptionHint>
   return (
-    candidate.flow === "account-auto-detect" &&
+    candidate.flow === POPUP_CRITICAL_FLOWS.AccountAutoDetect &&
     candidate.status === "pending" &&
     typeof candidate.startedAt === "number" &&
     typeof candidate.interruptedAt === "number"
@@ -69,7 +74,7 @@ function isActivePopupCriticalFlow(
 
   const candidate = value as Partial<ActivePopupCriticalFlow>
   return (
-    candidate.flow === "account-auto-detect" &&
+    candidate.flow === POPUP_CRITICAL_FLOWS.AccountAutoDetect &&
     candidate.status === "active" &&
     typeof candidate.startedAt === "number"
   )
@@ -213,7 +218,7 @@ function ensureDebugAvailable(action: string) {
  * Queues the popup interruption hint without reproducing popup teardown.
  */
 export async function debugQueuePopupInterruptionHint(
-  flow: PopupCriticalFlow = "account-auto-detect",
+  flow: PopupCriticalFlow = POPUP_CRITICAL_FLOWS.AccountAutoDetect,
 ) {
   ensureDebugAvailable("popupInterruptionHint:debugQueue")
 

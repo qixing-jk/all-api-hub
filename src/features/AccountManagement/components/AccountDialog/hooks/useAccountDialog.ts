@@ -61,6 +61,7 @@ import {
 } from "~/services/permissions/permissionManager"
 import {
   completePopupCriticalFlow,
+  POPUP_CRITICAL_FLOWS,
   startPopupCriticalFlow,
 } from "~/services/popupInterruptionHint"
 import {
@@ -1576,7 +1577,7 @@ export function useAccountDialog({
     detectedCookieStoreIdRef.current = null
     const shouldTrackPopupInterruption = isExtensionPopup()
     if (shouldTrackPopupInterruption) {
-      await startPopupCriticalFlow("account-auto-detect")
+      await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
     }
 
     try {
@@ -1727,7 +1728,7 @@ export function useAccountDialog({
       })
     } finally {
       if (shouldTrackPopupInterruption) {
-        await completePopupCriticalFlow("account-auto-detect")
+        await completePopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
       }
       setIsDetecting(false)
     }

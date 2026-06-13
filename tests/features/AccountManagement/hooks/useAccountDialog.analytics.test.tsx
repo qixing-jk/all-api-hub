@@ -14,6 +14,7 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   AutoDetectErrorType,
 } from "~/services/accounts/utils/autoDetectUtils"
+import { POPUP_CRITICAL_FLOWS } from "~/services/popupInterruptionHint"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -290,10 +291,10 @@ describe("useAccountDialog analytics", () => {
     })
 
     expect(mockStartPopupCriticalFlow).toHaveBeenCalledWith(
-      "account-auto-detect",
+      POPUP_CRITICAL_FLOWS.AccountAutoDetect,
     )
     expect(mockCompletePopupCriticalFlow).toHaveBeenCalledWith(
-      "account-auto-detect",
+      POPUP_CRITICAL_FLOWS.AccountAutoDetect,
     )
   })
 
