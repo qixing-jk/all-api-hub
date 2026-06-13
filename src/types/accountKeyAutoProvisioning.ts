@@ -17,6 +17,13 @@ export type AccountKeyRepairSkipReason =
   | "aihubmixOneTimeKey"
   | "noneAuth"
 
+export const ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS = {
+  GroupUnavailable: "groupUnavailable",
+} as const
+
+export type AccountKeyRepairInvalidTokenReason =
+  (typeof ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS)[keyof typeof ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS]
+
 export interface AccountKeyRepairInvalidToken {
   accountId: string
   accountName: string
@@ -25,7 +32,7 @@ export interface AccountKeyRepairInvalidToken {
   tokenId: number
   tokenName: string
   group: string
-  reason: "groupUnavailable"
+  reason: AccountKeyRepairInvalidTokenReason
   errorMessage?: string
 }
 

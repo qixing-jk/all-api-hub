@@ -291,7 +291,12 @@ class AccountKeyRepairRunner {
         accountName: resolvedAccountName,
         siteType: account.site_type,
         siteUrlOrigin: originKey,
-        outcome: result.created ? "created" : "alreadyHad",
+        outcome:
+          !result.created && result.missingGroups.length > 0
+            ? "failed"
+            : result.created
+              ? "created"
+              : "alreadyHad",
         availableGroups: result.availableGroups,
         coveredGroups: result.coveredGroups,
         createdGroups: result.createdGroups,
@@ -388,20 +393,33 @@ class AccountKeyRepairRunner {
       const deletedIds = new Set(
         result.deleted.map((token) => `${token.accountId}:${token.tokenId}`),
       )
+      let removedInvalidTokenCount = 0
 
       return {
         ...prev,
-        results: prev.results.map((accountResult) => ({
-          ...accountResult,
-          invalidTokens: accountResult.invalidTokens?.filter(
-            (token) => !deletedIds.has(`${token.accountId}:${token.tokenId}`),
-          ),
-        })),
+        results: prev.results.map((accountResult) => {
+          const nextInvalidTokens = accountResult.invalidTokens?.filter(
+            (token) => {
+              const shouldRemove = deletedIds.has(
+                `${token.accountId}:${token.tokenId}`,
+              )
+              if (shouldRemove) {
+                removedInvalidTokenCount += 1
+              }
+              return !shouldRemove
+            },
+          )
+
+          return {
+            ...accountResult,
+            invalidTokens: nextInvalidTokens,
+          }
+        }),
         summary: {
           ...prev.summary,
           invalidKeys: Math.max(
             0,
-            (prev.summary.invalidKeys ?? 0) - result.deleted.length,
+            (prev.summary.invalidKeys ?? 0) - removedInvalidTokenCount,
           ),
           deletedKeys: (prev.summary.deletedKeys ?? 0) + result.deleted.length,
           deleteFailed: (prev.summary.deleteFailed ?? 0) + result.failed.length,

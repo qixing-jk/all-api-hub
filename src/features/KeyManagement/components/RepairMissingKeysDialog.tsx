@@ -116,7 +116,13 @@ function getSkipReasonLabel(
 }
 
 type BadgeVariant = React.ComponentProps<typeof Badge>["variant"]
-type RepairResultView = "accountCoverage" | "invalidKeys"
+const REPAIR_RESULT_VIEWS = {
+  AccountCoverage: "accountCoverage",
+  InvalidKeys: "invalidKeys",
+} as const
+
+type RepairResultView =
+  (typeof REPAIR_RESULT_VIEWS)[keyof typeof REPAIR_RESULT_VIEWS]
 
 const OUTCOME_BADGE_VARIANTS: Record<AccountKeyRepairOutcome, BadgeVariant> = {
   created: "success",
@@ -146,9 +152,9 @@ function getRepairOutcomeLabel(t: TFunction, outcome: AccountKeyRepairOutcome) {
  */
 function getRepairResultViewLabel(t: TFunction, view: RepairResultView) {
   switch (view) {
-    case "accountCoverage":
+    case REPAIR_RESULT_VIEWS.AccountCoverage:
       return t("keyManagement:repairMissingKeys.views.accountCoverage")
-    case "invalidKeys":
+    case REPAIR_RESULT_VIEWS.InvalidKeys:
       return t("keyManagement:repairMissingKeys.views.invalidKeys")
   }
 }
@@ -257,8 +263,9 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [outcomeFilter, setOutcomeFilter] =
     useState<AccountKeyRepairOutcome | null>(null)
-  const [activeView, setActiveView] =
-    useState<RepairResultView>("accountCoverage")
+  const [activeView, setActiveView] = useState<RepairResultView>(
+    REPAIR_RESULT_VIEWS.AccountCoverage,
+  )
   const [openingSub2ApiAccountId, setOpeningSub2ApiAccountId] = useState<
     string | null
   >(null)
@@ -432,25 +439,36 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
       setProgress((current) => {
         if (!current) return current
 
+        let removedInvalidTokenCount = 0
+        const nextResults = current.results.map((result) => {
+          const nextInvalidTokens = result.invalidTokens?.filter((token) => {
+            const shouldRemove = deletedKeys.has(getInvalidTokenKey(token))
+            if (shouldRemove) {
+              removedInvalidTokenCount += 1
+            }
+            return !shouldRemove
+          })
+
+          return {
+            ...result,
+            invalidTokens: nextInvalidTokens,
+          }
+        })
+
         return {
           ...current,
           summary: {
             ...current.summary,
             invalidKeys: Math.max(
               0,
-              (current.summary.invalidKeys ?? 0) - response.data.deleted.length,
+              (current.summary.invalidKeys ?? 0) - removedInvalidTokenCount,
             ),
             deletedKeys:
               (current.summary.deletedKeys ?? 0) + response.data.deleted.length,
             deleteFailed:
               (current.summary.deleteFailed ?? 0) + response.data.failed.length,
           },
-          results: current.results.map((result) => ({
-            ...result,
-            invalidTokens: result.invalidTokens?.filter(
-              (token) => !deletedKeys.has(getInvalidTokenKey(token)),
-            ),
-          })),
+          results: nextResults,
         }
       })
       setDeleteResultMessage(
@@ -653,7 +671,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     if (!isOpen) {
       setSearchTerm("")
       setOutcomeFilter(null)
-      setActiveView("accountCoverage")
+      setActiveView(REPAIR_RESULT_VIEWS.AccountCoverage)
       setSelectedInvalidTokenKeys(new Set())
       setIsDeleteConfirmOpen(false)
       setDeleteResultMessage("")
@@ -960,8 +978,11 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
             className="w-full"
             options={[
               {
-                value: "accountCoverage",
-                label: getRepairResultViewLabel(t, "accountCoverage"),
+                value: REPAIR_RESULT_VIEWS.AccountCoverage,
+                label: getRepairResultViewLabel(
+                  t,
+                  REPAIR_RESULT_VIEWS.AccountCoverage,
+                ),
                 leftIcon: (
                   <ShieldCheck
                     aria-hidden="true"
@@ -971,10 +992,13 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                 ),
               },
               {
-                value: "invalidKeys",
+                value: REPAIR_RESULT_VIEWS.InvalidKeys,
                 label: (
                   <>
-                    {getRepairResultViewLabel(t, "invalidKeys")}
+                    {getRepairResultViewLabel(
+                      t,
+                      REPAIR_RESULT_VIEWS.InvalidKeys,
+                    )}
                     {invalidTokens.length > 0 ? (
                       <Badge
                         variant="warning"
@@ -1019,7 +1043,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                     data-testid="repair-missing-keys-result-count"
                     className="text-xs leading-none text-gray-500 tabular-nums dark:text-gray-400"
                   >
-                    {activeView === "accountCoverage"
+                    {activeView === REPAIR_RESULT_VIEWS.AccountCoverage
                       ? `${filteredResults.length}/${visibleResults.length}`
                       : `${filteredInvalidTokens.length}/${invalidTokens.length}`}
                   </span>
@@ -1055,7 +1079,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
               </div>
             </CardHeader>
 
-            {activeView === "accountCoverage" ? (
+            {activeView === REPAIR_RESULT_VIEWS.AccountCoverage ? (
               <CardContent
                 padding="sm"
                 spacing="none"
@@ -1102,7 +1126,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
             <CardContent padding="none" spacing="none">
               <div className="max-h-[60vh] overflow-y-auto md:max-h-[min(70vh,48rem)]">
-                {activeView === "invalidKeys" ? (
+                {activeView === REPAIR_RESULT_VIEWS.InvalidKeys ? (
                   <div>
                     {deleteResultMessage ? (
                       <div className="px-4 pt-4">

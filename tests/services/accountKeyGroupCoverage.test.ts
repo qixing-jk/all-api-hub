@@ -7,10 +7,12 @@ import {
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   buildGroupDefaultTokenRequest,
+  deleteInvalidAccountToken,
   ensureAccountKeysForAvailableGroups,
 } from "~/services/accounts/accountKeyAutoProvisioning/groupCoverage"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { AuthTypeEnum } from "~/types"
+import { ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS } from "~/types/accountKeyAutoProvisioning"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -113,7 +115,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
           tokenId: 9,
           tokenName: "old group key",
           group: "old",
-          reason: "groupUnavailable",
+          reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
         },
       ],
     })
@@ -221,6 +223,48 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       2,
       expect.any(Object),
       buildGroupDefaultTokenRequest("beta"),
+    )
+  })
+
+  it("deletes an invalid account token and returns a deletion record", async () => {
+    mocks.deleteApiToken.mockResolvedValue(true)
+
+    const result = await deleteInvalidAccountToken({
+      account,
+      displaySiteData,
+      token: {
+        accountId: "new-api-1",
+        accountName: "Relay Account",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrlOrigin: "https://relay.example.com",
+        tokenId: 9,
+        tokenName: "old group key",
+        group: "old",
+        reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+      },
+    })
+
+    expect(mocks.deleteApiToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://relay.example.com",
+        accountId: "new-api-1",
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.AccessToken,
+          userId: "101",
+          accessToken: "access-token",
+        }),
+      }),
+      9,
+    )
+    expect(result).toEqual(
+      expect.objectContaining({
+        accountId: "new-api-1",
+        tokenId: 9,
+        tokenName: "old group key",
+        group: "old",
+        reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+        deletedAt: expect.any(Number),
+      }),
     )
   })
 })

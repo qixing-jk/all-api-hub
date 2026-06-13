@@ -4,9 +4,10 @@ import { API_ERROR_CODES } from "~/services/apiService/common/errors"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { DisplaySiteData, SiteAccount } from "~/types"
-import type {
-  AccountKeyRepairDeleteInvalidTokensResult,
-  AccountKeyRepairInvalidToken,
+import {
+  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
+  type AccountKeyRepairDeleteInvalidTokensResult,
+  type AccountKeyRepairInvalidToken,
 } from "~/types/accountKeyAutoProvisioning"
 import { t } from "~/utils/i18n/core"
 
@@ -151,7 +152,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
       tokenId: token.id,
       tokenName: token.name,
       group,
-      reason: "groupUnavailable",
+      reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
     })
   }
 

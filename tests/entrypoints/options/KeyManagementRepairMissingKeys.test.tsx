@@ -1172,6 +1172,68 @@ describe("KeyManagement repair missing keys entry point", () => {
     })
   })
 
+  it("keeps the invalid key summary aligned with actually visible deleted keys", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(
+      async (message: any, data: any) => {
+        if (message === AccountKeyRepairMessageTypes.GetProgress) {
+          return { success: true, data: coverageProgress }
+        }
+        if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
+          return {
+            success: true,
+            data: {
+              deleted: [
+                { ...data.tokens[0], deletedAt: 123 },
+                {
+                  ...data.tokens[0],
+                  tokenId: 99,
+                  tokenName: "already removed",
+                  deletedAt: 124,
+                },
+              ],
+              failed: [],
+            },
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.views.invalidKeys",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "old group key",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+      }),
+    )
+    fireEvent.click(screen.getByTestId("repair-invalid-keys-confirm-delete"))
+
+    expect(
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.invalidKeys.deleteSuccess",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId("repair-missing-keys-result-count"),
+    ).toHaveTextContent("0/0")
+  })
+
   it("closes confirmation and shows delete failure feedback when invalid key deletion fails", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {

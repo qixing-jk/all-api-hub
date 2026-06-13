@@ -300,7 +300,7 @@
     "skipReasons": {
       "aihubmixOneTimeKey": "AIHubMix 金鑰僅可查看一次，請手動建立並立即保存完整金鑰",
       "noneAuth": "無憑據（認證方式：無）",
-      "sub2api": "需要選擇 Sub2API 分組，請手動建立密鑰"
+      "sub2api": "需要選擇 Sub2API 分組，請手動建立金鑰"
     },
     "title": "金鑰覆蓋檢查",
     "totalsLabels": {
