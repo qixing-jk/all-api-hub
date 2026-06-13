@@ -542,4 +542,92 @@ describe("SponsorRecommendationsSection", () => {
       }),
     )
   })
+
+  it("tracks controlled action availability combinations for supported sponsor clicks", async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal("open", vi.fn())
+    renderSection([
+      createSupportedSponsor({
+        id: "all-actions-provider",
+        name: "All Actions Provider",
+        links: {
+          primary: "https://all-actions.example.invalid/register",
+        },
+        actions: {
+          addAccount: {
+            siteType: SITE_TYPES.NEW_API,
+            siteUrl: "https://all-actions.example.invalid",
+          },
+          bookmarkFallback: {
+            url: "https://all-actions.example.invalid/docs",
+          },
+          apiCredentialProfileFallback: {
+            baseUrl: "https://api.all-actions.example.invalid/v1",
+          },
+        },
+      }),
+      createSupportedSponsor({
+        id: "add-bookmark-provider",
+        name: "Add Bookmark Provider",
+        links: {
+          primary: "https://add-bookmark.example.invalid/register",
+        },
+        actions: {
+          addAccount: {
+            siteType: SITE_TYPES.NEW_API,
+            siteUrl: "https://add-bookmark.example.invalid",
+          },
+          bookmarkFallback: {
+            url: "https://add-bookmark.example.invalid/docs",
+          },
+        },
+        rank: 2,
+      }),
+      createSupportedSponsor({
+        id: "add-api-provider",
+        name: "Add API Provider",
+        links: {
+          primary: "https://add-api.example.invalid/register",
+        },
+        actions: {
+          addAccount: {
+            siteType: SITE_TYPES.NEW_API,
+            siteUrl: "https://add-api.example.invalid",
+          },
+          apiCredentialProfileFallback: {
+            baseUrl: "https://api.add-api.example.invalid/v1",
+          },
+        },
+        rank: 3,
+      }),
+    ])
+    trackProductAnalyticsEventMock.mockClear()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /account:sponsor.actions.continueAddAccount: All Actions Provider/u,
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: /account:sponsor.actions.continueAddAccount: Add Bookmark Provider/u,
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: /account:sponsor.actions.continueAddAccount: Add API Provider/u,
+      }),
+    )
+
+    const availabilityValues = trackProductAnalyticsEventMock.mock.calls.map(
+      ([, payload]) =>
+        (payload as { sponsor_action_availability?: string })
+          .sponsor_action_availability,
+    )
+    expect(availabilityValues).toEqual([
+      "add-account,bookmark,api",
+      "add-account,bookmark",
+      "add-account,api",
+    ])
+  })
 })

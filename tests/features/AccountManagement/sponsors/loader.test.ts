@@ -339,6 +339,39 @@ describe("sponsor recommendation loader", () => {
     ).not.toHaveBeenCalled()
   })
 
+  it("returns null when the remote catalog resource is unavailable", async () => {
+    const fetchMock = mockFetchJson(
+      {
+        success: false,
+      },
+      false,
+    )
+
+    await expect(
+      refreshSponsorRecommendations({ locale: "en", now }),
+    ).resolves.toBeNull()
+
+    expect(fetchMock).toHaveBeenCalledWith(SPONSOR_REMOTE_CATALOG_V4_URL, {
+      cache: "no-store",
+    })
+    expect(
+      sponsorCatalogStorage.setCachedVersionedCatalog,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("returns refreshed recommendations when cache persistence fails", async () => {
+    const remoteCatalog = createV4Catalog("remote-v4")
+    mockFetchJson(remoteCatalog)
+    vi.mocked(
+      sponsorCatalogStorage.setCachedVersionedCatalog,
+    ).mockRejectedValue(new Error("storage unavailable"))
+
+    const result = await refreshSponsorRecommendations({ locale: "en", now })
+
+    expect(result?.items.map((item) => item.id)).toEqual(["remote-v4"])
+    expect(result?.source).toBe(SPONSOR_CATALOG_SOURCES.Remote)
+  })
+
   it("returns null when remote refresh fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
 

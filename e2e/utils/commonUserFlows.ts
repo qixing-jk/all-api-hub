@@ -82,9 +82,9 @@ type ExtensionPageGuardOptions = {
 }
 
 const E2E_SPONSOR_REMOTE_CATALOG_URL =
-  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/public/sponsor-catalog.json"
+  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/public/sponsor-catalog.v4.json"
 const E2E_SPONSOR_CATALOG_PAYLOAD = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   items: [],
 }
 

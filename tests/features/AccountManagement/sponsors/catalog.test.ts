@@ -541,6 +541,223 @@ describe("sponsor catalog v4 normalization", () => {
     )
   })
 
+  it("rejects malformed locale and action containers before semantic selection", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 4,
+        items: [
+          {
+            id: "invalid-locales-campaign",
+            locales: "en",
+          },
+          {
+            id: "invalid-locale-shape-campaign",
+            locales: {
+              en: null,
+            },
+          },
+          {
+            id: "invalid-actions-container-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 10,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                name: "Invalid Actions Campaign",
+                tagline: "Synthetic invalid actions campaign.",
+                links: {
+                  primary: "https://campaign.example.invalid/signup",
+                },
+                actions: [],
+              },
+            },
+          },
+        ],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+      },
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toEqual([])
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-locales-campaign has invalid locales",
+    )
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-locale-shape-campaign locale en has invalid shape",
+    )
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-actions-container-campaign locale en has invalid actions",
+    )
+  })
+
+  it("rejects selected locale campaigns with invalid semantic fields", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 4,
+        items: [
+          {
+            id: "invalid-shape-selected-campaign",
+            locales: {
+              en: null,
+            },
+          },
+          {
+            id: "invalid-support-status-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 10,
+                supportStatus: "pending",
+                name: "Invalid Status Campaign",
+                tagline: "Synthetic invalid status campaign.",
+                links: {
+                  primary: "https://campaign.example.invalid/signup",
+                },
+              },
+            },
+          },
+          {
+            id: "expired-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 20,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                startsAt: "2026-07-01T00:00:00.000Z",
+                name: "Expired Campaign",
+                tagline: "Synthetic expired campaign.",
+                links: {
+                  primary: "https://expired.example.invalid/signup",
+                },
+              },
+            },
+          },
+          {
+            id: "missing-name-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 30,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                name: "",
+                tagline: "Synthetic missing name campaign.",
+                links: {
+                  primary: "https://missing-name.example.invalid/signup",
+                },
+              },
+            },
+          },
+          {
+            id: "invalid-date-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 40,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                endsAt: "not a date",
+                name: "Invalid Date Campaign",
+                tagline: "Synthetic invalid date campaign.",
+                links: {
+                  primary: "https://invalid-date.example.invalid/signup",
+                },
+              },
+            },
+          },
+        ],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+      },
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toEqual([])
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-shape-selected-campaign locale en has invalid shape",
+    )
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-support-status-campaign locale en has invalid supportStatus",
+    )
+    expect(result.errors.join("\n")).toContain(
+      "item expired-campaign locale en is outside its active date range",
+    )
+    expect(result.errors.join("\n")).toContain(
+      "item missing-name-campaign locale en has invalid name or tagline",
+    )
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-date-campaign locale en is outside its active date range",
+    )
+  })
+
+  it("rejects invalid fallback action URLs and malformed action payloads", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 4,
+        items: [
+          {
+            id: "invalid-api-key-url-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 10,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                name: "Invalid API Key URL Campaign",
+                tagline: "Synthetic invalid API key URL campaign.",
+                links: {
+                  primary: "https://campaign.example.invalid/signup",
+                },
+                actions: {
+                  apiCredentialProfileFallback: {
+                    baseUrl: "https://api.example.invalid",
+                    apiKeyCreateUrl: "not a url",
+                  },
+                },
+              },
+            },
+          },
+          {
+            id: "invalid-bookmark-shape-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 20,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                name: "Invalid Bookmark Shape Campaign",
+                tagline: "Synthetic invalid bookmark shape campaign.",
+                links: {
+                  primary: "https://campaign.example.invalid/signup",
+                },
+                actions: {
+                  bookmarkFallback: "https://bookmark.example.invalid",
+                },
+              },
+            },
+          },
+        ],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+      },
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toEqual([])
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-api-key-url-campaign locale en has invalid actions",
+    )
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-bookmark-shape-campaign locale en has invalid bookmarkFallback action",
+    )
+  })
+
   it("rejects unknown nested link and action fields", () => {
     const result = normalizeSponsorCatalog(
       {

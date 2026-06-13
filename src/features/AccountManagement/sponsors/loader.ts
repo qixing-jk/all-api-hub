@@ -98,7 +98,10 @@ async function readCachedSponsorCatalog(): Promise<unknown | null> {
     })
     return cached?.payload ?? null
   } catch (error) {
-    logger.warn("Failed to read sponsor catalog cache", error)
+    logger.warn("Failed to read sponsor catalog cache", {
+      error,
+      url: SPONSOR_REMOTE_CATALOG_V4_URL,
+    })
     return null
   }
 }
@@ -116,7 +119,10 @@ async function persistCachedSponsorCatalog(
       payload,
     })
   } catch (error) {
-    logger.warn("Failed to persist sponsor catalog cache", error)
+    logger.warn("Failed to persist sponsor catalog cache", {
+      error,
+      url: SPONSOR_REMOTE_CATALOG_V4_URL,
+    })
   }
 }
 

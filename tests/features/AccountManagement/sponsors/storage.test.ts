@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -101,5 +101,20 @@ describe("sponsor catalog storage", () => {
           "https://example.invalid/sponsors/catalog-with-invalid-date.v4.json",
       }),
     ).resolves.toBeNull()
+  })
+
+  it("returns null when the versioned cache cannot be read", async () => {
+    const getSpy = vi
+      .spyOn(Storage.prototype, "getItem")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+
+    await expect(
+      sponsorCatalogStorage.getCachedVersionedCatalog({
+        schemaVersion: 4,
+        sourceUrl,
+      }),
+    ).resolves.toBeNull()
+
+    getSpy.mockRestore()
   })
 })

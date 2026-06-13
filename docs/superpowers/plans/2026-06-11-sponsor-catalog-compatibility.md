@@ -216,7 +216,7 @@ Expected: PASS.
 
 ```bash
 git diff --stat
-rg -n "sponsor-catalog-manifest|catalogV4|primaryAffiliateUrl|websiteUrl|fallbackHints|accountPrefill" src tests public docs/superpowers/specs/2026-06-11-sponsor-catalog-compatibility-design.md docs/superpowers/plans/2026-06-11-sponsor-catalog-compatibility.md
+rg -n "sponsor-catalog-manifest|catalogV4|primaryAffiliateUrl|websiteUrl|apiKeyCreateUrl|fallbackHints|accountPrefill" src tests public docs/superpowers/specs/2026-06-11-sponsor-catalog-compatibility-design.md docs/superpowers/plans/2026-06-11-sponsor-catalog-compatibility.md
 ```
 
 Expected:
