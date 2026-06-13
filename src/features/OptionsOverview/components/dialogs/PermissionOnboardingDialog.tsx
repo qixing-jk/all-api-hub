@@ -23,6 +23,7 @@ import {
 import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
+import { openLanguageRequestPage } from "~/utils/navigation"
 
 /**
  * Unified logger scoped to the optional-permissions onboarding dialog.
@@ -195,6 +196,10 @@ export function PermissionOnboardingDialog({
     window.open(GITHUB_URL, "_blank", "noopener,noreferrer")
   }, [])
 
+  const handleOpenLanguageRequest = useCallback(() => {
+    void openLanguageRequestPage()
+  }, [])
+
   const permissionList = useMemo(() => {
     return OPTIONAL_PERMISSION_DEFINITIONS.map((permission) => ({
       ...permission,
@@ -270,13 +275,26 @@ export function PermissionOnboardingDialog({
               {t("appearanceLanguage.onboardingHelper")}
             </BodySmall>
           </CardHeader>
-          <CardContent padding="sm" spacing="sm" className="space-y-3">
+          <CardContent
+            padding="sm"
+            spacing="none"
+            className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+          >
             <LanguageSwitcher
               variant="select"
               compact
               showIcon={false}
               className="w-full sm:w-40"
             />
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={handleOpenLanguageRequest}
+              className="h-auto justify-start px-0 py-0 text-xs font-normal sm:justify-center"
+            >
+              {t("appearanceLanguage.onboardingLanguageRequest")}
+            </Button>
           </CardContent>
         </Card>
 

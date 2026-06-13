@@ -21,6 +21,7 @@
     "languageDesc": "Choose your preferred language",
     "onboardingHelper": "Update the onboarding text immediately and keep this language for later settings pages.",
     "onboardingLabel": "Choose your language",
+    "onboardingLanguageRequest": "Don't see your language? Tell us what to add",
     "switcher": {
       "currentLanguage": "Current interface language: {{language}}",
       "groupLabel": "Interface language selector",

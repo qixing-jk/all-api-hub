@@ -21,6 +21,7 @@
     "languageDesc": "表示に使用する言語を選択します",
     "onboardingHelper": "切り替えると案内文がすぐに更新され、以後の設定ページでもこの言語が使われます。",
     "onboardingLabel": "言語を選択",
+    "onboardingLanguageRequest": "表示したい言語がありませんか？追加希望をお知らせください",
     "switcher": {
       "currentLanguage": "現在の表示言語: {{language}}",
       "groupLabel": "表示言語セレクター",

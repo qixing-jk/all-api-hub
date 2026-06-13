@@ -40,6 +40,10 @@ const analyticsMocks = vi.hoisted(() => ({
   trackProductAnalyticsEvent: vi.fn(),
 }))
 
+const navigationMocks = vi.hoisted(() => ({
+  openLanguageRequestPage: vi.fn(),
+}))
+
 vi.mock("~/services/permissions/permissionManager", () => {
   const OPTIONAL_PERMISSIONS = [
     "cookies",
@@ -80,6 +84,10 @@ vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
     trackProductAnalyticsEvent: analyticsMocks.trackProductAnalyticsEvent,
   }
 })
+
+vi.mock("~/utils/navigation", () => ({
+  openLanguageRequestPage: navigationMocks.openLanguageRequestPage,
+}))
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -235,6 +243,7 @@ describe("PermissionOnboardingDialog language selection", () => {
     preferenceMocks.setLanguage.mockReset()
     toastHelperMocks.showResultToast.mockReset()
     analyticsMocks.trackProductAnalyticsEvent.mockReset()
+    navigationMocks.openLanguageRequestPage.mockReset()
   })
 
   it("renders the onboarding selector and updates onboarding copy immediately when the language changes", async () => {
@@ -294,6 +303,23 @@ describe("PermissionOnboardingDialog language selection", () => {
     expect(
       screen.getByRole("heading", { name: "Welcome to All API Hub" }),
     ).toBeInTheDocument()
+  })
+
+  it("opens the language request page from the onboarding language selector", async () => {
+    const user = userEvent.setup()
+    const i18n = await createSettingsI18n("en")
+
+    navigationMocks.openLanguageRequestPage.mockResolvedValue(undefined)
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: i18n.t("appearanceLanguage.onboardingLanguageRequest"),
+      }),
+    )
+
+    expect(navigationMocks.openLanguageRequestPage).toHaveBeenCalledTimes(1)
   })
 
   it("uses the persisted onboarding language in later settings renders and localizes shared switcher accessibility labels", async () => {

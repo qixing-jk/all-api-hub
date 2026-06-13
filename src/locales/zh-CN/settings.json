@@ -21,6 +21,7 @@
     "languageDesc": "选择您偏好的显示语言",
     "onboardingHelper": "切换后会立即更新引导内容，并作为后续设置页面的显示语言。",
     "onboardingLabel": "选择界面语言",
+    "onboardingLanguageRequest": "没找到你的语言？告诉我们希望支持哪种",
     "switcher": {
       "currentLanguage": "当前界面语言：{{language}}",
       "groupLabel": "界面语言选择",

@@ -21,6 +21,7 @@
     "languageDesc": "Chọn ngôn ngữ hiển thị bạn muốn dùng",
     "onboardingHelper": "Sau khi chuyển, nội dung hướng dẫn sẽ cập nhật ngay và được dùng làm ngôn ngữ hiển thị cho trang cài đặt sau này.",
     "onboardingLabel": "Chọn ngôn ngữ giao diện",
+    "onboardingLanguageRequest": "Không thấy ngôn ngữ của bạn? Hãy cho chúng tôi biết cần thêm gì",
     "switcher": {
       "currentLanguage": "Ngôn ngữ giao diện hiện tại: {{language}}",
       "groupLabel": "Chọn ngôn ngữ giao diện",
