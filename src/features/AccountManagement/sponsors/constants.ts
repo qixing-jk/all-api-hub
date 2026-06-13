@@ -1,9 +1,9 @@
-import sponsorCatalog from "~~/public/sponsor-catalog.json"
+import sponsorCatalog from "~~/public/sponsor-catalog.v4.json"
 
 export const SPONSOR_CATALOG_SCHEMA_VERSION = sponsorCatalog.schemaVersion
 
-export const SPONSOR_REMOTE_CATALOG_URL =
-  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/public/sponsor-catalog.json"
+export const SPONSOR_REMOTE_CATALOG_V4_URL =
+  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/public/sponsor-catalog.v4.json"
 
 export const SPONSOR_LOCALE_FALLBACKS = ["zh-CN", "en"] as const
 

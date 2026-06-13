@@ -2,81 +2,104 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import { SPONSOR_CATALOG_SCHEMA_VERSION } from "~/features/AccountManagement/sponsors/constants"
 import { sponsorCatalogStorage } from "~/features/AccountManagement/sponsors/storage"
-import {
-  SPONSOR_SUPPORT_STATUS,
-  type RawSponsorCatalog,
-} from "~/features/AccountManagement/sponsors/types"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 
 const storage = new Storage({ area: "local" })
-
-const catalog: RawSponsorCatalog = {
-  schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
-  items: [
-    {
-      id: "cached-provider",
-      enabled: true,
-      supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
-      urls: {
-        primaryAffiliate: "https://cached.example.com/register",
-      },
-      locales: {
-        en: {
-          name: "Cached Provider",
-          tagline: "Cached sponsor recommendation.",
-        },
-      },
-    },
-  ],
-}
+const sourceUrl = "https://example.invalid/sponsors/catalog.v4.json"
 
 describe("sponsor catalog storage", () => {
   beforeEach(async () => {
     await storage.remove(STORAGE_KEYS.SPONSOR_CATALOG_CACHE)
+    await storage.remove(STORAGE_KEYS.SPONSOR_CATALOG_VERSIONED_CACHE)
   })
 
-  it("returns null when no cached remote catalog exists", async () => {
+  it("persists and reads V4 catalog cache envelopes", async () => {
+    await sponsorCatalogStorage.setCachedVersionedCatalog({
+      schemaVersion: 4,
+      sourceUrl,
+      fetchedAt: Date.parse("2026-06-11T00:00:00.000Z"),
+      payload: {
+        schemaVersion: 4,
+        items: [],
+      },
+    })
+
     await expect(
-      sponsorCatalogStorage.getCachedRemoteCatalog(),
+      sponsorCatalogStorage.getCachedVersionedCatalog({
+        schemaVersion: 4,
+        sourceUrl,
+      }),
+    ).resolves.toEqual({
+      schemaVersion: 4,
+      sourceUrl,
+      fetchedAt: Date.parse("2026-06-11T00:00:00.000Z"),
+      payload: {
+        schemaVersion: 4,
+        items: [],
+      },
+    })
+  })
+
+  it("does not return cache entries for mismatched schema or URL", async () => {
+    await sponsorCatalogStorage.setCachedVersionedCatalog({
+      schemaVersion: 4,
+      sourceUrl,
+      fetchedAt: 1,
+      payload: {
+        schemaVersion: 4,
+        items: [],
+      },
+    })
+
+    await expect(
+      sponsorCatalogStorage.getCachedVersionedCatalog({
+        schemaVersion: 3,
+        sourceUrl,
+      }),
+    ).resolves.toBeNull()
+    await expect(
+      sponsorCatalogStorage.getCachedVersionedCatalog({
+        schemaVersion: 4,
+        sourceUrl: "https://example.invalid/sponsors/other.json",
+      }),
     ).resolves.toBeNull()
   })
 
-  it("persists and reads the cached remote sponsor catalog", async () => {
-    await sponsorCatalogStorage.setCachedRemoteCatalog(catalog)
+  it("returns null for malformed matching cache entries", async () => {
+    await storage.set(STORAGE_KEYS.SPONSOR_CATALOG_VERSIONED_CACHE, {
+      [`4:${sourceUrl}`]: {
+        schemaVersion: 4,
+        sourceUrl,
+        payload: {
+          schemaVersion: 4,
+          items: [],
+        },
+      },
+      "4:https://example.invalid/sponsors/catalog-with-invalid-date.v4.json": {
+        schemaVersion: 4,
+        sourceUrl:
+          "https://example.invalid/sponsors/catalog-with-invalid-date.v4.json",
+        fetchedAt: "2026-06-11T00:00:00.000Z",
+        payload: {
+          schemaVersion: 4,
+          items: [],
+        },
+      },
+    })
 
     await expect(
-      sponsorCatalogStorage.getCachedRemoteCatalog(),
-    ).resolves.toEqual(catalog)
-  })
-
-  it("preserves raw catalog metadata for later normalization", async () => {
-    const extendedCatalog: RawSponsorCatalog = {
-      ...catalog,
-      _examples: {
-        devSponsors: [
-          {
-            id: "example-provider",
-            enabled: true,
-            supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
-            urls: {
-              primaryAffiliate: "https://example.test/register",
-            },
-            locales: {
-              en: {
-                name: "Example Provider",
-                tagline: "Development-only example.",
-              },
-            },
-          },
-        ],
-      },
-    }
-
-    await sponsorCatalogStorage.setCachedRemoteCatalog(extendedCatalog)
-
-    const cached = await sponsorCatalogStorage.getCachedRemoteCatalog()
-    expect(cached?._examples?.devSponsors?.[0]?.id).toBe("example-provider")
+      sponsorCatalogStorage.getCachedVersionedCatalog({
+        schemaVersion: 4,
+        sourceUrl,
+      }),
+    ).resolves.toBeNull()
+    await expect(
+      sponsorCatalogStorage.getCachedVersionedCatalog({
+        schemaVersion: 4,
+        sourceUrl:
+          "https://example.invalid/sponsors/catalog-with-invalid-date.v4.json",
+      }),
+    ).resolves.toBeNull()
   })
 })

@@ -5,11 +5,14 @@ import {
   getDevelopmentSponsorCatalog,
 } from "./bundledCatalog"
 import { normalizeSponsorCatalog } from "./catalog"
-import { SPONSOR_REMOTE_CATALOG_URL } from "./constants"
+import {
+  SPONSOR_CATALOG_SCHEMA_VERSION,
+  SPONSOR_REMOTE_CATALOG_V4_URL,
+} from "./constants"
 import { sponsorCatalogStorage } from "./storage"
 import {
   SPONSOR_CATALOG_SOURCES,
-  type RawSponsorCatalog,
+  type SponsorCatalogNormalizationResult,
   type SponsorCatalogSource,
   type SponsorRecommendation,
 } from "./types"
@@ -53,31 +56,72 @@ function mergeDevelopmentSponsorRecommendations(
   )
 }
 
-/**
- * Fetches the remote sponsor catalog as a best-effort JSON payload.
- */
-async function fetchRemoteSponsorCatalog(): Promise<RawSponsorCatalog | null> {
+/** Fetches the current V4 sponsor catalog as a best-effort JSON payload. */
+async function fetchRemoteSponsorCatalog(): Promise<unknown | null> {
   try {
-    const response = await fetch(SPONSOR_REMOTE_CATALOG_URL, {
+    const response = await fetch(SPONSOR_REMOTE_CATALOG_V4_URL, {
       cache: "no-store",
     })
 
     if (!response.ok) {
-      logger.warn("Failed to fetch sponsor catalog", {
+      logger.warn("Failed to fetch sponsor catalog resource", {
         status: response.status,
+        url: SPONSOR_REMOTE_CATALOG_V4_URL,
       })
       return null
     }
 
-    return (await response.json()) as RawSponsorCatalog
+    return await response.json()
   } catch (error) {
-    logger.warn("Failed to fetch sponsor catalog", error)
+    logger.warn("Failed to fetch sponsor catalog resource", {
+      error,
+      url: SPONSOR_REMOTE_CATALOG_V4_URL,
+    })
     return null
   }
 }
 
+/** Normalizes one V4 catalog payload for a result source. */
+function normalizeCatalog(
+  catalog: unknown,
+  options: LoadSponsorRecommendationsOptions & { source: SponsorCatalogSource },
+): SponsorCatalogNormalizationResult {
+  return normalizeSponsorCatalog(catalog, options)
+}
+
+/** Reads the fixed V4 remote cache. */
+async function readCachedSponsorCatalog(): Promise<unknown | null> {
+  try {
+    const cached = await sponsorCatalogStorage.getCachedVersionedCatalog({
+      schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
+      sourceUrl: SPONSOR_REMOTE_CATALOG_V4_URL,
+    })
+    return cached?.payload ?? null
+  } catch (error) {
+    logger.warn("Failed to read sponsor catalog cache", error)
+    return null
+  }
+}
+
+/** Persists the fixed V4 remote cache. */
+async function persistCachedSponsorCatalog(
+  payload: unknown,
+  options: LoadSponsorRecommendationsOptions,
+): Promise<void> {
+  try {
+    await sponsorCatalogStorage.setCachedVersionedCatalog({
+      schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
+      sourceUrl: SPONSOR_REMOTE_CATALOG_V4_URL,
+      fetchedAt: options.now ?? Date.now(),
+      payload,
+    })
+  } catch (error) {
+    logger.warn("Failed to persist sponsor catalog cache", error)
+  }
+}
+
 /**
- * Fetches, validates, and caches the latest remote sponsor recommendations.
+ * Fetches, validates, and caches the current remote V4 sponsor recommendations.
  */
 export async function refreshSponsorRecommendations(
   options: LoadSponsorRecommendationsOptions,
@@ -87,7 +131,7 @@ export async function refreshSponsorRecommendations(
     return null
   }
 
-  const normalized = normalizeSponsorCatalog(remoteCatalog, {
+  const normalized = normalizeCatalog(remoteCatalog, {
     ...options,
     source: SPONSOR_CATALOG_SOURCES.Remote,
   })
@@ -99,11 +143,7 @@ export async function refreshSponsorRecommendations(
     return null
   }
 
-  try {
-    await sponsorCatalogStorage.setCachedRemoteCatalog(remoteCatalog)
-  } catch (error) {
-    logger.warn("Failed to persist sponsor catalog cache", error)
-  }
+  await persistCachedSponsorCatalog(remoteCatalog, options)
 
   return {
     items: mergeDevelopmentSponsorRecommendations(normalized.items, options),
@@ -112,12 +152,12 @@ export async function refreshSponsorRecommendations(
 }
 
 /**
- * Loads cached remote recommendations when valid, falling back to bundled data.
+ * Loads cached V4 remote recommendations when valid, falling back to bundled data.
  */
 export async function loadSponsorRecommendations(
   options: LoadSponsorRecommendationsOptions,
 ): Promise<LoadSponsorRecommendationsResult> {
-  const bundled = normalizeSponsorCatalog(getBundledSponsorCatalog(), {
+  const bundled = normalizeCatalog(getBundledSponsorCatalog(), {
     ...options,
     source: SPONSOR_CATALOG_SOURCES.Bundled,
   })
@@ -128,15 +168,9 @@ export async function loadSponsorRecommendations(
     })
   }
 
-  let cachedCatalog: RawSponsorCatalog | null = null
-  try {
-    cachedCatalog = await sponsorCatalogStorage.getCachedRemoteCatalog()
-  } catch (error) {
-    logger.warn("Failed to read sponsor catalog cache", error)
-  }
-
+  const cachedCatalog = await readCachedSponsorCatalog()
   if (cachedCatalog) {
-    const cached = normalizeSponsorCatalog(cachedCatalog, {
+    const cached = normalizeCatalog(cachedCatalog, {
       ...options,
       source: SPONSOR_CATALOG_SOURCES.Cached,
     })
