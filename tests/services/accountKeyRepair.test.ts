@@ -871,6 +871,42 @@ describe("accountKeyRepair", () => {
     })
   })
 
+  it("records invalid token delete failures when the account is missing", async () => {
+    const invalidToken = {
+      accountId: "missing-account",
+      accountName: "Missing Account",
+      siteType: SITE_TYPES.NEW_API,
+      siteUrlOrigin: "https://missing.example.com",
+      tokenId: 9,
+      tokenName: "old one",
+      group: "old",
+      reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+    }
+
+    mocks.getAllAccounts.mockResolvedValue([])
+    mocks.convertToDisplayData.mockReturnValue([])
+
+    const { deleteInvalidAccountTokens } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    await expect(
+      deleteInvalidAccountTokens({ tokens: [invalidToken] }),
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        deleted: [],
+        failed: [
+          {
+            ...invalidToken,
+            errorMessage: "account_not_found",
+          },
+        ],
+      },
+    })
+    expect(mocks.deleteInvalidAccountToken).not.toHaveBeenCalled()
+  })
+
   it("skips none-auth accounts, ignores disabled accounts, and falls back to per-account display conversion", async () => {
     const noneAuthAccount = buildSiteAccount({
       id: "none-auth-1",

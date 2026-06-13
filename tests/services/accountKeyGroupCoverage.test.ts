@@ -133,6 +133,42 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     )
   })
 
+  it("uses the stored account id for invalid tokens when display data has no id", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([
+      buildApiToken({
+        id: 9,
+        name: "old group key",
+        group: "old",
+      }),
+    ])
+    mocks.fetchUserGroups.mockResolvedValue({
+      default: { desc: "Default", ratio: 1 },
+    })
+    mocks.createApiToken.mockResolvedValue(true)
+
+    const result = await ensureAccountKeysForAvailableGroups({
+      account,
+      displaySiteData: {
+        ...displaySiteData,
+        id: "",
+      },
+      accountName: "Relay Account",
+      siteUrlOrigin: "https://relay.example.com",
+    })
+
+    expect(mocks.fetchAccountTokens).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "new-api-1",
+      }),
+    )
+    expect(result.invalidTokens).toEqual([
+      expect.objectContaining({
+        accountId: "new-api-1",
+        tokenId: 9,
+      }),
+    ])
+  })
+
   it("falls back to one-key behavior when group lookup is unsupported", async () => {
     mocks.fetchAccountTokens.mockResolvedValue([])
     mocks.fetchUserGroups.mockRejectedValue(

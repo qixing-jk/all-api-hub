@@ -60,9 +60,11 @@ function createAccountApiRequest(
   account: SiteAccount,
   displaySiteData: DisplaySiteData,
 ): ApiServiceRequest {
+  const accountId = displaySiteData.id || account.id
+
   return {
     baseUrl: displaySiteData.baseUrl || account.site_url,
-    accountId: displaySiteData.id || account.id,
+    accountId,
     auth: {
       authType: displaySiteData.authType,
       userId: displaySiteData.userId,
@@ -84,6 +86,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
   const { account, displaySiteData, accountName, siteUrlOrigin } = params
   const service = getApiService(displaySiteData.siteType)
   const request = createAccountApiRequest(account, displaySiteData)
+  const accountId = displaySiteData.id || account.id
 
   const tokens = await service.fetchAccountTokens(request)
   let groups: string[]
@@ -145,7 +148,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     }
 
     invalidTokens.push({
-      accountId: displaySiteData.id,
+      accountId,
       accountName,
       siteType: displaySiteData.siteType,
       siteUrlOrigin,
