@@ -156,9 +156,11 @@ describe("DevDialogDebugMenu", () => {
     )
 
     expect(mockedDebugQueuePopupInterruptionHint).toHaveBeenCalledOnce()
-    expect(toastSuccessMock).toHaveBeenCalledWith(
-      "Queued popup interruption hint (dev)",
-    )
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "Queued popup interruption hint (dev)",
+      )
+    })
   })
 
   it("reports popup hint debug failures", async () => {
