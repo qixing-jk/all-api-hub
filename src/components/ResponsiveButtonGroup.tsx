@@ -10,7 +10,7 @@ import { cn } from "~/lib/utils"
 type ResponsiveButtonGroupVariant = "segmented" | "plain"
 
 export const responsiveButtonGroupItemClassName =
-  "min-w-fit flex-1 [@container(min-width:42rem)]:flex-none"
+  "min-w-fit flex-1 scale-100 [@container(min-width:42rem)]:flex-none"
 
 interface ResponsiveButtonGroupProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode

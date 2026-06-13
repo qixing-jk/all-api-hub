@@ -71,7 +71,9 @@ describe("ResponsiveToggleGroup", () => {
       "min-w-fit",
       "flex-1",
       "[@container(min-width:42rem)]:flex-none",
+      "scale-100",
     )
+    expect(usdButton).not.toHaveClass("scale-105")
     expect(usdButton).toHaveAttribute("aria-pressed", "true")
 
     fireEvent.click(cnyButton)
