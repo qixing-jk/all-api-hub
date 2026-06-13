@@ -19,6 +19,10 @@
       "button": "Open feature request",
       "description": "Share an improvement idea or workflow request through the feature-request template."
     },
+    "languageRequest": {
+      "button": "Open language request",
+      "description": "Ask us to support a new interface language for All API Hub."
+    },
     "title": "Feedback & Support"
   },
   "githubDesc": "View source code, submit issues or participate in project development",

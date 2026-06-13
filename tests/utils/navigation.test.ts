@@ -28,6 +28,7 @@ import {
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
   openKeysPage,
+  openLanguageRequestPage,
   openManagedSiteChannelsForChannel,
   openManagedSiteChannelsPage,
   openManagedSiteModelSyncForChannel,
@@ -104,6 +105,7 @@ vi.mock("~/utils/navigation/feedbackLinks", () => ({
   getFeedbackDestinationUrls: vi.fn((language?: string) => ({
     bugReport: "https://feedback.example/bug",
     featureRequest: "https://feedback.example/feature",
+    languageRequest: "https://feedback.example/language",
     siteSupportRequest: "https://feedback.example/site-support",
     discussions: "https://feedback.example/discussions",
     community: language
@@ -939,6 +941,7 @@ describe("navigation utilities", () => {
     await openAboutPage()
     await openBugReportPage()
     await openFeatureRequestPage()
+    await openLanguageRequestPage()
     await openSiteSupportRequestPage({
       siteUrl: "https://relay.example.com/console",
     })
@@ -959,6 +962,10 @@ describe("navigation utilities", () => {
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
       "https://feedback.example/feature",
+      true,
+    )
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://feedback.example/language",
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(

@@ -19,6 +19,10 @@
       "button": "Mở yêu cầu tính năng",
       "description": "Chia sẻ ý tưởng cải tiến hoặc nhu cầu sử dụng của bạn thông qua mẫu yêu cầu tính năng."
     },
+    "languageRequest": {
+      "button": "Mở yêu cầu ngôn ngữ mới",
+      "description": "Yêu cầu All API Hub hỗ trợ thêm ngôn ngữ giao diện mới."
+    },
     "title": "Phản hồi và hỗ trợ"
   },
   "githubDesc": "Xem mã nguồn, gửi vấn đề hoặc tham gia phát triển dự án",

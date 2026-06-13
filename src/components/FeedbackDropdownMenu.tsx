@@ -1,6 +1,7 @@
 import {
   BugAntIcon,
   ChatBubbleLeftEllipsisIcon,
+  LanguageIcon,
   LightBulbIcon,
   PuzzlePieceIcon,
   UsersIcon,
@@ -19,6 +20,7 @@ import {
   openBugReportPage,
   openCommunityPage,
   openFeatureRequestPage,
+  openLanguageRequestPage,
   openSiteSupportRequestPage,
 } from "~/utils/navigation"
 
@@ -63,6 +65,10 @@ export function FeedbackDropdownMenu({
         <DropdownMenuItem onClick={() => void openSiteSupportRequestPage()}>
           <PuzzlePieceIcon className="h-4 w-4" />
           {t("feedback.siteSupportRequest")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => void openLanguageRequestPage()}>
+          <LanguageIcon className="h-4 w-4" />
+          {t("feedback.languageRequest")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => void openCommunityPage(language)}>
           <UsersIcon className="h-4 w-4" />

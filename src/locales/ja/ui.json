@@ -317,6 +317,7 @@
     "community": "コミュニティグループ",
     "discussion": "ディスカッションを開始",
     "featureRequest": "機能要望を送る",
+    "languageRequest": "新しい言語をリクエスト",
     "siteSupportRequest": "サイト対応を依頼",
     "trigger": "フィードバック",
     "triggerTooltip": "フィードバックショートカットを開く"

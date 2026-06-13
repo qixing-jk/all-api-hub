@@ -19,6 +19,10 @@
       "button": "打开功能建议",
       "description": "通过功能建议模板分享你的改进想法或使用场景需求。"
     },
+    "languageRequest": {
+      "button": "打开新语言请求",
+      "description": "请求 All API Hub 支持新的界面语言。"
+    },
     "title": "反馈与支持"
   },
   "githubDesc": "查看源代码、提交问题或参与项目开发",

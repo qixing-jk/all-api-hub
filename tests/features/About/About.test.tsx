@@ -35,6 +35,11 @@ describe("About", () => {
         name: "about:feedbackSection.featureRequest.button",
       }),
     ).toHaveAttribute("href", feedbackUrls.featureRequest)
+    expect(
+      await screen.findByRole("link", {
+        name: "about:feedbackSection.languageRequest.button",
+      }),
+    ).toHaveAttribute("href", feedbackUrls.languageRequest)
     const communityLink = await screen.findByRole("link", {
       name: "about:feedbackSection.community.button",
     })

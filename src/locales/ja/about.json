@@ -19,6 +19,10 @@
       "button": "機能要望を開く",
       "description": "feature-request テンプレートを通じて、改善案やワークフロー要望を共有してください。"
     },
+    "languageRequest": {
+      "button": "言語要望を開く",
+      "description": "All API Hub で新しい表示言語の対応をリクエストできます。"
+    },
     "title": "フィードバックとサポート"
   },
   "githubDesc": "ソースコードの確認、Issue の報告、プロジェクト開発への参加ができます",

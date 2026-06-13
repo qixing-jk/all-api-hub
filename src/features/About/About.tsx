@@ -4,6 +4,7 @@ import {
   ChatBubbleLeftEllipsisIcon,
   CodeBracketIcon,
   GlobeAltIcon,
+  LanguageIcon,
   LightBulbIcon,
   StarIcon,
   UsersIcon,
@@ -154,6 +155,15 @@ export default function About() {
               buttonText={t("feedbackSection.featureRequest.button")}
               buttonVariant="secondary"
               iconClass="text-amber-500 dark:text-amber-400"
+            />
+            <LinkCard
+              Icon={LanguageIcon}
+              title={t("ui:feedback.languageRequest")}
+              description={t("feedbackSection.languageRequest.description")}
+              href={feedbackDestinations.languageRequest}
+              buttonText={t("feedbackSection.languageRequest.button")}
+              buttonVariant="secondary"
+              iconClass="text-indigo-600 dark:text-indigo-400"
             />
             <LinkCard
               Icon={UsersIcon}

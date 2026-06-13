@@ -7,6 +7,7 @@ import {
   openBugReportPage,
   openCommunityPage,
   openFeatureRequestPage,
+  openLanguageRequestPage,
   openPermissionsOnboardingPage,
   openSiteSupportRequestPage,
 } from "~/utils/navigation"
@@ -62,6 +63,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
     openBugReportPage: vi.fn(),
     openCommunityPage: vi.fn(),
     openFeatureRequestPage: vi.fn(),
+    openLanguageRequestPage: vi.fn(),
     openPermissionsOnboardingPage: vi.fn(),
     openSiteSupportRequestPage: vi.fn(),
   }
@@ -70,6 +72,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 const mockedOpenBugReportPage = vi.mocked(openBugReportPage)
 const mockedOpenCommunityPage = vi.mocked(openCommunityPage)
 const mockedOpenFeatureRequestPage = vi.mocked(openFeatureRequestPage)
+const mockedOpenLanguageRequestPage = vi.mocked(openLanguageRequestPage)
 const mockedOpenPermissionsOnboardingPage = vi.mocked(
   openPermissionsOnboardingPage,
 )
@@ -145,6 +148,16 @@ describe("options Header", () => {
       }),
     )
     expect(mockedOpenSiteSupportRequestPage).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      await screen.findByRole("button", { name: "ui:feedback.trigger" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "ui:feedback.languageRequest",
+      }),
+    )
+    expect(mockedOpenLanguageRequestPage).toHaveBeenCalledTimes(1)
 
     await user.click(
       await screen.findByRole("button", { name: "ui:feedback.trigger" }),

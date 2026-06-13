@@ -512,6 +512,13 @@ const _openFeatureRequestPage = async () => {
 }
 
 /**
+ * Opens the repository language-request template in a new browser tab.
+ */
+const _openLanguageRequestPage = async () => {
+  await createActiveTab(getFeedbackDestinationUrls().languageRequest)
+}
+
+/**
  * Opens the site-support request issue form in a new browser tab.
  */
 const _openSiteSupportRequestPage = async (
@@ -846,6 +853,11 @@ export const openBugReportPage = withPopupClose(_openBugReportPage)
  * Open the feature-request issue template and close the popup afterward when needed.
  */
 export const openFeatureRequestPage = withPopupClose(_openFeatureRequestPage)
+
+/**
+ * Open the language-request issue template and close the popup afterward when needed.
+ */
+export const openLanguageRequestPage = withPopupClose(_openLanguageRequestPage)
 
 /**
  * Open the site-support issue template and close the popup afterward when needed.
