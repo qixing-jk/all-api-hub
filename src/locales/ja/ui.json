@@ -411,6 +411,15 @@
     "sidepanel": "サイドバー",
     "template": "{{page}} | {{app}}"
   },
+  "popupInterruption": {
+    "actions": {
+      "keepPopup": "ポップアップを使い続ける",
+      "useSidepanel": "サイドバーを使う"
+    },
+    "description": "アカウントの自動検出中にポップアップが閉じました。より安定した追加フローにはサイドバーを使ってください。",
+    "settingName": "ツールバークリック時の動作",
+    "title": "自動検出が中断された可能性があります"
+  },
   "repeatableInput": {
     "actions": {
       "add": "追加",

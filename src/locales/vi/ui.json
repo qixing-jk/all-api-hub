@@ -411,6 +411,15 @@
     "sidepanel": "Thanh bên",
     "template": "{{page}} | {{app}}"
   },
+  "popupInterruption": {
+    "actions": {
+      "keepPopup": "Tiếp tục dùng popup",
+      "useSidepanel": "Dùng thanh bên"
+    },
+    "description": "Cửa sổ bật lên đã đóng khi đang tự động nhận diện tài khoản. Hãy dùng thanh bên để thêm tài khoản ổn định hơn.",
+    "settingName": "Hành vi khi bấm thanh công cụ",
+    "title": "Tự động nhận diện có thể đã bị gián đoạn"
+  },
   "repeatableInput": {
     "actions": {
       "add": "Thêm",

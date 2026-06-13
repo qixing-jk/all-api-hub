@@ -411,6 +411,15 @@
     "sidepanel": "侧边栏",
     "template": "{{page}} | {{app}}"
   },
+  "popupInterruption": {
+    "actions": {
+      "keepPopup": "继续用弹窗",
+      "useSidepanel": "改用侧边栏"
+    },
+    "description": "弹窗在账号自动识别期间关闭了。建议改用侧边栏完成添加账号流程。",
+    "settingName": "工具栏点击行为",
+    "title": "自动识别可能被中断"
+  },
   "repeatableInput": {
     "actions": {
       "add": "添加",

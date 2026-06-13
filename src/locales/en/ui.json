@@ -416,6 +416,15 @@
     "sidepanel": "Sidebar",
     "template": "{{page}} | {{app}}"
   },
+  "popupInterruption": {
+    "actions": {
+      "keepPopup": "Keep popup",
+      "useSidepanel": "Use sidebar"
+    },
+    "description": "The popup closed while account auto-detect was running. Use the sidebar for a steadier add-account flow.",
+    "settingName": "Toolbar click behavior",
+    "title": "Auto-detect may have been interrupted"
+  },
   "repeatableInput": {
     "actions": {
       "add": "Add",

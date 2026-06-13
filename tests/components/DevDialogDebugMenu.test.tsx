@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
+import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { openPermissionsOnboardingPage } from "~/utils/navigation"
@@ -43,10 +44,23 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/popupInterruptionHint", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/popupInterruptionHint")>()
+
+  return {
+    ...actual,
+    debugQueuePopupInterruptionHint: vi.fn(),
+  }
+})
+
 const mockedUseUpdateLogDialogContext = vi.mocked(useUpdateLogDialogContext)
 const mockedGetExtensionVersion = vi.mocked(getExtensionVersion)
 const mockedOpenPermissionsOnboardingPage = vi.mocked(
   openPermissionsOnboardingPage,
+)
+const mockedDebugQueuePopupInterruptionHint = vi.mocked(
+  debugQueuePopupInterruptionHint,
 )
 
 describe("DevDialogDebugMenu", () => {
@@ -59,7 +73,10 @@ describe("DevDialogDebugMenu", () => {
       closeDialog: vi.fn(),
     })
     mockedGetExtensionVersion.mockReturnValue("3.37.0")
+    mockedOpenPermissionsOnboardingPage.mockReset()
     mockedOpenPermissionsOnboardingPage.mockResolvedValue(undefined)
+    mockedDebugQueuePopupInterruptionHint.mockReset()
+    mockedDebugQueuePopupInterruptionHint.mockResolvedValue(undefined)
     vi.spyOn(changelogOnUpdateState, "setPendingVersion").mockResolvedValue(
       undefined,
     )
@@ -73,7 +90,7 @@ describe("DevDialogDebugMenu", () => {
     vi.restoreAllMocks()
   })
 
-  it("groups update-log and onboarding debug actions in one development menu", async () => {
+  it("groups update-log, onboarding, and popup hint debug actions in one development menu", async () => {
     const user = userEvent.setup()
     const openDialog = vi.fn()
     mockedUseUpdateLogDialogContext.mockReturnValue({
@@ -114,6 +131,17 @@ describe("DevDialogDebugMenu", () => {
     expect(mockedOpenPermissionsOnboardingPage).toHaveBeenCalledWith({
       reason: "debug",
     })
+
+    await user.click(
+      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "Dev: Queue popup interruption hint",
+      }),
+    )
+
+    expect(mockedDebugQueuePopupInterruptionHint).toHaveBeenCalledOnce()
   })
 
   it("does not render outside development mode", () => {

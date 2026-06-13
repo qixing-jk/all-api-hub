@@ -618,6 +618,27 @@ export function hasStorageChangedListener(): boolean {
 }
 
 /**
+ * Reads keys from browser.storage.local through the guarded browser adapter.
+ */
+export async function getLocalStorage(keys: string | string[]) {
+  return await browser.storage.local.get(keys)
+}
+
+/**
+ * Writes values to browser.storage.local through the guarded browser adapter.
+ */
+export async function setLocalStorage(values: Record<string, unknown>) {
+  await browser.storage.local.set(values)
+}
+
+/**
+ * Removes keys from browser.storage.local through the guarded browser adapter.
+ */
+export async function removeLocalStorage(keys: string | string[]) {
+  await browser.storage.local.remove(keys)
+}
+
+/**
  * 监听标签页激活事件
  * 返回清理函数
  * @param callback 激活信息发生变化时调用的回调函数。

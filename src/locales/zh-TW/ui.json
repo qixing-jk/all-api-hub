@@ -411,6 +411,15 @@
     "sidepanel": "側邊欄",
     "template": "{{page}} | {{app}}"
   },
+  "popupInterruption": {
+    "actions": {
+      "keepPopup": "繼續用彈窗",
+      "useSidepanel": "改用側邊欄"
+    },
+    "description": "彈窗在帳戶自動識別期間關閉了。建議改用側邊欄完成新增帳戶流程。",
+    "settingName": "工具列點擊行為",
+    "title": "自動識別可能被中斷"
+  },
   "repeatableInput": {
     "actions": {
       "add": "新增",

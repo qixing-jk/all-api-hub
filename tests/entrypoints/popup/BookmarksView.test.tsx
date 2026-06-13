@@ -12,16 +12,22 @@ import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
 const {
   apiCredentialProfilesPreloadMock,
+  markPopupClosedDuringCriticalFlowMock,
   bookmarksPreloadMock,
   trackProductAnalyticsActionStartedMock,
 } = vi.hoisted(() => ({
   bookmarksPreloadMock: vi.fn(),
   apiCredentialProfilesPreloadMock: vi.fn(),
+  markPopupClosedDuringCriticalFlowMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
 vi.mock("~/components/AppLayout", () => ({
   AppLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
+}))
+
+vi.mock("~/components/PopupInterruptionHintBanner", () => ({
+  default: () => <div>PopupInterruptionHintBanner</div>,
 }))
 
 vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
@@ -31,8 +37,13 @@ vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
 }))
 
 vi.mock("~/utils/browser", () => ({
+  isExtensionPopup: () => true,
   isExtensionSidePanel: () => false,
   isMobileDevice: () => false,
+}))
+
+vi.mock("~/services/popupInterruptionHint", () => ({
+  markPopupClosedDuringCriticalFlow: markPopupClosedDuringCriticalFlowMock,
 }))
 
 vi.mock("~/hooks/useProductAnalyticsPageView", () => ({
@@ -211,5 +222,16 @@ describe("popup bookmarks view", () => {
     expect(
       await screen.findByText("ApiCredentialProfileDialogOpen"),
     ).toBeInTheDocument()
+  })
+
+  it("records a pending popup interruption hint when the popup page is hidden", async () => {
+    const { default: App } = await import("~/entrypoints/popup/App")
+
+    render(<App />)
+    await screen.findByText("ActionButtons")
+
+    window.dispatchEvent(new Event("pagehide"))
+
+    expect(markPopupClosedDuringCriticalFlowMock).toHaveBeenCalledTimes(1)
   })
 })

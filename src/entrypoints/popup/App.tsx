@@ -1,13 +1,15 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { AppLayout } from "~/components/AppLayout"
+import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanner"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 import { useProductAnalyticsPageView } from "~/hooks/useProductAnalyticsPageView"
 import { cn } from "~/lib/utils"
+import { markPopupClosedDuringCriticalFlow } from "~/services/popupInterruptionHint"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -18,7 +20,11 @@ import {
   type ProductAnalyticsFeatureId,
   type ProductAnalyticsPageId,
 } from "~/services/productAnalytics/events"
-import { isExtensionSidePanel, isMobileDevice } from "~/utils/browser"
+import {
+  isExtensionPopup,
+  isExtensionSidePanel,
+  isMobileDevice,
+} from "~/utils/browser"
 
 import ActionButtons from "./components/ActionButtons"
 import HeaderSection from "./components/HeaderSection"
@@ -96,6 +102,21 @@ function PopupContent() {
     pageId: mapPopupViewToAnalyticsPageId(activeView),
   })
 
+  useEffect(() => {
+    if (!isExtensionPopup()) {
+      return
+    }
+
+    const handlePageHide = () => {
+      void markPopupClosedDuringCriticalFlow()
+    }
+
+    window.addEventListener("pagehide", handlePageHide)
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide)
+    }
+  }, [])
+
   const popupWidthClass = isMobileDevice()
     ? "w-full"
     : inSidePanel
@@ -120,6 +141,7 @@ function PopupContent() {
         showRefresh={activeViewConfig.showRefresh}
         activeView={activeView}
       />
+      <PopupInterruptionHintBanner surfaceClassName="rounded-none border-x-0 shadow-none" />
 
       <section className="dark:border-dark-bg-tertiary shrink-0 space-y-2 border-b border-gray-200 bg-linear-to-br from-blue-50/50 to-indigo-50/30 p-3 sm:p-4 dark:from-blue-900/20 dark:to-indigo-900/10">
         <div className="flex items-center justify-between gap-2">

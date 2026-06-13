@@ -60,6 +60,10 @@ import {
   type ManifestOptionalPermissions,
 } from "~/services/permissions/permissionManager"
 import {
+  completePopupCriticalFlow,
+  startPopupCriticalFlow,
+} from "~/services/popupInterruptionHint"
+import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
   type ProductAnalyticsActionInsights,
@@ -88,6 +92,7 @@ import {
 } from "~/types"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { deepOverride } from "~/utils"
+import { isExtensionPopup } from "~/utils/browser"
 import {
   getActiveTabs,
   getAllTabs,
@@ -1569,6 +1574,10 @@ export function useAccountDialog({
     setIsDetecting(true)
     setDetectionError(null)
     detectedCookieStoreIdRef.current = null
+    const shouldTrackPopupInterruption = isExtensionPopup()
+    if (shouldTrackPopupInterruption) {
+      await startPopupCriticalFlow("account-auto-detect")
+    }
 
     try {
       const result = await autoDetectAccount(url.trim(), authType)
@@ -1717,6 +1726,9 @@ export function useAccountDialog({
         },
       })
     } finally {
+      if (shouldTrackPopupInterruption) {
+        await completePopupCriticalFlow("account-auto-detect")
+      }
       setIsDetecting(false)
     }
   }

@@ -35,6 +35,10 @@ vi.mock("~/components/AppLayout", () => ({
   AppLayout: ({ children }: { children: ReactNode }) => children,
 }))
 
+vi.mock("~/components/PopupInterruptionHintBanner", () => ({
+  default: () => <div>PopupInterruptionHintBanner</div>,
+}))
+
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
     managedSiteType: "new-api",

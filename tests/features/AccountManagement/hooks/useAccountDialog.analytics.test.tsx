@@ -36,6 +36,9 @@ const {
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
   mockResolveProductAnalyticsErrorCategoryFromError,
+  mockIsExtensionPopup,
+  mockStartPopupCriticalFlow,
+  mockCompletePopupCriticalFlow,
 } = vi.hoisted(() => ({
   mockAutoDetectAccount: vi.fn(),
   mockOpenWithAccount: vi.fn(),
@@ -45,6 +48,9 @@ const {
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
   mockResolveProductAnalyticsErrorCategoryFromError: vi.fn(),
+  mockIsExtensionPopup: vi.fn(),
+  mockStartPopupCriticalFlow: vi.fn(),
+  mockCompletePopupCriticalFlow: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -83,6 +89,26 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     mockResolveProductAnalyticsErrorCategoryFromError,
 }))
 
+vi.mock("~/services/popupInterruptionHint", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/popupInterruptionHint")>()
+
+  return {
+    ...actual,
+    startPopupCriticalFlow: mockStartPopupCriticalFlow,
+    completePopupCriticalFlow: mockCompletePopupCriticalFlow,
+  }
+})
+
+vi.mock("~/utils/browser", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser")>()
+
+  return {
+    ...actual,
+    isExtensionPopup: mockIsExtensionPopup,
+  }
+})
+
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
@@ -108,6 +134,9 @@ describe("useAccountDialog analytics", () => {
     mockResolveProductAnalyticsErrorCategoryFromError.mockReturnValue(
       PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     )
+    mockIsExtensionPopup.mockReturnValue(false)
+    mockStartPopupCriticalFlow.mockResolvedValue(undefined)
+    mockCompletePopupCriticalFlow.mockResolvedValue(undefined)
     ;(globalThis.browser.tabs.sendMessage as any) = vi.fn()
   })
 
@@ -232,6 +261,70 @@ describe("useAccountDialog analytics", () => {
       currentTabMatched: true,
     })
     expectNoSensitiveAnalyticsFields()
+  })
+
+  it("tracks popup auto-detect as a critical flow until it completes", async () => {
+    mockIsExtensionPopup.mockReturnValue(true)
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: true,
+      data: {
+        username: "private-user",
+        accessToken: "private-token",
+        userId: "123",
+        exchangeRate: 7,
+        siteName: "Detected Site",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await setUrlAndWait(result, "https://private.example.com")
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockStartPopupCriticalFlow).toHaveBeenCalledWith(
+      "account-auto-detect",
+    )
+    expect(mockCompletePopupCriticalFlow).toHaveBeenCalledWith(
+      "account-auto-detect",
+    )
+  })
+
+  it("does not track sidepanel or options auto-detect as a popup critical flow", async () => {
+    mockIsExtensionPopup.mockReturnValue(false)
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: true,
+      data: {
+        username: "private-user",
+        accessToken: "private-token",
+        userId: "123",
+        exchangeRate: 7,
+        siteName: "Detected Site",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await setUrlAndWait(result, "https://private.example.com")
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockStartPopupCriticalFlow).not.toHaveBeenCalled()
+    expect(mockCompletePopupCriticalFlow).not.toHaveBeenCalled()
   })
 
   it("tracks failed account auto-detect with safe context and a safe error category", async () => {

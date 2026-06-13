@@ -1,6 +1,7 @@
 import {
   BugAntIcon,
   DocumentTextIcon,
+  ExclamationTriangleIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline"
 import { useCallback } from "react"
@@ -15,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { isDevelopmentMode } from "~/utils/core/environment"
@@ -58,6 +60,19 @@ function DevDialogDebugMenuContent() {
     }
   }, [])
 
+  const handleQueuePopupInterruptionHint = useCallback(async () => {
+    try {
+      await debugQueuePopupInterruptionHint()
+      toast.success("Queued popup interruption hint (dev)")
+    } catch (error) {
+      const message = getErrorMessage(error)
+      logger.debug("Failed to queue popup interruption hint (dev)", {
+        error: message,
+      })
+      toast.error(`Failed to queue popup interruption hint (dev): ${message}`)
+    }
+  }, [])
+
   return (
     <DropdownMenu>
       <Tooltip content="Dev: Dialog debug menu">
@@ -80,6 +95,12 @@ function DevDialogDebugMenuContent() {
         <DropdownMenuItem onClick={() => void handleTriggerOnboarding()}>
           <SparklesIcon className="h-4 w-4" />
           Dev: Trigger onboarding
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => void handleQueuePopupInterruptionHint()}
+        >
+          <ExclamationTriangleIcon className="h-4 w-4" />
+          Dev: Queue popup interruption hint
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
