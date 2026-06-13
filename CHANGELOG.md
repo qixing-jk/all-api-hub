@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.46.0](https://github.com/qixing-jk/all-api-hub/compare/v3.45.0...v3.46.0) (2026-06-13)
+
+
+### Features
+
+* **feedback:** add language request entry points ([#961](https://github.com/qixing-jk/all-api-hub/issues/961)) ([b1e9db8](https://github.com/qixing-jk/all-api-hub/commit/b1e9db874a2e38c2840ff10e54762ffa2b571f2c))
+* **key-management:** audit group key coverage ([#958](https://github.com/qixing-jk/all-api-hub/issues/958)) ([0821f13](https://github.com/qixing-jk/all-api-hub/commit/0821f13d902f9c723aead90202066b10c6d7c5de))
+* **key-management:** batch import keys to CLIProxyAPI ([#959](https://github.com/qixing-jk/all-api-hub/issues/959)) ([51e84e2](https://github.com/qixing-jk/all-api-hub/commit/51e84e20bececb80102348a2d5938add82f3776e))
+* **popup:** guide interrupted auto-detect to sidebar ([#962](https://github.com/qixing-jk/all-api-hub/issues/962)) ([e08d923](https://github.com/qixing-jk/all-api-hub/commit/e08d923f25dbb060c01e278d8290857f69016bc9))
+* **sponsors:** migrate sponsor catalog to v4 ([#960](https://github.com/qixing-jk/all-api-hub/issues/960)) ([f002fcf](https://github.com/qixing-jk/all-api-hub/commit/f002fcf902a1a80f4155047ddeff2717556af1ef))
+
+
+### Bug Fixes
+
+* **key-management:** clarify Sub2API repair skip reason ([14730e4](https://github.com/qixing-jk/all-api-hub/commit/14730e4fe9f39b34eca2d5474a77dcc25fbaf7e1))
+* **model-list:** restore per-row model actions ([#949](https://github.com/qixing-jk/all-api-hub/issues/949)) ([6a022e0](https://github.com/qixing-jk/all-api-hub/commit/6a022e0c3f1413b05525c02ec63441788932ce30))
+* **settings:** improve setup guidance destinations ([#950](https://github.com/qixing-jk/all-api-hub/issues/950)) ([c81e312](https://github.com/qixing-jk/all-api-hub/commit/c81e312267bb79f57760a2ae4c037a124dd11219))
+* **sub2api:** enforce adapter identity overrides ([#932](https://github.com/qixing-jk/all-api-hub/issues/932)) ([1b22c96](https://github.com/qixing-jk/all-api-hub/commit/1b22c966af3c28853a3d3357666e44482863f9f7))
+* **sub2api:** stabilize key secret and lifecycle flows ([#935](https://github.com/qixing-jk/all-api-hub/issues/935)) ([1e4d90e](https://github.com/qixing-jk/all-api-hub/commit/1e4d90ef8999c04240067327324aa7c5d2908542))
+* **webdav:** avoid hidden temp backup names ([#956](https://github.com/qixing-jk/all-api-hub/issues/956)) ([1e7d9c8](https://github.com/qixing-jk/all-api-hub/commit/1e7d9c8d2452a445d436ff003687b33bf3ce896c))
+* **webdav:** persist dirty settings before testing ([#957](https://github.com/qixing-jk/all-api-hub/issues/957)) ([4e0d988](https://github.com/qixing-jk/all-api-hub/commit/4e0d9883f5b7dd432ee86ffa1f03e0d36bf1997f))
+
 ## [3.45.0](https://github.com/qixing-jk/all-api-hub/compare/v3.44.0...v3.45.0) (2026-06-08)
 
 
