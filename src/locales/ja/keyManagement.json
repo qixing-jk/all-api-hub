@@ -27,6 +27,22 @@
   "allAccountsFailed_other": "{{count}} 件失敗",
   "allAccountsLoading_other": "{{count}} 件読み込み中",
   "allAccountsProgress": "{{loaded}}/{{total}} アカウントを読み込み済み",
+  "batchCliProxyExport": {
+    "actions": {
+      "open": "CLIProxyAPI に一括インポート（{{selectedCount}}）",
+      "running": "インポート中...",
+      "start": "インポート開始"
+    },
+    "description": "{{selectedCount}} 件の選択済みキーを、同じ Provider ルールで CLIProxyAPI にインポートします。",
+    "results": {
+      "failed": "失敗",
+      "pending": "待機中",
+      "running": "インポート中",
+      "success": "成功"
+    },
+    "summary": "合計 {{total}} 件、成功 {{success}} 件、失敗 {{failed}} 件。",
+    "title": "CLIProxyAPI に一括インポート"
+  },
   "batchManagedSiteExport": {
     "actions": {
       "clearSelection": "選択をクリア",

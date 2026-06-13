@@ -67,6 +67,7 @@ describe("product analytics event enums", () => {
       ExportAccountTokenToCherryStudio: "export_account_token_to_cherry_studio",
       ExportAccountTokenToCCSwitch: "export_account_token_to_cc_switch",
       ExportAccountTokenToCliProxy: "export_account_token_to_cli_proxy",
+      ExportAccountTokensToCliProxy: "export_account_tokens_to_cli_proxy",
       ExportAccountTokenToClaudeCodeRouter:
         "export_account_token_to_claude_code_router",
       CopyKiloCodeAccountExportConfig: "copy_kilo_code_account_export_config",

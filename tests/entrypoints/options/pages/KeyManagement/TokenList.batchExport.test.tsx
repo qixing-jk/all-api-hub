@@ -62,6 +62,31 @@ vi.mock("~/components/CCSwitchExportDialog", () => ({
 }))
 
 vi.mock(
+  "~/features/KeyManagement/components/BatchCliProxyExportDialog",
+  () => ({
+    BatchCliProxyExportDialog: ({
+      isOpen,
+      items,
+      onClose,
+    }: {
+      isOpen: boolean
+      items: Array<{ token: { accountId: string; id: number } }>
+      onClose: () => void
+    }) =>
+      isOpen ? (
+        <div data-testid="batch-cli-proxy-export-dialog">
+          <div data-testid="batch-cli-proxy-export-item-count">
+            {items.length}
+          </div>
+          <button type="button" onClick={onClose}>
+            Close batch CLIProxy import
+          </button>
+        </div>
+      ) : null,
+  }),
+)
+
+vi.mock(
   "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog",
   () => ({
     ManagedSiteTokenBatchExportDialog: ({
@@ -430,6 +455,35 @@ describe("TokenList batch export selection", () => {
     expect(screen.getByTestId("cc-switch-export-dialog")).toHaveTextContent(
       "CC Switch export for Account 1",
     )
+  })
+
+  it("opens the batch CLIProxyAPI dialog with the frozen selected tokens", async () => {
+    const user = userEvent.setup()
+    const { rerender } = renderTokenList()
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    await user.click(await screen.findByRole("checkbox", { name: "Token 2" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: /keyManagement:batchCliProxyExport.actions.open/,
+      }),
+    )
+
+    expect(
+      screen.getByTestId("batch-cli-proxy-export-item-count"),
+    ).toHaveTextContent("2")
+
+    rerender(
+      <TokenList
+        {...(defaultProps as any)}
+        tokens={[token2] as any}
+        filteredTokens={[token2] as any}
+      />,
+    )
+
+    expect(
+      screen.getByTestId("batch-cli-proxy-export-item-count"),
+    ).toHaveTextContent("2")
   })
 
   it("skips rendering flat-list tokens whose account metadata is missing", async () => {

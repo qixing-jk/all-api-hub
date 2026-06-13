@@ -375,6 +375,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   ExportAccountTokenToClaudeCodeRouter:
     "export_account_token_to_claude_code_router",
   ExportAccountTokenToCliProxy: "export_account_token_to_cli_proxy",
+  ExportAccountTokensToCliProxy: "export_account_tokens_to_cli_proxy",
   ExportKiloCodeAccountSettingsFile: "export_kilo_code_account_settings_file",
   CancelRedemptionAccountSelection: "cancel_redemption_account_selection",
   CancelRedemptionPrompt: "cancel_redemption_prompt",

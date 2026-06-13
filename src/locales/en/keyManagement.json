@@ -30,6 +30,22 @@
   "allAccountsLoading_one": "{{count}} loading",
   "allAccountsLoading_other": "{{count}} loading",
   "allAccountsProgress": "{{loaded}}/{{total}} accounts loaded",
+  "batchCliProxyExport": {
+    "actions": {
+      "open": "Batch import to CLIProxyAPI ({{selectedCount}})",
+      "running": "Importing...",
+      "start": "Start import"
+    },
+    "description": "Import {{selectedCount}} selected keys to CLIProxyAPI with one provider policy.",
+    "results": {
+      "failed": "Failed",
+      "pending": "Pending",
+      "running": "Importing",
+      "success": "Success"
+    },
+    "summary": "{{total}} total, {{success}} succeeded, {{failed}} failed.",
+    "title": "Batch import to CLIProxyAPI"
+  },
   "batchManagedSiteExport": {
     "actions": {
       "clearSelection": "Clear selection",

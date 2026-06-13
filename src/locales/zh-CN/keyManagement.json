@@ -27,6 +27,22 @@
   "allAccountsFailed": "{{count}} 个失败",
   "allAccountsLoading": "{{count}} 个加载中",
   "allAccountsProgress": "已加载 {{loaded}}/{{total}} 个账号",
+  "batchCliProxyExport": {
+    "actions": {
+      "open": "批量导入到 CLIProxyAPI（{{selectedCount}}）",
+      "running": "正在导入...",
+      "start": "开始导入"
+    },
+    "description": "将 {{selectedCount}} 个已选择密钥按统一 Provider 规则导入到 CLIProxyAPI。",
+    "results": {
+      "failed": "失败",
+      "pending": "待导入",
+      "running": "导入中",
+      "success": "成功"
+    },
+    "summary": "共 {{total}} 个，成功 {{success}} 个，失败 {{failed}} 个。",
+    "title": "批量导入到 CLIProxyAPI"
+  },
   "batchManagedSiteExport": {
     "actions": {
       "clearSelection": "清空选择",

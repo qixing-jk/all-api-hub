@@ -27,6 +27,22 @@
   "allAccountsFailed_other": "{{count}} thất bại",
   "allAccountsLoading_other": "{{count}} đang tải",
   "allAccountsProgress": "Đã tải {{loaded}}/{{total}} tài khoản",
+  "batchCliProxyExport": {
+    "actions": {
+      "open": "Nhập hàng loạt vào CLIProxyAPI ({{selectedCount}})",
+      "running": "Đang nhập...",
+      "start": "Bắt đầu nhập"
+    },
+    "description": "Nhập {{selectedCount}} khóa đã chọn vào CLIProxyAPI với cùng một quy tắc Provider.",
+    "results": {
+      "failed": "Thất bại",
+      "pending": "Chờ nhập",
+      "running": "Đang nhập",
+      "success": "Thành công"
+    },
+    "summary": "Tổng {{total}}, thành công {{success}}, thất bại {{failed}}.",
+    "title": "Nhập hàng loạt vào CLIProxyAPI"
+  },
   "batchManagedSiteExport": {
     "actions": {
       "clearSelection": "Xóa lựa chọn",

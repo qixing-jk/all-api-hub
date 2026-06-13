@@ -7,7 +7,7 @@ import {
   KeyIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
-import { SendToBack } from "lucide-react"
+import { Network, SendToBack } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -28,6 +28,7 @@ import { createTab } from "~/utils/browser/browserApi"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { buildTokenIdentityKey } from "../utils"
+import { BatchCliProxyExportDialog } from "./BatchCliProxyExportDialog"
 import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
 import { TokenListItem } from "./TokenListItem"
 
@@ -282,6 +283,10 @@ export function TokenList(props: TokenListProps) {
   const [batchExportItems, setBatchExportItems] = useState<
     ManagedSiteTokenBatchExportItemInput[]
   >([])
+  const [batchCliProxyExportOpen, setBatchCliProxyExportOpen] = useState(false)
+  const [batchCliProxyExportItems, setBatchCliProxyExportItems] = useState<
+    ManagedSiteTokenBatchExportItemInput[]
+  >([])
   const [selectedTokenIds, setSelectedTokenIds] = useState<Set<string>>(
     () => new Set(),
   )
@@ -515,6 +520,16 @@ export function TokenList(props: TokenListProps) {
     setBatchExportItems([])
   }
 
+  const openBatchCliProxyExportDialog = () => {
+    setBatchCliProxyExportItems(selectedBatchItems)
+    setBatchCliProxyExportOpen(true)
+  }
+
+  const closeBatchCliProxyExportDialog = () => {
+    setBatchCliProxyExportOpen(false)
+    setBatchCliProxyExportItems([])
+  }
+
   const handleBatchExportCompleted = (
     result: ManagedSiteTokenBatchExportExecutionResult,
   ) => {
@@ -588,6 +603,18 @@ export function TokenList(props: TokenListProps) {
             onClick={clearSelection}
           >
             {t("batchManagedSiteExport.actions.clearSelection")}
+          </Button>
+          <Button
+            size="sm"
+            type="button"
+            disabled={selectedBatchItems.length === 0}
+            variant="outline"
+            onClick={openBatchCliProxyExportDialog}
+            leftIcon={<Network className="h-4 w-4" />}
+          >
+            {t("batchCliProxyExport.actions.open", {
+              selectedCount: selectedBatchItems.length,
+            })}
           </Button>
           <Button
             size="sm"
@@ -821,6 +848,12 @@ export function TokenList(props: TokenListProps) {
           token={ccSwitchContext.token}
         />
       )}
+
+      <BatchCliProxyExportDialog
+        isOpen={batchCliProxyExportOpen}
+        onClose={closeBatchCliProxyExportDialog}
+        items={batchCliProxyExportItems}
+      />
 
       <ManagedSiteTokenBatchExportDialog
         isOpen={batchExportOpen}
