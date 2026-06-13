@@ -250,14 +250,41 @@
   "pleaseSelectAccount": "Vui lòng chọn tài khoản",
   "refreshTokenList": "Làm mới danh sách khóa",
   "repairMissingKeys": {
-    "action": "Đảm bảo có ít nhất một khóa",
-    "description": "Quét các tài khoản đã lưu và tự động tạo một khóa mặc định cho các tài khoản đủ điều kiện và chưa có khóa, đảm bảo mỗi tài khoản đủ điều kiện có ít nhất một khóa.",
+    "action": "Kiểm tra khóa",
+    "actions": {
+      "rerun": "Kiểm tra lại",
+      "start": "Bắt đầu kiểm tra và bổ sung"
+    },
+    "coverage": {
+      "createdGroup": "Đã tạo: {{group}}",
+      "groupsCovered": "Đã phủ {{covered}}/{{total}} nhóm",
+      "missingGroup": "Chưa bổ sung: {{group}}"
+    },
+    "deleteConfirm": {
+      "confirm": "Xóa khóa đã chọn",
+      "description": "Các khóa này cũng sẽ bị xóa khỏi trang web tương ứng và không thể khôi phục bằng tiện ích. Hãy xác nhận rằng các nhóm của chúng không còn được sử dụng.",
+      "more_other": "Và {{count}} mục khác",
+      "title_other": "Xóa {{count}} khóa bất thường?"
+    },
+    "description": "Kiểm tra các nhóm khả dụng của từng tài khoản, tạo khóa mặc định cho nhóm còn thiếu khóa và liệt kê các khóa bất thường có nhóm không khả dụng.",
+    "initialNotice": "Sau khi bắt đầu, các nhóm khả dụng của tài khoản đã lưu sẽ được kiểm tra và khóa mặc định sẽ được tạo cho các nhóm còn thiếu khóa.",
+    "invalidKeys": {
+      "badge": "Bất thường",
+      "deleteFailed": "Xóa khóa bất thường thất bại",
+      "deletePartial": "Đã xóa {{deleted}}, {{failed}} mục xóa thất bại",
+      "deleteSelected": "Xóa mục đã chọn",
+      "deleteSuccess_other": "Đã xóa {{count}} khóa bất thường",
+      "emptyDescription": "Lần kiểm tra này không phát hiện khóa nào có nhóm không khả dụng.",
+      "emptyTitle": "Không có khóa bất thường",
+      "groupUnavailable": "Nhóm {{group}} hiện không khả dụng",
+      "selectAll": "Chọn tất cả kết quả hiện tại",
+      "selectedCount_other": "Đã chọn {{count}} khóa bất thường"
+    },
     "messages": {
       "loadFailed": "Tải tiến trình sửa chữa thất bại",
       "startFailed": "Bắt đầu tác vụ sửa chữa thất bại"
     },
     "noMatchingResults": "Không có kết quả khớp",
-    "outcomeLabel": "Kết quả",
     "outcomes": {
       "alreadyHad": "Đã tồn tại",
       "created": "Đã tạo",
@@ -265,6 +292,7 @@
       "skipped": "Đã bỏ qua"
     },
     "progressLabel": "Tiến trình",
+    "remoteWriteNotice": "Thao tác này có thể tạo khóa mới trên các trang web tương ứng; sẽ không tự động xóa bất kỳ khóa nào.",
     "resultsTitle": "Kết quả",
     "runningNote": "Tác vụ đang chạy trong nền, việc đóng hộp thoại này sẽ không hủy tác vụ.",
     "searchLabel": "Tìm kiếm",
@@ -274,11 +302,16 @@
       "noneAuth": "Không có thông tin xác thực (Phương thức xác thực: Không có)",
       "sub2api": "Cần chọn nhóm Sub2API; hãy tạo khóa thủ công"
     },
-    "title": "Đảm bảo có ít nhất một khóa",
+    "title": "Kiểm tra phạm vi khóa",
     "totalsLabels": {
       "eligibleAccounts": "Tài khoản đủ điều kiện",
       "enabledAccounts": "Tài khoản đã kích hoạt",
       "processedAccounts": "Đã xử lý"
+    },
+    "views": {
+      "accountCoverage": "Phạm vi tài khoản",
+      "invalidKeys": "Khóa bất thường",
+      "label": "Chế độ xem kết quả"
     }
   },
   "searchPlaceholder": "Tìm kiếm tên khóa...",

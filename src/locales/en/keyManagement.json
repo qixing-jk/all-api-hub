@@ -256,14 +256,45 @@
   "pleaseSelectAccount": "Please select account",
   "refreshTokenList": "Refresh Key List",
   "repairMissingKeys": {
-    "action": "Ensure at least one key",
-    "description": "Scan stored accounts and create a default key for any eligible account with no keys, ensuring each eligible account has at least one key.",
+    "action": "Key check",
+    "actions": {
+      "rerun": "Check again",
+      "start": "Start check and fill gaps"
+    },
+    "coverage": {
+      "createdGroup": "Created: {{group}}",
+      "groupsCovered": "Covered {{covered}}/{{total}} groups",
+      "missingGroup": "Missing: {{group}}"
+    },
+    "deleteConfirm": {
+      "confirm": "Delete selected keys",
+      "description": "These keys will also be deleted from the corresponding sites and cannot be restored through the extension. Confirm their groups are no longer used.",
+      "more_one": "And {{count}} more",
+      "more_other": "And {{count}} more",
+      "title_one": "Delete {{count}} invalid key?",
+      "title_other": "Delete {{count}} invalid keys?"
+    },
+    "description": "Check each account's available groups, create default keys for groups without keys, and list unusual keys whose groups are unavailable.",
+    "initialNotice": "After starting, saved accounts will be checked for available groups, and default keys will be created for groups without keys.",
+    "invalidKeys": {
+      "badge": "Invalid",
+      "deleteFailed": "Failed to delete invalid keys",
+      "deletePartial": "Deleted {{deleted}}, {{failed}} failed",
+      "deleteSelected": "Delete selected",
+      "deleteSuccess_one": "Deleted {{count}} invalid key",
+      "deleteSuccess_other": "Deleted {{count}} invalid keys",
+      "emptyDescription": "This check did not find any keys whose groups are unavailable.",
+      "emptyTitle": "No invalid keys",
+      "groupUnavailable": "Group {{group}} is currently unavailable",
+      "selectAll": "Select all current results",
+      "selectedCount_one": "{{count}} invalid key selected",
+      "selectedCount_other": "{{count}} invalid keys selected"
+    },
     "messages": {
       "loadFailed": "Failed to load repair progress",
       "startFailed": "Failed to start repair job"
     },
     "noMatchingResults": "No matching results",
-    "outcomeLabel": "Outcome",
     "outcomes": {
       "alreadyHad": "Already had keys",
       "created": "Created",
@@ -271,6 +302,7 @@
       "skipped": "Skipped"
     },
     "progressLabel": "Progress",
+    "remoteWriteNotice": "This action may create new keys on the corresponding sites. It will not automatically delete any keys.",
     "resultsTitle": "Results",
     "runningNote": "This job runs in the background. Closing this dialog will not cancel it.",
     "searchLabel": "Search",
@@ -280,11 +312,16 @@
       "noneAuth": "No credentials (auth type: none)",
       "sub2api": "Requires selecting a Sub2API group; create the key manually"
     },
-    "title": "Ensure at least one key",
+    "title": "Key coverage check",
     "totalsLabels": {
       "eligibleAccounts": "Eligible accounts",
       "enabledAccounts": "Enabled accounts",
       "processedAccounts": "Processed"
+    },
+    "views": {
+      "accountCoverage": "Account coverage",
+      "invalidKeys": "Invalid keys",
+      "label": "Result view"
     }
   },
   "searchPlaceholder": "Search key name...",

@@ -250,14 +250,41 @@
   "pleaseSelectAccount": "請選擇帳號",
   "refreshTokenList": "重新整理金鑰列表",
   "repairMissingKeys": {
-    "action": "確保至少有一個金鑰",
-    "description": "掃描已儲存帳號，為符合條件且沒有金鑰的帳號自動建立一個預設金鑰，確保每個符合條件的帳號至少有一個金鑰。",
+    "action": "金鑰檢查",
+    "actions": {
+      "rerun": "重新檢查",
+      "start": "開始檢查並補齊"
+    },
+    "coverage": {
+      "createdGroup": "已建立：{{group}}",
+      "groupsCovered": "已覆蓋 {{covered}}/{{total}} 個分組",
+      "missingGroup": "未補齊：{{group}}"
+    },
+    "deleteConfirm": {
+      "confirm": "刪除所選金鑰",
+      "description": "這些金鑰會同時從對應網站刪除，無法透過擴充功能恢復。請確認它們的分組已不再使用。",
+      "more_other": "以及另外 {{count}} 個",
+      "title_other": "刪除 {{count}} 個異常金鑰？"
+    },
+    "description": "檢查每個帳號的可用分組，為缺少金鑰的分組建立預設金鑰，並列出分組不可用的異常金鑰。",
+    "initialNotice": "開始後會檢查已儲存帳號的可用分組，並為缺少金鑰的分組建立預設金鑰。",
+    "invalidKeys": {
+      "badge": "異常",
+      "deleteFailed": "刪除異常金鑰失敗",
+      "deletePartial": "已刪除 {{deleted}} 個，{{failed}} 個刪除失敗",
+      "deleteSelected": "刪除所選",
+      "deleteSuccess_other": "已刪除 {{count}} 個異常金鑰",
+      "emptyDescription": "本次檢查未發現分組不可用的金鑰。",
+      "emptyTitle": "沒有異常金鑰",
+      "groupUnavailable": "分組 {{group}} 目前不可用",
+      "selectAll": "全選目前結果",
+      "selectedCount_other": "已選擇 {{count}} 個異常金鑰"
+    },
     "messages": {
       "loadFailed": "載入修復進度失敗",
       "startFailed": "啟動修復任務失敗"
     },
     "noMatchingResults": "沒有匹配的結果",
-    "outcomeLabel": "結果",
     "outcomes": {
       "alreadyHad": "已存在",
       "created": "已建立",
@@ -265,6 +292,7 @@
       "skipped": "已跳過"
     },
     "progressLabel": "進度",
+    "remoteWriteNotice": "此操作可能會在對應網站建立新金鑰；不會自動刪除任何金鑰。",
     "resultsTitle": "結果",
     "runningNote": "任務在後臺執行，關閉此對話方塊不會取消任務。",
     "searchLabel": "搜尋",
@@ -274,11 +302,16 @@
       "noneAuth": "無憑據（認證方式：無）",
       "sub2api": "需要選擇 Sub2API 分組，請手動建立密鑰"
     },
-    "title": "確保至少有一個金鑰",
+    "title": "金鑰覆蓋檢查",
     "totalsLabels": {
       "eligibleAccounts": "符合條件帳號",
       "enabledAccounts": "已啟用帳號",
       "processedAccounts": "已處理"
+    },
+    "views": {
+      "accountCoverage": "帳號覆蓋",
+      "invalidKeys": "異常金鑰",
+      "label": "結果視圖"
     }
   },
   "searchPlaceholder": "搜尋金鑰名稱...",

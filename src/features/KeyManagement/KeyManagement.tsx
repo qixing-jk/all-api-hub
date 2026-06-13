@@ -179,7 +179,7 @@ export default function KeyManagement(props: {
   }, [])
 
   const handleRepairMissingKeys = () => {
-    setRepairStartOnOpen(true)
+    setRepairStartOnOpen(false)
     setIsRepairOpen(true)
   }
 

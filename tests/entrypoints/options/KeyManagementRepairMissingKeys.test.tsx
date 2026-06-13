@@ -421,11 +421,269 @@ const aihubmixSkippedProgress: AccountKeyRepairProgress = {
   ],
 }
 
+const coverageProgress: AccountKeyRepairProgress = {
+  jobId: "job-coverage",
+  state: "completed",
+  startedAt: 1,
+  updatedAt: 2,
+  finishedAt: 2,
+  totals: {
+    enabledAccounts: 1,
+    eligibleAccounts: 1,
+    processedAccounts: 1,
+    processedEligibleAccounts: 1,
+  },
+  summary: {
+    created: 1,
+    alreadyHad: 0,
+    skipped: 0,
+    failed: 0,
+    availableGroups: 2,
+    coveredGroups: 2,
+    createdKeys: 1,
+    invalidKeys: 1,
+  },
+  results: [
+    {
+      accountId: "account-enabled",
+      accountName: "Enabled Site",
+      siteType: "new-api",
+      siteUrlOrigin: "https://enabled.example.com",
+      outcome: "created",
+      availableGroups: ["default", "vip"],
+      coveredGroups: ["default", "vip"],
+      createdGroups: ["vip"],
+      missingGroups: [],
+      invalidTokens: [
+        {
+          accountId: "account-enabled",
+          accountName: "Enabled Site",
+          siteType: "new-api",
+          siteUrlOrigin: "https://enabled.example.com",
+          tokenId: 9,
+          tokenName: "old group key",
+          group: "old",
+          reason: "groupUnavailable",
+        },
+      ],
+      finishedAt: 2,
+    },
+  ],
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve
+    reject = promiseReject
+  })
+
+  return { promise, resolve, reject }
+}
+
 describe("KeyManagement repair missing keys entry point", () => {
   beforeEach(() => {
     mockOpenSub2ApiTokenCreationDialog.mockReset()
     mockTrackProductAnalyticsActionCompleted.mockReset()
     mockTrackProductAnalyticsActionStarted.mockReset()
+  })
+
+  it("opens the key check dialog without starting until the user confirms", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message === AccountKeyRepairMessageTypes.Start) {
+        return { success: true, data: startProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    expect(
+      screen.getByText("keyManagement:repairMissingKeys.initialNotice"),
+    ).toBeInTheDocument()
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+      AccountKeyRepairMessageTypes.GetProgress,
+      undefined,
+    )
+    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalledWith(
+      AccountKeyRepairMessageTypes.Start,
+      undefined,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.Start,
+        undefined,
+      )
+    })
+  })
+
+  it("ignores repeated start clicks while the first start request is pending", async () => {
+    const startRequest = createDeferred<{
+      success: true
+      data: AccountKeyRepairProgress
+    }>()
+
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message === AccountKeyRepairMessageTypes.Start) {
+        return startRequest.promise
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    const startButton = screen.getByRole("button", {
+      name: "keyManagement:repairMissingKeys.actions.start",
+    })
+
+    fireEvent.click(startButton)
+    fireEvent.click(startButton)
+
+    await waitFor(() => {
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.Start,
+        undefined,
+      )
+    })
+    expect(
+      sendRuntimeActionMessageMock.mock.calls.filter(
+        ([message]) => message === AccountKeyRepairMessageTypes.Start,
+      ),
+    ).toHaveLength(1)
+
+    await act(async () => {
+      startRequest.resolve({ success: true, data: startProgress })
+      await startRequest.promise
+    })
+  })
+
+  it("keeps the start guard when closing and reopening during a pending start", async () => {
+    const startRequest = createDeferred<{
+      success: true
+      data: AccountKeyRepairProgress
+    }>()
+
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message === AccountKeyRepairMessageTypes.Start) {
+        return startRequest.promise
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    const repairButton = await screen.findByRole("button", {
+      name: "keyManagement:repairMissingKeys.action",
+    })
+
+    fireEvent.click(repairButton)
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /keyManagement:repairMissingKeys\.actions\.start/,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.Start,
+        undefined,
+      )
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "common:actions.close",
+      }),
+    )
+
+    fireEvent.click(repairButton)
+    const pendingStartButton = screen.getByRole("button", {
+      name: /keyManagement:repairMissingKeys\.actions\.start/,
+    })
+    expect(pendingStartButton).toBeDisabled()
+    fireEvent.click(pendingStartButton)
+
+    expect(
+      sendRuntimeActionMessageMock.mock.calls.filter(
+        ([message]) => message === AccountKeyRepairMessageTypes.Start,
+      ),
+    ).toHaveLength(1)
+
+    await act(async () => {
+      startRequest.resolve({ success: true, data: completedProgress })
+      await startRequest.promise
+    })
+
+    const rerunButton = screen.getByRole("button", {
+      name: "keyManagement:repairMissingKeys.actions.rerun",
+    })
+    const progressHeader = screen.getByTestId(
+      "repair-missing-keys-progress-header",
+    )
+    const progressActions = screen.getByTestId(
+      "repair-missing-keys-progress-actions",
+    )
+    expect(progressHeader).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "items-center",
+      "justify-between",
+    )
+    expect(progressHeader).not.toHaveClass("flex-col", "sm:flex-row")
+    expect(progressActions).toHaveClass(
+      "flex-wrap",
+      "items-center",
+      "justify-end",
+    )
+    expect(progressActions).toHaveTextContent("2/2 (100%)")
+    expect(progressActions).toContainElement(rerunButton)
+
+    const enabledAccountsLabel = screen.getByText(
+      "keyManagement:repairMissingKeys.totalsLabels.enabledAccounts",
+    )
+    expect(
+      rerunButton.compareDocumentPosition(enabledAccountsLabel) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+
+    fireEvent.click(rerunButton)
+
+    await waitFor(() => {
+      expect(
+        sendRuntimeActionMessageMock.mock.calls.filter(
+          ([message]) => message === AccountKeyRepairMessageTypes.Start,
+        ),
+      ).toHaveLength(2)
+    })
   })
 
   it("opens dialog, subscribes to progress, and hides disabled accounts", async () => {
@@ -449,6 +707,12 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect(
       screen.getByText("keyManagement:repairMissingKeys.description"),
     ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    )
 
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
@@ -510,6 +774,12 @@ describe("KeyManagement repair missing keys entry point", () => {
       }),
     )
 
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    )
+
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
@@ -544,6 +814,12 @@ describe("KeyManagement repair missing keys entry point", () => {
     fireEvent.click(
       await screen.findByRole("button", {
         name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
       }),
     )
 
@@ -621,6 +897,12 @@ describe("KeyManagement repair missing keys entry point", () => {
       }),
     )
 
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    )
+
     await waitFor(() => {
       expect(screen.getByText("Another Site")).toBeInTheDocument()
     })
@@ -661,6 +943,12 @@ describe("KeyManagement repair missing keys entry point", () => {
       }),
     )
 
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    )
+
     expect((await screen.findAllByText("AIHubMix"))[0]).toBeInTheDocument()
     expect(
       screen.getByText(
@@ -675,7 +963,395 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect(mockOpenSub2ApiTokenCreationDialog).not.toHaveBeenCalled()
   })
 
-  it("tracks started and successful completion analytics for start-on-open repair", async () => {
+  it("switches between account coverage and invalid key views", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: coverageProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    const viewSwitch = await screen.findByRole("group", {
+      name: "keyManagement:repairMissingKeys.views.label",
+    })
+    expect(viewSwitch).toHaveClass("w-full", "rounded-lg", "p-1")
+    expect(
+      screen.getByTestId("repair-missing-keys-account-coverage-view-icon"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId("repair-missing-keys-invalid-keys-view-icon"),
+    ).toBeInTheDocument()
+    const resultCount = screen.getByTestId("repair-missing-keys-result-count")
+    expect(
+      screen.getByTestId("repair-missing-keys-results-header"),
+    ).toHaveClass("space-y-0")
+    expect(
+      screen.getByTestId("repair-missing-keys-result-heading-row"),
+    ).toHaveClass("h-9", "items-center")
+    expect(
+      screen.getByTestId("repair-missing-keys-result-heading"),
+    ).toHaveClass("items-baseline")
+    expect(resultCount).toHaveTextContent("1/1")
+    expect(resultCount).toHaveClass("leading-none", "tabular-nums")
+    expect(resultCount).not.toHaveClass("rounded-full")
+    const accountCoverageButton = screen.getByRole("button", {
+      name: "keyManagement:repairMissingKeys.views.accountCoverage",
+    })
+    expect(accountCoverageButton).toHaveClass("scale-100")
+    expect(accountCoverageButton).not.toHaveClass("scale-105")
+    expect(accountCoverageButton).toHaveAttribute("aria-pressed", "true")
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.views.invalidKeys",
+      }),
+    ).toHaveAttribute("aria-pressed", "false")
+    expect(screen.getByText("vip")).toBeInTheDocument()
+    expect(screen.queryByText("old group key")).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.views.invalidKeys",
+      }),
+    )
+
+    expect(screen.getByText("old group key")).toBeInTheDocument()
+    expect(screen.getByText("old")).toBeInTheDocument()
+  })
+
+  it("shows a search no-match state when invalid keys are filtered out", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: coverageProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.views.invalidKeys",
+      }),
+    )
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "keyManagement:repairMissingKeys.searchPlaceholder",
+      ),
+      { target: { value: "does-not-match-invalid-keys" } },
+    )
+
+    expect(
+      screen.getByText("keyManagement:repairMissingKeys.noMatchingResults"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "keyManagement:repairMissingKeys.invalidKeys.emptyTitle",
+      ),
+    ).not.toBeInTheDocument()
+  })
+
+  it("deletes selected invalid keys after destructive confirmation", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(
+      async (message: any, data: any) => {
+        if (message === AccountKeyRepairMessageTypes.GetProgress) {
+          return { success: true, data: coverageProgress }
+        }
+        if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
+          return {
+            success: true,
+            data: {
+              deleted: [{ ...data.tokens[0], deletedAt: 123 }],
+              failed: [],
+            },
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.views.invalidKeys",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "old group key",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+      }),
+    )
+
+    expect(
+      screen.getByText(
+        "keyManagement:repairMissingKeys.deleteConfirm.description",
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId("repair-invalid-keys-confirm-delete"))
+
+    await waitFor(() => {
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.DeleteInvalidTokens,
+        {
+          tokens: [
+            expect.objectContaining({
+              tokenId: 9,
+              tokenName: "old group key",
+            }),
+          ],
+        },
+      )
+    })
+
+    expect(
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.invalidKeys.deleteSuccess",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:repairMissingKeys.invalidKeys.emptyTitle",
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("old group key")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "keyManagement:repairMissingKeys.deleteConfirm.description",
+        ),
+      ).not.toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+        featureId: "key_management",
+        actionId: "delete_invalid_account_tokens",
+        surfaceId: "options_key_management_repair_dialog",
+        entrypoint: "options",
+      })
+    })
+    await waitFor(() => {
+      expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actionId: "delete_invalid_account_tokens",
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          insights: expect.objectContaining({
+            itemCount: 1,
+            selectedCount: 1,
+            successCount: 1,
+            failureCount: 0,
+          }),
+        }),
+      )
+    })
+  })
+
+  it("closes confirmation and shows delete failure feedback when invalid key deletion fails", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: coverageProgress }
+      }
+      if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
+        return { success: false }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.views.invalidKeys",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "old group key",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+      }),
+    )
+    fireEvent.click(screen.getByTestId("repair-invalid-keys-confirm-delete"))
+
+    expect(
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.invalidKeys.deleteFailed",
+      ),
+    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "keyManagement:repairMissingKeys.deleteConfirm.description",
+        ),
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.getByText("old group key")).toBeInTheDocument()
+  })
+
+  it("closes delete confirmation when selected invalid keys are pruned", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: coverageProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.views.invalidKeys",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "old group key",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+      }),
+    )
+
+    expect(
+      screen.getByText(
+        "keyManagement:repairMissingKeys.deleteConfirm.description",
+      ),
+    ).toBeInTheDocument()
+
+    await act(async () => {
+      runtimeMessageState.listener?.({
+        type: RuntimeMessageTypes.AccountKeyRepairProgress,
+        payload: {
+          ...coverageProgress,
+          summary: {
+            ...coverageProgress.summary,
+            invalidKeys: 0,
+          },
+          results: coverageProgress.results.map((result) => ({
+            ...result,
+            invalidTokens: [],
+          })),
+        },
+      })
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "keyManagement:repairMissingKeys.deleteConfirm.description",
+        ),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("keeps invalid key delete feedback visible when search has no matches", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(
+      async (message: any, data: any) => {
+        if (message === AccountKeyRepairMessageTypes.GetProgress) {
+          return { success: true, data: coverageProgress }
+        }
+        if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
+          return {
+            success: true,
+            data: {
+              deleted: [],
+              failed: [{ ...data.tokens[0], errorMessage: "delete failed" }],
+            },
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.views.invalidKeys",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "old group key",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+      }),
+    )
+    fireEvent.click(screen.getByTestId("repair-invalid-keys-confirm-delete"))
+
+    expect(
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.invalidKeys.deletePartial",
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "keyManagement:repairMissingKeys.searchPlaceholder",
+      ),
+      { target: { value: "does-not-match-invalid-keys" } },
+    )
+
+    expect(
+      screen.getByText(
+        "keyManagement:repairMissingKeys.invalidKeys.deletePartial",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("tracks started and successful completion analytics for manual repair start", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
@@ -691,6 +1367,12 @@ describe("KeyManagement repair missing keys entry point", () => {
     fireEvent.click(
       await screen.findByRole("button", {
         name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
       }),
     )
 
@@ -752,6 +1434,12 @@ describe("KeyManagement repair missing keys entry point", () => {
       }),
     )
 
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    )
+
     await waitFor(() => {
       expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
         featureId: "key_management",
@@ -791,6 +1479,12 @@ describe("KeyManagement repair missing keys entry point", () => {
     fireEvent.click(
       await screen.findByRole("button", {
         name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
       }),
     )
 

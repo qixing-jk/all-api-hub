@@ -1,17 +1,22 @@
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { ShieldCheck, TriangleAlert } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
 import {
   Alert,
   Badge,
   Button,
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
+  Checkbox,
+  DestructiveConfirmDialog,
   EmptyState,
   Input,
   Label,
@@ -39,6 +44,7 @@ import {
 } from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
 import type {
+  AccountKeyRepairInvalidToken,
   AccountKeyRepairOutcome,
   AccountKeyRepairProgress,
   AccountKeyRepairSkipReason,
@@ -48,6 +54,13 @@ import { onRuntimeMessage } from "~/utils/browser/browserApi"
 const repairMissingKeysAnalyticsContext = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.RepairMissingAccountKeys,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRepairDialog,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+}
+
+const deleteInvalidKeysAnalyticsContext = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+  actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteInvalidAccountTokens,
   surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRepairDialog,
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
 }
@@ -103,6 +116,7 @@ function getSkipReasonLabel(
 }
 
 type BadgeVariant = React.ComponentProps<typeof Badge>["variant"]
+type RepairResultView = "accountCoverage" | "invalidKeys"
 
 const OUTCOME_BADGE_VARIANTS: Record<AccountKeyRepairOutcome, BadgeVariant> = {
   created: "success",
@@ -125,6 +139,67 @@ function getRepairOutcomeLabel(t: TFunction, outcome: AccountKeyRepairOutcome) {
     case "failed":
       return t("keyManagement:repairMissingKeys.outcomes.failed")
   }
+}
+
+/**
+ * Returns the localized view switch label.
+ */
+function getRepairResultViewLabel(t: TFunction, view: RepairResultView) {
+  switch (view) {
+    case "accountCoverage":
+      return t("keyManagement:repairMissingKeys.views.accountCoverage")
+    case "invalidKeys":
+      return t("keyManagement:repairMissingKeys.views.invalidKeys")
+  }
+}
+
+/**
+ * Keeps group names visible if i18n returns the missing-key fallback instead of
+ * interpolated copy.
+ */
+function getCoverageGroupLabel(
+  t: TFunction,
+  key: "createdGroup" | "missingGroup",
+  group: string,
+) {
+  const [translationKey, label] =
+    key === "createdGroup"
+      ? [
+          "keyManagement:repairMissingKeys.coverage.createdGroup",
+          t("keyManagement:repairMissingKeys.coverage.createdGroup", {
+            group,
+          }),
+        ]
+      : [
+          "keyManagement:repairMissingKeys.coverage.missingGroup",
+          t("keyManagement:repairMissingKeys.coverage.missingGroup", {
+            group,
+          }),
+        ]
+
+  return label === translationKey ? group : label
+}
+
+/**
+ * Returns the localized reason shown for invalid keys.
+ */
+function getInvalidTokenReasonLabel(
+  t: TFunction,
+  token: AccountKeyRepairInvalidToken,
+) {
+  switch (token.reason) {
+    case "groupUnavailable":
+      return t("keyManagement:repairMissingKeys.invalidKeys.groupUnavailable", {
+        group: token.group,
+      })
+  }
+}
+
+/**
+ * Builds a stable selection key for an invalid token within an account.
+ */
+function getInvalidTokenKey(token: AccountKeyRepairInvalidToken) {
+  return `${token.accountId}:${token.tokenId}`
 }
 
 /**
@@ -182,13 +257,27 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [outcomeFilter, setOutcomeFilter] =
     useState<AccountKeyRepairOutcome | null>(null)
+  const [activeView, setActiveView] =
+    useState<RepairResultView>("accountCoverage")
   const [openingSub2ApiAccountId, setOpeningSub2ApiAccountId] = useState<
     string | null
   >(null)
+  const [selectedInvalidTokenKeys, setSelectedInvalidTokenKeys] = useState<
+    Set<string>
+  >(() => new Set())
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [isDeletingInvalidKeys, setIsDeletingInvalidKeys] = useState(false)
+  const [deleteResultMessage, setDeleteResultMessage] = useState("")
+  const [isStarting, setIsStarting] = useState(false)
   const startedAnalyticsJobIdRef = useRef<string | null>(null)
   const completedAnalyticsJobIdRef = useRef<string | null>(null)
   const progressRef = useRef<AccountKeyRepairProgress | null>(null)
   const accountsRef = useRef(accounts)
+  const isDialogOpenRef = useRef(isOpen)
+  const startInFlightRef = useRef(false)
+  const startRequestIdRef = useRef(0)
+
+  isDialogOpenRef.current = isOpen
 
   const disabledAccountIds = useMemo(() => {
     return new Set(
@@ -207,9 +296,14 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     )
   }, [disabledAccountIds, progress])
 
+  const invalidTokens = useMemo(() => {
+    return visibleResults.flatMap((result) => result.invalidTokens ?? [])
+  }, [visibleResults])
+
   /**
    * Filters visible repair results by free-text search and an optional outcome filter.
-   * Search matches account name, site origin, and site type (case-insensitive).
+   * Search matches account name, site origin, site type, and group coverage
+   * details (case-insensitive).
    */
   const filteredResults = useMemo(() => {
     let results = visibleResults
@@ -224,13 +318,188 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     }
 
     return results.filter((result) => {
+      const groupNames = [
+        ...(result.availableGroups ?? []),
+        ...(result.coveredGroups ?? []),
+        ...(result.createdGroups ?? []),
+        ...(result.missingGroups ?? []),
+      ]
+
       return (
         result.accountName.toLowerCase().includes(keyword) ||
         result.siteUrlOrigin.toLowerCase().includes(keyword) ||
-        result.siteType.toLowerCase().includes(keyword)
+        result.siteType.toLowerCase().includes(keyword) ||
+        groupNames.some((group) => group.toLowerCase().includes(keyword))
       )
     })
   }, [outcomeFilter, searchTerm, visibleResults])
+
+  const filteredInvalidTokens = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase()
+    if (!keyword) {
+      return invalidTokens
+    }
+
+    return invalidTokens.filter((token) => {
+      return (
+        token.accountName.toLowerCase().includes(keyword) ||
+        token.siteUrlOrigin.toLowerCase().includes(keyword) ||
+        token.siteType.toLowerCase().includes(keyword) ||
+        token.tokenName.toLowerCase().includes(keyword) ||
+        token.group.toLowerCase().includes(keyword)
+      )
+    })
+  }, [invalidTokens, searchTerm])
+
+  const selectedInvalidTokens = useMemo(() => {
+    return filteredInvalidTokens.filter((token) =>
+      selectedInvalidTokenKeys.has(getInvalidTokenKey(token)),
+    )
+  }, [filteredInvalidTokens, selectedInvalidTokenKeys])
+
+  const deleteConfirmDetails = useMemo(() => {
+    const previewTokens = selectedInvalidTokens.slice(0, 5)
+    const hiddenCount = selectedInvalidTokens.length - previewTokens.length
+
+    return (
+      <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/40 rounded-md border border-gray-200 bg-gray-50 p-3">
+        <ul className="space-y-2 text-sm">
+          {previewTokens.map((token) => (
+            <li
+              key={getInvalidTokenKey(token)}
+              className="min-w-0 text-gray-700 dark:text-gray-300"
+            >
+              <span className="font-medium">{token.tokenName}</span>
+              <span className="dark:text-dark-text-secondary text-gray-500">
+                {" "}
+                · {token.accountName}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {hiddenCount > 0 ? (
+          <p className="dark:text-dark-text-secondary mt-2 text-xs text-gray-500">
+            {t("repairMissingKeys.deleteConfirm.more", {
+              count: hiddenCount,
+            })}
+          </p>
+        ) : null}
+      </div>
+    )
+  }, [selectedInvalidTokens, t])
+
+  const handleDeleteInvalidKeys = async () => {
+    const tokensToDelete = selectedInvalidTokens
+    if (tokensToDelete.length === 0) {
+      return
+    }
+
+    setIsDeletingInvalidKeys(true)
+    setDeleteResultMessage("")
+    void trackProductAnalyticsActionStarted(deleteInvalidKeysAnalyticsContext)
+    try {
+      const response = await sendAccountKeyRepairMessage(
+        AccountKeyRepairMessageTypes.DeleteInvalidTokens,
+        { tokens: tokensToDelete },
+      )
+
+      if (!response?.success || !response.data) {
+        setDeleteResultMessage(t("repairMissingKeys.invalidKeys.deleteFailed"))
+        setIsDeleteConfirmOpen(false)
+        void trackProductAnalyticsActionCompleted({
+          ...deleteInvalidKeysAnalyticsContext,
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            itemCount: tokensToDelete.length,
+            selectedCount: tokensToDelete.length,
+            successCount: 0,
+            failureCount: tokensToDelete.length,
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+          },
+        })
+        return
+      }
+
+      const deletedKeys = new Set(response.data.deleted.map(getInvalidTokenKey))
+      setSelectedInvalidTokenKeys((previous) => {
+        const next = new Set(previous)
+        for (const key of deletedKeys) {
+          next.delete(key)
+        }
+        return next
+      })
+      setProgress((current) => {
+        if (!current) return current
+
+        return {
+          ...current,
+          summary: {
+            ...current.summary,
+            invalidKeys: Math.max(
+              0,
+              (current.summary.invalidKeys ?? 0) - response.data.deleted.length,
+            ),
+            deletedKeys:
+              (current.summary.deletedKeys ?? 0) + response.data.deleted.length,
+            deleteFailed:
+              (current.summary.deleteFailed ?? 0) + response.data.failed.length,
+          },
+          results: current.results.map((result) => ({
+            ...result,
+            invalidTokens: result.invalidTokens?.filter(
+              (token) => !deletedKeys.has(getInvalidTokenKey(token)),
+            ),
+          })),
+        }
+      })
+      setDeleteResultMessage(
+        response.data.failed.length > 0
+          ? t("repairMissingKeys.invalidKeys.deletePartial", {
+              deleted: response.data.deleted.length,
+              failed: response.data.failed.length,
+            })
+          : t("repairMissingKeys.invalidKeys.deleteSuccess", {
+              count: response.data.deleted.length,
+            }),
+      )
+      setIsDeleteConfirmOpen(false)
+      void trackProductAnalyticsActionCompleted({
+        ...deleteInvalidKeysAnalyticsContext,
+        result:
+          response.data.failed.length > 0
+            ? PRODUCT_ANALYTICS_RESULTS.Failure
+            : PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          itemCount: tokensToDelete.length,
+          selectedCount: tokensToDelete.length,
+          successCount: response.data.deleted.length,
+          failureCount: response.data.failed.length,
+          statusKind:
+            response.data.failed.length > 0
+              ? PRODUCT_ANALYTICS_STATUS_KINDS.Warning
+              : PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+        },
+      })
+    } catch {
+      setDeleteResultMessage(t("repairMissingKeys.invalidKeys.deleteFailed"))
+      setIsDeleteConfirmOpen(false)
+      void trackProductAnalyticsActionCompleted({
+        ...deleteInvalidKeysAnalyticsContext,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: tokensToDelete.length,
+          selectedCount: tokensToDelete.length,
+          successCount: 0,
+          failureCount: tokensToDelete.length,
+          statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+        },
+      })
+    } finally {
+      setIsDeletingInvalidKeys(false)
+    }
+  }
 
   const handleOpenSub2ApiTokenDialog = async (accountId: string) => {
     const account = accountById.get(accountId)
@@ -292,6 +561,87 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     return "bg-blue-600 dark:bg-blue-500"
   }, [progress])
 
+  const handleStartAudit = useCallback(async () => {
+    if (startInFlightRef.current) {
+      return
+    }
+
+    startInFlightRef.current = true
+    const requestId = startRequestIdRef.current + 1
+    startRequestIdRef.current = requestId
+
+    setIsStarting(true)
+    setError("")
+    try {
+      const response = await sendAccountKeyRepairMessage(
+        AccountKeyRepairMessageTypes.Start,
+      )
+      if (response?.success && response.data) {
+        startedAnalyticsJobIdRef.current = response.data.jobId
+        void trackProductAnalyticsActionStarted(
+          repairMissingKeysAnalyticsContext,
+        )
+        if (
+          isDialogOpenRef.current &&
+          startRequestIdRef.current === requestId
+        ) {
+          setProgress(response.data)
+        }
+        return
+      }
+
+      void trackProductAnalyticsActionCompleted({
+        ...repairMissingKeysAnalyticsContext,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: getRepairStartFailureInsights(
+          progressRef.current,
+          accountsRef.current,
+        ),
+      })
+      if (isDialogOpenRef.current && startRequestIdRef.current === requestId) {
+        setError(t("repairMissingKeys.messages.startFailed"))
+      }
+    } catch {
+      void trackProductAnalyticsActionCompleted({
+        ...repairMissingKeysAnalyticsContext,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: getRepairStartFailureInsights(
+          progressRef.current,
+          accountsRef.current,
+        ),
+      })
+      if (isDialogOpenRef.current && startRequestIdRef.current === requestId) {
+        setError(t("repairMissingKeys.messages.startFailed"))
+      }
+    } finally {
+      if (startRequestIdRef.current === requestId) {
+        startInFlightRef.current = false
+        if (isDialogOpenRef.current) {
+          setIsStarting(false)
+        }
+      }
+    }
+  }, [t])
+
+  useEffect(() => {
+    isDialogOpenRef.current = isOpen
+    if (isOpen) {
+      setIsStarting(startInFlightRef.current)
+    } else {
+      setIsStarting(false)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    return () => {
+      isDialogOpenRef.current = false
+      startRequestIdRef.current += 1
+      startInFlightRef.current = false
+    }
+  }, [])
+
   useEffect(() => {
     if (!isOpen) {
       startedAnalyticsJobIdRef.current = null
@@ -303,8 +653,30 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     if (!isOpen) {
       setSearchTerm("")
       setOutcomeFilter(null)
+      setActiveView("accountCoverage")
+      setSelectedInvalidTokenKeys(new Set())
+      setIsDeleteConfirmOpen(false)
+      setDeleteResultMessage("")
     }
   }, [isOpen])
+
+  useEffect(() => {
+    const currentInvalidTokenKeys = new Set(
+      invalidTokens.map(getInvalidTokenKey),
+    )
+    setSelectedInvalidTokenKeys((previous) => {
+      const next = new Set(
+        [...previous].filter((key) => currentInvalidTokenKeys.has(key)),
+      )
+      return next.size === previous.size ? previous : next
+    })
+  }, [invalidTokens])
+
+  useEffect(() => {
+    if (isDeleteConfirmOpen && selectedInvalidTokens.length === 0) {
+      setIsDeleteConfirmOpen(false)
+    }
+  }, [isDeleteConfirmOpen, selectedInvalidTokens.length])
 
   useEffect(() => {
     progressRef.current = progress
@@ -356,52 +728,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     if (!isOpen) return
     if (!startOnOpen) return
 
-    let cancelled = false
-
-    void (async () => {
-      try {
-        const response = await sendAccountKeyRepairMessage(
-          AccountKeyRepairMessageTypes.Start,
-        )
-        if (cancelled) return
-        if (response?.success && response.data) {
-          startedAnalyticsJobIdRef.current = response.data.jobId
-          void trackProductAnalyticsActionStarted(
-            repairMissingKeysAnalyticsContext,
-          )
-          setProgress(response.data)
-        } else {
-          void trackProductAnalyticsActionCompleted({
-            ...repairMissingKeysAnalyticsContext,
-            result: PRODUCT_ANALYTICS_RESULTS.Failure,
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            insights: getRepairStartFailureInsights(
-              progressRef.current,
-              accountsRef.current,
-            ),
-          })
-          setError(t("repairMissingKeys.messages.startFailed"))
-        }
-      } catch {
-        if (!cancelled) {
-          void trackProductAnalyticsActionCompleted({
-            ...repairMissingKeysAnalyticsContext,
-            result: PRODUCT_ANALYTICS_RESULTS.Failure,
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            insights: getRepairStartFailureInsights(
-              progressRef.current,
-              accountsRef.current,
-            ),
-          })
-          setError(t("repairMissingKeys.messages.startFailed"))
-        }
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isOpen, startOnOpen, t])
+    void handleStartAudit()
+  }, [handleStartAudit, isOpen, startOnOpen])
 
   useEffect(() => {
     if (!progress) return
@@ -477,16 +805,72 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     >
       {error ? <Alert variant="destructive" description={error} /> : null}
 
-      {progress ? (
+      {!progress || progress.state === "idle" ? (
+        <Card variant="outlined" className="overflow-hidden">
+          <CardContent padding="default" className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <p className="pt-1 text-sm leading-6 text-gray-700 dark:text-gray-300">
+                {t("repairMissingKeys.initialNotice")}
+              </p>
+            </div>
+            <Alert
+              variant="info"
+              compact
+              description={t("repairMissingKeys.remoteWriteNotice")}
+            />
+          </CardContent>
+          <CardFooter
+            padding="sm"
+            className="dark:bg-dark-bg-primary/40 justify-start bg-gray-50/80"
+          >
+            <Button
+              type="button"
+              onClick={() => void handleStartAudit()}
+              disabled={isStarting}
+              loading={isStarting}
+              className="w-full sm:w-auto"
+            >
+              {t("repairMissingKeys.actions.start")}
+            </Button>
+          </CardFooter>
+        </Card>
+      ) : null}
+
+      {progress && progress.state !== "idle" ? (
         <div className="space-y-4">
           <Card>
             <CardContent padding="md" spacing="none" className="space-y-4">
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-400">
-                  <span>{t("repairMissingKeys.progressLabel")}</span>
-                  <span>
-                    {processedTotal}/{eligibleTotal} ({progressPercent}%)
-                  </span>
+                <div
+                  data-testid="repair-missing-keys-progress-header"
+                  className="flex flex-wrap items-center justify-between gap-2"
+                >
+                  <div className="min-w-0 text-xs text-gray-600 dark:text-gray-400">
+                    <span>{t("repairMissingKeys.progressLabel")}</span>
+                  </div>
+                  <div
+                    data-testid="repair-missing-keys-progress-actions"
+                    className="flex flex-wrap items-center justify-end gap-3 text-xs text-gray-600 dark:text-gray-400"
+                  >
+                    <span>
+                      {processedTotal}/{eligibleTotal} ({progressPercent}%)
+                    </span>
+                    {progress.state !== "running" ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleStartAudit()}
+                        disabled={isStarting}
+                        loading={isStarting}
+                      >
+                        {t("repairMissingKeys.actions.rerun")}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
                 <div
                   className="dark:bg-dark-bg-tertiary h-2 w-full rounded-full bg-gray-100"
@@ -568,22 +952,78 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
             </CardContent>
           </Card>
 
+          <ResponsiveToggleGroup
+            aria-label={t("repairMissingKeys.views.label")}
+            value={activeView}
+            onValueChange={setActiveView}
+            buttonSize="sm"
+            className="w-full"
+            options={[
+              {
+                value: "accountCoverage",
+                label: getRepairResultViewLabel(t, "accountCoverage"),
+                leftIcon: (
+                  <ShieldCheck
+                    aria-hidden="true"
+                    data-testid="repair-missing-keys-account-coverage-view-icon"
+                    className="h-4 w-4"
+                  />
+                ),
+              },
+              {
+                value: "invalidKeys",
+                label: (
+                  <>
+                    {getRepairResultViewLabel(t, "invalidKeys")}
+                    {invalidTokens.length > 0 ? (
+                      <Badge
+                        variant="warning"
+                        size="sm"
+                        className="ml-2"
+                        aria-hidden="true"
+                      >
+                        {invalidTokens.length}
+                      </Badge>
+                    ) : null}
+                  </>
+                ),
+                leftIcon: (
+                  <TriangleAlert
+                    aria-hidden="true"
+                    data-testid="repair-missing-keys-invalid-keys-view-icon"
+                    className="h-4 w-4"
+                  />
+                ),
+              },
+            ]}
+          />
+
           <Card>
             <CardHeader
+              data-testid="repair-missing-keys-results-header"
               padding="sm"
-              className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-2 space-y-0 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm">
-                  {t("repairMissingKeys.resultsTitle")}
-                </CardTitle>
-                <Badge
-                  variant="outline"
-                  size="sm"
-                  className="border-transparent"
+              <div
+                data-testid="repair-missing-keys-result-heading-row"
+                className="flex h-9 items-center"
+              >
+                <div
+                  data-testid="repair-missing-keys-result-heading"
+                  className="flex items-baseline gap-2"
                 >
-                  {filteredResults.length}/{visibleResults.length}
-                </Badge>
+                  <CardTitle className="text-sm">
+                    {t("repairMissingKeys.resultsTitle")}
+                  </CardTitle>
+                  <span
+                    data-testid="repair-missing-keys-result-count"
+                    className="text-xs leading-none text-gray-500 tabular-nums dark:text-gray-400"
+                  >
+                    {activeView === "accountCoverage"
+                      ? `${filteredResults.length}/${visibleResults.length}`
+                      : `${filteredInvalidTokens.length}/${invalidTokens.length}`}
+                  </span>
+                </div>
               </div>
 
               <div className="w-full sm:w-80">
@@ -615,57 +1055,208 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
               </div>
             </CardHeader>
 
-            <CardContent
-              padding="sm"
-              spacing="none"
-              className="dark:border-dark-bg-tertiary border-b border-gray-200"
-            >
-              <div className="space-y-2">
-                <div>
-                  <Label className="text-sm font-medium">
-                    {t("repairMissingKeys.outcomeLabel")}
-                  </Label>
+            {activeView === "accountCoverage" ? (
+              <CardContent
+                padding="sm"
+                spacing="none"
+                className="dark:border-dark-bg-tertiary border-b border-gray-200"
+              >
+                <div className="space-y-2">
+                  <TagFilter
+                    mode="single"
+                    value={outcomeFilter}
+                    onChange={(value) =>
+                      setOutcomeFilter(value as AccountKeyRepairOutcome | null)
+                    }
+                    allCount={visibleResults.length}
+                    options={[
+                      {
+                        value: "created",
+                        label: t("repairMissingKeys.outcomes.created"),
+                        count: outcomeCounts.created,
+                        variant: "success",
+                      },
+                      {
+                        value: "alreadyHad",
+                        label: t("repairMissingKeys.outcomes.alreadyHad"),
+                        count: outcomeCounts.alreadyHad,
+                        variant: "info",
+                      },
+                      {
+                        value: "skipped",
+                        label: t("repairMissingKeys.outcomes.skipped"),
+                        count: outcomeCounts.skipped,
+                        variant: "warning",
+                      },
+                      {
+                        value: "failed",
+                        label: t("repairMissingKeys.outcomes.failed"),
+                        count: outcomeCounts.failed,
+                        variant: "danger",
+                      },
+                    ]}
+                  />
                 </div>
-                <TagFilter
-                  mode="single"
-                  value={outcomeFilter}
-                  onChange={(value) =>
-                    setOutcomeFilter(value as AccountKeyRepairOutcome | null)
-                  }
-                  allCount={visibleResults.length}
-                  options={[
-                    {
-                      value: "created",
-                      label: t("repairMissingKeys.outcomes.created"),
-                      count: outcomeCounts.created,
-                      variant: "success",
-                    },
-                    {
-                      value: "alreadyHad",
-                      label: t("repairMissingKeys.outcomes.alreadyHad"),
-                      count: outcomeCounts.alreadyHad,
-                      variant: "info",
-                    },
-                    {
-                      value: "skipped",
-                      label: t("repairMissingKeys.outcomes.skipped"),
-                      count: outcomeCounts.skipped,
-                      variant: "warning",
-                    },
-                    {
-                      value: "failed",
-                      label: t("repairMissingKeys.outcomes.failed"),
-                      count: outcomeCounts.failed,
-                      variant: "danger",
-                    },
-                  ]}
-                />
-              </div>
-            </CardContent>
+              </CardContent>
+            ) : null}
 
             <CardContent padding="none" spacing="none">
               <div className="max-h-[60vh] overflow-y-auto md:max-h-[min(70vh,48rem)]">
-                {filteredResults.length === 0 ? (
+                {activeView === "invalidKeys" ? (
+                  <div>
+                    {deleteResultMessage ? (
+                      <div className="px-4 pt-4">
+                        <Alert description={deleteResultMessage} />
+                      </div>
+                    ) : null}
+
+                    {invalidTokens.length === 0 ? (
+                      <EmptyState
+                        icon={<MagnifyingGlassIcon className="h-12 w-12" />}
+                        title={t("repairMissingKeys.invalidKeys.emptyTitle")}
+                        description={t(
+                          "repairMissingKeys.invalidKeys.emptyDescription",
+                        )}
+                        className="py-10"
+                      />
+                    ) : filteredInvalidTokens.length === 0 ? (
+                      <EmptyState
+                        icon={<MagnifyingGlassIcon className="h-12 w-12" />}
+                        title={t("repairMissingKeys.noMatchingResults")}
+                        className="py-10"
+                      />
+                    ) : (
+                      <>
+                        <div className="dark:border-dark-bg-tertiary space-y-2 border-b border-gray-200 px-4 py-3">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <label className="flex items-center gap-2 text-sm">
+                              <Checkbox
+                                checked={
+                                  filteredInvalidTokens.length > 0 &&
+                                  selectedInvalidTokens.length ===
+                                    filteredInvalidTokens.length
+                                }
+                                onCheckedChange={(checked) => {
+                                  setSelectedInvalidTokenKeys(
+                                    checked
+                                      ? new Set(
+                                          filteredInvalidTokens.map(
+                                            getInvalidTokenKey,
+                                          ),
+                                        )
+                                      : new Set(),
+                                  )
+                                }}
+                                aria-label={t(
+                                  "repairMissingKeys.invalidKeys.selectAll",
+                                )}
+                              />
+                              {t("repairMissingKeys.invalidKeys.selectAll")}
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {t(
+                                  "repairMissingKeys.invalidKeys.selectedCount",
+                                  {
+                                    count: selectedInvalidTokens.length,
+                                  },
+                                )}
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                disabled={selectedInvalidTokens.length === 0}
+                                onClick={() => setIsDeleteConfirmOpen(true)}
+                              >
+                                {t(
+                                  "repairMissingKeys.invalidKeys.deleteSelected",
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <ul className="dark:divide-dark-bg-tertiary divide-y">
+                          {filteredInvalidTokens.map((token) => {
+                            const tokenKey = getInvalidTokenKey(token)
+
+                            return (
+                              <li
+                                key={`${token.accountId}-${token.tokenId}-${token.group}`}
+                                className="px-4 py-3"
+                              >
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="flex min-w-0 gap-3">
+                                    <Checkbox
+                                      checked={selectedInvalidTokenKeys.has(
+                                        tokenKey,
+                                      )}
+                                      onCheckedChange={(checked) => {
+                                        setSelectedInvalidTokenKeys(
+                                          (previous) => {
+                                            const next = new Set(previous)
+                                            if (checked) {
+                                              next.add(tokenKey)
+                                            } else {
+                                              next.delete(tokenKey)
+                                            }
+                                            return next
+                                          },
+                                        )
+                                      }}
+                                      aria-label={token.tokenName}
+                                      className="mt-0.5 shrink-0"
+                                    />
+                                    <div className="min-w-0 space-y-1">
+                                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                        <div className="truncate text-sm font-medium">
+                                          {token.tokenName}
+                                        </div>
+                                        <Badge
+                                          variant="warning"
+                                          size="sm"
+                                          className="shrink-0 border-transparent"
+                                        >
+                                          {t(
+                                            "repairMissingKeys.invalidKeys.badge",
+                                          )}
+                                        </Badge>
+                                        <Badge
+                                          variant="outline"
+                                          size="sm"
+                                          className="dark:border-dark-bg-tertiary shrink-0 border-gray-200 px-2 py-0.5 text-[11px] font-medium"
+                                          title={token.group}
+                                        >
+                                          {token.group}
+                                        </Badge>
+                                      </div>
+                                      <div className="dark:text-dark-text-secondary truncate text-xs text-gray-500">
+                                        {token.accountName} ·{" "}
+                                        {token.siteUrlOrigin}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    size="sm"
+                                    className="dark:border-dark-bg-tertiary shrink-0 border-gray-200 px-2 py-0.5 text-[11px] font-medium"
+                                    title={token.siteType}
+                                  >
+                                    {token.siteType}
+                                  </Badge>
+                                </div>
+                                <div className="mt-2 text-xs text-amber-700 dark:text-amber-200">
+                                  {getInvalidTokenReasonLabel(t, token)}
+                                </div>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                ) : filteredResults.length === 0 ? (
                   <EmptyState
                     icon={<MagnifyingGlassIcon className="h-12 w-12" />}
                     title={t("repairMissingKeys.noMatchingResults")}
@@ -760,6 +1351,35 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                               {details}
                             </div>
                           ) : null}
+
+                          {result.availableGroups ? (
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                              <Badge variant="outline" size="sm">
+                                {t("repairMissingKeys.coverage.groupsCovered", {
+                                  covered: result.coveredGroups?.length ?? 0,
+                                  total: result.availableGroups.length,
+                                })}
+                              </Badge>
+                              {(result.createdGroups ?? []).map((group) => (
+                                <Badge key={group} variant="success" size="sm">
+                                  {getCoverageGroupLabel(
+                                    t,
+                                    "createdGroup",
+                                    group,
+                                  )}
+                                </Badge>
+                              ))}
+                              {(result.missingGroups ?? []).map((group) => (
+                                <Badge key={group} variant="warning" size="sm">
+                                  {getCoverageGroupLabel(
+                                    t,
+                                    "missingGroup",
+                                    group,
+                                  )}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : null}
                         </li>
                       )
                     })}
@@ -769,12 +1389,23 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
             </CardContent>
           </Card>
         </div>
-      ) : (
-        <div className="dark:text-dark-text-secondary flex items-center justify-center gap-3 py-10 text-sm text-gray-500">
-          <Spinner size="sm" />
-          {t("common:status.loading")}
-        </div>
-      )}
+      ) : null}
+
+      <DestructiveConfirmDialog
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        onConfirm={() => void handleDeleteInvalidKeys()}
+        title={t("repairMissingKeys.deleteConfirm.title", {
+          count: selectedInvalidTokens.length,
+        })}
+        description={t("repairMissingKeys.deleteConfirm.description")}
+        confirmLabel={t("repairMissingKeys.deleteConfirm.confirm")}
+        cancelLabel={t("common:actions.cancel")}
+        details={deleteConfirmDetails}
+        isWorking={isDeletingInvalidKeys}
+        size="md"
+        confirmButtonTestId="repair-invalid-keys-confirm-delete"
+      />
     </Modal>
   )
 }

@@ -250,14 +250,41 @@
   "pleaseSelectAccount": "请选择账号",
   "refreshTokenList": "刷新密钥列表",
   "repairMissingKeys": {
-    "action": "确保至少有一个密钥",
-    "description": "扫描已保存账号，为符合条件且没有密钥的账号自动创建一个默认密钥，确保每个符合条件的账号至少有一个密钥。",
+    "action": "密钥检查",
+    "actions": {
+      "rerun": "重新检查",
+      "start": "开始检查并补齐"
+    },
+    "coverage": {
+      "createdGroup": "已创建：{{group}}",
+      "groupsCovered": "已覆盖 {{covered}}/{{total}} 个分组",
+      "missingGroup": "未补齐：{{group}}"
+    },
+    "deleteConfirm": {
+      "confirm": "删除所选密钥",
+      "description": "这些密钥会同时从对应网站删除，无法通过扩展恢复。请确认它们的分组已不再使用。",
+      "more": "以及另外 {{count}} 个",
+      "title": "删除 {{count}} 个异常密钥？"
+    },
+    "description": "检查每个账号的可用分组，为缺少密钥的分组创建默认密钥，并列出分组不可用的异常密钥。",
+    "initialNotice": "开始后会检查已保存账号的可用分组，并为缺少密钥的分组创建默认密钥。",
+    "invalidKeys": {
+      "badge": "异常",
+      "deleteFailed": "删除异常密钥失败",
+      "deletePartial": "已删除 {{deleted}} 个，{{failed}} 个删除失败",
+      "deleteSelected": "删除所选",
+      "deleteSuccess": "已删除 {{count}} 个异常密钥",
+      "emptyDescription": "本次检查未发现分组不可用的密钥。",
+      "emptyTitle": "没有异常密钥",
+      "groupUnavailable": "分组 {{group}} 当前不可用",
+      "selectAll": "全选当前结果",
+      "selectedCount": "已选择 {{count}} 个异常密钥"
+    },
     "messages": {
       "loadFailed": "加载修复进度失败",
       "startFailed": "启动修复任务失败"
     },
     "noMatchingResults": "没有匹配的结果",
-    "outcomeLabel": "结果",
     "outcomes": {
       "alreadyHad": "已存在",
       "created": "已创建",
@@ -265,6 +292,7 @@
       "skipped": "已跳过"
     },
     "progressLabel": "进度",
+    "remoteWriteNotice": "此操作可能会在对应网站创建新密钥；不会自动删除任何密钥。",
     "resultsTitle": "结果",
     "runningNote": "任务在后台运行，关闭此对话框不会取消任务。",
     "searchLabel": "搜索",
@@ -274,11 +302,16 @@
       "noneAuth": "无凭据（认证方式：无）",
       "sub2api": "需要选择 Sub2API 分组，请手动创建密钥"
     },
-    "title": "确保至少有一个密钥",
+    "title": "密钥覆盖检查",
     "totalsLabels": {
       "eligibleAccounts": "符合条件账号",
       "enabledAccounts": "已启用账号",
       "processedAccounts": "已处理"
+    },
+    "views": {
+      "accountCoverage": "账号覆盖",
+      "invalidKeys": "异常密钥",
+      "label": "结果视图"
     }
   },
   "searchPlaceholder": "搜索密钥名称...",
