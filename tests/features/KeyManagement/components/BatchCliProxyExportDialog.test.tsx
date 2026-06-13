@@ -209,4 +209,146 @@ describe("BatchCliProxyExportDialog", () => {
       },
     )
   })
+
+  it("normalizes edited model mappings and provider settings before import", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <BatchCliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        items={[{ account, token: token1 }]}
+      />,
+    )
+
+    await screen.findByRole("dialog")
+    await user.click(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.providerType"),
+    )
+    await user.click(
+      await screen.findByText(
+        "ui:dialog.cliproxy.providerTypes.geminiApiKey.label",
+      ),
+    )
+    await user.type(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.proxyUrl"),
+      "  http://localhost:4141  ",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.cliproxy.actions.addModel",
+      }),
+    )
+    await user.type(
+      screen.getByPlaceholderText("ui:dialog.cliproxy.placeholders.modelName"),
+      "  gemini-2.5-pro  ",
+    )
+    await user.type(
+      screen.getByPlaceholderText("ui:dialog.cliproxy.placeholders.modelAlias"),
+      "  smart  ",
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchCliProxyExport.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToCliProxy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerType: CLI_PROXY_PROVIDER_TYPES.GEMINI_API_KEY,
+          providerBaseUrl: "https://one.example.invalid/api",
+          proxyUrl: "http://localhost:4141",
+          models: [{ name: "gemini-2.5-pro", alias: "smart" }],
+        }),
+      )
+    })
+  })
+
+  it("keeps nameless model mappings out of the batch import payload", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <BatchCliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        items={[{ account, token: token1 }]}
+      />,
+    )
+
+    await screen.findByRole("dialog")
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.cliproxy.actions.addModel",
+      }),
+    )
+    await user.type(
+      screen.getByPlaceholderText("ui:dialog.cliproxy.placeholders.modelAlias"),
+      "alias-only",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchCliProxyExport.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToCliProxy).toHaveBeenCalledWith(
+        expect.objectContaining({ models: [] }),
+      )
+    })
+  })
+
+  it("reports token resolution failures without importing that token", async () => {
+    const user = userEvent.setup()
+    mockResolveDisplayAccountTokenForSecret
+      .mockRejectedValueOnce(new Error("token is hidden"))
+      .mockImplementationOnce(async (_account, token) => ({
+        ...token,
+        key: `resolved-${token.id}`,
+      }))
+
+    render(
+      <BatchCliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        items={[
+          { account, token: token1 },
+          { account, token: token2 },
+        ]}
+      />,
+    )
+
+    await screen.findByRole("dialog")
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchCliProxyExport.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("token is hidden")).toBeInTheDocument()
+    })
+    expect(mockImportToCliProxy).toHaveBeenCalledTimes(1)
+    expect(mockImportToCliProxy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        token: expect.objectContaining({ id: token2.id, key: "resolved-2" }),
+      }),
+    )
+    expect(mockShowResultToast).toHaveBeenCalledWith({
+      success: false,
+      message: "messages:errors.operation.failed",
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        insights: {
+          itemCount: 2,
+          successCount: 1,
+          failureCount: 1,
+        },
+      },
+    )
+  })
 })

@@ -484,6 +484,14 @@ describe("TokenList batch export selection", () => {
     expect(
       screen.getByTestId("batch-cli-proxy-export-item-count"),
     ).toHaveTextContent("2")
+
+    await user.click(
+      screen.getByRole("button", { name: "Close batch CLIProxy import" }),
+    )
+
+    expect(
+      screen.queryByTestId("batch-cli-proxy-export-dialog"),
+    ).not.toBeInTheDocument()
   })
 
   it("skips rendering flat-list tokens whose account metadata is missing", async () => {

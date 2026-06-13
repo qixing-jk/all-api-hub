@@ -50,7 +50,15 @@ interface BatchCliProxyExportDialogProps {
   }>
 }
 
-type ExecutionStatus = "pending" | "running" | "success" | "failed"
+const EXECUTION_STATUSES = {
+  Pending: "pending",
+  Running: "running",
+  Success: "success",
+  Failed: "failed",
+} as const
+
+type ExecutionStatus =
+  (typeof EXECUTION_STATUSES)[keyof typeof EXECUTION_STATUSES]
 
 interface ExecutionState {
   status: ExecutionStatus
@@ -87,13 +95,13 @@ function normalizeModels(
  */
 function getResultBadgeVariant(status: ExecutionStatus) {
   switch (status) {
-    case "success":
+    case EXECUTION_STATUSES.Success:
       return "success" as const
-    case "failed":
+    case EXECUTION_STATUSES.Failed:
       return "danger" as const
-    case "running":
+    case EXECUTION_STATUSES.Running:
       return "info" as const
-    case "pending":
+    case EXECUTION_STATUSES.Pending:
     default:
       return "secondary" as const
   }
@@ -107,13 +115,13 @@ function getResultStatusText(
   status: ExecutionStatus,
 ) {
   switch (status) {
-    case "success":
+    case EXECUTION_STATUSES.Success:
       return t("keyManagement:batchCliProxyExport.results.success")
-    case "failed":
+    case EXECUTION_STATUSES.Failed:
       return t("keyManagement:batchCliProxyExport.results.failed")
-    case "running":
+    case EXECUTION_STATUSES.Running:
       return t("keyManagement:batchCliProxyExport.results.running")
-    case "pending":
+    case EXECUTION_STATUSES.Pending:
     default:
       return t("keyManagement:batchCliProxyExport.results.pending")
   }
@@ -176,7 +184,8 @@ export function BatchCliProxyExportDialog({
   const statusCounts = useMemo(() => {
     return previewItems.reduce(
       (counts, item) => {
-        const status = executionStateById[item.id]?.status ?? "pending"
+        const status =
+          executionStateById[item.id]?.status ?? EXECUTION_STATUSES.Pending
         counts[status] += 1
         return counts
       },
@@ -214,7 +223,7 @@ export function BatchCliProxyExportDialog({
       Object.fromEntries(
         previewItems.map((item) => [
           item.id,
-          { status: "pending" satisfies ExecutionStatus },
+          { status: EXECUTION_STATUSES.Pending },
         ]),
       ),
     )
@@ -222,7 +231,7 @@ export function BatchCliProxyExportDialog({
     for (const item of previewItems) {
       setExecutionStateById((current) => ({
         ...current,
-        [item.id]: { status: "running" },
+        [item.id]: { status: EXECUTION_STATUSES.Running },
       }))
 
       try {
@@ -250,13 +259,19 @@ export function BatchCliProxyExportDialog({
           successCount += 1
           setExecutionStateById((current) => ({
             ...current,
-            [item.id]: { status: "success", message: result.message },
+            [item.id]: {
+              status: EXECUTION_STATUSES.Success,
+              message: result.message,
+            },
           }))
         } else {
           failureCount += 1
           setExecutionStateById((current) => ({
             ...current,
-            [item.id]: { status: "failed", message: result.message },
+            [item.id]: {
+              status: EXECUTION_STATUSES.Failed,
+              message: result.message,
+            },
           }))
         }
       } catch (error) {
@@ -264,7 +279,7 @@ export function BatchCliProxyExportDialog({
         failureCount += 1
         setExecutionStateById((current) => ({
           ...current,
-          [item.id]: { status: "failed", message },
+          [item.id]: { status: EXECUTION_STATUSES.Failed, message },
         }))
         showResultToast({
           success: false,
@@ -422,7 +437,9 @@ export function BatchCliProxyExportDialog({
 
         <div className="max-h-[45vh] space-y-2 overflow-y-auto rounded-md border p-3">
           {previewItems.map((item) => {
-            const state = executionStateById[item.id] ?? { status: "pending" }
+            const state = executionStateById[item.id] ?? {
+              status: EXECUTION_STATUSES.Pending,
+            }
             return (
               <div key={item.id} className="space-y-1 rounded-md border p-3">
                 <div className="flex items-start justify-between gap-3">
