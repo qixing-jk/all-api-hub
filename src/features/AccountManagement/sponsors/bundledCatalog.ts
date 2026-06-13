@@ -1,5 +1,5 @@
 import { isDevelopmentMode } from "~/utils/core/environment"
-import sponsorCatalog from "~~/public/sponsor-catalog.json"
+import sponsorCatalog from "~~/public/sponsor-catalog.v4.json"
 
 import type { RawSponsorCatalog } from "./types"
 

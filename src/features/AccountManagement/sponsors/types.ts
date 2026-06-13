@@ -20,17 +20,6 @@ export type SponsorCatalogSource =
 
 export const SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE = "sponsor" as const
 
-export interface SponsorLocalizedContent {
-  name: string
-  tagline: string
-  postClickNote?: string
-}
-
-export interface SponsorFallbackHints {
-  bookmarkManager: boolean
-  apiCredentialProfiles: boolean
-}
-
 export interface SponsorBookmarkFallbackPrefill {
   name: string
   url: string
@@ -43,32 +32,65 @@ export interface SponsorApiCredentialFallbackPrefill {
   apiKeyCreateHint?: string
 }
 
-export interface RawSponsorItem {
-  id: string
-  enabled: boolean
-  rank?: number
-  supportStatus: SponsorSupportStatus | string
-  urls: {
-    primaryAffiliate: string
-    website?: string
-    apiKeyCreate?: string
-  }
-  startsAt?: string
-  endsAt?: string
-  locales: Record<string, SponsorLocalizedContent>
-  fallbackHints?: Partial<SponsorFallbackHints>
-  accountPrefill?: {
-    siteType: AccountSiteType | string
+export interface SponsorRecommendationLinks {
+  primary: string
+}
+
+export interface SponsorRecommendationActions {
+  addAccount?: {
+    siteType: AccountSiteType
     siteUrl: string
-    authType?: AuthTypeEnum | string
+    authType?: AuthTypeEnum
+  }
+  bookmarkFallback?: {
+    url: string
+  }
+  apiCredentialProfileFallback?: {
+    baseUrl: string
+    apiKeyCreateUrl?: string
+    apiKeyCreateHint?: string
   }
 }
 
 export interface RawSponsorCatalog {
   schemaVersion: number
-  items: RawSponsorItem[]
+  items: RawSponsorCatalogItem[]
   _examples?: {
-    devSponsors?: RawSponsorItem[]
+    devSponsors?: RawSponsorCatalogItem[]
+  }
+}
+
+export interface RawSponsorCatalogItem {
+  id: string
+  locales: Record<string, RawSponsorLocaleCampaignV4>
+}
+
+export interface RawSponsorLocaleCampaignV4 {
+  enabled: boolean
+  rank: number
+  supportStatus: SponsorSupportStatus | string
+  startsAt?: string
+  endsAt?: string
+  name: string
+  tagline: string
+  postClickNote?: string
+  links: {
+    primary: string
+  }
+  actions?: {
+    addAccount?: {
+      siteType: AccountSiteType | string
+      siteUrl: string
+      authType?: AuthTypeEnum | string
+    }
+    bookmarkFallback?: {
+      url: string
+    }
+    apiCredentialProfileFallback?: {
+      baseUrl: string
+      apiKeyCreateUrl?: string
+      apiKeyCreateHint?: string
+    }
   }
 }
 
@@ -76,19 +98,14 @@ export interface SponsorRecommendation {
   id: string
   rank: number
   supportStatus: SponsorSupportStatus
-  primaryAffiliateUrl: string
-  websiteUrl?: string
-  apiKeyCreateUrl?: string
+  links: SponsorRecommendationLinks
+  actions: SponsorRecommendationActions
+  selectedLocale?: string
+  schemaVersion: number
   name: string
   tagline: string
   postClickNote?: string
   source: SponsorCatalogSource
-  accountPrefill?: {
-    siteType: AccountSiteType
-    siteUrl: string
-    authType?: AuthTypeEnum
-  }
-  fallbackHints: SponsorFallbackHints
 }
 
 export interface SponsorCatalogNormalizationResult {
