@@ -48,6 +48,44 @@ function BrokenChild(): ReactNode {
 }
 
 describe("RootErrorBoundary", () => {
+  it("uses the browser reload function when no custom reload handler is provided", async () => {
+    const user = userEvent.setup()
+    const reload = vi.fn()
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined)
+
+    const originalLocation = window.location
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        ...originalLocation,
+        reload,
+      },
+    })
+
+    try {
+      loggerErrorMock.mockClear()
+      render(
+        <I18nextProvider i18n={i18n}>
+          <RootErrorBoundary>
+            <BrokenChild />
+          </RootErrorBoundary>
+        </I18nextProvider>,
+      )
+
+      await user.click(screen.getByRole("button", { name: "Reload page" }))
+
+      expect(reload).toHaveBeenCalledTimes(1)
+    } finally {
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: originalLocation,
+      })
+      consoleError.mockRestore()
+    }
+  })
+
   it("shows recovery guidance and reloads the page after a root render failure", async () => {
     const user = userEvent.setup()
     const reload = vi.fn()
