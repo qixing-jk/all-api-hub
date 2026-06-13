@@ -31,6 +31,12 @@
   "quota": {
     "unlimited": "Unlimited"
   },
+  "rootErrorBoundary": {
+    "description": "The page could not be displayed correctly. Reload first. If this keeps happening, turn off automatic translation for this page or switch to the language you need in extension settings.",
+    "reload": "Reload page",
+    "requestLanguage": "Request a language",
+    "title": "Page display failed"
+  },
   "status": {
     "configurationRequired": "Configuration required",
     "creating": "Creating...",

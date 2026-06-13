@@ -126,6 +126,8 @@ describe("packageMeta", () => {
           "https://github.com/qixing-jk/all-api-hub/issues/new?template=bug_report.yml",
         featureRequest:
           "https://github.com/qixing-jk/all-api-hub/issues/new?template=feature_request.yml",
+        languageRequest:
+          "https://github.com/qixing-jk/all-api-hub/issues/new?template=language_request.yml",
         siteSupportRequest:
           "https://github.com/qixing-jk/all-api-hub/issues/new?template=site_support_request.yml",
         discussions: "https://github.com/qixing-jk/all-api-hub/discussions",
@@ -163,6 +165,8 @@ describe("packageMeta", () => {
           "https://github.com/example/project/issues/new?template=bug_report.yml",
         featureRequest:
           "https://github.com/example/project/issues/new?template=feature_request.yml",
+        languageRequest:
+          "https://github.com/example/project/issues/new?template=language_request.yml",
         siteSupportRequest:
           "https://github.com/example/project/issues/new?template=site_support_request.yml",
         discussions: "https://github.com/example/project/discussions",

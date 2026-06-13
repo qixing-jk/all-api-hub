@@ -1,0 +1,41 @@
+name: Language Request / 语言请求
+description: Request a new language or help improve an existing translation / 请求新增语言或协助改进现有翻译
+title: "[Language]: "
+labels: ["enhancement", "i18n"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping All API Hub work better in more languages. Please tell us which language you need and whether you can help review translations.
+
+        感谢您帮助 All API Hub 支持更多语言。请告诉我们您需要哪种语言，以及是否愿意协助校对翻译。
+
+  - type: input
+    id: language
+    attributes:
+      label: Requested Language / 期望支持的语言
+      description: Which language or locale would you like All API Hub to support? / 您希望 All API Hub 支持哪种语言或地区变体？
+      placeholder: e.g., French / Français, Korean / 한국어, zh-HK
+    validations:
+      required: true
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Can you help review translations? / 是否愿意协助校对？
+      description: Translation review from native or fluent speakers helps avoid awkward wording. / 母语或熟练使用者的校对能帮助我们避免生硬翻译。
+      options:
+        - Yes, I can help review / 可以，我愿意协助校对
+        - Maybe, please contact me first / 可能可以，请先联系我
+        - No, I am only requesting support / 暂时不能，只是提出请求
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Preferred wording or references / 偏好的术语或参考
+      description: Share any terminology, screenshots, or product references that would help us localize naturally. / 如果有偏好的术语、截图或产品参考，可在这里补充，帮助我们写得更自然。
+      placeholder: |
+        Terms that should be translated carefully...
+        需要特别注意的术语...

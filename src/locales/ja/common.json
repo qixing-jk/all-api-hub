@@ -31,6 +31,12 @@
   "quota": {
     "unlimited": "無制限"
   },
+  "rootErrorBoundary": {
+    "description": "ページを正しく表示できませんでした。まずページを再読み込みしてください。繰り返し発生する場合は、このページの自動翻訳をオフにするか、拡張機能の設定で必要な言語に切り替えてください。",
+    "reload": "ページを再読み込み",
+    "requestLanguage": "言語サポートをリクエスト",
+    "title": "ページを表示できません"
+  },
   "status": {
     "configurationRequired": "設定が必要です",
     "creating": "作成中...",

@@ -31,6 +31,12 @@
   "quota": {
     "unlimited": "Không giới hạn"
   },
+  "rootErrorBoundary": {
+    "description": "Không thể hiển thị trang chính xác. Trước tiên hãy tải lại trang. Nếu lỗi lặp lại, hãy tắt tự động dịch cho trang này hoặc chuyển sang ngôn ngữ bạn cần trong cài đặt tiện ích.",
+    "reload": "Tải lại trang",
+    "requestLanguage": "Yêu cầu ngôn ngữ",
+    "title": "Không hiển thị được trang"
+  },
   "status": {
     "configurationRequired": "Yêu cầu cấu hình",
     "creating": "Đang tạo...",

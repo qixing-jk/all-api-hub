@@ -3,6 +3,7 @@ import { getRepository } from "~/utils/navigation/packageMeta"
 
 const BUG_REPORT_TEMPLATE = "bug_report.yml"
 const FEATURE_REQUEST_TEMPLATE = "feature_request.yml"
+const LANGUAGE_REQUEST_TEMPLATE = "language_request.yml"
 const SITE_SUPPORT_REQUEST_TEMPLATE = "site_support_request.yml"
 
 export interface SiteSupportRequestContext {
@@ -15,6 +16,7 @@ interface FeedbackDestinationUrls {
   repository: string
   bugReport: string
   featureRequest: string
+  languageRequest: string
   siteSupportRequest: string
   discussions: string
   community: string
@@ -51,6 +53,10 @@ export const getFeedbackDestinationUrls = (
     repository,
     bugReport: buildIssueTemplateUrl(repository, BUG_REPORT_TEMPLATE),
     featureRequest: buildIssueTemplateUrl(repository, FEATURE_REQUEST_TEMPLATE),
+    languageRequest: buildIssueTemplateUrl(
+      repository,
+      LANGUAGE_REQUEST_TEMPLATE,
+    ),
     siteSupportRequest: buildIssueTemplateUrl(
       repository,
       SITE_SUPPORT_REQUEST_TEMPLATE,
