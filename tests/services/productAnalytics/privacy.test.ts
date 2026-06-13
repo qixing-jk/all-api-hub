@@ -145,15 +145,20 @@ describe("product analytics privacy filtering", () => {
           PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.VisitProvider,
         sponsor_catalog_source:
           PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES.Remote,
-        sponsor_id: "packycode",
+        sponsor_id: "example-sponsor",
         sponsor_rank: 1,
         sponsor_support_status:
           PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported,
         sponsor_supported_count: 1,
         sponsor_unsupported_count: 0,
-        sponsor_name: "PackyCode",
-        sponsor_url: "https://provider.example/register",
+        sponsor_catalog_schema_version: 4,
+        sponsor_campaign_locale: "en",
+        sponsor_action_availability: "bookmark,api",
+        sponsor_name: "Example Sponsor",
+        sponsor_url: "https://provider.example.invalid/register",
         sponsor_note: "Use promo code all-api-hub.",
+        sponsor_campaign_url: "https://campaign.example.invalid/signup",
+        sponsor_api_base_url: "https://api.example.invalid/v1",
         promo_code: "all-api-hub",
       },
     )
@@ -168,14 +173,63 @@ describe("product analytics privacy filtering", () => {
       item_count: 3,
       sponsor_action_kind: PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.VisitProvider,
       sponsor_catalog_source: PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES.Remote,
-      sponsor_id: "packycode",
       sponsor_rank: 1,
       sponsor_support_status:
         PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported,
       sponsor_supported_count: 1,
       sponsor_unsupported_count: 0,
+      sponsor_catalog_schema_version: 4,
+      sponsor_campaign_locale: "en",
+      sponsor_action_availability: "bookmark,api",
+    })
+    expect(sanitized).not.toHaveProperty("sponsor_id")
+    expect(sanitized).not.toHaveProperty("sponsor_campaign_url")
+    expect(sanitized).not.toHaveProperty("sponsor_api_base_url")
+  })
+
+  it.each([
+    "none",
+    "add-account",
+    "bookmark",
+    "api",
+    "add-account,bookmark",
+    "add-account,api",
+    "bookmark,api",
+    "add-account,bookmark,api",
+  ])("keeps controlled sponsor action availability %s", (availability) => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.SponsorRecommendations,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenSponsorProvider,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        sponsor_action_availability: availability,
+      },
+    )
+
+    expect(sanitized).toMatchObject({
+      sponsor_action_availability: availability,
     })
   })
+
+  it.each(["api,bookmark", "add-account,api,bookmark", "custom"])(
+    "drops uncontrolled sponsor action availability %s",
+    (availability) => {
+      const sanitized = sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.SponsorRecommendations,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenSponsorProvider,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          sponsor_action_availability: availability,
+        },
+      )
+
+      expect(sanitized).not.toHaveProperty("sponsor_action_availability")
+    },
+  )
 
   it("keeps safe product announcement fields and drops remote copy", () => {
     const sanitized = sanitizeProductAnalyticsEvent(

@@ -33,17 +33,17 @@ interface SponsorRecommendationCardProps {
 /** Returns the translated badge label for a sponsor recommendation. */
 function getSupportLabel(t: TFunction<"account">, item: SponsorRecommendation) {
   if (
-    item.fallbackHints.bookmarkManager &&
-    item.fallbackHints.apiCredentialProfiles
+    item.actions.bookmarkFallback &&
+    item.actions.apiCredentialProfileFallback
   ) {
     return t("sponsor.supportStatus.fallbackBookmarkAndApi")
   }
 
-  if (item.fallbackHints.bookmarkManager) {
+  if (item.actions.bookmarkFallback) {
     return t("sponsor.supportStatus.fallbackBookmark")
   }
 
-  if (item.fallbackHints.apiCredentialProfiles) {
+  if (item.actions.apiCredentialProfileFallback) {
     return t("sponsor.supportStatus.fallbackApiCredentialProfiles")
   }
 
@@ -91,60 +91,73 @@ export function SponsorRecommendationCard({
 
   const handlePrimaryClick = () => {
     trackClick(SPONSOR_RECOMMENDATION_ACTION_KINDS.VisitProvider)
-    window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
+    window.open(item.links.primary, "_blank", "noopener,noreferrer")
   }
 
   const handleContinueAddAccount = () => {
-    if (!item.accountPrefill) {
+    const addAccountAction = item.actions.addAccount
+
+    if (!addAccountAction) {
       return
     }
 
     trackClick(SPONSOR_RECOMMENDATION_ACTION_KINDS.ContinueAddAccount)
     onContinueAddAccount({
-      siteUrl: item.accountPrefill.siteUrl,
-      siteType: item.accountPrefill.siteType,
-      ...(item.accountPrefill.authType
-        ? { authType: item.accountPrefill.authType }
+      siteUrl: addAccountAction.siteUrl,
+      siteType: addAccountAction.siteType,
+      ...(addAccountAction.authType
+        ? { authType: addAccountAction.authType }
         : {}),
       source: "sponsor",
       sponsorId: item.id,
     })
-    window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
+    window.open(item.links.primary, "_blank", "noopener,noreferrer")
   }
 
   const handleOpenBookmarkManager = () => {
+    const bookmarkFallback = item.actions.bookmarkFallback
+
+    if (!bookmarkFallback) {
+      return
+    }
+
     trackClick(SPONSOR_RECOMMENDATION_ACTION_KINDS.BookmarkFallback)
-    window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
+    window.open(item.links.primary, "_blank", "noopener,noreferrer")
     onOpenBookmarkManager({
       name: item.name,
-      url: fallbackUrl,
+      url: bookmarkFallback.url,
     })
   }
 
   const handleOpenApiCredentialProfiles = () => {
+    const apiCredentialFallback = item.actions.apiCredentialProfileFallback
+
+    if (!apiCredentialFallback) {
+      return
+    }
+
     trackClick(
       SPONSOR_RECOMMENDATION_ACTION_KINDS.ApiCredentialProfilesFallback,
     )
-    window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
+    window.open(item.links.primary, "_blank", "noopener,noreferrer")
     onOpenApiCredentialProfiles({
       name: item.name,
-      baseUrl: fallbackUrl,
-      apiKeyCreateUrl: item.apiKeyCreateUrl,
-      apiKeyCreateHint: item.postClickNote,
+      baseUrl: apiCredentialFallback.baseUrl,
+      apiKeyCreateUrl: apiCredentialFallback.apiKeyCreateUrl,
+      apiKeyCreateHint: apiCredentialFallback.apiKeyCreateHint,
     })
   }
 
   const primaryLabel = t("sponsor.actions.visitProvider")
   const continueLabel = t("sponsor.actions.continueAddAccount")
-  const isSupported = Boolean(item.accountPrefill)
+  const isSupported = Boolean(item.actions.addAccount)
   const handleMainAction = isSupported
     ? handleContinueAddAccount
     : handlePrimaryClick
   const hasFallbackActions =
-    item.fallbackHints.bookmarkManager ||
-    item.fallbackHints.apiCredentialProfiles
+    Boolean(item.actions.bookmarkFallback) ||
+    Boolean(item.actions.apiCredentialProfileFallback)
   const supportLabel = getSupportLabel(t, item)
-  const fallbackUrl = item.websiteUrl ?? item.primaryAffiliateUrl
 
   return (
     <div
@@ -209,7 +222,7 @@ export function SponsorRecommendationCard({
 
       {hasFallbackActions ? (
         <div className="flex shrink-0 items-center gap-1">
-          {item.fallbackHints.bookmarkManager ? (
+          {item.actions.bookmarkFallback ? (
             <IconButton
               size="sm"
               type="button"
@@ -224,7 +237,7 @@ export function SponsorRecommendationCard({
               <Bookmark aria-hidden="true" className="h-4 w-4" />
             </IconButton>
           ) : null}
-          {item.fallbackHints.apiCredentialProfiles ? (
+          {item.actions.apiCredentialProfileFallback ? (
             <IconButton
               size="sm"
               type="button"

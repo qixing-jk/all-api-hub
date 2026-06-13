@@ -791,6 +791,20 @@ export const PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS = {
 export type ProductAnalyticsSponsorActionKind =
   (typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS)[keyof typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS]
 
+export const PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES = {
+  None: "none",
+  AddAccount: "add-account",
+  Bookmark: "bookmark",
+  Api: "api",
+  AddAccountBookmark: "add-account,bookmark",
+  AddAccountApi: "add-account,api",
+  BookmarkApi: "bookmark,api",
+  AddAccountBookmarkApi: "add-account,bookmark,api",
+} as const
+
+export type ProductAnalyticsSponsorActionAvailability =
+  (typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES)[keyof typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES]
+
 export const PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES = {
   Bundled: "bundled",
   Cached: "cached",
@@ -808,8 +822,6 @@ export const PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES = {
 
 export type ProductAnalyticsSponsorSupportStatus =
   (typeof PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES)[keyof typeof PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES]
-
-export type ProductAnalyticsSponsorId = string
 
 export const PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_ACTION_KINDS = {
   OpenList: "open_list",
@@ -948,8 +960,10 @@ export type ProductAnalyticsEventPayloadMap = {
     temp_window_turnstile_fetch_success_count?: number
     temp_window_turnstile_fetch_failure_count?: number
     sponsor_action_kind?: ProductAnalyticsSponsorActionKind
+    sponsor_action_availability?: ProductAnalyticsSponsorActionAvailability
+    sponsor_campaign_locale?: string
+    sponsor_catalog_schema_version?: number
     sponsor_catalog_source?: ProductAnalyticsSponsorCatalogSource
-    sponsor_id?: ProductAnalyticsSponsorId
     sponsor_rank?: number
     sponsor_support_status?: ProductAnalyticsSponsorSupportStatus
     sponsor_supported_count?: number

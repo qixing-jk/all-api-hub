@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  SPONSOR_CATALOG_SCHEMA_VERSION,
   SPONSOR_RECOMMENDATION_SURFACES,
   type SponsorRecommendationSurface,
 } from "~/features/AccountManagement/sponsors/constants"
@@ -63,17 +64,19 @@ function createSupportedSponsor(
     id: "supported-provider",
     name: "Supported Provider",
     tagline: "Supported provider.",
-    primaryAffiliateUrl: "https://supported.example.test/register",
     supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
-    accountPrefill: {
-      siteType: SITE_TYPES.NEW_API,
-      siteUrl: "https://supported.example.test",
-      authType: AuthTypeEnum.Cookie,
+    links: {
+      primary: "https://supported.example.invalid/register",
     },
-    fallbackHints: {
-      bookmarkManager: false,
-      apiCredentialProfiles: false,
+    actions: {
+      addAccount: {
+        siteType: SITE_TYPES.NEW_API,
+        siteUrl: "https://supported.example.invalid",
+        authType: AuthTypeEnum.Cookie,
+      },
     },
+    schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
+    selectedLocale: "en",
     source: SPONSOR_CATALOG_SOURCES.Bundled,
     rank: 1,
     ...overrides,
@@ -88,15 +91,23 @@ function createUnsupportedSponsor(
     name: "Manual Provider",
     tagline:
       "Manual setup required with an extended description for two-line sponsor copy.",
-    primaryAffiliateUrl: "https://manual.example.com/register?aff=all-api-hub",
-    websiteUrl: "https://manual.example.com/dashboard",
-    apiKeyCreateUrl: "https://manual.example.com/keys?aff=all-api-hub",
-    postClickNote: "Use promo code APIHUB after registration.",
+    postClickNote: "Create a key in the example console.",
     supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
-    fallbackHints: {
-      bookmarkManager: true,
-      apiCredentialProfiles: true,
+    links: {
+      primary: "https://manual.example.invalid/register",
     },
+    actions: {
+      bookmarkFallback: {
+        url: "https://docs.manual.example.invalid/get-started",
+      },
+      apiCredentialProfileFallback: {
+        baseUrl: "https://api.manual.example.invalid/v1",
+        apiKeyCreateUrl: "https://console.manual.example.invalid/keys",
+        apiKeyCreateHint: "Create a key in the example console.",
+      },
+    },
+    schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
+    selectedLocale: "en",
     source: SPONSOR_CATALOG_SOURCES.Bundled,
     rank: 2,
     ...overrides,
@@ -138,14 +149,14 @@ describe("SponsorRecommendationsSection", () => {
     await user.click(continueAction)
 
     expect(onContinueAddAccount).toHaveBeenCalledWith({
-      siteUrl: "https://supported.example.test",
+      siteUrl: "https://supported.example.invalid",
       siteType: SITE_TYPES.NEW_API,
       authType: AuthTypeEnum.Cookie,
       source: "sponsor",
       sponsorId: "supported-provider",
     })
     expect(openSpy).toHaveBeenCalledWith(
-      "https://supported.example.test/register",
+      "https://supported.example.invalid/register",
       "_blank",
       "noopener,noreferrer",
     )
@@ -161,9 +172,11 @@ describe("SponsorRecommendationsSection", () => {
 
     renderSection([
       createSupportedSponsor({
-        accountPrefill: {
-          siteType: SITE_TYPES.NEW_API,
-          siteUrl: "https://supported.example.test",
+        actions: {
+          addAccount: {
+            siteType: SITE_TYPES.NEW_API,
+            siteUrl: "https://supported.example.invalid",
+          },
         },
       }),
     ])
@@ -175,7 +188,7 @@ describe("SponsorRecommendationsSection", () => {
     )
 
     expect(onContinueAddAccount).toHaveBeenCalledWith({
-      siteUrl: "https://supported.example.test",
+      siteUrl: "https://supported.example.invalid",
       siteType: SITE_TYPES.NEW_API,
       source: "sponsor",
       sponsorId: "supported-provider",
@@ -227,24 +240,24 @@ describe("SponsorRecommendationsSection", () => {
     expect(onOpenApiCredentialProfiles).toHaveBeenCalledTimes(1)
     expect(onOpenBookmarkManager).toHaveBeenCalledWith({
       name: "Manual Provider",
-      url: "https://manual.example.com/dashboard",
+      url: "https://docs.manual.example.invalid/get-started",
     })
     expect(onOpenApiCredentialProfiles).toHaveBeenCalledWith({
       name: "Manual Provider",
-      baseUrl: "https://manual.example.com/dashboard",
-      apiKeyCreateUrl: "https://manual.example.com/keys?aff=all-api-hub",
-      apiKeyCreateHint: "Use promo code APIHUB after registration.",
+      baseUrl: "https://api.manual.example.invalid/v1",
+      apiKeyCreateUrl: "https://console.manual.example.invalid/keys",
+      apiKeyCreateHint: "Create a key in the example console.",
     })
     expect(openSpy).toHaveBeenCalledTimes(2)
     expect(openSpy).toHaveBeenNthCalledWith(
       1,
-      "https://manual.example.com/register?aff=all-api-hub",
+      "https://manual.example.invalid/register",
       "_blank",
       "noopener,noreferrer",
     )
     expect(openSpy).toHaveBeenNthCalledWith(
       2,
-      "https://manual.example.com/register?aff=all-api-hub",
+      "https://manual.example.invalid/register",
       "_blank",
       "noopener,noreferrer",
     )
@@ -258,14 +271,11 @@ describe("SponsorRecommendationsSection", () => {
     renderSection([
       createUnsupportedSponsor({
         tagline: "Manual setup required.",
-        primaryAffiliateUrl: "https://manual.example.com/register",
-        websiteUrl: undefined,
-        apiKeyCreateUrl: undefined,
-        postClickNote: undefined,
-        fallbackHints: {
-          bookmarkManager: false,
-          apiCredentialProfiles: false,
+        links: {
+          primary: "https://manual.example.invalid/register",
         },
+        actions: {},
+        postClickNote: undefined,
       }),
     ])
 
@@ -274,7 +284,7 @@ describe("SponsorRecommendationsSection", () => {
     )
 
     expect(openSpy).toHaveBeenCalledWith(
-      "https://manual.example.com/register",
+      "https://manual.example.invalid/register",
       "_blank",
       "noopener,noreferrer",
     )
@@ -292,27 +302,29 @@ describe("SponsorRecommendationsSection", () => {
         id: "bookmark-provider",
         name: "Bookmark Provider",
         tagline: "Bookmark first.",
-        primaryAffiliateUrl: "https://bookmark.example.com/register",
-        websiteUrl: undefined,
-        apiKeyCreateUrl: undefined,
-        postClickNote: undefined,
-        fallbackHints: {
-          bookmarkManager: true,
-          apiCredentialProfiles: false,
+        links: {
+          primary: "https://bookmark.example.invalid/register",
         },
+        actions: {
+          bookmarkFallback: {
+            url: "https://docs.bookmark.example.invalid/get-started",
+          },
+        },
+        postClickNote: undefined,
       }),
       createUnsupportedSponsor({
         id: "api-provider",
         name: "API Provider",
         tagline: "API credential first.",
-        primaryAffiliateUrl: "https://api.example.com/register",
-        websiteUrl: undefined,
-        apiKeyCreateUrl: undefined,
-        postClickNote: undefined,
-        fallbackHints: {
-          bookmarkManager: false,
-          apiCredentialProfiles: true,
+        links: {
+          primary: "https://api.example.invalid/register",
         },
+        actions: {
+          apiCredentialProfileFallback: {
+            baseUrl: "https://api.example.invalid/v1",
+          },
+        },
+        postClickNote: undefined,
         rank: 3,
       }),
     ])
@@ -330,11 +342,11 @@ describe("SponsorRecommendationsSection", () => {
 
     expect(onOpenBookmarkManager).toHaveBeenCalledWith({
       name: "Bookmark Provider",
-      url: "https://bookmark.example.com/register",
+      url: "https://docs.bookmark.example.invalid/get-started",
     })
     expect(onOpenApiCredentialProfiles).toHaveBeenCalledWith({
       name: "API Provider",
-      baseUrl: "https://api.example.com/register",
+      baseUrl: "https://api.example.invalid/v1",
       apiKeyCreateUrl: undefined,
       apiKeyCreateHint: undefined,
     })
@@ -458,7 +470,6 @@ describe("SponsorRecommendationsSection", () => {
         surface_id:
           "options_account_management_add_account_sponsor_recommendations",
         sponsor_action_kind: "continue_add_account",
-        sponsor_id: "supported-provider",
         sponsor_support_status: "supported",
         sponsor_catalog_source: "bundled",
         sponsor_rank: 1,
@@ -471,7 +482,6 @@ describe("SponsorRecommendationsSection", () => {
       expect.objectContaining({
         action_id: "open_sponsor_provider",
         sponsor_action_kind: "visit_provider",
-        sponsor_id: "remote-provider",
         sponsor_support_status: "unsupported",
         sponsor_catalog_source: "remote",
         sponsor_rank: 2,
@@ -484,7 +494,6 @@ describe("SponsorRecommendationsSection", () => {
       expect.objectContaining({
         action_id: "open_sponsor_bookmark_followup",
         sponsor_action_kind: "bookmark_fallback",
-        sponsor_id: "remote-provider",
       }),
     )
     expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
@@ -493,7 +502,6 @@ describe("SponsorRecommendationsSection", () => {
       expect.objectContaining({
         action_id: "open_sponsor_api_credentials_followup",
         sponsor_action_kind: "api_credential_profiles_fallback",
-        sponsor_id: "remote-provider",
       }),
     )
 
@@ -503,8 +511,10 @@ describe("SponsorRecommendationsSection", () => {
     expect(payloadText).not.toContain("https://")
     expect(payloadText).not.toContain("Supported Provider")
     expect(payloadText).not.toContain("Manual Provider")
-    expect(payloadText).not.toContain("Use promo code APIHUB")
-    expect(payloadText).not.toContain("all-api-hub")
+    expect(payloadText).not.toContain("supported-provider")
+    expect(payloadText).not.toContain("remote-provider")
+    expect(payloadText).not.toContain("Create a key in the example console.")
+    expect(payloadText).not.toContain("example.invalid")
   })
 
   it("tracks newcomer recommendation clicks with a distinct surface", async () => {

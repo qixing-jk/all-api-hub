@@ -13,12 +13,14 @@ import {
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES,
   PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS,
   PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
   PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   trackProductAnalyticsEvent,
   type ProductAnalyticsActionId,
+  type ProductAnalyticsSponsorActionAvailability,
   type ProductAnalyticsSponsorCatalogSource,
   type ProductAnalyticsSponsorSupportStatus,
   type ProductAnalyticsSurfaceId,
@@ -105,8 +107,12 @@ export function trackSponsorRecommendationClick({
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       item_count: itemCount,
       sponsor_action_kind: actionKind,
+      sponsor_action_availability: resolveSponsorActionAvailability(item),
+      ...(item.selectedLocale
+        ? { sponsor_campaign_locale: item.selectedLocale }
+        : {}),
+      sponsor_catalog_schema_version: item.schemaVersion,
       sponsor_catalog_source: resolveSponsorCatalogSource([item]),
-      sponsor_id: item.id,
       sponsor_rank: item.rank,
       sponsor_support_status: resolveSponsorSupportStatus(item),
     },
@@ -129,8 +135,11 @@ export function getSponsorRecommendationImpressionKey({
         item.rank,
         item.source,
         item.supportStatus,
-        item.fallbackHints.bookmarkManager ? "bookmark" : "no-bookmark",
-        item.fallbackHints.apiCredentialProfiles ? "api" : "no-api",
+        item.actions.bookmarkFallback ? "bookmark" : "no-bookmark",
+        item.actions.apiCredentialProfileFallback ? "api" : "no-api",
+        item.actions.addAccount ? "add-account" : "no-add-account",
+        item.selectedLocale ?? "unknown-locale",
+        String(item.schemaVersion),
       ].join(":"),
     ),
   ].join("|")
@@ -168,4 +177,43 @@ function resolveSponsorSupportStatus(
   return item.supportStatus === SPONSOR_SUPPORT_STATUS.Supported
     ? PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported
     : PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Unsupported
+}
+
+/** Collapses item-level action paths into a controlled analytics dimension. */
+function resolveSponsorActionAvailability(
+  item: SponsorRecommendation,
+): ProductAnalyticsSponsorActionAvailability {
+  const hasAddAccount = Boolean(item.actions.addAccount)
+  const hasBookmark = Boolean(item.actions.bookmarkFallback)
+  const hasApi = Boolean(item.actions.apiCredentialProfileFallback)
+
+  if (hasAddAccount && hasBookmark && hasApi) {
+    return PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES.AddAccountBookmarkApi
+  }
+
+  if (hasAddAccount && hasBookmark) {
+    return PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES.AddAccountBookmark
+  }
+
+  if (hasAddAccount && hasApi) {
+    return PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES.AddAccountApi
+  }
+
+  if (hasBookmark && hasApi) {
+    return PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES.BookmarkApi
+  }
+
+  if (hasAddAccount) {
+    return PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES.AddAccount
+  }
+
+  if (hasBookmark) {
+    return PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES.Bookmark
+  }
+
+  if (hasApi) {
+    return PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES.Api
+  }
+
+  return PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES.None
 }

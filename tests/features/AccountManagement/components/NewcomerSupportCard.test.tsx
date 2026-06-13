@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { NewcomerSupportCard } from "~/features/AccountManagement/components/NewcomerSupportCard"
+import { SPONSOR_CATALOG_SCHEMA_VERSION } from "~/features/AccountManagement/sponsors/constants"
 import {
   SPONSOR_CATALOG_SOURCES,
   SPONSOR_SUPPORT_STATUS,
@@ -69,17 +70,17 @@ function createSupportedSponsor(): SponsorRecommendation {
     name: "Supported Provider",
     tagline: "Supported provider.",
     supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
-    primaryAffiliateUrl: "https://supported.example.test/register",
-    websiteUrl: "https://supported.example.test",
-    accountPrefill: {
-      siteType: SITE_TYPES.NEW_API,
-      siteUrl: "https://supported.example.test",
-      authType: AuthTypeEnum.Cookie,
+    links: {
+      primary: "https://supported.example.test/register",
     },
-    fallbackHints: {
-      bookmarkManager: false,
-      apiCredentialProfiles: false,
+    actions: {
+      addAccount: {
+        siteType: SITE_TYPES.NEW_API,
+        siteUrl: "https://supported.example.test",
+        authType: AuthTypeEnum.Cookie,
+      },
     },
+    schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
     source: SPONSOR_CATALOG_SOURCES.Bundled,
     rank: 1,
   }
@@ -91,14 +92,21 @@ function createUnsupportedSponsor(): SponsorRecommendation {
     name: "Manual Provider",
     tagline: "Manual setup required.",
     supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
-    primaryAffiliateUrl: "https://manual.example.com/register",
-    websiteUrl: "https://manual.example.com",
-    apiKeyCreateUrl: "https://manual.example.com/keys?ref=all-api-hub",
     postClickNote: "Use promo code APIHUB after registration.",
-    fallbackHints: {
-      bookmarkManager: true,
-      apiCredentialProfiles: true,
+    links: {
+      primary: "https://manual.example.com/register",
     },
+    actions: {
+      bookmarkFallback: {
+        url: "https://manual.example.com",
+      },
+      apiCredentialProfileFallback: {
+        baseUrl: "https://manual.example.com",
+        apiKeyCreateUrl: "https://manual.example.com/keys?ref=all-api-hub",
+        apiKeyCreateHint: "Use promo code APIHUB after registration.",
+      },
+    },
+    schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
     source: SPONSOR_CATALOG_SOURCES.Bundled,
     rank: 2,
   }

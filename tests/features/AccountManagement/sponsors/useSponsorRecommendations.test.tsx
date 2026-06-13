@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
+import {
+  SPONSOR_CATALOG_SCHEMA_VERSION,
+  SPONSOR_RECOMMENDATION_SURFACES,
+} from "~/features/AccountManagement/sponsors/constants"
 import {
   SPONSOR_CATALOG_SOURCES,
   SPONSOR_SUPPORT_STATUS,
@@ -25,12 +28,13 @@ const recommendations: SponsorRecommendation[] = [
     id: "first-provider",
     name: "First Provider",
     tagline: "First sponsor.",
-    primaryAffiliateUrl: "https://first.example.com/register",
     supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
-    fallbackHints: {
-      bookmarkManager: false,
-      apiCredentialProfiles: false,
+    links: {
+      primary: "https://first.example.invalid/register",
     },
+    selectedLocale: "en",
+    actions: {},
+    schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
     source: SPONSOR_CATALOG_SOURCES.Bundled,
     rank: 1,
   },
@@ -38,12 +42,13 @@ const recommendations: SponsorRecommendation[] = [
     id: "second-provider",
     name: "Second Provider",
     tagline: "Second sponsor.",
-    primaryAffiliateUrl: "https://second.example.com/register",
     supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
-    fallbackHints: {
-      bookmarkManager: false,
-      apiCredentialProfiles: false,
+    links: {
+      primary: "https://second.example.invalid/register",
     },
+    selectedLocale: "en",
+    actions: {},
+    schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
     source: SPONSOR_CATALOG_SOURCES.Bundled,
     rank: 2,
   },
@@ -51,12 +56,13 @@ const recommendations: SponsorRecommendation[] = [
     id: "third-provider",
     name: "Third Provider",
     tagline: "Third sponsor.",
-    primaryAffiliateUrl: "https://third.example.com/register",
     supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
-    fallbackHints: {
-      bookmarkManager: false,
-      apiCredentialProfiles: false,
+    links: {
+      primary: "https://third.example.invalid/register",
     },
+    selectedLocale: "en",
+    actions: {},
+    schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
     source: SPONSOR_CATALOG_SOURCES.Bundled,
     rank: 3,
   },
@@ -64,12 +70,13 @@ const recommendations: SponsorRecommendation[] = [
     id: "fourth-provider",
     name: "Fourth Provider",
     tagline: "Fourth sponsor.",
-    primaryAffiliateUrl: "https://fourth.example.com/register",
     supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
-    fallbackHints: {
-      bookmarkManager: false,
-      apiCredentialProfiles: false,
+    links: {
+      primary: "https://fourth.example.invalid/register",
     },
+    selectedLocale: "en",
+    actions: {},
+    schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
     source: SPONSOR_CATALOG_SOURCES.Bundled,
     rank: 4,
   },

@@ -40,6 +40,7 @@ import {
   PRODUCT_ANALYTICS_SITE_TYPES,
   PRODUCT_ANALYTICS_SORT_FIELDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES,
   PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS,
   PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
   PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
@@ -124,8 +125,10 @@ const EVENT_ALLOWED_KEYS = {
     "temp_window_turnstile_fetch_success_count",
     "temp_window_turnstile_fetch_failure_count",
     "sponsor_action_kind",
+    "sponsor_action_availability",
+    "sponsor_campaign_locale",
+    "sponsor_catalog_schema_version",
     "sponsor_catalog_source",
-    "sponsor_id",
     "sponsor_rank",
     "sponsor_support_status",
     "sponsor_supported_count",
@@ -513,6 +516,9 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   sort_field: [...SORT_FIELDS, ...Object.values(PRODUCT_ANALYTICS_SORT_FIELDS)],
   sort_order: SORT_ORDERS,
   sponsor_action_kind: Object.values(PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS),
+  sponsor_action_availability: Object.values(
+    PRODUCT_ANALYTICS_SPONSOR_ACTION_AVAILABILITIES,
+  ),
   sponsor_catalog_source: Object.values(
     PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
   ),
@@ -586,7 +592,7 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "temp_context_used",
   "shield_bypass_prompt_dismissed_count",
   "shield_bypass_prompt_shown_count",
-  "sponsor_id",
+  "sponsor_campaign_locale",
   "sync_accounts_enabled",
   "source_managed_site_type",
   "target_managed_site_type",
@@ -649,6 +655,7 @@ const RAW_NUMBER_ALLOWED_KEYS = new Set([
   "shield_bypass_settings_visited_count",
   "site_announcements_polling_interval_minutes",
   "skipped_count",
+  "sponsor_catalog_schema_version",
   "sponsor_supported_count",
   "sponsor_unsupported_count",
   "sponsor_rank",
@@ -752,12 +759,12 @@ function isAllowedFieldValue(
     )
   }
 
-  if (key === "sponsor_id") {
+  if (key === "product_announcement_id") {
     return /^[a-z0-9][a-z0-9-]*$/.test(value)
   }
 
-  if (key === "product_announcement_id") {
-    return /^[a-z0-9][a-z0-9-]*$/.test(value)
+  if (key === "sponsor_campaign_locale") {
+    return /^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})?$/.test(value)
   }
 
   if (

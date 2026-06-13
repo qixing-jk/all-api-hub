@@ -11,6 +11,7 @@ import {
   ACCOUNT_DIALOG_PHASES,
   createEmptyAccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
+import { SPONSOR_CATALOG_SCHEMA_VERSION } from "~/features/AccountManagement/sponsors/constants"
 import type { SponsorRecommendation } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
@@ -40,17 +41,17 @@ const {
       name: "AnyRouter",
       tagline: "Supported provider.",
       supportStatus: "supported",
-      primaryAffiliateUrl: "https://anyrouter.example.com/register",
-      websiteUrl: "https://anyrouter.example.com",
-      accountPrefill: {
-        siteType: "anyrouter",
-        siteUrl: "https://anyrouter.example.com",
-        authType: "cookie",
+      links: {
+        primary: "https://anyrouter.example.com/register",
       },
-      fallbackHints: {
-        bookmarkManager: false,
-        apiCredentialProfiles: false,
+      actions: {
+        addAccount: {
+          siteType: "anyrouter",
+          siteUrl: "https://anyrouter.example.com",
+          authType: "cookie",
+        },
       },
+      schemaVersion: 4,
       source: "bundled",
       rank: 1,
     },
@@ -416,17 +417,17 @@ describe("AccountDialog", () => {
         name: "AnyRouter",
         tagline: "Supported provider.",
         supportStatus: "supported",
-        primaryAffiliateUrl: "https://anyrouter.example.com/register",
-        websiteUrl: "https://anyrouter.example.com",
-        accountPrefill: {
-          siteType: SITE_TYPES.ANYROUTER,
-          siteUrl: "https://anyrouter.example.com",
-          authType: AuthTypeEnum.Cookie,
+        links: {
+          primary: "https://anyrouter.example.com/register",
         },
-        fallbackHints: {
-          bookmarkManager: false,
-          apiCredentialProfiles: false,
+        actions: {
+          addAccount: {
+            siteType: SITE_TYPES.ANYROUTER,
+            siteUrl: "https://anyrouter.example.com",
+            authType: AuthTypeEnum.Cookie,
+          },
         },
+        schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
         source: "bundled",
         rank: 1,
       },
@@ -646,9 +647,11 @@ describe("AccountDialog", () => {
     vi.stubGlobal("open", vi.fn())
     mockSponsorRecommendationItems[0] = {
       ...mockSponsorRecommendationItems[0],
-      accountPrefill: {
-        siteType: SITE_TYPES.ANYROUTER,
-        siteUrl: "https://anyrouter.example.com",
+      actions: {
+        addAccount: {
+          siteType: SITE_TYPES.ANYROUTER,
+          siteUrl: "https://anyrouter.example.com",
+        },
       },
     }
     mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
@@ -723,15 +726,22 @@ describe("AccountDialog", () => {
         name: "Manual Provider",
         tagline: "Needs manual setup.",
         supportStatus: "unsupported",
-        primaryAffiliateUrl: "https://manual-provider.example.com/register",
-        websiteUrl: "https://manual-provider.example.com",
-        apiKeyCreateUrl:
-          "https://manual-provider.example.com/dashboard/keys?aff=all-api-hub",
         postClickNote: "充值时输入 APIHUB 可查看服务商活动。",
-        fallbackHints: {
-          bookmarkManager: true,
-          apiCredentialProfiles: true,
+        links: {
+          primary: "https://manual-provider.example.com/register",
         },
+        actions: {
+          bookmarkFallback: {
+            url: "https://manual-provider.example.com",
+          },
+          apiCredentialProfileFallback: {
+            baseUrl: "https://manual-provider.example.com",
+            apiKeyCreateUrl:
+              "https://manual-provider.example.com/dashboard/keys?aff=all-api-hub",
+            apiKeyCreateHint: "充值时输入 APIHUB 可查看服务商活动。",
+          },
+        },
+        schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
         source: "bundled",
         rank: 1,
       },
