@@ -24,6 +24,7 @@ export { CardItem, cardItemVariants } from "./CardItem"
 export { CardList } from "./CardList"
 export { Label, labelVariants } from "./label"
 export { Alert, AlertTitle, AlertDescription } from "./Alert"
+export { Notice, type NoticeProps } from "./Notice"
 export { Badge, badgeVariants } from "./badge"
 export {
   Select,
