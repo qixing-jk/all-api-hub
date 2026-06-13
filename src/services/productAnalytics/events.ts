@@ -351,6 +351,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   DeleteApiCredentialProfile: "delete_api_credential_profile",
   DeleteAutoCheckinAccount: "delete_auto_checkin_account",
   DeleteBookmark: "delete_bookmark",
+  DeleteInvalidAccountTokens: "delete_invalid_account_tokens",
   DeleteManagedSiteChannel: "delete_managed_site_channel",
   DeleteSelectedManagedSiteChannels: "delete_selected_managed_site_channels",
   DisableSelectedAccounts: "disable_selected_accounts",

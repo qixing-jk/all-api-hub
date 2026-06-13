@@ -1,0 +1,226 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { SITE_TYPES } from "~/constants/siteType"
+import {
+  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+  generateDefaultTokenRequest,
+} from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import {
+  buildGroupDefaultTokenRequest,
+  ensureAccountKeysForAvailableGroups,
+} from "~/services/accounts/accountKeyAutoProvisioning/groupCoverage"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { AuthTypeEnum } from "~/types"
+import {
+  buildApiToken,
+  buildDisplaySiteData,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
+
+const mocks = vi.hoisted(() => ({
+  fetchAccountTokens: vi.fn(),
+  fetchUserGroups: vi.fn(),
+  createApiToken: vi.fn(),
+  deleteApiToken: vi.fn(),
+}))
+
+vi.mock("~/services/apiService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/services/apiService")>()
+  return {
+    ...actual,
+    getApiService: vi.fn(() => mocks),
+  }
+})
+
+const account = buildSiteAccount({
+  id: "new-api-1",
+  site_name: "Relay Account",
+  site_type: SITE_TYPES.NEW_API,
+  site_url: "https://relay.example.com",
+  authType: AuthTypeEnum.AccessToken,
+  account_info: {
+    id: "101",
+    access_token: "access-token",
+    username: "valid",
+    quota: 0,
+    today_prompt_tokens: 0,
+    today_completion_tokens: 0,
+    today_quota_consumption: 0,
+    today_requests_count: 0,
+    today_income: 0,
+  },
+})
+
+const displaySiteData = buildDisplaySiteData({
+  id: account.id,
+  name: "Relay Account",
+  baseUrl: account.site_url,
+  siteType: SITE_TYPES.NEW_API,
+  authType: AuthTypeEnum.AccessToken,
+  userId: "101",
+  token: "access-token",
+})
+
+const runCoverage = () =>
+  ensureAccountKeysForAvailableGroups({
+    account,
+    displaySiteData,
+    accountName: "Relay Account",
+    siteUrlOrigin: "https://relay.example.com",
+  })
+
+describe("ensureAccountKeysForAvailableGroups", () => {
+  beforeEach(() => {
+    mocks.fetchAccountTokens.mockReset()
+    mocks.fetchUserGroups.mockReset()
+    mocks.createApiToken.mockReset()
+    mocks.deleteApiToken.mockReset()
+  })
+
+  it("creates missing group keys and reports tokens tied to unavailable groups", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([
+      buildApiToken({
+        id: 1,
+        name: "default key",
+        group: "default",
+      }),
+      buildApiToken({
+        id: 9,
+        name: "old group key",
+        group: "old",
+      }),
+    ])
+    mocks.fetchUserGroups.mockResolvedValue({
+      default: { desc: "Default", ratio: 1 },
+      vip: { desc: "VIP", ratio: 1 },
+    })
+    mocks.createApiToken.mockResolvedValue(true)
+
+    const result = await runCoverage()
+
+    expect(result).toEqual({
+      created: true,
+      availableGroups: ["default", "vip"],
+      coveredGroups: ["default", "vip"],
+      createdGroups: ["vip"],
+      missingGroups: [],
+      invalidTokens: [
+        {
+          accountId: "new-api-1",
+          accountName: "Relay Account",
+          siteType: SITE_TYPES.NEW_API,
+          siteUrlOrigin: "https://relay.example.com",
+          tokenId: 9,
+          tokenName: "old group key",
+          group: "old",
+          reason: "groupUnavailable",
+        },
+      ],
+    })
+    expect(mocks.createApiToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://relay.example.com",
+        accountId: "new-api-1",
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.AccessToken,
+          userId: "101",
+          accessToken: "access-token",
+        }),
+      }),
+      buildGroupDefaultTokenRequest("vip"),
+    )
+  })
+
+  it("falls back to one-key behavior when group lookup is unsupported", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([])
+    mocks.fetchUserGroups.mockRejectedValue(
+      new ApiError(
+        "unsupported",
+        undefined,
+        "/api/user/self/groups",
+        API_ERROR_CODES.FEATURE_UNSUPPORTED,
+      ),
+    )
+    mocks.createApiToken.mockResolvedValue(true)
+
+    const result = await runCoverage()
+
+    expect(result).toEqual({
+      created: true,
+      availableGroups: [],
+      coveredGroups: [],
+      createdGroups: [""],
+      missingGroups: [],
+      invalidTokens: [],
+    })
+    expect(mocks.createApiToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://relay.example.com",
+        accountId: "new-api-1",
+      }),
+      generateDefaultTokenRequest(),
+    )
+  })
+
+  it("treats empty group responses as legacy one-key coverage when a token already exists", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([
+      buildApiToken({
+        id: 1,
+        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "",
+      }),
+    ])
+    mocks.fetchUserGroups.mockResolvedValue({})
+
+    const result = await runCoverage()
+
+    expect(result).toEqual({
+      created: false,
+      availableGroups: [],
+      coveredGroups: [],
+      createdGroups: [],
+      missingGroups: [],
+      invalidTokens: [],
+    })
+    expect(mocks.createApiToken).not.toHaveBeenCalled()
+  })
+
+  it("records failed group creation as missing and continues with later groups", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([
+      buildApiToken({
+        id: 1,
+        name: "default key",
+        group: "default",
+      }),
+    ])
+    mocks.fetchUserGroups.mockResolvedValue({
+      default: { desc: "Default", ratio: 1 },
+      vip: { desc: "VIP", ratio: 1 },
+      beta: { desc: "Beta", ratio: 1 },
+    })
+    mocks.createApiToken
+      .mockRejectedValueOnce(new Error("vip failed"))
+      .mockResolvedValueOnce(true)
+
+    const result = await runCoverage()
+
+    expect(result).toEqual({
+      created: true,
+      availableGroups: ["default", "vip", "beta"],
+      coveredGroups: ["default", "beta"],
+      createdGroups: ["beta"],
+      missingGroups: ["vip"],
+      invalidTokens: [],
+    })
+    expect(mocks.createApiToken).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Object),
+      buildGroupDefaultTokenRequest("vip"),
+    )
+    expect(mocks.createApiToken).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Object),
+      buildGroupDefaultTokenRequest("beta"),
+    )
+  })
+})

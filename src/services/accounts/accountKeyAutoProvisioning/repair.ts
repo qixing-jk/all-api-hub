@@ -8,6 +8,8 @@ import type { DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import type {
   AccountKeyRepairAccountResult,
+  AccountKeyRepairDeleteInvalidTokensRequest,
+  AccountKeyRepairDeleteInvalidTokensResult,
   AccountKeyRepairProgress,
   AccountKeyRepairSkipReason,
 } from "~/types/accountKeyAutoProvisioning"
@@ -17,7 +19,10 @@ import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
-import { ensureDefaultApiTokenForAccount } from "./ensureDefaultToken"
+import {
+  deleteInvalidAccountToken,
+  ensureAccountKeysForAvailableGroups,
+} from "./groupCoverage"
 import {
   AccountKeyRepairMessageTypes,
   onAccountKeyRepairMessage,
@@ -249,6 +254,7 @@ class AccountKeyRepairRunner {
       const displaySiteData: DisplaySiteData =
         displaySiteDataById.get(account.id) ??
         accountStorage.convertToDisplayData(account)
+      const resolvedAccountName = displaySiteData.name || accountName
       const hasToken =
         typeof displaySiteData?.token === "string" &&
         displaySiteData.token.trim().length > 0
@@ -273,17 +279,24 @@ class AccountKeyRepairRunner {
         throw new Error("invalid_display_site_data")
       }
 
-      const result = await ensureDefaultApiTokenForAccount({
+      const result = await ensureAccountKeysForAvailableGroups({
         account,
         displaySiteData,
+        accountName: resolvedAccountName,
+        siteUrlOrigin: originKey,
       })
 
       await this.recordResult({
         accountId: account.id,
-        accountName,
+        accountName: resolvedAccountName,
         siteType: account.site_type,
         siteUrlOrigin: originKey,
         outcome: result.created ? "created" : "alreadyHad",
+        availableGroups: result.availableGroups,
+        coveredGroups: result.coveredGroups,
+        createdGroups: result.createdGroups,
+        missingGroups: result.missingGroups,
+        invalidTokens: result.invalidTokens,
         finishedAt: Date.now(),
       })
     } catch (error) {
@@ -334,6 +347,10 @@ class AccountKeyRepairRunner {
       }
 
       const isEligibleOutcome = result.outcome !== "skipped"
+      const availableGroupCount = result.availableGroups?.length ?? 0
+      const coveredGroupCount = result.coveredGroups?.length ?? 0
+      const createdKeyCount = result.createdGroups?.length ?? 0
+      const invalidKeyCount = result.invalidTokens?.length ?? 0
       const nextProcessedEligibleAccounts = isEligibleOutcome
         ? (prev.totals.processedEligibleAccounts ??
             prev.totals.processedAccounts) + 1
@@ -342,13 +359,52 @@ class AccountKeyRepairRunner {
       return {
         ...prev,
         results: nextResults,
-        summary: nextSummary,
+        summary: {
+          ...nextSummary,
+          availableGroups:
+            (prev.summary.availableGroups ?? 0) + availableGroupCount,
+          coveredGroups: (prev.summary.coveredGroups ?? 0) + coveredGroupCount,
+          createdKeys: (prev.summary.createdKeys ?? 0) + createdKeyCount,
+          invalidKeys: (prev.summary.invalidKeys ?? 0) + invalidKeyCount,
+          deletedKeys: prev.summary.deletedKeys ?? 0,
+          deleteFailed: prev.summary.deleteFailed ?? 0,
+        },
         totals: {
           ...prev.totals,
           processedAccounts: isEligibleOutcome
             ? prev.totals.processedAccounts + 1
             : prev.totals.processedAccounts,
           processedEligibleAccounts: nextProcessedEligibleAccounts,
+        },
+      }
+    })
+  }
+
+  async recordInvalidTokenDeletionResultForCurrentProgress(
+    result: AccountKeyRepairDeleteInvalidTokensResult,
+  ) {
+    await this.getProgress()
+    await this.queueProgressUpdate((prev) => {
+      const deletedIds = new Set(
+        result.deleted.map((token) => `${token.accountId}:${token.tokenId}`),
+      )
+
+      return {
+        ...prev,
+        results: prev.results.map((accountResult) => ({
+          ...accountResult,
+          invalidTokens: accountResult.invalidTokens?.filter(
+            (token) => !deletedIds.has(`${token.accountId}:${token.tokenId}`),
+          ),
+        })),
+        summary: {
+          ...prev.summary,
+          invalidKeys: Math.max(
+            0,
+            (prev.summary.invalidKeys ?? 0) - result.deleted.length,
+          ),
+          deletedKeys: (prev.summary.deletedKeys ?? 0) + result.deleted.length,
+          deleteFailed: (prev.summary.deleteFailed ?? 0) + result.failed.length,
         },
       }
     })
@@ -411,6 +467,60 @@ export async function getAccountKeyRepairProgress() {
 }
 
 /**
+ * Delete selected invalid account tokens and update the current repair progress.
+ */
+export async function deleteInvalidAccountTokens(
+  request: AccountKeyRepairDeleteInvalidTokensRequest,
+) {
+  const allAccounts = await accountStorage.getAllAccounts()
+  const displaySiteDataById = new Map(
+    accountStorage
+      .convertToDisplayData(allAccounts, allAccounts)
+      .map((account) => [account.id, account] as const),
+  )
+  const accountById = new Map(
+    allAccounts.map((account) => [account.id, account]),
+  )
+  const deleted: AccountKeyRepairDeleteInvalidTokensResult["deleted"] = []
+  const failed: AccountKeyRepairDeleteInvalidTokensResult["failed"] = []
+
+  for (const token of request.tokens) {
+    const account = accountById.get(token.accountId)
+    const displaySiteData = displaySiteDataById.get(token.accountId)
+    if (!account || !displaySiteData) {
+      failed.push({
+        ...token,
+        errorMessage: "account_not_found",
+      })
+      continue
+    }
+
+    try {
+      const result = await deleteInvalidAccountToken({
+        token,
+        account,
+        displaySiteData,
+      })
+      deleted.push(result)
+    } catch (error) {
+      failed.push({
+        ...token,
+        errorMessage: getErrorMessage(error) || "delete_failed",
+      })
+    }
+  }
+
+  await accountKeyRepairRunner.recordInvalidTokenDeletionResultForCurrentProgress(
+    {
+      deleted,
+      failed,
+    },
+  )
+
+  return { success: true as const, data: { deleted, failed } }
+}
+
+/**
  * Convert account-key repair listener errors into runtime responses.
  */
 function toAccountKeyRepairFailure(error: unknown) {
@@ -441,6 +551,16 @@ export function setupAccountKeyRepairMessagingListeners() {
       async () => {
         try {
           return await getAccountKeyRepairProgress()
+        } catch (error) {
+          return toAccountKeyRepairFailure(error)
+        }
+      },
+    ),
+    onAccountKeyRepairMessage(
+      AccountKeyRepairMessageTypes.DeleteInvalidTokens,
+      async ({ data }) => {
+        try {
+          return await deleteInvalidAccountTokens(data)
         } catch (error) {
           return toAccountKeyRepairFailure(error)
         }

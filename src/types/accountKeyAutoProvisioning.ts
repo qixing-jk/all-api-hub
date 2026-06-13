@@ -17,6 +17,37 @@ export type AccountKeyRepairSkipReason =
   | "aihubmixOneTimeKey"
   | "noneAuth"
 
+export interface AccountKeyRepairInvalidToken {
+  accountId: string
+  accountName: string
+  siteType: AccountSiteType
+  siteUrlOrigin: string
+  tokenId: number
+  tokenName: string
+  group: string
+  reason: "groupUnavailable"
+  errorMessage?: string
+}
+
+export interface AccountKeyRepairDeletedInvalidToken
+  extends AccountKeyRepairInvalidToken {
+  deletedAt: number
+}
+
+export interface AccountKeyRepairFailedInvalidTokenDelete
+  extends AccountKeyRepairInvalidToken {
+  errorMessage: string
+}
+
+export interface AccountKeyRepairDeleteInvalidTokensRequest {
+  tokens: AccountKeyRepairInvalidToken[]
+}
+
+export interface AccountKeyRepairDeleteInvalidTokensResult {
+  deleted: AccountKeyRepairDeletedInvalidToken[]
+  failed: AccountKeyRepairFailedInvalidTokenDelete[]
+}
+
 export interface AccountKeyRepairAccountResult {
   accountId: string
   accountName: string
@@ -25,6 +56,11 @@ export interface AccountKeyRepairAccountResult {
   outcome: AccountKeyRepairOutcome
   skipReason?: AccountKeyRepairSkipReason
   errorMessage?: string
+  availableGroups?: string[]
+  coveredGroups?: string[]
+  createdGroups?: string[]
+  missingGroups?: string[]
+  invalidTokens?: AccountKeyRepairInvalidToken[]
   finishedAt: number
 }
 
@@ -50,6 +86,12 @@ export interface AccountKeyRepairProgress {
     alreadyHad: number
     skipped: number
     failed: number
+    availableGroups?: number
+    coveredGroups?: number
+    createdKeys?: number
+    invalidKeys?: number
+    deletedKeys?: number
+    deleteFailed?: number
   }
   results: AccountKeyRepairAccountResult[]
   lastError?: string

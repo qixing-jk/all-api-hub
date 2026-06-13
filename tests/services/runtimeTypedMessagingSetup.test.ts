@@ -320,6 +320,8 @@ describe("typed runtime messaging setup", () => {
   it("registers account key repair typed listeners once and wraps handler errors", async () => {
     const onAccountKeyRepairMessage: OnMessageMock = vi.fn(() => vi.fn())
     const storageGet = vi.fn().mockRejectedValue(new Error("repair failed"))
+    const getAllAccounts = vi.fn().mockResolvedValue([])
+    const convertToDisplayData = vi.fn().mockReturnValue([])
 
     vi.doMock(
       "~/services/accounts/accountKeyAutoProvisioning/messaging",
@@ -327,10 +329,17 @@ describe("typed runtime messaging setup", () => {
         AccountKeyRepairMessageTypes: {
           Start: "accountKeyRepair:start",
           GetProgress: "accountKeyRepair:getProgress",
+          DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
         },
         onAccountKeyRepairMessage,
       }),
     )
+    vi.doMock("~/services/accounts/accountStorage", () => ({
+      accountStorage: {
+        getAllAccounts,
+        convertToDisplayData,
+      },
+    }))
     vi.doMock("@plasmohq/storage", () => ({
       Storage: class {
         get = storageGet
@@ -345,7 +354,7 @@ describe("typed runtime messaging setup", () => {
     repair.setupAccountKeyRepairMessagingListeners()
     repair.setupAccountKeyRepairMessagingListeners()
 
-    expect(onAccountKeyRepairMessage).toHaveBeenCalledTimes(2)
+    expect(onAccountKeyRepairMessage).toHaveBeenCalledTimes(3)
     const getProgressHandler = onAccountKeyRepairMessage.mock.calls.find(
       ([type]) => type === "accountKeyRepair:getProgress",
     )?.[1]
@@ -354,6 +363,17 @@ describe("typed runtime messaging setup", () => {
       success: false,
       error: "repair failed",
     })
+
+    const deleteHandler = getRegisteredHandler(
+      onAccountKeyRepairMessage,
+      "accountKeyRepair:deleteInvalidTokens",
+    )
+    await expect(deleteHandler({ data: { tokens: [] } })).resolves.toEqual({
+      success: false,
+      error: "repair failed",
+    })
+    expect(getAllAccounts).toHaveBeenCalledTimes(1)
+    expect(convertToDisplayData).toHaveBeenCalledWith([], [])
   })
 
   it("routes WebDAV auto-sync typed listeners through runtime resolvers", async () => {

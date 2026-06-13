@@ -27,6 +27,8 @@ const mocks = vi.hoisted(() => {
     getAllAccounts: vi.fn(),
     convertToDisplayData: vi.fn(),
     ensureDefaultApiTokenForAccount: vi.fn(),
+    ensureAccountKeysForAvailableGroups: vi.fn(),
+    deleteInvalidAccountToken: vi.fn(),
     sendRuntimeMessage: vi.fn(),
     safeRandomUUID: vi.fn(() => "job-123"),
   }
@@ -43,12 +45,11 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock(
-  "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken",
-  () => ({
-    ensureDefaultApiTokenForAccount: mocks.ensureDefaultApiTokenForAccount,
-  }),
-)
+vi.mock("~/services/accounts/accountKeyAutoProvisioning/groupCoverage", () => ({
+  ensureAccountKeysForAvailableGroups:
+    mocks.ensureAccountKeysForAvailableGroups,
+  deleteInvalidAccountToken: mocks.deleteInvalidAccountToken,
+}))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
@@ -215,7 +216,7 @@ describe("accountKeyRepair", () => {
         id: validAccount.id,
         name: "Valid Account",
         baseUrl: validAccount.site_url,
-        siteType: "new-api",
+        siteType: SITE_TYPES.NEW_API,
         authType: AuthTypeEnum.AccessToken,
         userId: "101",
         token: "access-token",
@@ -224,16 +225,20 @@ describe("accountKeyRepair", () => {
         id: invalidDisplayAccount.id,
         name: "Broken Cookie Account",
         baseUrl: invalidDisplayAccount.site_url,
-        siteType: "new-api",
+        siteType: SITE_TYPES.NEW_API,
         authType: AuthTypeEnum.Cookie,
         userId: "202",
         token: "",
         cookieAuthSessionCookie: "",
       }),
     ])
-    mocks.ensureDefaultApiTokenForAccount.mockResolvedValueOnce({
-      token: { id: 1, key: "created-token" },
+    mocks.ensureAccountKeysForAvailableGroups.mockResolvedValueOnce({
       created: true,
+      availableGroups: [],
+      coveredGroups: [],
+      createdGroups: [""],
+      missingGroups: [],
+      invalidTokens: [],
     })
     mocks.sendRuntimeMessage.mockResolvedValue(undefined)
 
@@ -264,6 +269,12 @@ describe("accountKeyRepair", () => {
       alreadyHad: 0,
       skipped: 2,
       failed: 1,
+      availableGroups: 0,
+      coveredGroups: 0,
+      createdKeys: 1,
+      invalidKeys: 0,
+      deletedKeys: 0,
+      deleteFailed: 0,
     })
     expect(progress.results).toEqual(
       expect.arrayContaining([
@@ -292,7 +303,7 @@ describe("accountKeyRepair", () => {
         }),
       ]),
     )
-    expect(mocks.ensureDefaultApiTokenForAccount).toHaveBeenCalledTimes(1)
+    expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledTimes(1)
     expect(mocks.sendRuntimeMessage).toHaveBeenCalledWith(
       {
         type: RuntimeMessageTypes.AccountKeyRepairProgress,
@@ -300,6 +311,352 @@ describe("accountKeyRepair", () => {
       },
       { maxAttempts: 1 },
     )
+  })
+
+  it("records group coverage and invalid keys from the group-aware audit helper", async () => {
+    const account = buildSiteAccount({
+      id: "new-api-1",
+      site_type: "new-api",
+      site_url: "https://relay.example.com",
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      account_info: {
+        id: "101",
+        access_token: "access-token",
+        username: "valid",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+
+    mocks.getAllAccounts.mockResolvedValue([account])
+    mocks.convertToDisplayData.mockReturnValue([
+      buildDisplaySiteData({
+        id: account.id,
+        name: "Relay Account",
+        baseUrl: account.site_url,
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.AccessToken,
+        userId: "101",
+        token: "access-token",
+      }),
+    ])
+    mocks.ensureAccountKeysForAvailableGroups.mockResolvedValueOnce({
+      created: true,
+      availableGroups: ["default", "vip"],
+      coveredGroups: ["default", "vip"],
+      createdGroups: ["vip"],
+      missingGroups: [],
+      invalidTokens: [
+        {
+          accountId: "new-api-1",
+          accountName: "Relay Account",
+          siteType: SITE_TYPES.NEW_API,
+          siteUrlOrigin: "https://relay.example.com",
+          tokenId: 9,
+          tokenName: "old group key",
+          group: "old",
+          reason: "groupUnavailable",
+        },
+      ],
+    })
+
+    const { accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    await accountKeyRepairRunner.start()
+
+    await vi.waitFor(async () => {
+      const progress = await accountKeyRepairRunner.getProgress()
+      expect(progress.state).toBe("completed")
+    })
+
+    const progress = await accountKeyRepairRunner.getProgress()
+    expect(progress.summary).toMatchObject({
+      created: 1,
+      alreadyHad: 0,
+      skipped: 0,
+      failed: 0,
+      availableGroups: 2,
+      coveredGroups: 2,
+      createdKeys: 1,
+      invalidKeys: 1,
+    })
+    expect(progress.results).toEqual([
+      expect.objectContaining({
+        accountId: "new-api-1",
+        outcome: "created",
+        availableGroups: ["default", "vip"],
+        coveredGroups: ["default", "vip"],
+        createdGroups: ["vip"],
+        invalidTokens: [
+          expect.objectContaining({
+            tokenId: 9,
+            tokenName: "old group key",
+            group: "old",
+            reason: "groupUnavailable",
+          }),
+        ],
+      }),
+    ])
+  })
+
+  it("deletes selected invalid tokens serially and records partial failure", async () => {
+    const account = buildSiteAccount({
+      id: "new-api-1",
+      site_type: "new-api",
+      site_url: "https://relay.example.com",
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      account_info: {
+        id: "101",
+        access_token: "access-token",
+        username: "valid",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const displayAccount = buildDisplaySiteData({
+      id: account.id,
+      name: "Relay Account",
+      baseUrl: account.site_url,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      userId: "101",
+      token: "access-token",
+    })
+    const invalidTokens = [
+      {
+        accountId: "new-api-1",
+        accountName: "Relay Account",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrlOrigin: "https://relay.example.com",
+        tokenId: 9,
+        tokenName: "old one",
+        group: "old",
+        reason: "groupUnavailable" as const,
+      },
+      {
+        accountId: "new-api-1",
+        accountName: "Relay Account",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrlOrigin: "https://relay.example.com",
+        tokenId: 10,
+        tokenName: "old two",
+        group: "old-2",
+        reason: "groupUnavailable" as const,
+      },
+    ]
+
+    mocks.getAllAccounts.mockResolvedValue([account])
+    mocks.convertToDisplayData.mockReturnValue([displayAccount])
+    let resolveFirstDelete!: (
+      value: (typeof invalidTokens)[number] & { deletedAt: number },
+    ) => void
+    mocks.deleteInvalidAccountToken
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirstDelete = resolve
+          }),
+      )
+      .mockRejectedValueOnce(new Error("delete boom"))
+
+    const { deleteInvalidAccountTokens } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    const deleteResult = deleteInvalidAccountTokens({ tokens: invalidTokens })
+
+    await vi.waitFor(() => {
+      expect(mocks.deleteInvalidAccountToken).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      mocks.deleteInvalidAccountToken.mock.calls[0]?.[0].token.tokenId,
+    ).toBe(9)
+
+    resolveFirstDelete({ ...invalidTokens[0], deletedAt: 123 })
+
+    await vi.waitFor(() => {
+      expect(mocks.deleteInvalidAccountToken).toHaveBeenCalledTimes(2)
+    })
+
+    await expect(deleteResult).resolves.toEqual({
+      success: true,
+      data: {
+        deleted: [{ ...invalidTokens[0], deletedAt: 123 }],
+        failed: [{ ...invalidTokens[1], errorMessage: "delete boom" }],
+      },
+    })
+
+    expect(
+      mocks.deleteInvalidAccountToken.mock.calls.map(
+        (call) => call[0].token.tokenId,
+      ),
+    ).toEqual([9, 10])
+  })
+
+  it("preserves stored audit progress when deleting after a cold start", async () => {
+    const account = buildSiteAccount({
+      id: "new-api-1",
+      site_type: "new-api",
+      site_url: "https://relay.example.com",
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      account_info: {
+        id: "101",
+        access_token: "access-token",
+        username: "valid",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const displayAccount = buildDisplaySiteData({
+      id: account.id,
+      name: "Relay Account",
+      baseUrl: account.site_url,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      userId: "101",
+      token: "access-token",
+    })
+    const invalidTokens = [
+      {
+        accountId: "new-api-1",
+        accountName: "Relay Account",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrlOrigin: "https://relay.example.com",
+        tokenId: 9,
+        tokenName: "old one",
+        group: "old",
+        reason: "groupUnavailable" as const,
+      },
+      {
+        accountId: "new-api-1",
+        accountName: "Relay Account",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrlOrigin: "https://relay.example.com",
+        tokenId: 10,
+        tokenName: "old two",
+        group: "old-2",
+        reason: "groupUnavailable" as const,
+      },
+    ]
+
+    mocks.storageMap.set("accountKeyRepair_progress", {
+      jobId: "job-stored",
+      state: "completed",
+      startedAt: 100,
+      updatedAt: 200,
+      finishedAt: 300,
+      totals: {
+        enabledAccounts: 1,
+        eligibleAccounts: 1,
+        processedAccounts: 1,
+        processedEligibleAccounts: 1,
+      },
+      summary: {
+        created: 1,
+        alreadyHad: 0,
+        skipped: 0,
+        failed: 0,
+        availableGroups: 2,
+        coveredGroups: 2,
+        createdKeys: 1,
+        invalidKeys: 2,
+        deletedKeys: 0,
+        deleteFailed: 0,
+      },
+      results: [
+        {
+          accountId: "new-api-1",
+          accountName: "Relay Account",
+          siteType: SITE_TYPES.NEW_API,
+          siteUrlOrigin: "https://relay.example.com",
+          outcome: "created",
+          availableGroups: ["default", "vip"],
+          coveredGroups: ["default", "vip"],
+          createdGroups: ["vip"],
+          invalidTokens,
+          finishedAt: 300,
+        },
+      ],
+    })
+    mocks.getAllAccounts.mockResolvedValue([account])
+    mocks.convertToDisplayData.mockReturnValue([displayAccount])
+    mocks.deleteInvalidAccountToken.mockResolvedValueOnce({
+      ...invalidTokens[0],
+      deletedAt: 123,
+    })
+
+    const { accountKeyRepairRunner, deleteInvalidAccountTokens } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    await expect(
+      deleteInvalidAccountTokens({ tokens: [invalidTokens[0]] }),
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        deleted: [{ ...invalidTokens[0], deletedAt: 123 }],
+        failed: [],
+      },
+    })
+
+    expect(mocks.storageMap.get("accountKeyRepair_progress")).toMatchObject({
+      jobId: "job-stored",
+      state: "completed",
+      totals: {
+        enabledAccounts: 1,
+        eligibleAccounts: 1,
+        processedAccounts: 1,
+        processedEligibleAccounts: 1,
+      },
+      summary: {
+        created: 1,
+        alreadyHad: 0,
+        skipped: 0,
+        failed: 0,
+        availableGroups: 2,
+        coveredGroups: 2,
+        createdKeys: 1,
+        invalidKeys: 1,
+        deletedKeys: 1,
+        deleteFailed: 0,
+      },
+      results: [
+        expect.objectContaining({
+          accountId: "new-api-1",
+          outcome: "created",
+          invalidTokens: [invalidTokens[1]],
+        }),
+      ],
+    })
+    await expect(accountKeyRepairRunner.getProgress()).resolves.toMatchObject({
+      jobId: "job-stored",
+      summary: {
+        invalidKeys: 1,
+        deletedKeys: 1,
+      },
+      results: [
+        expect.objectContaining({
+          invalidTokens: [invalidTokens[1]],
+        }),
+      ],
+    })
   })
 
   it("skips none-auth accounts, ignores disabled accounts, and falls back to per-account display conversion", async () => {
@@ -348,7 +705,7 @@ describe("accountKeyRepair", () => {
             id: noneAuthAccount.id,
             name: "None Auth",
             baseUrl: noneAuthAccount.site_url,
-            siteType: "new-api",
+            siteType: SITE_TYPES.NEW_API,
             authType: AuthTypeEnum.None,
             userId: "1",
           }),
@@ -359,16 +716,20 @@ describe("accountKeyRepair", () => {
         id: cookieAccount.id,
         name: "Cookie Fallback",
         baseUrl: cookieAccount.site_url,
-        siteType: "new-api",
+        siteType: SITE_TYPES.NEW_API,
         authType: AuthTypeEnum.Cookie,
         userId: "404",
         token: "",
         cookieAuthSessionCookie: "session=abc",
       })
     })
-    mocks.ensureDefaultApiTokenForAccount.mockResolvedValueOnce({
-      token: { id: 3, key: "cookie-created" },
+    mocks.ensureAccountKeysForAvailableGroups.mockResolvedValueOnce({
       created: false,
+      availableGroups: [],
+      coveredGroups: [],
+      createdGroups: [],
+      missingGroups: [],
+      invalidTokens: [],
     })
 
     const { accountKeyRepairRunner } = await import(
@@ -394,6 +755,12 @@ describe("accountKeyRepair", () => {
       alreadyHad: 1,
       skipped: 1,
       failed: 0,
+      availableGroups: 0,
+      coveredGroups: 0,
+      createdKeys: 0,
+      invalidKeys: 0,
+      deletedKeys: 0,
+      deleteFailed: 0,
     })
     expect(progress.results).toEqual(
       expect.arrayContaining([
@@ -410,13 +777,15 @@ describe("accountKeyRepair", () => {
       ]),
     )
     expect(mocks.convertToDisplayData).toHaveBeenCalledWith(cookieAccount)
-    expect(mocks.ensureDefaultApiTokenForAccount).toHaveBeenCalledWith({
+    expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledWith({
       account: cookieAccount,
       displaySiteData: expect.objectContaining({
         id: "cookie-1",
         authType: AuthTypeEnum.Cookie,
         cookieAuthSessionCookie: "session=abc",
       }),
+      accountName: "Cookie Fallback",
+      siteUrlOrigin: "https://cookie.example.com",
     })
   })
 
@@ -448,19 +817,23 @@ describe("accountKeyRepair", () => {
         id: "queued-1",
         name: "Queued Account",
         baseUrl: "https://queued.example.com",
-        siteType: "new-api",
+        siteType: SITE_TYPES.NEW_API,
         authType: AuthTypeEnum.AccessToken,
         userId: "303",
         token: "queued-token",
       }),
     ])
-    mocks.ensureDefaultApiTokenForAccount.mockImplementation(
+    mocks.ensureAccountKeysForAvailableGroups.mockImplementation(
       () =>
         new Promise((resolve) => {
           resolvers.push(() =>
             resolve({
-              token: { id: 2, key: "queued-token-created" },
               created: false,
+              availableGroups: [],
+              coveredGroups: [],
+              createdGroups: [],
+              missingGroups: [],
+              invalidTokens: [],
             }),
           )
         }),
