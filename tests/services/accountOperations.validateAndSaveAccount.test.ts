@@ -490,6 +490,76 @@ describe("accountOperations validateAndSaveAccount", () => {
     expect(fetchAccountDataMock).toHaveBeenCalledTimes(5)
   })
 
+  it("allows New API-family account sites to update non-canonical string user ids", async () => {
+    for (const userId of ["1.5", "1e3", "-1", "0", "001"]) {
+      const accountId = await accountStorage.addAccount({
+        site_name: "Test Site",
+        site_url: "https://api.example.com",
+        site_type: SITE_TYPES.NEW_API,
+        health: { status: SiteHealthStatus.Healthy },
+        authType: AuthTypeEnum.AccessToken,
+        disabled: false,
+        excludeFromTotalBalance: false,
+        excludeFromTodayIncome: false,
+        exchange_rate: 7,
+        notes: "",
+        tagIds: [],
+        checkIn: CHECK_IN_DISABLED,
+        account_info: {
+          id: "previous-id",
+          access_token: "old-token",
+          username: "tester",
+          quota: 0,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+        },
+        last_sync_time: 0,
+      })
+
+      fetchAccountDataMock.mockResolvedValueOnce({
+        quota: 12,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: CHECK_IN_DISABLED,
+      })
+
+      const result = await validateAndUpdateAccount(
+        accountId,
+        "https://api.example.com",
+        "Test Site",
+        "tester",
+        "token",
+        userId,
+        "7.0",
+        "",
+        [],
+        CHECK_IN_DISABLED,
+        SITE_TYPES.NEW_API,
+        AuthTypeEnum.AccessToken,
+        "",
+      )
+
+      expect(result.success).toBe(true)
+      const saved = await accountStorage.getAccountById(accountId)
+      expect(saved?.account_info.id).toBe(userId)
+      expect(fetchAccountDataMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          auth: expect.objectContaining({
+            userId,
+          }),
+        }),
+      )
+    }
+
+    expect(fetchAccountDataMock).toHaveBeenCalledTimes(5)
+  })
+
   it("allows AIHubMix to save a stable username identity", async () => {
     fetchAccountDataMock.mockResolvedValueOnce({
       quota: 12,
