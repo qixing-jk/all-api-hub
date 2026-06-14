@@ -93,7 +93,6 @@
     "tagsSearchPlaceholder": "搜索标签…",
     "tagsSelectedCount": "已选择 {{count}} 个标签",
     "userId": "用户 ID",
-    "userIdNumber": "用户 ID（数字）",
     "username": "用户名",
     "validRateError": "请输入有效的汇率，大于 0"
   },

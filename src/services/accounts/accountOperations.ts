@@ -15,10 +15,7 @@ import {
 } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
-import {
-  isValidManualAccountIdentity,
-  normalizeAccountIdentity,
-} from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   ensureDefaultApiTokenForAccount,
   generateDefaultTokenRequest,
@@ -69,24 +66,6 @@ import { t } from "~/utils/i18n/core"
 const logger = createLogger("AccountOperations")
 
 export const MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS = 20000
-
-/**
- * Keeps legacy numeric-id validation at the explicit manual-input boundary only.
- */
-function validateManualAccountIdentity(
-  userId: string,
-  siteType: AccountSiteType,
-): AccountSaveResponse | null {
-  const identity = normalizeAccountIdentity(userId)
-  if (!identity || !isValidManualAccountIdentity(identity, siteType)) {
-    return {
-      success: false,
-      message: t("messages:errors.validation.userIdNumeric"),
-    }
-  }
-
-  return null
-}
 
 const isCreatedApiToken = (value: unknown): value is ApiToken =>
   !!value &&
@@ -813,11 +792,6 @@ export async function validateAndSaveAccount(
   }
 
   const accountIdentity = normalizeAccountIdentity(userId) ?? ""
-  const identityValidationError = validateManualAccountIdentity(
-    accountIdentity,
-    normalizedSiteType,
-  )
-  if (identityValidationError) return identityValidationError
 
   let shouldAutoProvisionKeyOnAccountAdd =
     DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ?? false
@@ -1085,11 +1059,6 @@ export async function validateAndUpdateAccount(
   }
 
   const accountIdentity = normalizeAccountIdentity(userId) ?? ""
-  const identityValidationError = validateManualAccountIdentity(
-    accountIdentity,
-    normalizedSiteType,
-  )
-  if (identityValidationError) return identityValidationError
 
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
   const normalizedManualBalanceUsd =

@@ -94,7 +94,6 @@
     "tagsSelectedCount_one": "{{count}} tag selected",
     "tagsSelectedCount_other": "{{count}} tags selected",
     "userId": "User ID",
-    "userIdNumber": "User ID (number)",
     "username": "Username",
     "validRateError": "Please enter a valid exchange rate, greater than 0"
   },

@@ -93,7 +93,6 @@
     "tagsSearchPlaceholder": "搜尋標籤…",
     "tagsSelectedCount_other": "已選擇 {{count}} 個標籤",
     "userId": "使用者 ID",
-    "userIdNumber": "使用者 ID（數字）",
     "username": "使用者名稱",
     "validRateError": "請輸入有效的匯率，大於 0"
   },

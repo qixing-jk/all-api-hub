@@ -33,7 +33,6 @@ import {
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { requiresNumericManualAccountIdentity } from "~/services/accounts/accountIdentity"
 import { isValidExchangeRate } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -137,7 +136,6 @@ export default function AccountForm({
     siteType,
   } = draft
   const isSub2Api = siteType === SITE_TYPES.SUB2API
-  const requiresNumericUserId = requiresNumericManualAccountIdentity(siteType)
 
   return (
     <div className="space-y-3">
@@ -245,13 +243,12 @@ export default function AccountForm({
 
         <FormField label={t("form.userId")} required>
           <Input
-            type={requiresNumericUserId ? "number" : "text"}
+            // Compatible account sites may expose alphanumeric user IDs. Reference: https://github.com/qixing-jk/all-api-hub/issues/964
+            type="text"
             autoComplete="off"
             value={userId}
             onChange={(e) => onUserIdChange(e.target.value)}
-            placeholder={
-              requiresNumericUserId ? t("form.userIdNumber") : t("form.userId")
-            }
+            placeholder={t("form.userId")}
             leftIcon={<span className="font-mono text-sm">#</span>}
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput}
             required

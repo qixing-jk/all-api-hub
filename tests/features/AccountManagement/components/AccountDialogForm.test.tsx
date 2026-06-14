@@ -154,9 +154,7 @@ describe("AccountDialog AccountForm", () => {
     ).toBeInTheDocument()
     expect(within(authSection).getByDisplayValue("alice")).toBeInTheDocument()
     expect(
-      within(authSection).getByPlaceholderText(
-        "accountDialog:form.userIdNumber",
-      ),
+      within(authSection).getByPlaceholderText("accountDialog:form.userId"),
     ).toBeInTheDocument()
     expect(
       within(authSection).getByDisplayValue("secret-token"),
@@ -181,14 +179,20 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
   })
 
-  it("uses the site-specific account identity input strategy", async () => {
+  it("uses text input for manual account identities across account site types", async () => {
     const props = createProps()
 
     const { rerender } = render(<AccountForm {...props} />)
 
-    expect(
-      await screen.findByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
-    ).toHaveAttribute("type", "number")
+    const newApiUserIdInput = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput,
+    )
+    expect(newApiUserIdInput).toHaveAttribute("type", "text")
+    expect(newApiUserIdInput).toHaveAttribute("autocomplete", "off")
+    expect(newApiUserIdInput).toHaveAttribute(
+      "placeholder",
+      "accountDialog:form.userId",
+    )
 
     props.draft.siteType = SITE_TYPES.AIHUBMIX
     props.draft.userId = "aihubmix-user"
@@ -339,12 +343,9 @@ describe("AccountDialog AccountForm", () => {
     fireEvent.change(screen.getByDisplayValue("alice"), {
       target: { value: "alice cooper" },
     })
-    fireEvent.change(
-      screen.getByPlaceholderText("accountDialog:form.userIdNumber"),
-      {
-        target: { value: "77" },
-      },
-    )
+    fireEvent.change(screen.getByPlaceholderText("accountDialog:form.userId"), {
+      target: { value: "77" },
+    })
     fireEvent.change(accessTokenInput, {
       target: { value: "secret-token next" },
     })

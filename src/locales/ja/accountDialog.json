@@ -93,7 +93,6 @@
     "tagsSearchPlaceholder": "タグを検索...",
     "tagsSelectedCount_other": "{{count}} 個のタグを選択中",
     "userId": "ユーザー ID",
-    "userIdNumber": "ユーザー ID（数値）",
     "username": "ユーザー名",
     "validRateError": "0 より大きい有効な為替レートを入力してください"
   },
