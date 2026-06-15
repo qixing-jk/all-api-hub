@@ -36,7 +36,7 @@ interface ModelDisplayProps {
   onVerifyModel?: (
     source: ModelManagementItemSource,
     modelId: string,
-    modelEnableGroups: string[],
+    modelEnableGroups?: string[],
   ) => void
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
@@ -48,7 +48,7 @@ interface ModelDisplayProps {
       { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT }
     >["account"],
     modelId: string,
-    modelEnableGroups: string[],
+    modelEnableGroups?: string[],
   ) => void
   onModelClick?: (model: CalculatedModelItem) => void
   count?: number

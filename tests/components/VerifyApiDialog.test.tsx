@@ -325,6 +325,79 @@ describe("VerifyApiDialog", () => {
     )
   })
 
+  it("uses enabled tokens without group filtering when model group context is omitted", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "default-secret",
+        status: 1,
+        name: "default-token",
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Text generation succeeded",
+    })
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: "1",
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const probeCard = await screen.findByTestId("verify-probe-text-generation")
+    const runButton = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
+
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiKey: "sk-default-secret",
+          tokenMeta: expect.objectContaining({
+            id: 1,
+            name: "default-token",
+          }),
+        }),
+      ),
+    )
+  })
+
   it("does not fall back to an incompatible enabled token for a requested model group", async () => {
     const onManageModelKey = vi.fn()
     mockFetchAccountTokens.mockResolvedValueOnce([

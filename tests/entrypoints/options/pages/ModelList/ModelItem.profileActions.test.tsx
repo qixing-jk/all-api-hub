@@ -112,7 +112,11 @@ describe("ModelItem profile actions", () => {
       }),
     )
 
-    expect(onVerifyModel).toHaveBeenCalledWith(profileSource, "gpt-4o-mini")
+    expect(onVerifyModel).toHaveBeenCalledWith(
+      profileSource,
+      "gpt-4o-mini",
+      undefined,
+    )
 
     await user.click(
       await screen.findByRole("button", {

@@ -200,6 +200,24 @@ function getRowLatency(results: ApiVerificationProbeResult[]) {
   return results.reduce((total, result) => total + (result.latencyMs || 0), 0)
 }
 
+/** Resolve a failed probe row to localized, stable user-facing feedback. */
+function resolveFailureSummaryText(
+  t: ReturnType<typeof useTranslation>["t"],
+  result: ApiVerificationProbeResult,
+) {
+  const fallback =
+    result.summary.trim() || t("modelList:batchVerify.messages.unexpected")
+
+  if (!result.summaryKey) {
+    return fallback
+  }
+
+  return t(`aiApiVerification:${result.summaryKey}`, {
+    ...(result.summaryParams ?? {}),
+    defaultValue: fallback,
+  })
+}
+
 /** Pick a valid probe id for synthetic failure records. */
 function getFirstApplicableProbeId(
   apiType: ApiVerificationApiType,
@@ -956,16 +974,13 @@ export function BatchVerifyModelsDialog({
                   ))}
                 </div>
                 {row.results
-                  .filter(
-                    (result) =>
-                      result.status === "fail" && result.summary.trim(),
-                  )
+                  .filter((result) => result.status === "fail")
                   .map((result) => (
                     <div
                       key={`${result.id}-summary`}
                       className="text-xs break-words text-red-600 dark:text-red-400"
                     >
-                      {result.summary}
+                      {resolveFailureSummaryText(t, result)}
                     </div>
                   ))}
               </div>

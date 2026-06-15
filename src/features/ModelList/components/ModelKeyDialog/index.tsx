@@ -51,7 +51,7 @@ interface ModelKeyDialogProps {
   onClose: () => void
   account: DisplaySiteData
   modelId: string
-  modelEnableGroups: string[]
+  modelEnableGroups?: string[]
 }
 
 /**
@@ -68,8 +68,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   const createGroupOptions = useMemo(() => {
     const seen = new Set<string>()
     const options: string[] = []
+    const groups = modelEnableGroups ?? []
 
-    modelEnableGroups
+    groups
       .map((group) => (typeof group === "string" ? group.trim() : ""))
       .filter(Boolean)
       .forEach((group) => {

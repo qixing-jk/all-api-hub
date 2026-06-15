@@ -40,7 +40,7 @@ type UseModelKeyDialogParams = {
   isOpen: boolean
   account: DisplaySiteData | null
   modelId: string
-  modelEnableGroups: string[]
+  modelEnableGroups?: string[]
 }
 
 /**

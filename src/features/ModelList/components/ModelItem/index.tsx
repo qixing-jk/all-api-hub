@@ -65,7 +65,7 @@ interface ModelItemProps {
   onVerifyModel?: (
     source: ModelManagementItemSource,
     modelId: string,
-    modelEnableGroups: string[],
+    modelEnableGroups?: string[],
   ) => void
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
@@ -77,7 +77,7 @@ interface ModelItemProps {
       { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT }
     >["account"],
     modelId: string,
-    modelEnableGroups: string[],
+    modelEnableGroups?: string[],
   ) => void
   isExpanded?: boolean
   onToggleExpand?: () => void
@@ -236,7 +236,9 @@ export default function ModelItem(props: ModelItemProps) {
 
   const modelActionEnableGroups = effectiveGroup
     ? [effectiveGroup]
-    : model.enable_groups
+    : model.enable_groups.length > 0
+      ? model.enable_groups
+      : undefined
 
   const sourceBadge = sourceLabel.label ? (
     handleFilterAccount ? (

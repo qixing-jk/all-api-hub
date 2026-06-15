@@ -237,7 +237,7 @@ export default function ModelList(props: {
   const [verifyContext, setVerifyContext] = useState<{
     account: DisplaySiteData
     modelId: string
-    modelEnableGroups: string[]
+    modelEnableGroups?: string[]
   } | null>(null)
 
   const [verifyCliContext, setVerifyCliContext] = useState<{
@@ -253,7 +253,7 @@ export default function ModelList(props: {
   const [modelKeyContext, setModelKeyContext] = useState<{
     account: DisplaySiteData
     modelId: string
-    modelEnableGroups: string[]
+    modelEnableGroups?: string[]
     returnToVerify?: boolean
   } | null>(null)
 
@@ -264,7 +264,7 @@ export default function ModelList(props: {
   const handleVerifyModel = (
     source: ModelManagementItemSource,
     modelId: string,
-    modelEnableGroups: string[],
+    modelEnableGroups?: string[],
   ) => {
     if (source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
       setVerifyProfileContext({
@@ -287,7 +287,7 @@ export default function ModelList(props: {
   const handleOpenModelKeyDialog = (
     account: DisplaySiteData,
     modelId: string,
-    modelEnableGroups: string[],
+    modelEnableGroups?: string[],
   ) => setModelKeyContext({ account, modelId, modelEnableGroups })
 
   const handleManageVerifyModelKey = () => {
