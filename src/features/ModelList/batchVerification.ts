@@ -54,9 +54,11 @@ export function createBatchVerifyModelItems(
     items.push({
       key,
       modelId,
-      enableGroups: Array.isArray(item.model.enable_groups)
-        ? item.model.enable_groups
-        : null,
+      enableGroups: item.effectiveGroup
+        ? [item.effectiveGroup]
+        : Array.isArray(item.model.enable_groups)
+          ? item.model.enable_groups
+          : null,
       source: item.source,
     })
   }

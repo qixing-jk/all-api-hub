@@ -87,6 +87,49 @@ describe("model list batch verification helpers", () => {
     expect(item.enableGroups).toBeNull()
   })
 
+  it("narrows verification group metadata and token selection to the row's effective group", () => {
+    const source = {
+      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      account: { id: "acc-1" },
+    } as any
+
+    const [item] = createBatchVerifyModelItems([
+      {
+        model: {
+          model_name: "gpt-4o",
+          enable_groups: [DEFAULT_MODEL_GROUP, "vip"],
+        },
+        effectiveGroup: "vip",
+        source,
+      },
+    ] as any)
+
+    expect(item.enableGroups).toEqual(["vip"])
+    expect(
+      pickBatchVerifyCompatibleToken(
+        [
+          {
+            id: 1,
+            status: 1,
+            group: DEFAULT_MODEL_GROUP,
+            model_limits_enabled: false,
+            model_limits: "",
+            models: "",
+          },
+          {
+            id: 2,
+            status: 1,
+            group: "vip",
+            model_limits_enabled: false,
+            model_limits: "",
+            models: "",
+          },
+        ] as any,
+        item,
+      )?.id,
+    ).toBe(2)
+  })
+
   it("omits rows whose source cannot provide verification credentials", () => {
     const supportedSource = {
       kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,

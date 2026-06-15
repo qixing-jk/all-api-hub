@@ -949,6 +949,59 @@ describe("BatchVerifyModelsDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows the failed probe response summary in the final row feedback", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 22,
+      summary: "model not available to token group",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    const row = await screen.findByTestId(
+      getBatchVerifyRowTestId("account:acc-1:model:gpt-4o"),
+    )
+    await waitFor(() => {
+      expect(row).toHaveTextContent("model not available to token group")
+    })
+  })
+
   it("requires at least one selected probe before starting", async () => {
     renderDialog([
       {

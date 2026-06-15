@@ -929,30 +929,45 @@ export function BatchVerifyModelsDialog({
               </div>
             ) : null}
             {row.results.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {row.results.map((result) => (
-                  <Badge
-                    key={result.id}
-                    variant={statusVariant(
-                      result.status === "unsupported"
-                        ? BATCH_VERIFY_ROW_STATUSES.SKIPPED
-                        : result.status,
-                    )}
-                    size="sm"
-                  >
-                    {getApiVerificationProbeLabel(t, result.id)}
-                    {" · "}
-                    {result.status === "pass"
-                      ? t("modelList:batchVerify.status.pass")
-                      : result.status === "fail"
-                        ? t("modelList:batchVerify.status.fail")
-                        : t(
-                            "aiApiVerification:verifyDialog.status.unsupported",
-                          )}
-                    {" · "}
-                    {formatLatency(result.latencyMs)}
-                  </Badge>
-                ))}
+              <div className="mt-2 space-y-1.5">
+                <div className="flex flex-wrap gap-1.5">
+                  {row.results.map((result) => (
+                    <Badge
+                      key={result.id}
+                      variant={statusVariant(
+                        result.status === "unsupported"
+                          ? BATCH_VERIFY_ROW_STATUSES.SKIPPED
+                          : result.status,
+                      )}
+                      size="sm"
+                    >
+                      {getApiVerificationProbeLabel(t, result.id)}
+                      {" · "}
+                      {result.status === "pass"
+                        ? t("modelList:batchVerify.status.pass")
+                        : result.status === "fail"
+                          ? t("modelList:batchVerify.status.fail")
+                          : t(
+                              "aiApiVerification:verifyDialog.status.unsupported",
+                            )}
+                      {" · "}
+                      {formatLatency(result.latencyMs)}
+                    </Badge>
+                  ))}
+                </div>
+                {row.results
+                  .filter(
+                    (result) =>
+                      result.status === "fail" && result.summary.trim(),
+                  )
+                  .map((result) => (
+                    <div
+                      key={`${result.id}-summary`}
+                      className="text-xs break-words text-red-600 dark:text-red-400"
+                    >
+                      {result.summary}
+                    </div>
+                  ))}
               </div>
             ) : null}
           </div>
