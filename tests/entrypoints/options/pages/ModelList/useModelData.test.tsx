@@ -1499,10 +1499,12 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
 
+    await waitFor(() => {
+      expect(result.current.accountFallback?.isActive).toBe(true)
+      expect(result.current.pricingData).toEqual(fallbackPricing)
+    })
     expect(fetchModelPricing).not.toHaveBeenCalled()
     expect(result.current.loadErrorMessage).toBeNull()
-    expect(result.current.accountFallback?.isActive).toBe(true)
-    expect(result.current.pricingData).toEqual(fallbackPricing)
   })
 
   it("refreshes an active Sub2API runtime fallback catalog with the selected key", async () => {

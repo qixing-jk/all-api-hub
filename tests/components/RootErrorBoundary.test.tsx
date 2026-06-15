@@ -57,6 +57,22 @@ function BrokenTranslatedDomChild(): ReactNode {
   )
 }
 
+function BrokenTranslatedDomNameChild(): ReactNode {
+  throw new DOMException("The target node is missing.", "NotFoundError")
+}
+
+function BrokenTranslatedDomMessageChild(): ReactNode {
+  throw new Error(
+    "Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a child of this node.",
+  )
+}
+
+function BrokenAppNotFoundChild(): ReactNode {
+  const error = new Error("Saved profile was not found")
+  error.name = "NotFoundError"
+  throw error
+}
+
 describe("RootErrorBoundary", () => {
   it("uses the browser reload function when no custom reload handler is provided", async () => {
     const user = userEvent.setup()
@@ -182,6 +198,102 @@ describe("RootErrorBoundary", () => {
       ).toHaveAttribute(
         "href",
         "https://github.com/qixing-jk/all-api-hub/issues/new?template=language_request.yml",
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it("shows translation guidance for DOMException NotFoundError even without a DOM mutation message", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined)
+
+    try {
+      loggerErrorMock.mockClear()
+      render(
+        <I18nextProvider i18n={i18n}>
+          <RootErrorBoundary reloadPage={vi.fn()}>
+            <BrokenTranslatedDomNameChild />
+          </RootErrorBoundary>
+        </I18nextProvider>,
+      )
+
+      expect(
+        screen.getByText(
+          "If you are using automatic translation, turn it off for this page or switch to the language you need in extension settings.",
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getByRole("link", { name: "Request a language" }),
+      ).toHaveAttribute(
+        "href",
+        "https://github.com/qixing-jk/all-api-hub/issues/new?template=language_request.yml",
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it("shows translation guidance for DOM mutation message patterns even without a NotFoundError name", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined)
+
+    try {
+      loggerErrorMock.mockClear()
+      render(
+        <I18nextProvider i18n={i18n}>
+          <RootErrorBoundary reloadPage={vi.fn()}>
+            <BrokenTranslatedDomMessageChild />
+          </RootErrorBoundary>
+        </I18nextProvider>,
+      )
+
+      expect(
+        screen.getByText(
+          "If you are using automatic translation, turn it off for this page or switch to the language you need in extension settings.",
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getByRole("link", { name: "Request a language" }),
+      ).toHaveAttribute(
+        "href",
+        "https://github.com/qixing-jk/all-api-hub/issues/new?template=language_request.yml",
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it("does not show translation guidance for app errors that only use a NotFoundError name", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined)
+
+    try {
+      loggerErrorMock.mockClear()
+      render(
+        <I18nextProvider i18n={i18n}>
+          <RootErrorBoundary reloadPage={vi.fn()}>
+            <BrokenAppNotFoundChild />
+          </RootErrorBoundary>
+        </I18nextProvider>,
+      )
+
+      expect(
+        screen.queryByText(
+          "If you are using automatic translation, turn it off for this page or switch to the language you need in extension settings.",
+        ),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("link", { name: "Request a language" }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("link", { name: "Report problem" }),
+      ).toHaveAttribute(
+        "href",
+        "https://github.com/qixing-jk/all-api-hub/issues/new?template=bug_report.yml",
       )
     } finally {
       consoleError.mockRestore()

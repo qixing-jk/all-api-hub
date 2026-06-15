@@ -37,7 +37,7 @@ function isLikelyExternalDomMutationError(error: unknown) {
   const name = error.name.toLowerCase()
 
   return (
-    name === "notfounderror" ||
+    (error instanceof DOMException && name === "notfounderror") ||
     (message.includes("node") &&
       (message.includes("removechild") || message.includes("insertbefore")))
   )
