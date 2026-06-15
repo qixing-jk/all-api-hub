@@ -21,6 +21,7 @@
     "copyModelName": "複製模型名稱",
     "copySiteUrl": "複製站點 URL",
     "keyForModel": "模型對應金鑰",
+    "openSelectedAccountKeys": "管理帳號金鑰",
     "openSite": "打開站點",
     "verifyApi": "驗證介面",
     "verifyCliSupport": "驗證 CLI 相容性"

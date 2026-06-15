@@ -18,6 +18,7 @@
     "importToCliProxy": "Nhập vào CLIProxyAPI",
     "importToManagedSite": "Nhập vào {{site}}",
     "openApiProfiles": "Mở Hồ sơ API",
+    "openSelectedAccountModels": "Xem mô hình tài khoản",
     "retryFailed": "Thử lại tài khoản thất bại",
     "saveToApiProfiles": "Lưu vào Hồ sơ API",
     "showKey": "Hiển thị khóa",

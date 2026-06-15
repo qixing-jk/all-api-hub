@@ -21,6 +21,7 @@
     "copyModelName": "モデル名をコピー",
     "copySiteUrl": "サイト URL をコピー",
     "keyForModel": "このモデル用のキー",
+    "openSelectedAccountKeys": "アカウントキーを管理",
     "openSite": "サイトを開く",
     "verifyApi": "API を検証",
     "verifyCliSupport": "CLI 対応を検証"

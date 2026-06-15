@@ -8,6 +8,7 @@ export const MODEL_LIST_TEST_IDS = {
   modelKeyDialog: "model-list-model-key-dialog",
   createCustomKeyButton: "model-list-create-custom-key-button",
   openKeyManagementButton: "model-list-open-key-management-button",
+  openSelectedAccountKeysButton: "model-list-open-selected-account-keys-button",
 } as const
 
 /**

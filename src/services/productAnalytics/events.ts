@@ -425,6 +425,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenCreateApiCredentialProfileDialog:
     "open_create_api_credential_profile_dialog",
   OpenAccountKeyManagementFromModel: "open_account_key_management_from_model",
+  OpenAccountModelListFromKeyManagement:
+    "open_account_model_list_from_key_management",
   OpenFailedAutoCheckinManualSignIns:
     "open_failed_auto_checkin_manual_sign_ins",
   OpenFilteredManagedSiteChannelMigration:

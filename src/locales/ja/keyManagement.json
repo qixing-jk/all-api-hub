@@ -18,6 +18,7 @@
     "importToCliProxy": "CLIProxyAPI にインポート",
     "importToManagedSite": "{{site}} にインポート",
     "openApiProfiles": "API 認証情報庫を開く",
+    "openSelectedAccountModels": "アカウントモデルを見る",
     "retryFailed": "失敗を再試行",
     "saveToApiProfiles": "API 認証情報庫に保存",
     "showKey": "キーを表示",

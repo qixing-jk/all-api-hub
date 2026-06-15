@@ -23,6 +23,7 @@
     "copyModelName": "Copy model name",
     "copySiteUrl": "Copy site URL",
     "keyForModel": "Key for this model",
+    "openSelectedAccountKeys": "Manage account keys",
     "openSite": "Open site",
     "verifyApi": "Verify API",
     "verifyCliSupport": "Verify CLI Support"

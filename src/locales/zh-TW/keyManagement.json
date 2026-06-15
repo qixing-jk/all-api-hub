@@ -18,6 +18,7 @@
     "importToCliProxy": "匯入到 CLIProxyAPI",
     "importToManagedSite": "匯入到 {{site}}",
     "openApiProfiles": "開啟 API 憑據庫",
+    "openSelectedAccountModels": "查看帳號模型",
     "retryFailed": "重試失敗帳號",
     "saveToApiProfiles": "儲存到 API 憑據庫",
     "showKey": "顯示金鑰",

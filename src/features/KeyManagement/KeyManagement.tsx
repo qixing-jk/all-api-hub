@@ -20,7 +20,7 @@ import {
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken } from "~/types"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { openModelsPage, pushWithinOptionsPage } from "~/utils/navigation"
 
 import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
@@ -214,6 +214,17 @@ export default function KeyManagement(props: {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
   }, [])
 
+  const handleOpenSelectedAccountModels = useCallback(() => {
+    if (
+      !selectedAccount ||
+      selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+    ) {
+      return
+    }
+
+    void openModelsPage(selectedAccount)
+  }, [selectedAccount])
+
   const handleRequestAccountSelection = useCallback(() => {
     const selectorTrigger = accountSelectorTriggerRef.current
 
@@ -311,6 +322,12 @@ export default function KeyManagement(props: {
         onAddToken={handleAddToken}
         onRepairMissingKeys={handleRepairMissingKeys}
         onRefresh={() => selectedAccount && loadTokens()}
+        onOpenSelectedAccountModels={
+          selectedAccount &&
+          selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+            ? handleOpenSelectedAccountModels
+            : undefined
+        }
         onRefreshManagedSiteStatus={
           isManagedSiteChannelStatusSupported
             ? () => void refreshManagedSiteTokenStatuses()

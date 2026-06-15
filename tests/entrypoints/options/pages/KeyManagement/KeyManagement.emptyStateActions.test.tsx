@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
@@ -14,6 +15,7 @@ const {
   tokenListPropsSpy,
   useKeyManagementMock,
   pushWithinOptionsPageMock,
+  openModelsPageMock,
   mockedUseUserPreferencesContext,
   addTokenDialogPropsSpy,
   accountSummaryBarPropsSpy,
@@ -22,6 +24,7 @@ const {
   tokenListPropsSpy: vi.fn(),
   useKeyManagementMock: vi.fn(),
   pushWithinOptionsPageMock: vi.fn(),
+  openModelsPageMock: vi.fn(),
   mockedUseUserPreferencesContext: vi.fn(),
   addTokenDialogPropsSpy: vi.fn(),
   accountSummaryBarPropsSpy: vi.fn(),
@@ -43,6 +46,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   return {
     ...actual,
     pushWithinOptionsPage: pushWithinOptionsPageMock,
+    openModelsPage: openModelsPageMock,
   }
 })
 
@@ -219,6 +223,7 @@ describe("KeyManagement empty-state actions", () => {
     tokenListPropsSpy.mockReset()
     useKeyManagementMock.mockReset()
     pushWithinOptionsPageMock.mockReset()
+    openModelsPageMock.mockReset()
     addTokenDialogPropsSpy.mockReset()
     accountSummaryBarPropsSpy.mockReset()
     mockedUseUserPreferencesContext.mockReturnValue({
@@ -276,6 +281,37 @@ describe("KeyManagement empty-state actions", () => {
     await waitFor(() =>
       expect(selectorTrigger).toHaveAttribute("aria-expanded", "true"),
     )
+  })
+
+  it("opens the model list for the selected account from the title action", async () => {
+    const user = userEvent.setup()
+    const account = createAccount({
+      id: "acc-1",
+      name: "Account 1",
+    })
+
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        displayData: [account],
+        selectedAccount: account.id,
+      }),
+    )
+
+    render(<KeyManagement />)
+
+    const pageTitle = await screen.findByRole("heading", {
+      name: "keyManagement:title",
+    })
+    const titleActionContainer = pageTitle.parentElement
+    expect(titleActionContainer).not.toBeNull()
+
+    await user.click(
+      within(titleActionContainer as HTMLElement).getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.openSelectedAccountModelsButton,
+      ),
+    )
+
+    expect(openModelsPageMock).toHaveBeenCalledWith(account.id)
   })
 
   it("uses the destructive confirmation dialog before deleting a token", async () => {

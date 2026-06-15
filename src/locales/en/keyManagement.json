@@ -19,6 +19,7 @@
     "importToCliProxy": "Import to CLIProxyAPI",
     "importToManagedSite": "Import to {{site}}",
     "openApiProfiles": "Open API credential library",
+    "openSelectedAccountModels": "View account models",
     "retryFailed": "Retry failed",
     "saveToApiProfiles": "Save to API credential library",
     "showKey": "Show Key",

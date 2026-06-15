@@ -21,6 +21,7 @@
     "copyModelName": "复制模型名称",
     "copySiteUrl": "复制站点 URL",
     "keyForModel": "模型对应密钥",
+    "openSelectedAccountKeys": "管理账号密钥",
     "openSite": "打开站点",
     "verifyApi": "验证接口",
     "verifyCliSupport": "验证 CLI 兼容性"

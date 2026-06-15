@@ -1,13 +1,14 @@
 import { Tab } from "@headlessui/react"
 import { ArrowPathIcon } from "@heroicons/react/24/outline"
-import { Cpu } from "lucide-react"
+import { Cpu, KeyRound } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { PageHeader } from "~/components/PageHeader"
-import { Alert, Button, EmptyState } from "~/components/ui"
+import Tooltip from "~/components/Tooltip"
+import { Alert, Button, EmptyState, IconButton } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
@@ -35,7 +36,7 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { openKeysPage, pushWithinOptionsPage } from "~/utils/navigation"
 
 import { sortModelListAccounts } from "./accountOrdering"
 import { AccountSelector } from "./components/AccountSelector"
@@ -328,6 +329,14 @@ export default function ModelList(props: {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`)
   }, [])
 
+  const handleOpenSelectedAccountKeys = useCallback(() => {
+    if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
+      return
+    }
+
+    void openKeysPage(selectedSource.account.id)
+  }, [selectedSource])
+
   const handleRequestSourceSelection = useCallback(() => {
     const selectorTrigger = sourceSelectorTriggerRef.current
 
@@ -358,6 +367,33 @@ export default function ModelList(props: {
       <PageHeader
         icon={Cpu}
         title={t("title")}
+        titleActions={
+          selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ? (
+            <ProductAnalyticsScope
+              entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+              featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
+              surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage}
+            >
+              <Tooltip content={t("actions.openSelectedAccountKeys")}>
+                <IconButton
+                  type="button"
+                  onClick={handleOpenSelectedAccountKeys}
+                  size="sm"
+                  variant="outline"
+                  aria-label={t("actions.openSelectedAccountKeys")}
+                  data-testid={
+                    MODEL_LIST_TEST_IDS.openSelectedAccountKeysButton
+                  }
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountKeyManagementFromModel
+                  }
+                >
+                  <KeyRound className="h-4 w-4" />
+                </IconButton>
+              </Tooltip>
+            </ProductAnalyticsScope>
+          ) : undefined
+        }
         description={t("description")}
         actions={
           selectedSource && hasModelData ? (

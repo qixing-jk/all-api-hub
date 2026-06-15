@@ -21,6 +21,7 @@
     "copyModelName": "Sao chép tên mô hình",
     "copySiteUrl": "Sao chép URL trang",
     "keyForModel": "Khóa tương ứng với mô hình",
+    "openSelectedAccountKeys": "Quản lý khóa tài khoản",
     "openSite": "Mở trang",
     "verifyApi": "Xác minh API",
     "verifyCliSupport": "Xác minh khả năng tương thích CLI"
