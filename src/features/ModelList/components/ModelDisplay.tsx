@@ -33,7 +33,11 @@ import ModelItem from "./ModelItem"
 interface ModelDisplayProps {
   models: CalculatedModelItem[]
   verificationSummariesByKey: Record<string, ApiVerificationHistorySummary>
-  onVerifyModel?: (source: ModelManagementItemSource, modelId: string) => void
+  onVerifyModel?: (
+    source: ModelManagementItemSource,
+    modelId: string,
+    modelEnableGroups: string[],
+  ) => void
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
     modelId: string,

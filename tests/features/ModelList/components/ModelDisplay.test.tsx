@@ -114,7 +114,13 @@ vi.mock("~/features/ModelList/components/ModelItem", () => ({
         <button
           type="button"
           onClick={() =>
-            props.onVerifyModel?.(props.source, props.model.model_name)
+            props.onVerifyModel?.(
+              props.source,
+              props.model.model_name,
+              props.effectiveGroup
+                ? [props.effectiveGroup]
+                : props.model.enable_groups,
+            )
           }
         >
           verify-{props.model.model_name}
@@ -421,7 +427,9 @@ describe("ModelDisplay", () => {
     )
     await user.click(screen.getByRole("button", { name: "key-gpt-4o-mini" }))
 
-    expect(onVerifyModel).toHaveBeenCalledWith(ACCOUNT_SOURCE, "gpt-4o-mini")
+    expect(onVerifyModel).toHaveBeenCalledWith(ACCOUNT_SOURCE, "gpt-4o-mini", [
+      "vip",
+    ])
     expect(onVerifyCliSupport).toHaveBeenCalledWith(
       ACCOUNT_SOURCE,
       "gpt-4o-mini",

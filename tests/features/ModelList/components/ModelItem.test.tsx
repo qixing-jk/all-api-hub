@@ -319,6 +319,7 @@ describe("ModelItem", () => {
         onOpenModelKeyDialog={onOpenModelKeyDialog}
         onVerifyModel={onVerifyModel}
         onVerifyCliSupport={onVerifyCliSupport}
+        effectiveGroup="vip"
       />,
     )
 
@@ -329,11 +330,12 @@ describe("ModelItem", () => {
     expect(onOpenModelKeyDialog).toHaveBeenCalledWith(
       props.source.account,
       props.model.model_name,
-      props.model.enable_groups,
+      ["vip"],
     )
     expect(onVerifyModel).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "account" }),
       props.model.model_name,
+      ["vip"],
     )
     expect(onVerifyCliSupport).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "account" }),
