@@ -329,13 +329,9 @@ export default function ModelList(props: {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`)
   }, [])
 
-  const handleOpenSelectedAccountKeys = useCallback(() => {
-    if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
-      return
-    }
-
-    void openKeysPage(selectedSource.account.id)
-  }, [selectedSource])
+  const handleOpenSelectedAccountKeys = useCallback((accountId: string) => {
+    void openKeysPage(accountId)
+  }, [])
 
   const handleRequestSourceSelection = useCallback(() => {
     const selectorTrigger = sourceSelectorTriggerRef.current
@@ -367,6 +363,7 @@ export default function ModelList(props: {
       <PageHeader
         icon={Cpu}
         title={t("title")}
+        titleActionsTestId={MODEL_LIST_TEST_IDS.titleActions}
         titleActions={
           selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ? (
             <ProductAnalyticsScope
@@ -377,7 +374,9 @@ export default function ModelList(props: {
               <Tooltip content={t("actions.openSelectedAccountKeys")}>
                 <IconButton
                   type="button"
-                  onClick={handleOpenSelectedAccountKeys}
+                  onClick={() =>
+                    handleOpenSelectedAccountKeys(selectedSource.account.id)
+                  }
                   size="sm"
                   variant="outline"
                   aria-label={t("actions.openSelectedAccountKeys")}

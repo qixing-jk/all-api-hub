@@ -7,6 +7,7 @@ interface PageHeaderProps {
   icon: ComponentType<{ className?: string }>
   title: ReactNode
   titleActions?: ReactNode
+  titleActionsTestId?: string
   description?: ReactNode
   actions?: ReactNode
   spacing?: "default" | "compact"
@@ -20,6 +21,7 @@ interface PageHeaderProps {
  * @param props.icon Icon component rendered next to the title.
  * @param props.title Header title node.
  * @param props.titleActions Optional compact action elements rendered next to the title.
+ * @param props.titleActionsTestId Optional test id for the title action container.
  * @param props.description Optional helper text shown below the title.
  * @param props.actions Optional action elements rendered on the right.
  * @param props.spacing Adjusts vertical spacing (default or compact).
@@ -30,6 +32,7 @@ export function PageHeader({
   icon: Icon,
   title,
   titleActions,
+  titleActionsTestId,
   description,
   actions,
   spacing = "default",
@@ -46,7 +49,10 @@ export function PageHeader({
               iconClassName,
             )}
           />
-          <div className="flex min-w-0 items-center gap-2">
+          <div
+            className="flex min-w-0 items-center gap-2"
+            data-testid={titleActionsTestId}
+          >
             <Heading2 className="dark:text-dark-text-primary text-gray-900">
               {title}
             </Heading2>

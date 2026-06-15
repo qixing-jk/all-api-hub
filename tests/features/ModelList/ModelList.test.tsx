@@ -270,17 +270,36 @@ describe("ModelList", () => {
 
     render(<ModelList />)
 
-    const pageTitle = screen.getByRole("heading", { name: "title" })
-    const titleActionContainer = pageTitle.parentElement
-    expect(titleActionContainer).not.toBeNull()
-
     await user.click(
-      within(titleActionContainer as HTMLElement).getByTestId(
+      within(screen.getByTestId(MODEL_LIST_TEST_IDS.titleActions)).getByTestId(
         MODEL_LIST_TEST_IDS.openSelectedAccountKeysButton,
       ),
     )
 
     expect(openKeysPageMock).toHaveBeenCalledWith(ACCOUNT.id)
+  })
+
+  it("does not show the key-management title shortcut for non-account sources", () => {
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      selectedSource: {
+        kind: MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+        value: "all-accounts",
+        capabilities: CAPABILITIES,
+      },
+      selectedSourceValue: "all-accounts",
+      currentAccount: null,
+      pricingContexts: [],
+      pricingData: null,
+    })
+
+    render(<ModelList />)
+
+    expect(
+      within(
+        screen.getByTestId(MODEL_LIST_TEST_IDS.titleActions),
+      ).queryByTestId(MODEL_LIST_TEST_IDS.openSelectedAccountKeysButton),
+    ).not.toBeInTheDocument()
   })
 
   it("opens the model key dialog from an incompatible API verification token state", async () => {

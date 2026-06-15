@@ -299,19 +299,35 @@ describe("KeyManagement empty-state actions", () => {
 
     render(<KeyManagement />)
 
-    const pageTitle = await screen.findByRole("heading", {
-      name: "keyManagement:title",
-    })
-    const titleActionContainer = pageTitle.parentElement
-    expect(titleActionContainer).not.toBeNull()
-
     await user.click(
-      within(titleActionContainer as HTMLElement).getByTestId(
-        KEY_MANAGEMENT_TEST_IDS.openSelectedAccountModelsButton,
-      ),
+      within(
+        await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.titleActions),
+      ).getByTestId(KEY_MANAGEMENT_TEST_IDS.openSelectedAccountModelsButton),
     )
 
     expect(openModelsPageMock).toHaveBeenCalledWith(account.id)
+  })
+
+  it("does not show the model-list title shortcut while viewing all accounts", async () => {
+    const account = createAccount({
+      id: "acc-1",
+      name: "Account 1",
+    })
+
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        displayData: [account],
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      }),
+    )
+
+    render(<KeyManagement />)
+
+    expect(
+      within(
+        await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.titleActions),
+      ).queryByTestId(KEY_MANAGEMENT_TEST_IDS.openSelectedAccountModelsButton),
+    ).not.toBeInTheDocument()
   })
 
   it("uses the destructive confirmation dialog before deleting a token", async () => {

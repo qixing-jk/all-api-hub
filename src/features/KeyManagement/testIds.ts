@@ -7,6 +7,7 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   openApiProfilesToastButton: "key-management-open-api-profiles-toast-button",
   openSelectedAccountModelsButton:
     "key-management-open-selected-account-models-button",
+  titleActions: "key-management-title-actions",
   addTokenSubmitButton: "key-management-add-token-submit-button",
   oneTimeKeyCloseButton: "key-management-one-time-key-close-button",
   oneTimeKeySaveButton: "key-management-one-time-key-save-button",

@@ -70,6 +70,7 @@ export function Header({
         <PageHeader
           icon={KeyRound}
           title={t("title")}
+          titleActionsTestId={KEY_MANAGEMENT_TEST_IDS.titleActions}
           titleActions={
             onOpenSelectedAccountModels ? (
               <Tooltip content={t("actions.openSelectedAccountModels")}>

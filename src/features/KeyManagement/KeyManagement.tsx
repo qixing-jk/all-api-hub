@@ -215,13 +215,6 @@ export default function KeyManagement(props: {
   }, [])
 
   const handleOpenSelectedAccountModels = useCallback(() => {
-    if (
-      !selectedAccount ||
-      selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
-    ) {
-      return
-    }
-
     void openModelsPage(selectedAccount)
   }, [selectedAccount])
 
