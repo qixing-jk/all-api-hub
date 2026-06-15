@@ -14,7 +14,10 @@ import type {
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
-import type { ModelPricing } from "~/services/apiService/common/type"
+import {
+  isModelPriceUnavailable,
+  type ModelPricing,
+} from "~/services/apiService/common/type"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import {
@@ -216,7 +219,11 @@ export default function ModelItem(props: ModelItemProps) {
 
   const activeGroups =
     selectedGroups.length > 0 ? selectedGroups : availableGroups
+  const hasRuntimeDiscoveredPricingGap =
+    isModelPriceUnavailable(model) ||
+    calculatedPrice.priceAvailability === "unavailable"
   const isAvailableForUser =
+    hasRuntimeDiscoveredPricingGap ||
     groupSelectionScope === MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
       ? true
       : showGroupDetails

@@ -6,6 +6,11 @@ import { ModelItemPerCallPricingView } from "~/features/ModelList/components/Mod
 import { PriceView } from "~/features/ModelList/components/ModelItem/ModelItemPicingView"
 import { ModelItemPricing } from "~/features/ModelList/components/ModelItem/ModelItemPricing"
 import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
+import {
+  MODEL_PRICE_PRECISION_KINDS,
+  MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
+} from "~/services/apiService/common/type"
 
 const { formatPriceCompactMock, isTokenBillingTypeMock } = vi.hoisted(() => ({
   formatPriceCompactMock: vi.fn(
@@ -296,7 +301,7 @@ describe("Model item pricing and description", () => {
       expect(screen.queryByText("ratio")).toBeNull()
     })
 
-    it("omits the pricing body when a per-call model has no computed per-call price", () => {
+    it("renders explicit zero per-call prices instead of treating them as missing", () => {
       isTokenBillingTypeMock.mockReturnValue(false)
 
       render(
@@ -312,7 +317,8 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.queryByText("perCall")).toBeNull()
+      expect(screen.getByText("perCall")).toBeInTheDocument()
+      expect(screen.getByText("USD:0")).toBeInTheDocument()
       expect(screen.queryByText("ratio")).toBeNull()
     })
 
@@ -419,6 +425,160 @@ describe("Model item pricing and description", () => {
         "lowestPriceWithinAccountFilters",
       )
       expect(screen.queryByText(/^optimalGroup:/)).toBeNull()
+    })
+
+    it("shows unavailable pricing metadata without formatting a zero price or ratio", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({
+            model_ratio: 0,
+            completion_ratio: 0,
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.NONE,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+              unavailable_reason:
+                MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+            },
+          })}
+          calculatedPrice={createCalculatedPrice({
+            inputUSD: 0,
+            inputCNY: 0,
+            outputUSD: 0,
+            outputCNY: 0,
+          })}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={true}
+          isAvailableForUser={true}
+          groupRatios={{}}
+        />,
+      )
+
+      expect(
+        screen.getByText("unavailablePriceReasons.modelListOnly"),
+      ).toBeInTheDocument()
+      expect(screen.queryByText("USD:0/M")).toBeNull()
+      expect(screen.queryByText("CNY:0/M")).toBeNull()
+      expect(screen.queryByText("0x")).toBeNull()
+      expect(formatPriceCompactMock).not.toHaveBeenCalled()
+    })
+
+    it("shows the key-group unavailable reason when Sub2API group resolution is missing", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({
+            model_name: "example-runtime-model",
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.NONE,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+              unavailable_reason:
+                MODEL_UNAVAILABLE_PRICE_REASONS.KEY_GROUP_UNKNOWN,
+            },
+          })}
+          calculatedPrice={createCalculatedPrice({
+            priceAvailability: "unavailable",
+            unavailableReason:
+              MODEL_UNAVAILABLE_PRICE_REASONS.KEY_GROUP_UNKNOWN,
+          })}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={true}
+          isAvailableForUser={true}
+          groupRatios={{}}
+        />,
+      )
+
+      expect(
+        screen.getByText("unavailablePriceReasons.keyGroupUnknown"),
+      ).toBeInTheDocument()
+      expect(formatPriceCompactMock).not.toHaveBeenCalled()
+    })
+
+    it("labels estimated Sub2API prices with short source text", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({
+            model_ratio: 0,
+            completion_ratio: 0,
+            token_price_usd_per_million: {
+              input: 0.25,
+              output: 1,
+            },
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE,
+              precision: MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+              source_date: "2026-06-14",
+            },
+          })}
+          calculatedPrice={createCalculatedPrice({
+            inputUSD: 0.25,
+            inputCNY: 1.75,
+            outputUSD: 1,
+            outputCNY: 7,
+          })}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={false}
+          isAvailableForUser={true}
+          groupRatios={{ default: 1 }}
+        />,
+      )
+
+      expect(screen.getByText("estimatedPrice")).toHaveAttribute(
+        "title",
+        "estimatedPriceTitle",
+      )
+      expect(screen.getByText("estimatedPrice")).toHaveClass("shrink-0")
+      expect(screen.getByText("USD:0.25/M")).toBeInTheDocument()
+      expect(screen.queryByText("official-rate-estimate")).toBeNull()
+      expect(screen.queryByText("2026-06-14")).toBeNull()
+    })
+
+    it("shows the effective group ratio for estimated Sub2API prices", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({
+            model_ratio: 0,
+            completion_ratio: 0,
+            token_price_usd_per_million: {
+              input: 0.25,
+              output: 1,
+            },
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE,
+              precision: MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+            },
+          })}
+          calculatedPrice={createCalculatedPrice({
+            inputUSD: 0.25,
+            inputCNY: 1.75,
+            outputUSD: 1,
+            outputCNY: 7,
+          })}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={true}
+          isAvailableForUser={true}
+          effectiveGroup="vip"
+          groupRatios={{ vip: 2 }}
+        />,
+      )
+
+      expect(screen.getByText("ratio")).toBeInTheDocument()
+      expect(screen.getByText("2x")).toBeInTheDocument()
+      expect(screen.queryByText("0x")).toBeNull()
     })
 
     it("uses account-filter copy for all-accounts auto-picked groups", () => {

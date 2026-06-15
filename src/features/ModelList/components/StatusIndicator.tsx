@@ -14,6 +14,7 @@ import {
   Spinner,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import { SITE_TYPES } from "~/constants/siteType"
 import type { AccountFallbackControls } from "~/features/ModelList/hooks/useModelData"
 import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
@@ -74,6 +75,12 @@ export function StatusIndicator({
     )
   }
 
+  const isSub2ApiKeyScopedStatus =
+    selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+    currentAccount?.siteType === SITE_TYPES.SUB2API &&
+    accountFallback?.isAvailable === true &&
+    !accountFallback.isActive
+
   const renderAccountFallbackSection = () => {
     if (!currentAccount || !accountFallback?.isAvailable) {
       return null
@@ -86,13 +93,17 @@ export function StatusIndicator({
       (!requiresExplicitSelection || accountFallback.selectedTokenId !== null)
 
     return (
-      <div className="dark:border-dark-bg-tertiary mt-4 space-y-4 border-t border-red-100 pt-4">
+      <div className="dark:border-dark-bg-tertiary mt-4 space-y-4 border-t border-gray-200 pt-4">
         <div>
           <h4 className="dark:text-dark-text-primary text-sm font-semibold text-gray-900">
-            {t("status.fallback.title")}
+            {isSub2ApiKeyScopedStatus
+              ? t("status.sub2apiKeyScopedFallbackTitle")
+              : t("status.fallback.title")}
           </h4>
           <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-600">
-            {t("status.fallback.description")}
+            {isSub2ApiKeyScopedStatus
+              ? t("status.sub2apiKeyScopedFallbackDescription")
+              : t("status.fallback.description")}
           </p>
         </div>
 
@@ -237,6 +248,20 @@ export function StatusIndicator({
           </div>
         ) : null}
       </div>
+    )
+  }
+
+  if (isSub2ApiKeyScopedStatus) {
+    return (
+      <Alert
+        variant="info"
+        className="mb-6"
+        title={t("status.sub2apiKeyScopedTitle")}
+        description={t("status.sub2apiKeyScopedDescription")}
+        aria-live="polite"
+      >
+        {renderAccountFallbackSection()}
+      </Alert>
     )
   }
 

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
@@ -111,8 +112,13 @@ function createInvalidFormatError() {
   return error
 }
 
+const MODEL_PRICING_UNSUPPORTED_ERROR = "model_pricing_unsupported"
+
 const createUnsupportedModelPricingError = () =>
-  new Error("model_pricing_unsupported")
+  new Error(MODEL_PRICING_UNSUPPORTED_ERROR)
+
+const isUnsupportedModelPricingError = (error: unknown) =>
+  error instanceof Error && error.message === MODEL_PRICING_UNSUPPORTED_ERROR
 
 /** Counts only valid model rows so analytics never includes raw model ids. */
 function getPricingModelCount(pricing: PricingResponse | null | undefined) {
@@ -733,6 +739,40 @@ function useSingleAccountModelData(params: {
       selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
       !currentAccount
     ) {
+      return
+    }
+    if (!fallbackAvailable) return
+    if (currentAccount.siteType !== SITE_TYPES.SUB2API) return
+    if (!query.isError) return
+    if (!isUnsupportedModelPricingError(query.error)) return
+    if (!scopedHasLoadedFallbackTokens) return
+    if (scopedFallbackTokens.length !== 1) return
+    if (!selectedFallbackToken) return
+    if (scopedFallbackPricingData) return
+    if (scopedIsLoadingFallbackCatalog) return
+    if (scopedFallbackCatalogLoadErrorMessage) return
+
+    void loadFallbackCatalog()
+  }, [
+    currentAccount,
+    fallbackAvailable,
+    loadFallbackCatalog,
+    query.error,
+    query.isError,
+    scopedFallbackCatalogLoadErrorMessage,
+    scopedFallbackPricingData,
+    scopedFallbackTokens.length,
+    scopedHasLoadedFallbackTokens,
+    scopedIsLoadingFallbackCatalog,
+    selectedFallbackToken,
+    selectedSource?.kind,
+  ])
+
+  useEffect(() => {
+    if (
+      selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
+      !currentAccount
+    ) {
       setDataFormatError(false)
       setLoadErrorMessage(null)
       return
@@ -789,6 +829,15 @@ function useSingleAccountModelData(params: {
       }
 
       setDataFormatError(false)
+      if (
+        currentAccount.siteType === SITE_TYPES.SUB2API &&
+        isUnsupportedModelPricingError(query.error) &&
+        fallbackAvailable
+      ) {
+        setLoadErrorMessage(null)
+        return
+      }
+
       const message = t("status.loadFailed")
       setLoadErrorMessage(message)
       toast.error(message)
@@ -816,6 +865,7 @@ function useSingleAccountModelData(params: {
     query.errorUpdatedAt,
     currentAccount,
     currentAccountScopeKey,
+    fallbackAvailable,
     selectedSource?.kind,
     t,
     resetFallbackState,
@@ -823,11 +873,22 @@ function useSingleAccountModelData(params: {
 
   const loadPricingData = useCallback(async () => {
     if (!currentAccount) return
+    if (scopedFallbackPricingData && selectedFallbackToken) {
+      await loadFallbackCatalog()
+      return
+    }
+
     await modelPricingCache.invalidate(
       createModelPricingCacheKey(currentAccount),
     )
     await query.refetch()
-  }, [currentAccount, query])
+  }, [
+    currentAccount,
+    loadFallbackCatalog,
+    query,
+    scopedFallbackPricingData,
+    selectedFallbackToken,
+  ])
 
   const pricingData = query.data ?? scopedFallbackPricingData ?? null
   const isFallbackCatalogActive = Boolean(
@@ -884,7 +945,7 @@ function useSingleAccountModelData(params: {
   return {
     pricingData,
     pricingContexts,
-    isLoading: query.isFetching,
+    isLoading: query.isFetching || scopedIsLoadingFallbackCatalog,
     dataFormatError,
     accountQueryStates: [],
     loadPricingData,

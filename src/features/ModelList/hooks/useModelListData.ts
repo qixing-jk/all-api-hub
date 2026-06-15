@@ -8,6 +8,7 @@ import {
   isAihubmixModelListPricing,
 } from "../aihubmixModelList"
 import {
+  deriveModelListSourceCapabilities,
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   isProfileSourceValue,
   MODEL_MANAGEMENT_SOURCE_KINDS,
@@ -208,15 +209,25 @@ export function useModelListData(routeParams?: Record<string, string>) {
       return toAihubmixModelListCapabilities(baseCapabilities)
     }
 
+    const responseDerivedCapabilities = deriveModelListSourceCapabilities({
+      capabilities: baseCapabilities,
+      modelListSource: modelData.pricingData?.model_list_source,
+    })
+
     // Account-key fallback keeps the same owning account selected, but the
     // rendered catalog is no longer pricing-authoritative.
-    return isFallbackCatalogActive
-      ? toCatalogOnlyCapabilities(baseCapabilities)
-      : baseCapabilities
+    const shouldDowngradeFallbackCatalog =
+      isFallbackCatalogActive &&
+      modelData.pricingData?.model_list_source?.supportsPricing !== true
+
+    return shouldDowngradeFallbackCatalog
+      ? toCatalogOnlyCapabilities(responseDerivedCapabilities)
+      : responseDerivedCapabilities
   }, [
     isFallbackCatalogActive,
     isSelectedAccountAihubmixCatalogFallback,
     isSelectedAccountAihubmixModelList,
+    modelData.pricingData?.model_list_source,
     selectedSource?.capabilities,
   ])
 

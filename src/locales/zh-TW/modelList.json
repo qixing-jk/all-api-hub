@@ -96,6 +96,8 @@
   "displayOptions": "顯示選項:",
   "endpointType": "端點型別",
   "endpointTypes": "端點型別",
+  "estimatedPrice": "估算價",
+  "estimatedPriceTitle": "基於官方價格表和此金鑰的 Sub2API 分組倍率估算。",
   "expandDetails": "展開詳細資訊",
   "fallbackSourceNotice": {
     "description": "目前模型目錄是透過帳號金鑰回退載入，僅支援模型發現與驗證。點擊重新整理資料會重新嘗試帳號介面。",
@@ -219,10 +221,20 @@
     "loading": "正在載入模型資料...",
     "profileLoadFailed": "載入該 API 憑據的模型失敗：{{errorMessage}}",
     "profileLoadFailedTitle": "載入該 API 憑據的模型失敗",
-    "retryLoad": "重新嘗試載入"
+    "retryLoad": "重新嘗試載入",
+    "sub2apiKeyScopedDescription": "Sub2API 不提供帳號級模型列表。擴充功能會透過該帳號下的 API 密鑰取得實際可用模型。",
+    "sub2apiKeyScopedFallbackDescription": "請選擇一個 API 密鑰；如果只有一個可用密鑰，擴充功能會自動使用它載入模型。",
+    "sub2apiKeyScopedFallbackTitle": "透過密鑰取得模型",
+    "sub2apiKeyScopedTitle": "正在透過 API 密鑰取得模型列表"
   },
   "title": "模型列表",
   "totalModels_other": "總計 {{count}} 個模型",
   "unavailable": "不可用",
+  "unavailablePriceReasons": {
+    "keyGroupUnknown": "價格不可用，因為無法解析此金鑰的 Sub2API 分組。",
+    "modelListOnly": "此金鑰可使用這些模型，但價格不可用。",
+    "officialPriceMissing": "此模型不在價格表中。",
+    "pricingSourceUnavailable": "此來源的價格資料不可用。"
+  },
   "userGroup": "使用者分組"
 }

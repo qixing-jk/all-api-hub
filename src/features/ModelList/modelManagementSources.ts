@@ -1,3 +1,4 @@
+import type { ModelListSourceInfo } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
@@ -16,6 +17,7 @@ const MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES = {
 } as const
 
 export type ModelManagementSourceCapabilities = {
+  supportsRuntimeModelList?: boolean
   supportsPricing: boolean
   supportsRatioDisplay: boolean
   supportsGroupFiltering: boolean
@@ -159,6 +161,33 @@ export function toAihubmixCatalogFallbackCapabilities(
   return {
     ...toAihubmixModelListCapabilities(capabilities),
     supportsAccountSummary: false,
+  }
+}
+
+/**
+ * Applies response-level model-list source capability overrides for display.
+ */
+export function deriveModelListSourceCapabilities(params: {
+  capabilities: ModelManagementSourceCapabilities
+  modelListSource?: Pick<
+    ModelListSourceInfo,
+    "supportsRuntimeModelList" | "supportsPricing"
+  >
+}): ModelManagementSourceCapabilities {
+  const { capabilities, modelListSource } = params
+
+  if (!modelListSource) return capabilities
+
+  const pricingCapabilities =
+    modelListSource.supportsPricing === false
+      ? toCatalogOnlyCapabilities(capabilities)
+      : capabilities
+
+  return {
+    ...pricingCapabilities,
+    ...(typeof modelListSource.supportsRuntimeModelList === "boolean"
+      ? { supportsRuntimeModelList: modelListSource.supportsRuntimeModelList }
+      : {}),
   }
 }
 

@@ -20,6 +20,8 @@ import {
   type CalculatedPrice,
 } from "~/services/models/utils/modelPricing"
 
+import { getUnavailablePriceReasonText } from "./ModelItemPricing"
+
 interface ModelItemDetailsProps {
   model: ModelPricing
   calculatedPrice: CalculatedPrice
@@ -46,6 +48,8 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
   if (!showGroupDetails && !showEndpointTypes && !showPricingDetails) {
     return null
   }
+
+  const priceUnavailable = calculatedPrice.priceAvailability === "unavailable"
 
   return (
     <>
@@ -130,30 +134,40 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                 {t("detailedPricing")}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="space-y-1">
-                <div className="dark:text-dark-text-tertiary text-gray-500">
-                  {t("input1MTokens")}
+            {priceUnavailable ? (
+              <div className="dark:text-dark-text-secondary text-xs leading-snug text-gray-600">
+                {getUnavailablePriceReasonText(
+                  t,
+                  calculatedPrice.unavailableReason ??
+                    model.price_metadata?.unavailable_reason,
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="space-y-1">
+                  <div className="dark:text-dark-text-tertiary text-gray-500">
+                    {t("input1MTokens")}
+                  </div>
+                  <div className="dark:text-dark-text-primary font-medium text-gray-900">
+                    USD: {formatPrice(calculatedPrice.inputUSD, "USD")}
+                  </div>
+                  <div className="dark:text-dark-text-primary font-medium text-gray-900">
+                    CNY: {formatPrice(calculatedPrice.inputCNY, "CNY")}
+                  </div>
                 </div>
-                <div className="dark:text-dark-text-primary font-medium text-gray-900">
-                  USD: {formatPrice(calculatedPrice.inputUSD, "USD")}
-                </div>
-                <div className="dark:text-dark-text-primary font-medium text-gray-900">
-                  CNY: {formatPrice(calculatedPrice.inputCNY, "CNY")}
+                <div className="space-y-1">
+                  <div className="dark:text-dark-text-tertiary text-gray-500">
+                    {t("output1MTokens")}
+                  </div>
+                  <div className="dark:text-dark-text-primary font-medium text-gray-900">
+                    USD: {formatPrice(calculatedPrice.outputUSD, "USD")}
+                  </div>
+                  <div className="dark:text-dark-text-primary font-medium text-gray-900">
+                    CNY: {formatPrice(calculatedPrice.outputCNY, "CNY")}
+                  </div>
                 </div>
               </div>
-              <div className="space-y-1">
-                <div className="dark:text-dark-text-tertiary text-gray-500">
-                  {t("output1MTokens")}
-                </div>
-                <div className="dark:text-dark-text-primary font-medium text-gray-900">
-                  USD: {formatPrice(calculatedPrice.outputUSD, "USD")}
-                </div>
-                <div className="dark:text-dark-text-primary font-medium text-gray-900">
-                  CNY: {formatPrice(calculatedPrice.outputCNY, "CNY")}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>

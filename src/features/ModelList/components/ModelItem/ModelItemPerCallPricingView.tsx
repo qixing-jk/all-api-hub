@@ -1,6 +1,6 @@
 import {
   formatPriceCompact,
-  type CalculatedPrice,
+  type AvailableCalculatedPrice,
   type PerCallPrice,
 } from "~/services/models/utils/modelPricing"
 
@@ -34,7 +34,8 @@ export const ModelItemPerCallPricingView = ({
       </span>
     )
   } else {
-    const calculatedPrice: CalculatedPrice = {
+    const calculatedPrice: AvailableCalculatedPrice = {
+      priceAvailability: "available",
       inputUSD: perCallPrice.input,
       inputCNY: perCallPrice.input * exchangeRate,
       outputUSD: perCallPrice.output,

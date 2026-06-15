@@ -96,6 +96,8 @@
   "displayOptions": "Tùy chọn hiển thị:",
   "endpointType": "Loại endpoint",
   "endpointTypes": "Loại endpoint",
+  "estimatedPrice": "Ước tính",
+  "estimatedPriceTitle": "Ước tính từ bảng giá chính thức và tỷ lệ nhóm Sub2API của khóa này.",
   "expandDetails": "Mở rộng chi tiết",
   "fallbackSourceNotice": {
     "description": "Thư mục mô hình hiện tại được tải dự phòng thông qua khóa tài khoản, chỉ hỗ trợ phát hiện và xác minh mô hình. Nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
@@ -219,10 +221,20 @@
     "loading": "Đang tải dữ liệu mô hình...",
     "profileLoadFailed": "Tải mô hình của thông tin xác thực API này thất bại: {{errorMessage}}",
     "profileLoadFailedTitle": "Tải mô hình của thông tin xác thực API này thất bại",
-    "retryLoad": "Thử tải lại"
+    "retryLoad": "Thử tải lại",
+    "sub2apiKeyScopedDescription": "Sub2API không cung cấp danh sách mô hình ở cấp tài khoản. Tiện ích sẽ dùng API key của tài khoản này để lấy các mô hình thực sự có thể sử dụng.",
+    "sub2apiKeyScopedFallbackDescription": "Chọn một API key. Nếu chỉ có một key khả dụng, tiện ích sẽ tự động dùng key đó để tải mô hình.",
+    "sub2apiKeyScopedFallbackTitle": "Lấy mô hình qua key",
+    "sub2apiKeyScopedTitle": "Đang lấy danh sách mô hình qua API key"
   },
   "title": "Danh sách mô hình",
   "totalModels_other": "Tổng cộng {{count}} mô hình",
   "unavailable": "Không khả dụng",
+  "unavailablePriceReasons": {
+    "keyGroupUnknown": "Không có giá vì không thể xác định nhóm Sub2API của khóa này.",
+    "modelListOnly": "Các mô hình này khả dụng cho khóa này. Không có dữ liệu giá.",
+    "officialPriceMissing": "Mô hình này không có trong bảng giá.",
+    "pricingSourceUnavailable": "Dữ liệu giá không khả dụng cho nguồn này."
+  },
   "userGroup": "Nhóm người dùng"
 }

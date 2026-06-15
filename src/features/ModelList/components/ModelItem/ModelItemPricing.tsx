@@ -1,13 +1,24 @@
+import type { TFunction } from "i18next"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
-import { formatGroupLabelFromRatios } from "~/features/ModelList/groupLabels"
+import {
+  formatGroupLabelFromRatios,
+  resolveGroupRatio,
+} from "~/features/ModelList/groupLabels"
 import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
   type ModelListGroupSelectionScope,
 } from "~/features/ModelList/groupSelectionScopes"
-import type { ModelPricing } from "~/services/apiService/common/type"
+import {
+  isModelPriceUnavailable,
+  MODEL_PRICE_PRECISION_KINDS,
+  MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
+  type ModelPricing,
+  type ModelUnavailablePriceReason,
+} from "~/services/apiService/common/type"
 import {
   formatPriceCompact,
   isTokenBillingType,
@@ -35,6 +46,26 @@ interface ModelItemPricingProps {
 interface PriceMetaBadgeViewModel {
   kind: "optimal-group" | "lowest-price"
   variant: "success" | "secondary"
+}
+
+/**
+ * Maps unavailable-price metadata to local model-list copy.
+ */
+export function getUnavailablePriceReasonText(
+  t: TFunction<"modelList">,
+  reason?: ModelUnavailablePriceReason,
+) {
+  switch (reason) {
+    case MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY:
+      return t("unavailablePriceReasons.modelListOnly")
+    case MODEL_UNAVAILABLE_PRICE_REASONS.KEY_GROUP_UNKNOWN:
+      return t("unavailablePriceReasons.keyGroupUnknown")
+    case MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING:
+      return t("unavailablePriceReasons.officialPriceMissing")
+    case MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE:
+    default:
+      return t("unavailablePriceReasons.pricingSourceUnavailable")
+  }
 }
 
 /**
@@ -87,8 +118,19 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     return null
   }
 
+  const priceUnavailable =
+    isModelPriceUnavailable(model) ||
+    calculatedPrice.priceAvailability === "unavailable"
   const tokenBillingType = isTokenBillingType(model.quota_type)
   const perCallPrice = calculatedPrice.perCallPrice
+  const estimatedPriceUsesDirectTokenPrice =
+    model.price_metadata?.source ===
+      MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE &&
+    model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+  const displayRatio =
+    estimatedPriceUsesDirectTokenPrice && effectiveGroup
+      ? resolveGroupRatio(effectiveGroup, groupRatios)
+      : model.model_ratio
   const effectiveGroupLabel = effectiveGroup
     ? formatGroupLabelFromRatios(effectiveGroup, groupRatios)
     : undefined
@@ -137,6 +179,40 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       {priceMetaLabel}
     </Badge>
   ) : null
+  const estimatedPriceMeta =
+    model.price_metadata?.precision ===
+    MODEL_PRICE_PRECISION_KINDS.ESTIMATED ? (
+      <Badge
+        variant="warning"
+        size="sm"
+        className="shrink-0 text-[10px] sm:text-xs"
+        title={t("estimatedPriceTitle")}
+      >
+        {t("estimatedPrice")}
+      </Badge>
+    ) : null
+
+  if (priceUnavailable) {
+    const unavailableReason =
+      model.price_metadata?.unavailable_reason ??
+      (calculatedPrice.priceAvailability === "unavailable"
+        ? calculatedPrice.unavailableReason
+        : undefined)
+
+    return (
+      <div className="mt-2">
+        <span
+          className={`block max-w-full text-xs leading-snug font-medium sm:text-sm ${
+            isAvailableForUser
+              ? "dark:text-dark-text-secondary text-gray-600"
+              : "dark:text-dark-text-tertiary text-gray-500"
+          }`}
+        >
+          {getUnavailablePriceReasonText(t, unavailableReason)}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className="mt-2">
@@ -150,7 +226,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
             formatPriceCompact={formatPriceCompact}
           />
 
-          {(showRatioColumn || priceMeta) && (
+          {(showRatioColumn || priceMeta || estimatedPriceMeta) && (
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {showRatioColumn && (
                 <>
@@ -164,16 +240,17 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
                         : "dark:text-dark-text-tertiary text-gray-500"
                     }`}
                   >
-                    {model.model_ratio}x
+                    {displayRatio}x
                   </span>
                 </>
               )}
               {priceMeta}
+              {estimatedPriceMeta}
             </div>
           )}
         </div>
       ) : (
-        perCallPrice && (
+        perCallPrice !== undefined && (
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span className="dark:text-dark-text-secondary text-xs whitespace-nowrap text-gray-600 sm:text-sm">
               {t("perCall")}
@@ -186,6 +263,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
               tokenBillingType={tokenBillingType}
             />
             {priceMeta}
+            {estimatedPriceMeta}
           </div>
         )
       )}

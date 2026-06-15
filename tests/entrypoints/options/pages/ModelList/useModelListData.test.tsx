@@ -472,6 +472,129 @@ describe("useModelListData", () => {
     })
   })
 
+  it("derives runtime model-list display capabilities from response metadata", async () => {
+    mockUseModelData.mockReturnValue({
+      pricingData: {
+        data: [],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+        model_list_source: {
+          kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+          provider: SITE_TYPES.SUB2API,
+          supportsRuntimeModelList: true,
+          supportsPricing: false,
+        },
+      },
+      pricingContexts: [],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
+    })
+
+    expect(result.current.sourceCapabilities).toMatchObject({
+      supportsRuntimeModelList: true,
+      supportsPricing: false,
+      supportsRatioDisplay: false,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+      supportsTokenCompatibility: true,
+      supportsCredentialVerification: true,
+      supportsBatchCredentialVerification: true,
+      supportsCliVerification: true,
+    })
+  })
+
+  it("keeps Sub2API fallback estimated pricing and group ratio display enabled", async () => {
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [
+        {
+          ...ACCOUNT,
+          siteType: SITE_TYPES.SUB2API,
+        },
+      ],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: {
+        data: [],
+        group_ratio: {
+          default: 1,
+        },
+        success: true,
+        usable_group: {
+          default: "default",
+        },
+        model_list_source: {
+          kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+          provider: SITE_TYPES.SUB2API,
+          supportsRuntimeModelList: true,
+          supportsPricing: true,
+        },
+      },
+      pricingContexts: [],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: {
+        isAvailable: true,
+        isActive: true,
+        hasLoadedTokens: true,
+        isLoadingTokens: false,
+        isLoadingCatalog: false,
+        tokenLoadErrorMessage: null,
+        catalogLoadErrorMessage: null,
+        tokens: [],
+        selectedTokenId: null,
+        activeTokenName: "Runtime key",
+        loadTokens: vi.fn(),
+        setSelectedTokenId: vi.fn(),
+        loadCatalog: vi.fn(),
+      },
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
+    })
+
+    expect(result.current.isFallbackCatalogActive).toBe(true)
+    expect(result.current.sourceCapabilities).toMatchObject({
+      supportsRuntimeModelList: true,
+      supportsPricing: true,
+      supportsRatioDisplay: true,
+      supportsGroupFiltering: true,
+      supportsAccountSummary: false,
+      supportsTokenCompatibility: true,
+      supportsCredentialVerification: true,
+      supportsBatchCredentialVerification: true,
+      supportsCliVerification: true,
+    })
+  })
+
   it("exposes AIHubMix catalog fallback notice state without globally downgrading all-accounts capabilities", async () => {
     const aihubmixAccount: DisplaySiteData = {
       ...ACCOUNT,

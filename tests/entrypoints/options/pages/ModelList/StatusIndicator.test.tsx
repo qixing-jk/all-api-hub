@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { StatusIndicator } from "~/features/ModelList/components/StatusIndicator"
 import {
   createAccountSource,
@@ -27,6 +28,49 @@ const ACCOUNT = {
 } as const
 
 describe("StatusIndicator", () => {
+  it("shows Sub2API key-scoped model loading as an expected info state", async () => {
+    const sub2apiAccount = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.SUB2API,
+    }
+
+    render(
+      <StatusIndicator
+        selectedSource={createAccountSource(sub2apiAccount as any)}
+        isLoading={false}
+        dataFormatError={false}
+        loadErrorMessage={null}
+        currentAccount={sub2apiAccount as any}
+        loadPricingData={vi.fn()}
+        accountFallback={{
+          isAvailable: true,
+          isActive: false,
+          hasLoadedTokens: false,
+          isLoadingTokens: true,
+          isLoadingCatalog: false,
+          tokenLoadErrorMessage: null,
+          catalogLoadErrorMessage: null,
+          tokens: [],
+          selectedTokenId: null,
+          activeTokenName: null,
+          loadTokens: vi.fn(),
+          setSelectedTokenId: vi.fn(),
+          loadCatalog: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText("modelList:status.sub2apiKeyScopedTitle"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("modelList:status.sub2apiKeyScopedDescription"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:status.genericLoadFailedTitle"),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows automatic key loading feedback before the fallback list is ready", async () => {
     render(
       <StatusIndicator

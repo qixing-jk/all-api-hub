@@ -168,7 +168,9 @@ const PROFILE_SOURCE = {
 
 type CalculatedModelOverrides = {
   model?: Partial<ModelPricing>
-  calculatedPrice?: Partial<CalculatedPrice>
+  calculatedPrice?: Partial<
+    Extract<CalculatedPrice, { priceAvailability?: "available" }>
+  >
   source?: CalculatedModelItem["source"]
   effectiveGroup?: string
 }

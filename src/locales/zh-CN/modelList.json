@@ -96,6 +96,8 @@
   "displayOptions": "显示选项:",
   "endpointType": "端点类型",
   "endpointTypes": "端点类型",
+  "estimatedPrice": "估算价",
+  "estimatedPriceTitle": "基于官方价格表和此密钥的 Sub2API 分组倍率估算。",
   "expandDetails": "展开详细信息",
   "fallbackSourceNotice": {
     "description": "当前模型目录通过账号密钥回退加载，仅支持模型发现与验证。点击刷新数据会重新尝试账号接口。",
@@ -219,10 +221,20 @@
     "loading": "正在加载模型数据...",
     "profileLoadFailed": "加载该 API 凭据的模型失败：{{errorMessage}}",
     "profileLoadFailedTitle": "加载该 API 凭据的模型失败",
-    "retryLoad": "重新尝试加载"
+    "retryLoad": "重新尝试加载",
+    "sub2apiKeyScopedDescription": "Sub2API 不提供账号级模型列表。插件会通过该账号下的 API 密钥获取实际可用模型。",
+    "sub2apiKeyScopedFallbackDescription": "请选择一个 API 密钥；如果只有一个可用密钥，插件会自动使用它加载模型。",
+    "sub2apiKeyScopedFallbackTitle": "通过密钥获取模型",
+    "sub2apiKeyScopedTitle": "正在通过 API 密钥获取模型列表"
   },
   "title": "模型列表",
   "totalModels": "总计 {{count}} 个模型",
   "unavailable": "不可用",
+  "unavailablePriceReasons": {
+    "keyGroupUnknown": "价格不可用，因为无法解析此密钥的 Sub2API 分组。",
+    "modelListOnly": "此密钥可使用这些模型，但价格不可用。",
+    "officialPriceMissing": "此模型不在价格表中。",
+    "pricingSourceUnavailable": "此来源的价格数据不可用。"
+  },
   "userGroup": "用户分组"
 }

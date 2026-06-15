@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next"
 
-import { CalculatedPrice } from "~/services/models/utils/modelPricing"
+import type { AvailableCalculatedPrice } from "~/services/models/utils/modelPricing"
 import { CurrencyType } from "~/types"
 
 interface PriceViewProps {
-  calculatedPrice: CalculatedPrice
+  calculatedPrice: AvailableCalculatedPrice
   showRealPrice: boolean
   tokenBillingType: boolean
   isAvailableForUser: boolean

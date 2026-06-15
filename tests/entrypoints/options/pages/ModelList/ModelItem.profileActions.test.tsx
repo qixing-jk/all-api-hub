@@ -8,6 +8,11 @@ import {
   toAihubmixCatalogFallbackCapabilities,
   toCatalogOnlyCapabilities,
 } from "~/features/ModelList/modelManagementSources"
+import {
+  MODEL_PRICE_PRECISION_KINDS,
+  MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
+} from "~/services/apiService/common/type"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createProfileModelVerificationHistoryTarget,
@@ -509,6 +514,75 @@ describe("ModelItem profile actions", () => {
         name: "modelList:expandDetails",
       }),
     ).not.toBeInTheDocument()
+  })
+
+  it("keeps model-list-only rows visually available while showing unavailable pricing copy", async () => {
+    const accountSource = createAccountSource({
+      id: "account-model-list-only",
+      name: "Example Account",
+      username: "tester",
+      balance: { USD: 0, CNY: 0 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: SiteHealthStatus.Healthy },
+      siteType: "new-api",
+      baseUrl: "https://example.com",
+      token: "token",
+      userId: "1",
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: { enableDetection: false },
+    })
+
+    render(
+      <ModelItem
+        model={{
+          model_name: "example-runtime-model",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 0,
+          enable_groups: [],
+          supported_endpoint_types: [],
+          price_metadata: {
+            source: MODEL_PRICE_SOURCE_KINDS.NONE,
+            precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+            unavailable_reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+          },
+        }}
+        calculatedPrice={{
+          priceAvailability: "unavailable",
+          unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+        }}
+        exchangeRate={1}
+        showRealPrice={false}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        groupRatios={{ default: 1 }}
+        selectedGroups={["default"]}
+        availableGroups={["default"]}
+        source={accountSource}
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        "modelList:unavailablePriceReasons.modelListOnly",
+      ),
+    ).toBeInTheDocument()
+
+    expect(screen.getByText("modelList:available")).toBeInTheDocument()
+    expect(screen.queryByText("modelList:unavailable")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/modelList:clickSwitchGroup/),
+    ).not.toBeInTheDocument()
+
+    expect(
+      screen.getByRole("heading", { name: "example-runtime-model" }),
+    ).toHaveClass("text-gray-900")
+    expect(
+      screen.getByRole("heading", { name: "example-runtime-model" }),
+    ).not.toHaveClass("text-gray-500")
   })
 
   it("hides the model-key action for account catalog fallback rows without token compatibility", async () => {

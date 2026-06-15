@@ -12,6 +12,9 @@ import {
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import {
   MODEL_LIST_SOURCE_KINDS,
+  MODEL_PRICE_PRECISION_KINDS,
+  MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
 } from "~/services/apiService/common/type"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
@@ -1774,6 +1777,244 @@ describe("useFilteredModels", () => {
       expect(
         result.current.filteredModels.map((item) => item.model.model_name),
       ).toEqual(["per-call-a", "per-call-b"])
+    })
+  })
+
+  it("sorts model-list-only rows after comparable priced rows", async () => {
+    const account = createDisplayAccount({
+      id: "account-model-list-only-pricing",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const pricingData = createPricingResponse([
+      {
+        model_name: "priced-expensive-model",
+        model_ratio: 4,
+        completion_ratio: 1,
+        enable_groups: ["default"],
+      },
+      {
+        model_name: "example-runtime-model",
+        model_ratio: 0,
+        completion_ratio: 0,
+        enable_groups: [],
+        price_metadata: {
+          source: MODEL_PRICE_SOURCE_KINDS.NONE,
+          precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+          unavailable_reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+        },
+      },
+      {
+        model_name: "priced-cheap-model",
+        model_ratio: 1,
+        completion_ratio: 1,
+        enable_groups: ["default"],
+      },
+    ])
+
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual([
+        "priced-cheap-model",
+        "priced-expensive-model",
+        "example-runtime-model",
+      ])
+    })
+
+    rerender({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_DESC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual([
+        "priced-expensive-model",
+        "priced-cheap-model",
+        "example-runtime-model",
+      ])
+    })
+  })
+
+  it("keeps unavailable-price model-list-only rows visible for token and per-call billing filters", async () => {
+    const account = createDisplayAccount({
+      id: "account-model-list-only-filters",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const pricingData = createPricingResponse([
+      {
+        model_name: "example-runtime-model",
+        quota_type: 0,
+        model_ratio: 0,
+        completion_ratio: 0,
+        enable_groups: [],
+        price_metadata: {
+          source: MODEL_PRICE_SOURCE_KINDS.NONE,
+          precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+          unavailable_reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+        },
+      },
+      {
+        model_name: "example-priced-model",
+        quota_type: 0,
+        model_ratio: 1,
+        completion_ratio: 1,
+        enable_groups: ["default"],
+      },
+    ])
+
+    const source = createAccountSource(account)
+
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData,
+      selectedSource: source,
+      selectedBillingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["example-runtime-model", "example-priced-model"])
+    })
+
+    rerender({
+      pricingData,
+      selectedSource: source,
+      selectedBillingMode: MODEL_LIST_BILLING_MODES.PER_CALL,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["example-runtime-model"])
+    })
+  })
+
+  it("keeps unavailable-price rows stable after sorting comparable priced rows", async () => {
+    const account = createDisplayAccount({
+      id: "account-stable-unavailable",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const pricingData = createPricingResponse([
+      {
+        model_name: "priced-expensive-model",
+        model_ratio: 4,
+        completion_ratio: 1,
+        enable_groups: ["default"],
+      },
+      {
+        model_name: "example-runtime-model-a",
+        model_ratio: 0,
+        completion_ratio: 0,
+        enable_groups: [],
+        price_metadata: {
+          source: MODEL_PRICE_SOURCE_KINDS.NONE,
+          precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+          unavailable_reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+        },
+      },
+      {
+        model_name: "priced-cheap-model",
+        model_ratio: 1,
+        completion_ratio: 1,
+        enable_groups: ["default"],
+      },
+      {
+        model_name: "example-runtime-model-b",
+        model_ratio: 0,
+        completion_ratio: 0,
+        enable_groups: [],
+        price_metadata: {
+          source: MODEL_PRICE_SOURCE_KINDS.NONE,
+          precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+          unavailable_reason:
+            MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+        },
+      },
+    ])
+
+    const { result } = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual([
+        "priced-cheap-model",
+        "priced-expensive-model",
+        "example-runtime-model-a",
+        "example-runtime-model-b",
+      ])
+    })
+
+    expect(
+      result.current.filteredModels.map((item) => [
+        item.model.model_name,
+        item.calculatedPrice.priceAvailability,
+        item.isLowestPrice,
+      ]),
+    ).toEqual([
+      ["priced-cheap-model", "available", false],
+      ["priced-expensive-model", "available", false],
+      ["example-runtime-model-a", "unavailable", false],
+      ["example-runtime-model-b", "unavailable", false],
+    ])
+  })
+
+  it("ignores stale pricing filters when response metadata disables pricing", async () => {
+    const account = createDisplayAccount({
+      id: "account-runtime-list-only",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "example-runtime-token-model",
+            quota_type: 0,
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+          },
+          {
+            model_name: "example-runtime-call-model",
+            quota_type: 1,
+            model_price: 1,
+            enable_groups: ["default"],
+          },
+        ],
+        {
+          model_list_source: {
+            kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+            supportsRuntimeModelList: true,
+            supportsPricing: false,
+          },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      selectedBillingMode: MODEL_LIST_BILLING_MODES.PER_CALL,
+      selectedGroups: ["stale-group"],
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["example-runtime-token-model", "example-runtime-call-model"])
     })
   })
 })

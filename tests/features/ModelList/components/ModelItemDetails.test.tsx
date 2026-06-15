@@ -3,6 +3,11 @@ import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ModelItemDetails } from "~/features/ModelList/components/ModelItem/ModelItemDetails"
+import {
+  MODEL_PRICE_PRECISION_KINDS,
+  MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
+} from "~/services/apiService/common/type"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { formatPriceMock, getEndpointTypesTextMock, isTokenBillingTypeMock } =
@@ -246,6 +251,46 @@ describe("ModelItemDetails", () => {
     expect(screen.getByText("USD: USD:2.5")).toBeInTheDocument()
     expect(screen.getByText("CNY: CNY:17.5")).toBeInTheDocument()
     expect(formatPriceMock).toHaveBeenCalledTimes(4)
+  })
+
+  it("shows an unavailable-price explanation instead of zero details", async () => {
+    render(
+      <ModelItemDetails
+        model={
+          {
+            enable_groups: ["default"],
+            supported_endpoint_types: ["chat"],
+            quota_type: 0,
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.NONE,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+              unavailable_reason:
+                MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
+            },
+          } as any
+        }
+        calculatedPrice={
+          {
+            priceAvailability: "unavailable",
+            unavailableReason:
+              MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
+          } as any
+        }
+        showEndpointTypes={false}
+        groupRatios={{}}
+        effectiveGroup="default"
+        showGroupDetails={false}
+        showPricingDetails={true}
+      />,
+    )
+
+    expect(await screen.findByText("detailedPricing")).toBeInTheDocument()
+    expect(
+      screen.getByText("unavailablePriceReasons.officialPriceMissing"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/^USD:/)).toBeNull()
+    expect(screen.queryByText(/^CNY:/)).toBeNull()
+    expect(formatPriceMock).not.toHaveBeenCalled()
   })
 
   it("falls back to a 1x tooltip when group ratios are missing", async () => {

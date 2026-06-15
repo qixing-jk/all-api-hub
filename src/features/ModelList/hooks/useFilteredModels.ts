@@ -4,6 +4,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { applyAihubmixModelListCapabilities } from "~/features/ModelList/aihubmixModelList"
 import {
   createAccountSource,
+  deriveModelListSourceCapabilities,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
@@ -11,7 +12,10 @@ import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
-import type { PricingResponse } from "~/services/apiService/common/type"
+import {
+  isModelPriceUnavailable,
+  type PricingResponse,
+} from "~/services/apiService/common/type"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import {
   calculateModelPrice,
@@ -111,6 +115,17 @@ function getComparablePriceKey(
   item: Pick<CalculatedModelItem, "model" | "calculatedPrice" | "source">,
   showRealPrice: boolean,
 ): ComparablePriceKey {
+  if (
+    isModelPriceUnavailable(item.model) ||
+    item.calculatedPrice.priceAvailability === "unavailable"
+  ) {
+    return {
+      billingMode: getModelBillingMode(item.model.quota_type),
+      primary: null,
+      secondary: null,
+    }
+  }
+
   if (isTokenBillingType(item.model.quota_type)) {
     const inputPrice = showRealPrice
       ? item.calculatedPrice.inputCNY
@@ -156,12 +171,16 @@ function getComparablePriceKey(
 }
 
 /** Orders nullable numbers with finite values before missing ones. */
-function compareNullableNumber(a: number | null, b: number | null) {
+function compareNullableNumber(
+  a: number | null,
+  b: number | null,
+  direction: 1 | -1,
+) {
   const aValid = isFiniteNumber(a)
   const bValid = isFiniteNumber(b)
 
   if (aValid && bValid) {
-    return a - b
+    return (a - b) * direction
   }
 
   if (aValid) {
@@ -181,17 +200,30 @@ function comparePriceKeys(
   b: ComparablePriceKey,
   direction: 1 | -1,
 ) {
-  const primaryComparison = compareNullableNumber(a.primary, b.primary)
+  const primaryComparison = compareNullableNumber(
+    a.primary,
+    b.primary,
+    direction,
+  )
   if (primaryComparison !== 0) {
-    return primaryComparison * direction
+    return primaryComparison
   }
 
-  const secondaryComparison = compareNullableNumber(a.secondary, b.secondary)
+  const secondaryComparison = compareNullableNumber(
+    a.secondary,
+    b.secondary,
+    direction,
+  )
   if (secondaryComparison !== 0) {
-    return secondaryComparison * direction
+    return secondaryComparison
   }
 
   return 0
+}
+
+/** Returns true when a price key has at least one finite comparable value. */
+function hasComparablePriceValue(priceKey: ComparablePriceKey) {
+  return isFiniteNumber(priceKey.primary) || isFiniteNumber(priceKey.secondary)
 }
 
 /** Creates a stable identifier for a calculated model item. */
@@ -254,8 +286,12 @@ function getModelBillingMode(quotaType: number): PricingBillingMode {
 
 /** Returns true when row pricing metadata should affect filters and sorting. */
 function supportsPricingDerivedBehavior(
-  item: Pick<CalculatedModelItem, "source">,
+  item: Pick<CalculatedModelItem, "model" | "source">,
 ) {
+  if (isModelPriceUnavailable(item.model)) {
+    return false
+  }
+
   return (
     item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
     item.source.capabilities.supportsPricing
@@ -275,7 +311,11 @@ function resolveBestCalculatedItem(
     supportsGroupFiltering,
   )
 
-  if (supportsGroupFiltering && candidateGroups.length === 0) {
+  if (
+    supportsGroupFiltering &&
+    candidateGroups.length === 0 &&
+    supportsPricingDerivedBehavior(rawItem)
+  ) {
     return null
   }
 
@@ -409,7 +449,13 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
           },
         }
         const source = applyAihubmixModelListCapabilities(
-          allAccountsRowSource,
+          {
+            ...allAccountsRowSource,
+            capabilities: deriveModelListSourceCapabilities({
+              capabilities: allAccountsRowSource.capabilities,
+              modelListSource: pricing.model_list_source,
+            }),
+          },
           pricing,
         )
 
@@ -446,7 +492,13 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
     const source = applyAihubmixModelListCapabilities(
-      selectedSource,
+      {
+        ...selectedSource,
+        capabilities: deriveModelListSourceCapabilities({
+          capabilities: selectedSource.capabilities,
+          modelListSource: pricingData.model_list_source,
+        }),
+      },
       pricingData,
     )
 
@@ -689,6 +741,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
       if (supportsGroupFiltering) {
         filtered = filtered.filter((item) => {
+          if (!supportsPricingDerivedBehavior(item)) {
+            return true
+          }
+
           const itemSupportsGroupFiltering =
             item.source.capabilities.supportsGroupFiltering
           return (
@@ -843,6 +899,12 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     const priceKeys = new Map<string, ComparablePriceKey>()
     providerFilteredModels.forEach((item) => {
       if (!supportsPricingDerivedBehavior(item)) {
+        if (isModelPriceUnavailable(item.model)) {
+          priceKeys.set(
+            getModelItemKey(item),
+            getComparablePriceKey(item, showRealPrice),
+          )
+        }
         return
       }
 
@@ -871,11 +933,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       groups.forEach((groupItems) => {
         const comparableItems = groupItems.filter((item) => {
           const priceKey = priceKeys.get(getModelItemKey(item))
-          return (
-            priceKey &&
-            (isFiniteNumber(priceKey.primary) ||
-              isFiniteNumber(priceKey.secondary))
-          )
+          return priceKey && hasComparablePriceValue(priceKey)
         })
 
         if (comparableItems.length === 0) {
@@ -990,20 +1048,15 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
                   item,
                 ): item is (typeof indexedItems)[number] & {
                   priceKey: ComparablePriceKey
-                } => !!item.priceKey,
+                } => !!item.priceKey && hasComparablePriceValue(item.priceKey),
               )
               .sort(comparePricedRows)
 
-            let pricedIndex = 0
-            return indexedItems.map((item) => {
-              if (!item.priceKey) {
-                return item
-              }
-
-              const nextPricedItem = pricedItems[pricedIndex]
-              pricedIndex += 1
-              return nextPricedItem ?? item
-            })
+            const missingPriceItems = indexedItems.filter(
+              (item) =>
+                !item.priceKey || !hasComparablePriceValue(item.priceKey),
+            )
+            return [...pricedItems, ...missingPriceItems]
           })()
 
     return sortedWithIndices.map(({ item, itemKey }) => ({
