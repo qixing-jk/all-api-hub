@@ -94,7 +94,6 @@ function renderModelItemHeader(quotaType: number) {
       isAvailableForUser={true}
       handleCopyModelName={vi.fn()}
       showPricingMetadata={true}
-      showAvailabilityBadge={false}
     />,
   )
 }
@@ -112,7 +111,6 @@ describe("ModelItemHeader", () => {
         isAvailableForUser={true}
         handleCopyModelName={vi.fn()}
         showPricingMetadata={true}
-        showAvailabilityBadge={false}
         onOpenKeyDialog={vi.fn()}
         onVerifyApi={vi.fn()}
         onVerifyCliSupport={vi.fn()}
@@ -175,5 +173,71 @@ describe("ModelItemHeader", () => {
       "flex-[1_1_10rem]",
       "items-center",
     )
+  })
+
+  it("renders available groups as neutral metadata instead of availability status", () => {
+    render(
+      <ModelItemHeader
+        model={
+          {
+            model_name: "gpt-private-model",
+            quota_type: 0,
+          } as any
+        }
+        isAvailableForUser={true}
+        handleCopyModelName={vi.fn()}
+        showPricingMetadata={true}
+        groupSummary={{
+          label: "default (1x)",
+          overflowCount: 1,
+          title: "modelList:availableGroups: default (1x), vip (2x)",
+        }}
+      />,
+    )
+
+    const groupBadge = screen.getByText("default (1x)").closest("[data-slot]")
+    expect(groupBadge).toBeInTheDocument()
+    expect(groupBadge).toHaveAttribute(
+      "title",
+      "modelList:availableGroups: default (1x), vip (2x)",
+    )
+    expect(groupBadge).toHaveAttribute(
+      "aria-label",
+      "modelList:availableGroups: default (1x), vip (2x)",
+    )
+    expect(groupBadge).toHaveClass("bg-secondary")
+    const overflowCount = screen.getByText("+1")
+    expect(overflowCount).toHaveClass(
+      "shrink-0",
+      "rounded-full",
+      "bg-current/10",
+      "px-1.5",
+      "text-[0.85em]",
+      "tabular-nums",
+    )
+    expect(screen.queryByText("modelList:available")).not.toBeInTheDocument()
+  })
+
+  it("omits the count adornment for single-group summaries", () => {
+    render(
+      <ModelItemHeader
+        model={
+          {
+            model_name: "gpt-private-model",
+            quota_type: 0,
+          } as any
+        }
+        isAvailableForUser={true}
+        handleCopyModelName={vi.fn()}
+        showPricingMetadata={true}
+        groupSummary={{
+          label: "default (1x)",
+          title: "modelList:availableGroups: default (1x)",
+        }}
+      />,
+    )
+
+    expect(screen.getByText("default (1x)")).toBeInTheDocument()
+    expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument()
   })
 })

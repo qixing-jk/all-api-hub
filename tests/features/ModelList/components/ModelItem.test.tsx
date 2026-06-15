@@ -55,9 +55,14 @@ vi.mock("react-i18next", async (importOriginal) => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, options?: { group?: string; name?: string }) => {
+      t: (
+        key: string,
+        options?: { group?: string; name?: string; remainingCount?: number },
+      ) => {
         if (options?.group) {
-          return `${key}:${options.group}`
+          return options.remainingCount
+            ? `${key}:${options.group}+${options.remainingCount}`
+            : `${key}:${options.group}`
         }
         if (options?.name) {
           return `${key}:${options.name}`
@@ -75,15 +80,29 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
     onOpenKeyDialog,
     onVerifyApi,
     onVerifyCliSupport,
+    groupSummary,
   }: {
     model: { model_name: string }
     trailingContent?: React.ReactNode
     onOpenKeyDialog?: () => void
     onVerifyApi?: () => void
     onVerifyCliSupport?: () => void
+    groupSummary?: {
+      label: string
+      overflowCount?: number
+      title: string
+    }
   }) => (
     <div>
       {model.model_name}
+      {groupSummary ? (
+        <span title={groupSummary.title}>
+          {groupSummary.label}
+          {typeof groupSummary.overflowCount === "number"
+            ? `+${groupSummary.overflowCount}`
+            : ""}
+        </span>
+      ) : null}
       {onOpenKeyDialog ? (
         <button type="button" onClick={onOpenKeyDialog}>
           key
@@ -239,6 +258,34 @@ describe("ModelItem", () => {
     expect(
       screen.queryByText("availableGroups: vip (1x)"),
     ).not.toBeInTheDocument()
+  })
+
+  it("summarizes model groups in the row header without showing availability status", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        model={{
+          ...props.model,
+          enable_groups: ["default", "vip", "private"],
+        }}
+        groupRatios={{
+          default: 1,
+          vip: 2,
+          private: 3,
+        }}
+        selectedGroups={[]}
+        availableGroups={["default", "vip", "private"]}
+      />,
+    )
+
+    const groupSummary = screen.getByText("default (1x)+2")
+    expect(groupSummary).toHaveAttribute(
+      "title",
+      "availableGroups: default (1x), vip (2x), private (3x)",
+    )
+    expect(screen.queryByText("available")).not.toBeInTheDocument()
   })
 
   it("suppresses the ratio column when either the row or display capabilities do not support ratios", () => {

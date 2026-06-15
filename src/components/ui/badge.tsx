@@ -58,4 +58,20 @@ function Badge({
   )
 }
 
-export { Badge, badgeVariants }
+/**
+ * BadgeAdornment renders short secondary metadata inside a Badge.
+ */
+function BadgeAdornment({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="badge-adornment"
+      className={cn(
+        "shrink-0 rounded-full bg-current/10 px-1.5 text-[0.85em] font-medium tabular-nums",
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Badge, BadgeAdornment, badgeVariants }

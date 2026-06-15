@@ -233,6 +233,22 @@ export default function ModelItem(props: ModelItemProps) {
       : showGroupDetails
         ? activeGroups.some((group) => model.enable_groups.includes(group))
         : true
+  const groupLabels = model.enable_groups.map((group) =>
+    formatGroupLabelFromRatios(group, groupRatios),
+  )
+  const groupSummary =
+    showGroupDetails && groupLabels.length > 0
+      ? {
+          label:
+            groupLabels.length === 1
+              ? groupLabels[0]
+              : formatGroupLabelFromRatios(model.enable_groups[0], groupRatios),
+          ...(groupLabels.length > 1
+            ? { overflowCount: groupLabels.length - 1 }
+            : {}),
+          title: `${t("availableGroups")}: ${groupLabels.join(", ")}`,
+        }
+      : undefined
 
   const modelActionEnableGroups = effectiveGroup
     ? [effectiveGroup]
@@ -322,7 +338,7 @@ export default function ModelItem(props: ModelItemProps) {
             isAvailableForUser={isAvailableForUser}
             handleCopyModelName={handleCopyModelName}
             showPricingMetadata={showPricing}
-            showAvailabilityBadge={showGroupDetails}
+            groupSummary={groupSummary}
             verificationSummary={verificationSummary}
             onOpenKeyDialog={
               source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&

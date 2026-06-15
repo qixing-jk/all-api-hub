@@ -8,7 +8,7 @@ import React from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
-import { Badge, IconButton } from "~/components/ui"
+import { Badge, BadgeAdornment, IconButton } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import { getBillingModeText } from "~/services/models/utils/modelPricing"
@@ -28,7 +28,11 @@ interface ModelItemHeaderProps {
   isAvailableForUser: boolean
   handleCopyModelName: () => void
   showPricingMetadata: boolean
-  showAvailabilityBadge: boolean
+  groupSummary?: {
+    label: string
+    overflowCount?: number
+    title: string
+  }
   verificationSummary?: ApiVerificationHistorySummary | null
   onOpenKeyDialog?: () => void
   onVerifyApi?: () => void
@@ -45,7 +49,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   isAvailableForUser,
   handleCopyModelName,
   showPricingMetadata,
-  showAvailabilityBadge,
+  groupSummary,
   verificationSummary,
   onOpenKeyDialog,
   onVerifyApi,
@@ -162,15 +166,20 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
             </Badge>
           )}
 
-          {showAvailabilityBadge && (
+          {groupSummary && (
             <Badge
-              variant={isAvailableForUser ? "success" : "secondary"}
+              variant="secondary"
               size="sm"
-              className="text-[10px] sm:text-xs"
+              className="max-w-[9rem] min-w-0 text-[10px] sm:text-xs"
+              title={groupSummary.title}
+              aria-label={groupSummary.title}
             >
-              {isAvailableForUser
-                ? t("modelList:available")
-                : t("modelList:unavailable")}
+              <span className="min-w-0 truncate">{groupSummary.label}</span>
+              {typeof groupSummary.overflowCount === "number" && (
+                <BadgeAdornment aria-hidden="true">
+                  +{groupSummary.overflowCount}
+                </BadgeAdornment>
+              )}
             </Badge>
           )}
         </div>
