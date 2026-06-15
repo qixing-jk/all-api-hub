@@ -18,6 +18,7 @@ import {
   fetchCurrentUser,
   fetchSiteStatus,
   fetchSub2ApiAnnouncements,
+  fetchSub2ApiRuntimeModels,
   fetchSupportCheckIn,
   fetchTodayIncome,
   fetchTodayUsage,
@@ -1750,6 +1751,193 @@ describe("apiService sub2api exported operations", () => {
     await expect(
       fetchAccountAvailableModels(baseRequest as any),
     ).resolves.toEqual([])
+  })
+
+  describe("fetchSub2ApiRuntimeModels", () => {
+    const createRuntimeRequest = (
+      overrides: Partial<ApiServiceAccountRequest> = {},
+    ): ApiServiceAccountRequest =>
+      ({
+        baseUrl: "https://sub2.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          apiKey: "runtime-api-key",
+        },
+        ...overrides,
+      }) as ApiServiceAccountRequest
+
+    it("fetches OpenAI-style runtime models with bearer API-key auth", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            object: "list",
+            data: [
+              {
+                id: "example-runtime-model",
+                object: "model",
+                created: 1_700_000_000,
+                owned_by: "example",
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+      ).resolves.toEqual(["example-runtime-model"])
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://sub2.example.com/v1/models",
+        expect.objectContaining({
+          method: "GET",
+          cache: "no-store",
+          headers: expect.objectContaining({
+            Authorization: "Bearer runtime-api-key",
+          }),
+        }),
+      )
+      expect(fetchApi).not.toHaveBeenCalled()
+      expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    })
+
+    it("fetches Sub2API-style runtime models and normalizes IDs", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "example-runtime-model",
+                display_name: "Example Runtime Model",
+                created_at: "2026-06-14T00:00:00.000Z",
+              },
+              {
+                id: " second-runtime-model ",
+                display_name: "Second Runtime Model",
+                created_at: 1_700_000_000,
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+      ).resolves.toEqual(["example-runtime-model", "second-runtime-model"])
+    })
+
+    it("returns an empty list when the runtime model data list is empty", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+      ).resolves.toEqual([])
+    })
+
+    it("rejects malformed runtime model payloads with a validation error", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: [{ id: "" }] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+      ).rejects.toMatchObject({
+        message: "messages:errors.api.invalidResponseFormat",
+        code: API_ERROR_CODES.BUSINESS_ERROR,
+      })
+    })
+
+    it("rejects invalid JSON runtime model responses with a validation error", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response("<html>not json</html>", {
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+        }),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+      ).rejects.toMatchObject({
+        message: "messages:errors.api.invalidResponseFormat",
+        code: API_ERROR_CODES.BUSINESS_ERROR,
+      })
+    })
+
+    it("treats runtime 401 and 403 responses as API-key auth failures", async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }))
+        .mockResolvedValueOnce(new Response("Forbidden", { status: 403 }))
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+      ).rejects.toMatchObject({
+        code: API_ERROR_CODES.HTTP_401,
+      })
+
+      await expect(
+        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+      ).rejects.toMatchObject({
+        code: API_ERROR_CODES.HTTP_401,
+      })
+    })
+
+    it("surfaces Sub2API runtime business errors before auth fallbacks", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            code: "GROUP_DELETED",
+            message: "API Key 所属分组已删除",
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+      ).rejects.toMatchObject({
+        message: "API Key 所属分组已删除",
+        code: API_ERROR_CODES.BUSINESS_ERROR,
+        endpoint: "/v1/models",
+      })
+    })
+
+    it("rejects dashboard access tokens without calling the runtime model endpoint", async () => {
+      const fetchMock = vi.fn()
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(
+          createRuntimeRequest({
+            auth: {
+              authType: AuthTypeEnum.AccessToken,
+              accessToken: "dashboard-jwt",
+            },
+          }),
+        ),
+      ).rejects.toMatchObject({
+        code: API_ERROR_CODES.HTTP_401,
+      })
+
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
   })
 
   it("reuses newer stored auth instead of refreshing again when account storage already rotated the JWT", async () => {

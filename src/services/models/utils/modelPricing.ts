@@ -2,17 +2,36 @@
  * 模型定价计算工具
  */
 
-import type { ModelPricing } from "~/services/apiService/common/type"
+import {
+  isModelPriceUnavailable,
+  type ModelPricing,
+  type ModelUnavailablePriceReason,
+} from "~/services/apiService/common/type"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { CurrencyType } from "~/types"
 import { t } from "~/utils/i18n/core"
 
-export interface CalculatedPrice {
+export type CalculatedPrice =
+  | AvailableCalculatedPrice
+  | UnavailableCalculatedPrice
+
+export interface AvailableCalculatedPrice {
+  priceAvailability?: "available"
   inputUSD: number // 每1M token输入价格（美元）
   outputUSD: number // 每1M token输出价格（美元）
   inputCNY: number // 每1M token输入价格（人民币）
   outputCNY: number // 每1M token输出价格（人民币）
   perCallPrice?: PerCallPrice // 按次计费时每次调用的价格
+}
+
+export interface UnavailableCalculatedPrice {
+  priceAvailability: "unavailable"
+  unavailableReason?: ModelUnavailablePriceReason
+  inputUSD?: undefined
+  outputUSD?: undefined
+  inputCNY?: undefined
+  outputCNY?: undefined
+  perCallPrice?: undefined
 }
 
 export type PerCallPrice = number | { input: number; output: number }
@@ -22,7 +41,7 @@ const TOKEN_PRICE_UNIT_TOKENS = 1_000_000
 const NEW_API_RATIO_BASE_USD_PER_MILLION_TOKENS =
   TOKEN_PRICE_UNIT_TOKENS / NEW_API_QUOTA_PER_USD
 
-type TokenPriceUSD = Pick<CalculatedPrice, "inputUSD" | "outputUSD">
+type TokenPriceUSD = Pick<AvailableCalculatedPrice, "inputUSD" | "outputUSD">
 type PartialTokenPriceUSD = Partial<TokenPriceUSD>
 
 /**
@@ -80,6 +99,13 @@ export const calculateModelPrice = (
   exchangeRate: number,
   userGroup: string = DEFAULT_MODEL_GROUP,
 ): CalculatedPrice => {
+  if (isModelPriceUnavailable(model)) {
+    return {
+      priceAvailability: "unavailable",
+      unavailableReason: model.price_metadata?.unavailable_reason,
+    }
+  }
+
   // 获取用户分组的倍率，默认为1
   const groupMultiplier = groupRatio[userGroup] || 1
 
@@ -93,6 +119,7 @@ export const calculateModelPrice = (
     const outputUSD = directPrice.outputUSD ?? ratioPrice.outputUSD
 
     return {
+      priceAvailability: "available",
       inputUSD,
       outputUSD,
       inputCNY: inputUSD * exchangeRate,
@@ -106,6 +133,7 @@ export const calculateModelPrice = (
     )
 
     return {
+      priceAvailability: "available",
       inputUSD: 0,
       outputUSD: 0,
       inputCNY: 0,

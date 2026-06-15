@@ -3,17 +3,33 @@ import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/a
 import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import { loadModelPriceTable } from "~/services/apiCredentialProfiles/modelPriceTable"
+import {
+  applySub2ApiPriceEstimates,
+  resolveSub2ApiKeyGroupForPriceEstimation,
+} from "~/services/apiCredentialProfiles/sub2apiPriceEstimation"
 import { getApiService } from "~/services/apiService"
-import type {
-  ModelPricing,
-  PricingResponse,
+import {
+  MODEL_LIST_SOURCE_KINDS,
+  MODEL_PRICE_PRECISION_KINDS,
+  MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
+  type ModelPricing,
+  type PricingResponse,
 } from "~/services/apiService/common/type"
+import {
+  fetchAccountTokens,
+  fetchSub2ApiAvailableGroups,
+  fetchSub2ApiGroupRates,
+  fetchSub2ApiRuntimeModels,
+} from "~/services/apiService/sub2api"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { parseDelimitedList } from "~/utils/core/string"
 
 type FetchApiCredentialModelCatalogParams = {
@@ -103,6 +119,30 @@ export async function loadAccountTokenFallbackPricingResponse(
     )
     resolvedTokenKey = resolvedToken.key
 
+    if (params.account.siteType === SITE_TYPES.SUB2API) {
+      const runtimeModelIds = await fetchSub2ApiRuntimeModels({
+        baseUrl: params.account.baseUrl,
+        accountId: params.account.id,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          apiKey: resolvedToken.key,
+        },
+      } as ApiServiceRequest & {
+        auth: ApiServiceRequest["auth"] & { apiKey: string }
+      })
+
+      const modelOnlyResponse =
+        buildSub2ApiRuntimePricingResponse(runtimeModelIds)
+
+      return await loadSub2ApiEstimatedPricingResponse({
+        account: params.account,
+        selectedToken: params.token,
+        resolvedKey: resolvedToken.key,
+        runtimeModelIds,
+        fallbackResponse: modelOnlyResponse,
+      })
+    }
+
     let upstreamModelIds: string[] = []
     try {
       upstreamModelIds = await fetchApiCredentialModelIds({
@@ -151,12 +191,20 @@ export function normalizeApiCredentialModelIds(modelIds: unknown[]) {
 /**
  * Convert a raw model id into the minimal pricing-model shape used by Model List.
  */
-function createProfileCatalogModel(modelId: string): ModelPricing {
+function createProfileCatalogModel(
+  modelId: string,
+  unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+): ModelPricing {
   return {
     model_name: modelId,
     quota_type: 0,
     model_ratio: 0,
     model_price: 0,
+    price_metadata: {
+      source: MODEL_PRICE_SOURCE_KINDS.NONE,
+      precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+      unavailable_reason: unavailableReason,
+    },
     completion_ratio: 1,
     enable_groups: [],
     supported_endpoint_types: [],
@@ -174,7 +222,98 @@ export function buildApiCredentialProfilePricingResponse(
       createProfileCatalogModel(modelId),
     ),
     group_ratio: {},
+    model_list_source: {
+      kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+      supportsPricing: false,
+    },
     success: true,
     usable_group: {},
+  }
+}
+
+/**
+ * Build a Sub2API runtime-key model catalog where model visibility is known
+ * but no JWT/group pricing estimate has been applied yet.
+ */
+function buildSub2ApiRuntimePricingResponse(
+  modelIds: string[],
+  unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+): PricingResponse {
+  return {
+    data: normalizeApiCredentialModelIds(modelIds).map((modelId) =>
+      createProfileCatalogModel(modelId, unavailableReason),
+    ),
+    group_ratio: {},
+    model_list_source: {
+      kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+      provider: SITE_TYPES.SUB2API,
+      supportsRuntimeModelList: true,
+      supportsPricing: false,
+    },
+    success: true,
+    usable_group: {},
+  }
+}
+
+const hasSub2ApiDashboardAuth = (
+  account: LoadAccountTokenFallbackPricingParams["account"],
+): boolean => {
+  return (
+    account.authType === AuthTypeEnum.AccessToken &&
+    typeof account.token === "string" &&
+    account.token.trim().length > 0
+  )
+}
+
+const createSub2ApiDashboardRequest = (
+  account: LoadAccountTokenFallbackPricingParams["account"],
+): ApiServiceRequest => ({
+  baseUrl: account.baseUrl,
+  accountId: account.id,
+  auth: {
+    authType: AuthTypeEnum.AccessToken,
+    userId: account.userId,
+    accessToken: account.token,
+    cookie: account.cookieAuthSessionCookie,
+  },
+})
+
+const loadSub2ApiEstimatedPricingResponse = async (params: {
+  account: LoadAccountTokenFallbackPricingParams["account"]
+  selectedToken: ApiToken
+  resolvedKey: string
+  runtimeModelIds: string[]
+  fallbackResponse: PricingResponse
+}): Promise<PricingResponse> => {
+  if (!hasSub2ApiDashboardAuth(params.account)) {
+    return params.fallbackResponse
+  }
+
+  try {
+    const dashboardRequest = createSub2ApiDashboardRequest(params.account)
+    const [groups, groupRates, accountTokens, priceTable] = await Promise.all([
+      fetchSub2ApiAvailableGroups(dashboardRequest),
+      fetchSub2ApiGroupRates(dashboardRequest),
+      fetchAccountTokens(dashboardRequest),
+      loadModelPriceTable(),
+    ])
+    const group = resolveSub2ApiKeyGroupForPriceEstimation({
+      selectedToken: params.selectedToken,
+      resolvedKey: params.resolvedKey,
+      accountTokens,
+      groups,
+    })
+
+    return applySub2ApiPriceEstimates({
+      modelIds: params.runtimeModelIds,
+      group,
+      groupRates,
+      priceTable,
+    })
+  } catch {
+    return buildSub2ApiRuntimePricingResponse(
+      params.runtimeModelIds,
+      MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+    )
   }
 }

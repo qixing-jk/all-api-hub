@@ -43,6 +43,7 @@ import {
   buildSub2ApiUserGroups,
   extractSub2ApiKeyItems,
   parseSub2ApiEnvelope,
+  parseSub2ApiGroupRates,
   parseSub2ApiKey,
   parseSub2ApiUserIdentity,
   resolveSub2ApiGroupId,
@@ -75,6 +76,7 @@ import {
 const logger = createLogger("ApiService.Sub2API")
 const DEFAULT_KEYS_PAGE = 1
 const DEFAULT_KEYS_PAGE_SIZE = 100
+const SUB2API_RUNTIME_MODELS_ENDPOINT = "/v1/models"
 const sub2ApiAuthMutationLocks = new Map<string, Promise<void>>()
 
 const isCloseToExpiry = (tokenExpiresAt: number): boolean => {
@@ -87,6 +89,11 @@ const normalizeAccessToken = (value: unknown): string =>
 
 const normalizeRefreshToken = (value: unknown): string =>
   normalizeAccessToken(value)
+
+const normalizeRuntimeApiKey = (request: ApiServiceRequest): string => {
+  const auth = request.auth as typeof request.auth & { apiKey?: unknown }
+  return normalizeAccessToken(auth.apiKey)
+}
 
 const normalizeTokenExpiresAt = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isFinite(value) ? value : undefined
@@ -608,6 +615,99 @@ const fetchSub2ApiData = async <T>(
   return result.data
 }
 
+const createInvalidRuntimeModelsPayloadError = () =>
+  new ApiError(
+    t("messages:errors.api.invalidResponseFormat"),
+    undefined,
+    SUB2API_RUNTIME_MODELS_ENDPOINT,
+    API_ERROR_CODES.BUSINESS_ERROR,
+  )
+
+const createRuntimeApiKeyAuthError = () =>
+  new ApiError(
+    t("messages:sub2api.loginRequired"),
+    401,
+    SUB2API_RUNTIME_MODELS_ENDPOINT,
+    API_ERROR_CODES.HTTP_401,
+  )
+
+const createSub2ApiRuntimeBusinessError = (
+  payload: unknown,
+): ApiError | null => {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null
+  }
+
+  const code = (payload as { code?: unknown }).code
+  if (
+    (typeof code !== "string" || !code.trim()) &&
+    (typeof code !== "number" || code === 0)
+  ) {
+    return null
+  }
+
+  const message = (payload as { message?: unknown }).message
+  if (typeof message !== "string" || !message.trim()) {
+    return null
+  }
+
+  return new ApiError(
+    message.trim(),
+    undefined,
+    SUB2API_RUNTIME_MODELS_ENDPOINT,
+    API_ERROR_CODES.BUSINESS_ERROR,
+  )
+}
+
+const normalizeRuntimeModelId = (item: unknown): string => {
+  if (!item || typeof item !== "object" || Array.isArray(item)) {
+    throw createInvalidRuntimeModelsPayloadError()
+  }
+
+  const id = (item as { id?: unknown }).id
+  if (typeof id !== "string" || !id.trim()) {
+    throw createInvalidRuntimeModelsPayloadError()
+  }
+
+  return id.trim()
+}
+
+const parseSub2ApiRuntimeModelIds = (payload: unknown): string[] => {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw createInvalidRuntimeModelsPayloadError()
+  }
+
+  const data = (payload as { data?: unknown }).data
+  if (!Array.isArray(data)) {
+    throw createInvalidRuntimeModelsPayloadError()
+  }
+
+  return data.map(normalizeRuntimeModelId)
+}
+
+const readRuntimeModelsPayload = async (
+  response: Response,
+): Promise<unknown> => {
+  try {
+    return await response.json()
+  } catch {
+    throw createInvalidRuntimeModelsPayloadError()
+  }
+}
+
+const readRuntimeModelsBusinessError = async (
+  response: Response,
+): Promise<ApiError | null> => {
+  try {
+    return createSub2ApiRuntimeBusinessError(await response.clone().json())
+  } catch {
+    return null
+  }
+}
+
+const createRuntimeModelsUrl = (baseUrl: string): string =>
+  `${baseUrl.replace(/\/+$/, "")}${SUB2API_RUNTIME_MODELS_ENDPOINT}`
+
 const fetchAvailableGroupsInternal = async (request: ApiServiceRequest) =>
   fetchSub2ApiData<unknown[]>(request, SUB2API_AVAILABLE_GROUPS_ENDPOINT, {
     method: "GET",
@@ -615,14 +715,16 @@ const fetchAvailableGroupsInternal = async (request: ApiServiceRequest) =>
   })
 
 const fetchGroupRatesInternal = async (request: ApiServiceRequest) =>
-  fetchSub2ApiData<Record<string, number>>(
-    request,
-    SUB2API_GROUP_RATES_ENDPOINT,
-    {
-      method: "GET",
-      cache: "no-store",
-    },
+  fetchSub2ApiData<unknown>(request, SUB2API_GROUP_RATES_ENDPOINT, {
+    method: "GET",
+    cache: "no-store",
+  }).then((rates) =>
+    parseSub2ApiGroupRates(rates, SUB2API_GROUP_RATES_ENDPOINT),
   )
+
+export const fetchSub2ApiAvailableGroups = fetchAvailableGroupsInternal
+
+export const fetchSub2ApiGroupRates = fetchGroupRatesInternal
 
 const normalizePositiveInteger = (value: number, fallback: number): number =>
   Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback
@@ -1357,6 +1459,62 @@ export async function fetchUserGroups(
   } catch (error) {
     logger.error("Failed to fetch Sub2API groups", {
       accountId: request.accountId,
+      error: getSafeErrorMessage(error),
+    })
+    throw error
+  }
+}
+
+/**
+ * Source: https://github.com/Wei-Shaw/sub2api - gateway /v1/models uses
+ * runtime API-key auth and returns models visible to that key's group/platform.
+ */
+export async function fetchSub2ApiRuntimeModels(
+  request: ApiServiceRequest,
+): Promise<string[]> {
+  const apiKey = normalizeRuntimeApiKey(request)
+  if (!apiKey) {
+    throw createRuntimeApiKeyAuthError()
+  }
+
+  const endpointUrl = createRuntimeModelsUrl(request.baseUrl)
+
+  try {
+    const response = await fetch(endpointUrl, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    })
+
+    if (response.status === 401 || response.status === 403) {
+      const businessError = await readRuntimeModelsBusinessError(response)
+      if (businessError) {
+        throw businessError
+      }
+
+      throw createRuntimeApiKeyAuthError()
+    }
+
+    if (!response.ok) {
+      throw new ApiError(
+        response.statusText || "Sub2API runtime model request failed",
+        response.status,
+        SUB2API_RUNTIME_MODELS_ENDPOINT,
+        API_ERROR_CODES.HTTP_OTHER,
+      )
+    }
+
+    return parseSub2ApiRuntimeModelIds(await readRuntimeModelsPayload(response))
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error
+    }
+
+    logger.error("Failed to fetch Sub2API runtime models", {
+      accountId: request.accountId,
+      endpoint: SUB2API_RUNTIME_MODELS_ENDPOINT,
       error: getSafeErrorMessage(error),
     })
     throw error

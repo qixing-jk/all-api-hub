@@ -155,6 +155,17 @@ const parseSub2ApiKeyGroup = (payload: Partial<Sub2ApiKeyData>): string => {
   return ""
 }
 
+const parseSub2ApiKeyGroupId = (
+  payload: Partial<Sub2ApiKeyData>,
+): number | undefined => {
+  const explicitGroupId = toFiniteIntegerOrNull(payload.group_id)
+  if (explicitGroupId !== null) {
+    return explicitGroupId
+  }
+
+  return undefined
+}
+
 /**
  * Convert a USD balance (Sub2API) into the extension's internal quota unit.
  */
@@ -317,6 +328,7 @@ export const parseSub2ApiKey = (
     allow_ips: normalizeIpWhitelist(data.ip_whitelist).join(","),
     used_quota: convertUsdBalanceToQuota(usedQuotaUsd),
     group: parseSub2ApiKeyGroup(data),
+    sub2api_group_id: parseSub2ApiKeyGroupId(data),
   })
 }
 
@@ -336,7 +348,7 @@ const parseSub2ApiGroupList = (
   })
 }
 
-const parseSub2ApiGroupRates = (
+export const parseSub2ApiGroupRates = (
   payload: unknown,
   endpoint: string,
 ): Record<string, number> => {
@@ -345,7 +357,7 @@ const parseSub2ApiGroupRates = (
   return Object.entries(rates).reduce(
     (accumulator, [key, value]) => {
       const numericValue = toFiniteNumberOrZero(value)
-      accumulator[key] = numericValue || 1
+      accumulator[key] = numericValue > 0 ? numericValue : 1
       return accumulator
     },
     {} as Record<string, number>,

@@ -512,6 +512,12 @@ export interface ApiToken {
   allow_ips?: string
   used_quota: number
   group?: string // 可选字段，某些站点可能没有
+  /**
+   * Stable Sub2API backend group id, when the key DTO exposes it.
+   *
+   * `group` remains the display/group name and must not be interpreted as this id.
+   */
+  sub2api_group_id?: number
   DeletedAt?: null
   /**
    * Token-scoped model allow-list / restriction field returned by some backends.

@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest"
 
 import type { ModelPricing } from "~/services/apiService/common/type"
 import {
+  MODEL_PRICE_PRECISION_KINDS,
+  MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
+} from "~/services/apiService/common/type"
+import {
   calculateModelPrice,
   formatPrice,
   formatPriceCompact,
@@ -199,6 +204,39 @@ describe("modelPricing utils", () => {
           inputCNY: 42,
           outputCNY: 63,
         })
+      })
+
+      it("returns missing-price metadata for unavailable price rows", () => {
+        const result = calculateModelPrice(
+          {
+            ...tokenModel,
+            model_name: "example-runtime-model",
+            model_ratio: 0,
+            completion_ratio: 0,
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.NONE,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+              unavailable_reason:
+                MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+            },
+          },
+          baseGroupRatio,
+          exchangeRate,
+          "default",
+        )
+
+        expect(result.priceAvailability).toBe("unavailable")
+        if (result.priceAvailability !== "unavailable") {
+          throw new Error("Expected unavailable price result")
+        }
+        expect(result.unavailableReason).toBe(
+          MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+        )
+        expect(result.inputUSD).toBeUndefined()
+        expect(result.outputUSD).toBeUndefined()
+        expect(result.inputCNY).toBeUndefined()
+        expect(result.outputCNY).toBeUndefined()
+        expect(result.perCallPrice).toBeUndefined()
       })
     })
 

@@ -10,6 +10,7 @@ import {
   createApiToken,
   fetchAccountAvailableModels,
   fetchAccountTokens,
+  fetchSub2ApiGroupRates,
   fetchTokenById,
   fetchUserGroups,
   resolveApiTokenKey,
@@ -103,8 +104,50 @@ describe("apiService sub2api key management parsing", () => {
     expect(token.used_quota).toBe(Math.round(1.25 * 500000))
     expect(token.allow_ips).toBe("1.1.1.1,2.2.2.2")
     expect(token.group).toBe("vip")
+    expect(token.sub2api_group_id).toBeUndefined()
     expect(token.unlimited_quota).toBe(false)
     expect(token.expired_time).toBe(1772971200)
+  })
+
+  it("treats nested Sub2API group ids as group metadata, not stable key group ids", () => {
+    const token = parseSub2ApiKey({
+      id: "7",
+      user_id: "5",
+      key: "test-key",
+      name: "VIP Key",
+      status: "active",
+      quota: 2.5,
+      quota_used: 1.25,
+      expires_at: null,
+      created_at: "2026-03-01T08:30:00.000Z",
+      updated_at: "2026-03-02T09:45:00.000Z",
+      ip_whitelist: [],
+      group: { id: 9, name: "vip" },
+    })
+
+    expect(token.group).toBe("vip")
+    expect(token.sub2api_group_id).toBeUndefined()
+  })
+
+  it("preserves a stable Sub2API key group id when the backend exposes group_id", () => {
+    const token = parseSub2ApiKey({
+      id: "7",
+      user_id: "5",
+      key: "test-key",
+      name: "VIP Key",
+      status: "active",
+      quota: 2.5,
+      quota_used: 1.25,
+      expires_at: null,
+      created_at: "2026-03-01T08:30:00.000Z",
+      updated_at: "2026-03-02T09:45:00.000Z",
+      ip_whitelist: [],
+      group_id: "11",
+      group: { id: 9, name: "vip" },
+    })
+
+    expect(token.group).toBe("vip")
+    expect(token.sub2api_group_id).toBe(11)
   })
 
   it("treats non-positive numeric strings like numeric expiries", () => {
@@ -185,10 +228,43 @@ describe("apiService sub2api key management service", () => {
     })
   })
 
+  it("normalizes raw Sub2API group rates for estimator callers", async () => {
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        "1": "0",
+        "9": "invalid",
+        "10": "2.5",
+      },
+    })
+
+    await expect(fetchSub2ApiGroupRates(createRequest())).resolves.toEqual({
+      "1": 1,
+      "9": 1,
+      "10": 2.5,
+    })
+  })
+
   it("returns no available models so Sub2API form hides model-limit controls", async () => {
     await expect(fetchAccountAvailableModels(createRequest())).resolves.toEqual(
       [],
     )
+  })
+
+  it("keeps key-creation available models empty even with Sub2API form metadata", async () => {
+    await expect(
+      fetchAccountAvailableModels(
+        createRequest({
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            apiKey: "runtime-api-key",
+            accessToken: "dashboard-jwt",
+          } as ApiServiceRequest["auth"] & { apiKey: string },
+        }),
+      ),
+    ).resolves.toEqual([])
+    expect(fetchApiMock).not.toHaveBeenCalled()
   })
 
   it("resolves usable inventory keys without calling unsupported compatible reveal endpoints", async () => {

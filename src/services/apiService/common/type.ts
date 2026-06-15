@@ -163,7 +163,9 @@ export interface ModelPricing {
     input?: number
     output?: number
     cache_read?: number
+    cache_write?: number
   }
+  price_metadata?: ModelPriceMetadata
   owner_by?: string
   completion_ratio: number
   enable_groups: string[]
@@ -173,14 +175,64 @@ export interface ModelPricing {
 export const MODEL_LIST_SOURCE_KINDS = {
   USER_SCOPED: "user-scoped",
   CATALOG_FALLBACK: "catalog-fallback",
+  SUB2API_RUNTIME_KEY: "sub2api-runtime-key",
 } as const
 
 export type ModelListSourceKind =
   (typeof MODEL_LIST_SOURCE_KINDS)[keyof typeof MODEL_LIST_SOURCE_KINDS]
 
+export const MODEL_PRICE_SOURCE_KINDS = {
+  NONE: "none",
+  OFFICIAL_RATE_ESTIMATE: "official-rate-estimate",
+  CHANNEL_PRICING: "channel-pricing",
+} as const
+
+export type ModelPriceSourceKind =
+  (typeof MODEL_PRICE_SOURCE_KINDS)[keyof typeof MODEL_PRICE_SOURCE_KINDS]
+
+export const MODEL_PRICE_PRECISION_KINDS = {
+  EXACT: "exact",
+  ESTIMATED: "estimated",
+  UNAVAILABLE: "unavailable",
+} as const
+
+export type ModelPricePrecisionKind =
+  (typeof MODEL_PRICE_PRECISION_KINDS)[keyof typeof MODEL_PRICE_PRECISION_KINDS]
+
+export const MODEL_UNAVAILABLE_PRICE_REASONS = {
+  MODEL_LIST_ONLY: "model-list-only",
+  KEY_GROUP_UNKNOWN: "key-group-unknown",
+  OFFICIAL_PRICE_MISSING: "official-price-missing",
+  PRICING_SOURCE_UNAVAILABLE: "pricing-source-unavailable",
+} as const
+
+export type ModelUnavailablePriceReason =
+  (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS]
+
+export interface ModelPriceMetadata {
+  source: ModelPriceSourceKind
+  precision: ModelPricePrecisionKind
+  unavailable_reason?: ModelUnavailablePriceReason
+  source_date?: string
+  unmatched_model_count?: number
+}
+
 export interface ModelListSourceInfo {
   kind: ModelListSourceKind
   provider?: AccountSiteType
+  supportsRuntimeModelList?: boolean
+  supportsPricing?: boolean
+}
+
+/**
+ * Returns whether a model row intentionally lacks usable pricing data.
+ */
+export function isModelPriceUnavailable(
+  model: Pick<ModelPricing, "price_metadata">,
+) {
+  return (
+    model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE
+  )
 }
 
 // 模型定价响应类型
