@@ -309,34 +309,43 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                     {t("modelList:keyDialog.createGroupLabel")}
                   </label>
                   <div className="mt-2">
-                    <Select
-                      value={createGroup}
-                      onValueChange={setCreateGroup}
-                      disabled={
-                        !canCreateToken || createGroupOptions.length === 1
-                      }
-                    >
-                      <SelectTrigger
-                        id={createGroupSelectId}
-                        aria-label={t("modelList:keyDialog.createGroupLabel")}
+                    {requiresCreateGroupSelection ? (
+                      <Select
+                        value={createGroup}
+                        onValueChange={setCreateGroup}
+                        disabled={!canCreateToken}
                       >
-                        <SelectValue
-                          placeholder={t(
-                            "modelList:keyDialog.createGroupPlaceholder",
-                          )}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {createGroupOptions.map((group) => (
-                          <SelectItem key={group} value={group}>
-                            {group}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectTrigger
+                          id={createGroupSelectId}
+                          aria-label={t("modelList:keyDialog.createGroupLabel")}
+                        >
+                          <SelectValue
+                            placeholder={t(
+                              "modelList:keyDialog.createGroupPlaceholder",
+                            )}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {createGroupOptions.map((group) => (
+                            <SelectItem key={group} value={group}>
+                              {group}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div
+                        id={createGroupSelectId}
+                        className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary flex h-9 items-center rounded-md border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-700"
+                      >
+                        {createGroupOptions[0]}
+                      </div>
+                    )}
                   </div>
                   <p className="dark:text-dark-text-tertiary mt-2 text-sm text-gray-500">
-                    {t("modelList:keyDialog.createGroupHint")}
+                    {requiresCreateGroupSelection
+                      ? t("modelList:keyDialog.createGroupHint")
+                      : t("modelList:keyDialog.createGroupAutoSelectedHint")}
                   </p>
                 </div>
 

@@ -289,6 +289,37 @@ describe("ModelKeyDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows a read-only auto-selected group when only one create group is available", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["vip"]}
+      />,
+    )
+
+    expect(
+      await screen.findByText("modelList:keyDialog.noCompatibleTitle"),
+    ).toBeInTheDocument()
+
+    expect(screen.getByText("vip")).toBeInTheDocument()
+    expect(
+      screen.getByText("modelList:keyDialog.createGroupAutoSelectedHint"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("combobox", {
+        name: "modelList:keyDialog.createGroupLabel",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "modelList:keyDialog.createKey" }),
+    ).toBeInTheDocument()
+  })
+
   it("shows a one-time key dialog when AIHubMix default create returns a full token", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     createApiTokenMock.mockResolvedValueOnce({
