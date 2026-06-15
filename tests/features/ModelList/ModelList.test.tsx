@@ -1,0 +1,290 @@
+import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import type React from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import ModelList from "~/features/ModelList/ModelList"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+
+const { mockUseModelListData } = vi.hoisted(() => ({
+  mockUseModelListData: vi.fn(),
+}))
+
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>()
+
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string) => key,
+    }),
+  }
+})
+
+vi.mock("@headlessui/react", () => ({
+  Tab: {
+    Panels: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="tab-panels">{children}</div>
+    ),
+    Panel: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="tab-panel">{children}</div>
+    ),
+  },
+}))
+
+vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
+  useModelListData: (...args: unknown[]) => mockUseModelListData(...args),
+}))
+
+vi.mock(
+  "~/services/verification/verificationResultHistory",
+  async (importOriginal) => {
+    const original =
+      await importOriginal<
+        typeof import("~/services/verification/verificationResultHistory")
+      >()
+
+    return {
+      ...original,
+      useVerificationResultHistorySummaries: () => ({ summariesByKey: {} }),
+    }
+  },
+)
+
+vi.mock("~/features/ModelList/components/AccountSelector", () => ({
+  AccountSelector: () => <div data-testid="account-selector" />,
+}))
+
+vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
+  AccountSummaryBar: () => <div data-testid="account-summary-bar" />,
+}))
+
+vi.mock("~/features/ModelList/components/BatchVerifyModelsDialog", () => ({
+  BatchVerifyModelsDialog: () => <div data-testid="batch-verify-dialog" />,
+}))
+
+vi.mock("~/features/ModelList/components/ControlPanel", () => ({
+  ControlPanel: () => <div data-testid="control-panel" />,
+}))
+
+vi.mock("~/features/ModelList/components/Footer", () => ({
+  Footer: () => <div data-testid="model-list-footer" />,
+}))
+
+vi.mock("~/features/ModelList/components/ProviderTabs", () => ({
+  ProviderTabs: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="provider-tabs">{children}</div>
+  ),
+}))
+
+vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
+  StatusIndicator: () => <div data-testid="status-indicator" />,
+}))
+
+vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
+  ModelDisplay: ({
+    onVerifyModel,
+  }: {
+    onVerifyModel?: (...args: any[]) => void
+  }) => (
+    <button
+      type="button"
+      onClick={() => onVerifyModel?.(ACCOUNT_SOURCE, "gpt-test", ["vip"])}
+    >
+      open-api-verification
+    </button>
+  ),
+}))
+
+vi.mock("~/components/dialogs/VerifyApiDialog", () => ({
+  VerifyApiDialog: ({
+    initialModelId,
+    modelEnableGroups,
+    onManageModelKey,
+  }: {
+    initialModelId?: string
+    modelEnableGroups?: string[]
+    onManageModelKey?: () => void
+  }) => (
+    <div data-testid="verify-api-dialog">
+      <span>{initialModelId}</span>
+      <span>{modelEnableGroups?.join(",")}</span>
+      <button type="button" onClick={onManageModelKey}>
+        manage-model-key
+      </button>
+    </div>
+  ),
+}))
+
+vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
+  VerifyCliSupportDialog: () => <div data-testid="verify-cli-dialog" />,
+}))
+
+vi.mock(
+  "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog",
+  () => ({
+    VerifyApiCredentialProfileDialog: () => (
+      <div data-testid="verify-profile-dialog" />
+    ),
+  }),
+)
+
+vi.mock("~/features/ModelList/components/ModelKeyDialog", () => ({
+  default: ({
+    modelId,
+    modelEnableGroups,
+    onClose,
+  }: {
+    modelId: string
+    modelEnableGroups: string[]
+    onClose: () => void
+  }) => (
+    <div data-testid={MODEL_LIST_TEST_IDS.modelKeyDialog}>
+      <span>{modelId}</span>
+      <span>{modelEnableGroups.join(",")}</span>
+      <button type="button" onClick={onClose}>
+        close-model-key
+      </button>
+    </div>
+  ),
+}))
+
+const ACCOUNT = {
+  id: "account-1",
+  name: "Account One",
+  username: "user",
+  baseUrl: "https://example.com",
+  balance: { USD: 0, CNY: 0 },
+  todayConsumption: { USD: 0, CNY: 0 },
+  todayIncome: { USD: 0, CNY: 0 },
+  todayTokens: { upload: 0, download: 0 },
+  health: { status: "healthy" },
+  token: "account-token",
+  userId: "1",
+  authType: "access_token",
+  checkIn: { enableDetection: false },
+} as any
+
+const CAPABILITIES = {
+  supportsPricing: true,
+  supportsRatioDisplay: true,
+  supportsGroupFiltering: true,
+  supportsAccountSummary: false,
+  supportsTokenCompatibility: true,
+  supportsCredentialVerification: true,
+  supportsBatchCredentialVerification: true,
+  supportsCliVerification: true,
+}
+
+const ACCOUNT_SOURCE = {
+  kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+  value: "account:account-1",
+  account: ACCOUNT,
+  capabilities: CAPABILITIES,
+} as any
+
+function createModelListData() {
+  return {
+    accounts: [ACCOUNT],
+    profiles: [],
+    selectedSource: ACCOUNT_SOURCE,
+    currentAccount: ACCOUNT,
+    sourceCapabilities: CAPABILITIES,
+    selectedSourceValue: "account:account-1",
+    setSelectedSourceValue: vi.fn(),
+    searchTerm: "",
+    setSearchTerm: vi.fn(),
+    selectedProvider: "all",
+    setSelectedProvider: vi.fn(),
+    sortMode: "default",
+    setSortMode: vi.fn(),
+    selectedBillingMode: "all",
+    setSelectedBillingMode: vi.fn(),
+    selectedGroups: ["vip"],
+    setSelectedGroups: vi.fn(),
+    allAccountsExcludedGroupsByAccountId: {},
+    setAllAccountsExcludedGroupsByAccountId: vi.fn(),
+    showRealPrice: false,
+    setShowRealPrice: vi.fn(),
+    showRatioColumn: false,
+    setShowRatioColumn: vi.fn(),
+    showEndpointTypes: false,
+    setShowEndpointTypes: vi.fn(),
+    pricingData: {
+      data: [
+        {
+          model_name: "gpt-test",
+          quota_type: 0,
+          model_ratio: 1,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: ["vip"],
+          supported_endpoint_types: [],
+        },
+      ],
+      group_ratio: { vip: 1 },
+      success: true,
+      usable_group: {},
+    },
+    pricingContexts: [],
+    isLoading: false,
+    dataFormatError: null,
+    loadErrorMessage: null,
+    accountFallback: null,
+    isFallbackCatalogActive: false,
+    isAihubmixCatalogFallbackActive: false,
+    filteredModels: [],
+    accountSummaryCountsByAccountId: new Map(),
+    allProvidersFilteredCount: 1,
+    getFilteredResultCount: vi.fn(() => 1),
+    availableGroups: ["vip"],
+    availableAccountGroupsByAccountId: {},
+    availableAccountGroupOptionsByAccountId: {},
+    loadPricingData: vi.fn(),
+    getProviderFilteredCount: vi.fn(() => 1),
+    accountQueryStates: [],
+    allAccountsFilterAccountIds: [],
+    setAllAccountsFilterAccountIds: vi.fn(),
+  }
+}
+
+describe("ModelList", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseModelListData.mockReturnValue(createModelListData())
+  })
+
+  it("opens the model key dialog from an incompatible API verification token state", async () => {
+    const user = userEvent.setup()
+    render(<ModelList />)
+
+    await user.click(
+      screen.getAllByRole("button", { name: "open-api-verification" })[0],
+    )
+    expect(screen.getByTestId("verify-api-dialog")).toHaveTextContent(
+      "gpt-test",
+    )
+    expect(screen.getByTestId("verify-api-dialog")).toHaveTextContent("vip")
+
+    await user.click(screen.getByRole("button", { name: "manage-model-key" }))
+
+    expect(screen.queryByTestId("verify-api-dialog")).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId(MODEL_LIST_TEST_IDS.modelKeyDialog),
+    ).toHaveTextContent("gpt-test")
+    expect(
+      screen.getByTestId(MODEL_LIST_TEST_IDS.modelKeyDialog),
+    ).toHaveTextContent("vip")
+
+    await user.click(screen.getByRole("button", { name: "close-model-key" }))
+
+    expect(
+      screen.queryByTestId(MODEL_LIST_TEST_IDS.modelKeyDialog),
+    ).not.toBeInTheDocument()
+    expect(screen.getByTestId("verify-api-dialog")).toHaveTextContent(
+      "gpt-test",
+    )
+    expect(screen.getByTestId("verify-api-dialog")).toHaveTextContent("vip")
+  })
+})

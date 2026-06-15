@@ -2,6 +2,7 @@
   "verifyDialog": {
     "actions": {
       "close": "Đóng",
+      "manageModelKey": "Mở thiết lập khóa cho mô hình",
       "retry": "Thử lại",
       "run": "Bắt đầu xác minh",
       "running": "Đang chạy...",
@@ -32,8 +33,10 @@
       "model": "Mô hình",
       "modelPlaceholder": "Nhập ID mô hình",
       "token": "Khóa",
+      "tokenIncompatible": "Không dùng được cho mô hình này",
       "tokenPlaceholder": "Chọn khóa"
     },
+    "noCompatibleTokenHint": "Không có khóa nào dùng được cho nhóm của mô hình này. Hãy tạo hoặc chọn khóa thuộc nhóm khả dụng trong Quản lý khóa.",
     "notRunYet": "Chưa chạy",
     "probes": {
       "models": "API danh sách mô hình (/v1/models)",
@@ -43,6 +46,7 @@
       "web-search": "Tìm kiếm web / Grounding"
     },
     "requiresModelId": "Vui lòng nhập ID mô hình trước khi chạy bài kiểm tra này.",
+    "selectedTokenIncompatibleHint": "Khóa đang chọn không dùng được cho nhóm của mô hình này. Hãy chọn khóa tương thích trước khi xác minh.",
     "status": {
       "fail": "Thất bại",
       "pass": "Thành công",

@@ -234,6 +234,248 @@ describe("VerifyApiDialog", () => {
     expect(await within(probeCard).findByText(/"bar": 2/)).toBeInTheDocument()
   })
 
+  it("defaults to a token compatible with the requested model group", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "default-secret",
+        status: 1,
+        name: "default-token",
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+      {
+        id: 2,
+        user_id: 1,
+        key: "vip-secret",
+        status: 1,
+        name: "vip-token",
+        group: "vip",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Text generation succeeded",
+    })
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: "1",
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+        modelEnableGroups={["vip"]}
+      />,
+    )
+
+    const probeCard = await screen.findByTestId("verify-probe-text-generation")
+    const runButton = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
+
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiKey: "sk-vip-secret",
+          tokenMeta: expect.objectContaining({
+            id: 2,
+            name: "vip-token",
+          }),
+        }),
+      ),
+    )
+  })
+
+  it("does not fall back to an incompatible enabled token for a requested model group", async () => {
+    const onManageModelKey = vi.fn()
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "default-secret",
+        status: 1,
+        name: "default-token",
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: "1",
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+        modelEnableGroups={["vip"]}
+        onManageModelKey={onManageModelKey}
+      />,
+    )
+
+    const probeCard = await screen.findByTestId("verify-probe-text-generation")
+    const runButton = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+
+    await waitFor(() => expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1))
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.noCompatibleTokenHint"),
+    ).toBeInTheDocument()
+    const manageButton = screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.manageModelKey",
+    })
+    fireEvent.click(manageButton)
+    expect(onManageModelKey).toHaveBeenCalledTimes(1)
+    expect(runButton).toBeDisabled()
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+  })
+
+  it("blocks verification when the selected token becomes incompatible with the model group", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "default-secret",
+        status: 1,
+        name: "default-token",
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+      {
+        id: 2,
+        user_id: 1,
+        key: "vip-secret",
+        status: 1,
+        name: "vip-token",
+        group: "vip",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: "1",
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        modelEnableGroups={["vip"]}
+      />,
+    )
+
+    const probeCard = await screen.findByTestId("verify-probe-text-generation")
+    const runButton = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+
+    await waitFor(() => expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1))
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "aiApiVerification:verifyDialog.meta.modelPlaceholder",
+      ),
+      { target: { value: "gpt-test" } },
+    )
+
+    expect(
+      screen.getByText(
+        "aiApiVerification:verifyDialog.selectedTokenIncompatibleHint",
+      ),
+    ).toBeInTheDocument()
+    expect(runButton).toBeDisabled()
+    fireEvent.click(runButton)
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+  })
+
   it("shows i18n summary for unsupported probes", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       {

@@ -237,6 +237,7 @@ export default function ModelList(props: {
   const [verifyContext, setVerifyContext] = useState<{
     account: DisplaySiteData
     modelId: string
+    modelEnableGroups: string[]
   } | null>(null)
 
   const [verifyCliContext, setVerifyCliContext] = useState<{
@@ -253,6 +254,7 @@ export default function ModelList(props: {
     account: DisplaySiteData
     modelId: string
     modelEnableGroups: string[]
+    returnToVerify?: boolean
   } | null>(null)
 
   const [batchVerifyContext, setBatchVerifyContext] = useState<{
@@ -262,6 +264,7 @@ export default function ModelList(props: {
   const handleVerifyModel = (
     source: ModelManagementItemSource,
     modelId: string,
+    modelEnableGroups: string[],
   ) => {
     if (source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
       setVerifyProfileContext({
@@ -271,7 +274,7 @@ export default function ModelList(props: {
       return
     }
 
-    setVerifyContext({ account: source.account, modelId })
+    setVerifyContext({ account: source.account, modelId, modelEnableGroups })
   }
 
   const handleVerifyCliSupport = (
@@ -286,6 +289,21 @@ export default function ModelList(props: {
     modelId: string,
     modelEnableGroups: string[],
   ) => setModelKeyContext({ account, modelId, modelEnableGroups })
+
+  const handleManageVerifyModelKey = () => {
+    if (!verifyContext) return
+    setModelKeyContext({ ...verifyContext, returnToVerify: true })
+    setVerifyContext(null)
+  }
+
+  const handleCloseModelKeyDialog = () => {
+    if (modelKeyContext?.returnToVerify) {
+      const { returnToVerify: _returnToVerify, ...nextVerifyContext } =
+        modelKeyContext
+      setVerifyContext(nextVerifyContext)
+    }
+    setModelKeyContext(null)
+  }
 
   const batchVerifyItems = useMemo(
     () => createBatchVerifyModelItems(filteredModels),
@@ -458,6 +476,8 @@ export default function ModelList(props: {
               onClose={() => setVerifyContext(null)}
               account={verifyContext.account}
               initialModelId={verifyContext.modelId}
+              modelEnableGroups={verifyContext.modelEnableGroups}
+              onManageModelKey={handleManageVerifyModelKey}
             />
           )}
 
@@ -494,7 +514,7 @@ export default function ModelList(props: {
           {modelKeyContext && (
             <ModelKeyDialog
               isOpen={true}
-              onClose={() => setModelKeyContext(null)}
+              onClose={handleCloseModelKeyDialog}
               account={modelKeyContext.account}
               modelId={modelKeyContext.modelId}
               modelEnableGroups={modelKeyContext.modelEnableGroups}

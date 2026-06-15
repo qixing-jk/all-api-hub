@@ -12,6 +12,8 @@ export type VerifyApiDialogProps = {
   onClose: () => void
   account: DisplaySiteData
   initialModelId?: string
+  modelEnableGroups?: string[]
+  onManageModelKey?: () => void
 }
 
 /**

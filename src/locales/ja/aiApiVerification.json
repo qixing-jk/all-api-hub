@@ -2,6 +2,7 @@
   "verifyDialog": {
     "actions": {
       "close": "閉じる",
+      "manageModelKey": "モデル対応キーを開く",
       "retry": "再試行",
       "run": "実行",
       "running": "実行中...",
@@ -32,8 +33,10 @@
       "model": "モデル",
       "modelPlaceholder": "モデル ID を入力",
       "token": "トークン",
+      "tokenIncompatible": "このモデルでは使用不可",
       "tokenPlaceholder": "トークンを選択"
     },
+    "noCompatibleTokenHint": "このモデルのグループで使用できるトークンがありません。キー管理で有効なグループのトークンを作成するか選択してください。",
     "notRunYet": "未実行",
     "probes": {
       "models": "Models エンドポイント (/v1/models)",
@@ -43,6 +46,7 @@
       "web-search": "Web 検索 / grounding"
     },
     "requiresModelId": "このテストを実行するにはモデル ID を入力してください。",
+    "selectedTokenIncompatibleHint": "選択中のトークンはこのモデルのグループでは使用できません。互換性のあるトークンを選択してから検証してください。",
     "status": {
       "fail": "失敗",
       "pass": "成功",

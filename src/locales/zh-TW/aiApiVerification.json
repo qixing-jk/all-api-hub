@@ -2,6 +2,7 @@
   "verifyDialog": {
     "actions": {
       "close": "關閉",
+      "manageModelKey": "開啟模型對應金鑰",
       "retry": "重試",
       "run": "開始驗證",
       "running": "執行中...",
@@ -32,8 +33,10 @@
       "model": "模型",
       "modelPlaceholder": "輸入模型 ID",
       "token": "金鑰",
+      "tokenIncompatible": "不適用於此模型",
       "tokenPlaceholder": "選擇金鑰"
     },
+    "noCompatibleTokenHint": "目前沒有適用於此模型分組的金鑰。請在金鑰管理中建立或選擇可用分組的金鑰。",
     "notRunYet": "尚未執行",
     "probes": {
       "models": "模型列表介面 (/v1/models)",
@@ -43,6 +46,7 @@
       "web-search": "聯網搜尋 / Grounding"
     },
     "requiresModelId": "請輸入模型 ID 後執行該測試。",
+    "selectedTokenIncompatibleHint": "目前選擇的金鑰不適用於此模型分組。請先選擇適用的金鑰後再測試。",
     "status": {
       "fail": "失敗",
       "pass": "透過",

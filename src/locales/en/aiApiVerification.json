@@ -2,6 +2,7 @@
   "verifyDialog": {
     "actions": {
       "close": "Close",
+      "manageModelKey": "Open model key setup",
       "retry": "Retry",
       "run": "Run",
       "running": "Running...",
@@ -32,8 +33,10 @@
       "model": "Model",
       "modelPlaceholder": "Enter model id",
       "token": "Token",
+      "tokenIncompatible": "Not available for this model",
       "tokenPlaceholder": "Select token"
     },
+    "noCompatibleTokenHint": "No token is available for this model's group. Create or choose a token for an enabled group in Key Management.",
     "notRunYet": "Not run yet",
     "probes": {
       "models": "Models endpoint (/v1/models)",
@@ -43,6 +46,7 @@
       "web-search": "Web search / grounding"
     },
     "requiresModelId": "Enter a model id to run this test.",
+    "selectedTokenIncompatibleHint": "The selected token is not available for this model's group. Choose a compatible token before running verification.",
     "status": {
       "fail": "Fail",
       "pass": "Pass",

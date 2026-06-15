@@ -16,6 +16,7 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
+import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -70,7 +71,14 @@ const logger = createLogger("VerifyApiDialog")
  * Modal dialog that runs API verification for a selected account token + model.
  */
 export function VerifyApiDialog(props: VerifyApiDialogProps) {
-  const { isOpen, onClose, account, initialModelId } = props
+  const {
+    isOpen,
+    onClose,
+    account,
+    initialModelId,
+    modelEnableGroups,
+    onManageModelKey,
+  } = props
   const { t } = useTranslation("aiApiVerification")
 
   const [isRunning, setIsRunning] = useState(false)
@@ -101,6 +109,39 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const selectedToken = tokens.find(
     (tok) => tok.id.toString() === selectedTokenId,
   )
+
+  const requestedModelId = initialModelId?.trim() || modelId.trim()
+  const hasModelGroupContext =
+    requestedModelId.length > 0 && Array.isArray(modelEnableGroups)
+  const compatibleTokens = useMemo(() => {
+    if (!hasModelGroupContext) return tokens
+    return tokens.filter((token) =>
+      isTokenCompatibleWithModel(token, {
+        id: requestedModelId,
+        enableGroups: modelEnableGroups,
+      }),
+    )
+  }, [hasModelGroupContext, modelEnableGroups, requestedModelId, tokens])
+  const compatibleTokenIds = useMemo(
+    () => new Set(compatibleTokens.map((token) => token.id)),
+    [compatibleTokens],
+  )
+  const hasLoadedTokens = !isLoadingTokens && tokens.length > 0
+  const hasNoCompatibleToken =
+    hasModelGroupContext && hasLoadedTokens && compatibleTokens.length === 0
+  const selectedTokenIsCompatible =
+    !selectedToken ||
+    !hasModelGroupContext ||
+    compatibleTokenIds.has(selectedToken.id)
+  const hasIncompatibleSelectedToken =
+    hasModelGroupContext &&
+    selectedToken !== undefined &&
+    !selectedTokenIsCompatible
+  const tokenCompatibilityHint = hasNoCompatibleToken
+    ? t("verifyDialog.noCompatibleTokenHint")
+    : hasIncompatibleSelectedToken
+      ? t("verifyDialog.selectedTokenIncompatibleHint")
+      : null
 
   const tokenModelHint = useMemo(() => {
     if (!selectedToken) return undefined
@@ -157,7 +198,18 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       setTokens(sorted)
 
       const defaultToken =
-        sorted.find((tok) => tok.status === 1) ?? sorted.at(0) ?? null
+        sorted.find((tok) => {
+          if (!hasModelGroupContext) return tok.status === 1
+          return isTokenCompatibleWithModel(tok, {
+            id: requestedModelId,
+            enableGroups: modelEnableGroups,
+          })
+        }) ??
+        (hasModelGroupContext
+          ? null
+          : sorted.find((tok) => tok.status === 1)) ??
+        (hasModelGroupContext ? null : sorted.at(0)) ??
+        null
       setSelectedTokenId(defaultToken ? defaultToken.id.toString() : "")
     } catch (error) {
       logger.error("Failed to load tokens", {
@@ -176,7 +228,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   }
 
   const runProbe = async (probeId: ApiVerificationProbeId) => {
-    if (!selectedToken) return null
+    if (!selectedToken || !selectedTokenIsCompatible) return null
     let resolvedToken = selectedToken
 
     const pendingProbes = probesRef.current.map((probe) =>
@@ -266,7 +318,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   }
 
   // The suite can always run the models probe without a model id.
-  const canRunAll = !!selectedToken
+  const canRunAll = !!selectedToken && selectedTokenIsCompatible
 
   const runAll = async () => {
     if (!canRunAll) return
@@ -441,16 +493,44 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             <SearchableSelect
               options={[
                 { value: "", label: t("verifyDialog.meta.tokenPlaceholder") },
-                ...tokens.map((tok) => ({
-                  value: tok.id.toString(),
-                  label: tok.name,
-                })),
+                ...tokens.map((tok) => {
+                  const isCompatible =
+                    !hasModelGroupContext || compatibleTokenIds.has(tok.id)
+                  return {
+                    value: tok.id.toString(),
+                    label: tok.name,
+                    disabled: !isCompatible,
+                    suffix: isCompatible ? undefined : (
+                      <span className="text-xs text-gray-400">
+                        {t("verifyDialog.meta.tokenIncompatible")}
+                      </span>
+                    ),
+                  }
+                }),
               ]}
               value={selectedTokenId}
               onChange={setSelectedTokenId}
               disabled={isLoadingTokens}
               placeholder={t("verifyDialog.meta.tokenPlaceholder")}
             />
+            {tokenCompatibilityHint ? (
+              <div className="space-y-1.5">
+                <div className="text-xs text-red-500" role="alert">
+                  {tokenCompatibilityHint}
+                </div>
+                {onManageModelKey ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto px-0 py-0 text-xs"
+                    onClick={onManageModelKey}
+                  >
+                    {t("verifyDialog.actions.manageModelKey")}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">
@@ -579,6 +659,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                       isLoadingTokens ||
                       probe.isRunning ||
                       !selectedToken ||
+                      !selectedTokenIsCompatible ||
                       isDisabledForModel
                     }
                   >
