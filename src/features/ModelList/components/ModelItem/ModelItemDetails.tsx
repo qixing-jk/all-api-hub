@@ -20,7 +20,10 @@ import {
   type CalculatedPrice,
 } from "~/services/models/utils/modelPricing"
 
-import { getUnavailablePriceReasonText } from "./ModelItemPricing"
+import {
+  getUnavailablePriceReasonText,
+  resolveUnavailablePriceReason,
+} from "./ModelItemPricing"
 
 interface ModelItemDetailsProps {
   model: ModelPricing
@@ -49,7 +52,10 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
     return null
   }
 
-  const priceUnavailable = calculatedPrice.priceAvailability === "unavailable"
+  const unavailableReason = resolveUnavailablePriceReason(
+    model,
+    calculatedPrice,
+  )
 
   return (
     <>
@@ -134,13 +140,9 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                 {t("detailedPricing")}
               </span>
             </div>
-            {priceUnavailable ? (
+            {unavailableReason ? (
               <div className="dark:text-dark-text-secondary text-xs leading-snug text-gray-600">
-                {getUnavailablePriceReasonText(
-                  t,
-                  calculatedPrice.unavailableReason ??
-                    model.price_metadata?.unavailable_reason,
-                )}
+                {getUnavailablePriceReasonText(t, unavailableReason)}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 text-xs">

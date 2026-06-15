@@ -1898,6 +1898,39 @@ describe("apiService sub2api exported operations", () => {
       })
     })
 
+    it("surfaces non-auth runtime model HTTP failures with endpoint context", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response("Gateway timeout", {
+          status: 504,
+          statusText: "",
+        }),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+      ).rejects.toMatchObject({
+        message: "Sub2API runtime model request failed",
+        statusCode: 504,
+        code: API_ERROR_CODES.HTTP_OTHER,
+        endpoint: "/v1/models",
+      })
+    })
+
+    it("logs and rethrows network failures from the runtime model endpoint", async () => {
+      const networkError = new Error("network down")
+      const fetchMock = vi.fn().mockRejectedValueOnce(networkError)
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(
+          createRuntimeRequest({
+            accountId: "account-runtime",
+          }),
+        ),
+      ).rejects.toBe(networkError)
+    })
+
     it("surfaces Sub2API runtime business errors before auth fallbacks", async () => {
       const fetchMock = vi.fn().mockResolvedValue(
         new Response(

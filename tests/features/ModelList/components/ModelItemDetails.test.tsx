@@ -293,6 +293,85 @@ describe("ModelItemDetails", () => {
     expect(formatPriceMock).not.toHaveBeenCalled()
   })
 
+  it("uses model unavailable metadata before calculated fallback details", async () => {
+    render(
+      <ModelItemDetails
+        model={
+          {
+            enable_groups: ["default"],
+            supported_endpoint_types: ["chat"],
+            quota_type: 0,
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.NONE,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+              unavailable_reason:
+                MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+            },
+          } as any
+        }
+        calculatedPrice={
+          {
+            priceAvailability: "unavailable",
+            unavailableReason:
+              MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
+          } as any
+        }
+        showEndpointTypes={false}
+        groupRatios={{}}
+        effectiveGroup="default"
+        showGroupDetails={false}
+        showPricingDetails={true}
+      />,
+    )
+
+    expect(await screen.findByText("detailedPricing")).toBeInTheDocument()
+    expect(
+      screen.getByText("unavailablePriceReasons.modelListOnly"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("unavailablePriceReasons.officialPriceMissing"),
+    ).toBeNull()
+  })
+
+  it("uses model unavailable metadata even when calculated prices are otherwise available", async () => {
+    render(
+      <ModelItemDetails
+        model={
+          {
+            enable_groups: ["default"],
+            supported_endpoint_types: ["chat"],
+            quota_type: 0,
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.NONE,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+              unavailable_reason:
+                MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+            },
+          } as any
+        }
+        calculatedPrice={
+          {
+            inputUSD: 1,
+            outputUSD: 2,
+            inputCNY: 7,
+            outputCNY: 14,
+          } as any
+        }
+        showEndpointTypes={false}
+        groupRatios={{}}
+        effectiveGroup="default"
+        showGroupDetails={false}
+        showPricingDetails={true}
+      />,
+    )
+
+    expect(await screen.findByText("detailedPricing")).toBeInTheDocument()
+    expect(
+      screen.getByText("unavailablePriceReasons.pricingSourceUnavailable"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/^USD:/)).toBeNull()
+  })
+
   it("falls back to a 1x tooltip when group ratios are missing", async () => {
     render(
       <ModelItemDetails

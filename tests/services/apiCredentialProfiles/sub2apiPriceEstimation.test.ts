@@ -108,6 +108,27 @@ describe("resolveSub2ApiKeyGroupForPriceEstimation", () => {
     ).toEqual(expect.objectContaining({ groupId: "9", groupName: "vip" }))
   })
 
+  it("falls back to the selected key group name when account tokens do not reveal an exact key match", () => {
+    expect(
+      resolveSub2ApiKeyGroupForPriceEstimation({
+        selectedToken: createToken({
+          key: "masked********key",
+          group: "vip",
+        }),
+        resolvedKey: "sub2api-full-secret",
+        accountTokens: [
+          createToken({
+            id: 1,
+            key: "different-sub2api-secret",
+            group: "default",
+            sub2api_group_id: 1,
+          }),
+        ],
+        groups,
+      }),
+    ).toEqual(expect.objectContaining({ groupId: "9", groupName: "vip" }))
+  })
+
   it("disables estimation for masked matches, no match, no stored group, or multiple same-name matches", () => {
     const baseParams = {
       resolvedKey: "stored-key",
@@ -117,7 +138,7 @@ describe("resolveSub2ApiKeyGroupForPriceEstimation", () => {
     expect(
       resolveSub2ApiKeyGroupForPriceEstimation({
         ...baseParams,
-        selectedToken: createToken({ group: "vip" }),
+        selectedToken: createToken({ group: "" }),
         accountTokens: [
           createToken({
             key: "stored********key",

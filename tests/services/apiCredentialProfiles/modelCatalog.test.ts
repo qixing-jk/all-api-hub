@@ -450,6 +450,45 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     ])
   })
 
+  it("keeps Sub2API runtime rows without pricing when dashboard auth is unavailable", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
+      ...TOKEN,
+      key: "sk-real-sub2api-secret",
+    })
+    fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
+      "example-runtime-model",
+    ])
+
+    const result = await loadAccountTokenFallbackPricingResponse({
+      account: {
+        ...ACCOUNT,
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: "https://sub2api.example.invalid",
+        token: "",
+      },
+      token: {
+        ...TOKEN,
+        key: "sk-masked-sub2api",
+      },
+    })
+
+    expect(fetchSub2ApiAvailableGroupsMock).not.toHaveBeenCalled()
+    expect(loadModelPriceTableMock).not.toHaveBeenCalled()
+    expect(result.model_list_source).toMatchObject({
+      kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+      provider: SITE_TYPES.SUB2API,
+      supportsPricing: false,
+    })
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        model_name: "example-runtime-model",
+        price_metadata: expect.objectContaining({
+          unavailable_reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+        }),
+      }),
+    ])
+  })
+
   it("redacts the resolved key and base URL when fallback loading fails", async () => {
     resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
       ...TOKEN,

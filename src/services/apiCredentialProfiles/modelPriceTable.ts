@@ -18,8 +18,10 @@ type LiteLlmPriceTableEntry = {
   cache_creation_input_token_cost?: unknown
 }
 
-const LITELLM_MODEL_PRICE_TABLE_URL =
+export const LITELLM_MODEL_PRICE_TABLE_URL =
   "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
+
+export const MODEL_PRICE_TABLE_FETCH_TIMEOUT_MS = 10_000
 
 const USD_PER_TOKEN_TO_USD_PER_MILLION = 1_000_000
 
@@ -87,7 +89,29 @@ const normalizeLiteLlmPriceTable = (payload: unknown): ModelPriceTable => {
  * token and are normalized to this app's USD-per-1M-token display units.
  */
 export async function loadModelPriceTable(): Promise<ModelPriceTable> {
-  const response = await fetch(LITELLM_MODEL_PRICE_TABLE_URL)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    MODEL_PRICE_TABLE_FETCH_TIMEOUT_MS,
+  )
+  let response: Response
+
+  try {
+    response = await fetch(LITELLM_MODEL_PRICE_TABLE_URL, {
+      signal: controller.signal,
+    })
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("Timed out loading LiteLLM price table", {
+        cause: error,
+      })
+    }
+
+    throw new Error("Failed to load LiteLLM price table", { cause: error })
+  } finally {
+    clearTimeout(timeoutId)
+  }
+
   if (!response.ok) {
     throw new Error("Failed to load LiteLLM price table")
   }

@@ -150,12 +150,13 @@ export function resolveSub2ApiKeyGroupForPriceEstimation(
       params.accountTokens,
       params.resolvedKey,
     )
-    if (!matchedToken) return null
 
-    return (
-      findGroupByStableId(groups, matchedToken.sub2api_group_id) ??
-      findSingleGroupByName(groups, matchedToken.group)
-    )
+    if (matchedToken) {
+      return (
+        findGroupByStableId(groups, matchedToken.sub2api_group_id) ??
+        findSingleGroupByName(groups, matchedToken.group)
+      )
+    }
   }
 
   return findSingleGroupByName(groups, params.selectedToken.group)

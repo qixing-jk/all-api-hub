@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { loadModelPriceTable } from "~/services/apiCredentialProfiles/modelPriceTable"
+import {
+  LITELLM_MODEL_PRICE_TABLE_URL,
+  loadModelPriceTable,
+  MODEL_PRICE_TABLE_FETCH_TIMEOUT_MS,
+} from "~/services/apiCredentialProfiles/modelPriceTable"
 
 describe("loadModelPriceTable", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it("loads and normalizes LiteLLM token prices into USD-per-million units", async () => {
@@ -27,8 +32,7 @@ describe("loadModelPriceTable", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await expect(loadModelPriceTable()).resolves.toEqual({
-      source:
-        "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      source: LITELLM_MODEL_PRICE_TABLE_URL,
       models: {
         "example-priced-model": {
           input: 2,
@@ -38,9 +42,9 @@ describe("loadModelPriceTable", () => {
         },
       },
     })
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-    )
+    expect(fetchMock).toHaveBeenCalledWith(LITELLM_MODEL_PRICE_TABLE_URL, {
+      signal: expect.any(AbortSignal),
+    })
   })
 
   it("rejects failed or malformed price-table responses", async () => {
@@ -67,5 +71,32 @@ describe("loadModelPriceTable", () => {
     await expect(loadModelPriceTable()).rejects.toThrow(
       "Invalid LiteLLM price table payload",
     )
+  })
+
+  it("aborts hung LiteLLM price-table requests", async () => {
+    vi.useFakeTimers()
+    let abortSignal: AbortSignal | undefined
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) => {
+        abortSignal = init?.signal
+
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("The operation was aborted", "AbortError"))
+          })
+        })
+      }),
+    )
+
+    const loading = loadModelPriceTable()
+    const loadingExpectation = expect(loading).rejects.toThrow(
+      "Timed out loading LiteLLM price table",
+    )
+
+    await vi.advanceTimersByTimeAsync(MODEL_PRICE_TABLE_FETCH_TIMEOUT_MS)
+
+    expect(abortSignal?.aborted).toBe(true)
+    await loadingExpectation
   })
 })

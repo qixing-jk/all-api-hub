@@ -69,6 +69,28 @@ export function getUnavailablePriceReasonText(
 }
 
 /**
+ * Resolves the shared unavailable-price state used by collapsed and expanded rows.
+ */
+export function resolveUnavailablePriceReason(
+  model: ModelPricing,
+  calculatedPrice: CalculatedPrice,
+): ModelUnavailablePriceReason | undefined {
+  if (
+    !isModelPriceUnavailable(model) &&
+    calculatedPrice.priceAvailability !== "unavailable"
+  ) {
+    return undefined
+  }
+
+  return (
+    model.price_metadata?.unavailable_reason ??
+    (calculatedPrice.priceAvailability === "unavailable"
+      ? calculatedPrice.unavailableReason
+      : undefined)
+  )
+}
+
+/**
  * Resolves which pricing metadata badge should be rendered for the model row.
  */
 function resolvePriceMetaBadge(params: {
@@ -118,9 +140,10 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     return null
   }
 
-  const priceUnavailable =
-    isModelPriceUnavailable(model) ||
-    calculatedPrice.priceAvailability === "unavailable"
+  const unavailableReason = resolveUnavailablePriceReason(
+    model,
+    calculatedPrice,
+  )
   const tokenBillingType = isTokenBillingType(model.quota_type)
   const perCallPrice = calculatedPrice.perCallPrice
   const estimatedPriceUsesDirectTokenPrice =
@@ -192,13 +215,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       </Badge>
     ) : null
 
-  if (priceUnavailable) {
-    const unavailableReason =
-      model.price_metadata?.unavailable_reason ??
-      (calculatedPrice.priceAvailability === "unavailable"
-        ? calculatedPrice.unavailableReason
-        : undefined)
-
+  if (unavailableReason) {
     return (
       <div className="mt-2">
         <span
