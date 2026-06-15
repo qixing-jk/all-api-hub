@@ -32,10 +32,12 @@
     "unlimited": "Unlimited"
   },
   "rootErrorBoundary": {
-    "description": "The page could not be displayed correctly. Reload first. If this keeps happening, turn off automatic translation for this page or switch to the language you need in extension settings.",
+    "genericDescription": "The page could not be displayed correctly. Reload first. If this keeps happening, report the problem so we can help.",
     "reload": "Reload page",
+    "reportIssue": "Report problem",
     "requestLanguage": "Request a language",
-    "title": "Page display failed"
+    "title": "Page display failed",
+    "translationDescription": "If you are using automatic translation, turn it off for this page or switch to the language you need in extension settings."
   },
   "status": {
     "configurationRequired": "Configuration required",

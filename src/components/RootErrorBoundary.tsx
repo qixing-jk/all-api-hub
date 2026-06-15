@@ -14,6 +14,7 @@ type RootErrorBoundaryProps = {
 }
 
 type RootErrorBoundaryState = {
+  error: unknown
   hasError: boolean
 }
 
@@ -25,13 +26,35 @@ function reloadCurrentPage() {
 }
 
 /**
+ * Detects React root crashes that match browser translation DOM rewrites.
+ */
+function isLikelyExternalDomMutationError(error: unknown) {
+  if (!(error instanceof Error || error instanceof DOMException)) {
+    return false
+  }
+
+  const message = error.message.toLowerCase()
+  const name = error.name.toLowerCase()
+
+  return (
+    name === "notfounderror" ||
+    (message.includes("node") &&
+      (message.includes("removechild") || message.includes("insertbefore")))
+  )
+}
+
+/**
  * Renders a small recovery surface when the React root cannot render normally.
  */
 function RootErrorFallback({
+  error,
   reloadPage = reloadCurrentPage,
-}: Pick<RootErrorBoundaryProps, "reloadPage">) {
+}: Pick<RootErrorBoundaryProps, "reloadPage"> & {
+  error: unknown
+}) {
   const { t } = useTranslation("common")
-  const languageRequestUrl = getFeedbackDestinationUrls().languageRequest
+  const feedbackUrls = getFeedbackDestinationUrls()
+  const showTranslationGuidance = isLikelyExternalDomMutationError(error)
 
   return (
     <main className="bg-background text-foreground flex min-h-screen items-center justify-center px-4 py-8">
@@ -43,8 +66,13 @@ function RootErrorFallback({
           {t("rootErrorBoundary.title")}
         </h1>
         <p className="text-muted-foreground mt-3 text-sm leading-6">
-          {t("rootErrorBoundary.description")}
+          {t("rootErrorBoundary.genericDescription")}
         </p>
+        {showTranslationGuidance ? (
+          <p className="text-muted-foreground mt-2 text-sm leading-6">
+            {t("rootErrorBoundary.translationDescription")}
+          </p>
+        ) : null}
         <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
           <Button
             type="button"
@@ -58,8 +86,18 @@ function RootErrorFallback({
             variant="outline"
             leftIcon={<ExternalLink className="size-4" aria-hidden="true" />}
           >
-            <a href={languageRequestUrl} target="_blank" rel="noreferrer">
-              {t("rootErrorBoundary.requestLanguage")}
+            <a
+              href={
+                showTranslationGuidance
+                  ? feedbackUrls.languageRequest
+                  : feedbackUrls.bugReport
+              }
+              target="_blank"
+              rel="noreferrer"
+            >
+              {showTranslationGuidance
+                ? t("rootErrorBoundary.requestLanguage")
+                : t("rootErrorBoundary.reportIssue")}
             </a>
           </Button>
         </div>
@@ -73,11 +111,12 @@ export class RootErrorBoundary extends Component<
   RootErrorBoundaryState
 > {
   state: RootErrorBoundaryState = {
+    error: null,
     hasError: false,
   }
 
-  static getDerivedStateFromError(): RootErrorBoundaryState {
-    return { hasError: true }
+  static getDerivedStateFromError(error: unknown): RootErrorBoundaryState {
+    return { error, hasError: true }
   }
 
   componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
@@ -86,7 +125,12 @@ export class RootErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
-      return <RootErrorFallback reloadPage={this.props.reloadPage} />
+      return (
+        <RootErrorFallback
+          error={this.state.error}
+          reloadPage={this.props.reloadPage}
+        />
+      )
     }
 
     return this.props.children

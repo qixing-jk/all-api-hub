@@ -32,10 +32,12 @@
     "unlimited": "无限额度"
   },
   "rootErrorBoundary": {
-    "description": "页面显示异常。请先刷新页面；如果反复出现，请关闭此页面的自动翻译，或在扩展设置中切换到需要的语言。",
+    "genericDescription": "页面暂时无法显示。请先刷新页面；如果仍然失败，请反馈问题，我们会协助排查。",
     "reload": "刷新页面",
+    "reportIssue": "反馈问题",
     "requestLanguage": "请求支持新语言",
-    "title": "页面显示失败"
+    "title": "页面显示失败",
+    "translationDescription": "如果你正在使用浏览器自动翻译，请关闭此页面的自动翻译，或在扩展设置中切换到需要的语言。"
   },
   "status": {
     "configurationRequired": "缺少配置",
