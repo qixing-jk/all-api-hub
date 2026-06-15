@@ -22,6 +22,7 @@ import {
 import {
   formatPriceCompact,
   isTokenBillingType,
+  type AvailableCalculatedPrice,
   type CalculatedPrice,
 } from "~/services/models/utils/modelPricing"
 
@@ -86,8 +87,18 @@ export function resolveUnavailablePriceReason(
     model.price_metadata?.unavailable_reason ??
     (calculatedPrice.priceAvailability === "unavailable"
       ? calculatedPrice.unavailableReason
-      : undefined)
+      : undefined) ??
+    MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE
   )
+}
+
+/**
+ * Narrows calculated pricing to rows that can render numeric price values.
+ */
+export function isAvailableCalculatedPrice(
+  calculatedPrice: CalculatedPrice,
+): calculatedPrice is AvailableCalculatedPrice {
+  return calculatedPrice.priceAvailability !== "unavailable"
 }
 
 /**
@@ -229,6 +240,10 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
         </span>
       </div>
     )
+  }
+
+  if (!isAvailableCalculatedPrice(calculatedPrice)) {
+    return null
   }
 
   return (

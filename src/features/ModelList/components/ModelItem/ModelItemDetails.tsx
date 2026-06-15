@@ -22,6 +22,7 @@ import {
 
 import {
   getUnavailablePriceReasonText,
+  isAvailableCalculatedPrice,
   resolveUnavailablePriceReason,
 } from "./ModelItemPricing"
 
@@ -144,7 +145,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
               <div className="dark:text-dark-text-secondary text-xs leading-snug text-gray-600">
                 {getUnavailablePriceReasonText(t, unavailableReason)}
               </div>
-            ) : (
+            ) : isAvailableCalculatedPrice(calculatedPrice) ? (
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div className="space-y-1">
                   <div className="dark:text-dark-text-tertiary text-gray-500">
@@ -169,7 +170,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>

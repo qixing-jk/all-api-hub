@@ -79,7 +79,7 @@ describe("loadModelPriceTable", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((_url: string, init?: RequestInit) => {
-        abortSignal = init?.signal
+        abortSignal = init?.signal ?? undefined
 
         return new Promise((_resolve, reject) => {
           init?.signal?.addEventListener("abort", () => {
