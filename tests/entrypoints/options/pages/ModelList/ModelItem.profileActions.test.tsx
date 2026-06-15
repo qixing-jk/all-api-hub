@@ -575,7 +575,7 @@ describe("ModelItem profile actions", () => {
       ),
     ).toBeInTheDocument()
 
-    expect(screen.getByText("modelList:available")).toBeInTheDocument()
+    expect(screen.queryByText("modelList:available")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:unavailable")).not.toBeInTheDocument()
     expect(
       screen.queryByText(/modelList:clickSwitchGroup/),
