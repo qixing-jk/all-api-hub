@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
+import { RootErrorBoundary } from "~/components/RootErrorBoundary"
 import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/browserApi"
@@ -189,6 +190,51 @@ describe("DevDialogDebugMenu", () => {
         "Failed to queue popup interruption hint (dev): storage blocked",
       )
     })
+  })
+
+  it("triggers the root translation crash fallback from the development menu", async () => {
+    const user = userEvent.setup()
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined)
+
+    try {
+      render(
+        <RootErrorBoundary reloadPage={vi.fn()}>
+          <DevDialogDebugMenu />
+        </RootErrorBoundary>,
+        {
+          withReleaseUpdateStatusProvider: false,
+          withUserPreferencesProvider: false,
+          withThemeProvider: false,
+        },
+      )
+
+      await user.click(
+        await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
+      )
+      await user.click(
+        await screen.findByRole("menuitem", {
+          name: "Dev: Trigger translation crash",
+        }),
+      )
+
+      expect(
+        await screen.findByText(
+          "common:rootErrorBoundary.translationDescription",
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getByRole("link", {
+          name: "common:rootErrorBoundary.requestLanguage",
+        }),
+      ).toHaveAttribute(
+        "href",
+        "https://github.com/qixing-jk/all-api-hub/issues/new?template=language_request.yml",
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 
   it("does not render outside development mode", () => {

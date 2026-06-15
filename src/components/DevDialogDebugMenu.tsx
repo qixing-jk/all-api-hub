@@ -2,9 +2,10 @@ import {
   BugAntIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon,
+  LanguageIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline"
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 import toast from "react-hot-toast"
 
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
@@ -27,10 +28,26 @@ import { openPermissionsOnboardingPage } from "~/utils/navigation"
 const logger = createLogger("DevDialogDebugMenu")
 
 /**
+ * Builds the DOMException shape React commonly reports after browser translation rewrites DOM nodes.
+ */
+function createDevTranslationCrashError() {
+  return new DOMException(
+    "Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node.",
+    "NotFoundError",
+  )
+}
+
+/**
  * Renders the development dialog debug dropdown once development mode is confirmed.
  */
 function DevDialogDebugMenuContent() {
   const { openDialog } = useUpdateLogDialogContext()
+  const [shouldTriggerTranslationCrash, setShouldTriggerTranslationCrash] =
+    useState(false)
+
+  if (shouldTriggerTranslationCrash) {
+    throw createDevTranslationCrashError()
+  }
 
   const handleTriggerUpdateLog = useCallback(async () => {
     try {
@@ -101,6 +118,12 @@ function DevDialogDebugMenuContent() {
         >
           <ExclamationTriangleIcon className="h-4 w-4" />
           Dev: Queue popup interruption hint
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setShouldTriggerTranslationCrash(true)}
+        >
+          <LanguageIcon className="h-4 w-4" />
+          Dev: Trigger translation crash
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
