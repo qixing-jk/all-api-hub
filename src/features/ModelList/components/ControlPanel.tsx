@@ -90,6 +90,8 @@ interface ControlPanelProps {
  * @param props Component props bundle.
  * @param props.selectedSource Active model-management source.
  * @param props.sourceCapabilities Capability flags for the active source.
+ * @param props.selectedSourceValue Active model-management source value.
+ * @param props.setSelectedSourceValue Setter for source selection value.
  * @param props.searchTerm Current search keyword.
  * @param props.setSearchTerm Setter to update search keyword.
  * @param props.sortMode Active sort mode.
@@ -285,6 +287,7 @@ export function ControlPanel({
     setSelectedBillingMode(MODEL_LIST_BILLING_MODES.ALL)
     setSelectedGroups([])
     setShowRealPrice(true)
+    const filterCount = 1 + (searchTerm.trim() ? 1 : 0)
 
     void trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
@@ -295,7 +298,7 @@ export function ControlPanel({
       insights: {
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
         mode: PRODUCT_ANALYTICS_MODE_IDS.All,
-        filterCount: 2,
+        filterCount,
       },
     })
   }

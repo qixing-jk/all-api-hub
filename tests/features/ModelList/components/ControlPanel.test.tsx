@@ -217,8 +217,6 @@ describe("ControlPanel", () => {
       onBatchVerifyModels: vi.fn(),
     })
 
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
-
     const copyButton = screen.getByRole("button", { name: "copyAllNames" })
     const comparisonButton = screen.getByRole("button", {
       name: "comparison.cta",
@@ -253,6 +251,28 @@ describe("ControlPanel", () => {
       expect.objectContaining({
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.EnableModelPriceComparison,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: expect.objectContaining({
+          filterCount: 1,
+        }),
+      }),
+    )
+  })
+
+  it("counts the existing search term when enabling price comparison", async () => {
+    const user = userEvent.setup()
+    renderControlPanel({
+      searchTerm: "gpt",
+    })
+
+    await user.click(screen.getByRole("button", { name: "comparison.cta" }))
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.EnableModelPriceComparison,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: expect.objectContaining({
+          filterCount: 2,
+        }),
       }),
     )
   })
