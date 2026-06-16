@@ -61,6 +61,49 @@ export type ModelManagementItemSource =
   | ModelManagementAccountSource
   | ModelManagementProfileSource
 
+export const MODEL_LIST_SOURCE_IDENTITY_KINDS = {
+  ACCOUNT: "account",
+  ACCOUNT_TOKEN: "account-token",
+} as const
+
+export type ModelListSourceIdentity =
+  | {
+      kind: typeof MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT
+      id: string
+    }
+  | {
+      kind: typeof MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN
+      id: string
+      tokenId: number
+      tokenName?: string
+    }
+
+/** Creates the default account-scoped source identity for model-list rows. */
+export function createAccountModelListSourceIdentity(
+  accountId: string,
+): ModelListSourceIdentity {
+  return {
+    kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT,
+    id: accountId,
+  }
+}
+
+/** Creates a token-scoped account source identity for model-list rows. */
+export function createAccountTokenModelListSourceIdentity(params: {
+  accountId: string
+  tokenId: number
+  tokenName?: string
+}): ModelListSourceIdentity {
+  const tokenName = params.tokenName?.trim()
+
+  return {
+    kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
+    id: `${params.accountId}:token:${params.tokenId}`,
+    tokenId: params.tokenId,
+    ...(tokenName ? { tokenName } : {}),
+  }
+}
+
 export const EMPTY_MODEL_MANAGEMENT_CAPABILITIES: ModelManagementSourceCapabilities =
   {
     supportsPricing: false,

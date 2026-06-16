@@ -6,8 +6,10 @@ import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import {
   createAccountSource,
+  createAccountTokenModelListSourceIdentity,
   createAllAccountsSource,
   createProfileSource,
+  MODEL_LIST_SOURCE_IDENTITY_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import {
@@ -1361,6 +1363,211 @@ describe("useFilteredModels", () => {
     })
   })
 
+  it("compares Sub2API estimated token prices against ratio-based accounts in all-accounts mode", async () => {
+    const sub2apiAccount = createDisplayAccount({
+      id: "account-sub2api-estimated",
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2api.example.invalid",
+    })
+    const ratioAccount = createDisplayAccount({
+      id: "account-ratio",
+      name: "Ratio Account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://ratio.example.invalid",
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: sub2apiAccount,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                quota_type: 0,
+                model_ratio: 0,
+                completion_ratio: 1,
+                enable_groups: ["default"],
+                token_price_usd_per_million: {
+                  input: 0.5,
+                  output: 2,
+                },
+                price_metadata: {
+                  source: MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE,
+                  precision: MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+                },
+              },
+            ],
+            {
+              group_ratio: { default: 1 },
+              model_list_source: {
+                kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+                provider: SITE_TYPES.SUB2API,
+                supportsRuntimeModelList: true,
+                supportsPricing: true,
+              },
+            },
+          ),
+        },
+        {
+          account: ratioAccount,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                quota_type: 0,
+                model_ratio: 1,
+                completion_ratio: 3,
+                enable_groups: ["default"],
+              },
+            ],
+            {
+              group_ratio: { default: 1 },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.calculatedPrice.inputUSD,
+          item.calculatedPrice.outputUSD,
+          item.isLowestPrice,
+        ]),
+      ).toEqual([
+        ["account-sub2api-estimated", 0.5, 2, true],
+        ["account-ratio", 2, 6, false],
+      ])
+    })
+  })
+
+  it("keeps same-account token sources distinct when they expose the same model", async () => {
+    const account = createDisplayAccount({
+      id: "account-sub2api-multi-key",
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2api.example.invalid",
+    })
+    const defaultTokenSourceIdentity =
+      createAccountTokenModelListSourceIdentity({
+        accountId: account.id,
+        tokenId: 11,
+        tokenName: "Default key",
+      })
+    const vipTokenSourceIdentity = createAccountTokenModelListSourceIdentity({
+      accountId: account.id,
+      tokenId: 12,
+      tokenName: "VIP key",
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          sourceIdentity: defaultTokenSourceIdentity,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                quota_type: 0,
+                model_ratio: 0,
+                completion_ratio: 1,
+                enable_groups: ["default"],
+                token_price_usd_per_million: {
+                  input: 0.5,
+                  output: 1,
+                },
+                price_metadata: {
+                  source: MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE,
+                  precision: MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+                },
+              },
+            ],
+            {
+              group_ratio: { default: 1 },
+              model_list_source: {
+                kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+                provider: SITE_TYPES.SUB2API,
+                supportsRuntimeModelList: true,
+                supportsPricing: true,
+              },
+            },
+          ),
+        },
+        {
+          account,
+          sourceIdentity: vipTokenSourceIdentity,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                quota_type: 0,
+                model_ratio: 0,
+                completion_ratio: 1,
+                enable_groups: ["vip"],
+                token_price_usd_per_million: {
+                  input: 0.25,
+                  output: 0.75,
+                },
+                price_metadata: {
+                  source: MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE,
+                  precision: MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+                },
+              },
+            ],
+            {
+              group_ratio: { vip: 0.5 },
+              model_list_source: {
+                kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+                provider: SITE_TYPES.SUB2API,
+                supportsRuntimeModelList: true,
+                supportsPricing: true,
+              },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.sourceIdentity?.id,
+          item.sourceIdentity?.kind,
+          item.effectiveGroup,
+          item.calculatedPrice.inputUSD,
+          item.isLowestPrice,
+        ]),
+      ).toEqual([
+        [
+          "account-sub2api-multi-key",
+          "account-sub2api-multi-key:token:12",
+          MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
+          "vip",
+          0.25,
+          true,
+        ],
+        [
+          "account-sub2api-multi-key",
+          "account-sub2api-multi-key:token:11",
+          MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
+          "default",
+          0.5,
+          false,
+        ],
+      ])
+    })
+  })
+
   it("treats same-named groups on different accounts as unrelated filters", async () => {
     const accountA = createDisplayAccount({
       id: "account-a",
@@ -1431,6 +1638,89 @@ describe("useFilteredModels", () => {
     expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
       "account-a": [{ name: "vip", ratio: 0.5 }],
       "account-b": [{ name: "vip", ratio: 0.8 }],
+    })
+  })
+
+  it("keeps token-scoped group candidates separate under the same account", async () => {
+    const account = createDisplayAccount({
+      id: "account-sub2api-token-groups",
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2api.example.invalid",
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 31,
+            tokenName: "Default key",
+          }),
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "default-model",
+                model_ratio: 1,
+                completion_ratio: 1,
+                enable_groups: ["default"],
+              },
+            ],
+            {
+              group_ratio: { default: 1 },
+            },
+          ),
+        },
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 32,
+            tokenName: "VIP key",
+          }),
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "vip-model",
+                model_ratio: 1,
+                completion_ratio: 1,
+                enable_groups: ["default", "vip"],
+              },
+            ],
+            {
+              group_ratio: { vip: 0.5 },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      allAccountsExcludedGroupsByAccountId: {
+        "account-sub2api-token-groups": ["vip"],
+      },
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => [
+          item.model.model_name,
+          item.sourceIdentity?.id,
+          item.effectiveGroup,
+        ]),
+      ).toEqual([
+        ["default-model", "account-sub2api-token-groups:token:31", "default"],
+      ])
+    })
+
+    expect(result.current.availableAccountGroupsByAccountId).toEqual({
+      "account-sub2api-token-groups": ["default", "vip"],
+    })
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-sub2api-token-groups": [
+        { name: "default", ratio: 1 },
+        { name: "vip", ratio: 0.5 },
+      ],
     })
   })
 

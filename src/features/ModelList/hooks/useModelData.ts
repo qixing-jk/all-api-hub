@@ -5,7 +5,9 @@ import { useTranslation } from "react-i18next"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  createAccountModelListSourceIdentity,
   MODEL_MANAGEMENT_SOURCE_KINDS,
+  type ModelListSourceIdentity,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
@@ -67,6 +69,7 @@ interface UseModelDataProps {
 export interface AccountPricingContext {
   account: DisplaySiteData
   pricing: PricingResponse
+  sourceIdentity?: ModelListSourceIdentity
 }
 
 interface AccountQueryState {
@@ -119,6 +122,9 @@ const createUnsupportedModelPricingError = () =>
 
 const isUnsupportedModelPricingError = (error: unknown) =>
   error instanceof Error && error.message === MODEL_PRICING_UNSUPPORTED_ERROR
+
+const shouldRetryModelPricingQuery = (failureCount: number, error: Error) =>
+  !isUnsupportedModelPricingError(error) && failureCount < 1
 
 /** Counts only valid model rows so analytics never includes raw model ids. */
 function getPricingModelCount(pricing: PricingResponse | null | undefined) {
@@ -326,6 +332,27 @@ function createModelPricingCacheKey(
   ].join("|")
 }
 
+/** Loads the single-key Sub2API fallback catalog for all-accounts comparison. */
+async function fetchSub2ApiAllAccountsFallbackPricing(
+  account: DisplaySiteData,
+) {
+  const tokens = await fetchDisplayAccountTokens(account)
+  if (tokens.length !== 1) {
+    throw createUnsupportedModelPricingError()
+  }
+
+  const data = await loadAccountTokenFallbackPricingResponse({
+    account,
+    token: tokens[0],
+  })
+
+  if (!Array.isArray(data.data)) {
+    throw createInvalidFormatError()
+  }
+
+  return data
+}
+
 /** Builds the profile catalog query key from stable profile revision data. */
 function createProfileCatalogQueryKey(profile?: {
   id: string
@@ -512,7 +539,7 @@ function useSingleAccountModelData(params: {
     enabled: !!currentAccount,
     staleTime: MODEL_PRICING_CACHE_TTL_MS,
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: shouldRetryModelPricingQuery,
     queryFn: async () => {
       if (!currentAccount) {
         throw new Error("No account selected")
@@ -898,7 +925,15 @@ function useSingleAccountModelData(params: {
   const pricingContexts: AccountPricingContext[] = useMemo(
     () =>
       currentAccount && pricingData
-        ? [{ account: currentAccount, pricing: pricingData }]
+        ? [
+            {
+              account: currentAccount,
+              pricing: pricingData,
+              sourceIdentity: createAccountModelListSourceIdentity(
+                currentAccount.id,
+              ),
+            },
+          ]
         : [],
     [currentAccount, pricingData],
   )
@@ -978,10 +1013,14 @@ function useAllAccountsModelData(
       enabled: enabled && safeDisplayData.length > 0,
       staleTime: MODEL_PRICING_CACHE_TTL_MS,
       refetchOnWindowFocus: false,
-      retry: 1,
+      retry: shouldRetryModelPricingQuery,
       queryFn: async () => {
         const service = getApiService(account.siteType)
         if (!service.capabilities.modelPricing) {
+          if (account.siteType === SITE_TYPES.SUB2API) {
+            return fetchSub2ApiAllAccountsFallbackPricing(account)
+          }
+
           throw createUnsupportedModelPricingError()
         }
 

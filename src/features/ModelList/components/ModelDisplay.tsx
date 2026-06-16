@@ -213,6 +213,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
               groupSelectionScope={groupSelectionScope}
               isGroupSelectionInteractive={isGroupSelectionInteractive}
               source={sourceForModel}
+              sourceIdentity={item.sourceIdentity}
               displayCapabilities={displayCapabilities}
               verificationSummary={verificationSummary}
               onFilterAccount={onFilterAccount}

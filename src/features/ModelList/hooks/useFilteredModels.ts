@@ -6,6 +6,7 @@ import {
   createAccountSource,
   deriveModelListSourceCapabilities,
   MODEL_MANAGEMENT_SOURCE_KINDS,
+  type ModelListSourceIdentity,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
@@ -66,6 +67,7 @@ interface RawModelItem {
         NonNullable<ModelManagementSource>,
         { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
       >
+  sourceIdentity?: ModelListSourceIdentity
   groupRatios: Record<string, number>
   exchangeRate: number
 }
@@ -84,6 +86,7 @@ export type CalculatedModelItem = {
         NonNullable<ModelManagementSource>,
         { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
       >
+  sourceIdentity?: ModelListSourceIdentity
   groupRatios: Record<string, number>
   effectiveGroup?: string
   hasAutoSelectedGroup?: boolean
@@ -226,14 +229,42 @@ function hasComparablePriceValue(priceKey: ComparablePriceKey) {
   return isFiniteNumber(priceKey.primary) || isFiniteNumber(priceKey.secondary)
 }
 
+/** Resolves the row identity used for source-scoped model-list comparisons. */
+function getModelListSourceIdentityKey(params: {
+  source:
+    | ReturnType<typeof createAccountSource>
+    | Extract<
+        NonNullable<ModelManagementSource>,
+        { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
+      >
+  sourceIdentity?: ModelListSourceIdentity
+}) {
+  return (
+    params.sourceIdentity?.id ??
+    (params.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+      ? params.source.account.id
+      : params.source.profile.id)
+  )
+}
+
+/** Resolves the source-level group/filter key for a raw model item. */
+function getRawItemSourceIdentityKey(
+  item: Pick<RawModelItem, "source" | "sourceIdentity">,
+) {
+  return getModelListSourceIdentityKey({
+    source: item.source,
+    sourceIdentity: item.sourceIdentity,
+  })
+}
+
 /** Creates a stable identifier for a calculated model item. */
 export function getModelItemKey(
-  item: Pick<CalculatedModelItem, "model" | "source">,
+  item: Pick<CalculatedModelItem, "model" | "source" | "sourceIdentity">,
 ) {
-  const sourceId =
-    item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-      ? item.source.account.id
-      : item.source.profile.id
+  const sourceId = getModelListSourceIdentityKey({
+    source: item.source,
+    sourceIdentity: item.sourceIdentity,
+  })
 
   return `${item.source.kind}:${sourceId}:${item.model.model_name}`
 }
@@ -336,6 +367,7 @@ function resolveBestCalculatedItem(
       model: rawItem.model,
       calculatedPrice,
       source: rawItem.source,
+      sourceIdentity: rawItem.sourceIdentity,
       groupRatios: rawItem.groupRatios,
       effectiveGroup: supportsGroupFiltering ? group : undefined,
       hasAutoSelectedGroup: groupsToEvaluate.length > 1,
@@ -430,7 +462,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
   const rawModelItems = useMemo<RawModelItem[]>(() => {
     if (pricingContexts && pricingContexts.length > 0) {
-      return pricingContexts.flatMap(({ account, pricing }) => {
+      return pricingContexts.flatMap(({ account, pricing, sourceIdentity }) => {
         if (!pricing || !Array.isArray(pricing.data)) {
           return []
         }
@@ -462,6 +494,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         return pricing.data.map((model) => ({
           model,
           source,
+          sourceIdentity,
           groupRatios: pricing.group_ratio ?? {},
           exchangeRate,
         }))
@@ -530,6 +563,49 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     })
 
     return Array.from(groupSet)
+  }, [
+    rawModelItems,
+    selectedSource?.capabilities.supportsGroupFiltering,
+    selectedSource?.kind,
+  ])
+
+  const availableGroupsBySourceId = useMemo(() => {
+    if (
+      !selectedSource?.capabilities.supportsGroupFiltering ||
+      selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+    ) {
+      return {}
+    }
+
+    const groupsBySourceId = new Map<string, Set<string>>()
+
+    rawModelItems.forEach((item) => {
+      if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
+        return
+      }
+
+      const sourceId = getRawItemSourceIdentityKey(item)
+      const sourceGroups = groupsBySourceId.get(sourceId) ?? new Set<string>()
+
+      const pricedGroups = Object.keys(item.groupRatios)
+      pricedGroups.forEach((group) => {
+        if (group) {
+          sourceGroups.add(group)
+        }
+      })
+      if (pricedGroups.length === 0) {
+        addAvailableGroups(sourceGroups, item.model)
+      }
+
+      groupsBySourceId.set(sourceId, sourceGroups)
+    })
+
+    return Object.fromEntries(
+      Array.from(groupsBySourceId.entries()).map(([sourceId, groups]) => [
+        sourceId,
+        toUniqueGroups(groups),
+      ]),
+    ) as Record<string, string[]>
   }, [
     rawModelItems,
     selectedSource?.capabilities.supportsGroupFiltering,
@@ -629,30 +705,34 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     selectedSource?.kind,
   ])
 
-  const includedAllAccountsGroupsByAccountId = useMemo(() => {
+  const includedAllAccountsGroupsBySourceId = useMemo(() => {
     if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
       return {}
     }
 
     return Object.fromEntries(
-      Object.entries(availableAccountGroupsByAccountId).map(
-        ([accountId, groups]) => {
-          const excludedGroups = new Set(
-            toUniqueGroups(
-              allAccountsExcludedGroupsByAccountId[accountId] ?? [],
-            ),
-          )
+      rawModelItems.flatMap((item) => {
+        if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
+          return []
+        }
 
-          return [
-            accountId,
-            groups.filter((group) => !excludedGroups.has(group)),
-          ]
-        },
-      ),
+        const sourceId = getRawItemSourceIdentityKey(item)
+        const groups = availableGroupsBySourceId[sourceId] ?? []
+        const excludedGroups = new Set(
+          toUniqueGroups(
+            allAccountsExcludedGroupsByAccountId[item.source.account.id] ?? [],
+          ),
+        )
+
+        return [
+          [sourceId, groups.filter((group) => !excludedGroups.has(group))],
+        ]
+      }),
     ) as Record<string, string[]>
   }, [
     allAccountsExcludedGroupsByAccountId,
-    availableAccountGroupsByAccountId,
+    availableGroupsBySourceId,
+    rawModelItems,
     selectedSource?.kind,
   ])
 
@@ -698,7 +778,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       ) {
         return (
-          includedAllAccountsGroupsByAccountId[item.source.account.id] ?? []
+          includedAllAccountsGroupsBySourceId[
+            getRawItemSourceIdentityKey(item)
+          ] ?? []
         )
       }
 
@@ -706,7 +788,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     },
     [
       getSingleSourceGroupCandidates,
-      includedAllAccountsGroupsByAccountId,
+      includedAllAccountsGroupsBySourceId,
       selectedGroups,
       selectedSource?.capabilities.supportsGroupFiltering,
       selectedSource?.kind,

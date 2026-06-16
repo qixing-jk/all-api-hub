@@ -9,6 +9,7 @@ import {
   type ModelListGroupSelectionScope,
 } from "~/features/ModelList/groupSelectionScopes"
 import type {
+  ModelListSourceIdentity,
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
@@ -58,6 +59,7 @@ interface ModelItemProps {
   groupSelectionScope?: ModelListGroupSelectionScope
   isGroupSelectionInteractive?: boolean
   source: ModelManagementItemSource
+  sourceIdentity?: ModelListSourceIdentity
   displayCapabilities?: ModelManagementSourceCapabilities
   isLowestPrice?: boolean
   verificationSummary?: ApiVerificationHistorySummary | null
@@ -103,6 +105,7 @@ export default function ModelItem(props: ModelItemProps) {
     groupSelectionScope = MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE,
     isGroupSelectionInteractive = true,
     source,
+    sourceIdentity,
     displayCapabilities = source.capabilities,
     isLowestPrice = false,
     verificationSummary,
@@ -182,10 +185,14 @@ export default function ModelItem(props: ModelItemProps) {
     void createTab(parsedSourceUrl.toString(), true)
   }
 
-  const sourceLabel = formatModelListSourceLabel(source, {
-    formatProfileLabel: ({ name, host }) =>
-      t("sourceLabels.profileBadge", { name, host }),
-  })
+  const sourceLabel = formatModelListSourceLabel(
+    source,
+    {
+      formatProfileLabel: ({ name, host }) =>
+        t("sourceLabels.profileBadge", { name, host }),
+    },
+    sourceIdentity,
+  )
   const handleFilterAccount =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && onFilterAccount
       ? () => onFilterAccount(source.account.id)
