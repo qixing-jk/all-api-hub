@@ -591,6 +591,106 @@ describe("useModelData all-accounts loading", () => {
     ])
   })
 
+  it("loads only active Sub2API fallback keys in all-accounts mode", async () => {
+    const fetchModelPricing = vi.fn()
+    vi.mocked(getApiService).mockReturnValue(
+      createMockApiService(fetchModelPricing, {
+        capabilities: { modelPricing: false },
+      }),
+    )
+
+    const account = createDisplayAccount({
+      id: "sub2api-active-only",
+      name: "Sub2API Active Only",
+      baseUrl: "https://sub2api-active-only.example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+    })
+    const tokens = [
+      {
+        id: 21,
+        user_id: 21,
+        key: "sk-active",
+        status: 1,
+        name: "Active runtime key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+      {
+        id: 22,
+        user_id: 21,
+        key: "sk-disabled",
+        status: 0,
+        name: "Disabled runtime key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ]
+    const pricing = {
+      data: [
+        {
+          model_name: "active-model",
+          quota_type: 0,
+          model_ratio: 1,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: ["default"],
+          supported_endpoint_types: [],
+        },
+      ],
+      group_ratio: { default: 1 },
+      success: true,
+      usable_group: { default: true },
+    }
+
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce(tokens)
+    mockLoadAccountTokenFallbackPricingResponse.mockResolvedValueOnce(pricing)
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(
+          mockLoadAccountTokenFallbackPricingResponse,
+        ).toHaveBeenCalledTimes(1)
+      },
+      { timeout: 3000 },
+    )
+
+    expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith({
+      account,
+      token: tokens[0],
+    })
+    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(result.current.loadErrorMessage).toBeNull()
+    expect(result.current.pricingContexts).toEqual([
+      {
+        account,
+        pricing,
+        sourceIdentity: {
+          kind: "account-token",
+          id: "sub2api-active-only:token:21",
+          tokenId: 21,
+          tokenName: "Active runtime key",
+        },
+      },
+    ])
+  })
+
   it("keeps successful Sub2API token contexts as partial instead of load failed when another token fails", async () => {
     mockTrackProductAnalyticsActionCompleted.mockReset()
     const fetchModelPricing = vi.fn()

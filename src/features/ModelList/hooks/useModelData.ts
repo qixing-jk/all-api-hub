@@ -454,7 +454,9 @@ async function loadSub2ApiTokenPricingContext(params: {
 async function fetchSub2ApiAllAccountsFallbackPricingContexts(
   account: DisplaySiteData,
 ): Promise<AccountPricingQueryResult> {
-  const tokens = await fetchDisplayAccountTokens(account)
+  const tokens = (await fetchDisplayAccountTokens(account)).filter(
+    (token) => token.status === 1,
+  )
   if (tokens.length === 0) {
     throw createUnsupportedModelPricingError()
   }

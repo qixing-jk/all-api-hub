@@ -1,3 +1,8 @@
+import {
+  MODEL_LIST_SOURCE_IDENTITY_KINDS,
+  type ModelListSourceIdentity,
+  type ModelManagementItemSource,
+} from "~/features/ModelList/modelManagementSources"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import {
@@ -10,11 +15,6 @@ import {
   getModelItemKey,
   type CalculatedModelItem,
 } from "./hooks/useFilteredModels"
-import {
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
-  type ModelListSourceIdentity,
-  type ModelManagementItemSource,
-} from "./modelManagementSources"
 
 export const MODEL_LIST_BATCH_VERIFY_CONCURRENCY = 5
 export const MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES = {

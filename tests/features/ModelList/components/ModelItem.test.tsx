@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
 import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
+import { createAccountTokenModelListSourceIdentity } from "~/features/ModelList/modelManagementSources"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import {
@@ -213,6 +214,7 @@ function createDefaultProps() {
       account: {
         id: "account-1",
         name: "Account One",
+        baseUrl: "https://account.example.invalid",
       },
       capabilities: {
         supportsPricing: true,
@@ -258,6 +260,25 @@ describe("ModelItem", () => {
     expect(
       screen.queryByText("availableGroups: vip (1x)"),
     ).not.toBeInTheDocument()
+  })
+
+  it("renders token-scoped account labels from source identity", () => {
+    render(
+      <ModelItem
+        {...createDefaultProps()}
+        sourceIdentity={createAccountTokenModelListSourceIdentity({
+          accountId: "account-1",
+          tokenId: 41,
+          tokenName: "VIP runtime key",
+        })}
+      />,
+    )
+
+    expect(
+      screen.getByText(
+        "Account One / VIP runtime key · account.example.invalid",
+      ),
+    ).toBeInTheDocument()
   })
 
   it("summarizes model groups in the row header without showing availability status", () => {

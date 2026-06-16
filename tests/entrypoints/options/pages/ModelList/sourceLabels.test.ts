@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  createAccountModelListSourceIdentity,
   createAccountSource,
   createAccountTokenModelListSourceIdentity,
   createProfileSource,
@@ -59,6 +60,50 @@ describe("formatModelListSourceLabel", () => {
       title: "https://sub2api.example.invalid",
     })
     expect(label.label).not.toContain("sk-")
+  })
+
+  it("falls back to token ids when account-token source names are blank", () => {
+    const account = createDisplayAccount({
+      id: "sub2api-account",
+      name: "Sub2API Account",
+      baseUrl: "https://sub2api.example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+    })
+
+    expect(
+      formatModelListSourceLabel(
+        createAccountSource(account),
+        labelOptions,
+        createAccountTokenModelListSourceIdentity({
+          accountId: account.id,
+          tokenId: 42,
+          tokenName: "  ",
+        }),
+      ),
+    ).toEqual({
+      label: "Sub2API Account / #42 · sub2api.example.invalid",
+      title: "https://sub2api.example.invalid",
+    })
+  })
+
+  it("ignores non-token source identities for account labels", () => {
+    const account = createDisplayAccount({
+      id: "sub2api-account",
+      name: "Sub2API Account",
+      baseUrl: "https://sub2api.example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+    })
+
+    expect(
+      formatModelListSourceLabel(
+        createAccountSource(account),
+        labelOptions,
+        createAccountModelListSourceIdentity(account.id),
+      ),
+    ).toEqual({
+      label: "Sub2API Account · sub2api.example.invalid",
+      title: "https://sub2api.example.invalid",
+    })
   })
 
   it("keeps profile labels unchanged", () => {
