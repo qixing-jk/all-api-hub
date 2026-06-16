@@ -7,6 +7,7 @@ import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManage
 import { AuthTypeEnum } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
+  readStoredAccounts,
   refreshAccountRowsAndReadStorage,
   saveManualAccountFromApp,
 } from "~~/e2e/scenarios/accountManualAdd"
@@ -54,6 +55,7 @@ test.beforeEach(async ({ context, page }) => {
 })
 
 test("grants the Chromium cookie/DNR optional permissions needed for cookie auth", async ({
+  context,
   extensionId,
   page,
 }) => {
@@ -65,6 +67,7 @@ test("grants the Chromium cookie/DNR optional permissions needed for cookie auth
     await expectPermissionOnboardingHidden(page)
     await grantCookieDnrPermissions(page, localSite.origin)
   } finally {
+    await closeOtherPages(context, page)
     await localSite.close()
   }
 })
@@ -123,6 +126,15 @@ test("isolates same-site cookie and access-token accounts through account refres
             cookieAuthSessionCookie: ACCOUNT_A_SESSION_COOKIE,
           },
         })
+        await localSite.waitForAuthenticatedSessionRequest(
+          ACCOUNT_A_SESSION_COOKIE,
+        )
+        await waitForStoredAccountQuota(
+          serviceWorker,
+          cookieAccountA.id,
+          33_000,
+        )
+
         const cookieAccountB = await saveManualAccountFromApp({
           page,
           extensionId,
@@ -137,6 +149,15 @@ test("isolates same-site cookie and access-token accounts through account refres
             cookieAuthSessionCookie: ACCOUNT_B_SESSION_COOKIE,
           },
         })
+        await localSite.waitForAuthenticatedSessionRequest(
+          ACCOUNT_B_SESSION_COOKIE,
+        )
+        await waitForStoredAccountQuota(
+          serviceWorker,
+          cookieAccountB.id,
+          44_000,
+        )
+
         const tokenAccountA = await saveManualAccountFromApp({
           page,
           extensionId,
@@ -151,6 +172,9 @@ test("isolates same-site cookie and access-token accounts through account refres
             accessToken: ACCESS_TOKEN_A,
           },
         })
+        await localSite.waitForAuthenticatedAccessTokenRequest(ACCESS_TOKEN_A)
+        await waitForStoredAccountQuota(serviceWorker, tokenAccountA.id, 55_000)
+
         const tokenAccountB = await saveManualAccountFromApp({
           page,
           extensionId,
@@ -165,6 +189,8 @@ test("isolates same-site cookie and access-token accounts through account refres
             accessToken: ACCESS_TOKEN_B,
           },
         })
+        await localSite.waitForAuthenticatedAccessTokenRequest(ACCESS_TOKEN_B)
+        await waitForStoredAccountQuota(serviceWorker, tokenAccountB.id, 66_000)
 
         return [cookieAccountA, cookieAccountB, tokenAccountA, tokenAccountB]
       })
@@ -307,6 +333,20 @@ async function grantCookieDnrPermissions(page: Page, origin: string) {
   expect(hasOriginPermission, `${originPattern} host access`).toBe(true)
 }
 
+async function waitForStoredAccountQuota(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+  accountId: string,
+  expectedQuota: number,
+) {
+  await expect
+    .poll(async () => {
+      const accounts = await readStoredAccounts(serviceWorker)
+      const account = accounts.find((candidate) => candidate.id === accountId)
+      return account?.account_info.quota ?? null
+    })
+    .toBe(expectedQuota)
+}
+
 type CapturedSelfRequest = {
   cookieHeader: string
   matchedSessionCookie: string | null
@@ -318,8 +358,11 @@ type DnrCaptureNewApiServer = {
   origin: string
   selfRequests: CapturedSelfRequest[]
   clearSelfRequests: () => void
-  waitForAuthenticatedSelfRequest: (
+  waitForAuthenticatedSessionRequest: (
     sessionCookie: string,
+  ) => Promise<CapturedSelfRequest>
+  waitForAuthenticatedAccessTokenRequest: (
+    accessToken: string,
   ) => Promise<CapturedSelfRequest>
   close: () => Promise<void>
 }
@@ -328,7 +371,7 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
   const selfRequests: CapturedSelfRequest[] = []
   const sockets = new Set<Socket>()
   const waiters: Array<{
-    sessionCookie: string
+    matches: (request: CapturedSelfRequest) => boolean
     resolve: (request: CapturedSelfRequest) => void
     reject: (error: Error) => void
     timeout: ReturnType<typeof setTimeout>
@@ -336,7 +379,7 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
 
   const resolveMatchingWaiters = (captured: CapturedSelfRequest) => {
     for (const waiter of [...waiters]) {
-      if (captured.matchedSessionCookie !== waiter.sessionCookie) {
+      if (!waiter.matches(captured)) {
         continue
       }
       clearTimeout(waiter.timeout)
@@ -473,26 +516,31 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
     })
   })
 
-  const waitForAuthenticatedSelfRequest = async (sessionCookie: string) => {
-    const existing = selfRequests.find(
-      (request) => request.matchedSessionCookie === sessionCookie,
-    )
+  const waitForAuthenticatedRequest = async (
+    label: string,
+    matches: (request: CapturedSelfRequest) => boolean,
+  ) => {
+    const existing = selfRequests.find(matches)
     if (existing) return existing
 
     return await new Promise<CapturedSelfRequest>((resolve, reject) => {
       const timeout = setTimeout(() => {
         const seen = selfRequests
-          .map((request) => request.cookieHeader || "<empty>")
+          .map((request) =>
+            [
+              `cookie=${request.cookieHeader || "<empty>"}`,
+              `token=${request.matchedAccessToken ?? "<none>"}`,
+              `status=${request.responseStatus}`,
+            ].join(" "),
+          )
           .join(", ")
         reject(
-          new Error(
-            `Timed out waiting for ${sessionCookie}; seen Cookie headers: ${seen}`,
-          ),
+          new Error(`Timed out waiting for ${label}; seen requests: ${seen}`),
         )
       }, 15_000)
 
       waiters.push({
-        sessionCookie,
+        matches,
         resolve,
         reject,
         timeout,
@@ -522,7 +570,16 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
     clearSelfRequests: () => {
       selfRequests.splice(0)
     },
-    waitForAuthenticatedSelfRequest,
+    waitForAuthenticatedSessionRequest: (sessionCookie) =>
+      waitForAuthenticatedRequest(
+        sessionCookie,
+        (request) => request.matchedSessionCookie === sessionCookie,
+      ),
+    waitForAuthenticatedAccessTokenRequest: (accessToken) =>
+      waitForAuthenticatedRequest(
+        accessToken,
+        (request) => request.matchedAccessToken === accessToken,
+      ),
     close,
   }
 }
