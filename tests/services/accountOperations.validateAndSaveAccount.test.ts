@@ -295,6 +295,48 @@ describe("accountOperations validateAndSaveAccount", () => {
     })
   })
 
+  it("can save account configuration without blocking on remote data refresh", async () => {
+    const result = await validateAndSaveAccount(
+      "https://api.example.com",
+      "Example",
+      "user",
+      "token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      message: "messages:toast.success.accountSaveSuccess",
+      feedbackLevel: "success",
+    })
+    expect(fetchAccountDataMock).not.toHaveBeenCalled()
+
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved).toMatchObject({
+      site_name: "Example",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Unknown },
+      account_info: {
+        id: "1",
+        username: "user",
+        access_token: "token",
+        quota: 0,
+      },
+    })
+  })
+
   it("normalizes unsupported site types before saving", async () => {
     const { getApiService } = await import("~/services/apiService")
     fetchAccountDataMock.mockResolvedValueOnce({

@@ -183,6 +183,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       created: false,
     })
     mockOpenWithAccount.mockResolvedValue({ opened: true })
+    vi.spyOn(accountStorage, "refreshAccount").mockResolvedValue({
+      account: buildSiteAccount({ id: "saved-account-id" }),
+      refreshed: true,
+    })
     mockAutoProvisionKeyOnAccountAdd(false)
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
@@ -394,12 +398,60 @@ describe("useAccountDialog save and auto-config flows", () => {
         refreshToken: "refresh-token",
         tokenExpiresAt: 123456789,
       },
-      { skipAutoProvisionKeyOnAccountAdd: false },
+      {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      },
     )
     expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledWith(
       savedDisplayData,
     )
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
+  })
+
+  it("defers account data refresh after a successful manual save", async () => {
+    const refreshSpy = vi
+      .spyOn(accountStorage, "refreshAccount")
+      .mockResolvedValue({
+        account: buildSiteAccount({ id: "saved-account-id" }),
+        refreshed: true,
+      })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith(
+      "https://api.example.com/private",
+      "Sensitive Site",
+      "private-user",
+      "sk-private-token",
+      "12345",
+      "7",
+      "private notes",
+      ["secret-tag-id"],
+      expect.any(Object),
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      "",
+      false,
+      false,
+      undefined,
+      {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      },
+    )
+    expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true)
   })
 
   it("does not persist Sub2API refresh-token auth until the mode is explicitly enabled", async () => {
@@ -442,7 +494,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       false,
       false,
       undefined,
-      { skipAutoProvisionKeyOnAccountAdd: false },
+      {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      },
     )
   })
 
@@ -492,6 +547,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       true,
       false,
       undefined,
+      { deferDataRefresh: true },
     )
     expect(toast.success).toHaveBeenCalledWith(
       "accountDialog:messages.updateSuccess",
@@ -933,7 +989,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       false,
       false,
       undefined,
-      { skipAutoProvisionKeyOnAccountAdd: true },
+      {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: true,
+      },
     )
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(true)
     expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
@@ -1158,7 +1217,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect.any(Boolean),
       expect.any(Boolean),
       undefined,
-      { skipAutoProvisionKeyOnAccountAdd: false },
+      {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      },
     )
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(
@@ -1691,7 +1753,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       false,
       false,
       undefined,
-      { skipAutoProvisionKeyOnAccountAdd: true },
+      {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: true,
+      },
     )
     expect(mockEnsureAccountTokenForPostSaveWorkflow).toHaveBeenCalledWith({
       account: savedSiteAccount,

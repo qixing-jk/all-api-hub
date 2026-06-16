@@ -594,6 +594,11 @@ type TagIdsInput = string[] | undefined
 
 export interface ValidateAndSaveAccountOptions {
   skipAutoProvisionKeyOnAccountAdd?: boolean
+  deferDataRefresh?: boolean
+}
+
+export interface ValidateAndUpdateAccountOptions {
+  deferDataRefresh?: boolean
 }
 
 /**
@@ -820,6 +825,77 @@ export async function validateAndSaveAccount(
     siteType: normalizedSiteType,
     url,
   })
+  const normalizedTagIds = normalizeTagIdsInput(tagIds)
+
+  if (options.deferDataRefresh === true) {
+    const accountData: Omit<
+      SiteAccount,
+      "id" | "created_at" | "updated_at" | "user_updated_at"
+    > = {
+      site_name: siteName.trim(),
+      site_url: storageSiteUrl,
+      site_type: normalizedSiteType,
+      authType: authType,
+      disabled: false,
+      excludeFromTotalBalance: excludeFromTotalBalance === true,
+      excludeFromTodayIncome: excludeFromTodayIncome === true,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? { sessionCookie: sessionCookieHeader.trim() }
+          : undefined,
+      sub2apiAuth: normalizedSub2ApiAuth,
+      exchange_rate: resolveExchangeRate(exchangeRate),
+      notes,
+      manualBalanceUsd: normalizedManualBalanceUsd,
+      tagIds: normalizedTagIds,
+      checkIn: checkInConfig,
+      health: { status: SiteHealthStatus.Unknown },
+      account_info: {
+        id: accountIdentity,
+        access_token: accessToken.trim(),
+        username: username.trim(),
+        quota: manualQuota ?? 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      last_sync_time: Date.now(),
+    }
+
+    try {
+      const accountId = await accountStorage.addAccount(accountData)
+      logger.info("Account saved before deferred data refresh", {
+        accountId,
+        siteName: siteName.trim(),
+        siteType: normalizedSiteType,
+      })
+
+      if (!options.skipAutoProvisionKeyOnAccountAdd) {
+        void autoProvisionKeyOnAccountAdd(
+          accountId,
+          shouldAutoProvisionKeyOnAccountAdd,
+        )
+      }
+
+      return {
+        success: true,
+        message: t("messages:toast.success.accountSaveSuccess"),
+        accountId,
+        feedbackLevel: "success",
+      }
+    } catch (saveError) {
+      logger.error("Failed to save account", saveError)
+      const errorMessage = getErrorMessage(saveError)
+      return {
+        success: false,
+        message: t("messages:errors.operation.saveFailed", {
+          error: errorMessage,
+        }),
+      }
+    }
+  }
 
   try {
     // 获取账号余额和今日使用情况
@@ -851,9 +927,6 @@ export async function validateAndSaveAccount(
           MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS,
         ),
     )
-
-    const normalizedTagIds = normalizeTagIdsInput(tagIds)
-
     const accountData: Omit<
       SiteAccount,
       "id" | "created_at" | "updated_at" | "user_updated_at"
@@ -913,9 +986,6 @@ export async function validateAndSaveAccount(
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
     logger.warn("Data fetch failed; saving configuration only", error)
-
-    // Build partial account data without quota/usage data
-    const normalizedTagIds = normalizeTagIdsInput(tagIds)
 
     const partialAccountData: Omit<
       SiteAccount,
@@ -1030,6 +1100,7 @@ export async function validateAndUpdateAccount(
   excludeFromTotalBalance = false,
   excludeFromTodayIncome = false,
   sub2apiAuth?: Sub2ApiAuthConfig,
+  options: ValidateAndUpdateAccountOptions = {},
 ): Promise<AccountSaveResponse> {
   const sessionCookieHeader =
     authType === AuthTypeEnum.Cookie
@@ -1072,6 +1143,60 @@ export async function validateAndUpdateAccount(
     siteType: normalizedSiteType,
     url,
   })
+  const normalizedTagIds = normalizeTagIdsInput(tagIds)
+
+  if (options.deferDataRefresh === true) {
+    const updateData = {
+      site_name: siteName.trim(),
+      site_url: storageSiteUrl,
+      site_type: normalizedSiteType,
+      authType: authType,
+      excludeFromTotalBalance: excludeFromTotalBalance === true,
+      excludeFromTodayIncome: excludeFromTodayIncome === true,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? { sessionCookie: sessionCookieHeader.trim() }
+          : undefined,
+      sub2apiAuth: normalizedSub2ApiAuth,
+      exchange_rate: resolveExchangeRate(exchangeRate),
+      notes: notes,
+      manualBalanceUsd: normalizedManualBalanceUsd,
+      tagIds: normalizedTagIds,
+      checkIn: checkInConfig,
+      account_info: {
+        id: accountIdentity,
+        access_token: accessToken.trim(),
+        username: username.trim(),
+        ...(manualQuota === undefined ? {} : { quota: manualQuota }),
+      },
+    }
+
+    const success = await accountStorage.updateAccount(accountId, updateData, {
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+    })
+
+    if (!success) {
+      return {
+        success: false,
+        message: t("messages:errors.validation.updateAccountFailed", {
+          error: "",
+        }),
+      }
+    }
+
+    logger.info("Account updated before deferred data refresh", {
+      accountId,
+      siteName: siteName.trim(),
+      siteType: normalizedSiteType,
+    })
+
+    return {
+      success: true,
+      message: t("messages:toast.success.accountUpdateSuccess"),
+      accountId,
+      feedbackLevel: "success",
+    }
+  }
 
   try {
     // 获取账号余额和今日使用情况
@@ -1101,9 +1226,6 @@ export async function validateAndUpdateAccount(
             : undefined,
       },
     })
-
-    const normalizedTagIds = normalizeTagIdsInput(tagIds)
-
     const updateData: Partial<
       Omit<SiteAccount, "id" | "created_at" | "updated_at" | "user_updated_at">
     > = {
@@ -1165,9 +1287,6 @@ export async function validateAndUpdateAccount(
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
     logger.warn("Data fetch failed; saving configuration only", error)
-
-    // Build partial update preserving quota/usage data
-    const normalizedTagIds = normalizeTagIdsInput(tagIds)
 
     const partialUpdateData = {
       site_name: siteName.trim(),

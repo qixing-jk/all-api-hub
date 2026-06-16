@@ -150,6 +150,18 @@ function createCurrentTabCookieImportContext(
  */
 const logger = createLogger("AccountDialogHook")
 
+/**
+ * Refreshes saved account data without keeping the account dialog save flow open.
+ */
+function schedulePostSaveAccountRefresh(accountId: string) {
+  void accountStorage.refreshAccount(accountId, true).catch((error) => {
+    logger.warn("Post-save deferred account refresh failed", {
+      accountId,
+      error: getErrorMessage(error),
+    })
+  })
+}
+
 interface CookieAuthPermissionState {
   granted: boolean | null
   pending: boolean
@@ -1799,6 +1811,7 @@ export function useAccountDialog({
               excludeFromTodayIncome,
               sub2apiAuth,
               {
+                deferDataRefresh: true,
                 skipAutoProvisionKeyOnAccountAdd:
                   options?.skipAutoProvisionKeyOnAccountAdd === true ||
                   isAihubmixNormalSaveForegroundKeyFlow(options),
@@ -1822,6 +1835,7 @@ export function useAccountDialog({
               excludeFromTotalBalance,
               excludeFromTodayIncome,
               sub2apiAuth,
+              { deferDataRefresh: true },
             )
 
       if (!result.success) {
@@ -1834,6 +1848,13 @@ export function useAccountDialog({
 
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       isAnalyticsActionCompleted = true
+
+      if (
+        typeof result.accountId === "string" &&
+        result.accountId.trim().length > 0
+      ) {
+        schedulePostSaveAccountRefresh(result.accountId.trim())
+      }
 
       const feedbackMessage =
         typeof result.message === "string" && result.message.trim().length > 0
