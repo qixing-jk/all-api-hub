@@ -887,10 +887,14 @@ export function BatchVerifyModelsDialog({
   }
 
   const renderRow = (row: BatchVerifyRow) => {
-    const sourceLabel = formatModelListSourceLabel(row.item.source, {
-      formatProfileLabel: ({ name, host }) =>
-        t("modelList:sourceLabels.profileBadge", { name, host }),
-    })
+    const sourceLabel = formatModelListSourceLabel(
+      row.item.source,
+      {
+        formatProfileLabel: ({ name, host }) =>
+          t("modelList:sourceLabels.profileBadge", { name, host }),
+      },
+      row.item.sourceIdentity,
+    )
 
     return (
       <div

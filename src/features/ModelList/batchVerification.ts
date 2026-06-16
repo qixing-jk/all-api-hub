@@ -10,7 +10,11 @@ import {
   getModelItemKey,
   type CalculatedModelItem,
 } from "./hooks/useFilteredModels"
-import { type ModelManagementItemSource } from "./modelManagementSources"
+import {
+  MODEL_LIST_SOURCE_IDENTITY_KINDS,
+  type ModelListSourceIdentity,
+  type ModelManagementItemSource,
+} from "./modelManagementSources"
 
 export const MODEL_LIST_BATCH_VERIFY_CONCURRENCY = 5
 export const MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES = {
@@ -26,6 +30,7 @@ export type BatchVerifyModelItem = {
   modelId: string
   enableGroups: string[] | null
   source: ModelManagementItemSource
+  sourceIdentity?: ModelListSourceIdentity
 }
 
 /**
@@ -60,6 +65,7 @@ export function createBatchVerifyModelItems(
           ? item.model.enable_groups
           : null,
       source: item.source,
+      sourceIdentity: item.sourceIdentity,
     })
   }
 
@@ -87,14 +93,26 @@ export function resolveBatchVerifyApiType(
  */
 export function pickBatchVerifyCompatibleToken(
   tokens: ApiToken[],
-  item: Pick<BatchVerifyModelItem, "modelId" | "enableGroups">,
+  item: Pick<
+    BatchVerifyModelItem,
+    "modelId" | "enableGroups" | "sourceIdentity"
+  >,
 ): ApiToken | null {
-  return (
-    tokens.find((token) =>
-      isTokenCompatibleWithModel(token, {
-        id: item.modelId,
-        enableGroups: item.enableGroups,
-      }),
-    ) ?? null
-  )
+  const isCompatible = (token: ApiToken) =>
+    isTokenCompatibleWithModel(token, {
+      id: item.modelId,
+      enableGroups: item.enableGroups,
+    })
+
+  if (
+    item.sourceIdentity?.kind === MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN
+  ) {
+    const sourceIdentity = item.sourceIdentity
+    const token = tokens.find(
+      (candidate) => candidate.id === sourceIdentity.tokenId,
+    )
+    return token && isCompatible(token) ? token : null
+  }
+
+  return tokens.find((token) => isCompatible(token)) ?? null
 }

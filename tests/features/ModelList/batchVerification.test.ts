@@ -6,7 +6,10 @@ import {
   pickBatchVerifyCompatibleToken,
   resolveBatchVerifyApiType,
 } from "~/features/ModelList/batchVerification"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import {
+  MODEL_LIST_SOURCE_IDENTITY_KINDS,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+} from "~/features/ModelList/modelManagementSources"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 
@@ -69,6 +72,142 @@ describe("model list batch verification helpers", () => {
       "account:acc-1:gpt-4o",
       "account:acc-2:gpt-4o",
     ])
+  })
+
+  it("keeps same-account token rows separate for batch verification", () => {
+    const source = {
+      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      account: { id: "batch-sub2api-account" },
+      capabilities: { supportsBatchCredentialVerification: true },
+    } as any
+    const model = { model_name: "shared-model", enable_groups: ["default"] }
+
+    const result = createBatchVerifyModelItems([
+      {
+        model,
+        source,
+        sourceIdentity: {
+          kind: "account-token",
+          id: "batch-sub2api-account:token:51",
+          tokenId: 51,
+          tokenName: "Default key",
+        },
+        groupRatios: { default: 1 },
+        effectiveGroup: "default",
+      },
+      {
+        model,
+        source,
+        sourceIdentity: {
+          kind: "account-token",
+          id: "batch-sub2api-account:token:52",
+          tokenId: 52,
+          tokenName: "Second key",
+        },
+        groupRatios: { default: 1 },
+        effectiveGroup: "default",
+      },
+    ] as any)
+
+    expect(result.map((item) => item.key)).toEqual([
+      "account:batch-sub2api-account:token:51:shared-model",
+      "account:batch-sub2api-account:token:52:shared-model",
+    ])
+    expect(result.map((item) => item.sourceIdentity)).toEqual([
+      {
+        kind: "account-token",
+        id: "batch-sub2api-account:token:51",
+        tokenId: 51,
+        tokenName: "Default key",
+      },
+      {
+        kind: "account-token",
+        id: "batch-sub2api-account:token:52",
+        tokenId: 52,
+        tokenName: "Second key",
+      },
+    ])
+  })
+
+  it("selects the matching token for token-scoped rows", () => {
+    const tokens = [
+      {
+        id: 51,
+        status: 1,
+        group: DEFAULT_MODEL_GROUP,
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+      {
+        id: 52,
+        status: 1,
+        group: DEFAULT_MODEL_GROUP,
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ] as any
+
+    expect(
+      pickBatchVerifyCompatibleToken(tokens, {
+        modelId: "shared-model",
+        enableGroups: [DEFAULT_MODEL_GROUP],
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
+          id: "batch-sub2api-account:token:52",
+          tokenId: 52,
+          tokenName: "Second key",
+        },
+      })?.id,
+    ).toBe(52)
+  })
+
+  it("does not fall back to another compatible token for token-scoped rows", () => {
+    const tokens = [
+      {
+        id: 51,
+        status: 1,
+        group: DEFAULT_MODEL_GROUP,
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+      {
+        id: 52,
+        status: 1,
+        group: "vip",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ] as any
+
+    expect(
+      pickBatchVerifyCompatibleToken(tokens, {
+        modelId: "shared-model",
+        enableGroups: [DEFAULT_MODEL_GROUP],
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
+          id: "batch-sub2api-account:token:53",
+          tokenId: 53,
+          tokenName: "Missing key",
+        },
+      }),
+    ).toBeNull()
+
+    expect(
+      pickBatchVerifyCompatibleToken(tokens, {
+        modelId: "shared-model",
+        enableGroups: [DEFAULT_MODEL_GROUP],
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
+          id: "batch-sub2api-account:token:52",
+          tokenId: 52,
+          tokenName: "VIP key",
+        },
+      }),
+    ).toBeNull()
   })
 
   it("keeps missing model group metadata unrestricted", () => {
