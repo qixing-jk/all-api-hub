@@ -1,5 +1,5 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import { getApiService } from "~/services/apiService"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
 import type {
   SiteAnnouncement,
@@ -18,6 +18,13 @@ import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 import { fingerprintAnnouncement, normalizeAnnouncementText } from "./text"
 
 const logger = createLogger("SiteAnnouncementProviders")
+
+const createMissingSiteNoticeCapabilityError = (siteType: AccountSiteType) =>
+  new Error(`siteNotice is not implemented for ${siteType}`)
+
+const createMissingSiteAnnouncementsCapabilityError = (
+  siteType: AccountSiteType,
+) => new Error(`siteAnnouncements is not implemented for ${siteType}`)
 
 /**
  * Normalizes a site URL into the stable key segment used for announcement state.
@@ -115,9 +122,12 @@ export const commonSiteAnnouncementProvider: SiteAnnouncementProvider = {
   ): Promise<SiteAnnouncementProviderResult> {
     const siteKey = createCommonSiteAnnouncementKey(request)
     try {
-      const notice = await getApiService(request.siteType).fetchSiteNotice(
-        request.apiRequest,
-      )
+      const adapter = getSiteAdapter(request.siteType)
+      if (!adapter.siteNotice) {
+        throw createMissingSiteNoticeCapabilityError(request.siteType)
+      }
+
+      const notice = await adapter.siteNotice.fetch(request.apiRequest)
       const content = normalizeAnnouncementText(notice)
       return {
         providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
@@ -152,8 +162,13 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
   ): Promise<SiteAnnouncementProviderResult> {
     const siteKey = createSub2ApiSiteAnnouncementKey(request)
     try {
-      const announcements = await getApiService(SITE_TYPES.SUB2API)
-        .fetchSub2ApiAnnouncements(request.apiRequest, { unreadOnly: true })
+      const adapter = getSiteAdapter(SITE_TYPES.SUB2API)
+      if (!adapter.siteAnnouncements) {
+        throw createMissingSiteAnnouncementsCapabilityError(SITE_TYPES.SUB2API)
+      }
+
+      const announcements = await adapter.siteAnnouncements
+        .fetch(request.apiRequest, { unreadOnly: true })
         .then((items) =>
           items
             .map(normalizeSub2ApiAnnouncement)
@@ -177,14 +192,25 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
     }
   },
   async markRead(request, announcements) {
-    const service = getApiService(SITE_TYPES.SUB2API)
     const ids = announcements
       .map((announcement) => announcement.id)
       .filter((id): id is string => Boolean(id))
 
+    if (ids.length === 0) {
+      return
+    }
+
+    const adapter = getSiteAdapter(SITE_TYPES.SUB2API)
+    if (!adapter.siteAnnouncements) {
+      throw createMissingSiteAnnouncementsCapabilityError(SITE_TYPES.SUB2API)
+    }
+
     const results = await Promise.allSettled(
       ids.map((id) =>
-        service.markSub2ApiAnnouncementRead(request.apiRequest, id),
+        adapter.siteAnnouncements!.markRead({
+          request: request.apiRequest,
+          id,
+        }),
       ),
     )
 

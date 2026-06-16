@@ -14,12 +14,12 @@ import {
   type SiteAnnouncementProviderRequest,
 } from "~/types/siteAnnouncements"
 
-const { getApiServiceMock } = vi.hoisted(() => ({
-  getApiServiceMock: vi.fn(),
+const { getSiteAdapterMock } = vi.hoisted(() => ({
+  getSiteAdapterMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: getApiServiceMock,
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: getSiteAdapterMock,
 }))
 
 const baseRequest: SiteAnnouncementProviderRequest = {
@@ -36,6 +36,26 @@ const baseRequest: SiteAnnouncementProviderRequest = {
     },
   },
 }
+
+const createNoticeAdapter = (fetch = vi.fn().mockResolvedValue(null)) => ({
+  siteType: SITE_TYPES.NEW_API,
+  family: "newApiFamily" as const,
+  siteNotice: {
+    fetch,
+  },
+})
+
+const createSub2ApiAdapter = (overrides?: {
+  fetch?: ReturnType<typeof vi.fn>
+  markRead?: ReturnType<typeof vi.fn>
+}) => ({
+  siteType: SITE_TYPES.SUB2API,
+  family: "sub2api" as const,
+  siteAnnouncements: {
+    fetch: overrides?.fetch ?? vi.fn().mockResolvedValue([]),
+    markRead: overrides?.markRead ?? vi.fn().mockResolvedValue(true),
+  },
+})
 
 describe("site announcement providers", () => {
   it("uses normalized site keys for common and Sub2API providers", () => {
@@ -55,9 +75,11 @@ describe("site announcement providers", () => {
   })
 
   it("returns a common announcement for non-empty /api/notice responses", async () => {
-    getApiServiceMock.mockReturnValueOnce({
-      fetchSiteNotice: vi.fn().mockResolvedValue(" **Hello** <b>world</b> "),
-    })
+    getSiteAdapterMock.mockReturnValueOnce(
+      createNoticeAdapter(
+        vi.fn().mockResolvedValue(" **Hello** <b>world</b> "),
+      ),
+    )
 
     const result = await commonSiteAnnouncementProvider.fetch(baseRequest)
 
@@ -71,9 +93,9 @@ describe("site announcement providers", () => {
   })
 
   it("returns an empty common announcement list for blank notice bodies", async () => {
-    getApiServiceMock.mockReturnValueOnce({
-      fetchSiteNotice: vi.fn().mockResolvedValue("   "),
-    })
+    getSiteAdapterMock.mockReturnValueOnce(
+      createNoticeAdapter(vi.fn().mockResolvedValue("   ")),
+    )
 
     const result = await commonSiteAnnouncementProvider.fetch(baseRequest)
 
@@ -84,9 +106,11 @@ describe("site announcement providers", () => {
   })
 
   it("marks common provider failures as unsupported with the upstream error text", async () => {
-    getApiServiceMock.mockReturnValueOnce({
-      fetchSiteNotice: vi.fn().mockRejectedValue(new Error("not supported")),
-    })
+    getSiteAdapterMock.mockReturnValueOnce(
+      createNoticeAdapter(
+        vi.fn().mockRejectedValue(new Error("not supported")),
+      ),
+    )
 
     const result = await commonSiteAnnouncementProvider.fetch(baseRequest)
 
@@ -97,20 +121,37 @@ describe("site announcement providers", () => {
     })
   })
 
+  it("marks common provider missing siteNotice capability as unsupported", async () => {
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+
+    const result = await commonSiteAnnouncementProvider.fetch({
+      ...baseRequest,
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+
+    expect(result).toMatchObject({
+      status: SITE_ANNOUNCEMENT_STATUS.Unsupported,
+      announcements: [],
+      error: "siteNotice is not implemented for AIHubMix",
+    })
+  })
+
   it("normalizes Sub2API unread announcement lists and marks ids as read", async () => {
     const markRead = vi.fn().mockResolvedValue(true)
-    getApiServiceMock.mockReturnValue({
-      fetchSub2ApiAnnouncements: vi.fn().mockResolvedValue([
-        {
-          id: 12,
-          title: "Deploy",
-          content: "Maintenance",
-          created_at: "2026-05-07T00:00:00Z",
-          read_at: "2026-05-07T01:00:00Z",
-        },
-      ]),
-      markSub2ApiAnnouncementRead: markRead,
-    })
+    const fetch = vi.fn().mockResolvedValue([
+      {
+        id: 12,
+        title: "Deploy",
+        content: "Maintenance",
+        created_at: "2026-05-07T00:00:00Z",
+        read_at: "2026-05-07T01:00:00Z",
+      },
+    ])
+    getSiteAdapterMock.mockReturnValue(
+      createSub2ApiAdapter({ fetch, markRead }),
+    )
 
     const request = {
       ...baseRequest,
@@ -134,36 +175,42 @@ describe("site announcement providers", () => {
       result.announcements,
     )
 
-    expect(markRead).toHaveBeenCalledWith(request.apiRequest, "12")
+    expect(fetch).toHaveBeenCalledWith(request.apiRequest, { unreadOnly: true })
+    expect(markRead).toHaveBeenCalledWith({
+      request: request.apiRequest,
+      id: "12",
+    })
   })
 
   it("normalizes Sub2API announcements from body/message fallbacks and mixed timestamp formats", async () => {
-    getApiServiceMock.mockReturnValue({
-      fetchSub2ApiAnnouncements: vi.fn().mockResolvedValue([
-        {
-          id: null,
-          title: "  ",
-          message: " Message fallback ",
-          created_at: 1_715_000_000,
-          updated_at: "2026-05-07T00:00:00Z",
-          read_at: "invalid",
-        },
-        {
-          id: 99,
-          title: "Body fallback",
-          body: " From body ",
-          created_at: "1715000000",
-          updated_at: "1715003600000",
-        },
-        {
-          id: 100,
-          title: "   ",
-          content: "   ",
-          message: "",
-          body: "",
-        },
-      ]),
-    })
+    getSiteAdapterMock.mockReturnValue(
+      createSub2ApiAdapter({
+        fetch: vi.fn().mockResolvedValue([
+          {
+            id: null,
+            title: "  ",
+            message: " Message fallback ",
+            created_at: 1_715_000_000,
+            updated_at: "2026-05-07T00:00:00Z",
+            read_at: "invalid",
+          },
+          {
+            id: 99,
+            title: "Body fallback",
+            body: " From body ",
+            created_at: "1715000000",
+            updated_at: "1715003600000",
+          },
+          {
+            id: 100,
+            title: "   ",
+            content: "   ",
+            message: "",
+            body: "",
+          },
+        ]),
+      }),
+    )
 
     const request = {
       ...baseRequest,
@@ -193,9 +240,11 @@ describe("site announcement providers", () => {
   })
 
   it("returns an error result when Sub2API announcement fetch fails", async () => {
-    getApiServiceMock.mockReturnValue({
-      fetchSub2ApiAnnouncements: vi.fn().mockRejectedValue(new Error("denied")),
-    })
+    getSiteAdapterMock.mockReturnValue(
+      createSub2ApiAdapter({
+        fetch: vi.fn().mockRejectedValue(new Error("denied")),
+      }),
+    )
 
     const request = {
       ...baseRequest,
@@ -211,14 +260,31 @@ describe("site announcement providers", () => {
     })
   })
 
+  it("returns an error result when Sub2API siteAnnouncements capability is missing", async () => {
+    getSiteAdapterMock.mockReturnValue({
+      siteType: SITE_TYPES.SUB2API,
+    })
+
+    const request = {
+      ...baseRequest,
+      siteType: SITE_TYPES.SUB2API,
+      providerId: "sub2api" as const,
+    }
+    const result = await sub2ApiSiteAnnouncementProvider.fetch(request)
+
+    expect(result).toMatchObject({
+      status: SITE_ANNOUNCEMENT_STATUS.Error,
+      announcements: [],
+      error: "siteAnnouncements is not implemented for sub2api",
+    })
+  })
+
   it("logs partial Sub2API mark-read failures without failing the whole batch", async () => {
     const markRead = vi
       .fn()
       .mockRejectedValueOnce(new Error("first failed"))
       .mockResolvedValueOnce(true)
-    getApiServiceMock.mockReturnValue({
-      markSub2ApiAnnouncementRead: markRead,
-    })
+    getSiteAdapterMock.mockReturnValue(createSub2ApiAdapter({ markRead }))
 
     const request = {
       ...baseRequest,
@@ -232,13 +298,15 @@ describe("site announcement providers", () => {
         { id: "2" },
       ]),
     ).resolves.toBeUndefined()
+    expect(markRead).toHaveBeenCalledWith({
+      request: request.apiRequest,
+      id: "1",
+    })
   })
 
   it("throws when every Sub2API mark-read request fails", async () => {
     const markRead = vi.fn().mockRejectedValue(new Error("all failed"))
-    getApiServiceMock.mockReturnValue({
-      markSub2ApiAnnouncementRead: markRead,
-    })
+    getSiteAdapterMock.mockReturnValue(createSub2ApiAdapter({ markRead }))
 
     const request = {
       ...baseRequest,
@@ -249,13 +317,15 @@ describe("site announcement providers", () => {
     await expect(
       sub2ApiSiteAnnouncementProvider.markRead?.(request, [{ id: "1" }]),
     ).rejects.toThrow("all failed")
+    expect(markRead).toHaveBeenCalledWith({
+      request: request.apiRequest,
+      id: "1",
+    })
   })
 
   it("skips mark-read requests when no upstream ids are available", async () => {
     const markRead = vi.fn()
-    getApiServiceMock.mockReturnValue({
-      markSub2ApiAnnouncementRead: markRead,
-    })
+    getSiteAdapterMock.mockReturnValue(createSub2ApiAdapter({ markRead }))
 
     const request = {
       ...baseRequest,
@@ -271,9 +341,7 @@ describe("site announcement providers", () => {
 
   it("wraps non-error full-batch mark-read failures with a safe error instance", async () => {
     const markRead = vi.fn().mockRejectedValue("bad gateway")
-    getApiServiceMock.mockReturnValue({
-      markSub2ApiAnnouncementRead: markRead,
-    })
+    getSiteAdapterMock.mockReturnValue(createSub2ApiAdapter({ markRead }))
 
     const request = {
       ...baseRequest,
@@ -284,18 +352,24 @@ describe("site announcement providers", () => {
     await expect(
       sub2ApiSiteAnnouncementProvider.markRead?.(request, [{ id: "1" }]),
     ).rejects.toThrow("bad gateway")
+    expect(markRead).toHaveBeenCalledWith({
+      request: request.apiRequest,
+      id: "1",
+    })
   })
 
   it("keeps Sub2API title-only announcements title-only", async () => {
-    getApiServiceMock.mockReturnValue({
-      fetchSub2ApiAnnouncements: vi.fn().mockResolvedValue([
-        {
-          id: 13,
-          title: "Title only",
-          content: "",
-        },
-      ]),
-    })
+    getSiteAdapterMock.mockReturnValue(
+      createSub2ApiAdapter({
+        fetch: vi.fn().mockResolvedValue([
+          {
+            id: 13,
+            title: "Title only",
+            content: "",
+          },
+        ]),
+      }),
+    )
 
     const request = {
       ...baseRequest,

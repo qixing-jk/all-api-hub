@@ -41,7 +41,6 @@ import {
   fetchApiData,
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
-import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
 import {
   AuthTypeEnum,
   CheckInConfig,
@@ -478,28 +477,6 @@ export async function fetchSiteNotice(
     logger.warn("获取站点公告信息失败", error)
     return null
   }
-}
-
-/**
- * Placeholder for site-specific Sub2API override. Common-compatible sites do
- * not expose this endpoint.
- */
-export async function fetchSub2ApiAnnouncements(
-  _request: ApiServiceRequest,
-  _options?: { unreadOnly?: boolean },
-): Promise<Sub2ApiAnnouncementData[]> {
-  return []
-}
-
-/**
- * Placeholder for site-specific Sub2API override. Common-compatible sites do
- * not expose this endpoint.
- */
-export async function markSub2ApiAnnouncementRead(
-  _request: ApiServiceRequest,
-  _id: string | number,
-): Promise<boolean> {
-  return false
 }
 
 /**
