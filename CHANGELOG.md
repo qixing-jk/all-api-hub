@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.47.0](https://github.com/qixing-jk/all-api-hub/compare/v3.46.0...v3.47.0) (2026-06-16)
+
+
+### Features
+
+* **model-list:** add price comparison shortcut ([#977](https://github.com/qixing-jk/all-api-hub/issues/977)) ([2c02225](https://github.com/qixing-jk/all-api-hub/commit/2c02225de81311db55632ed60be699c97de1f572))
+* **model-list:** compare all Sub2API keys ([#973](https://github.com/qixing-jk/all-api-hub/issues/973)) ([efb3d00](https://github.com/qixing-jk/all-api-hub/commit/efb3d00d521cb781345218dc18fa351d16ae7c2d))
+* **model-list:** load Sub2API runtime models with estimated pricing ([#968](https://github.com/qixing-jk/all-api-hub/issues/968)) ([a465862](https://github.com/qixing-jk/all-api-hub/commit/a46586284e7badbf21aebae16178f6cc4fcde710))
+* **model-list:** show group count badges ([#972](https://github.com/qixing-jk/all-api-hub/issues/972)) ([9661c52](https://github.com/qixing-jk/all-api-hub/commit/9661c526ea34c0e5231ea311e12559632f707e09))
+* **navigation:** link account keys and models ([#971](https://github.com/qixing-jk/all-api-hub/issues/971)) ([550e4f7](https://github.com/qixing-jk/all-api-hub/commit/550e4f7bd2b8ea942a354080a565516a491319a6))
+
+
+### Bug Fixes
+
+* **account:** allow string user ids ([#966](https://github.com/qixing-jk/all-api-hub/issues/966)) ([a1e4064](https://github.com/qixing-jk/all-api-hub/commit/a1e40646e315b2223f8ae239e5e15ac7c05ed46e))
+* **account:** defer post-save data refresh ([#975](https://github.com/qixing-jk/all-api-hub/issues/975)) ([861dd8c](https://github.com/qixing-jk/all-api-hub/commit/861dd8c08702d91e8dd600b4a0ab10337ed5b2a0))
+* **model-list:** align navigation labels ([d5a5c06](https://github.com/qixing-jk/all-api-hub/commit/d5a5c06c447062f565e50459e4b7cad66f0500aa))
+* **model-list:** improve model verification key guidance ([#970](https://github.com/qixing-jk/all-api-hub/issues/970)) ([8db484a](https://github.com/qixing-jk/all-api-hub/commit/8db484a526e4a30f91b89a71e9d3853a69573dec))
+* **model-list:** show groups for compatible model keys ([da33de6](https://github.com/qixing-jk/all-api-hub/commit/da33de62974055a13d4d3e97171e61dbe1f922e0))
+* **ui:** split root crash recovery guidance ([#969](https://github.com/qixing-jk/all-api-hub/issues/969)) ([04298e1](https://github.com/qixing-jk/all-api-hub/commit/04298e18f05fc373390590f09b07bd7be8ba8e8f))
+
 ## [3.46.0](https://github.com/qixing-jk/all-api-hub/compare/v3.45.0...v3.46.0) (2026-06-13)
 
 
