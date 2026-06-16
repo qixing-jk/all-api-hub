@@ -12,11 +12,17 @@
   "accountGroupFilterTriggerCount_one": "{{count}} account filtered",
   "accountGroupFilterTriggerCount_other": "{{count}} accounts filtered",
   "accountSummary": {
+    "failureReasons": {
+      "invalidFormat": "The model list returned an unsupported format.",
+      "unknown": "Unknown error"
+    },
     "incompatible": "format incompatible",
     "loadFailed": "load failed",
     "loading": "loading",
     "models_one": "{{count}} model",
     "models_other": "{{count}} models",
+    "partialLoadFailed": "partial",
+    "partialLoadFailedReason": "Some keys failed to load. First failure: {{reason}}",
     "title": "Accounts overview"
   },
   "actions": {
@@ -226,6 +232,7 @@
     "incompatibleDesc": "The model data interface of the current site does not conform to the standard specification, possibly due to secondary development of the site. The extension cannot parse the model pricing information of this site for the time being",
     "incompatibleFormat": "Data format incompatible",
     "loadFailed": "Failed to load model data, please try again later",
+    "loadFailedWithReason": "Failed to load model data: {{reason}}",
     "loading": "Loading model data...",
     "profileLoadFailed": "Failed to load models for this API credential: {{errorMessage}}",
     "profileLoadFailedTitle": "Failed to load models for this API credential",

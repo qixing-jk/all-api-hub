@@ -11,10 +11,16 @@
   "accountGroupFilterTrigger": "篩選帳號分組",
   "accountGroupFilterTriggerCount_other": "已篩選 {{count}} 個帳號",
   "accountSummary": {
+    "failureReasons": {
+      "invalidFormat": "模型列表返回格式不受支援。",
+      "unknown": "未知錯誤"
+    },
     "incompatible": "格式不相容",
     "loadFailed": "載入失敗",
     "loading": "載入中",
     "models_other": "{{count}} 個模型",
+    "partialLoadFailed": "部分載入",
+    "partialLoadFailedReason": "部分金鑰載入失敗。第一個原因：{{reason}}",
     "title": "帳號概覽"
   },
   "actions": {
@@ -219,6 +225,7 @@
     "incompatibleDesc": "當前站點的模型資料介面返回格式不符合標準規範，可能是經過二次開發的站點。外掛暫時無法解析該站點的模型定價資訊",
     "incompatibleFormat": "資料格式不相容",
     "loadFailed": "載入模型資料失敗，請稍後重試",
+    "loadFailedWithReason": "載入模型資料失敗：{{reason}}",
     "loading": "正在載入模型資料...",
     "profileLoadFailed": "載入該 API 憑據的模型失敗：{{errorMessage}}",
     "profileLoadFailedTitle": "載入該 API 憑據的模型失敗",

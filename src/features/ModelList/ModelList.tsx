@@ -201,6 +201,7 @@ export default function ModelList(props: {
           count: count ?? 0,
           isLoading: state.isLoading,
           errorType: state.errorType,
+          errorMessage: state.errorMessage,
         },
       ]
     })

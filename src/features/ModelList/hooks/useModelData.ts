@@ -1,4 +1,5 @@
 import { useQueries, useQuery } from "@tanstack/react-query"
+import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -6,6 +7,7 @@ import { useTranslation } from "react-i18next"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   createAccountModelListSourceIdentity,
+  createAccountTokenModelListSourceIdentity,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelListSourceIdentity,
   type ModelManagementSource,
@@ -78,6 +80,18 @@ interface AccountQueryState {
   hasData: boolean
   hasError: boolean
   errorType?: ModelListAccountErrorType
+  errorMessage?: string
+}
+
+interface AccountPricingQueryResult {
+  contexts: AccountPricingContext[]
+  partialFailureCount?: number
+  partialFailureErrors?: unknown[]
+}
+
+interface SettledContextResult {
+  context?: AccountPricingContext
+  error?: unknown
 }
 
 export interface AccountFallbackControls {
@@ -215,6 +229,35 @@ function getAggregateModelDataFailureDiagnostics(errors: unknown[]): {
   )
 }
 
+/** Returns a user-facing, non-secret reason for model-data load failures. */
+function getModelDataDisplayErrorReason(
+  error: unknown,
+  t: TFunction<"modelList">,
+) {
+  const code =
+    error && typeof error === "object"
+      ? (error as { code?: unknown }).code
+      : undefined
+
+  if (code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT) {
+    return t("accountSummary.failureReasons.invalidFormat")
+  }
+
+  return getErrorMessage(error) || t("accountSummary.failureReasons.unknown")
+}
+
+/** Selects the first useful display reason from a set of load failures. */
+function getFirstModelDataDisplayErrorReason(
+  errors: unknown[],
+  t: TFunction<"modelList">,
+) {
+  return (
+    errors
+      .map((error) => getModelDataDisplayErrorReason(error, t))
+      .find(Boolean) ?? t("accountSummary.failureReasons.unknown")
+  )
+}
+
 const MODEL_DATA_ANALYTICS_CONTEXT = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData,
@@ -316,6 +359,24 @@ function createModelPricingQueryKey(
     : [MODEL_LIST_QUERY_KEYS.PRICING, MODEL_LIST_QUERY_SCOPE_VALUES.NONE]
 }
 
+/** Builds an all-accounts pricing query key without changing persistence cache scope. */
+function createAllAccountsModelPricingQueryKey(
+  account: Pick<
+    DisplaySiteData,
+    "id" | "baseUrl" | "userId" | "siteType" | "authType"
+  >,
+) {
+  return [
+    MODEL_LIST_QUERY_KEYS.PRICING,
+    MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+    account.id,
+    account.baseUrl,
+    account.userId,
+    account.siteType,
+    account.authType,
+  ]
+}
+
 /** Builds the persisted pricing-cache key from non-secret account fields. */
 function createModelPricingCacheKey(
   account: Pick<
@@ -332,25 +393,108 @@ function createModelPricingCacheKey(
   ].join("|")
 }
 
-/** Loads the single-key Sub2API fallback catalog for all-accounts comparison. */
-async function fetchSub2ApiAllAccountsFallbackPricing(
-  account: DisplaySiteData,
+const SUB2API_ALL_ACCOUNTS_TOKEN_CONCURRENCY = 4
+
+/** Checks that a pricing response exposes the expected model row array. */
+function hasValidPricingData(data: PricingResponse) {
+  return Array.isArray(data.data)
+}
+
+/** Maps items through async workers while preserving input order. */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
 ) {
+  const results = new Array<R>(items.length)
+  let nextIndex = 0
+  const workerCount = Math.min(Math.max(concurrency, 1), items.length)
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex
+        nextIndex += 1
+        results[currentIndex] = await mapper(items[currentIndex])
+      }
+    }),
+  )
+
+  return results
+}
+
+/** Loads one Sub2API token fallback catalog as a row source context. */
+async function loadSub2ApiTokenPricingContext(params: {
+  account: DisplaySiteData
+  token: ApiToken
+}): Promise<SettledContextResult> {
+  try {
+    const pricing = await loadAccountTokenFallbackPricingResponse(params)
+    if (!hasValidPricingData(pricing)) {
+      throw createInvalidFormatError()
+    }
+
+    return {
+      context: {
+        account: params.account,
+        pricing,
+        sourceIdentity: createAccountTokenModelListSourceIdentity({
+          accountId: params.account.id,
+          tokenId: params.token.id,
+          tokenName: params.token.name,
+        }),
+      },
+    }
+  } catch (error) {
+    return { error }
+  }
+}
+
+/** Loads Sub2API fallback catalogs for every account token in comparison mode. */
+async function fetchSub2ApiAllAccountsFallbackPricingContexts(
+  account: DisplaySiteData,
+): Promise<AccountPricingQueryResult> {
   const tokens = await fetchDisplayAccountTokens(account)
-  if (tokens.length !== 1) {
+  if (tokens.length === 0) {
     throw createUnsupportedModelPricingError()
   }
 
-  const data = await loadAccountTokenFallbackPricingResponse({
-    account,
-    token: tokens[0],
-  })
+  const settledResults = await mapWithConcurrency(
+    tokens,
+    SUB2API_ALL_ACCOUNTS_TOKEN_CONCURRENCY,
+    (token) => loadSub2ApiTokenPricingContext({ account, token }),
+  )
+  const contexts = settledResults.flatMap((result) =>
+    result.context ? [result.context] : [],
+  )
+  const errors = settledResults.flatMap((result) =>
+    result.error ? [result.error] : [],
+  )
 
-  if (!Array.isArray(data.data)) {
-    throw createInvalidFormatError()
+  if (contexts.length === 0) {
+    const invalidFormatErrors = errors.filter((error) => {
+      const typedError = error as { code?: string } | null | undefined
+      return typedError?.code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
+    })
+    if (
+      invalidFormatErrors.length > 0 &&
+      invalidFormatErrors.length === errors.length
+    ) {
+      throw invalidFormatErrors[0]
+    }
+
+    const nonInvalidFormatError = errors.find((error) => {
+      const typedError = error as { code?: string } | null | undefined
+      return typedError?.code !== MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
+    })
+    throw nonInvalidFormatError ?? createUnsupportedModelPricingError()
   }
 
-  return data
+  return {
+    contexts,
+    ...(errors.length > 0 ? { partialFailureCount: errors.length } : {}),
+    ...(errors.length > 0 ? { partialFailureErrors: errors } : {}),
+  }
 }
 
 /** Builds the profile catalog query key from stable profile revision data. */
@@ -929,13 +1073,23 @@ function useSingleAccountModelData(params: {
             {
               account: currentAccount,
               pricing: pricingData,
-              sourceIdentity: createAccountModelListSourceIdentity(
-                currentAccount.id,
-              ),
+              sourceIdentity:
+                isFallbackCatalogActive && selectedFallbackToken
+                  ? createAccountTokenModelListSourceIdentity({
+                      accountId: currentAccount.id,
+                      tokenId: selectedFallbackToken.id,
+                      tokenName: selectedFallbackToken.name,
+                    })
+                  : createAccountModelListSourceIdentity(currentAccount.id),
             },
           ]
         : [],
-    [currentAccount, pricingData],
+    [
+      currentAccount,
+      isFallbackCatalogActive,
+      pricingData,
+      selectedFallbackToken,
+    ],
   )
 
   const accountFallback = useMemo<AccountFallbackControls | null>(() => {
@@ -1004,7 +1158,7 @@ function useAllAccountsModelData(
 
   const queries = useQueries({
     queries: safeDisplayData.map((account) => ({
-      queryKey: createModelPricingQueryKey(account),
+      queryKey: createAllAccountsModelPricingQueryKey(account),
       /**
        * Only load pricing when the UI is explicitly in "all accounts" mode.
        * This avoids triggering expensive background fetches while the user is
@@ -1018,7 +1172,7 @@ function useAllAccountsModelData(
         const service = getApiService(account.siteType)
         if (!service.capabilities.modelPricing) {
           if (account.siteType === SITE_TYPES.SUB2API) {
-            return fetchSub2ApiAllAccountsFallbackPricing(account)
+            return fetchSub2ApiAllAccountsFallbackPricingContexts(account)
           }
 
           throw createUnsupportedModelPricingError()
@@ -1027,7 +1181,17 @@ function useAllAccountsModelData(
         const cacheKey = createModelPricingCacheKey(account)
         const cached = await modelPricingCache.get(cacheKey)
         if (cached && Array.isArray(cached.data)) {
-          return cached
+          return {
+            contexts: [
+              {
+                account,
+                pricing: cached,
+                sourceIdentity: createAccountModelListSourceIdentity(
+                  account.id,
+                ),
+              },
+            ],
+          }
         }
 
         const data = await service.fetchModelPricing({
@@ -1047,7 +1211,15 @@ function useAllAccountsModelData(
 
         await modelPricingCache.set(cacheKey, data)
 
-        return data
+        return {
+          contexts: [
+            {
+              account,
+              pricing: data,
+              sourceIdentity: createAccountModelListSourceIdentity(account.id),
+            },
+          ],
+        }
       },
     })),
   })
@@ -1076,10 +1248,18 @@ function useAllAccountsModelData(
     if (!queries.every((query) => query.isSuccess || query.isError)) return
 
     const successCount = queries.filter((query) => query.isSuccess).length
-    const failedQueries = queries.filter((query) => query.isError)
+    const failedQueries = queries.filter(
+      (query) => query.isError || (query.data?.partialFailureCount ?? 0) > 0,
+    )
     const failureCount = failedQueries.length
     const modelCount = queries.reduce(
-      (count, query) => count + getPricingModelCount(query.data),
+      (count, query) =>
+        count +
+        (query.data?.contexts ?? []).reduce(
+          (contextCount, context) =>
+            contextCount + getPricingModelCount(context.pricing),
+          0,
+        ),
       0,
     )
     const trackingKey = queries
@@ -1087,6 +1267,7 @@ function useAllAccountsModelData(
         [
           safeDisplayData[index]?.id,
           query.isSuccess ? "success" : "failure",
+          query.data?.partialFailureCount ?? 0,
           query.dataUpdatedAt,
           query.errorUpdatedAt,
         ].join(":"),
@@ -1099,7 +1280,10 @@ function useAllAccountsModelData(
     const failureDiagnostics =
       failureCount > 0
         ? getAggregateModelDataFailureDiagnostics(
-            failedQueries.map((query) => query.error),
+            failedQueries.flatMap((query) => [
+              ...(query.error ? [query.error] : []),
+              ...(query.data?.partialFailureErrors ?? []),
+            ]),
           )
         : null
 
@@ -1128,17 +1312,8 @@ function useAllAccountsModelData(
   }, [enabled, queries, safeDisplayData])
 
   const pricingContexts: AccountPricingContext[] = useMemo(() => {
-    return safeDisplayData
-      .map((account, index) => {
-        const query = queries[index]
-        if (!query || !query.data) return null
-        return {
-          account,
-          pricing: query.data,
-        }
-      })
-      .filter((item): item is AccountPricingContext => item !== null)
-  }, [queries, safeDisplayData])
+    return queries.flatMap((query) => query.data?.contexts ?? [])
+  }, [queries])
 
   const isLoading = queries.some((query) => query.isFetching)
 
@@ -1164,16 +1339,32 @@ function useAllAccountsModelData(
       safeDisplayData.map((account, index) => {
         const query = queries[index]
         const error = query?.error as { code?: string } | null | undefined
-        const hasData = !!query?.data
-        const hasError = !!query?.error
+        const partialFailureCount = query?.data?.partialFailureCount ?? 0
+        const partialFailureErrors = query?.data?.partialFailureErrors ?? []
+        const hasData = (query?.data?.contexts.length ?? 0) > 0
+        const hasPartialFailure = hasData && partialFailureCount > 0
+        const hasError = !!query?.error || partialFailureCount > 0
         const isLoading =
           !hasData && Boolean(query?.isPending || query?.isFetching)
 
         let errorType: ModelListAccountErrorType | undefined
+        let errorMessage: string | undefined
         if (error?.code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT) {
           errorType = MODEL_LIST_ACCOUNT_ERROR_TYPES.INVALID_FORMAT
+          errorMessage = t("accountSummary.failureReasons.invalidFormat")
+        } else if (hasPartialFailure) {
+          errorType = MODEL_LIST_ACCOUNT_ERROR_TYPES.PARTIAL_LOAD_FAILED
+          errorMessage = t("accountSummary.partialLoadFailedReason", {
+            reason: getFirstModelDataDisplayErrorReason(
+              partialFailureErrors,
+              t,
+            ),
+          })
         } else if (hasError) {
           errorType = MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED
+          errorMessage = query?.error
+            ? getModelDataDisplayErrorReason(query.error, t)
+            : undefined
         }
 
         return {
@@ -1182,10 +1373,22 @@ function useAllAccountsModelData(
           hasData,
           hasError,
           errorType,
+          errorMessage,
         }
       }),
-    [queries, safeDisplayData],
+    [queries, safeDisplayData, t],
   )
+
+  const loadErrorMessage = useMemo(() => {
+    const failedQuery = queries.find((query) => query.isError)
+    if (!failedQuery?.error) {
+      return null
+    }
+
+    return t("status.loadFailedWithReason", {
+      reason: getModelDataDisplayErrorReason(failedQuery.error, t),
+    })
+  }, [queries, t])
 
   return {
     pricingData: null,
@@ -1194,9 +1397,7 @@ function useAllAccountsModelData(
     dataFormatError,
     accountQueryStates,
     loadPricingData,
-    loadErrorMessage: queries.some((query) => query.isError)
-      ? t("status.loadFailed")
-      : null,
+    loadErrorMessage,
     accountFallback: null,
   }
 }

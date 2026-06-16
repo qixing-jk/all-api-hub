@@ -11,10 +11,16 @@
   "accountGroupFilterTrigger": "Lọc nhóm tài khoản",
   "accountGroupFilterTriggerCount_other": "{{count}} tài khoản",
   "accountSummary": {
+    "failureReasons": {
+      "invalidFormat": "Danh sách mô hình trả về định dạng không được hỗ trợ.",
+      "unknown": "Lỗi không xác định"
+    },
     "incompatible": "Định dạng không tương thích",
     "loadFailed": "Tải thất bại",
     "loading": "Đang tải",
     "models_other": "{{count}} mô hình",
+    "partialLoadFailed": "Tải một phần",
+    "partialLoadFailedReason": "Một số khóa tải thất bại. Lỗi đầu tiên: {{reason}}",
     "title": "Tổng quan tài khoản"
   },
   "actions": {
@@ -219,6 +225,7 @@
     "incompatibleDesc": "Định dạng trả về từ API dữ liệu mô hình của trang web hiện tại không tuân thủ tiêu chuẩn, có thể đây là một trang web đã được phát triển thứ cấp. Tiện ích mở rộng tạm thời không thể phân tích thông tin định giá mô hình của trang web này",
     "incompatibleFormat": "Định dạng dữ liệu không tương thích",
     "loadFailed": "Tải dữ liệu mô hình thất bại, vui lòng thử lại sau",
+    "loadFailedWithReason": "Tải dữ liệu mô hình thất bại: {{reason}}",
     "loading": "Đang tải dữ liệu mô hình...",
     "profileLoadFailed": "Tải mô hình của thông tin xác thực API này thất bại: {{errorMessage}}",
     "profileLoadFailedTitle": "Tải mô hình của thông tin xác thực API này thất bại",

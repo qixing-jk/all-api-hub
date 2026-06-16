@@ -11,10 +11,16 @@
   "accountGroupFilterTrigger": "アカウントグループを絞り込む",
   "accountGroupFilterTriggerCount_other": "{{count}} 件のアカウントを絞り込み中",
   "accountSummary": {
+    "failureReasons": {
+      "invalidFormat": "モデル一覧が対応していない形式で返されました。",
+      "unknown": "不明なエラー"
+    },
     "incompatible": "形式非互換",
     "loadFailed": "読み込み失敗",
     "loading": "読み込み中",
     "models_other": "{{count}} モデル",
+    "partialLoadFailed": "一部読み込み",
+    "partialLoadFailedReason": "一部のキーの読み込みに失敗しました。最初の理由: {{reason}}",
     "title": "アカウント概要"
   },
   "actions": {
@@ -219,6 +225,7 @@
     "incompatibleDesc": "現在のサイトのモデルデータインターフェースは標準仕様に準拠していません。サイト側の二次開発が原因の可能性があり、このサイトのモデル料金情報は現時点で解析できません。",
     "incompatibleFormat": "データ形式に互換性がありません",
     "loadFailed": "モデルデータの読み込みに失敗しました。しばらくしてからもう一度お試しください",
+    "loadFailedWithReason": "モデルデータの読み込みに失敗しました: {{reason}}",
     "loading": "モデルデータを読み込み中...",
     "profileLoadFailed": "この API 認証情報のモデル読み込みに失敗しました: {{errorMessage}}",
     "profileLoadFailedTitle": "この API 認証情報のモデル読み込みに失敗しました",

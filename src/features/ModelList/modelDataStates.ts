@@ -16,6 +16,7 @@ export const MODEL_LIST_DATA_ERROR_CODES = {
 export const MODEL_LIST_ACCOUNT_ERROR_TYPES = {
   INVALID_FORMAT: "invalid-format",
   LOAD_FAILED: "load-failed",
+  PARTIAL_LOAD_FAILED: "partial-load-failed",
 } as const
 
 export type ModelListAccountErrorType =

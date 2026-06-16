@@ -111,4 +111,36 @@ describe("AccountSummaryBar", () => {
     )
     expect(screen.queryByText("accountSummary.models")).toBeNull()
   })
+
+  it("shows a warning summary with the failure reason when an account partially loads", () => {
+    render(
+      <AccountSummaryBar
+        items={[
+          {
+            accountId: "account-partial",
+            name: "Partial Account",
+            count: 2,
+            errorType: "partial-load-failed",
+            errorMessage: "Some keys failed to load. First failure: denied",
+          },
+        ]}
+      />,
+    )
+
+    const partialBadge = screen
+      .getByText("Partial Account")
+      .closest("[data-slot='badge']")
+
+    expect(partialBadge).toHaveAttribute(
+      "title",
+      "Some keys failed to load. First failure: denied",
+    )
+    expect(partialBadge).toHaveAccessibleName(
+      "Partial Account accountSummary.partialLoadFailed Some keys failed to load. First failure: denied",
+    )
+    expect(screen.getByText("accountSummary.partialLoadFailed")).toHaveClass(
+      "text-amber-600",
+      "dark:text-amber-300",
+    )
+  })
 })

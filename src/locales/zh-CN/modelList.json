@@ -11,10 +11,16 @@
   "accountGroupFilterTrigger": "筛选账号分组",
   "accountGroupFilterTriggerCount": "{{count}} 个账号",
   "accountSummary": {
+    "failureReasons": {
+      "invalidFormat": "模型列表返回格式不受支持。",
+      "unknown": "未知错误"
+    },
     "incompatible": "格式不兼容",
     "loadFailed": "加载失败",
     "loading": "加载中",
     "models": "{{count}} 个模型",
+    "partialLoadFailed": "部分加载",
+    "partialLoadFailedReason": "部分密钥加载失败。首个原因：{{reason}}",
     "title": "账号概览"
   },
   "actions": {
@@ -219,6 +225,7 @@
     "incompatibleDesc": "当前站点的模型数据接口返回格式不符合标准规范，可能是经过二次开发的站点。插件暂时无法解析该站点的模型定价信息",
     "incompatibleFormat": "数据格式不兼容",
     "loadFailed": "加载模型数据失败，请稍后重试",
+    "loadFailedWithReason": "加载模型数据失败：{{reason}}",
     "loading": "正在加载模型数据...",
     "profileLoadFailed": "加载该 API 凭据的模型失败：{{errorMessage}}",
     "profileLoadFailedTitle": "加载该 API 凭据的模型失败",

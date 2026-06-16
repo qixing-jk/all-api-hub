@@ -13,6 +13,7 @@ interface AccountSummaryItem {
   count: number
   isLoading?: boolean
   errorType?: ModelListAccountErrorType
+  errorMessage?: string
 }
 
 interface AccountSummaryBarProps {
@@ -24,6 +25,7 @@ interface AccountSummaryBarProps {
 interface StatusPresentation {
   label: string
   className: string
+  title?: string
 }
 
 /**
@@ -60,6 +62,7 @@ export function AccountSummaryBar({
       return {
         label: t("accountSummary.loadFailed"),
         className: "text-red-500 dark:text-red-400",
+        title: item.errorMessage,
       }
     }
 
@@ -67,6 +70,15 @@ export function AccountSummaryBar({
       return {
         label: t("accountSummary.incompatible"),
         className: "text-red-500 dark:text-red-400",
+        title: item.errorMessage,
+      }
+    }
+
+    if (item.errorType === MODEL_LIST_ACCOUNT_ERROR_TYPES.PARTIAL_LOAD_FAILED) {
+      return {
+        label: t("accountSummary.partialLoadFailed"),
+        className: "text-amber-600 dark:text-amber-300",
+        title: item.errorMessage,
       }
     }
 
@@ -97,6 +109,12 @@ export function AccountSummaryBar({
                   }
                   size="default"
                   className="cursor-pointer"
+                  title={statusPresentation.title}
+                  aria-label={
+                    statusPresentation.title
+                      ? `${item.name} ${statusPresentation.label} ${statusPresentation.title}`
+                      : undefined
+                  }
                   onClick={() => onAccountClick?.(item.accountId)}
                 >
                   <span className="truncate font-medium">{item.name}</span>
