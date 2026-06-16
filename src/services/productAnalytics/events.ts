@@ -509,6 +509,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
     "select_all_managed_site_model_sync_channels",
   SelectManagedSiteModelSyncTab: "select_managed_site_model_sync_tab",
   SelectModelSource: "select_model_source",
+  EnableModelPriceComparison: "enable_model_price_comparison",
   FilterModelList: "filter_model_list",
   SelectApiCredentialProfileExportDestination:
     "select_api_credential_profile_export_destination",

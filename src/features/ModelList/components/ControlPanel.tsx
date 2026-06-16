@@ -4,10 +4,11 @@ import {
   CpuChipIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline"
-import { Copy } from "lucide-react"
+import { Copy, TrendingDown } from "lucide-react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import Tooltip from "~/components/Tooltip"
 import {
   Alert,
   Button,
@@ -30,6 +31,7 @@ import {
   resolveGroupRatio,
 } from "~/features/ModelList/groupLabels"
 import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
   type ModelManagementSourceCapabilities,
@@ -54,6 +56,8 @@ import {
 interface ControlPanelProps {
   selectedSource: ModelManagementSource | null
   sourceCapabilities: ModelManagementSourceCapabilities
+  selectedSourceValue?: string
+  setSelectedSourceValue?: (sourceValue: string) => void
   searchTerm: string
   setSearchTerm: (term: string) => void
   sortMode: ModelListSortMode
@@ -111,6 +115,8 @@ interface ControlPanelProps {
 export function ControlPanel({
   selectedSource,
   sourceCapabilities,
+  selectedSourceValue = selectedSource?.value ?? "",
+  setSelectedSourceValue,
   searchTerm,
   setSearchTerm,
   sortMode,
@@ -136,8 +142,19 @@ export function ControlPanel({
   const isProfileSource =
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
   const isAllAccountsSource =
+    selectedSourceValue === ALL_ACCOUNTS_SOURCE_VALUE ||
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
   const supportsPriceSorting = sourceCapabilities.supportsPricing
+  const isPriceComparisonActive =
+    isAllAccountsSource &&
+    sortMode === MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST &&
+    selectedBillingMode === MODEL_LIST_BILLING_MODES.ALL &&
+    selectedGroups.length === 0 &&
+    showRealPrice
+  const shouldShowPriceComparisonPrompt =
+    sourceCapabilities.supportsPricing &&
+    !isProfileSource &&
+    !isPriceComparisonActive
   const groupOptions = availableGroups.map((group) => ({
     value: group,
     label: formatGroupLabel(
@@ -258,6 +275,28 @@ export function ControlPanel({
     setSelectedGroups(groups)
     trackFilterChange(PRODUCT_ANALYTICS_MODE_IDS.GroupFilter, {
       selectedGroups: groups,
+    })
+  }
+  const handleEnablePriceComparison = () => {
+    if (!isAllAccountsSource && setSelectedSourceValue) {
+      setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+    }
+    setSortMode(MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST)
+    setSelectedBillingMode(MODEL_LIST_BILLING_MODES.ALL)
+    setSelectedGroups([])
+    setShowRealPrice(true)
+
+    void trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.EnableModelPriceComparison,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+        filterCount: 2,
+      },
     })
   }
 
@@ -397,6 +436,24 @@ export function ControlPanel({
                   {t("batchVerify.actions.open")}
                 </Button>
               ) : null}
+
+              {shouldShowPriceComparisonPrompt && (
+                <Tooltip
+                  content={t("comparison.tooltip")}
+                  wrapperClassName="contents"
+                >
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    title={t("comparison.tooltip")}
+                    leftIcon={<TrendingDown className="h-4 w-4" />}
+                    onClick={handleEnablePriceComparison}
+                  >
+                    {t("comparison.cta")}
+                  </Button>
+                </Tooltip>
+              )}
             </div>
 
             <div className="flex items-center space-x-4 text-sm">

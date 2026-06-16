@@ -102,6 +102,10 @@
   "billingMode": "Billing Mode",
   "clickSwitchGroup": "Click to switch to {{group}} group",
   "collapseDetails": "Collapse details",
+  "comparison": {
+    "cta": "Compare Prices",
+    "tooltip": "Clear current filters, switch to all accounts, and sort each model by the lowest price."
+  },
   "copyAllNames": "Copy All Model Names",
   "description": "View and manage available AI models",
   "detailedPricing": "Detailed Pricing",

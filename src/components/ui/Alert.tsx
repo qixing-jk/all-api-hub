@@ -21,7 +21,7 @@ const alertVariants = cva("relative w-full rounded-lg border p-4", {
     compact: {
       false:
         "[&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4",
-      true: "flex items-start gap-2 p-3 sm:items-center",
+      true: "grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 p-3",
     },
   },
   defaultVariants: {
@@ -55,7 +55,7 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
     const getIcon = () => {
       if (!showIcon) return null
 
-      const iconClassName = cn("h-4 w-4", compact && "mt-0.5 shrink-0 sm:mt-0")
+      const iconClassName = cn("h-4 w-4", compact && "mt-0.5 shrink-0")
 
       switch (variant) {
         case "destructive":
@@ -81,7 +81,7 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
         {...props}
       >
         {icon}
-        <div className={cn("ml-0 space-y-1.5", compact && "min-w-0 flex-1")}>
+        <div className={cn("ml-0 space-y-1.5", compact && "min-w-0")}>
           {title && (
             <Heading5 className="leading-none tracking-tight">{title}</Heading5>
           )}

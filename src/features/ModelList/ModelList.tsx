@@ -578,6 +578,8 @@ export default function ModelList(props: {
           <ControlPanel
             selectedSource={selectedSource}
             sourceCapabilities={sourceCapabilities}
+            selectedSourceValue={selectedSourceValue}
+            setSelectedSourceValue={setSelectedSourceValue}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             sortMode={sortMode}

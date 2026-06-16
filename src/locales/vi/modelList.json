@@ -96,6 +96,10 @@
   "billingMode": "Phương thức tính phí",
   "clickSwitchGroup": "Nhấp để chuyển sang nhóm {{group}}",
   "collapseDetails": "Thu gọn chi tiết",
+  "comparison": {
+    "cta": "So sánh giá",
+    "tooltip": "Xóa bộ lọc hiện tại, chuyển sang tất cả tài khoản và ưu tiên giá thấp nhất cho cùng mô hình."
+  },
   "copyAllNames": "Sao chép tất cả tên mô hình",
   "description": "Xem và quản lý các mô hình AI khả dụng",
   "detailedPricing": "Định giá chi tiết",

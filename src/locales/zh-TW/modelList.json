@@ -96,6 +96,10 @@
   "billingMode": "計費方式",
   "clickSwitchGroup": "點擊切換到 {{group}} 分組",
   "collapseDetails": "收起詳細資訊",
+  "comparison": {
+    "cta": "一鍵比價",
+    "tooltip": "清空目前篩選，切換到所有帳號，並按同模型最低價優先排序。"
+  },
   "copyAllNames": "複製所有模型名稱",
   "description": "檢視和管理可用的AI模型",
   "detailedPricing": "詳細定價",

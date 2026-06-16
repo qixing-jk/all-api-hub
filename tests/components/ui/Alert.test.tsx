@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { Alert } from "~/components/ui/Alert"
 
 describe("Alert", () => {
-  it("renders compact alerts with inline icon and text", () => {
+  it("renders compact alerts with a stable icon and content grid", () => {
     render(
       <Alert
         compact
@@ -16,13 +16,12 @@ describe("Alert", () => {
     const alert = screen.getByRole("alert")
     const icon = alert.querySelector("svg")
 
-    expect(alert).toHaveClass("flex")
+    expect(alert).toHaveClass("grid")
+    expect(alert).toHaveClass("grid-cols-[auto_minmax(0,1fr)]")
     expect(alert).toHaveClass("items-start")
-    expect(alert).toHaveClass("sm:items-center")
-    expect(alert).toHaveClass("gap-2")
+    expect(alert).toHaveClass("gap-3")
     expect(icon).toHaveClass("shrink-0")
     expect(icon).toHaveClass("mt-0.5")
-    expect(icon).toHaveClass("sm:mt-0")
     expect(alert).toHaveTextContent(
       "Save the draft before testing the connection.",
     )

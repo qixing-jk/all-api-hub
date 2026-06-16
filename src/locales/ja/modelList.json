@@ -96,6 +96,10 @@
   "billingMode": "課金方式",
   "clickSwitchGroup": "{{group}} グループへ切り替える",
   "collapseDetails": "詳細を折りたたむ",
+  "comparison": {
+    "cta": "価格を比較",
+    "tooltip": "現在の絞り込みをクリアし、すべてのアカウントに切り替えて、同一モデルの最安値を優先して並べます。"
+  },
   "copyAllNames": "すべてのモデル名をコピー",
   "description": "利用可能な AI モデルを確認・管理します",
   "detailedPricing": "詳細料金",
