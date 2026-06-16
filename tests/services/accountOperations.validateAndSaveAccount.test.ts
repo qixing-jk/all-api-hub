@@ -295,7 +295,54 @@ describe("accountOperations validateAndSaveAccount", () => {
     })
   })
 
-  it("can save account configuration without blocking on remote data refresh", async () => {
+  it("can save cookie account configuration without blocking on remote data refresh", async () => {
+    const result = await validateAndSaveAccount(
+      "https://api.example.com",
+      "Example",
+      "user",
+      "",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.Cookie,
+      "Cookie: session=abc123; theme=dark",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      message: "messages:toast.success.accountSaveSuccess",
+      feedbackLevel: "success",
+    })
+    expect(fetchAccountDataMock).not.toHaveBeenCalled()
+
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved).toMatchObject({
+      site_name: "Example",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Unknown },
+      cookieAuth: { sessionCookie: "session=abc123" },
+      account_info: {
+        id: "1",
+        username: "user",
+        access_token: "",
+        quota: 0,
+      },
+    })
+  })
+
+  it("returns a stable save failure when deferred account persistence fails", async () => {
+    vi.spyOn(accountStorage, "addAccount").mockRejectedValueOnce(
+      new Error("disk full"),
+    )
+
     const result = await validateAndSaveAccount(
       "https://api.example.com",
       "Example",
@@ -316,25 +363,118 @@ describe("accountOperations validateAndSaveAccount", () => {
       { deferDataRefresh: true },
     )
 
+    expect(result).toEqual({
+      success: false,
+      message: "messages:errors.operation.saveFailed",
+    })
+    expect(fetchAccountDataMock).not.toHaveBeenCalled()
+  })
+
+  it("can update cookie account configuration without blocking on remote data refresh", async () => {
+    const accountId = await accountStorage.addAccount({
+      site_name: "Old Example",
+      site_url: "https://old.example.com",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: CHECK_IN_DISABLED,
+      account_info: {
+        id: "previous-id",
+        access_token: "old-token",
+        username: "old-user",
+        quota: 42,
+        today_prompt_tokens: 1,
+        today_completion_tokens: 2,
+        today_quota_consumption: 3,
+        today_requests_count: 4,
+        today_income: 5,
+      },
+      last_sync_time: 123,
+    })
+
+    const result = await validateAndUpdateAccount(
+      accountId,
+      "https://api.example.com",
+      "Example",
+      "user",
+      "",
+      "1",
+      "7.0",
+      "notes",
+      [" alpha ", "alpha", "beta"],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.Cookie,
+      "Cookie: session=abc123; theme=dark",
+      "2.5",
+      true,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
     expect(result).toMatchObject({
       success: true,
-      message: "messages:toast.success.accountSaveSuccess",
+      message: "messages:toast.success.accountUpdateSuccess",
+      accountId,
       feedbackLevel: "success",
     })
     expect(fetchAccountDataMock).not.toHaveBeenCalled()
 
-    const saved = await accountStorage.getAccountById(result.accountId!)
-    expect(saved).toMatchObject({
+    const updated = await accountStorage.getAccountById(accountId)
+    expect(updated).toMatchObject({
       site_name: "Example",
       site_type: SITE_TYPES.NEW_API,
-      health: { status: SiteHealthStatus.Unknown },
+      excludeFromTotalBalance: true,
+      tagIds: ["alpha", "beta"],
+      cookieAuth: { sessionCookie: "session=abc123" },
       account_info: {
         id: "1",
         username: "user",
-        access_token: "token",
-        quota: 0,
+        access_token: "",
+        quota: 1250000,
       },
     })
+  })
+
+  it("returns a stable update failure when deferred account persistence fails", async () => {
+    const updateAccountSpy = vi
+      .spyOn(accountStorage, "updateAccount")
+      .mockResolvedValueOnce(false)
+
+    const result = await validateAndUpdateAccount(
+      "existing-account-id",
+      "https://api.example.com",
+      "Example",
+      "user",
+      "token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result).toEqual({
+      success: false,
+      message: "messages:errors.validation.updateAccountFailed",
+    })
+    expect(updateAccountSpy).toHaveBeenCalled()
+    expect(fetchAccountDataMock).not.toHaveBeenCalled()
   })
 
   it("normalizes unsupported site types before saving", async () => {

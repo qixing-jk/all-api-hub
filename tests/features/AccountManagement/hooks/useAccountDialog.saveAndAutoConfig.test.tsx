@@ -451,7 +451,9 @@ describe("useAccountDialog save and auto-config flows", () => {
         skipAutoProvisionKeyOnAccountAdd: false,
       },
     )
-    expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true)
+    await waitFor(() => {
+      expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true)
+    })
   })
 
   it("does not persist Sub2API refresh-token auth until the mode is explicitly enabled", async () => {
