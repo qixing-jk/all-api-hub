@@ -57,6 +57,17 @@ const globalsConfig = {
 
 const jsFamilyFilePattern = "**/*.{js,cjs,mjs,jsx,ts,tsx}"
 const srcJsFamilyFilePattern = "src/**/*.{js,cjs,mjs,jsx,ts,tsx}"
+const optionsPageImportRestrictionPattern = {
+  group: ["~/entrypoints/options/pages/**"],
+  message:
+    "Do not import from `~/entrypoints/options/pages/**` outside the options entrypoint. Extract shared code into `~/features/`, `~/services/`, `~/utils/`, or `~/types/` instead.",
+}
+const apiServiceBackendImplementationImportPattern = {
+  regex:
+    "^(?:~/services/apiService|(?:\\.\\./){1,4}apiService)/(?:aihubmix|anyrouter|axonHub|claudeCodeHub|doneHub|octopus|oneHub|sub2api|veloera|wong)$",
+  message:
+    "Do not import backend-specific apiService implementations from product code. Add or use an adapter/workflow module instead.",
+}
 
 export default defineConfig([
   {
@@ -231,13 +242,7 @@ export default defineConfig([
       "no-restricted-imports": [
         "error",
         {
-          patterns: [
-            {
-              group: ["~/entrypoints/options/pages/**"],
-              message:
-                "Do not import from `~/entrypoints/options/pages/**` outside the options entrypoint. Extract shared code into `~/features/`, `~/services/`, `~/utils/`, or `~/types/` instead.",
-            },
-          ],
+          patterns: [optionsPageImportRestrictionPattern],
         },
       ],
     },
@@ -249,6 +254,28 @@ export default defineConfig([
       "no-restricted-imports": "off",
     },
   },
+  // Guardrails: keep direct backend-specific apiService imports behind adapters
+  // or workflow owner modules while the account-site adapter migration proceeds.
+  {
+    files: [srcJsFamilyFilePattern],
+    ignores: [
+      "src/services/apiService/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/services/apiAdapters/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/services/apiCredentialProfiles/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/services/checkin/autoCheckin/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/services/managedSites/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/services/models/modelSync/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/features/BasicSettings/components/tabs/ManagedSite/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [apiServiceBackendImplementationImportPattern],
+        },
+      ],
+    },
+  },
   // Guardrails: AI API protocol modules must not depend on account-site apiService internals.
   {
     files: ["src/services/aiApi/**/*.{js,cjs,mjs,jsx,ts,tsx}"],
@@ -257,11 +284,7 @@ export default defineConfig([
         "error",
         {
           patterns: [
-            {
-              group: ["~/entrypoints/options/pages/**"],
-              message:
-                "Do not import from `~/entrypoints/options/pages/**` outside the options entrypoint. Extract shared code into `~/features/`, `~/services/`, `~/utils/`, or `~/types/` instead.",
-            },
+            optionsPageImportRestrictionPattern,
             {
               group: [
                 "~/services/apiService/**",
