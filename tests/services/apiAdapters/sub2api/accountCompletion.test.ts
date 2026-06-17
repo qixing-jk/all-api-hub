@@ -179,11 +179,6 @@ describe("sub2ApiAccountCompletion", () => {
   })
 
   it("classifies missing detected access token", async () => {
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Sub2 Portal",
-    })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
-
     await expect(
       sub2ApiAccountCompletion.complete(
         {
@@ -206,6 +201,7 @@ describe("sub2ApiAccountCompletion", () => {
       AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
       expect.any(Error),
     )
+    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
   })
 
   it("classifies site status fetch failures", async () => {

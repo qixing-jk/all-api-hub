@@ -336,4 +336,70 @@ describe("newApiAccountCompletion", () => {
       expect.any(Error),
     )
   })
+
+  it("classifies site status fetch failures", async () => {
+    const siteStatusError = new Error("site status unavailable")
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "token-user",
+      access_token: "generated-token",
+    })
+    mockFetchSiteStatus.mockRejectedValueOnce(siteStatusError)
+
+    await expect(
+      newApiAccountCompletion.complete(
+        {
+          url: "https://status-failure.example.com",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "12",
+            siteType: SITE_TYPES.NEW_API,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+      cause: siteStatusError,
+    })
+
+    expect(createCompletionError).toHaveBeenCalledWith(
+      AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+      siteStatusError,
+    )
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+  })
+
+  it("falls back to disabled check-in detection when support probing fails", async () => {
+    const supportError = new Error("support probe unavailable")
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "token-user",
+      access_token: "generated-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Token Portal",
+    })
+    mockFetchSupportCheckIn.mockRejectedValueOnce(supportError)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await newApiAccountCompletion.complete(
+      {
+        url: "https://support-failure.example.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          userId: "13",
+          siteType: SITE_TYPES.NEW_API,
+        },
+        context: {},
+      },
+      helpers,
+    )
+
+    expect(handleCheckInSupportFetchFailure).toHaveBeenCalledWith(supportError)
+    expect(createInitialCheckInConfig).toHaveBeenCalledWith({
+      enableDetection: false,
+      autoCheckInEnabled: true,
+    })
+    expect(result.checkIn.enableDetection).toBe(false)
+  })
 })

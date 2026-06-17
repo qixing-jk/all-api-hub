@@ -11,6 +11,14 @@ export const sub2ApiAccountCompletion: AccountCompletionCapability = {
     const service = getApiService(SITE_TYPES.SUB2API)
     const { url, detected, context } = request
 
+    const accessToken = helpers.trimString(detected.accessToken)
+    if (!accessToken) {
+      throw helpers.createCompletionError(
+        AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+        new Error("access token missing"),
+      )
+    }
+
     let siteStatus = null
     try {
       siteStatus = await service.fetchSiteStatus(
@@ -26,14 +34,6 @@ export const sub2ApiAccountCompletion: AccountCompletionCapability = {
       throw helpers.createCompletionError(
         AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
         error,
-      )
-    }
-
-    const accessToken = helpers.trimString(detected.accessToken)
-    if (!accessToken) {
-      throw helpers.createCompletionError(
-        AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
-        new Error("access token missing"),
       )
     }
 

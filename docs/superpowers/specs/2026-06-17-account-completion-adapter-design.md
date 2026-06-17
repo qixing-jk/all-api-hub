@@ -128,6 +128,7 @@ Proposed types:
 ```ts
 import type {
   AutoDetectCompletionData,
+  AutoDetectCompletionError,
   AutoDetectCompletionRequest,
 } from "~/services/accounts/autoDetectCompletion/types"
 import type { AutoDetectFailureReason } from "~/constants/autoDetect"
@@ -172,8 +173,16 @@ export type AccountCompletionHelpers = {
     input: AccountCompletionServiceRequestInput,
   ): ApiServiceRequest
   fetchSiteName(siteStatus: SiteStatusInfo | null): Promise<string>
-  createCompletionError(reason: AutoDetectFailureReason, cause: unknown): Error
+  createCompletionError(
+    reason: AutoDetectFailureReason,
+    cause: unknown,
+  ): AutoDetectCompletionError
   trimString(value: unknown): string
+  createInitialCheckInConfig(input: {
+    enableDetection: boolean
+    autoCheckInEnabled: boolean
+  }): AutoDetectCompletionData["checkIn"]
+  handleCheckInSupportFetchFailure(error: unknown): false
 }
 
 export type AccountCompletionCapability = {
