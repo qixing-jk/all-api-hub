@@ -20,7 +20,10 @@ import {
   generateDefaultTokenRequest,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { getSiteName } from "~/services/accounts/siteName"
+import {
+  completeAutoDetectedAccount,
+  getAutoDetectCompletionFailureReason,
+} from "~/services/accounts/autoDetectCompletion/completion"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
@@ -32,12 +35,6 @@ import {
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import { getApiService } from "~/services/apiService"
-import {
-  API_SERVICE_FETCH_CONTEXT_KINDS,
-  type ApiServiceFetchContext,
-  type ApiServiceRequest,
-  type SiteStatusInfo,
-} from "~/services/apiService/common/type"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -105,31 +102,6 @@ function getAutoDetectFailureReasonByErrorCode(
 }
 
 /**
- * Preserves the failing completion step while keeping the original error available for UI classification.
- */
-class AutoDetectCompletionError extends Error {
-  constructor(
-    readonly reason: AutoDetectFailureReason,
-    cause: unknown,
-  ) {
-    super(getErrorMessage(cause))
-    this.name = "AutoDetectCompletionError"
-    this.cause = cause
-  }
-}
-
-/**
- * Resolves the most specific auto-detect completion reason available for analytics.
- */
-function getAutoDetectCompletionFailureReason(
-  error: unknown,
-): AutoDetectFailureReason {
-  return error instanceof AutoDetectCompletionError
-    ? error.reason
-    : AUTO_DETECT_FAILURE_REASONS.UnexpectedException
-}
-
-/**
  * Returns local user-facing guidance for known completion failures.
  */
 function getAutoDetectCompletionFailureMessage(
@@ -138,13 +110,36 @@ function getAutoDetectCompletionFailureMessage(
 ) {
   switch (reason) {
     case AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed:
+    case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
       return t("messages:operations.detection.getAccessTokenFailedDetailed")
     case AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed:
       return t("messages:operations.detection.getSiteStatusFailedDetailed")
+    case AUTO_DETECT_FAILURE_REASONS.UsernameMissing:
+      return t("messages:operations.detection.getUsernameFailedDetailed")
     default:
       return t("accountDialog:messages.autoDetectFailed", {
         error: fallbackErrorMessage,
       })
+  }
+}
+
+/**
+ * Preserves invalid-response details for completion validation failures.
+ */
+function getAutoDetectCompletionDetailedError(
+  error: unknown,
+  reason: AutoDetectFailureReason,
+  message: string,
+) {
+  switch (reason) {
+    case AUTO_DETECT_FAILURE_REASONS.UsernameMissing:
+    case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
+      return {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message,
+      }
+    default:
+      return analyzeAutoDetectError(error)
   }
 }
 
@@ -186,51 +181,6 @@ async function withTimeout<T>(
     if (timeoutId !== undefined) {
       clearTimeout(timeoutId)
     }
-  }
-}
-
-/**
- * Extracts the matched current-tab context from successful auto-detect data.
- */
-function getAutoDetectFetchContext(
-  detectResultData: NonNullable<
-    Awaited<ReturnType<typeof autoDetectSmart>>["data"]
-  >,
-): ApiServiceFetchContext | undefined {
-  const fetchContext = detectResultData.fetchContext
-  if (fetchContext?.kind === API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT) {
-    return fetchContext
-  }
-
-  if (fetchContext?.kind === API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB) {
-    if (
-      typeof fetchContext.tabId === "number" &&
-      typeof fetchContext.origin === "string" &&
-      fetchContext.origin.trim()
-    ) {
-      return fetchContext
-    }
-  }
-
-  if (fetchContext?.incognito === true || fetchContext?.cookieStoreId) {
-    return fetchContext
-  }
-
-  return undefined
-}
-
-/**
- * Builds the service-layer request used by auto-detect completion.
- */
-function createAutoDetectApiRequest(params: {
-  baseUrl: string
-  auth: ApiServiceRequest["auth"]
-  fetchContext?: ApiServiceFetchContext
-}): ApiServiceRequest {
-  return {
-    baseUrl: params.baseUrl,
-    auth: params.auth,
-    ...(params.fetchContext ? { fetchContext: params.fetchContext } : {}),
   }
 }
 
@@ -311,21 +261,11 @@ export async function autoDetectAccount(
       }
     }
 
-    const { userId, siteType, sub2apiAuth } = detectResult.data
+    const { userId, siteType } = detectResult.data
     autoDetectContext = withFinalAutoDetectSiteType(
       detectResult.autoDetectContext,
       siteType,
     )
-    const autoDetectFetchContext = getAutoDetectFetchContext(detectResult.data)
-    const isSub2Api = siteType === SITE_TYPES.SUB2API
-    const isAIHubMix = siteType === SITE_TYPES.AIHUBMIX
-    const effectiveAuthType =
-      isSub2Api || isAIHubMix ? AuthTypeEnum.AccessToken : authType
-    // AIHubMix imports through cookie-authenticated web endpoints, then stores
-    // the retrieved account access token for all normal account/key/model APIs.
-    const detectionAuthType = isAIHubMix
-      ? AuthTypeEnum.Cookie
-      : effectiveAuthType
 
     if (!userId) {
       return {
@@ -340,188 +280,17 @@ export async function autoDetectAccount(
       }
     }
 
-    let tokenPromise: Promise<any>
-
-    // 根据 authType 选择对应的 Promise
-    if (isSub2Api) {
-      const accessToken =
-        typeof detectResult.data.accessToken === "string"
-          ? detectResult.data.accessToken.trim()
-          : ""
-      const detectedUsername =
-        typeof detectResult.data.user?.username === "string"
-          ? detectResult.data.user.username.trim()
-          : ""
-
-      tokenPromise = Promise.resolve({
-        username: detectedUsername,
-        access_token: accessToken,
-      })
-    } else if (
-      isAIHubMix &&
-      typeof detectResult.data.accessToken === "string"
-    ) {
-      const detectedUsername =
-        typeof detectResult.data.user?.username === "string"
-          ? detectResult.data.user.username.trim()
-          : ""
-
-      tokenPromise = Promise.resolve({
-        username: detectedUsername,
-        access_token: detectResult.data.accessToken.trim(),
-      })
-    } else if (effectiveAuthType === AuthTypeEnum.Cookie) {
-      tokenPromise = getApiService(siteType).fetchUserInfo(
-        createAutoDetectApiRequest({
-          baseUrl: url,
-          fetchContext: autoDetectFetchContext,
-          auth: {
-            authType: AuthTypeEnum.Cookie,
-            userId,
-          },
-        }),
-      )
-    } else if (effectiveAuthType === AuthTypeEnum.AccessToken) {
-      tokenPromise = getApiService(siteType).getOrCreateAccessToken(
-        createAutoDetectApiRequest({
-          baseUrl: url,
-          fetchContext: autoDetectFetchContext,
-          auth: {
-            authType: AuthTypeEnum.Cookie,
-            userId,
-          },
-        }),
-      )
-    } else {
-      // none 或其他情况
-      tokenPromise = Promise.resolve(null)
-    }
-
-    const fetchSiteStatusFallback = () =>
-      getApiService(siteType).fetchSiteStatus(
-        createAutoDetectApiRequest({
-          baseUrl: url,
-          fetchContext: autoDetectFetchContext,
-          auth: {
-            authType: detectionAuthType || AuthTypeEnum.None,
-          },
-        }),
-      )
-
-    const siteStatusPromise: Promise<SiteStatusInfo | null> =
-      fetchSiteStatusFallback()
-    const classifiedSiteStatusPromise = siteStatusPromise.catch((error) => {
-      throw new AutoDetectCompletionError(
-        AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
-        error,
-      )
+    const completed = await completeAutoDetectedAccount({
+      url,
+      requestedAuthType: authType,
+      detected: detectResult.data,
+      autoDetectContext,
     })
-
-    const fetchSupportCheckInFallback = () =>
-      getApiService(siteType).fetchSupportCheckIn(
-        createAutoDetectApiRequest({
-          baseUrl: url,
-          fetchContext: autoDetectFetchContext,
-          auth: {
-            authType: AuthTypeEnum.None,
-          },
-        }),
-      )
-
-    const checkSupportPromise: Promise<boolean | undefined> =
-      classifiedSiteStatusPromise.then((siteStatus) =>
-        typeof siteStatus?.checkin_enabled === "boolean"
-          ? siteStatus.checkin_enabled
-          : fetchSupportCheckInFallback().catch((error) => {
-              logger.warn("Auto-detect check-in support probe failed", {
-                siteType,
-                error: getErrorMessage(error),
-              })
-              return false
-            }),
-      )
-
-    // 并行执行 token 获取和 site 状态获取（降低端到端等待）
-    const [tokenInfo, siteStatus, checkSupport, siteName] = await Promise.all([
-      tokenPromise.catch((error) => {
-        throw new AutoDetectCompletionError(
-          AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
-          error,
-        )
-      }),
-      classifiedSiteStatusPromise,
-      checkSupportPromise,
-      classifiedSiteStatusPromise.then((resolvedSiteStatus) =>
-        getSiteName(url, siteType, resolvedSiteStatus),
-      ),
-    ])
-
-    const { username: detectedUsername, access_token } = tokenInfo
-
-    // 验证获取到的用户信息是否完整
-    const isUsernameMissing = !isSub2Api && !detectedUsername
-    const isAccessTokenMissing =
-      (effectiveAuthType === AuthTypeEnum.AccessToken || isAIHubMix) &&
-      !access_token
-
-    if (
-      // Sub2API 默认可能返回空 username（""），此时不应阻止账号识别；但 AccessToken 仍然必须存在
-      isUsernameMissing ||
-      isAccessTokenMissing
-    ) {
-      const failureReason = isAccessTokenMissing
-        ? AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing
-        : AUTO_DETECT_FAILURE_REASONS.UsernameMissing
-      const message = isAccessTokenMissing
-        ? t("messages:operations.detection.getAccessTokenFailedDetailed")
-        : t("messages:operations.detection.getUsernameFailedDetailed")
-      return {
-        success: false,
-        message,
-        detailedError: {
-          type: AutoDetectErrorType.INVALID_RESPONSE,
-          message,
-        },
-        autoDetectContext,
-        autoDetectFailureReason: failureReason,
-      }
-    }
-
-    // 获取默认充值比例
-    const defaultExchangeRate =
-      getApiService(siteType).extractDefaultExchangeRate(siteStatus) ??
-      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
     return {
       success: true,
       message: t("accountDialog:messages.autoDetectSuccess"),
-      data: {
-        username: detectedUsername,
-        siteName: siteName,
-        accessToken: access_token,
-        userId: userId.toString(),
-        exchangeRate: defaultExchangeRate,
-        authType: effectiveAuthType,
-        checkIn: {
-          enableDetection: isSub2Api ? false : checkSupport ?? false,
-          autoCheckInEnabled: isSub2Api ? false : true,
-          siteStatus: {
-            isCheckedInToday: false,
-          },
-          customCheckIn: {
-            url: "",
-            redeemUrl: "",
-            openRedeemWithCheckIn: true,
-            isCheckedInToday: false,
-          },
-        },
-        siteType: siteType,
-        ...(isSub2Api && sub2apiAuth ? { sub2apiAuth } : {}),
-        ...(autoDetectFetchContext
-          ? { fetchContext: autoDetectFetchContext }
-          : {}),
-        autoDetectContext,
-      },
+      data: completed,
     }
   } catch (error) {
     const errorMessage = getErrorMessage(error)
@@ -534,7 +303,11 @@ export async function autoDetectAccount(
       t("messages:autodetect.failed", { error: errorMessage }),
       error,
     )
-    const detailedError = analyzeAutoDetectError(error)
+    const detailedError = getAutoDetectCompletionDetailedError(
+      error,
+      autoDetectFailureReason,
+      message,
+    )
     return {
       success: false,
       message,
