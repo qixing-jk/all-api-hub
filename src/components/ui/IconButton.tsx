@@ -45,6 +45,7 @@ export interface IconButtonProps
     VariantProps<typeof iconButtonVariants> {
   loading?: boolean
   "aria-label": string
+  disableAutoTitle?: boolean
   analyticsAction?: ProductAnalyticsScopedActionConfig
 }
 
@@ -57,6 +58,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       loading,
       children,
       disabled,
+      disableAutoTitle,
       analyticsAction,
       onClick,
       ...props
@@ -87,6 +89,9 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         disabled={isDisabled}
         onClick={handleClick}
         {...props}
+        title={
+          disableAutoTitle ? props.title : props.title ?? props["aria-label"]
+        }
       >
         {loading ? (
           <svg

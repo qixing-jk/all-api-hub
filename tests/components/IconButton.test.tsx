@@ -50,6 +50,42 @@ describe("IconButton", () => {
     )
   })
 
+  it("uses aria-label as the fallback title for icon-only discovery", () => {
+    render(
+      <IconButton aria-label="Refresh profiles">
+        <span />
+      </IconButton>,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Refresh profiles" }),
+    ).toHaveAttribute("title", "Refresh profiles")
+  })
+
+  it("keeps an explicit title when it differs from the accessible name", () => {
+    render(
+      <IconButton aria-label="Refresh profiles" title="Refresh the list">
+        <span />
+      </IconButton>,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Refresh profiles" }),
+    ).toHaveAttribute("title", "Refresh the list")
+  })
+
+  it("can disable automatic title fallback for tooltip-managed buttons", () => {
+    render(
+      <IconButton aria-label="Refresh profiles" disableAutoTitle>
+        <span />
+      </IconButton>,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Refresh profiles" }),
+    ).not.toHaveAttribute("title")
+  })
+
   it("tracks controlled analytics action without reading button content", () => {
     const onClick = vi.fn()
 
