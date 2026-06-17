@@ -106,7 +106,6 @@ describe("accountOperations autoDetectAccount", () => {
     })
 
     mockFetchSiteStatus.mockResolvedValueOnce(null)
-    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
@@ -134,7 +133,6 @@ describe("accountOperations autoDetectAccount", () => {
       },
     })
     mockFetchSiteStatus.mockResolvedValueOnce(null)
-    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(

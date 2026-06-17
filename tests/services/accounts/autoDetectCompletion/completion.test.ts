@@ -5,42 +5,26 @@ import {
   AUTO_DETECT_STRATEGIES,
 } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AutoDetectCompletionError,
   completeAutoDetectedAccount,
 } from "~/services/accounts/autoDetectCompletion/completion"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
-import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
+import {
+  API_SERVICE_FETCH_CONTEXT_KINDS,
+  type ApiServiceFetchContext,
+} from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
 
-const {
-  mockFetchSiteStatus,
-  mockFetchSupportCheckIn,
-  mockExtractDefaultExchangeRate,
-  mockFetchUserInfo,
-  mockGetOrCreateAccessToken,
-} = vi.hoisted(() => ({
-  mockFetchSiteStatus: vi.fn(),
-  mockFetchSupportCheckIn: vi.fn(),
-  mockExtractDefaultExchangeRate: vi.fn(),
-  mockFetchUserInfo: vi.fn(),
-  mockGetOrCreateAccessToken: vi.fn(),
+const { getSiteAdapterMock, accountCompletionMock } = vi.hoisted(() => ({
+  getSiteAdapterMock: vi.fn(),
+  accountCompletionMock: {
+    complete: vi.fn(),
+  },
 }))
 
-vi.mock("~/services/apiService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/services/apiService")>()
-  return {
-    ...actual,
-    getApiService: vi.fn(() => ({
-      fetchSiteStatus: mockFetchSiteStatus,
-      fetchSupportCheckIn: mockFetchSupportCheckIn,
-      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-      fetchUserInfo: mockFetchUserInfo,
-      getOrCreateAccessToken: mockGetOrCreateAccessToken,
-    })),
-  }
-})
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: getSiteAdapterMock,
+}))
 
 const currentTabFetchContext = (origin: string) => ({
   kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -53,203 +37,133 @@ const browserFetchContext = () => ({
   cookieStoreId: "firefox-container-2",
 })
 
+const completedAccountData = {
+  username: "service-user",
+  siteName: "Status Portal",
+  accessToken: "service-token",
+  userId: "7",
+  exchangeRate: 6.8,
+  authType: AuthTypeEnum.AccessToken,
+  checkIn: {
+    enableDetection: true,
+    autoCheckInEnabled: true,
+    siteStatus: {
+      isCheckedInToday: false,
+    },
+    customCheckIn: {
+      url: "",
+      redeemUrl: "",
+      openRedeemWithCheckIn: true,
+      isCheckedInToday: false,
+    },
+  },
+}
+
 describe("auto-detect completion", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getSiteAdapterMock.mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      accountCompletion: accountCompletionMock,
+    })
+    accountCompletionMock.complete.mockResolvedValue(completedAccountData)
   })
 
-  it("completes compatible access-token account data through the service layer", async () => {
+  it("routes completion through the adapter with valid current-tab context", async () => {
     const fetchContext = currentTabFetchContext("https://status.example.com")
     const autoDetectContext = {
       strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
       siteType: SITE_TYPES.NEW_API,
     }
-    const siteStatus = {
-      system_name: "Status Portal",
-      checkin_enabled: true,
+    const detected = {
+      userId: "7",
+      siteType: SITE_TYPES.NEW_API,
+      fetchContext,
     }
-    mockGetOrCreateAccessToken.mockResolvedValueOnce({
-      username: "  service-user  ",
-      access_token: "  service-token  ",
-    })
-    mockFetchSiteStatus.mockResolvedValueOnce(siteStatus)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(6.8)
 
     const result = await completeAutoDetectedAccount({
       url: "https://status.example.com",
       requestedAuthType: AuthTypeEnum.AccessToken,
       autoDetectContext,
-      detected: {
-        userId: "7",
-        siteType: SITE_TYPES.NEW_API,
-        fetchContext,
-      },
+      detected,
     })
 
-    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(accountCompletionMock.complete).toHaveBeenCalledTimes(1)
+
+    const [adapterRequest, helpers] =
+      accountCompletionMock.complete.mock.calls[0]
+    expect(adapterRequest).toEqual({
+      url: "https://status.example.com",
+      requestedAuthType: AuthTypeEnum.AccessToken,
+      detected,
+      autoDetectContext,
+      context: { fetchContext },
+    })
+    expect(Object.keys(helpers).sort()).toEqual(
+      [
+        "createServiceRequest",
+        "fetchSiteName",
+        "createCompletionError",
+        "trimString",
+        "createInitialCheckInConfig",
+        "handleCheckInSupportFetchFailure",
+      ].sort(),
+    )
+    expect(
+      helpers.createServiceRequest({
+        baseUrl: "https://status.example.com",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: "7",
+        },
+        context: { fetchContext },
+      }),
+    ).toEqual({
       baseUrl: "https://status.example.com",
-      fetchContext,
       auth: {
         authType: AuthTypeEnum.Cookie,
         userId: "7",
       },
-    })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
-      baseUrl: "https://status.example.com",
       fetchContext,
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-      },
     })
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
-    expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
-    expect(result).toEqual({
-      username: "service-user",
-      siteName: "Status Portal",
-      accessToken: "service-token",
-      userId: "7",
-      exchangeRate: 6.8,
-      authType: AuthTypeEnum.AccessToken,
-      checkIn: {
+    expect(helpers.trimString("  trimmed  ")).toBe("trimmed")
+    expect(
+      helpers.createInitialCheckInConfig({
         enableDetection: true,
         autoCheckInEnabled: true,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
-        customCheckIn: {
-          url: "",
-          redeemUrl: "",
-          openRedeemWithCheckIn: true,
-          isCheckedInToday: false,
-        },
-      },
+      }),
+    ).toEqual(completedAccountData.checkIn)
+    expect(
+      helpers.createCompletionError(
+        AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+        new Error("token failed"),
+      ),
+    ).toBeInstanceOf(AutoDetectCompletionError)
+    expect(
+      helpers.handleCheckInSupportFetchFailure(new Error("probe failed")),
+    ).toBe(false)
+
+    await expect(
+      helpers.fetchSiteName({
+        system_name: "Status Portal",
+      }),
+    ).resolves.toBe("Status Portal")
+    expect(result).toEqual({
+      ...completedAccountData,
       siteType: SITE_TYPES.NEW_API,
       fetchContext,
       autoDetectContext,
     })
   })
 
-  it("uses detected Sub2API access-token data without user/token service completion", async () => {
-    const fetchContext = currentTabFetchContext("https://sub2.example.com")
-    const sub2apiAuth = {
-      refreshToken: "refresh-token",
-      tokenExpiresAt: 1999999999999,
-    }
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Runtime Portal",
-    })
-    mockFetchSupportCheckIn.mockResolvedValueOnce(true)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
-
-    const result = await completeAutoDetectedAccount({
-      url: "https://sub2.example.com",
-      requestedAuthType: AuthTypeEnum.Cookie,
-      detected: {
-        userId: "12",
-        user: { id: 12, username: "  " },
-        siteType: SITE_TYPES.SUB2API,
-        accessToken: "  jwt-token  ",
-        sub2apiAuth,
-        fetchContext,
-      },
-    })
-
-    expect(mockFetchUserInfo).not.toHaveBeenCalled()
-    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
-    expect(result).toMatchObject({
-      username: "",
-      siteName: "Runtime Portal",
-      accessToken: "jwt-token",
-      userId: "12",
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
-      authType: AuthTypeEnum.AccessToken,
-      siteType: SITE_TYPES.SUB2API,
-      sub2apiAuth,
-      fetchContext,
-      checkIn: {
-        enableDetection: false,
-        autoCheckInEnabled: false,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
-        customCheckIn: {
-          url: "",
-          redeemUrl: "",
-          openRedeemWithCheckIn: true,
-          isCheckedInToday: false,
-        },
-      },
-    })
-  })
-
-  it("uses detected AIHubMix access-token data and probes site status with Cookie auth", async () => {
-    const fetchContext = currentTabFetchContext("https://aihubmix.com")
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
-      checkin_enabled: false,
-    })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
-
-    const result = await completeAutoDetectedAccount({
-      url: "https://aihubmix.com",
-      requestedAuthType: AuthTypeEnum.Cookie,
-      detected: {
-        userId: "11",
-        user: { id: 11, username: "  aihubmix-user  " },
-        siteType: SITE_TYPES.AIHUBMIX,
-        accessToken: "  detected-console-token  ",
-        fetchContext,
-      },
-    })
-
-    expect(mockFetchUserInfo).not.toHaveBeenCalled()
-    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
-      baseUrl: "https://aihubmix.com",
-      fetchContext,
-      auth: {
-        authType: AuthTypeEnum.Cookie,
-      },
-    })
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
-    expect(result).toMatchObject({
-      username: "aihubmix-user",
-      accessToken: "detected-console-token",
-      authType: AuthTypeEnum.AccessToken,
-      siteType: SITE_TYPES.AIHUBMIX,
-      fetchContext,
-      checkIn: {
-        enableDetection: false,
-        autoCheckInEnabled: true,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
-        customCheckIn: {
-          url: "",
-          redeemUrl: "",
-          openRedeemWithCheckIn: true,
-          isCheckedInToday: false,
-        },
-      },
-    })
-  })
-
-  it("drops malformed current-tab fetch context from service requests and result", async () => {
+  it("drops malformed current-tab context before adapter completion", async () => {
     const malformedFetchContext = {
       kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
       tabId: "not-a-number",
       origin: "https://malformed.example.com",
       cookieStoreId: "",
     } as unknown as ApiServiceFetchContext
-    mockGetOrCreateAccessToken.mockResolvedValueOnce({
-      username: "malformed-context-user",
-      access_token: "malformed-context-token",
-    })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Malformed Context Portal",
-      checkin_enabled: true,
-    })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await completeAutoDetectedAccount({
       url: "https://malformed.example.com",
@@ -261,33 +175,24 @@ describe("auto-detect completion", () => {
       },
     })
 
+    const [adapterRequest, helpers] =
+      accountCompletionMock.complete.mock.calls[0]
+    expect(adapterRequest.context).toEqual({})
+    expect(
+      helpers.createServiceRequest({
+        baseUrl: "https://malformed.example.com",
+        auth: { authType: AuthTypeEnum.Cookie, userId: "8" },
+        context: {},
+      }),
+    ).toEqual({
+      baseUrl: "https://malformed.example.com",
+      auth: { authType: AuthTypeEnum.Cookie, userId: "8" },
+    })
     expect(result).not.toHaveProperty("fetchContext")
-    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
-      baseUrl: "https://malformed.example.com",
-      auth: {
-        authType: AuthTypeEnum.Cookie,
-        userId: "8",
-      },
-    })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
-      baseUrl: "https://malformed.example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-      },
-    })
   })
 
-  it("retains browser fetch context in service requests and result", async () => {
+  it("retains browser fetch context before adapter completion and result", async () => {
     const fetchContext = browserFetchContext()
-    mockGetOrCreateAccessToken.mockResolvedValueOnce({
-      username: "browser-context-user",
-      access_token: "browser-context-token",
-    })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Browser Context Portal",
-      checkin_enabled: true,
-    })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await completeAutoDetectedAccount({
       url: "https://browser-context.example.com",
@@ -299,174 +204,52 @@ describe("auto-detect completion", () => {
       },
     })
 
-    expect(result.fetchContext).toEqual(fetchContext)
-    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
-      baseUrl: "https://browser-context.example.com",
-      fetchContext,
-      auth: {
-        authType: AuthTypeEnum.Cookie,
-        userId: "9",
-      },
-    })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
-      baseUrl: "https://browser-context.example.com",
-      fetchContext,
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-      },
-    })
-  })
-
-  it("throws access-token missing when token completion returns no usable token", async () => {
-    mockGetOrCreateAccessToken.mockResolvedValueOnce({
-      username: "missing-token-user",
-      access_token: "  ",
-    })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Missing Token Portal",
-    })
-    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
-
-    await expect(
-      completeAutoDetectedAccount({
-        url: "https://token.example.com",
-        requestedAuthType: AuthTypeEnum.AccessToken,
-        detected: {
-          userId: "5",
-          siteType: SITE_TYPES.NEW_API,
-        },
+    expect(accountCompletionMock.complete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: { fetchContext },
       }),
-    ).rejects.toMatchObject({
-      reason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
-    })
-  })
-
-  it("throws username missing when non-Sub2API completion returns no usable username", async () => {
-    mockGetOrCreateAccessToken.mockResolvedValueOnce({
-      username: "  ",
-      access_token: "username-missing-token",
-    })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Missing Username Portal",
-    })
-    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
-
-    await expect(
-      completeAutoDetectedAccount({
-        url: "https://username.example.com",
-        requestedAuthType: AuthTypeEnum.AccessToken,
-        detected: {
-          userId: "6",
-          siteType: SITE_TYPES.NEW_API,
-        },
-      }),
-    ).rejects.toMatchObject({
-      reason: AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
-    })
-  })
-
-  it("wraps token service failures as token-fetch completion errors", async () => {
-    const tokenError = new Error("token failed")
-    mockGetOrCreateAccessToken.mockRejectedValueOnce(tokenError)
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Token Failure Portal",
-      checkin_enabled: true,
-    })
-
-    const completionPromise = completeAutoDetectedAccount({
-      url: "https://token-failure.example.com",
-      requestedAuthType: AuthTypeEnum.AccessToken,
-      detected: {
-        userId: "10",
-        siteType: SITE_TYPES.NEW_API,
-      },
-    })
-
-    await expect(completionPromise).rejects.toMatchObject({
-      name: "AutoDetectCompletionError",
-      reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
-      cause: tokenError,
-    })
-  })
-
-  it("falls back to disabled check-in when support probing fails", async () => {
-    const supportError = new Error("support failed")
-    mockGetOrCreateAccessToken.mockResolvedValueOnce({
-      username: "support-user",
-      access_token: "support-token",
-    })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Support Failure Portal",
-    })
-    mockFetchSupportCheckIn.mockRejectedValueOnce(supportError)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
-
-    const result = await completeAutoDetectedAccount({
-      url: "https://support.example.com",
-      requestedAuthType: AuthTypeEnum.AccessToken,
-      detected: {
-        userId: "13",
-        siteType: SITE_TYPES.NEW_API,
-      },
-    })
-
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
-      baseUrl: "https://support.example.com",
-      auth: {
-        authType: AuthTypeEnum.None,
-      },
-    })
-    expect(result.checkIn.enableDetection).toBe(false)
-  })
-
-  it("classifies unsupported completion auth as username missing", async () => {
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Unsupported Auth Portal",
-      checkin_enabled: true,
-    })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
-
-    await expect(
-      completeAutoDetectedAccount({
-        url: "https://unsupported-auth.example.com",
-        requestedAuthType: AuthTypeEnum.None,
-        detected: {
-          userId: "14",
-          siteType: SITE_TYPES.NEW_API,
-        },
-      }),
-    ).rejects.toMatchObject({
-      reason: AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
-    })
-  })
-
-  it("throws completion error when site status fetch fails", async () => {
-    const statusError = new Error("status failed")
-    mockGetOrCreateAccessToken.mockResolvedValueOnce({
-      username: "status-user",
-      access_token: "status-token",
-    })
-    mockFetchSiteStatus.mockRejectedValueOnce(statusError)
-
-    const completionPromise = completeAutoDetectedAccount({
-      url: "https://status.example.com",
-      requestedAuthType: AuthTypeEnum.AccessToken,
-      detected: {
-        userId: "8",
-        siteType: SITE_TYPES.NEW_API,
-      },
-    })
-
-    await expect(completionPromise).rejects.toMatchObject({
-      name: "AutoDetectCompletionError",
-      reason: AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
-      cause: statusError,
-    })
-
-    await expect(completionPromise).rejects.toBeInstanceOf(
-      AutoDetectCompletionError,
+      expect.any(Object),
     )
+    expect(result.fetchContext).toEqual(fetchContext)
+  })
+
+  it("rejects when the adapter does not implement account completion", async () => {
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.NEW_API,
+    })
+
+    await expect(
+      completeAutoDetectedAccount({
+        url: "https://unsupported.example.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          userId: "10",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      }),
+    ).rejects.toMatchObject({
+      name: "AutoDetectCompletionError",
+      reason: AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
+    })
+    expect(accountCompletionMock.complete).not.toHaveBeenCalled()
+  })
+
+  it("passes adapter completion errors through unchanged", async () => {
+    const completionError = new AutoDetectCompletionError(
+      AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      new Error("token failed"),
+    )
+    accountCompletionMock.complete.mockRejectedValueOnce(completionError)
+
+    await expect(
+      completeAutoDetectedAccount({
+        url: "https://token-failure.example.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          userId: "11",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      }),
+    ).rejects.toBe(completionError)
   })
 })

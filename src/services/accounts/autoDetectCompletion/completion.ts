@@ -2,20 +2,17 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
-import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { getSiteName } from "~/services/accounts/siteName"
-import { getApiService } from "~/services/apiService"
+import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import {
   API_SERVICE_FETCH_CONTEXT_KINDS,
   type ApiServiceFetchContext,
   type ApiServiceRequest,
   type SiteStatusInfo,
 } from "~/services/apiService/common/type"
-import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { t } from "~/utils/i18n/core"
 
 import {
   AutoDetectCompletionError,
@@ -92,13 +89,13 @@ function trimString(value: unknown): string {
 /**
  * Creates the persisted check-in shape used by auto-detected accounts.
  */
-function createInitialCheckInConfig(
-  isSub2Api: boolean,
-  checkSupport: boolean | undefined,
-) {
+function createInitialCheckInConfig(input: {
+  enableDetection: boolean
+  autoCheckInEnabled: boolean
+}) {
   return {
-    enableDetection: isSub2Api ? false : checkSupport ?? false,
-    autoCheckInEnabled: isSub2Api ? false : true,
+    enableDetection: input.enableDetection,
+    autoCheckInEnabled: input.autoCheckInEnabled,
     siteStatus: {
       isCheckedInToday: false,
     },
@@ -111,6 +108,46 @@ function createInitialCheckInConfig(
   }
 }
 
+const createMissingAccountCompletionCapabilityError = (siteType: string) =>
+  new Error(`accountCompletion is not implemented for ${siteType}`)
+
+const createCompletionError = (
+  reason: AutoDetectFailureReason,
+  cause: unknown,
+) => new AutoDetectCompletionError(reason, cause)
+
+const createAccountCompletionHelpers = (params: {
+  url: string
+  siteType: string
+}): AccountCompletionHelpers => ({
+  createServiceRequest(input: {
+    baseUrl: string
+    auth: ApiServiceRequest["auth"]
+    context: {
+      fetchContext?: ApiServiceFetchContext
+    }
+  }) {
+    return createAutoDetectApiRequest({
+      baseUrl: input.baseUrl,
+      auth: input.auth,
+      fetchContext: input.context.fetchContext,
+    })
+  },
+  fetchSiteName(siteStatus: SiteStatusInfo | null) {
+    return getSiteName(params.url, params.siteType, siteStatus)
+  },
+  createCompletionError,
+  trimString,
+  createInitialCheckInConfig,
+  handleCheckInSupportFetchFailure(error: unknown) {
+    logger.warn("Auto-detect check-in support probe failed", {
+      siteType: params.siteType,
+      error: getErrorMessage(error),
+    })
+    return false as const
+  },
+})
+
 /**
  * Completes a detected identity with service-backed token, status, and defaults.
  */
@@ -118,150 +155,37 @@ export async function completeAutoDetectedAccount(
   request: AutoDetectCompletionRequest,
 ): Promise<AutoDetectCompletionData> {
   const { url, requestedAuthType, detected, autoDetectContext } = request
-  const { userId, siteType, sub2apiAuth } = detected
+  const { siteType } = detected
   const autoDetectFetchContext = getAutoDetectFetchContext(detected)
-  const apiService = getApiService(siteType)
-  const isSub2Api = siteType === SITE_TYPES.SUB2API
-  const isAIHubMix = siteType === SITE_TYPES.AIHUBMIX
-  const effectiveAuthType =
-    isSub2Api || isAIHubMix ? AuthTypeEnum.AccessToken : requestedAuthType
-  // AIHubMix imports through cookie-authenticated web endpoints, then stores
-  // the retrieved account access token for all normal account/key/model APIs.
-  const detectionAuthType = isAIHubMix ? AuthTypeEnum.Cookie : effectiveAuthType
-
-  let tokenPromise: Promise<unknown>
-
-  if (isSub2Api) {
-    tokenPromise = Promise.resolve({
-      username: trimString(detected.user?.username),
-      access_token: trimString(detected.accessToken),
-    })
-  } else if (isAIHubMix && typeof detected.accessToken === "string") {
-    tokenPromise = Promise.resolve({
-      username: trimString(detected.user?.username),
-      access_token: trimString(detected.accessToken),
-    })
-  } else if (effectiveAuthType === AuthTypeEnum.Cookie) {
-    tokenPromise = apiService.fetchUserInfo(
-      createAutoDetectApiRequest({
-        baseUrl: url,
-        fetchContext: autoDetectFetchContext,
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId,
-        },
-      }),
-    )
-  } else if (effectiveAuthType === AuthTypeEnum.AccessToken) {
-    tokenPromise = apiService.getOrCreateAccessToken(
-      createAutoDetectApiRequest({
-        baseUrl: url,
-        fetchContext: autoDetectFetchContext,
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId,
-        },
-      }),
-    )
-  } else {
-    // Auto-detect does not normally route non-token completion with None auth;
-    // if it does, the shared identity validation below classifies missing data.
-    tokenPromise = Promise.resolve(null)
-  }
-
-  const fetchSiteStatusFallback = () =>
-    apiService.fetchSiteStatus(
-      createAutoDetectApiRequest({
-        baseUrl: url,
-        fetchContext: autoDetectFetchContext,
-        auth: {
-          authType: detectionAuthType || AuthTypeEnum.None,
-        },
-      }),
-    )
-
-  const siteStatusPromise: Promise<SiteStatusInfo | null> =
-    fetchSiteStatusFallback()
-  const classifiedSiteStatusPromise = siteStatusPromise.catch((error) => {
+  const adapter = getSiteAdapter(siteType)
+  if (!adapter.accountCompletion) {
     throw new AutoDetectCompletionError(
-      AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
-      error,
+      AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
+      createMissingAccountCompletionCapabilityError(siteType),
     )
-  })
-
-  const fetchSupportCheckInFallback = () =>
-    apiService.fetchSupportCheckIn(
-      createAutoDetectApiRequest({
-        baseUrl: url,
-        fetchContext: autoDetectFetchContext,
-        auth: {
-          authType: AuthTypeEnum.None,
-        },
-      }),
-    )
-
-  const checkSupportPromise: Promise<boolean | undefined> =
-    classifiedSiteStatusPromise.then((siteStatus) =>
-      typeof siteStatus?.checkin_enabled === "boolean"
-        ? siteStatus.checkin_enabled
-        : fetchSupportCheckInFallback().catch((error) => {
-            logger.warn("Auto-detect check-in support probe failed", {
-              siteType,
-              error: getErrorMessage(error),
-            })
-            return false
-          }),
-    )
-
-  const [tokenInfo, siteStatus, checkSupport, siteName] = await Promise.all([
-    tokenPromise.catch((error) => {
-      throw new AutoDetectCompletionError(
-        AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
-        error,
-      )
-    }),
-    classifiedSiteStatusPromise,
-    checkSupportPromise,
-    classifiedSiteStatusPromise.then((resolvedSiteStatus) =>
-      getSiteName(url, siteType, resolvedSiteStatus),
-    ),
-  ])
-
-  const tokenData =
-    tokenInfo && typeof tokenInfo === "object"
-      ? (tokenInfo as { username?: unknown; access_token?: unknown })
-      : {}
-  const detectedUsername = trimString(tokenData.username)
-  const accessToken = trimString(tokenData.access_token)
-  const isUsernameMissing = !isSub2Api && !detectedUsername
-  const isAccessTokenMissing =
-    (effectiveAuthType === AuthTypeEnum.AccessToken || isAIHubMix) &&
-    !accessToken
-
-  if (isUsernameMissing || isAccessTokenMissing) {
-    const failureReason = isAccessTokenMissing
-      ? AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing
-      : AUTO_DETECT_FAILURE_REASONS.UsernameMissing
-    const message = isAccessTokenMissing
-      ? t("messages:operations.detection.getAccessTokenFailedDetailed")
-      : t("messages:operations.detection.getUsernameFailedDetailed")
-    throw new AutoDetectCompletionError(failureReason, new Error(message))
   }
 
-  const defaultExchangeRate =
-    apiService.extractDefaultExchangeRate(siteStatus) ??
-    UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+  const completed = await adapter.accountCompletion.complete(
+    {
+      url,
+      requestedAuthType,
+      detected,
+      autoDetectContext,
+      context: {
+        ...(autoDetectFetchContext
+          ? { fetchContext: autoDetectFetchContext }
+          : {}),
+      },
+    },
+    createAccountCompletionHelpers({
+      url,
+      siteType,
+    }),
+  )
 
   return {
-    username: detectedUsername,
-    siteName,
-    accessToken,
-    userId: userId.toString(),
-    exchangeRate: defaultExchangeRate,
-    authType: effectiveAuthType,
-    checkIn: createInitialCheckInConfig(isSub2Api, checkSupport),
+    ...completed,
     siteType,
-    ...(isSub2Api && sub2apiAuth ? { sub2apiAuth } : {}),
     ...(autoDetectFetchContext ? { fetchContext: autoDetectFetchContext } : {}),
     autoDetectContext,
   }
