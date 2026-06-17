@@ -15,6 +15,9 @@ describe("apiAdapters registry", () => {
       fetch: expect.any(Function),
       markRead: expect.any(Function),
     })
+    expect(adapter.modelCatalog).toEqual({
+      fetchModels: expect.any(Function),
+    })
     expect(adapter.siteNotice).toBeUndefined()
   })
 
@@ -44,6 +47,7 @@ describe("apiAdapters registry", () => {
         fetch: expect.any(Function),
       })
       expect(adapter.siteAnnouncements).toBeUndefined()
+      expect(adapter.modelCatalog).toBeUndefined()
     }
   })
 
@@ -55,5 +59,6 @@ describe("apiAdapters registry", () => {
     })
     expect(adapter.siteNotice).toBeUndefined()
     expect(adapter.siteAnnouncements).toBeUndefined()
+    expect(adapter.modelCatalog).toBeUndefined()
   })
 })
