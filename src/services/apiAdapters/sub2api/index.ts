@@ -1,6 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 
 import type { SiteAdapter } from "../contracts/siteAdapter"
+import { sub2ApiAccountCompletion } from "./accountCompletion"
 import { sub2ApiModelCatalog } from "./modelCatalog"
 import { sub2ApiSiteAnnouncements } from "./siteAnnouncements"
 
@@ -9,4 +10,5 @@ export const sub2ApiAdapter: SiteAdapter = {
   family: "sub2api",
   siteAnnouncements: sub2ApiSiteAnnouncements,
   modelCatalog: sub2ApiModelCatalog,
+  accountCompletion: sub2ApiAccountCompletion,
 }

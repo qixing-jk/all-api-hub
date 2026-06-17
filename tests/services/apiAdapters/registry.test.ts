@@ -18,6 +18,9 @@ describe("apiAdapters registry", () => {
     expect(adapter.modelCatalog).toEqual({
       fetchModels: expect.any(Function),
     })
+    expect(adapter.accountCompletion).toEqual({
+      complete: expect.any(Function),
+    })
     expect(adapter.siteNotice).toBeUndefined()
   })
 
@@ -46,16 +49,22 @@ describe("apiAdapters registry", () => {
       expect(adapter.siteNotice).toEqual({
         fetch: expect.any(Function),
       })
+      expect(adapter.accountCompletion).toEqual({
+        complete: expect.any(Function),
+      })
       expect(adapter.siteAnnouncements).toBeUndefined()
       expect(adapter.modelCatalog).toBeUndefined()
     }
   })
 
-  it("keeps AIHubMix unsupported for siteNotice in the first slice", () => {
+  it("returns an AIHubMix Adapter with account completion only", () => {
     const adapter = getSiteAdapter(SITE_TYPES.AIHUBMIX)
 
     expect(adapter).toMatchObject({
       siteType: SITE_TYPES.AIHUBMIX,
+    })
+    expect(adapter.accountCompletion).toEqual({
+      complete: expect.any(Function),
     })
     expect(adapter.siteNotice).toBeUndefined()
     expect(adapter.siteAnnouncements).toBeUndefined()

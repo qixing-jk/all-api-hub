@@ -1,5 +1,6 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 
+import { aihubmixAdapter } from "./aihubmix"
 import type { SiteAdapter } from "./contracts/siteAdapter"
 import { newApiAdapter } from "./newApi"
 import { sub2ApiAdapter } from "./sub2api"
@@ -35,6 +36,10 @@ const createUnsupportedAdapter = (siteType: AccountSiteType): SiteAdapter => ({
 export function getSiteAdapter(siteType: AccountSiteType): SiteAdapter {
   if (siteType === SITE_TYPES.SUB2API) {
     return sub2ApiAdapter
+  }
+
+  if (siteType === SITE_TYPES.AIHUBMIX) {
+    return aihubmixAdapter
   }
 
   if (newApiFamilySiteTypes.has(siteType)) {
