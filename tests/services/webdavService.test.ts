@@ -197,6 +197,26 @@ describe("webdavService", () => {
       )
     })
 
+    it("keeps using GET for explicit JSON file paths that are not absolute URLs", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch.mockResolvedValue({ status: 200 })
+
+      const ok = await testWebdavConnection({
+        url: "backups/export.json",
+      })
+
+      expect(ok).toBe(true)
+      expect(globalAny.fetch).toHaveBeenCalledWith(
+        "backups/export.json",
+        expect.objectContaining({
+          headers: expect.not.objectContaining({
+            Depth: expect.any(String),
+          }),
+          method: "GET",
+        }),
+      )
+    })
+
     it("returns true when explicit JSON file status is 404 (file missing but auth ok)", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue({
         webdav: {
