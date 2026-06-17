@@ -1,10 +1,10 @@
-import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
-import { getSiteName } from "~/services/accounts/siteName"
 import {
   AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectFailureReason,
-} from "~/services/accounts/utils/autoDetectUtils"
+} from "~/constants/autoDetect"
+import { SITE_TYPES } from "~/constants/siteType"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { getSiteName } from "~/services/accounts/siteName"
 import { getApiService } from "~/services/apiService"
 import {
   API_SERVICE_FETCH_CONTEXT_KINDS,

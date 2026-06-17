@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AUTO_DETECT_STRATEGIES } from "~/constants/autoDetect"
+import {
+  AUTO_DETECT_FAILURE_REASONS,
+  AUTO_DETECT_STRATEGIES,
+} from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AutoDetectCompletionError,
   completeAutoDetectedAccount,
 } from "~/services/accounts/autoDetectCompletion/completion"
-import { AUTO_DETECT_FAILURE_REASONS } from "~/services/accounts/utils/autoDetectUtils"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
@@ -337,6 +339,106 @@ describe("auto-detect completion", () => {
       }),
     ).rejects.toMatchObject({
       reason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+    })
+  })
+
+  it("throws username missing when non-Sub2API completion returns no usable username", async () => {
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "  ",
+      access_token: "username-missing-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Missing Username Portal",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    await expect(
+      completeAutoDetectedAccount({
+        url: "https://username.example.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          userId: "6",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      }),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
+    })
+  })
+
+  it("wraps token service failures as token-fetch completion errors", async () => {
+    const tokenError = new Error("token failed")
+    mockGetOrCreateAccessToken.mockRejectedValueOnce(tokenError)
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Token Failure Portal",
+      checkin_enabled: true,
+    })
+
+    const completionPromise = completeAutoDetectedAccount({
+      url: "https://token-failure.example.com",
+      requestedAuthType: AuthTypeEnum.AccessToken,
+      detected: {
+        userId: "10",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    await expect(completionPromise).rejects.toMatchObject({
+      name: "AutoDetectCompletionError",
+      reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      cause: tokenError,
+    })
+  })
+
+  it("falls back to disabled check-in when support probing fails", async () => {
+    const supportError = new Error("support failed")
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "support-user",
+      access_token: "support-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Support Failure Portal",
+    })
+    mockFetchSupportCheckIn.mockRejectedValueOnce(supportError)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await completeAutoDetectedAccount({
+      url: "https://support.example.com",
+      requestedAuthType: AuthTypeEnum.AccessToken,
+      detected: {
+        userId: "13",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
+      baseUrl: "https://support.example.com",
+      auth: {
+        authType: AuthTypeEnum.None,
+      },
+    })
+    expect(result.checkIn.enableDetection).toBe(false)
+  })
+
+  it("classifies unsupported completion auth as username missing", async () => {
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Unsupported Auth Portal",
+      checkin_enabled: true,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    await expect(
+      completeAutoDetectedAccount({
+        url: "https://unsupported-auth.example.com",
+        requestedAuthType: AuthTypeEnum.None,
+        detected: {
+          userId: "14",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      }),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
     })
   })
 

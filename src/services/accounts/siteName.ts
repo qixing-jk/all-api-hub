@@ -75,19 +75,29 @@ export async function getSiteName(
   }
 
   // 3. 解析 URL
-  const urlObj = new URL(urlString)
+  let urlObj: URL
+  try {
+    urlObj = new URL(urlString)
+  } catch {
+    return urlString.split("/")[0] || ""
+  }
   const hostWithProtocol = `${urlObj.protocol}//${urlObj.host}`
 
   // 4. 仅在已知 siteType 时才请求站点状态，避免为未知站点增加额外探测请求。
   if (siteTypeHint) {
-    const resolvedSiteStatus =
-      siteStatusInfo ??
-      (await getApiService(siteTypeHint).fetchSiteStatus({
-        baseUrl: hostWithProtocol,
-        auth: {
-          authType: AuthTypeEnum.None,
-        },
-      }))
+    let resolvedSiteStatus = siteStatusInfo
+    if (!resolvedSiteStatus) {
+      try {
+        resolvedSiteStatus = await getApiService(siteTypeHint).fetchSiteStatus({
+          baseUrl: hostWithProtocol,
+          auth: {
+            authType: AuthTypeEnum.None,
+          },
+        })
+      } catch {
+        resolvedSiteStatus = null
+      }
+    }
     if (
       resolvedSiteStatus?.system_name &&
       isNotDefaultSiteName(resolvedSiteStatus.system_name)

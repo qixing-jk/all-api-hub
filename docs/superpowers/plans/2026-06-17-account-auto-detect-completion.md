@@ -401,6 +401,31 @@ describe("completeAutoDetectedAccount", () => {
     })
   })
 
+  it("throws UsernameMissing when non-Sub2API completion returns no username", async () => {
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "",
+      access_token: "account-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Missing Username Portal",
+      checkin_enabled: false,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    await expect(
+      completeAutoDetectedAccount({
+        url: "https://username.example.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          userId: "6",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      }),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
+    })
+  })
+
   it("classifies site status failures", async () => {
     mockGetOrCreateAccessToken.mockResolvedValueOnce({
       username: "status-user",

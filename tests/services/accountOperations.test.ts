@@ -403,6 +403,10 @@ describe("accountOperations", () => {
       expect(extractDomainPrefix("")).toBe("")
     })
 
+    it("handles single-segment hostnames", () => {
+      expect(extractDomainPrefix("localhost")).toBe("Localhost")
+    })
+
     it("capitalizes first letter", () => {
       expect(extractDomainPrefix("github.com")).toBe("Github")
     })
@@ -491,6 +495,24 @@ describe("accountOperations", () => {
 
       expect(result).toBe("Billing Center")
       expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    })
+
+    it("falls back to the raw input prefix when the URL cannot be parsed", async () => {
+      const result = await getSiteName("not a url/path", SITE_TYPES.NEW_API)
+
+      expect(result).toBe("not a url")
+      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    })
+
+    it("falls back to the domain name when site status fetch fails", async () => {
+      mockFetchSiteStatus.mockRejectedValueOnce(new Error("status failed"))
+
+      const result = await getSiteName(
+        "https://api.example.com/dashboard",
+        SITE_TYPES.NEW_API,
+      )
+
+      expect(result).toBe("Example")
     })
   })
 })
