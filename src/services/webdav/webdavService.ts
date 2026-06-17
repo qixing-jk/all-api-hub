@@ -132,6 +132,18 @@ function resolveConnectionTestUrl(url: string) {
 }
 
 /**
+ * Detects explicit backup file URLs so connection checks can keep the legacy
+ * GET probe for file paths while using a WebDAV-native probe for collections.
+ */
+function isExplicitWebdavJsonFileUrl(url: string) {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith(".json")
+  } catch {
+    return /\.json($|[?#])/i.test(url)
+  }
+}
+
+/**
  * Derives the backup directory URL from a fully-qualified backup target URL.
  *
  * Used so we can create the collection via `MKCOL` before uploading.
@@ -638,19 +650,25 @@ async function getWebdavEncryptionConfig() {
  * Test connectivity and authentication against the configured WebDAV
  * endpoint.
  *
+ * Explicit JSON file URLs keep the legacy GET probe so missing backup files
+ * can still be treated as reachable. Collection-like URLs use PROPFIND with
+ * Depth: 0 because some WebDAV providers reject collection GET while accepting
+ * standard collection metadata probes.
+ *
  * Any non-auth HTTP status in the 2xx–4xx range is treated as a successful
- * connectivity check (the exact backup file does not need to exist yet).
- * 401/403 are treated as authentication failures and 5xx as connection
- * errors.
+ * connectivity check. 401/403 are treated as authentication failures and 5xx
+ * as connection errors.
  */
 export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
   const { cfg } = await resolveWebdavBackupRequestContext(custom)
   const targetUrl = resolveConnectionTestUrl(cfg.url)
+  const usesFileProbe = isExplicitWebdavJsonFileUrl(targetUrl)
 
   const res = await fetch(targetUrl, {
-    method: "GET",
+    method: usesFileProbe ? "GET" : "PROPFIND",
     headers: {
       Authorization: buildAuthHeader(cfg.username, cfg.password),
+      ...(usesFileProbe ? {} : { Depth: "0" }),
     },
   })
   // 401/403 明确表示鉴权失败

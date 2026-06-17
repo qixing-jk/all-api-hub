@@ -132,9 +132,9 @@ describe("webdavService", () => {
       expect(globalAny.fetch).not.toHaveBeenCalled()
     })
 
-    it("returns true when status is 200", async () => {
+    it("returns true when a collection probe returns WebDAV multistatus", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
-      globalAny.fetch.mockResolvedValue({ status: 200 })
+      globalAny.fetch.mockResolvedValue({ status: 207 })
 
       const ok = await testWebdavConnection()
 
@@ -142,7 +142,13 @@ describe("webdavService", () => {
       expect(globalAny.fetch).toHaveBeenCalledTimes(1)
       const [url, init] = globalAny.fetch.mock.calls[0]
       expect(typeof url).toBe("string")
-      expect((init as RequestInit).method).toBe("GET")
+      expect((init as RequestInit).method).toBe("PROPFIND")
+      expect((init as RequestInit).headers).toEqual(
+        expect.objectContaining({
+          Authorization: "Basic dXNlcjpwYXNz",
+          Depth: "0",
+        }),
+      )
     })
 
     it("tests directory-like WebDAV URLs without expanding them to backup files", async () => {
@@ -160,21 +166,57 @@ describe("webdavService", () => {
       expect(globalAny.fetch).toHaveBeenCalledWith(
         "http://127.0.0.1:1900/configSync/ALL-API-HUB",
         expect.objectContaining({
+          method: "PROPFIND",
+          headers: expect.objectContaining({
+            Depth: "0",
+          }),
+        }),
+      )
+    })
+
+    it("keeps using GET for explicit JSON file URLs", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        webdav: {
+          ...basePrefs.webdav,
+          url: "https://webdav.example.invalid/backups/export.json",
+        },
+      })
+      globalAny.fetch.mockResolvedValue({ status: 200 })
+
+      const ok = await testWebdavConnection()
+
+      expect(ok).toBe(true)
+      expect(globalAny.fetch).toHaveBeenCalledWith(
+        "https://webdav.example.invalid/backups/export.json",
+        expect.objectContaining({
+          headers: expect.not.objectContaining({
+            Depth: expect.any(String),
+          }),
           method: "GET",
         }),
       )
     })
 
-    it("returns true when status is 404 (file missing but auth ok)", async () => {
-      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+    it("returns true when explicit JSON file status is 404 (file missing but auth ok)", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        webdav: {
+          ...basePrefs.webdav,
+          url: "https://webdav.example.invalid/backups/export.json",
+        },
+      })
       globalAny.fetch.mockResolvedValue({ status: 404 })
 
       const ok = await testWebdavConnection()
       expect(ok).toBe(true)
     })
 
-    it("treats other non-auth 4xx (e.g. 405/409) as connectivity success", async () => {
-      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+    it("treats other explicit JSON file non-auth 4xx as connectivity success", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        webdav: {
+          ...basePrefs.webdav,
+          url: "https://webdav.example.invalid/backups/export.json",
+        },
+      })
       globalAny.fetch.mockResolvedValue({ status: 405 })
 
       const ok = await testWebdavConnection()
