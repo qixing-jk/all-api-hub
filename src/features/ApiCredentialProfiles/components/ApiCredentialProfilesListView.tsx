@@ -1,11 +1,12 @@
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
-import { KeyRound } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import {
   EmptyState,
   Input,
+  Notice,
   SearchableSelect,
   Spinner,
   TagFilter,
@@ -26,6 +27,7 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
+import { openKeysPage } from "~/utils/navigation"
 
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
 import { ApiCredentialProfilesDialogs } from "./ApiCredentialProfilesDialogs"
@@ -285,6 +287,10 @@ export function ApiCredentialProfilesListView({
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         }
 
+  const handleOpenKeyManagement = useCallback(() => {
+    void openKeysPage()
+  }, [])
+
   return (
     <div className={cn("space-y-4", className)}>
       <ApiCredentialProfilesDialogs controller={controller} />
@@ -362,28 +368,49 @@ export function ApiCredentialProfilesListView({
           </div>
         </div>
       ) : filteredProfiles.length === 0 ? (
-        <EmptyState
-          icon={<KeyRound className="h-8 w-8" />}
-          title={
-            controller.profiles.length === 0
-              ? t("apiCredentialProfiles:empty.title")
-              : t("apiCredentialProfiles:empty.filteredTitle")
-          }
-          description={
-            controller.profiles.length === 0
-              ? t("apiCredentialProfiles:empty.description")
-              : t("apiCredentialProfiles:empty.filteredDescription")
-          }
-          action={
-            controller.profiles.length === 0
-              ? {
-                  label: t("apiCredentialProfiles:actions.add"),
-                  onClick: controller.openAddDialog,
-                  analyticsAction: emptyStateAddAnalyticsAction,
-                }
-              : undefined
-          }
-        />
+        <div className="mx-auto flex max-w-md flex-col gap-4">
+          <EmptyState
+            icon={<ApiCredentialLibraryIcon className="h-8 w-8" />}
+            title={
+              controller.profiles.length === 0
+                ? t("apiCredentialProfiles:empty.title")
+                : t("apiCredentialProfiles:empty.filteredTitle")
+            }
+            description={
+              controller.profiles.length === 0
+                ? t("apiCredentialProfiles:empty.description")
+                : t("apiCredentialProfiles:empty.filteredDescription")
+            }
+            action={
+              controller.profiles.length === 0
+                ? {
+                    label: t("apiCredentialProfiles:actions.add"),
+                    onClick: controller.openAddDialog,
+                    analyticsAction: emptyStateAddAnalyticsAction,
+                  }
+                : undefined
+            }
+          />
+          {controller.profiles.length === 0 ? (
+            <Notice
+              tone="info"
+              icon={<ApiCredentialLibraryIcon className="h-3.5 w-3.5" />}
+              className="text-left"
+              description={
+                <span>
+                  {t("apiCredentialProfiles:empty.keyManagementImportHint")}{" "}
+                  <button
+                    type="button"
+                    className="font-medium text-blue-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:text-blue-200"
+                    onClick={handleOpenKeyManagement}
+                  >
+                    {t("apiCredentialProfiles:empty.keyManagementLink")}
+                  </button>
+                </span>
+              }
+            />
+          ) : null}
+        </div>
       ) : (
         <ApiCredentialProfilesList
           profiles={filteredProfiles}

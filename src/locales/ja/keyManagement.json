@@ -21,6 +21,7 @@
     "openSelectedAccountModels": "アカウントモデルを見る",
     "retryFailed": "失敗を再試行",
     "saveToApiProfiles": "API 認証情報庫に保存",
+    "saveToApiProfilesHint": "このキーを API 認証情報庫に保存し、コピー、検証、エクスポートに再利用できます。",
     "showKey": "キーを表示",
     "useInCherry": "Cherry Studio で使う"
   },

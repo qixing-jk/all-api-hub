@@ -1,7 +1,8 @@
 import type { TFunction } from "i18next"
-import { Bookmark, ExternalLink, KeyRound, Plus } from "lucide-react"
+import { Bookmark, ExternalLink, Plus } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import { Badge, IconButton } from "~/components/ui"
 import {
   SPONSOR_RECOMMENDATION_ACTION_KINDS,
@@ -251,7 +252,10 @@ export function SponsorRecommendationCard({
                 ACCOUNT_MANAGEMENT_TEST_IDS.sponsorFallbackApiCredentialProfilesAction
               }
             >
-              <KeyRound aria-hidden="true" className="h-4 w-4" />
+              <ApiCredentialLibraryIcon
+                aria-hidden="true"
+                className="h-4 w-4"
+              />
             </IconButton>
           ) : null}
         </div>

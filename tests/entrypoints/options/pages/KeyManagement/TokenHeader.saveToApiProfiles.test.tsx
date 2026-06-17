@@ -200,6 +200,42 @@ describe("TokenHeader save to API profiles", () => {
     })
   })
 
+  it("explains the API credential library save action on the row button", () => {
+    const account = createAccountStub()
+
+    const token = {
+      id: 1,
+      user_id: 1,
+      key: "sk-test",
+      status: 1,
+      name: "Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.saveToApiProfiles",
+      }),
+    ).toHaveAttribute("title", "keyManagement:actions.saveToApiProfilesHint")
+  })
+
   it("creates an openai-compatible profile from token + account baseUrl", async () => {
     const user = userEvent.setup()
     const account = createAccountStub()

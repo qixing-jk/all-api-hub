@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesListView"
@@ -11,8 +12,14 @@ import {
 } from "~/services/productAnalytics/events"
 import { act, fireEvent, render, screen } from "~~/tests/test-utils/render"
 
-const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
-  trackProductAnalyticsActionCompletedMock: vi.fn(),
+const { openKeysPageMock, trackProductAnalyticsActionCompletedMock } =
+  vi.hoisted(() => ({
+    openKeysPageMock: vi.fn(),
+    trackProductAnalyticsActionCompletedMock: vi.fn(),
+  }))
+
+vi.mock("~/utils/navigation", () => ({
+  openKeysPage: (...args: unknown[]) => openKeysPageMock(...args),
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -80,6 +87,12 @@ vi.mock("~/components/ui", () => ({
       ) : null}
     </div>
   ),
+  Notice: ({ description, icon, tone }: any) => (
+    <div role="status" data-tone={tone}>
+      {icon ? <span data-testid="notice-icon">{icon}</span> : null}
+      <div>{description}</div>
+    </div>
+  ),
   Spinner: () => <div data-testid="spinner" />,
 }))
 
@@ -109,6 +122,7 @@ describe("ApiCredentialProfilesListView", () => {
   })
 
   beforeEach(() => {
+    openKeysPageMock.mockReset()
     trackProductAnalyticsActionCompletedMock.mockReset()
   })
 
@@ -136,6 +150,37 @@ describe("ApiCredentialProfilesListView", () => {
         PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       ].join(":"),
     )
+    const importHint = screen.getByRole("status")
+    expect(importHint).toHaveAttribute("data-tone", "info")
+    expect(importHint).toHaveTextContent(
+      "apiCredentialProfiles:empty.keyManagementImportHint",
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:empty.keyManagementLink",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("opens Key Management from the empty-state import hint", async () => {
+    const user = userEvent.setup()
+    const controller = {
+      profiles: [],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(<ApiCredentialProfilesListView controller={controller} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "apiCredentialProfiles:empty.keyManagementLink",
+      }),
+    )
+
+    expect(openKeysPageMock).toHaveBeenCalledTimes(1)
   })
 
   it("declares popup empty-state add action analytics metadata", async () => {

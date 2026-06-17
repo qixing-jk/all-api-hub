@@ -21,6 +21,7 @@
     "openSelectedAccountModels": "查看帳號模型",
     "retryFailed": "重試失敗帳號",
     "saveToApiProfiles": "儲存到 API 憑據庫",
+    "saveToApiProfilesHint": "將此金鑰儲存到 API 憑據庫，用於快速複製、驗證與匯出。",
     "showKey": "顯示金鑰",
     "useInCherry": "在 Cherry Studio 中使用"
   },

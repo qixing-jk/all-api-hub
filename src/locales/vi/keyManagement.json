@@ -21,6 +21,7 @@
     "openSelectedAccountModels": "Xem mô hình tài khoản",
     "retryFailed": "Thử lại tài khoản thất bại",
     "saveToApiProfiles": "Lưu vào Hồ sơ API",
+    "saveToApiProfilesHint": "Lưu khóa này vào thư viện thông tin xác thực API để sao chép, xác minh và xuất nhanh.",
     "showKey": "Hiển thị khóa",
     "useInCherry": "Sử dụng trong Cherry Studio"
   },

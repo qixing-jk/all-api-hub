@@ -1,7 +1,7 @@
-import { KeyRound } from "lucide-react"
 import { useEffect, useMemo, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
@@ -77,7 +77,7 @@ export default function ApiCredentialProfiles({
     >
       <div className="space-y-6 p-6">
         <PageHeader
-          icon={KeyRound}
+          icon={ApiCredentialLibraryIcon}
           title={t("title")}
           description={t("description")}
           actions={

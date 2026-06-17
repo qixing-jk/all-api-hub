@@ -6,7 +6,6 @@ import {
   Cloud,
   Cpu,
   Info,
-  KeyRound,
   Layers,
   LayoutDashboard,
   LineChart,
@@ -15,10 +14,13 @@ import {
   RefreshCcw,
   Settings,
   UserRound,
-  UserRoundKey,
   type LucideIcon,
 } from "lucide-react"
 
+import {
+  AccountKeyIcon,
+  ApiCredentialLibraryIcon,
+} from "~/components/icons/productIcons"
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import type { DevOptionsMenuItemId } from "~/constants/devOptionsMenuIds"
 import {
@@ -30,10 +32,10 @@ export const OPTIONS_MENU_ITEM_ICONS = {
   [MENU_ITEM_IDS.OVERVIEW]: LayoutDashboard,
   [MENU_ITEM_IDS.BASIC]: Settings,
   [MENU_ITEM_IDS.ACCOUNT]: UserRound,
-  [MENU_ITEM_IDS.API_CREDENTIAL_PROFILES]: KeyRound,
+  [MENU_ITEM_IDS.API_CREDENTIAL_PROFILES]: ApiCredentialLibraryIcon,
   [MENU_ITEM_IDS.BOOKMARK]: Bookmark,
   [MENU_ITEM_IDS.MODELS]: Cpu,
-  [MENU_ITEM_IDS.KEYS]: UserRoundKey,
+  [MENU_ITEM_IDS.KEYS]: AccountKeyIcon,
   [MENU_ITEM_IDS.AUTO_CHECKIN]: CalendarCheck2,
   [MENU_ITEM_IDS.SITE_ANNOUNCEMENTS]: Megaphone,
   [MENU_ITEM_IDS.BALANCE_HISTORY]: LineChart,

@@ -1,7 +1,8 @@
-import { Cpu, KeyRound, Plus, RefreshCw, Wrench } from "lucide-react"
+import { Cpu, Plus, RefreshCw, Wrench } from "lucide-react"
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
+import { AccountKeyIcon } from "~/components/icons/productIcons"
 import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
 import { Button, IconButton } from "~/components/ui"
@@ -68,7 +69,7 @@ export function Header({
         surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader}
       >
         <PageHeader
-          icon={KeyRound}
+          icon={AccountKeyIcon}
           title={t("title")}
           titleActionsTestId={KEY_MANAGEMENT_TEST_IDS.titleActions}
           titleActions={

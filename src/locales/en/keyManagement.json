@@ -22,6 +22,7 @@
     "openSelectedAccountModels": "View account models",
     "retryFailed": "Retry failed",
     "saveToApiProfiles": "Save to API credential library",
+    "saveToApiProfilesHint": "Save this key to the API credential library for quick copying, verification, and export.",
     "showKey": "Show Key",
     "useInCherry": "Use in Cherry Studio"
   },

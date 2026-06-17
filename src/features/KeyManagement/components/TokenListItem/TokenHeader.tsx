@@ -1,7 +1,6 @@
 import {
   ArrowPathIcon,
   PencilIcon,
-  PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
@@ -19,6 +18,7 @@ import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import {
   getKeySignalLabel,
@@ -31,6 +31,7 @@ import {
   SignalBadge,
 } from "~/components/ManagedSiteChannelAssessmentSignalHelpers"
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
+import Tooltip from "~/components/Tooltip"
 import {
   Badge,
   Button,
@@ -476,15 +477,18 @@ function TokenActionButtons({
       >
         <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
       </IconButton>
-      <IconButton
-        aria-label={t("keyManagement:actions.saveToApiProfiles")}
-        data-testid={KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton}
-        size="sm"
-        variant="ghost"
-        onClick={handleSaveToApiCredentialProfiles}
-      >
-        <PlusIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
-      </IconButton>
+      <Tooltip content={t("keyManagement:actions.saveToApiProfilesHint")}>
+        <IconButton
+          aria-label={t("keyManagement:actions.saveToApiProfiles")}
+          title={t("keyManagement:actions.saveToApiProfilesHint")}
+          data-testid={KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton}
+          size="sm"
+          variant="ghost"
+          onClick={handleSaveToApiCredentialProfiles}
+        >
+          <ApiCredentialLibraryIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
+        </IconButton>
+      </Tooltip>
       <IconButton
         aria-label={t("actions.useInCherry")}
         size="sm"
