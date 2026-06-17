@@ -276,6 +276,7 @@ Use validation as progressive gates:
 ### Locale Shape Consistency
 
 - Keep locale key shapes stable across languages; do not let one language drift into a pluralized or structurally different key family unless that family is intentionally introduced for every locale.
+- When changing an existing app locale string under `src/locales/**`, check the same key in every sibling locale before handoff. If the wording describes a renamed action, control, icon, or workflow, update all supported app locales in the same change unless a locale is intentionally generated or out of scope, and call that out explicitly.
 
 ## Security & Configuration Tips
 
