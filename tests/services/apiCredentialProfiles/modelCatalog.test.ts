@@ -28,6 +28,7 @@ const {
   fetchSub2ApiGroupRatesMock,
   fetchSub2ApiRuntimeModelsMock,
   getApiServiceMock,
+  getSiteAdapterMock,
   loadModelPriceTableMock,
   resolveDisplayAccountTokenForSecretMock,
 } = vi.hoisted(() => ({
@@ -39,6 +40,7 @@ const {
   fetchSub2ApiGroupRatesMock: vi.fn(),
   fetchSub2ApiRuntimeModelsMock: vi.fn(),
   getApiServiceMock: vi.fn(),
+  getSiteAdapterMock: vi.fn(),
   loadModelPriceTableMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
 }))
@@ -67,8 +69,10 @@ vi.mock("~/services/apiService/sub2api", () => ({
     fetchSub2ApiAvailableGroupsMock(...args),
   fetchSub2ApiGroupRates: (...args: unknown[]) =>
     fetchSub2ApiGroupRatesMock(...args),
-  fetchSub2ApiRuntimeModels: (...args: unknown[]) =>
-    fetchSub2ApiRuntimeModelsMock(...args),
+}))
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: getSiteAdapterMock,
 }))
 
 vi.mock("~/services/apiCredentialProfiles/modelPriceTable", () => ({
@@ -123,6 +127,24 @@ const TOKEN = {
   models: "",
 } as const
 
+const createSub2ApiModelCatalogAdapter = (
+  fetchModels = fetchSub2ApiRuntimeModelsMock,
+) => ({
+  siteType: SITE_TYPES.SUB2API,
+  family: "sub2api" as const,
+  modelCatalog: {
+    fetchModels,
+  },
+})
+
+const mockSub2ApiModelCatalogAdapter = (
+  fetchModels = fetchSub2ApiRuntimeModelsMock,
+) => {
+  getSiteAdapterMock.mockReturnValue(
+    createSub2ApiModelCatalogAdapter(fetchModels),
+  )
+}
+
 describe("loadAccountTokenFallbackPricingResponse", () => {
   beforeEach(() => {
     fetchAnthropicModelIdsMock.mockReset()
@@ -133,8 +155,10 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     fetchSub2ApiGroupRatesMock.mockReset()
     fetchSub2ApiRuntimeModelsMock.mockReset()
     getApiServiceMock.mockReset()
+    getSiteAdapterMock.mockReset()
     loadModelPriceTableMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockReset()
+    mockSub2ApiModelCatalogAdapter()
     resolveDisplayAccountTokenForSecretMock.mockImplementation(
       async (_account, token) => token,
     )
@@ -219,6 +243,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
       baseUrl: "https://example.com",
       apiKey: "sk-real-secret",
     })
+    expect(getSiteAdapterMock).not.toHaveBeenCalled()
     expect(result.data.map((item) => item.model_name)).toEqual([
       "gpt-4o-mini",
       "claude-3-haiku",
@@ -291,6 +316,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
 
     expect(result).toBe(aihubmixPricing)
     expect(getApiServiceMock).toHaveBeenCalledWith(SITE_TYPES.AIHUBMIX)
+    expect(getSiteAdapterMock).not.toHaveBeenCalled()
     expect(fetchModelPricingMock).toHaveBeenCalledWith({
       baseUrl: "https://aihubmix.com",
       accountId: "account-1",
@@ -335,13 +361,14 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
         key: "sk-masked-sub2api",
       }),
     )
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
     expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith({
       baseUrl: "https://sub2api.example.invalid",
       accountId: "account-1",
-      auth: expect.objectContaining({
+      auth: {
         authType: AuthTypeEnum.AccessToken,
         apiKey: "sk-real-sub2api-secret",
-      }),
+      },
     })
     expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
     expect(fetchSub2ApiAvailableGroupsMock).toHaveBeenCalledWith({
@@ -487,6 +514,29 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
         }),
       }),
     ])
+  })
+
+  it("sanitizes a missing Sub2API model catalog capability failure", async () => {
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.SUB2API,
+      family: "sub2api",
+    })
+
+    await expect(
+      loadAccountTokenFallbackPricingResponse({
+        account: {
+          ...ACCOUNT,
+          siteType: SITE_TYPES.SUB2API,
+          baseUrl: "https://sub2api.example.invalid",
+        },
+        token: {
+          ...TOKEN,
+          key: "sk-masked-sub2api",
+        },
+      }),
+    ).rejects.toThrow("modelCatalog is not implemented for sub2api")
+
+    expect(fetchSub2ApiRuntimeModelsMock).not.toHaveBeenCalled()
   })
 
   it("redacts the resolved key and base URL when fallback loading fails", async () => {

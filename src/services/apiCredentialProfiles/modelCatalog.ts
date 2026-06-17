@@ -3,6 +3,7 @@ import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/a
 import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { loadModelPriceTable } from "~/services/apiCredentialProfiles/modelPriceTable"
 import {
   applySub2ApiPriceEstimates,
@@ -21,7 +22,6 @@ import {
   fetchAccountTokens,
   fetchSub2ApiAvailableGroups,
   fetchSub2ApiGroupRates,
-  fetchSub2ApiRuntimeModels,
 } from "~/services/apiService/sub2api"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
@@ -54,6 +54,9 @@ type LoadAccountTokenFallbackPricingParams = {
 
 export const ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED =
   "ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED"
+
+const createMissingModelCatalogCapabilityError = () =>
+  new Error("modelCatalog is not implemented for sub2api")
 
 /**
  * Fetch raw model ids using a stored API credential profile.
@@ -120,15 +123,18 @@ export async function loadAccountTokenFallbackPricingResponse(
     resolvedTokenKey = resolvedToken.key
 
     if (params.account.siteType === SITE_TYPES.SUB2API) {
-      const runtimeModelIds = await fetchSub2ApiRuntimeModels({
+      const adapter = getSiteAdapter(SITE_TYPES.SUB2API)
+      if (!adapter.modelCatalog) {
+        throw createMissingModelCatalogCapabilityError()
+      }
+
+      const runtimeModelIds = await adapter.modelCatalog.fetchModels({
         baseUrl: params.account.baseUrl,
         accountId: params.account.id,
         auth: {
           authType: AuthTypeEnum.AccessToken,
           apiKey: resolvedToken.key,
         },
-      } as ApiServiceRequest & {
-        auth: ApiServiceRequest["auth"] & { apiKey: string }
       })
 
       const modelOnlyResponse =
