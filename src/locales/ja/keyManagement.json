@@ -247,6 +247,7 @@
     "accountNotFound": "アカウント情報が見つかりません",
     "batchSavedToApiProfiles": "選択したキーを API 認証情報庫に保存しました",
     "batchSaveToApiProfilesFailed": "選択したキーを API 認証情報庫に保存できませんでした",
+    "batchSaveToApiProfilesPartialFailed": "選択した {{totalCount}} 件のうち {{savedCount}} 件を保存しました。{{failedCount}} 件は保存できませんでした。",
     "copyFailed": "コピーに失敗しました",
     "deleteConfirm": "キー {{name}} を削除してもよろしいですか？ この操作は元に戻せません",
     "deleteSuccess": "キー {{name}} を正常に削除しました",

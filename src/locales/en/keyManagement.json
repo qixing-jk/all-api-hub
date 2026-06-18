@@ -253,6 +253,7 @@
     "accountNotFound": "Account information not found",
     "batchSavedToApiProfiles": "Saved selected keys to API credential library",
     "batchSaveToApiProfilesFailed": "Failed to save selected keys to API credential library",
+    "batchSaveToApiProfilesPartialFailed": "Saved {{savedCount}} of {{totalCount}} selected keys. {{failedCount}} could not be saved.",
     "copyFailed": "Copy failed",
     "deleteConfirm": "Are you sure you want to delete key {{name}}? This action cannot be undone",
     "deleteSuccess": "Key {{name}} deleted successfully",

@@ -141,6 +141,8 @@ export async function saveApiTokensToApiCredentialProfiles({
 }: SaveApiTokensToApiCredentialProfilesParams): Promise<{
   savedCount: number
 }> {
+  let savedCount = 0
+
   try {
     for (const { account, token } of items) {
       const resolvedToken = await resolveTokenForSecret(account, token)
@@ -155,6 +157,7 @@ export async function saveApiTokensToApiCredentialProfiles({
           key: resolvedToken.key,
         },
       })
+      savedCount += 1
     }
 
     toast.success(
@@ -183,9 +186,22 @@ export async function saveApiTokensToApiCredentialProfiles({
 
     return { savedCount: items.length }
   } catch (error) {
+    const totalCount = items.length
+    const failedCount = totalCount - savedCount
+    const isPartialFailure = savedCount > 0
+
     logger.error(
-      `Failed to save selected keys to API profiles from ${source}`,
+      `${
+        isPartialFailure ? "Partially saved" : "Failed to save"
+      } selected keys to API profiles from ${source}`,
       {
+        ...(isPartialFailure
+          ? {
+              failedCount,
+              savedCount,
+              totalCount,
+            }
+          : {}),
         message: toSanitizedErrorSummary(
           error,
           items.flatMap(({ account, token }) =>
@@ -196,7 +212,15 @@ export async function saveApiTokensToApiCredentialProfiles({
         ),
       },
     )
-    toast.error(t("keyManagement:messages.batchSaveToApiProfilesFailed"))
+    toast.error(
+      isPartialFailure
+        ? t("keyManagement:messages.batchSaveToApiProfilesPartialFailed", {
+            failedCount,
+            savedCount,
+            totalCount,
+          })
+        : t("keyManagement:messages.batchSaveToApiProfilesFailed"),
+    )
     throw error
   }
 }

@@ -247,6 +247,7 @@
     "accountNotFound": "找不到對應帳號資訊",
     "batchSavedToApiProfiles": "已儲存所選金鑰到 API 憑據庫",
     "batchSaveToApiProfilesFailed": "儲存所選金鑰到 API 憑據庫失敗",
+    "batchSaveToApiProfilesPartialFailed": "已儲存 {{savedCount}}/{{totalCount}} 個所選金鑰，{{failedCount}} 個未能儲存。",
     "copyFailed": "複製失敗",
     "deleteConfirm": "確定要刪除金鑰 {{name}} 嗎？此操作不可撤銷",
     "deleteSuccess": "金鑰 {{name}} 刪除成功",

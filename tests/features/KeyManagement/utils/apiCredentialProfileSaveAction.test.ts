@@ -310,4 +310,87 @@ describe("saveApiTokensToApiCredentialProfiles", () => {
     expect(openApiCredentialProfilesPageMock).toHaveBeenCalledTimes(1)
     expect(toastDismissMock).toHaveBeenCalledWith("toast-1")
   })
+
+  it("reports partial batch save failures after earlier profiles were created", async () => {
+    const error = new Error("storage failed for sk-second")
+    createApiCredentialProfileMock
+      .mockResolvedValueOnce({ id: "profile-1", name: "Example - First" })
+      .mockRejectedValueOnce(error)
+    const t = vi.fn((key: string, params?: Record<string, unknown>) =>
+      params ? `${key}:${JSON.stringify(params)}` : key,
+    ) as unknown as TFunction
+    const logger = { error: vi.fn() }
+
+    await expect(
+      saveApiTokensToApiCredentialProfiles({
+        items: [
+          {
+            account: createAccount({
+              id: "account-1",
+              name: "Example",
+              baseUrl: "https://api.example.invalid/v1",
+              siteType: SITE_TYPES.NEW_API,
+              tagIds: ["tag-a"],
+              authType: AuthTypeEnum.AccessToken,
+              token: "account-token",
+              userId: "1",
+            }),
+            token: createToken({
+              id: 1,
+              accountId: "account-1",
+              key: "sk-first",
+              name: "First",
+              accountName: "Example",
+            }),
+          },
+          {
+            account: createAccount({
+              id: "account-2",
+              name: "Other",
+              baseUrl: "https://other.example.invalid/v1",
+              siteType: SITE_TYPES.NEW_API,
+              authType: AuthTypeEnum.AccessToken,
+              token: "other-account-token",
+              userId: "2",
+            }),
+            token: createToken({
+              id: 2,
+              accountId: "account-2",
+              key: "sk-second",
+              name: "Second",
+              accountName: "Other",
+            }),
+          },
+        ],
+        t,
+        logger,
+        source: "TokenListBatchAction",
+      }),
+    ).rejects.toThrow(error)
+
+    expect(createApiCredentialProfileMock).toHaveBeenCalledTimes(2)
+    expect(logger.error).toHaveBeenCalledWith(
+      "Partially saved selected keys to API profiles from TokenListBatchAction",
+      {
+        failedCount: 1,
+        message: "storage failed for [REDACTED]",
+        savedCount: 1,
+        totalCount: 2,
+      },
+    )
+    expect(t).toHaveBeenCalledWith(
+      "keyManagement:messages.batchSaveToApiProfilesPartialFailed",
+      {
+        failedCount: 1,
+        savedCount: 1,
+        totalCount: 2,
+      },
+    )
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "keyManagement:messages.batchSaveToApiProfilesPartialFailed",
+      ),
+    )
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+  })
 })

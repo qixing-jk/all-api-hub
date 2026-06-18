@@ -247,6 +247,7 @@
     "accountNotFound": "Không tìm thấy thông tin tài khoản tương ứng",
     "batchSavedToApiProfiles": "Đã lưu các khóa đã chọn vào thư viện thông tin xác thực API",
     "batchSaveToApiProfilesFailed": "Không thể lưu các khóa đã chọn vào thư viện thông tin xác thực API",
+    "batchSaveToApiProfilesPartialFailed": "Đã lưu {{savedCount}}/{{totalCount}} khóa đã chọn. {{failedCount}} khóa chưa được lưu.",
     "copyFailed": "Sao chép thất bại",
     "deleteConfirm": "Bạn có chắc chắn muốn xóa khóa {{name}} không? Thao tác này không thể hoàn tác",
     "deleteSuccess": "Đã xóa khóa {{name}} thành công",

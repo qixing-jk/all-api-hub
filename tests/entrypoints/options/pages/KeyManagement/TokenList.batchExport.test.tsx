@@ -10,11 +10,22 @@ import {
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
 
-const { mockBuildBatchExportResult, mockSaveApiCredentialProfiles } =
-  vi.hoisted(() => ({
-    mockBuildBatchExportResult: vi.fn(),
-    mockSaveApiCredentialProfiles: vi.fn(),
-  }))
+const {
+  mockBuildBatchExportResult,
+  mockCompleteProductAnalyticsAction,
+  mockSaveApiCredentialProfiles,
+  mockStartProductAnalyticsAction,
+} = vi.hoisted(() => ({
+  mockBuildBatchExportResult: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
+  mockSaveApiCredentialProfiles: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    mockStartProductAnalyticsAction(...args),
+}))
 
 vi.mock(
   "~/features/KeyManagement/utils/apiCredentialProfileSaveAction",
@@ -190,6 +201,9 @@ describe("TokenList batch export selection", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSaveApiCredentialProfiles.mockResolvedValue({ savedCount: 2 })
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
     mockBuildBatchExportResult.mockImplementation((items) => ({
       totalSelected: items.length,
       attemptedCount: items.length,
@@ -538,6 +552,32 @@ describe("TokenList batch export selection", () => {
     expect(screen.getByRole("checkbox", { name: "Token 1" })).not.toBeChecked()
     expect(screen.getByRole("checkbox", { name: "Token 2" })).not.toBeChecked()
     expect(saveButton).toBeDisabled()
+  })
+
+  it("keeps selected tokens available and tracks failure when API profile batch save fails", async () => {
+    const user = userEvent.setup()
+    mockSaveApiCredentialProfiles.mockRejectedValueOnce(
+      new Error("storage failed"),
+    )
+    renderTokenList()
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+
+    const saveButton = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.batchSaveToApiProfilesButton,
+    )
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        "failure",
+        {
+          errorCategory: "unknown",
+        },
+      )
+    })
+    expect(screen.getByRole("checkbox", { name: "Token 1" })).toBeChecked()
+    expect(saveButton).toBeEnabled()
   })
 
   it("skips rendering flat-list tokens whose account metadata is missing", async () => {
