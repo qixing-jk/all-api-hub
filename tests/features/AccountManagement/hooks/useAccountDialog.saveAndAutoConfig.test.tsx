@@ -2280,6 +2280,19 @@ describe("useAccountDialog save and auto-config flows", () => {
       apiServiceRequest,
       "createDisplayAccountApiContext",
     ).mockReturnValue({
+      adapter: {
+        siteType: SITE_TYPES.SUB2API,
+        keyManagement: {
+          fetchTokens: fetchAccountTokens,
+          createToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+        },
+      } as any,
+      keyManagement: {
+        fetchTokens: fetchAccountTokens,
+        createToken: vi.fn(),
+        resolveTokenKey: vi.fn(),
+      } as any,
       service: {
         fetchAccountTokens,
       } as any,
@@ -2378,6 +2391,19 @@ describe("useAccountDialog save and auto-config flows", () => {
       apiServiceRequest,
       "createDisplayAccountApiContext",
     ).mockReturnValue({
+      adapter: {
+        siteType: SITE_TYPES.SUB2API,
+        keyManagement: {
+          fetchTokens: fetchAccountTokens,
+          createToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+        },
+      } as any,
+      keyManagement: {
+        fetchTokens: fetchAccountTokens,
+        createToken: vi.fn(),
+        resolveTokenKey: vi.fn(),
+      } as any,
       service: {
         fetchAccountTokens,
       } as any,
@@ -2469,6 +2495,19 @@ describe("useAccountDialog save and auto-config flows", () => {
       apiServiceRequest,
       "createDisplayAccountApiContext",
     ).mockReturnValue({
+      adapter: {
+        siteType: SITE_TYPES.SUB2API,
+        keyManagement: {
+          fetchTokens: fetchAccountTokens,
+          createToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+        },
+      } as any,
+      keyManagement: {
+        fetchTokens: fetchAccountTokens,
+        createToken: vi.fn(),
+        resolveTokenKey: vi.fn(),
+      } as any,
       service: {
         fetchAccountTokens,
       } as any,

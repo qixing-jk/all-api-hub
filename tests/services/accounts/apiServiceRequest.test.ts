@@ -7,8 +7,13 @@ import {
   InvalidTokenPayloadError,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum } from "~/types"
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: vi.fn(),
+}))
 
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(),
@@ -24,39 +29,65 @@ const ACCOUNT = {
   cookieAuthSessionCookie: "",
 } as const
 
+const REQUEST = {
+  baseUrl: "https://example.com",
+  accountId: "account-1",
+  auth: {
+    authType: AuthTypeEnum.AccessToken,
+    userId: "1",
+    accessToken: "token",
+    cookie: "",
+  },
+}
+
 describe("fetchDisplayAccountTokens", () => {
+  let fetchTokens: ReturnType<typeof vi.fn>
+  let createToken: ReturnType<typeof vi.fn>
+  let resolveTokenKey: ReturnType<typeof vi.fn>
+  let keyManagement: {
+    fetchTokens: typeof fetchTokens
+    createToken: typeof createToken
+    resolveTokenKey: typeof resolveTokenKey
+  }
+  let adapter: {
+    siteType: string
+    keyManagement?: typeof keyManagement
+  }
+  let service: {
+    fetchUserGroups: ReturnType<typeof vi.fn>
+  }
+
   beforeEach(() => {
+    fetchTokens = vi.fn()
+    createToken = vi.fn()
+    resolveTokenKey = vi.fn()
+    keyManagement = { fetchTokens, createToken, resolveTokenKey }
+    adapter = { siteType: "new-api", keyManagement }
+    service = { fetchUserGroups: vi.fn() }
+
+    vi.mocked(getSiteAdapter).mockReset()
     vi.mocked(getApiService).mockReset()
+    vi.mocked(getSiteAdapter).mockReturnValue(adapter as any)
+    vi.mocked(getApiService).mockReturnValue(service as any)
   })
 
   it("returns the token array when the API payload is valid", async () => {
-    const fetchAccountTokens = vi
-      .fn()
-      .mockResolvedValue([{ id: 1, key: "sk-test", status: 1 }])
-    const service = { fetchAccountTokens }
-    vi.mocked(getApiService).mockReturnValue(service as any)
+    fetchTokens.mockResolvedValue([{ id: 1, key: "sk-test", status: 1 }])
 
     const result = await fetchDisplayAccountTokens(ACCOUNT as any)
 
     expect(result).toEqual([{ id: 1, key: "sk-test", status: 1 }])
+    expect(fetchTokens).toHaveBeenCalledWith(REQUEST)
     expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual({
       service,
-      request: {
-        baseUrl: "https://example.com",
-        accountId: "account-1",
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          userId: "1",
-          accessToken: "token",
-          cookie: "",
-        },
-      },
+      adapter,
+      keyManagement,
+      request: REQUEST,
     })
   })
 
   it("throws InvalidTokenPayloadError when the API payload is not an array", async () => {
-    const fetchAccountTokens = vi.fn().mockResolvedValue({ items: [] })
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    fetchTokens.mockResolvedValue({ items: [] })
 
     await expect(
       fetchDisplayAccountTokens(ACCOUNT as any),
@@ -79,8 +110,7 @@ describe("fetchDisplayAccountTokens", () => {
 
   it("returns the original token object when the resolved secret key is unchanged", async () => {
     const token = { id: 1, key: "sk-test", status: 1 }
-    const resolveApiTokenKey = vi.fn().mockResolvedValue("sk-test")
-    vi.mocked(getApiService).mockReturnValue({ resolveApiTokenKey } as any)
+    resolveTokenKey.mockResolvedValue("sk-test")
 
     const result = await resolveDisplayAccountTokenForSecret(
       ACCOUNT as any,
@@ -88,12 +118,12 @@ describe("fetchDisplayAccountTokens", () => {
     )
 
     expect(result).toBe(token)
+    expect(resolveTokenKey).toHaveBeenCalledWith({ request: REQUEST, token })
   })
 
   it("clones the token when the resolved secret key differs from the masked key", async () => {
     const token = { id: 1, key: "sk-masked", status: 1, name: "Masked" }
-    const resolveApiTokenKey = vi.fn().mockResolvedValue("sk-real")
-    vi.mocked(getApiService).mockReturnValue({ resolveApiTokenKey } as any)
+    resolveTokenKey.mockResolvedValue("sk-real")
 
     const result = await resolveDisplayAccountTokenForSecret(
       ACCOUNT as any,
@@ -107,12 +137,12 @@ describe("fetchDisplayAccountTokens", () => {
       name: "Masked",
     })
     expect(result).not.toBe(token)
+    expect(resolveTokenKey).toHaveBeenCalledWith({ request: REQUEST, token })
   })
 
   it("returns a transient sk-prefixed secret for optional-prefix compatible account types", async () => {
     const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
-    const resolveApiTokenKey = vi.fn().mockResolvedValue("plain-secret")
-    vi.mocked(getApiService).mockReturnValue({ resolveApiTokenKey } as any)
+    resolveTokenKey.mockResolvedValue("plain-secret")
 
     const result = await resolveDisplayAccountTokenForSecret(
       { ...ACCOUNT, siteType: "Veloera" } as any,
@@ -131,8 +161,7 @@ describe("fetchDisplayAccountTokens", () => {
 
   it("does not synthesize sk-prefixes for non-compatible account types", async () => {
     const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
-    const resolveApiTokenKey = vi.fn().mockResolvedValue("plain-secret")
-    vi.mocked(getApiService).mockReturnValue({ resolveApiTokenKey } as any)
+    resolveTokenKey.mockResolvedValue("plain-secret")
 
     const result = await resolveDisplayAccountTokenForSecret(
       { ...ACCOUNT, siteType: "sub2api" } as any,
@@ -140,6 +169,19 @@ describe("fetchDisplayAccountTokens", () => {
     )
 
     expect(result).toBe(token)
+  })
+
+  it("throws when adapter key management is not implemented", async () => {
+    vi.mocked(getSiteAdapter).mockReturnValue({
+      siteType: "unsupported",
+    } as any)
+
+    await expect(
+      fetchDisplayAccountTokens({
+        ...ACCOUNT,
+        siteType: "unsupported",
+      } as any),
+    ).rejects.toThrow("keyManagement is not implemented for unsupported")
   })
 
   it("only allows token management for enabled accounts with complete auth context", () => {

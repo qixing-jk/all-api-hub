@@ -1,3 +1,5 @@
+import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { getApiService } from "~/services/apiService"
 import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
@@ -8,6 +10,21 @@ const hasNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
 
 const logger = createLogger("DisplayAccountApiContext")
+
+export const createMissingKeyManagementCapabilityError = (
+  siteType: string,
+): Error => new Error(`keyManagement is not implemented for ${siteType}`)
+
+export const requireDisplayAccountKeyManagement = (
+  account: Pick<DisplaySiteData, "siteType">,
+  keyManagement: KeyManagementCapability | undefined,
+): KeyManagementCapability => {
+  if (!keyManagement) {
+    throw createMissingKeyManagementCapabilityError(account.siteType)
+  }
+
+  return keyManagement
+}
 
 export class InvalidTokenPayloadError extends Error {
   readonly code = "INVALID_TOKEN_PAYLOAD"
@@ -69,10 +86,16 @@ export const createDisplayAccountApiContext = (
     | "token"
     | "cookieAuthSessionCookie"
   >,
-) => ({
-  service: getApiService(account.siteType),
-  request: buildApiRequestFromDisplayAccount(account),
-})
+) => {
+  const adapter = getSiteAdapter(account.siteType)
+
+  return {
+    service: getApiService(account.siteType),
+    adapter,
+    keyManagement: adapter.keyManagement,
+    request: buildApiRequestFromDisplayAccount(account),
+  }
+}
 
 /**
  * Fetches the current token inventory for a display account.
@@ -89,8 +112,11 @@ export async function fetchDisplayAccountTokens(
     | "cookieAuthSessionCookie"
   >,
 ): Promise<ApiToken[]> {
-  const { service, request } = createDisplayAccountApiContext(account)
-  const tokensResponse = await service.fetchAccountTokens(request)
+  const { keyManagement, request } = createDisplayAccountApiContext(account)
+  const tokensResponse = await requireDisplayAccountKeyManagement(
+    account,
+    keyManagement,
+  ).fetchTokens(request)
 
   if (Array.isArray(tokensResponse)) {
     return tokensResponse
@@ -130,8 +156,11 @@ export async function resolveDisplayAccountTokenForSecret<
   >,
   token: TToken,
 ): Promise<TToken> {
-  const { service, request } = createDisplayAccountApiContext(account)
-  const resolvedKey = await service.resolveApiTokenKey(request, token)
+  const { keyManagement, request } = createDisplayAccountApiContext(account)
+  const resolvedKey = await requireDisplayAccountKeyManagement(
+    account,
+    keyManagement,
+  ).resolveTokenKey({ request, token })
   return formatOptionalSkPrefixSiteToken(
     resolvedKey === token.key ? token : { ...token, key: resolvedKey },
     account.siteType,
