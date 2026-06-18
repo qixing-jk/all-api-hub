@@ -4,6 +4,7 @@ import type { SiteAdapter } from "../contracts/siteAdapter"
 import { newApiAccountCompletion } from "./accountCompletion"
 import { createNewApiAccountRefresh } from "./accountRefresh"
 import { createNewApiKeyManagement } from "./keyManagement"
+import { createNewApiModelPricing } from "./modelPricing"
 import { newApiSiteNotice } from "./siteNotice"
 
 export const createNewApiAdapter = (
@@ -15,4 +16,5 @@ export const createNewApiAdapter = (
   accountCompletion: newApiAccountCompletion,
   keyManagement: createNewApiKeyManagement(siteType),
   accountRefresh: createNewApiAccountRefresh(siteType),
+  modelPricing: createNewApiModelPricing(siteType),
 })
