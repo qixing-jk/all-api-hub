@@ -17,13 +17,14 @@ import {
   fetchDisplayAccountTokens,
   InvalidTokenPayloadError,
 } from "~/services/accounts/utils/apiServiceRequest"
+import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import {
   ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
   loadAccountTokenFallbackPricingResponse,
 } from "~/services/apiCredentialProfiles/modelCatalog"
-import { getApiService } from "~/services/apiService"
 import type { PricingResponse } from "~/services/apiService/common/type"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
@@ -393,6 +394,22 @@ function createModelPricingCacheKey(
   ].join("|")
 }
 
+/** Builds the adapter pricing request from a display account. */
+function createDisplayAccountModelPricingRequest(
+  account: DisplaySiteData,
+): ModelPricingRequest {
+  return {
+    baseUrl: account.baseUrl,
+    accountId: account.id,
+    auth: {
+      authType: account.authType,
+      userId: account.userId,
+      accessToken: account.token,
+      cookie: account.cookieAuthSessionCookie,
+    },
+  }
+}
+
 const SUB2API_ALL_ACCOUNTS_TOKEN_CONCURRENCY = 4
 
 /** Checks that a pricing response exposes the expected model row array. */
@@ -691,8 +708,8 @@ function useSingleAccountModelData(params: {
         throw new Error("No account selected")
       }
 
-      const service = getApiService(currentAccount.siteType)
-      if (!service.capabilities.modelPricing) {
+      const modelPricing = getSiteAdapter(currentAccount.siteType).modelPricing
+      if (!modelPricing) {
         throw createUnsupportedModelPricingError()
       }
 
@@ -705,16 +722,9 @@ function useSingleAccountModelData(params: {
       }
       directLoadCacheHitRef.current = false
 
-      const data = await service.fetchModelPricing({
-        baseUrl: currentAccount.baseUrl,
-        accountId: currentAccount.id,
-        auth: {
-          authType: currentAccount.authType,
-          userId: currentAccount.userId,
-          accessToken: currentAccount.token,
-          cookie: currentAccount.cookieAuthSessionCookie,
-        },
-      })
+      const data = await modelPricing.fetchPricing(
+        createDisplayAccountModelPricingRequest(currentAccount),
+      )
 
       if (!Array.isArray(data.data)) {
         throw createInvalidFormatError()
@@ -1171,8 +1181,8 @@ function useAllAccountsModelData(
       refetchOnWindowFocus: false,
       retry: shouldRetryModelPricingQuery,
       queryFn: async () => {
-        const service = getApiService(account.siteType)
-        if (!service.capabilities.modelPricing) {
+        const modelPricing = getSiteAdapter(account.siteType).modelPricing
+        if (!modelPricing) {
           if (account.siteType === SITE_TYPES.SUB2API) {
             return fetchSub2ApiAllAccountsFallbackPricingContexts(account)
           }
@@ -1196,16 +1206,9 @@ function useAllAccountsModelData(
           }
         }
 
-        const data = await service.fetchModelPricing({
-          baseUrl: account.baseUrl,
-          accountId: account.id,
-          auth: {
-            authType: account.authType,
-            userId: account.userId,
-            accessToken: account.token,
-            cookie: account.cookieAuthSessionCookie,
-          },
-        })
+        const data = await modelPricing.fetchPricing(
+          createDisplayAccountModelPricingRequest(account),
+        )
 
         if (!Array.isArray(data.data)) {
           throw createInvalidFormatError()

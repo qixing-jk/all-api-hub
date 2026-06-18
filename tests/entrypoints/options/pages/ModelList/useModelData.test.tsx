@@ -13,10 +13,7 @@ import {
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import { InvalidTokenPayloadError } from "~/services/accounts/utils/apiServiceRequest"
-import {
-  getApiService,
-  type ApiServiceCapabilities,
-} from "~/services/apiService"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
   MODEL_LIST_SOURCE_KINDS,
@@ -66,8 +63,8 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(),
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: vi.fn(),
 }))
 
 vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
@@ -148,18 +145,22 @@ const createDeferred = <T,>() => {
   return { promise, resolve, reject }
 }
 
-const createMockApiService = (
-  fetchModelPricing: ReturnType<typeof vi.fn>,
+const createMockSiteAdapter = (
+  fetchPricing: ReturnType<typeof vi.fn>,
   overrides: {
-    capabilities?: Partial<Pick<ApiServiceCapabilities, "modelPricing">>
+    siteType?: DisplaySiteData["siteType"]
+    modelPricing?: false
   } = {},
 ) =>
   ({
-    fetchModelPricing,
-    capabilities: {
-      modelPricing: true,
-      ...overrides.capabilities,
-    },
+    siteType: overrides.siteType ?? SITE_TYPES.NEW_API,
+    ...(overrides.modelPricing === false
+      ? {}
+      : {
+          modelPricing: {
+            fetchPricing,
+          },
+        }),
   }) as any
 
 const createWrapper = () => {
@@ -282,20 +283,20 @@ describe("useModelData all-accounts loading", () => {
     mockFetchDisplayAccountTokens.mockReset()
     mockLoadAccountTokenFallbackPricingResponse.mockReset()
     mockTrackProductAnalyticsActionCompleted.mockReset()
-    vi.mocked(getApiService).mockReset()
+    vi.mocked(getSiteAdapter).mockReset()
   })
 
   it("does not fetch all-account pricing until selectedAccount is 'all'", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
-    const fetchModelPricing = vi.fn().mockResolvedValue({
+    const fetchPricing = vi.fn().mockResolvedValue({
       data: [],
       group_ratio: {},
       success: true,
       usable_group: {},
     })
-    const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue(createMockApiService(fetchModelPricing))
+    const mockedGetSiteAdapter = vi.mocked(getSiteAdapter)
+    mockedGetSiteAdapter.mockReturnValue(createMockSiteAdapter(fetchPricing))
 
     const accounts = [
       createDisplayAccount({
@@ -321,20 +322,20 @@ describe("useModelData all-accounts loading", () => {
 
     // Yield at least one tick; with the pre-fix behaviour this would start queries immediately.
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
   })
 
   it("fetches all-account pricing when selectedAccount is 'all'", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
-    const fetchModelPricing = vi.fn().mockResolvedValue({
+    const fetchPricing = vi.fn().mockResolvedValue({
       data: [],
       group_ratio: {},
       success: true,
       usable_group: {},
     })
-    const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue(createMockApiService(fetchModelPricing))
+    const mockedGetSiteAdapter = vi.mocked(getSiteAdapter)
+    mockedGetSiteAdapter.mockReturnValue(createMockSiteAdapter(fetchPricing))
 
     const accounts = [
       createDisplayAccount({
@@ -358,8 +359,8 @@ describe("useModelData all-accounts loading", () => {
       { wrapper: createWrapper() },
     )
 
-    await waitFor(() => expect(fetchModelPricing).toHaveBeenCalledTimes(2))
-    const calledAccountIds = fetchModelPricing.mock.calls.map(
+    await waitFor(() => expect(fetchPricing).toHaveBeenCalledTimes(2))
+    const calledAccountIds = fetchPricing.mock.calls.map(
       (call) => call[0]?.accountId,
     )
     expect(calledAccountIds).toEqual(expect.arrayContaining(["a", "b"]))
@@ -368,12 +369,13 @@ describe("useModelData all-accounts loading", () => {
   it("does not invoke model pricing for unsupported Sub2API accounts", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("fetch should not be called"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
 
@@ -401,18 +403,60 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
     expect(result.current.loadErrorMessage).toBeNull()
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
+  })
+
+  it("reports unsupported non-Sub2API accounts as direct pricing failures", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+    const fetchPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("fetch should not be called"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.UNKNOWN,
+        modelPricing: false,
+      }),
+    )
+
+    const account = createDisplayAccount({
+      id: "unsupported-unknown",
+      baseUrl: "https://unsupported-unknown.example.invalid",
+      siteType: SITE_TYPES.UNKNOWN,
+      userId: "unsupported-unknown-user",
+    })
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(result.current.loadErrorMessage).toBe(
+          "modelList:status.loadFailed",
+        )
+      },
+      { timeout: 3000 },
+    )
+    expect(fetchPricing).not.toHaveBeenCalled()
+    expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(account)
   })
 
   it("does not invoke all-account pricing when Sub2API has no fallback key", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("fetch should not be called"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
     mockFetchDisplayAccountTokens.mockResolvedValue([])
@@ -449,7 +493,7 @@ describe("useModelData all-accounts loading", () => {
       },
       { timeout: 3000 },
     )
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
     expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(2)
     expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(accounts[0])
     expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(accounts[1])
@@ -459,12 +503,13 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("common pricing should not be called"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
 
@@ -565,7 +610,7 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
 
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
     expect(result.current.loadErrorMessage).toBeNull()
     expect(result.current.pricingContexts).toEqual([
       {
@@ -592,10 +637,11 @@ describe("useModelData all-accounts loading", () => {
   })
 
   it("loads only active Sub2API fallback keys in all-accounts mode", async () => {
-    const fetchModelPricing = vi.fn()
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    const fetchPricing = vi.fn()
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
 
@@ -675,7 +721,7 @@ describe("useModelData all-accounts loading", () => {
       account,
       token: tokens[0],
     })
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
     expect(result.current.loadErrorMessage).toBeNull()
     expect(result.current.pricingContexts).toEqual([
       {
@@ -693,10 +739,13 @@ describe("useModelData all-accounts loading", () => {
 
   it("keeps successful Sub2API token contexts as partial instead of load failed when another token fails", async () => {
     mockTrackProductAnalyticsActionCompleted.mockReset()
-    const fetchModelPricing = vi.fn()
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    const fetchPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("fetch should not be called"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
 
@@ -796,10 +845,11 @@ describe("useModelData all-accounts loading", () => {
   })
 
   it("marks a Sub2API account failed when every fallback key fails", async () => {
-    const fetchModelPricing = vi.fn()
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    const fetchPricing = vi.fn()
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
 
@@ -862,10 +912,11 @@ describe("useModelData all-accounts loading", () => {
   })
 
   it("marks mixed Sub2API all-token failures as load failed instead of invalid format", async () => {
-    const fetchModelPricing = vi.fn()
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    const fetchPricing = vi.fn()
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
 
@@ -966,7 +1017,7 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockResolvedValueOnce({
         data: [
@@ -1000,8 +1051,8 @@ describe("useModelData all-accounts loading", () => {
         success: true,
         usable_group: { default: true },
       })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -1075,7 +1126,7 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
 
-    expect(fetchModelPricing).toHaveBeenCalledTimes(2)
+    expect(fetchPricing).toHaveBeenCalledTimes(2)
     expect(result.current.loadErrorMessage).toBeNull()
   })
 
@@ -1083,7 +1134,7 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockResolvedValue({
+    const fetchPricing = vi.fn().mockResolvedValue({
       data: [
         {
           model_name: "gpt-4o-mini",
@@ -1108,8 +1159,8 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: { default: true },
     })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -1155,14 +1206,14 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockResolvedValue({
+    const fetchPricing = vi.fn().mockResolvedValue({
       data: null,
       group_ratio: {},
       success: true,
       usable_group: {},
     })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -1203,7 +1254,7 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+    const fetchPricing = vi.fn().mockImplementation(({ accountId }) => {
       if (accountId === "analytics-all-success") {
         return Promise.resolve({
           data: [
@@ -1225,8 +1276,8 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.reject(new Error("private backend failure"))
     })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const accounts = [
@@ -1275,7 +1326,7 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+    const fetchPricing = vi.fn().mockImplementation(({ accountId }) => {
       if (accountId === "analytics-all-success") {
         return Promise.resolve({
           data: [
@@ -1297,8 +1348,8 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.reject(new TypeError("Failed to fetch"))
     })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const accounts = [
@@ -1347,7 +1398,7 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+    const fetchPricing = vi.fn().mockImplementation(({ accountId }) => {
       if (accountId === "analytics-all-valid") {
         return Promise.resolve({
           data: [
@@ -1374,8 +1425,8 @@ describe("useModelData all-accounts loading", () => {
         usable_group: {},
       })
     })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const accounts = [
@@ -1424,7 +1475,7 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+    const fetchPricing = vi.fn().mockImplementation(({ accountId }) => {
       if (accountId === "analytics-all-auth-failure") {
         return Promise.reject(
           new ApiError(
@@ -1443,8 +1494,8 @@ describe("useModelData all-accounts loading", () => {
         usable_group: {},
       })
     })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const accounts = [
@@ -1559,9 +1610,9 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const fallbackToken = {
@@ -1653,7 +1704,7 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockResolvedValueOnce({
         data: [
@@ -1687,8 +1738,8 @@ describe("useModelData all-accounts loading", () => {
         success: true,
         usable_group: { default: true },
       })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const firstAccount = createDisplayAccount({
@@ -1728,7 +1779,7 @@ describe("useModelData all-accounts loading", () => {
     )
 
     await waitFor(() => {
-      expect(fetchModelPricing).toHaveBeenCalledTimes(1)
+      expect(fetchPricing).toHaveBeenCalledTimes(1)
       expect(result.current.pricingData?.data[0]?.model_name).toBe(
         "access-token-model",
       )
@@ -1740,8 +1791,8 @@ describe("useModelData all-accounts loading", () => {
     })
 
     await waitFor(() => {
-      expect(fetchModelPricing).toHaveBeenCalledTimes(2)
-      expect(fetchModelPricing).toHaveBeenLastCalledWith(
+      expect(fetchPricing).toHaveBeenCalledTimes(2)
+      expect(fetchPricing).toHaveBeenLastCalledWith(
         expect.objectContaining({
           accountId: "credential-change-account",
           auth: expect.objectContaining({
@@ -1760,9 +1811,9 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn()
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    const fetchPricing = vi.fn()
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -1814,7 +1865,7 @@ describe("useModelData all-accounts loading", () => {
         "cached-model",
       )
     })
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
     expectLastModelDataAnalyticsCompletion({
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
@@ -1831,10 +1882,13 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn()
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    const fetchPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("fetch should not be called"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
 
@@ -1887,7 +1941,7 @@ describe("useModelData all-accounts loading", () => {
         { timeout: 3000 },
       )
       expect(result.current.loadErrorMessage).toBeNull()
-      expect(fetchModelPricing).not.toHaveBeenCalled()
+      expect(fetchPricing).not.toHaveBeenCalled()
       expect(result.current.pricingData).toBeNull()
     } finally {
       await modelPricingCache.invalidate(cacheKey)
@@ -1898,13 +1952,14 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("common pricing should not be called"))
-    const sub2apiService = createMockApiService(fetchModelPricing, {
-      capabilities: { modelPricing: false },
+    const sub2apiAdapter = createMockSiteAdapter(fetchPricing, {
+      siteType: SITE_TYPES.SUB2API,
+      modelPricing: false,
     })
-    vi.mocked(getApiService).mockReturnValue(sub2apiService)
+    vi.mocked(getSiteAdapter).mockReturnValue(sub2apiAdapter)
 
     const account = createDisplayAccount({
       id: "sub2api-runtime-fallback-account",
@@ -1971,7 +2026,7 @@ describe("useModelData all-accounts loading", () => {
     })
 
     const selectedSource = createAccountSource(account)
-    expect(sub2apiService.capabilities.modelPricing).toBe(false)
+    expect(sub2apiAdapter.modelPricing).toBeUndefined()
     expect(selectedSource.capabilities.supportsPricing).toBe(true)
 
     const { result } = renderHook(
@@ -1990,7 +2045,7 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
     expect(result.current.loadErrorMessage).toBeNull()
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
     await waitFor(() => {
       expect(result.current.accountFallback?.selectedTokenId).toBeNull()
       expect(result.current.accountFallback?.tokens).toEqual(fallbackTokens)
@@ -2062,12 +2117,13 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("common pricing should not be called"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
 
@@ -2155,7 +2211,7 @@ describe("useModelData all-accounts loading", () => {
       expect(result.current.accountFallback?.isActive).toBe(true)
       expect(result.current.pricingData).toEqual(fallbackPricing)
     })
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
     expect(result.current.loadErrorMessage).toBeNull()
   })
 
@@ -2163,12 +2219,13 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("common pricing should not be called"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing, {
-        capabilities: { modelPricing: false },
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
       }),
     )
 
@@ -2258,7 +2315,7 @@ describe("useModelData all-accounts loading", () => {
       account,
       token: fallbackToken,
     })
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
   })
 
   it("marks all-account queries as loading before each account returns data", async () => {
@@ -2277,11 +2334,11 @@ describe("useModelData all-accounts loading", () => {
       success: true
       usable_group: Record<string, never>
     }>()
-    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+    const fetchPricing = vi.fn().mockImplementation(({ accountId }) => {
       return accountId === "a" ? firstDeferred.promise : secondDeferred.promise
     })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const accounts = [
@@ -2364,9 +2421,9 @@ describe("useModelData all-accounts loading", () => {
   it("loads a profile-backed model catalog without a SiteAccount", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
-    const fetchModelPricing = vi.fn()
-    const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue(createMockApiService(fetchModelPricing))
+    const fetchPricing = vi.fn()
+    const mockedGetSiteAdapter = vi.mocked(getSiteAdapter)
+    mockedGetSiteAdapter.mockReturnValue(createMockSiteAdapter(fetchPricing))
     mockFetchApiCredentialModelIds.mockResolvedValueOnce([
       "gpt-4o-mini",
       "claude-3-5-sonnet",
@@ -2408,16 +2465,16 @@ describe("useModelData all-accounts loading", () => {
     expect(
       result.current.pricingData?.data.map((item) => item.model_name),
     ).toEqual(["gpt-4o-mini", "claude-3-5-sonnet"])
-    expect(fetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchPricing).not.toHaveBeenCalled()
   })
 
   it("clears single-account errors when the query becomes idle", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -2463,9 +2520,9 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -2531,7 +2588,7 @@ describe("useModelData all-accounts loading", () => {
     )
 
     await waitFor(() => {
-      expect(fetchModelPricing).toHaveBeenCalledTimes(1)
+      expect(fetchPricing).toHaveBeenCalledTimes(1)
     })
     await waitFor(
       () => {
@@ -2580,12 +2637,12 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockRejectedValueOnce(new Error("boom"))
       .mockRejectedValueOnce(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -2639,7 +2696,7 @@ describe("useModelData all-accounts loading", () => {
     )
 
     await waitFor(() => {
-      expect(fetchModelPricing).toHaveBeenCalledTimes(1)
+      expect(fetchPricing).toHaveBeenCalledTimes(1)
     })
     await waitFor(
       () => {
@@ -2668,7 +2725,7 @@ describe("useModelData all-accounts loading", () => {
     expect(result.current.pricingData?.data[0]?.model_name).toBe(
       "stale-fallback-model",
     )
-    const pricingCallCountBeforeRefresh = fetchModelPricing.mock.calls.length
+    const pricingCallCountBeforeRefresh = fetchPricing.mock.calls.length
 
     await act(async () => {
       await result.current.loadPricingData()
@@ -2685,9 +2742,7 @@ describe("useModelData all-accounts loading", () => {
     expect(
       result.current.pricingData?.data.map((item) => item.model_name),
     ).toEqual(["fresh-fallback-model"])
-    expect(fetchModelPricing).toHaveBeenCalledTimes(
-      pricingCallCountBeforeRefresh,
-    )
+    expect(fetchPricing).toHaveBeenCalledTimes(pricingCallCountBeforeRefresh)
   })
 
   it("discards stale fallback token results after switching accounts", async () => {
@@ -2695,7 +2750,7 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const deferredTokens = createDeferred<any[]>()
-    const fetchModelPricing = vi
+    const fetchPricing = vi
       .fn()
       .mockRejectedValueOnce(new Error("boom"))
       .mockRejectedValueOnce(new Error("boom"))
@@ -2705,8 +2760,8 @@ describe("useModelData all-accounts loading", () => {
         success: true,
         usable_group: {},
       })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
     mockFetchDisplayAccountTokens.mockReturnValueOnce(deferredTokens.promise)
 
@@ -2788,9 +2843,9 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
     mockFetchDisplayAccountTokens.mockRejectedValueOnce(
       new InvalidTokenPayloadError({
@@ -2837,9 +2892,9 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const fallbackToken = {
@@ -2910,9 +2965,9 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const fallbackToken = {
@@ -2994,7 +3049,7 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+    const fetchPricing = vi.fn().mockImplementation(({ accountId }) => {
       if (accountId === "bad-format") {
         return Promise.resolve({
           data: null,
@@ -3006,8 +3061,8 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.reject(new Error("boom"))
     })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const accounts = [
@@ -3063,14 +3118,14 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
-    const fetchModelPricing = vi.fn().mockResolvedValue({
+    const fetchPricing = vi.fn().mockResolvedValue({
       data: null,
       group_ratio: {},
       success: true,
       usable_group: {},
     })
-    vi.mocked(getApiService).mockReturnValue(
-      createMockApiService(fetchModelPricing),
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
     )
 
     const account = createDisplayAccount({
