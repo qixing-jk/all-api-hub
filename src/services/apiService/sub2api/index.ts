@@ -4,6 +4,7 @@
  * Sub2API differs from One-API/New-API backends in that authenticated endpoints
  * live under `/api/v1/*` and require a dashboard JWT.
  */
+import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import {
   determineHealthStatus,
   extractDefaultExchangeRate as extractCommonDefaultExchangeRate,
@@ -256,7 +257,7 @@ const persistSub2ApiAuthUpdate = async (
       request.accountId,
       updates,
       {
-        userTimestampMode: "preserve",
+        userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
       },
     )
     if (!updated) {

@@ -680,6 +680,52 @@ describe("apiService sub2api refreshAccountData", () => {
     nowSpy.mockRestore()
   })
 
+  it("skips persistence when refreshed credentials have no auth store", async () => {
+    const now = 1_700_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 0,
+          message: "ok",
+          data: {
+            access_token: "new-jwt",
+            refresh_token: "new-refresh",
+            expires_in: 3600,
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { id: 1, username: "alice", balance: 2 },
+    } as any)
+
+    const result = await refreshAccountData(
+      createRequest({
+        accountId: "account-without-store",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "1",
+          accessToken: "old-jwt",
+          refreshToken: "old-refresh",
+          tokenExpiresAt: now + 60_000,
+        },
+      }),
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.authUpdate?.accessToken).toBe("new-jwt")
+    expect(mockUpdateAccount).not.toHaveBeenCalled()
+
+    nowSpy.mockRestore()
+  })
+
   it("uses rotated refresh token for 401 retry after proactive refresh", async () => {
     const now = 1_700_000_000_000
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
