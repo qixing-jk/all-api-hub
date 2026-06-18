@@ -34,20 +34,18 @@ const storageHooks: {
   beforeRemove: async () => {},
 }
 const {
-  mockValidateAccountConnection,
   mockFetchSupportCheckIn,
   mockGetAccountSiteType,
+  mockGetSiteAdapter,
   mockRefreshAccountData,
-  mockFetchTodayIncome,
   markAccountDisabledInStatusMock,
   markAccountsDisabledInStatusMock,
   pruneStatusForAccountIdsMock,
 } = vi.hoisted(() => ({
-  mockValidateAccountConnection: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
   mockGetAccountSiteType: vi.fn(),
+  mockGetSiteAdapter: vi.fn(),
   mockRefreshAccountData: vi.fn(),
-  mockFetchTodayIncome: vi.fn(),
   markAccountDisabledInStatusMock: vi.fn(),
   markAccountsDisabledInStatusMock: vi.fn(),
   pruneStatusForAccountIdsMock: vi.fn(),
@@ -76,13 +74,8 @@ vi.mock("@plasmohq/storage", () => {
   return { Storage }
 })
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
-    fetchTodayIncome: mockFetchTodayIncome,
-    refreshAccountData: mockRefreshAccountData,
-    validateAccountConnection: mockValidateAccountConnection,
-    fetchSupportCheckIn: mockFetchSupportCheckIn,
-  })),
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: mockGetSiteAdapter,
 }))
 
 vi.mock("~/services/siteDetection/detectSiteType", () => ({
@@ -175,11 +168,10 @@ describe("accountStorage core behaviors", () => {
     storageHooks.beforeGet = async () => {}
     storageHooks.beforeSet = async () => {}
     storageHooks.beforeRemove = async () => {}
-    mockValidateAccountConnection.mockReset()
     mockFetchSupportCheckIn.mockReset()
     mockGetAccountSiteType.mockReset()
+    mockGetSiteAdapter.mockReset()
     mockRefreshAccountData.mockReset()
-    mockFetchTodayIncome.mockReset()
     markAccountDisabledInStatusMock.mockReset()
     markAccountsDisabledInStatusMock.mockReset()
     pruneStatusForAccountIdsMock.mockReset()
@@ -211,7 +203,12 @@ describe("accountStorage core behaviors", () => {
       },
     }))
 
-    mockFetchTodayIncome.mockResolvedValue({ today_income: 0 })
+    mockGetSiteAdapter.mockReturnValue({
+      accountRefresh: {
+        fetchCheckInSupport: mockFetchSupportCheckIn,
+        refreshAccount: mockRefreshAccountData,
+      },
+    })
   })
 
   it("migrates legacy string tags on reads (account.tags -> tagIds + global tag store)", async () => {
@@ -1642,6 +1639,8 @@ describe("accountStorage core behaviors", () => {
     expect(mockGetAccountSiteType).toHaveBeenCalledWith(
       "https://foo.example.com",
     )
+    expect(mockGetSiteAdapter).toHaveBeenCalledWith("one-api")
+    expect(mockGetSiteAdapter).not.toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
       baseUrl: "https://foo.example.com",
       auth: {
@@ -1673,9 +1672,9 @@ describe("accountStorage core behaviors", () => {
       }),
     )
     expect(mockGetAccountSiteType).not.toHaveBeenCalled()
+    expect(mockGetSiteAdapter).not.toHaveBeenCalled()
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockRefreshAccountData).not.toHaveBeenCalled()
-    expect(mockFetchTodayIncome).not.toHaveBeenCalled()
   })
 
   it("refreshAccount should probe disabled accounts when explicitly allowed and re-enable them on success", async () => {
@@ -1786,7 +1785,6 @@ describe("accountStorage core behaviors", () => {
         }),
       )
       expect(mockRefreshAccountData).not.toHaveBeenCalled()
-      expect(mockFetchTodayIncome).not.toHaveBeenCalled()
     } finally {
       vi.useRealTimers()
     }
@@ -1806,6 +1804,7 @@ describe("accountStorage core behaviors", () => {
     await accountStorage.refreshAccount("known-site", true)
 
     expect(mockGetAccountSiteType).not.toHaveBeenCalled()
+    expect(mockGetSiteAdapter).toHaveBeenCalledWith("one-api")
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
       baseUrl: "https://bar.example.com",
       auth: {
@@ -1814,7 +1813,6 @@ describe("accountStorage core behaviors", () => {
         accessToken: "token",
       },
     })
-    expect(mockFetchTodayIncome).not.toHaveBeenCalled()
     const updatedAccount = await accountStorage.getAccountById("known-site")
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(false)
@@ -1858,6 +1856,47 @@ describe("accountStorage core behaviors", () => {
     expect(updatedAccount?.health?.status).toBe(SiteHealthStatus.Healthy)
   })
 
+  it("refreshAccount should persist an unhealthy state when account refresh is unsupported", async () => {
+    const account = createAccount({
+      id: "unsupported-refresh",
+      site_url: "https://unsupported.example.com",
+      site_type: SITE_TYPES.ONE_API,
+      checkIn: {
+        enableDetection: true,
+        autoCheckInEnabled: true,
+        siteStatus: {
+          isCheckedInToday: false,
+        },
+      },
+    })
+    seedStorage([account])
+
+    mockGetSiteAdapter.mockReturnValueOnce({
+      siteType: SITE_TYPES.ONE_API,
+    })
+
+    const result = await accountStorage.refreshAccount(
+      "unsupported-refresh",
+      true,
+    )
+    const updatedAccount = await accountStorage.getAccountById(
+      "unsupported-refresh",
+    )
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        refreshed: true,
+      }),
+    )
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+    expect(mockRefreshAccountData).not.toHaveBeenCalled()
+    expect(updatedAccount?.health).toEqual({
+      status: SiteHealthStatus.Unknown,
+      reason: "accountRefresh is not implemented for one-api",
+      code: undefined,
+    })
+  })
+
   it("refreshAccount should persist today_income from refreshAccountData", async () => {
     const account = createAccount({
       id: "income-sync",
@@ -1893,7 +1932,6 @@ describe("accountStorage core behaviors", () => {
 
     const updatedAccount = await accountStorage.getAccountById("income-sync")
     expect(updatedAccount?.account_info.today_income).toBe(123_456)
-    expect(mockFetchTodayIncome).not.toHaveBeenCalled()
   })
 
   it("refreshAccount should persist Sub2API refresh-token auth updates", async () => {

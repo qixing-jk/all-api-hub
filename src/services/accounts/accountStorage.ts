@@ -7,7 +7,8 @@ import {
   collectDuplicateAccountNameKeys,
   resolveAccountDisplayName,
 } from "~/services/accounts/utils/accountDisplayName"
-import { getApiService } from "~/services/apiService"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import type { RefreshAccountResult } from "~/services/apiService/common/type"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
@@ -60,6 +61,17 @@ import {
 export { ACCOUNT_STORAGE_KEYS }
 
 const logger = createLogger("AccountStorage")
+
+const createMissingAccountRefreshResult = (
+  siteType: string,
+): RefreshAccountResult => ({
+  success: false,
+  healthStatus: {
+    status: SiteHealthStatus.Unknown,
+    message: `accountRefresh is not implemented for ${siteType}`,
+    code: undefined,
+  },
+})
 
 type RefreshAccountOptions = {
   includeTodayCashflow?: boolean
@@ -1064,27 +1076,31 @@ class AccountStorageService {
         refreshToken: account.sub2apiAuth?.refreshToken,
         tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
       }
+      const accountRefresh = getSiteAdapter(account.site_type).accountRefresh
 
       // Refresh check-in support status together with account refresh.
       const currentCheckIn = account.checkIn
       let checkInForRefresh = { ...currentCheckIn }
 
-      try {
-        const support = await getApiService(
-          account.site_type,
-        ).fetchSupportCheckIn({
-          baseUrl,
-          auth,
-        })
+      if (accountRefresh?.fetchCheckInSupport) {
+        try {
+          const support = await accountRefresh.fetchCheckInSupport({
+            baseUrl,
+            auth,
+          })
 
-        if (typeof support === "boolean") {
-          checkInForRefresh = {
-            ...checkInForRefresh,
-            enableDetection: support,
+          if (typeof support === "boolean") {
+            checkInForRefresh = {
+              ...checkInForRefresh,
+              enableDetection: support,
+            }
           }
+        } catch (error) {
+          logger.warn("Failed to determine check-in support", {
+            baseUrl,
+            error,
+          })
         }
-      } catch (error) {
-        logger.warn("Failed to determine check-in support", { baseUrl, error })
       }
 
       const prefs = await userPreferences.getPreferences()
@@ -1092,13 +1108,15 @@ class AccountStorageService {
         options?.includeTodayCashflow ?? prefs.showTodayCashflow ?? true
 
       // 刷新账号数据
-      const result = await getApiService(account.site_type).refreshAccountData({
-        baseUrl: account.site_url,
-        accountId: account.id,
-        checkIn: checkInForRefresh,
-        auth,
-        includeTodayCashflow,
-      })
+      const result = accountRefresh
+        ? await accountRefresh.refreshAccount({
+            baseUrl: account.site_url,
+            accountId: account.id,
+            checkIn: checkInForRefresh,
+            auth,
+            includeTodayCashflow,
+          })
+        : createMissingAccountRefreshResult(account.site_type)
 
       // 构建更新数据
       const updateData: Partial<
