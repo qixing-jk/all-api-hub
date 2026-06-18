@@ -1,6 +1,7 @@
 import type { AccountSiteType } from "~/constants/siteType"
 
 import type { AccountCompletionCapability } from "./accountCompletion"
+import type { KeyManagementCapability } from "./keyManagement"
 import type { ModelCatalogCapability } from "./modelCatalog"
 import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
 import type { SiteNoticeCapability } from "./siteNotice"
@@ -14,4 +15,5 @@ export type SiteAdapter = {
   siteAnnouncements?: SiteAnnouncementsCapability
   modelCatalog?: ModelCatalogCapability
   accountCompletion?: AccountCompletionCapability
+  keyManagement?: KeyManagementCapability
 }

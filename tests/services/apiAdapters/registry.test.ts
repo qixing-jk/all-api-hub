@@ -21,6 +21,11 @@ describe("apiAdapters registry", () => {
     expect(adapter.accountCompletion).toEqual({
       complete: expect.any(Function),
     })
+    expect(adapter.keyManagement).toEqual({
+      fetchTokens: expect.any(Function),
+      createToken: expect.any(Function),
+      resolveTokenKey: expect.any(Function),
+    })
     expect(adapter.siteNotice).toBeUndefined()
   })
 
@@ -52,12 +57,17 @@ describe("apiAdapters registry", () => {
       expect(adapter.accountCompletion).toEqual({
         complete: expect.any(Function),
       })
+      expect(adapter.keyManagement).toEqual({
+        fetchTokens: expect.any(Function),
+        createToken: expect.any(Function),
+        resolveTokenKey: expect.any(Function),
+      })
       expect(adapter.siteAnnouncements).toBeUndefined()
       expect(adapter.modelCatalog).toBeUndefined()
     }
   })
 
-  it("returns an AIHubMix Adapter with account completion only", () => {
+  it("returns an AIHubMix Adapter with account completion and key management", () => {
     const adapter = getSiteAdapter(SITE_TYPES.AIHUBMIX)
 
     expect(adapter).toMatchObject({
@@ -65,6 +75,11 @@ describe("apiAdapters registry", () => {
     })
     expect(adapter.accountCompletion).toEqual({
       complete: expect.any(Function),
+    })
+    expect(adapter.keyManagement).toEqual({
+      fetchTokens: expect.any(Function),
+      createToken: expect.any(Function),
+      resolveTokenKey: expect.any(Function),
     })
     expect(adapter.siteNotice).toBeUndefined()
     expect(adapter.siteAnnouncements).toBeUndefined()

@@ -2,7 +2,7 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 
 import { aihubmixAdapter } from "./aihubmix"
 import type { SiteAdapter } from "./contracts/siteAdapter"
-import { newApiAdapter } from "./newApi"
+import { createNewApiAdapter } from "./newApi"
 import { sub2ApiAdapter } from "./sub2api"
 
 const newApiFamilySiteTypes = new Set<AccountSiteType>([
@@ -21,10 +21,8 @@ const newApiFamilySiteTypes = new Set<AccountSiteType>([
   SITE_TYPES.UNKNOWN,
 ])
 
-const createNewApiFamilyAdapter = (siteType: AccountSiteType): SiteAdapter => ({
-  ...newApiAdapter,
-  siteType,
-})
+const createNewApiFamilyAdapter = (siteType: AccountSiteType): SiteAdapter =>
+  createNewApiAdapter(siteType)
 
 const createUnsupportedAdapter = (siteType: AccountSiteType): SiteAdapter => ({
   siteType,
