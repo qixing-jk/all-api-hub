@@ -5,7 +5,7 @@ heroImage: "/512.png"
 heroText: "All API Hub - Your All-in-One AI Asset Manager"
 tagline: "Open-source browser extension to unify the management of third-party AI aggregation relays and self-built New APIs: automatically identify accounts, compare model prices, verify API/CLI compatibility, synchronize models and channels, and support cross-platform and encrypted WebDAV backups."
 actions:
-  - text: "Get Started"
+  - text: "🚀 Get Started"
     link: "./get-started.html"
     type: "primary"
 
@@ -106,12 +106,12 @@ Have questions or want to share useful sites? Join the community:
 
 <div class="readme-sponsor readme-sponsor-featured">
   <p class="readme-sponsor-banner">
-    <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">
-      <img src="../../../resources/partners/volcengine_en.jpg" alt="Dola Seed on BytePlus ModelArk">
+    <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">
+      <img src="../../../resources/partners/volcengine.png" alt="火山引擎方舟 Coding-Plan">
     </a>
   </p>
   <p class="readme-sponsor-copy">
-    Thanks to Dola Seed for sponsoring this project! Dola Seed 2.0 is a full-modal general large model independently developed by ByteDance for the global market. Built on a unified multimodal architecture, it supports joint understanding and generation of text, images, audio, and video. It natively enables agent collaboration, with strong reasoning, long-task execution, tool integration, and coding capabilities. It is widely applicable to smart cockpits, personal assistants, education, customer support, marketing, retail, and other scenarios. It excels in multimodal perception, end-to-end complex task delivery, stable interaction, and data security, and is readily accessible and deployable via the ModelArk platform. Register via <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">this link</a> to get 500,000 tokens of free inference quota per model.<a href="https://www.volcengine.com/activity/agentplan?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub"> >>中国大陆地区的开发者请点击这里</a>
+    <strong>Volcano Engine Ark Coding-Plan</strong> is a developer productivity plan launched by ByteDance. The Lite plan costs only <strong>¥9.9/month</strong> and allows you to use mainstream models such as Doubao, DeepSeek, and GLM, compatible with IDE tools like Cursor, Claude Code, and Windsurf, and provides an automatic model switching experience. Join now through the <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">activity link</a> to enjoy referral rebates and first-order discounts.
   </p>
 </div>
 
