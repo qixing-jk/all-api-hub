@@ -84,14 +84,6 @@ export interface ApiTransportRequest {
   baseUrl: string
   data?: Record<string, any>
   accountId?: string
-  accountAuthStore?: {
-    getAccountById: (id: string) => Promise<any>
-    updateAccount: (
-      id: string,
-      updates: Record<string, any>,
-      options: { userTimestampMode: "preserve" | "touch" },
-    ) => Promise<boolean>
-  }
   cookieAuthSessionCookie?: string
   fetchContext?: ApiTransportFetchContext
 }

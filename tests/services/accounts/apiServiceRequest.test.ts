@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
+import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import {
   canManageDisplayAccountTokens,
   createDisplayAccountApiContext,
@@ -17,6 +19,13 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(),
+}))
+
+vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
+  accountSub2ApiAuthSession: {
+    getLatestAuth: vi.fn(),
+    persistAuthUpdate: vi.fn(),
+  },
 }))
 
 const ACCOUNT = {
@@ -84,19 +93,46 @@ describe("fetchDisplayAccountTokens", () => {
       keyManagement,
       request: expect.objectContaining(REQUEST),
     })
+    expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual(
+      expect.objectContaining({
+        request: expect.not.objectContaining({
+          accountAuthStore: expect.anything(),
+        }),
+      }),
+    )
   })
 
-  it("injects a narrow Sub2API auth store into account-scoped requests", async () => {
+  it("keeps non-Sub2API account-scoped requests transport-only", async () => {
     fetchTokens.mockResolvedValue([])
 
     await fetchDisplayAccountTokens(ACCOUNT as any)
 
-    const request = fetchTokens.mock.calls[0]?.[0]
-    expect(request?.accountAuthStore?.getAccountById).toEqual(
-      expect.any(Function),
-    )
-    expect(request?.accountAuthStore?.updateAccount).toEqual(
-      expect.any(Function),
+    const request = fetchTokens.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(request).toEqual(expect.objectContaining(REQUEST))
+    expect(request).not.toHaveProperty("accountAuthStore")
+    expect(request).not.toHaveProperty("sub2apiAuthSession")
+  })
+
+  it("adds a Sub2API auth session only for Sub2API display-account contexts", async () => {
+    const sub2apiAccount = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.SUB2API,
+    }
+    fetchTokens.mockResolvedValue([])
+
+    await fetchDisplayAccountTokens(sub2apiAccount as any)
+
+    const request = fetchTokens.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(request).toEqual(expect.objectContaining(REQUEST))
+    expect(request).not.toHaveProperty("accountAuthStore")
+    expect(request.sub2apiAuthSession).toBe(accountSub2ApiAuthSession)
+    expect(
+      createDisplayAccountApiContext(sub2apiAccount as any).request,
+    ).toEqual(
+      expect.objectContaining({
+        ...REQUEST,
+        sub2apiAuthSession: accountSub2ApiAuthSession,
+      }),
     )
   })
 

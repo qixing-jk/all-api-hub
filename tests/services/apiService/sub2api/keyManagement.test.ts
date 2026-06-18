@@ -15,6 +15,7 @@ import {
   resolveApiTokenKey,
   updateApiToken,
 } from "~/services/apiService/sub2api"
+import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import {
   convertExpirySecondsToSub2ApiDays,
   parseSub2ApiKey,
@@ -45,8 +46,8 @@ vi.mock("~/services/apiService/sub2api/tokenResync", () => ({
 }))
 
 const createRequest = (
-  overrides: Partial<ApiServiceRequest> = {},
-): ApiServiceRequest => ({
+  overrides: Partial<Sub2ApiAuthSessionRequest<ApiServiceRequest>> = {},
+): Sub2ApiAuthSessionRequest<ApiServiceRequest> => ({
   baseUrl: "https://sub2.example.com",
   accountId: "acc-1",
   sub2apiAuthSession: {

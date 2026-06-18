@@ -29,6 +29,7 @@ import {
   refreshAccountData,
   updateApiToken,
 } from "~/services/apiService/sub2api"
+import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import {
   buildSub2ApiUserGroups,
   convertExpirySecondsToSub2ApiDays,
@@ -508,8 +509,10 @@ describe("apiService sub2api refreshAccountData", () => {
   })
 
   const createRequest = (
-    overrides: Partial<ApiServiceAccountRequest> = {},
-  ): ApiServiceAccountRequest =>
+    overrides: Partial<
+      Sub2ApiAuthSessionRequest<ApiServiceAccountRequest>
+    > = {},
+  ): Sub2ApiAuthSessionRequest<ApiServiceAccountRequest> =>
     ({
       baseUrl: "https://sub2.example.com",
       auth: {
@@ -524,7 +527,7 @@ describe("apiService sub2api refreshAccountData", () => {
         customCheckIn: { url: "", redeemUrl: "", openRedeemWithCheckIn: true },
       },
       ...overrides,
-    }) as ApiServiceAccountRequest
+    }) as Sub2ApiAuthSessionRequest<ApiServiceAccountRequest>
 
   const createTokenRequest = (
     overrides: Partial<CreateTokenRequest> = {},

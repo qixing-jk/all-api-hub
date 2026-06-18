@@ -1,9 +1,11 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { SITE_TYPES } from "~/constants/siteType"
+import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { getApiService } from "~/services/apiService"
 import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
@@ -65,7 +67,6 @@ const buildApiRequestFromDisplayAccount = (
 ): ApiServiceRequest => ({
   baseUrl: account.baseUrl,
   accountId: account.id,
-  accountAuthStore: accountStorage,
   auth: {
     authType: account.authType,
     userId: account.userId,
@@ -73,6 +74,20 @@ const buildApiRequestFromDisplayAccount = (
     cookie: account.cookieAuthSessionCookie,
   },
 })
+
+const withDisplayAccountAuthSession = (
+  account: Pick<DisplaySiteData, "siteType">,
+  request: ApiServiceRequest,
+): ApiServiceRequest | Sub2ApiAuthSessionRequest => {
+  if (account.siteType !== SITE_TYPES.SUB2API) {
+    return request
+  }
+
+  return {
+    ...request,
+    sub2apiAuthSession: accountSub2ApiAuthSession,
+  } satisfies Sub2ApiAuthSessionRequest
+}
 
 /**
  * Resolve both the site-specific service and its request DTO for a display account.
@@ -95,7 +110,10 @@ export const createDisplayAccountApiContext = (
     service: getApiService(account.siteType),
     adapter,
     keyManagement: adapter.keyManagement,
-    request: buildApiRequestFromDisplayAccount(account),
+    request: withDisplayAccountAuthSession(
+      account,
+      buildApiRequestFromDisplayAccount(account),
+    ),
   }
 }
 
