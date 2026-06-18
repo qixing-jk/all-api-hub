@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { ApiError } from "~/services/apiService/common/errors"
 import type {
   ApiServiceRequest,
@@ -27,13 +26,13 @@ import { AuthTypeEnum } from "~/types"
 const {
   fetchApiMock,
   resyncSub2ApiAuthTokenMock,
-  getAccountByIdMock,
-  updateAccountMock,
+  getLatestAuthMock,
+  persistAuthUpdateMock,
 } = vi.hoisted(() => ({
   fetchApiMock: vi.fn(),
   resyncSub2ApiAuthTokenMock: vi.fn(),
-  getAccountByIdMock: vi.fn(),
-  updateAccountMock: vi.fn(),
+  getLatestAuthMock: vi.fn(),
+  persistAuthUpdateMock: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/common/utils", () => ({
@@ -50,9 +49,9 @@ const createRequest = (
 ): ApiServiceRequest => ({
   baseUrl: "https://sub2.example.com",
   accountId: "acc-1",
-  accountAuthStore: {
-    getAccountById: (...args: any[]) => getAccountByIdMock(...args),
-    updateAccount: (...args: any[]) => updateAccountMock(...args),
+  sub2apiAuthSession: {
+    getLatestAuth: (...args: any[]) => getLatestAuthMock(...args),
+    persistAuthUpdate: (...args: any[]) => persistAuthUpdateMock(...args),
   },
   auth: {
     authType: AuthTypeEnum.AccessToken,
@@ -197,10 +196,10 @@ describe("apiService sub2api key management service", () => {
     vi.unstubAllGlobals()
     fetchApiMock.mockReset()
     resyncSub2ApiAuthTokenMock.mockReset()
-    getAccountByIdMock.mockReset()
-    updateAccountMock.mockReset()
-    getAccountByIdMock.mockResolvedValue(null)
-    updateAccountMock.mockResolvedValue(true)
+    getLatestAuthMock.mockReset()
+    persistAuthUpdateMock.mockReset()
+    getLatestAuthMock.mockResolvedValue(null)
+    persistAuthUpdateMock.mockResolvedValue(true)
   })
 
   it("combines available groups with rate data for shared forms", async () => {
@@ -388,11 +387,9 @@ describe("apiService sub2api key management service", () => {
   })
 
   it("uses hydrated auth user id when create returns a key DTO without user_id", async () => {
-    getAccountByIdMock.mockResolvedValue({
-      account_info: {
-        id: "42",
-        access_token: "stored-jwt",
-      },
+    getLatestAuthMock.mockResolvedValue({
+      accessToken: "stored-jwt",
+      userId: "42",
     })
     fetchApiMock
       .mockResolvedValueOnce({
@@ -510,9 +507,9 @@ describe("apiService sub2api key management service", () => {
   })
 
   it("uses hydrated auth userId when listing keys without upstream user_id", async () => {
-    getAccountByIdMock.mockResolvedValue({
-      id: "acc-1",
-      account_info: { id: "42", access_token: "stored-jwt" },
+    getLatestAuthMock.mockResolvedValue({
+      accessToken: "stored-jwt",
+      userId: "42",
     })
 
     fetchApiMock.mockResolvedValueOnce({
@@ -554,9 +551,9 @@ describe("apiService sub2api key management service", () => {
   })
 
   it("uses hydrated auth userId when fetching key detail without upstream user_id", async () => {
-    getAccountByIdMock.mockResolvedValue({
-      id: "acc-1",
-      account_info: { id: "42", access_token: "stored-jwt" },
+    getLatestAuthMock.mockResolvedValue({
+      accessToken: "stored-jwt",
+      userId: "42",
     })
 
     fetchApiMock.mockResolvedValueOnce({
@@ -595,29 +592,28 @@ describe("apiService sub2api key management service", () => {
     vi.spyOn(Date, "now").mockReturnValue(now)
 
     let currentAccount = {
-      id: "acc-1",
-      account_info: { id: "1", access_token: "stored-jwt" },
+      accessToken: "stored-jwt",
+      userId: "1",
       sub2apiAuth: {
         refreshToken: "stored-refresh",
         tokenExpiresAt: now + 30_000,
       },
     }
 
-    getAccountByIdMock.mockImplementation(async () =>
+    getLatestAuthMock.mockImplementation(async () =>
       structuredClone(currentAccount),
     )
-    updateAccountMock.mockImplementation(async (_id, updates) => {
+    persistAuthUpdateMock.mockImplementation(async (_id, updates) => {
       currentAccount = {
         ...currentAccount,
-        ...updates,
-        account_info: {
-          ...currentAccount.account_info,
-          ...(updates.account_info ?? {}),
-        },
-        sub2apiAuth: updates.sub2apiAuth
+        accessToken: updates.accessToken,
+        sub2apiAuth: updates.refreshToken
           ? {
               ...(currentAccount.sub2apiAuth ?? {}),
-              ...updates.sub2apiAuth,
+              refreshToken: updates.refreshToken,
+              ...(typeof updates.tokenExpiresAt === "number"
+                ? { tokenExpiresAt: updates.tokenExpiresAt }
+                : {}),
             }
           : currentAccount.sub2apiAuth,
       }
@@ -671,16 +667,16 @@ describe("apiService sub2api key management service", () => {
       default: { desc: "Default plan", ratio: 1 },
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(persistAuthUpdateMock).toHaveBeenCalledTimes(1)
   })
 
   it("retries key requests with refresh-token recovery and persists rotated auth", async () => {
     const now = 1_772_713_600_000
     vi.spyOn(Date, "now").mockReturnValue(now)
 
-    getAccountByIdMock.mockResolvedValue({
-      id: "acc-1",
-      account_info: { id: "1", access_token: "stored-jwt" },
+    getLatestAuthMock.mockResolvedValue({
+      accessToken: "stored-jwt",
+      userId: "1",
       sub2apiAuth: { refreshToken: "stored-refresh" },
     })
 
@@ -734,21 +730,15 @@ describe("apiService sub2api key management service", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(tokens).toHaveLength(1)
     expect(tokens[0].key).toBe("retried-key")
-    expect(updateAccountMock).toHaveBeenCalledWith(
-      "acc-1",
-      expect.objectContaining({
-        account_info: { access_token: "new-jwt" },
-        sub2apiAuth: {
-          refreshToken: "rotated-refresh",
-          tokenExpiresAt: now + 3600 * 1000,
-        },
-      }),
-      { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
-    )
+    expect(persistAuthUpdateMock).toHaveBeenCalledWith("acc-1", {
+      accessToken: "new-jwt",
+      refreshToken: "rotated-refresh",
+      tokenExpiresAt: now + 3600 * 1000,
+    })
   })
 
   it("retries key requests with dashboard-session re-sync when no refresh token exists", async () => {
-    getAccountByIdMock.mockResolvedValue(null)
+    getLatestAuthMock.mockResolvedValue(null)
     resyncSub2ApiAuthTokenMock.mockResolvedValue({
       accessToken: "resynced-jwt",
       source: "existing_tab",
@@ -789,19 +779,15 @@ describe("apiService sub2api key management service", () => {
     expect(resyncSub2ApiAuthTokenMock).toHaveBeenCalledWith(
       "https://sub2.example.com",
     )
-    expect(updateAccountMock).toHaveBeenCalledWith(
-      "acc-1",
-      expect.objectContaining({
-        account_info: { access_token: "resynced-jwt" },
-      }),
-      { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
-    )
+    expect(persistAuthUpdateMock).toHaveBeenCalledWith("acc-1", {
+      accessToken: "resynced-jwt",
+    })
   })
 
   it("surfaces login-required when auth recovery is unavailable", async () => {
-    getAccountByIdMock.mockResolvedValue({
-      id: "acc-1",
-      account_info: { id: "1", access_token: "stored-jwt" },
+    getLatestAuthMock.mockResolvedValue({
+      accessToken: "stored-jwt",
+      userId: "1",
     })
     resyncSub2ApiAuthTokenMock.mockResolvedValue(null)
 

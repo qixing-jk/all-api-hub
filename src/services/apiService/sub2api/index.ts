@@ -4,7 +4,6 @@
  * Sub2API differs from One-API/New-API backends in that authenticated endpoints
  * live under `/api/v1/*` and require a dashboard JWT.
  */
-import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import {
   determineHealthStatus,
   extractDefaultExchangeRate as extractCommonDefaultExchangeRate,
@@ -36,6 +35,7 @@ import {
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
+import { getSub2ApiAuthSession, type Sub2ApiAuthSession } from "./authSession"
 import {
   buildSub2ApiUserGroups,
   extractSub2ApiKeyItems,
@@ -155,15 +155,11 @@ type RefreshedSub2ApiRequest<
   tokenExpiresAt: number
 }
 
-type Sub2ApiAccountAuthStore = NonNullable<
-  ApiServiceRequest["accountAuthStore"]
->
-
 type HydratedSub2ApiAuth<
   TRequest extends ApiServiceRequest = ApiServiceRequest,
 > = {
   request: TRequest
-  accountAuthStore?: Sub2ApiAccountAuthStore
+  authSession?: Sub2ApiAuthSession
 }
 
 const hydrateSub2ApiAuthRequest = async <TRequest extends ApiServiceRequest>(
@@ -173,20 +169,17 @@ const hydrateSub2ApiAuthRequest = async <TRequest extends ApiServiceRequest>(
   let refreshToken = normalizeRefreshToken(request.auth?.refreshToken)
   let tokenExpiresAt = normalizeTokenExpiresAt(request.auth?.tokenExpiresAt)
   let userId = request.auth?.userId
-  const accountAuthStore = request.accountAuthStore
+  const authSession = getSub2ApiAuthSession(request)
 
-  if (request.accountId && accountAuthStore) {
-    const account = await accountAuthStore.getAccountById(request.accountId)
-    if (account) {
-      const storedAccessToken =
-        typeof account.account_info?.access_token === "string"
-          ? account.account_info.access_token.trim()
-          : ""
+  if (request.accountId && authSession) {
+    const storedAuth = await authSession.getLatestAuth(request.accountId)
+    if (storedAuth) {
+      const storedAccessToken = normalizeAccessToken(storedAuth.accessToken)
       const storedRefreshToken = normalizeRefreshToken(
-        account.sub2apiAuth?.refreshToken,
+        storedAuth.sub2apiAuth?.refreshToken,
       )
       const storedTokenExpiresAt = normalizeTokenExpiresAt(
-        account.sub2apiAuth?.tokenExpiresAt,
+        storedAuth.sub2apiAuth?.tokenExpiresAt,
       )
 
       const shouldPreferStoredAccess = Boolean(storedAccessToken)
@@ -201,7 +194,7 @@ const hydrateSub2ApiAuthRequest = async <TRequest extends ApiServiceRequest>(
         tokenExpiresAt = storedTokenExpiresAt
       }
       if (userId === undefined) {
-        userId = account.account_info?.id
+        userId = storedAuth.userId
       }
     }
   }
@@ -220,45 +213,27 @@ const hydrateSub2ApiAuthRequest = async <TRequest extends ApiServiceRequest>(
 
   return {
     request: hydratedRequest,
-    accountAuthStore,
+    authSession,
   }
 }
 
 const persistSub2ApiAuthUpdate = async (
   request: ApiServiceRequest,
   authUpdate: PersistableSub2ApiAuthUpdate,
-  accountAuthStore: Sub2ApiAccountAuthStore | undefined,
+  authSession: Sub2ApiAuthSession | undefined,
 ) => {
   if (!request.accountId) {
     return
   }
 
-  if (!accountAuthStore) {
+  if (!authSession) {
     return
   }
 
   try {
-    const updates: Record<string, any> = {
-      account_info: {
-        access_token: authUpdate.accessToken,
-      },
-    }
-
-    if (authUpdate.refreshToken) {
-      updates.sub2apiAuth = {
-        refreshToken: authUpdate.refreshToken,
-        ...(typeof authUpdate.tokenExpiresAt === "number"
-          ? { tokenExpiresAt: authUpdate.tokenExpiresAt }
-          : {}),
-      }
-    }
-
-    const updated = await accountAuthStore.updateAccount(
+    const updated = await authSession.persistAuthUpdate(
       request.accountId,
-      updates,
-      {
-        userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
-      },
+      authUpdate,
     )
     if (!updated) {
       logger.warn("Failed to persist Sub2API auth update after key request", {
@@ -351,13 +326,12 @@ const refreshSub2ApiRequestAuth = async <
 >(params: {
   request: TRequest
   refreshToken: string
-  accountAuthStore?: Sub2ApiAccountAuthStore
+  authSession?: Sub2ApiAuthSession
 }): Promise<RefreshedSub2ApiRequest<TRequest>> => {
   return withSub2ApiAuthMutationLock(params.request, async () => {
     const latestHydrated = await hydrateSub2ApiAuthRequest(params.request)
     const latestRequest = latestHydrated.request
-    const latestAccountAuthStore =
-      latestHydrated.accountAuthStore ?? params.accountAuthStore
+    const latestAuthSession = latestHydrated.authSession ?? params.authSession
     const latestRefreshToken =
       normalizeRefreshToken(latestRequest.auth?.refreshToken) ||
       normalizeRefreshToken(params.refreshToken)
@@ -387,7 +361,7 @@ const refreshSub2ApiRequestAuth = async <
     await persistSub2ApiAuthUpdate(
       refreshedRequest,
       refreshed,
-      latestAccountAuthStore,
+      latestAuthSession,
     )
 
     return {
@@ -403,13 +377,12 @@ const resyncSub2ApiRequestAuth = async <
 >(params: {
   request: TRequest
   endpoint: string
-  accountAuthStore?: Sub2ApiAccountAuthStore
+  authSession?: Sub2ApiAuthSession
 }): Promise<TRequest> => {
   return withSub2ApiAuthMutationLock(params.request, async () => {
     const latestHydrated = await hydrateSub2ApiAuthRequest(params.request)
     const latestRequest = latestHydrated.request
-    const latestAccountAuthStore =
-      latestHydrated.accountAuthStore ?? params.accountAuthStore
+    const latestAuthSession = latestHydrated.authSession ?? params.authSession
 
     if (didSub2ApiAuthChange(params.request, latestRequest)) {
       return latestRequest
@@ -432,7 +405,7 @@ const resyncSub2ApiRequestAuth = async <
     await persistSub2ApiAuthUpdate(
       resyncedRequest,
       { accessToken: resynced.accessToken },
-      latestAccountAuthStore,
+      latestAuthSession,
     )
 
     return resyncedRequest
@@ -444,13 +417,13 @@ type AuthenticatedSub2ApiRunner<T> = (request: ApiServiceRequest) => Promise<T>
 const retrySub2ApiRunnerWithResyncedAuth = async <T>(params: {
   request: ApiServiceRequest
   endpoint: string
-  accountAuthStore?: Sub2ApiAccountAuthStore
+  authSession?: Sub2ApiAuthSession
   runner: AuthenticatedSub2ApiRunner<T>
 }): Promise<T> => {
   const updatedRequest = await resyncSub2ApiRequestAuth({
     request: params.request,
     endpoint: params.endpoint,
-    accountAuthStore: params.accountAuthStore,
+    authSession: params.authSession,
   })
 
   try {
@@ -491,7 +464,7 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
       const refreshed = await refreshSub2ApiRequestAuth({
         request: effectiveRequest,
         refreshToken,
-        accountAuthStore: hydrated.accountAuthStore,
+        authSession: hydrated.authSession,
       })
 
       effectiveRequest = refreshed.request
@@ -516,7 +489,7 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
         const refreshed = await refreshSub2ApiRequestAuth({
           request: effectiveRequest,
           refreshToken,
-          accountAuthStore: hydrated.accountAuthStore,
+          authSession: hydrated.authSession,
         })
 
         effectiveRequest = refreshed.request
@@ -536,7 +509,7 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
           updatedRequest = await resyncSub2ApiRequestAuth({
             request: effectiveRequest,
             endpoint,
-            accountAuthStore: hydrated.accountAuthStore,
+            authSession: hydrated.authSession,
           })
         } catch {
           throw refreshError
@@ -557,7 +530,7 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
     return await retrySub2ApiRunnerWithResyncedAuth({
       request: effectiveRequest,
       endpoint,
-      accountAuthStore: hydrated.accountAuthStore,
+      authSession: hydrated.authSession,
       runner,
     })
   }
@@ -833,13 +806,13 @@ const createRefreshSuccessResult = (
 
 const refreshSub2ApiAccountViaResync = async (params: {
   request: ApiServiceRequest
-  accountAuthStore?: Sub2ApiAccountAuthStore
+  authSession?: Sub2ApiAuthSession
   checkIn: CheckInConfig
 }): Promise<RefreshAccountResult> => {
   const retryRequest = await resyncSub2ApiRequestAuth({
     request: params.request,
     endpoint: SUB2API_AUTH_ME_ENDPOINT,
-    accountAuthStore: params.accountAuthStore,
+    authSession: params.authSession,
   })
 
   const currentUser = await fetchCurrentUser(retryRequest)
@@ -943,12 +916,12 @@ const fetchSub2ApiAccessTokenInfo = async (
 
 const fetchSub2ApiAccessTokenInfoWithResyncedAuth = async (params: {
   request: ApiServiceRequest
-  accountAuthStore?: Sub2ApiAccountAuthStore
+  authSession?: Sub2ApiAuthSession
 }): Promise<AccessTokenInfo> => {
   const resyncedRequest = await resyncSub2ApiRequestAuth({
     request: params.request,
     endpoint: SUB2API_AUTH_ME_ENDPOINT,
-    accountAuthStore: params.accountAuthStore,
+    authSession: params.authSession,
   })
 
   try {
@@ -965,7 +938,7 @@ const fetchSub2ApiAccessTokenInfoWithResyncedAuth = async (params: {
 const fetchSub2ApiAccessTokenInfoWithAuthRecovery = async (params: {
   request: ApiServiceRequest
   refreshToken: string
-  accountAuthStore?: Sub2ApiAccountAuthStore
+  authSession?: Sub2ApiAuthSession
 }): Promise<AccessTokenInfo> => {
   try {
     return await fetchSub2ApiAccessTokenInfo(params.request)
@@ -979,7 +952,7 @@ const fetchSub2ApiAccessTokenInfoWithAuthRecovery = async (params: {
         const refreshed = await refreshSub2ApiRequestAuth({
           request: params.request,
           refreshToken: params.refreshToken,
-          accountAuthStore: params.accountAuthStore,
+          authSession: params.authSession,
         })
 
         return await fetchSub2ApiAccessTokenInfo(refreshed.request)
@@ -993,7 +966,7 @@ const fetchSub2ApiAccessTokenInfoWithAuthRecovery = async (params: {
 
     return await fetchSub2ApiAccessTokenInfoWithResyncedAuth({
       request: params.request,
-      accountAuthStore: params.accountAuthStore,
+      authSession: params.authSession,
     })
   }
 }
@@ -1018,7 +991,7 @@ export async function getOrCreateAccessToken(
     return await fetchSub2ApiAccessTokenInfoWithAuthRecovery({
       request: effectiveRequest,
       refreshToken,
-      accountAuthStore: hydrated.accountAuthStore,
+      authSession: hydrated.authSession,
     })
   }
 
@@ -1027,7 +1000,7 @@ export async function getOrCreateAccessToken(
       const refreshed = await refreshSub2ApiRequestAuth({
         request: effectiveRequest,
         refreshToken,
-        accountAuthStore: hydrated.accountAuthStore,
+        authSession: hydrated.authSession,
       })
       effectiveRequest = refreshed.request
       accessToken = normalizeAccessToken(effectiveRequest.auth?.accessToken)
@@ -1047,7 +1020,7 @@ export async function getOrCreateAccessToken(
 
   return await fetchSub2ApiAccessTokenInfoWithResyncedAuth({
     request: effectiveRequest,
-    accountAuthStore: hydrated.accountAuthStore,
+    authSession: hydrated.authSession,
   })
 }
 
@@ -1158,7 +1131,7 @@ export async function refreshAccountData(
           const refreshed = await refreshSub2ApiRequestAuth({
             request: effectiveRequest,
             refreshToken,
-            accountAuthStore: hydratedRequest.accountAuthStore,
+            authSession: hydratedRequest.authSession,
           })
 
           effectiveRequest = refreshed.request
@@ -1200,7 +1173,7 @@ export async function refreshAccountData(
           const refreshed = await refreshSub2ApiRequestAuth({
             request: effectiveRequest,
             refreshToken,
-            accountAuthStore: hydratedRequest.accountAuthStore,
+            authSession: hydratedRequest.authSession,
           })
 
           const retryRequest = refreshed.request
@@ -1222,7 +1195,7 @@ export async function refreshAccountData(
           try {
             return await refreshSub2ApiAccountViaResync({
               request: effectiveRequest,
-              accountAuthStore: hydratedRequest.accountAuthStore,
+              authSession: hydratedRequest.authSession,
               checkIn,
             })
           } catch {
@@ -1237,7 +1210,7 @@ export async function refreshAccountData(
       try {
         return await refreshSub2ApiAccountViaResync({
           request: hydratedRequest.request,
-          accountAuthStore: hydratedRequest.accountAuthStore,
+          authSession: hydratedRequest.authSession,
           checkIn,
         })
       } catch (retryError) {
