@@ -8,6 +8,8 @@
 
 **Tech Stack:** TypeScript, WXT extension service modules, React account-management UI, Vitest with existing test utilities.
 
+**Implementation status:** Shipped in this branch. The task sections below are retained as the execution record for the completed slice, not as remaining work.
+
 ---
 
 ## File Structure
@@ -61,7 +63,7 @@
 
 ---
 
-### Task 1: Add Adapter Key Management Capability
+### Task 1: Add Adapter Key Management Capability (shipped)
 
 **Files:**
 - Create: `src/services/apiAdapters/contracts/keyManagement.ts`
@@ -1141,13 +1143,19 @@ Replace the smart-copy inventory block with:
       }
 ```
 
-Replace managed-channel locate inventory loading with:
+Replace managed-channel locate inventory and secret-resolution account loading with:
 
 ```ts
-      const tokensResponse = await fetchDisplayAccountTokens({
+      const tokenLookupAccount = {
         ...site,
         baseUrl: accountBaseUrl,
-      })
+      }
+      const tokensResponse = await fetchDisplayAccountTokens(tokenLookupAccount)
+      // ...
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        tokenLookupAccount,
+        apiToken,
+      )
 ```
 
 Remove the old non-array branch in managed-channel locate because `fetchDisplayAccountTokens(...)` now owns invalid payload detection and throws `InvalidTokenPayloadError`.

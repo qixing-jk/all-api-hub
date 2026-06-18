@@ -18,7 +18,7 @@ usable secret for copy/export/model-list flows.
 
 ## Current Context
 
-The current `SiteAdapter` Interface exposes:
+The shipped `SiteAdapter` Interface exposes:
 
 ```ts
 type SiteAdapter = {
@@ -28,13 +28,14 @@ type SiteAdapter = {
   siteAnnouncements?: SiteAnnouncementsCapability
   modelCatalog?: ModelCatalogCapability
   accountCompletion?: AccountCompletionCapability
+  keyManagement?: KeyManagementCapability
 }
 ```
 
 `src/services/apiService/index.ts` still provides the legacy compatibility
 facade. It merges `common` helpers with site overrides and still exposes
-`capabilities.keyManagement`, but product Modules use concrete helper names
-directly:
+`capabilities.keyManagement`, while the migrated account save/copy paths now
+enter backend key operations through `getSiteAdapter(siteType).keyManagement`:
 
 - `fetchAccountTokens(...)`
 - `createApiToken(...)`

@@ -464,10 +464,11 @@ export default function AccountActionButtons({
         }
       })
 
-      const tokensResponse = await fetchDisplayAccountTokens({
+      const tokenLookupAccount = {
         ...site,
         baseUrl: accountBaseUrl,
-      })
+      }
+      const tokensResponse = await fetchDisplayAccountTokens(tokenLookupAccount)
 
       if (tokensResponse.length === 0) {
         return handleChannelLocateFallback(
@@ -486,7 +487,7 @@ export default function AccountActionButtons({
         secretsToRedact.add(apiToken.key)
       }
       const resolvedToken = await resolveDisplayAccountTokenForSecret(
-        site,
+        tokenLookupAccount,
         apiToken,
       )
       if (resolvedToken.key) {

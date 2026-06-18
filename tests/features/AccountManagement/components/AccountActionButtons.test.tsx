@@ -43,6 +43,7 @@ const {
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
   resolveProductAnalyticsErrorCategoryFromErrorMock,
+  resolveDisplayAccountTokenForSecretMock,
 } = vi.hoisted(() => ({
   mockHandleSetAccountDisabled: vi.fn(),
   mockTogglePinAccount: vi.fn(),
@@ -82,6 +83,7 @@ const {
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
   resolveProductAnalyticsErrorCategoryFromErrorMock: vi.fn(),
+  resolveDisplayAccountTokenForSecretMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -195,9 +197,9 @@ vi.mock(
         })
       },
       resolveDisplayAccountTokenForSecret: async (
-        _account: unknown,
+        account: unknown,
         token: { key: string },
-      ) => token,
+      ) => resolveDisplayAccountTokenForSecretMock(account, token),
     }
   },
 )
@@ -225,6 +227,9 @@ describe("AccountActionButtons", () => {
       PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     )
     completeProductAnalyticsActionMock.mockResolvedValue(undefined)
+    resolveDisplayAccountTokenForSecretMock.mockImplementation(
+      async (_account: unknown, token: { key: string }) => token,
+    )
     exportShareSnapshotWithToastMock.mockResolvedValue(undefined)
   })
 
@@ -712,6 +717,47 @@ describe("AccountActionButtons", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
+  })
+
+  it("opens the copy dialog when smart copy finds multiple tokens", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      { key: "sk-one" },
+      { key: "sk-two" },
+    ])
+
+    const user = userEvent.setup()
+    const onCopyKey = vi.fn()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-multiple-keys",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={onCopyKey}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "account:actions.copyKey" }),
+    )
+
+    await waitFor(() => {
+      expect(onCopyKey).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-multiple-keys" }),
+      )
+    })
+    expect(clipboardWriteTextMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      {
+        insights: {
+          itemCount: 2,
+        },
       },
     )
   })
@@ -1713,7 +1759,7 @@ describe("AccountActionButtons", () => {
           id: "acc-6b",
           disabled: false,
           name: "Site",
-          baseUrl: "https://api.example.com/v1/openai",
+          baseUrl: "  https://api.example.com/v1/openai  ",
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -1746,6 +1792,12 @@ describe("AccountActionButtons", () => {
       expect.objectContaining({
         baseUrl: "https://api.example.com/v1/openai",
       }),
+    )
+    expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://api.example.com/v1/openai",
+      }),
+      expect.objectContaining({ key: "" }),
     )
     expect(openManagedSiteChannelsForChannelMock).not.toHaveBeenCalled()
   })
