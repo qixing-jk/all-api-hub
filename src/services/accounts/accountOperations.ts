@@ -24,7 +24,10 @@ import {
   completeAutoDetectedAccount,
   getAutoDetectCompletionFailureReason,
 } from "~/services/accounts/autoDetectCompletion/completion"
-import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  createDisplayAccountApiContext,
+  requireDisplayAccountKeyManagement,
+} from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
   AUTO_DETECT_FAILURE_REASONS,
@@ -34,6 +37,7 @@ import {
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { getApiService } from "~/services/apiService"
 import {
   DEFAULT_PREFERENCES,
@@ -1152,9 +1156,11 @@ export async function ensureAccountApiToken(
     id: options.toastId,
   })
 
-  const tokens = await getApiService(
-    displaySiteData.siteType,
-  ).fetchAccountTokens({
+  const keyManagement = requireDisplayAccountKeyManagement(
+    displaySiteData,
+    getSiteAdapter(displaySiteData.siteType).keyManagement,
+  )
+  const displayAccountRequest = {
     baseUrl: displaySiteData.baseUrl,
     accountId: displaySiteData.id,
     auth: {
@@ -1163,7 +1169,19 @@ export async function ensureAccountApiToken(
       accessToken: displaySiteData.token,
       cookie: displaySiteData.cookieAuthSessionCookie,
     },
-  })
+  }
+  const createAccountRequest = {
+    baseUrl: account.site_url,
+    accountId: account.id,
+    auth: {
+      authType: account.authType,
+      userId: account.account_info.id,
+      accessToken: account.account_info.access_token,
+      cookie: account.cookieAuth?.sessionCookie,
+    },
+  }
+
+  const tokens = await keyManagement.fetchTokens(displayAccountRequest)
   let apiToken: ApiToken | undefined = tokens.at(-1)
 
   if (!apiToken) {
@@ -1188,19 +1206,8 @@ export async function ensureAccountApiToken(
       throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
     }
 
-    const createApiTokenResult = await getApiService(
-      displaySiteData.siteType,
-    ).createApiToken(
-      {
-        baseUrl: account.site_url,
-        accountId: account.id,
-        auth: {
-          authType: account.authType,
-          userId: account.account_info.id,
-          accessToken: account.account_info.access_token,
-          cookie: account.cookieAuth?.sessionCookie,
-        },
-      },
+    const createApiTokenResult = await keyManagement.createToken(
+      createAccountRequest,
       newTokenData,
     )
 
@@ -1213,18 +1220,9 @@ export async function ensureAccountApiToken(
     } else {
       // Do not assume a created key can be read back in full. AIHubMix returns
       // complete API keys only at creation time and may list masked keys here.
-      const updatedTokens = await getApiService(
-        displaySiteData.siteType,
-      ).fetchAccountTokens({
-        baseUrl: displaySiteData.baseUrl,
-        accountId: displaySiteData.id,
-        auth: {
-          authType: displaySiteData.authType,
-          userId: displaySiteData.userId,
-          accessToken: displaySiteData.token,
-          cookie: displaySiteData.cookieAuthSessionCookie,
-        },
-      })
+      const updatedTokens = await keyManagement.fetchTokens(
+        displayAccountRequest,
+      )
       apiToken = updatedTokens.at(-1)
     }
   }

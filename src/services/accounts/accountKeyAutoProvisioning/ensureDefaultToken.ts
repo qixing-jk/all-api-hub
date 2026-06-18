@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { getApiService } from "~/services/apiService"
+import { requireDisplayAccountKeyManagement } from "~/services/accounts/utils/apiServiceRequest"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { t } from "~/utils/i18n/core"
@@ -42,9 +43,11 @@ export async function ensureDefaultApiTokenForAccount(params: {
   displaySiteData: DisplaySiteData
 }): Promise<{ token: ApiToken; created: boolean }> {
   const { account, displaySiteData } = params
-  const service = getApiService(displaySiteData.siteType)
-
-  const tokens = await service.fetchAccountTokens({
+  const keyManagement = requireDisplayAccountKeyManagement(
+    displaySiteData,
+    getSiteAdapter(displaySiteData.siteType).keyManagement,
+  )
+  const displayAccountRequest = {
     baseUrl: displaySiteData.baseUrl,
     accountId: displaySiteData.id,
     auth: {
@@ -53,7 +56,19 @@ export async function ensureDefaultApiTokenForAccount(params: {
       accessToken: displaySiteData.token,
       cookie: displaySiteData.cookieAuthSessionCookie,
     },
-  })
+  }
+  const createAccountRequest = {
+    baseUrl: account.site_url,
+    accountId: account.id,
+    auth: {
+      authType: account.authType,
+      userId: account.account_info.id,
+      accessToken: account.account_info.access_token,
+      cookie: account.cookieAuth?.sessionCookie,
+    },
+  }
+
+  const tokens = await keyManagement.fetchTokens(displayAccountRequest)
 
   let apiToken: ApiToken | undefined = tokens.at(-1)
   if (apiToken) {
@@ -69,17 +84,8 @@ export async function ensureDefaultApiTokenForAccount(params: {
   }
 
   const newTokenData = generateDefaultTokenRequest()
-  const createApiTokenResult = await service.createApiToken(
-    {
-      baseUrl: account.site_url,
-      accountId: account.id,
-      auth: {
-        authType: account.authType,
-        userId: account.account_info.id,
-        accessToken: account.account_info.access_token,
-        cookie: account.cookieAuth?.sessionCookie,
-      },
-    },
+  const createApiTokenResult = await keyManagement.createToken(
+    createAccountRequest,
     newTokenData,
   )
 
@@ -94,16 +100,7 @@ export async function ensureDefaultApiTokenForAccount(params: {
   // Backends such as AIHubMix may only expose the full API key in the create
   // response; a follow-up inventory fetch can return a masked key that cannot
   // be revealed later. This helper currently returns inventory data only.
-  const updatedTokens = await service.fetchAccountTokens({
-    baseUrl: displaySiteData.baseUrl,
-    accountId: displaySiteData.id,
-    auth: {
-      authType: displaySiteData.authType,
-      userId: displaySiteData.userId,
-      accessToken: displaySiteData.token,
-      cookie: displaySiteData.cookieAuthSessionCookie,
-    },
-  })
+  const updatedTokens = await keyManagement.fetchTokens(displayAccountRequest)
   apiToken = updatedTokens.at(-1)
 
   if (!apiToken) {

@@ -1,7 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { resolveSub2ApiQuickCreateResolution } from "~/services/accounts/accountOperations"
-import { getApiService } from "~/services/apiService"
+import { requireDisplayAccountKeyManagement } from "~/services/accounts/utils/apiServiceRequest"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import {
   hasUsableApiTokenKey,
   isMaskedApiTokenKey,
@@ -85,8 +86,11 @@ export async function inspectAccountTokenInventory(params: {
   displaySiteData: DisplaySiteData
 }): Promise<AccountTokenInventoryState> {
   const { displaySiteData } = params
-  const service = getApiService(displaySiteData.siteType)
-  const tokens = await service.fetchAccountTokens(
+  const keyManagement = requireDisplayAccountKeyManagement(
+    displaySiteData,
+    getSiteAdapter(displaySiteData.siteType).keyManagement,
+  )
+  const tokens = await keyManagement.fetchTokens(
     buildDisplayAccountRequest(displaySiteData),
   )
   const existingTokens = sanitizeApiTokens(tokens)
@@ -120,13 +124,16 @@ async function createDefaultToken(params: {
   existingTokenIds: number[]
 }): Promise<ApiToken | null> {
   const { account, displaySiteData, group, existingTokenIds } = params
-  const service = getApiService(displaySiteData.siteType)
+  const keyManagement = requireDisplayAccountKeyManagement(
+    displaySiteData,
+    getSiteAdapter(displaySiteData.siteType).keyManagement,
+  )
   const tokenData = generateDefaultTokenRequest()
   if (typeof group === "string") {
     tokenData.group = group
   }
 
-  const created = await service.createApiToken(
+  const created = await keyManagement.createToken(
     buildCreateRequest(account),
     tokenData,
   )
@@ -143,7 +150,7 @@ async function createDefaultToken(params: {
     return null
   }
 
-  const updatedTokens = await service.fetchAccountTokens(
+  const updatedTokens = await keyManagement.fetchTokens(
     buildDisplayAccountRequest(displaySiteData),
   )
 

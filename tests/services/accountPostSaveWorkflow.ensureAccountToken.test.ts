@@ -13,25 +13,43 @@ import {
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
-const { fetchAccountTokensMock, createApiTokenMock, fetchUserGroupsMock } =
-  vi.hoisted(() => ({
-    fetchAccountTokensMock: vi.fn(),
-    createApiTokenMock: vi.fn(),
-    fetchUserGroupsMock: vi.fn(),
-  }))
+const {
+  fetchAccountTokensMock,
+  createApiTokenMock,
+  fetchUserGroupsMock,
+  getSiteAdapterMock,
+} = vi.hoisted(() => {
+  const fetchAccountTokensMock = vi.fn()
+  const createApiTokenMock = vi.fn()
+  const fetchUserGroupsMock = vi.fn()
+
+  return {
+    fetchAccountTokensMock,
+    createApiTokenMock,
+    fetchUserGroupsMock,
+    getSiteAdapterMock: vi.fn(() => ({
+      keyManagement: {
+        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+        createToken: (...args: unknown[]) => createApiTokenMock(...args),
+        resolveTokenKey: vi.fn(),
+      },
+    })),
+  }
+})
 
 vi.mock("~/services/apiService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/services/apiService")>()
   return {
     ...actual,
     getApiService: vi.fn(() => ({
-      fetchAccountTokens: (...args: unknown[]) =>
-        fetchAccountTokensMock(...args),
-      createApiToken: (...args: unknown[]) => createApiTokenMock(...args),
       fetchUserGroups: (...args: unknown[]) => fetchUserGroupsMock(...args),
     })),
   }
 })
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: getSiteAdapterMock,
+}))
 
 const buildToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
   id: 1,
@@ -97,6 +115,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
     fetchUserGroupsMock.mockReset()
+    getSiteAdapterMock.mockClear()
   })
 
   it("selects the single newly created token by id diff even when it is not the last refetched token", () => {
@@ -221,6 +240,91 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       }),
     )
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("uses display account fields for inventory reads and stored account fields for token creation", async () => {
+    const displayAccount = buildDisplayAccount({
+      id: "display-account-id",
+      baseUrl: "https://display.example.invalid",
+      authType: AuthTypeEnum.Cookie,
+      userId: "display-user-id",
+      token: "display-access-token",
+      cookieAuthSessionCookie: "display-session-cookie",
+    })
+    const account = buildSiteAccount({
+      id: "stored-account-id",
+      site_name: "Stored Account",
+      site_url: "https://stored.example.invalid",
+      site_type: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.Cookie,
+      cookieAuth: { sessionCookie: "stored-session-cookie" },
+      account_info: {
+        id: "stored-user-id",
+        access_token: "stored-access-token",
+        username: "stored-user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const createdToken = buildToken({ id: 16, key: "sk-created" })
+
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([createdToken])
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    await expect(
+      ensureAccountTokenForPostSaveWorkflow({
+        account,
+        displaySiteData: displayAccount,
+      }),
+    ).resolves.toEqual({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
+      token: createdToken,
+      created: true,
+      oneTimeSecret: false,
+    })
+
+    const expectedDisplayRequest = {
+      baseUrl: "https://display.example.invalid",
+      accountId: "display-account-id",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: "display-user-id",
+        accessToken: "display-access-token",
+        cookie: "display-session-cookie",
+      },
+    }
+
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
+      1,
+      expectedDisplayRequest,
+    )
+    expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
+      2,
+      expectedDisplayRequest,
+    )
+    expect(createApiTokenMock).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://stored.example.invalid",
+        accountId: "stored-account-id",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: "stored-user-id",
+          accessToken: "stored-access-token",
+          cookie: "stored-session-cookie",
+        },
+      },
+      expect.objectContaining({
+        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "",
+      }),
+    )
   })
 
   it("blocks ordinary token creation when create succeeds but refetch cannot identify the new token", async () => {

@@ -21,13 +21,27 @@ const {
   fetchAccountTokensMock,
   createApiTokenMock,
   fetchUserGroupsMock,
+  getSiteAdapterMock,
   toastLoadingMock,
-} = vi.hoisted(() => ({
-  fetchAccountTokensMock: vi.fn(),
-  createApiTokenMock: vi.fn(),
-  fetchUserGroupsMock: vi.fn(),
-  toastLoadingMock: vi.fn(),
-}))
+} = vi.hoisted(() => {
+  const fetchAccountTokensMock = vi.fn()
+  const createApiTokenMock = vi.fn()
+  const fetchUserGroupsMock = vi.fn()
+
+  return {
+    fetchAccountTokensMock,
+    createApiTokenMock,
+    fetchUserGroupsMock,
+    getSiteAdapterMock: vi.fn(() => ({
+      keyManagement: {
+        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+        createToken: (...args: unknown[]) => createApiTokenMock(...args),
+        resolveTokenKey: vi.fn(),
+      },
+    })),
+    toastLoadingMock: vi.fn(),
+  }
+})
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -42,12 +56,14 @@ vi.mock("~/services/apiService", async (importOriginal) => {
   return {
     ...actual,
     getApiService: vi.fn(() => ({
-      fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-      createApiToken: (...args: any[]) => createApiTokenMock(...args),
-      fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
+      fetchUserGroups: (...args: unknown[]) => fetchUserGroupsMock(...args),
     })),
   }
 })
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: getSiteAdapterMock,
+}))
 
 const createTestAccounts = () => {
   const displayAccount = buildSub2ApiAccount()
@@ -150,6 +166,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
     fetchUserGroupsMock.mockReset()
+    getSiteAdapterMock.mockClear()
     toastLoadingMock.mockReset()
 
     const testAccounts = createTestAccounts()
@@ -271,6 +288,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
     fetchUserGroupsMock.mockReset()
+    getSiteAdapterMock.mockClear()
     toastLoadingMock.mockReset()
   })
 
@@ -308,6 +326,86 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
         baseUrl: displayAccount.baseUrl,
         accountId: displayAccount.id,
       }),
+      expect.objectContaining({
+        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "",
+      }),
+    )
+  })
+
+  it("uses display account fields for inventory reads and stored account fields for token creation", async () => {
+    const displayAccount = {
+      id: "display-account-id",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://display.example.invalid",
+      authType: AuthTypeEnum.Cookie,
+      userId: "display-user-id",
+      token: "display-access-token",
+      cookieAuthSessionCookie: "display-session-cookie",
+    }
+    const siteAccount = buildSiteAccount({
+      id: "stored-account-id",
+      site_type: SITE_TYPES.NEW_API,
+      site_url: "https://stored.example.invalid",
+      authType: AuthTypeEnum.Cookie,
+      cookieAuth: { sessionCookie: "stored-session-cookie" },
+      account_info: {
+        id: "stored-user-id",
+        access_token: "stored-access-token",
+        username: "stored-user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const createdToken = { id: 25, key: "sk-created-secret" }
+
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([createdToken])
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    await expect(
+      ensureDefaultApiTokenForAccount({
+        account: siteAccount,
+        displaySiteData: displayAccount as any,
+      }),
+    ).resolves.toEqual({ token: createdToken, created: true })
+
+    const expectedDisplayRequest = {
+      baseUrl: "https://display.example.invalid",
+      accountId: "display-account-id",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: "display-user-id",
+        accessToken: "display-access-token",
+        cookie: "display-session-cookie",
+      },
+    }
+
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
+      1,
+      expectedDisplayRequest,
+    )
+    expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
+      2,
+      expectedDisplayRequest,
+    )
+    expect(createApiTokenMock).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://stored.example.invalid",
+        accountId: "stored-account-id",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: "stored-user-id",
+          accessToken: "stored-access-token",
+          cookie: "stored-session-cookie",
+        },
+      },
       expect.objectContaining({
         name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
         group: "",
@@ -383,6 +481,84 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     ).resolves.toEqual(createdToken)
 
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses display account fields for shared inventory reads and stored account fields for shared token creation", async () => {
+    const displayAccount = {
+      id: "shared-display-account-id",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://shared-display.example.invalid",
+      authType: AuthTypeEnum.Cookie,
+      userId: "shared-display-user-id",
+      token: "shared-display-access-token",
+      cookieAuthSessionCookie: "shared-display-session-cookie",
+    }
+    const siteAccount = buildSiteAccount({
+      id: "shared-stored-account-id",
+      site_type: SITE_TYPES.NEW_API,
+      site_url: "https://shared-stored.example.invalid",
+      authType: AuthTypeEnum.Cookie,
+      cookieAuth: { sessionCookie: "shared-stored-session-cookie" },
+      account_info: {
+        id: "shared-stored-user-id",
+        access_token: "shared-stored-access-token",
+        username: "shared-stored-user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const createdToken = {
+      id: 26,
+      user_id: "shared-display-user-id",
+      key: "sk-shared-created-secret",
+      status: 1,
+      name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce(createdToken)
+
+    await expect(
+      ensureAccountApiToken(siteAccount, displayAccount as any),
+    ).resolves.toEqual(createdToken)
+
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(fetchAccountTokensMock).toHaveBeenCalledWith({
+      baseUrl: "https://shared-display.example.invalid",
+      accountId: "shared-display-account-id",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: "shared-display-user-id",
+        accessToken: "shared-display-access-token",
+        cookie: "shared-display-session-cookie",
+      },
+    })
+    expect(createApiTokenMock).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://shared-stored.example.invalid",
+        accountId: "shared-stored-account-id",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: "shared-stored-user-id",
+          accessToken: "shared-stored-access-token",
+          cookie: "shared-stored-session-cookie",
+        },
+      },
+      expect.objectContaining({
+        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "",
+      }),
+    )
   })
 
   it("blocks shared AIHubMix token ensure when no token exists because no one-time dialog is available", async () => {
