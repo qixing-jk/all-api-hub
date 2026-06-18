@@ -32,6 +32,11 @@
   "allAccountsLoading_one": "{{count}} loading",
   "allAccountsLoading_other": "{{count}} loading",
   "allAccountsProgress": "{{loaded}}/{{total}} accounts loaded",
+  "batchApiCredentialProfiles": {
+    "actions": {
+      "open": "Save to API credential library ({{selectedCount}})"
+    }
+  },
   "batchCliProxyExport": {
     "actions": {
       "open": "Batch import to CLIProxyAPI ({{selectedCount}})",
@@ -246,6 +251,8 @@
   },
   "messages": {
     "accountNotFound": "Account information not found",
+    "batchSavedToApiProfiles": "Saved selected keys to API credential library",
+    "batchSaveToApiProfilesFailed": "Failed to save selected keys to API credential library",
     "copyFailed": "Copy failed",
     "deleteConfirm": "Are you sure you want to delete key {{name}}? This action cannot be undone",
     "deleteSuccess": "Key {{name}} deleted successfully",

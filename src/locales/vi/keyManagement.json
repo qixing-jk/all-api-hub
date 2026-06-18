@@ -29,6 +29,11 @@
   "allAccountsFailed_other": "{{count}} thất bại",
   "allAccountsLoading_other": "{{count}} đang tải",
   "allAccountsProgress": "Đã tải {{loaded}}/{{total}} tài khoản",
+  "batchApiCredentialProfiles": {
+    "actions": {
+      "open": "Lưu vào thư viện thông tin xác thực API ({{selectedCount}})"
+    }
+  },
   "batchCliProxyExport": {
     "actions": {
       "open": "Nhập hàng loạt vào CLIProxyAPI ({{selectedCount}})",
@@ -240,6 +245,8 @@
   },
   "messages": {
     "accountNotFound": "Không tìm thấy thông tin tài khoản tương ứng",
+    "batchSavedToApiProfiles": "Đã lưu các khóa đã chọn vào thư viện thông tin xác thực API",
+    "batchSaveToApiProfilesFailed": "Không thể lưu các khóa đã chọn vào thư viện thông tin xác thực API",
     "copyFailed": "Sao chép thất bại",
     "deleteConfirm": "Bạn có chắc chắn muốn xóa khóa {{name}} không? Thao tác này không thể hoàn tác",
     "deleteSuccess": "Đã xóa khóa {{name}} thành công",

@@ -109,6 +109,8 @@ describe("product analytics event enums", () => {
       RepairMissingAccountKeys: "repair_missing_account_keys",
       SaveAccountTokenToApiCredentialProfile:
         "save_account_token_to_api_credential_profile",
+      SaveAccountTokensToApiCredentialProfiles:
+        "save_account_tokens_to_api_credential_profiles",
       RefreshManagedSiteTokenStatus: "refresh_managed_site_token_status",
       RetryManagedSiteTokenVerification:
         "retry_managed_site_token_verification",

@@ -29,6 +29,11 @@
   "allAccountsFailed": "{{count}} 个失败",
   "allAccountsLoading": "{{count}} 个加载中",
   "allAccountsProgress": "已加载 {{loaded}}/{{total}} 个账号",
+  "batchApiCredentialProfiles": {
+    "actions": {
+      "open": "保存到 API 凭据库（{{selectedCount}}）"
+    }
+  },
   "batchCliProxyExport": {
     "actions": {
       "open": "批量导入到 CLIProxyAPI（{{selectedCount}}）",
@@ -240,6 +245,8 @@
   },
   "messages": {
     "accountNotFound": "找不到对应账号信息",
+    "batchSavedToApiProfiles": "已保存所选密钥到 API 凭据库",
+    "batchSaveToApiProfilesFailed": "保存所选密钥到 API 凭据库失败",
     "copyFailed": "复制失败",
     "deleteConfirm": "确定要删除密钥 {{name}} 吗？此操作不可撤销",
     "deleteSuccess": "密钥 {{name}} 删除成功",

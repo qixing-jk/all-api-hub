@@ -6,21 +6,43 @@ import {
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/constants/siteType"
-import { buildOneTimeApiKeyProfileSaveAction } from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import {
+  buildOneTimeApiKeyProfileSaveAction,
+  saveApiTokensToApiCredentialProfiles,
+} from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { AuthTypeEnum } from "~/types"
+import {
+  createAccount,
+  createToken,
+} from "~~/tests/utils/keyManagementFactories"
 
-const { createApiCredentialProfileMock, toastErrorMock, toastSuccessMock } =
-  vi.hoisted(() => ({
-    createApiCredentialProfileMock: vi.fn(),
-    toastErrorMock: vi.fn(),
-    toastSuccessMock: vi.fn(),
-  }))
+const {
+  createApiCredentialProfileMock,
+  openApiCredentialProfilesPageMock,
+  toastDismissMock,
+  toastErrorMock,
+  toastSuccessMock,
+} = vi.hoisted(() => ({
+  createApiCredentialProfileMock: vi.fn(),
+  openApiCredentialProfilesPageMock: vi.fn(),
+  toastDismissMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+}))
 
 vi.mock("react-hot-toast", () => ({
   default: {
+    dismiss: toastDismissMock,
     error: toastErrorMock,
     success: toastSuccessMock,
   },
+}))
+
+vi.mock("~/utils/navigation", () => ({
+  openApiCredentialProfilesPage: (...args: unknown[]) =>
+    openApiCredentialProfilesPageMock(...args),
 }))
 
 vi.mock(
@@ -36,6 +58,8 @@ vi.mock(
 describe("buildOneTimeApiKeyProfileSaveAction", () => {
   beforeEach(() => {
     createApiCredentialProfileMock.mockReset()
+    openApiCredentialProfilesPageMock.mockReset()
+    toastDismissMock.mockReset()
     toastErrorMock.mockReset()
     toastSuccessMock.mockReset()
   })
@@ -189,5 +213,101 @@ describe("buildOneTimeApiKeyProfileSaveAction", () => {
       "keyManagement:messages.saveToApiProfilesFailed",
     )
     expect(toastSuccessMock).not.toHaveBeenCalled()
+  })
+})
+
+describe("saveApiTokensToApiCredentialProfiles", () => {
+  beforeEach(() => {
+    createApiCredentialProfileMock.mockReset()
+    toastErrorMock.mockReset()
+    toastSuccessMock.mockReset()
+  })
+
+  it("saves every selected token and shows a quick-open toast action", async () => {
+    createApiCredentialProfileMock
+      .mockResolvedValueOnce({ id: "profile-1", name: "Example - First" })
+      .mockResolvedValueOnce({ id: "profile-2", name: "AIHubMix - Second" })
+    const t = vi.fn((key: string) => key) as unknown as TFunction
+    const logger = { error: vi.fn() }
+
+    const result = await saveApiTokensToApiCredentialProfiles({
+      items: [
+        {
+          account: createAccount({
+            id: "account-1",
+            name: "Example",
+            baseUrl: "https://api.example.invalid/v1",
+            siteType: SITE_TYPES.NEW_API,
+            tagIds: ["tag-a"],
+            authType: AuthTypeEnum.AccessToken,
+            token: "account-token",
+            userId: "1",
+          }),
+          token: createToken({
+            id: 1,
+            accountId: "account-1",
+            key: "sk-first",
+            name: "First",
+            accountName: "Example",
+          }),
+        },
+        {
+          account: createAccount({
+            id: "account-2",
+            name: "AIHubMix",
+            baseUrl: AIHUBMIX_WEB_ORIGIN,
+            siteType: SITE_TYPES.AIHUBMIX,
+            tagIds: ["tag-b"],
+            authType: AuthTypeEnum.AccessToken,
+            token: "account-token",
+            userId: "2",
+          }),
+          token: createToken({
+            id: 2,
+            accountId: "account-2",
+            key: "sk-second",
+            name: "Second",
+            accountName: "AIHubMix",
+          }),
+        },
+      ],
+      t,
+      logger,
+      source: "TokenListBatchAction",
+    })
+
+    expect(result).toEqual({ savedCount: 2 })
+    expect(createApiCredentialProfileMock).toHaveBeenNthCalledWith(1, {
+      name: "Example - First",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.example.invalid/v1",
+      apiKey: "sk-first",
+      tagIds: ["tag-a"],
+    })
+    expect(createApiCredentialProfileMock).toHaveBeenNthCalledWith(2, {
+      name: "AIHubMix - Second",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: AIHUBMIX_API_ORIGIN,
+      apiKey: "sk-second",
+      tagIds: ["tag-b"],
+    })
+    expect(toastSuccessMock).toHaveBeenCalledWith(expect.any(Function), {
+      duration: 8000,
+    })
+
+    const toastMessageRenderer = toastSuccessMock.mock.calls[0]?.[0]
+    const toastMessage = toastMessageRenderer({ id: "toast-1" })
+    const openButton = toastMessage.props.children[1]
+    expect(openButton.props["data-testid"]).toBe(
+      KEY_MANAGEMENT_TEST_IDS.openApiProfilesToastButton,
+    )
+    expect(openButton.props.children).toBe(
+      "keyManagement:actions.openApiProfiles",
+    )
+
+    openButton.props.onClick()
+
+    expect(openApiCredentialProfilesPageMock).toHaveBeenCalledTimes(1)
+    expect(toastDismissMock).toHaveBeenCalledWith("toast-1")
   })
 })

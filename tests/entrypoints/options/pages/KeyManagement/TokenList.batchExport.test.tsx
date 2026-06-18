@@ -3,15 +3,26 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
 
-const { mockBuildBatchExportResult } = vi.hoisted(() => ({
-  mockBuildBatchExportResult: vi.fn(),
-}))
+const { mockBuildBatchExportResult, mockSaveApiCredentialProfiles } =
+  vi.hoisted(() => ({
+    mockBuildBatchExportResult: vi.fn(),
+    mockSaveApiCredentialProfiles: vi.fn(),
+  }))
+
+vi.mock(
+  "~/features/KeyManagement/utils/apiCredentialProfileSaveAction",
+  () => ({
+    saveApiTokensToApiCredentialProfiles: (...args: unknown[]) =>
+      mockSaveApiCredentialProfiles(...args),
+  }),
+)
 
 vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
   TokenListItem: ({
@@ -178,6 +189,7 @@ const renderTokenList = (props?: Partial<Parameters<typeof TokenList>[0]>) =>
 describe("TokenList batch export selection", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSaveApiCredentialProfiles.mockResolvedValue({ savedCount: 2 })
     mockBuildBatchExportResult.mockImplementation((items) => ({
       totalSelected: items.length,
       attemptedCount: items.length,
@@ -492,6 +504,40 @@ describe("TokenList batch export selection", () => {
     expect(
       screen.queryByTestId("batch-cli-proxy-export-dialog"),
     ).not.toBeInTheDocument()
+  })
+
+  it("saves the selected tokens to API credential profiles and clears selection", async () => {
+    const user = userEvent.setup()
+    renderTokenList()
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    await user.click(await screen.findByRole("checkbox", { name: "Token 2" }))
+
+    const saveButton = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.batchSaveToApiProfilesButton,
+    )
+    expect(saveButton).toBeEnabled()
+
+    await user.click(saveButton)
+
+    expect(mockSaveApiCredentialProfiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            account: expect.objectContaining({ id: account.id }),
+            token: expect.objectContaining({ id: token1.id }),
+          }),
+          expect.objectContaining({
+            account: expect.objectContaining({ id: account.id }),
+            token: expect.objectContaining({ id: token2.id }),
+          }),
+        ],
+        source: "TokenListBatchAction",
+      }),
+    )
+    expect(screen.getByRole("checkbox", { name: "Token 1" })).not.toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Token 2" })).not.toBeChecked()
+    expect(saveButton).toBeDisabled()
   })
 
   it("skips rendering flat-list tokens whose account metadata is missing", async () => {

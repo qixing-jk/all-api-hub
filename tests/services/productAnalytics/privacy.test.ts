@@ -336,6 +336,13 @@ describe("product analytics privacy filtering", () => {
       errorCategory: undefined,
     },
     {
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountTokensToApiCredentialProfiles,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementPage,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      errorCategory: undefined,
+    },
+    {
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteTokenStatus,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
       result: PRODUCT_ANALYTICS_RESULTS.Success,

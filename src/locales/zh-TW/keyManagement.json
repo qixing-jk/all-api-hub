@@ -29,6 +29,11 @@
   "allAccountsFailed_other": "{{count}} 個失敗",
   "allAccountsLoading_other": "{{count}} 個載入中",
   "allAccountsProgress": "已載入 {{loaded}}/{{total}} 個帳號",
+  "batchApiCredentialProfiles": {
+    "actions": {
+      "open": "儲存到 API 憑據庫（{{selectedCount}}）"
+    }
+  },
   "batchCliProxyExport": {
     "actions": {
       "open": "批次匯入到 CLIProxyAPI（{{selectedCount}}）",
@@ -240,6 +245,8 @@
   },
   "messages": {
     "accountNotFound": "找不到對應帳號資訊",
+    "batchSavedToApiProfiles": "已儲存所選金鑰到 API 憑據庫",
+    "batchSaveToApiProfilesFailed": "儲存所選金鑰到 API 憑據庫失敗",
     "copyFailed": "複製失敗",
     "deleteConfirm": "確定要刪除金鑰 {{name}} 嗎？此操作不可撤銷",
     "deleteSuccess": "金鑰 {{name}} 刪除成功",

@@ -29,6 +29,11 @@
   "allAccountsFailed_other": "{{count}} 件失敗",
   "allAccountsLoading_other": "{{count}} 件読み込み中",
   "allAccountsProgress": "{{loaded}}/{{total}} アカウントを読み込み済み",
+  "batchApiCredentialProfiles": {
+    "actions": {
+      "open": "API 認証情報庫に保存（{{selectedCount}}）"
+    }
+  },
   "batchCliProxyExport": {
     "actions": {
       "open": "CLIProxyAPI に一括インポート（{{selectedCount}}）",
@@ -240,6 +245,8 @@
   },
   "messages": {
     "accountNotFound": "アカウント情報が見つかりません",
+    "batchSavedToApiProfiles": "選択したキーを API 認証情報庫に保存しました",
+    "batchSaveToApiProfilesFailed": "選択したキーを API 認証情報庫に保存できませんでした",
     "copyFailed": "コピーに失敗しました",
     "deleteConfirm": "キー {{name}} を削除してもよろしいですか？ この操作は元に戻せません",
     "deleteSuccess": "キー {{name}} を正常に削除しました",
