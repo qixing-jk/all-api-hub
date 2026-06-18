@@ -26,6 +26,10 @@ describe("apiAdapters registry", () => {
       createToken: expect.any(Function),
       resolveTokenKey: expect.any(Function),
     })
+    expect(adapter.accountRefresh).toEqual({
+      fetchCheckInSupport: expect.any(Function),
+      refreshAccount: expect.any(Function),
+    })
     expect(adapter.siteNotice).toBeUndefined()
   })
 
@@ -62,6 +66,10 @@ describe("apiAdapters registry", () => {
         createToken: expect.any(Function),
         resolveTokenKey: expect.any(Function),
       })
+      expect(adapter.accountRefresh).toEqual({
+        fetchCheckInSupport: expect.any(Function),
+        refreshAccount: expect.any(Function),
+      })
       expect(adapter.siteAnnouncements).toBeUndefined()
       expect(adapter.modelCatalog).toBeUndefined()
     }
@@ -80,6 +88,10 @@ describe("apiAdapters registry", () => {
       fetchTokens: expect.any(Function),
       createToken: expect.any(Function),
       resolveTokenKey: expect.any(Function),
+    })
+    expect(adapter.accountRefresh).toEqual({
+      fetchCheckInSupport: expect.any(Function),
+      refreshAccount: expect.any(Function),
     })
     expect(adapter.siteNotice).toBeUndefined()
     expect(adapter.siteAnnouncements).toBeUndefined()

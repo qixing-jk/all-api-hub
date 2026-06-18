@@ -2,6 +2,7 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 
 import type { SiteAdapter } from "../contracts/siteAdapter"
 import { newApiAccountCompletion } from "./accountCompletion"
+import { createNewApiAccountRefresh } from "./accountRefresh"
 import { createNewApiKeyManagement } from "./keyManagement"
 import { newApiSiteNotice } from "./siteNotice"
 
@@ -13,4 +14,5 @@ export const createNewApiAdapter = (
   siteNotice: newApiSiteNotice,
   accountCompletion: newApiAccountCompletion,
   keyManagement: createNewApiKeyManagement(siteType),
+  accountRefresh: createNewApiAccountRefresh(siteType),
 })
