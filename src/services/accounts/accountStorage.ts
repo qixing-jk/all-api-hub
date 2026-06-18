@@ -7,7 +7,6 @@ import {
   collectDuplicateAccountNameKeys,
   resolveAccountDisplayName,
 } from "~/services/accounts/utils/accountDisplayName"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { RefreshAccountResult } from "~/services/apiService/common/type"
 import {
   ACCOUNT_STORAGE_KEYS,
@@ -1076,6 +1075,7 @@ class AccountStorageService {
         refreshToken: account.sub2apiAuth?.refreshToken,
         tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
       }
+      const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
       const accountRefresh = getSiteAdapter(account.site_type).accountRefresh
 
       // Refresh check-in support status together with account refresh.
@@ -1110,7 +1110,7 @@ class AccountStorageService {
       // 刷新账号数据
       const result = accountRefresh
         ? await accountRefresh.refreshAccount({
-            baseUrl: account.site_url,
+            baseUrl,
             accountId: account.id,
             checkIn: checkInForRefresh,
             auth,

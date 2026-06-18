@@ -45,18 +45,15 @@ vi.mock("~/services/apiService/sub2api/tokenResync", () => ({
     resyncSub2ApiAuthTokenMock(...args),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAccountById: (...args: any[]) => getAccountByIdMock(...args),
-    updateAccount: (...args: any[]) => updateAccountMock(...args),
-  },
-}))
-
 const createRequest = (
   overrides: Partial<ApiServiceRequest> = {},
 ): ApiServiceRequest => ({
   baseUrl: "https://sub2.example.com",
   accountId: "acc-1",
+  accountAuthStore: {
+    getAccountById: (...args: any[]) => getAccountByIdMock(...args),
+    updateAccount: (...args: any[]) => updateAccountMock(...args),
+  },
   auth: {
     authType: AuthTypeEnum.AccessToken,
     userId: "1",

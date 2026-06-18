@@ -1856,6 +1856,29 @@ describe("accountStorage core behaviors", () => {
     expect(updatedAccount?.health?.status).toBe(SiteHealthStatus.Healthy)
   })
 
+  it("refreshAccount should route adapter refreshes with normalized base URLs", async () => {
+    const account = createAccount({
+      id: "pathful-refresh-url",
+      site_url: "https://pathful.example.com/dashboard?tab=usage",
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: { enableDetection: true },
+    })
+    seedStorage([account])
+
+    await accountStorage.refreshAccount("pathful-refresh-url", true)
+
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://pathful.example.com",
+      }),
+    )
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://pathful.example.com",
+      }),
+    )
+  })
+
   it("refreshAccount should persist an unhealthy state when account refresh is unsupported", async () => {
     const account = createAccount({
       id: "unsupported-refresh",

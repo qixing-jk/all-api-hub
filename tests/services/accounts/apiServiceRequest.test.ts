@@ -77,13 +77,27 @@ describe("fetchDisplayAccountTokens", () => {
     const result = await fetchDisplayAccountTokens(ACCOUNT as any)
 
     expect(result).toEqual([{ id: 1, key: "sk-test", status: 1 }])
-    expect(fetchTokens).toHaveBeenCalledWith(REQUEST)
+    expect(fetchTokens).toHaveBeenCalledWith(expect.objectContaining(REQUEST))
     expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual({
       service,
       adapter,
       keyManagement,
-      request: REQUEST,
+      request: expect.objectContaining(REQUEST),
     })
+  })
+
+  it("injects a narrow Sub2API auth store into account-scoped requests", async () => {
+    fetchTokens.mockResolvedValue([])
+
+    await fetchDisplayAccountTokens(ACCOUNT as any)
+
+    const request = fetchTokens.mock.calls[0]?.[0]
+    expect(request?.accountAuthStore?.getAccountById).toEqual(
+      expect.any(Function),
+    )
+    expect(request?.accountAuthStore?.updateAccount).toEqual(
+      expect.any(Function),
+    )
   })
 
   it("throws InvalidTokenPayloadError when the API payload is not an array", async () => {
@@ -118,7 +132,10 @@ describe("fetchDisplayAccountTokens", () => {
     )
 
     expect(result).toBe(token)
-    expect(resolveTokenKey).toHaveBeenCalledWith({ request: REQUEST, token })
+    expect(resolveTokenKey).toHaveBeenCalledWith({
+      request: expect.objectContaining(REQUEST),
+      token,
+    })
   })
 
   it("clones the token when the resolved secret key differs from the masked key", async () => {
@@ -137,7 +154,10 @@ describe("fetchDisplayAccountTokens", () => {
       name: "Masked",
     })
     expect(result).not.toBe(token)
-    expect(resolveTokenKey).toHaveBeenCalledWith({ request: REQUEST, token })
+    expect(resolveTokenKey).toHaveBeenCalledWith({
+      request: expect.objectContaining(REQUEST),
+      token,
+    })
   })
 
   it("returns a transient sk-prefixed secret for optional-prefix compatible account types", async () => {

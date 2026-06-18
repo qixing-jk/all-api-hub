@@ -9,24 +9,50 @@ const {
   commonFetchAccountTokens,
   commonResolveApiTokenKey,
   commonExtractDefaultExchangeRate,
+  commonFetchSiteNotice,
   aihubmixFetchAccountTokens,
   oneHubFetchModelPricing,
   oneHubFetchAccountTokens,
   wongResolveApiTokenKey,
   sub2apiFetchUserInfo,
   sub2apiExtractDefaultExchangeRate,
+  sub2apiFetchSub2ApiRuntimeModels,
+  sub2apiFetchSub2ApiAnnouncements,
+  sub2apiMarkSub2ApiAnnouncementRead,
+  sub2apiFetchAccountTokens,
+  sub2apiCreateApiToken,
+  sub2apiResolveApiTokenKey,
+  sub2apiFetchSupportCheckIn,
+  sub2apiRefreshAccountData,
+  aihubmixCreateApiToken,
+  aihubmixResolveApiTokenKey,
+  aihubmixFetchSupportCheckIn,
+  aihubmixRefreshAccountData,
 } = vi.hoisted(() => ({
   commonFetchUserInfo: vi.fn(),
   commonFetchModelPricing: vi.fn(),
   commonFetchAccountTokens: vi.fn(),
   commonResolveApiTokenKey: vi.fn(),
   commonExtractDefaultExchangeRate: vi.fn(),
+  commonFetchSiteNotice: vi.fn(),
   aihubmixFetchAccountTokens: vi.fn(),
   oneHubFetchModelPricing: vi.fn(),
   oneHubFetchAccountTokens: vi.fn(),
   wongResolveApiTokenKey: vi.fn(),
   sub2apiFetchUserInfo: vi.fn(),
   sub2apiExtractDefaultExchangeRate: vi.fn(),
+  sub2apiFetchSub2ApiRuntimeModels: vi.fn(),
+  sub2apiFetchSub2ApiAnnouncements: vi.fn(),
+  sub2apiMarkSub2ApiAnnouncementRead: vi.fn(),
+  sub2apiFetchAccountTokens: vi.fn(),
+  sub2apiCreateApiToken: vi.fn(),
+  sub2apiResolveApiTokenKey: vi.fn(),
+  sub2apiFetchSupportCheckIn: vi.fn(),
+  sub2apiRefreshAccountData: vi.fn(),
+  aihubmixCreateApiToken: vi.fn(),
+  aihubmixResolveApiTokenKey: vi.fn(),
+  aihubmixFetchSupportCheckIn: vi.fn(),
+  aihubmixRefreshAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/common", () => ({
@@ -35,6 +61,7 @@ vi.mock("~/services/apiService/common", () => ({
   fetchAccountTokens: commonFetchAccountTokens,
   resolveApiTokenKey: commonResolveApiTokenKey,
   extractDefaultExchangeRate: commonExtractDefaultExchangeRate,
+  fetchSiteNotice: commonFetchSiteNotice,
 }))
 
 vi.mock("~/services/apiService/oneHub", () => ({
@@ -45,6 +72,10 @@ vi.mock("~/services/apiService/oneHub", () => ({
 
 vi.mock("~/services/apiService/aihubmix", () => ({
   fetchAccountTokens: aihubmixFetchAccountTokens,
+  createApiToken: aihubmixCreateApiToken,
+  resolveApiTokenKey: aihubmixResolveApiTokenKey,
+  fetchSupportCheckIn: aihubmixFetchSupportCheckIn,
+  refreshAccountData: aihubmixRefreshAccountData,
 }))
 
 vi.mock("~/services/apiService/wong", () => ({
@@ -54,6 +85,14 @@ vi.mock("~/services/apiService/wong", () => ({
 vi.mock("~/services/apiService/sub2api", () => ({
   fetchUserInfo: sub2apiFetchUserInfo,
   extractDefaultExchangeRate: sub2apiExtractDefaultExchangeRate,
+  fetchSub2ApiRuntimeModels: sub2apiFetchSub2ApiRuntimeModels,
+  fetchSub2ApiAnnouncements: sub2apiFetchSub2ApiAnnouncements,
+  markSub2ApiAnnouncementRead: sub2apiMarkSub2ApiAnnouncementRead,
+  fetchAccountTokens: sub2apiFetchAccountTokens,
+  createApiToken: sub2apiCreateApiToken,
+  resolveApiTokenKey: sub2apiResolveApiTokenKey,
+  fetchSupportCheckIn: sub2apiFetchSupportCheckIn,
+  refreshAccountData: sub2apiRefreshAccountData,
   // Intentionally omit fetchModelPricing so strict override behavior can be asserted.
 }))
 

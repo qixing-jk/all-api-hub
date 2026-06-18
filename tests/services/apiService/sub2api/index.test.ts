@@ -72,13 +72,6 @@ vi.mock("~/services/apiService/sub2api/tokenResync", () => ({
   resyncSub2ApiAuthToken: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAccountById: (...args: any[]) => mockGetAccountById(...args),
-    updateAccount: (...args: any[]) => mockUpdateAccount(...args),
-  },
-}))
-
 describe("apiService sub2api parsing", () => {
   it("convertUsdBalanceToQuota rounds using conversion factor", () => {
     expect(convertUsdBalanceToQuota(0)).toBe(0)
@@ -1063,6 +1056,10 @@ describe("apiService sub2api refreshAccountData", () => {
     const result = await refreshAccountData(
       createRequest({
         accountId: "account-1",
+        accountAuthStore: {
+          getAccountById: (...args: any[]) => mockGetAccountById(...args),
+          updateAccount: (...args: any[]) => mockUpdateAccount(...args),
+        },
         auth: {
           authType: AuthTypeEnum.AccessToken,
           accessToken: "stale-request-jwt",
@@ -2014,6 +2011,10 @@ describe("apiService sub2api exported operations", () => {
       fetchAccountTokens({
         ...baseRequest,
         accountId: "account-1",
+        accountAuthStore: {
+          getAccountById: (...args: any[]) => mockGetAccountById(...args),
+          updateAccount: (...args: any[]) => mockUpdateAccount(...args),
+        },
         auth: {
           authType: AuthTypeEnum.AccessToken,
           accessToken: "request-jwt",

@@ -1,3 +1,4 @@
+import { accountStorage } from "~/services/accounts/accountStorage"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { getApiService } from "~/services/apiService"
@@ -64,6 +65,7 @@ const buildApiRequestFromDisplayAccount = (
 ): ApiServiceRequest => ({
   baseUrl: account.baseUrl,
   accountId: account.id,
+  accountAuthStore: accountStorage,
   auth: {
     authType: account.authType,
     userId: account.userId,

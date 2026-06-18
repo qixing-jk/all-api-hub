@@ -500,8 +500,8 @@ import {
 } from "~/services/apiService/sub2api"
 
 export const sub2ApiAccountRefresh: AccountRefreshCapability = {
-  fetchCheckInSupport,
-  refreshAccount: refreshAccountData,
+  fetchCheckInSupport: (request) => fetchSupportCheckIn(request),
+  refreshAccount: (request) => refreshAccountData(request),
 }
 ```
 
@@ -547,8 +547,8 @@ import {
 } from "~/services/apiService/aihubmix"
 
 export const aihubmixAccountRefresh: AccountRefreshCapability = {
-  fetchCheckInSupport,
-  refreshAccount: refreshAccountData,
+  fetchCheckInSupport: (request) => fetchSupportCheckIn(request),
+  refreshAccount: (request) => refreshAccountData(request),
 }
 ```
 
