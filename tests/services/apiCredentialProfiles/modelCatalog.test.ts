@@ -27,7 +27,6 @@ const {
   fetchSub2ApiAvailableGroupsMock,
   fetchSub2ApiGroupRatesMock,
   fetchSub2ApiRuntimeModelsMock,
-  getApiServiceMock,
   getSiteAdapterMock,
   loadModelPriceTableMock,
   resolveDisplayAccountTokenForSecretMock,
@@ -39,14 +38,9 @@ const {
   fetchSub2ApiAvailableGroupsMock: vi.fn(),
   fetchSub2ApiGroupRatesMock: vi.fn(),
   fetchSub2ApiRuntimeModelsMock: vi.fn(),
-  getApiServiceMock: vi.fn(),
   getSiteAdapterMock: vi.fn(),
   loadModelPriceTableMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: (...args: unknown[]) => getApiServiceMock(...args),
 }))
 
 vi.mock("~/services/aiApi/anthropic", () => ({
@@ -154,7 +148,6 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     fetchSub2ApiAvailableGroupsMock.mockReset()
     fetchSub2ApiGroupRatesMock.mockReset()
     fetchSub2ApiRuntimeModelsMock.mockReset()
-    getApiServiceMock.mockReset()
     getSiteAdapterMock.mockReset()
     loadModelPriceTableMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockReset()
@@ -293,9 +286,12 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
         },
       ],
     }
-    const fetchModelPricingMock = vi.fn().mockResolvedValueOnce(aihubmixPricing)
-    getApiServiceMock.mockReturnValueOnce({
-      fetchModelPricing: fetchModelPricingMock,
+    const fetchPricingMock = vi.fn().mockResolvedValueOnce(aihubmixPricing)
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.AIHUBMIX,
+      modelPricing: {
+        fetchPricing: fetchPricingMock,
+      },
     })
     resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
       new Error("AIHubMix cannot reveal masked keys"),
@@ -315,9 +311,8 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     })
 
     expect(result).toBe(aihubmixPricing)
-    expect(getApiServiceMock).toHaveBeenCalledWith(SITE_TYPES.AIHUBMIX)
-    expect(getSiteAdapterMock).not.toHaveBeenCalled()
-    expect(fetchModelPricingMock).toHaveBeenCalledWith({
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.AIHUBMIX)
+    expect(fetchPricingMock).toHaveBeenCalledWith({
       baseUrl: "https://aihubmix.com",
       accountId: "account-1",
       auth: {
@@ -327,6 +322,30 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
         cookie: undefined,
       },
     })
+    expect(resolveDisplayAccountTokenForSecretMock).not.toHaveBeenCalled()
+    expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
+  })
+
+  it("sanitizes a missing AIHubMix model pricing capability failure", async () => {
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+
+    await expect(
+      loadAccountTokenFallbackPricingResponse({
+        account: {
+          ...ACCOUNT,
+          siteType: SITE_TYPES.AIHUBMIX,
+          baseUrl: "https://aihubmix.com",
+        },
+        token: {
+          ...TOKEN,
+          key: "sk-****masked",
+          models: "",
+        },
+      }),
+    ).rejects.toThrow("modelPricing is not implemented for AIHubMix")
+
     expect(resolveDisplayAccountTokenForSecretMock).not.toHaveBeenCalled()
     expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
   })

@@ -9,7 +9,6 @@ import {
   applySub2ApiPriceEstimates,
   resolveSub2ApiKeyGroupForPriceEstimation,
 } from "~/services/apiCredentialProfiles/sub2apiPriceEstimation"
-import { getApiService } from "~/services/apiService"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -58,6 +57,9 @@ export const ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED =
 const createMissingModelCatalogCapabilityError = () =>
   new Error("modelCatalog is not implemented for sub2api")
 
+const createMissingModelPricingCapabilityError = (siteType: string) =>
+  new Error(`modelPricing is not implemented for ${siteType}`)
+
 /**
  * Fetch raw model ids using a stored API credential profile.
  */
@@ -99,23 +101,20 @@ export async function loadAccountTokenFallbackPricingResponse(
   params: LoadAccountTokenFallbackPricingParams,
 ): Promise<PricingResponse> {
   const declaredModelIds = parseDelimitedList(params.token.models)
-
-  if (params.account.siteType === SITE_TYPES.AIHUBMIX) {
-    return getApiService(params.account.siteType).fetchModelPricing({
-      baseUrl: params.account.baseUrl,
-      accountId: params.account.id,
-      auth: {
-        authType: params.account.authType,
-        userId: params.account.userId,
-        accessToken: params.account.token,
-        cookie: params.account.cookieAuthSessionCookie,
-      },
-    })
-  }
-
   let resolvedTokenKey = ""
 
   try {
+    if (params.account.siteType === SITE_TYPES.AIHUBMIX) {
+      const adapter = getSiteAdapter(params.account.siteType)
+      if (!adapter.modelPricing) {
+        throw createMissingModelPricingCapabilityError(params.account.siteType)
+      }
+
+      return await adapter.modelPricing.fetchPricing(
+        createAccountModelPricingRequest(params.account),
+      )
+    }
+
     const resolvedToken = await resolveDisplayAccountTokenForSecret(
       params.account,
       params.token,
@@ -278,6 +277,19 @@ const createSub2ApiDashboardRequest = (
   accountId: account.id,
   auth: {
     authType: AuthTypeEnum.AccessToken,
+    userId: account.userId,
+    accessToken: account.token,
+    cookie: account.cookieAuthSessionCookie,
+  },
+})
+
+const createAccountModelPricingRequest = (
+  account: LoadAccountTokenFallbackPricingParams["account"],
+): ApiServiceRequest => ({
+  baseUrl: account.baseUrl,
+  accountId: account.id,
+  auth: {
+    authType: account.authType,
     userId: account.userId,
     accessToken: account.token,
     cookie: account.cookieAuthSessionCookie,
