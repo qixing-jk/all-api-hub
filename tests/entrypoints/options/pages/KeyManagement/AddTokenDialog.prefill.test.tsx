@@ -55,11 +55,21 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
-    createApiToken: (...args: any[]) => createApiTokenMock(...args),
     updateApiToken: (...args: any[]) => updateApiTokenMock(...args),
     fetchAccountAvailableModels: (...args: any[]) =>
       fetchAccountAvailableModelsMock(...args),
     fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
+  }),
+}))
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: () => ({
+    keyManagement: {
+      fetchTokens: vi.fn(async () => []),
+      createToken: (...args: any[]) => createApiTokenMock(...args),
+      resolveTokenKey: async ({ token }: { token: { key: string } }) =>
+        token.key,
+    },
   }),
 }))
 

@@ -55,12 +55,19 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
-    fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-    createApiToken: (...args: any[]) => createApiTokenMock(...args),
     fetchAccountAvailableModels: (...args: any[]) =>
       fetchAccountAvailableModelsMock(...args),
     fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
-    resolveApiTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
+  }),
+}))
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: () => ({
+    keyManagement: {
+      fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+      createToken: (...args: any[]) => createApiTokenMock(...args),
+      resolveTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
+    },
   }),
 }))
 
@@ -150,7 +157,7 @@ describe("CopyKeyDialog", () => {
     })
     completeProductAnalyticsActionMock.mockResolvedValue(undefined)
     resolveApiTokenKeyMock.mockImplementation(
-      async (_request, token: { key: string }) => token.key,
+      async ({ token }: { token: { key: string } }) => token.key,
     )
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
@@ -356,6 +363,7 @@ describe("CopyKeyDialog", () => {
     expect(
       await screen.findByText("ui:dialog.copyKey.createFailed"),
     ).toBeInTheDocument()
+    expect(screen.queryByText("invalid_token_payload")).not.toBeInTheDocument()
   })
 
   it("shows a load error when the initial token inventory request fails", async () => {
@@ -368,16 +376,15 @@ describe("CopyKeyDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("handles a malformed initial token inventory as an empty list", async () => {
+  it("shows a load error when the initial token inventory is malformed", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce(null)
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
     expect(
-      await screen.findByRole("button", {
-        name: "ui:dialog.copyKey.createKey",
-      }),
+      await screen.findByText("ui:dialog.copyKey.loadFailed"),
     ).toBeInTheDocument()
+    expect(screen.queryByText("invalid_token_payload")).not.toBeInTheDocument()
     expect(screen.queryByText("default")).not.toBeInTheDocument()
   })
 

@@ -5,7 +5,10 @@ import { useTranslation } from "react-i18next"
 import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  createDisplayAccountApiContext,
+  requireDisplayAccountKeyManagement,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -179,14 +182,17 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         allow_ips: formData.allowIps.trim() || "",
         group: formData.group,
       }
-      const { service, request } =
+      const { keyManagement, request, service } =
         createDisplayAccountApiContext(currentAccount)
 
       if (isEditMode && editingToken) {
         await service.updateApiToken(request, editingToken.id, tokenData)
         toast.success(t("dialog.updateSuccess"))
       } else {
-        const created = await service.createApiToken(request, tokenData)
+        const created = await requireDisplayAccountKeyManagement(
+          currentAccount,
+          keyManagement,
+        ).createToken(request, tokenData)
         const createdToken = isCreatedApiToken(created) ? created : undefined
         const displayCreatedToken = createdToken
           ? formatOptionalSkPrefixSiteToken(

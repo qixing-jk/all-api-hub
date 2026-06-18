@@ -36,7 +36,10 @@ import {
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  createDisplayAccountApiContext,
+  requireDisplayAccountKeyManagement,
+} from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
   AutoDetectError,
@@ -2207,10 +2210,13 @@ export function useAccountDialog({
       }
 
       try {
-        const { service, request } = createDisplayAccountApiContext(
+        const { keyManagement, request } = createDisplayAccountApiContext(
           pending.displaySiteData,
         )
-        const fetchedTokens = await service.fetchAccountTokens(request)
+        const fetchedTokens = await requireDisplayAccountKeyManagement(
+          pending.displaySiteData,
+          keyManagement,
+        ).fetchTokens(request)
         if (postSaveAutoConfigRunRef.current !== runId) {
           return
         }

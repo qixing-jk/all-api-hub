@@ -8,6 +8,9 @@ import { resolveSub2ApiQuickCreateResolution } from "~/services/accounts/account
 import {
   canManageDisplayAccountTokens,
   createDisplayAccountApiContext,
+  fetchDisplayAccountTokens,
+  InvalidTokenPayloadError,
+  requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
@@ -40,6 +43,9 @@ const isCreatedApiToken = (value: unknown): value is ApiToken =>
   typeof value === "object" &&
   typeof (value as Partial<ApiToken>).id === "number" &&
   typeof (value as Partial<ApiToken>).key === "string"
+
+const getTokenInventoryErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof InvalidTokenPayloadError ? fallback : getErrorMessage(error)
 
 /**
  * CopyKeyDialog 核心逻辑 hook，负责加载 token、处理复制与展开状态。
@@ -92,19 +98,8 @@ export function useCopyKeyDialog(
     clearSub2ApiCreateAllowedGroups()
 
     try {
-      const { service, request } = createDisplayAccountApiContext(account)
-      const tokensResponse = await service.fetchAccountTokens(request)
-      if (Array.isArray(tokensResponse)) {
-        setTokens(tokensResponse)
-      } else {
-        logger.warn("Token response is not an array", {
-          accountId: account.id,
-          baseUrl: account.baseUrl,
-          responseType: typeof tokensResponse,
-          siteType: account.siteType,
-        })
-        setTokens([])
-      }
+      const tokensResponse = await fetchDisplayAccountTokens(account)
+      setTokens(tokensResponse)
     } catch (error) {
       logger.error("Failed to load key list", {
         error,
@@ -112,7 +107,10 @@ export function useCopyKeyDialog(
         baseUrl: account.baseUrl,
         siteType: account.siteType,
       })
-      const errorMessage = getErrorMessage(error)
+      const errorMessage = getTokenInventoryErrorMessage(
+        error,
+        t("ui:dialog.copyKey.getFailed"),
+      )
       setError(t("ui:dialog.copyKey.loadFailed", { error: errorMessage }))
     } finally {
       setIsLoading(false)
@@ -222,12 +220,7 @@ export function useCopyKeyDialog(
           return
         }
 
-        const { service, request } = createDisplayAccountApiContext(account)
-        const refreshedTokens = await service.fetchAccountTokens(request)
-        if (!Array.isArray(refreshedTokens)) {
-          throw new Error("token_refresh_failed")
-        }
-
+        const refreshedTokens = await fetchDisplayAccountTokens(account)
         setTokens(refreshedTokens)
 
         if (refreshedTokens.length === 0) {
@@ -248,7 +241,10 @@ export function useCopyKeyDialog(
           baseUrl: account.baseUrl,
           siteType: account.siteType,
         })
-        const errorMessage = getErrorMessage(error)
+        const errorMessage = getTokenInventoryErrorMessage(
+          error,
+          t("ui:dialog.copyKey.getFailed"),
+        )
         setCreateError(
           t("ui:dialog.copyKey.createFailed", { error: errorMessage }),
         )
@@ -272,7 +268,7 @@ export function useCopyKeyDialog(
     clearSub2ApiCreateAllowedGroups()
 
     try {
-      const { service, request } = createDisplayAccountApiContext(account)
+      const { keyManagement, request } = createDisplayAccountApiContext(account)
       const tokenRequest = generateDefaultTokenRequest()
       if (account.siteType === "sub2api") {
         // Sub2API quick-create may skip the chooser only when the current
@@ -291,7 +287,10 @@ export function useCopyKeyDialog(
         tokenRequest.group = resolution.group
       }
 
-      const created = await service.createApiToken(request, tokenRequest)
+      const created = await requireDisplayAccountKeyManagement(
+        account,
+        keyManagement,
+      ).createToken(request, tokenRequest)
       if (!created) {
         throw new Error("create_token_failed")
       }

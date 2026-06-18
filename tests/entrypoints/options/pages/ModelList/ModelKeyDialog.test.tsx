@@ -64,11 +64,21 @@ vi.mock(
 
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
-    fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
     createApiToken: (...args: any[]) => createApiTokenMock(...args),
     fetchAccountAvailableModels: vi.fn(async () => []),
     fetchUserGroups: vi.fn(async () => ({})),
     updateApiToken: vi.fn(async () => true),
+  }),
+}))
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: () => ({
+    keyManagement: {
+      fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+      createToken: (...args: any[]) => createApiTokenMock(...args),
+      resolveTokenKey: async ({ token }: { token: { key: string } }) =>
+        token.key,
+    },
   }),
 }))
 

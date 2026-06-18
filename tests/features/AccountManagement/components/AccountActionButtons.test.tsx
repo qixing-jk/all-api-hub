@@ -94,14 +94,6 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({
-    fetchAccountTokens: fetchAccountTokensMock,
-    resolveApiTokenKey: async (_request: unknown, token: { key: string }) =>
-      token.key,
-  }),
-}))
-
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: getManagedSiteServiceMock,
   hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
@@ -179,11 +171,36 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
-  resolveDisplayAccountTokenForSecret: vi.fn(
-    async (_site: unknown, token: { key: string }) => token,
-  ),
-}))
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+
+    return {
+      ...actual,
+      fetchDisplayAccountTokens: async (...args: unknown[]) => {
+        const result = await fetchAccountTokensMock(...args)
+        if (Array.isArray(result)) {
+          return result
+        }
+
+        throw new actual.InvalidTokenPayloadError({
+          accountId: "test-account",
+          baseUrl: "https://example.com",
+          siteType: "test-site",
+          responseType: typeof result,
+        })
+      },
+      resolveDisplayAccountTokenForSecret: async (
+        _account: unknown,
+        token: { key: string },
+      ) => token,
+    }
+  },
+)
 
 describe("AccountActionButtons", () => {
   beforeEach(() => {
@@ -648,7 +665,7 @@ describe("AccountActionButtons", () => {
     await waitFor(() => {
       expect(fetchAccountTokensMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          accountId: "acc-single-key",
+          id: "acc-single-key",
         }),
       )
       expect(toastSuccessMock).toHaveBeenCalledWith("account:actions.keyCopied")

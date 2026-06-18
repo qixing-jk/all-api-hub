@@ -30,8 +30,11 @@ import { useDialogStateContext } from "~/features/AccountManagement/hooks/Dialog
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import { getApiService } from "~/services/apiService"
+import {
+  fetchDisplayAccountTokens,
+  InvalidTokenPayloadError,
+  resolveDisplayAccountTokenForSecret,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import {
   getManagedSiteChannelExactMatch,
@@ -343,61 +346,37 @@ export default function AccountActionButtons({
 
     try {
       // Fetch tokens to check count before deciding action
-      const tokensResponse = await getApiService(
-        site.siteType,
-      ).fetchAccountTokens({
-        baseUrl: site.baseUrl,
-        accountId: site.id,
-        auth: {
-          authType: site.authType,
-          userId: site.userId,
-          accessToken: site.token,
-          cookie: site.cookieAuthSessionCookie,
-        },
-      })
+      const tokensResponse = await fetchDisplayAccountTokens(site)
 
-      if (Array.isArray(tokensResponse)) {
-        if (tokensResponse.length === 1) {
-          // Single token - copy directly
-          const token = tokensResponse[0]
-          const resolvedToken = await resolveDisplayAccountTokenForSecret(
-            site,
-            token,
-          )
-          await navigator.clipboard.writeText(resolvedToken.key)
-          toast.success(t("actions.keyCopied"))
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: {
-              itemCount: tokensResponse.length,
-            },
-          })
-        } else if (tokensResponse.length > 1) {
-          // Multiple tokens - open dialog
-          onCopyKey(site)
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-            insights: {
-              itemCount: tokensResponse.length,
-            },
-          })
-        } else {
-          // No tokens found - open dialog for actionable empty state
-          onCopyKey(site)
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-            insights: {
-              itemCount: tokensResponse.length,
-            },
-          })
-        }
-      } else {
-        logger.warn("Token response is not an array", {
-          siteId: site.id,
-          baseUrl: site.baseUrl,
-          responseType: typeof tokensResponse,
-          siteType: site.siteType,
+      if (tokensResponse.length === 1) {
+        // Single token - copy directly
+        const token = tokensResponse[0]
+        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          site,
+          token,
+        )
+        await navigator.clipboard.writeText(resolvedToken.key)
+        toast.success(t("actions.keyCopied"))
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: {
+            itemCount: tokensResponse.length,
+          },
         })
-        toast.error(t("actions.fetchKeyInfoFailed"))
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      } else if (tokensResponse.length > 1) {
+        // Multiple tokens - open dialog
+        onCopyKey(site)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          insights: {
+            itemCount: tokensResponse.length,
+          },
+        })
+      } else {
+        // No tokens found - open dialog for actionable empty state
+        onCopyKey(site)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          insights: {
+            itemCount: tokensResponse.length,
+          },
         })
       }
     } catch (error) {
@@ -407,6 +386,14 @@ export default function AccountActionButtons({
         baseUrl: site.baseUrl,
         siteType: site.siteType,
       })
+      if (error instanceof InvalidTokenPayloadError) {
+        toast.error(t("actions.fetchKeyInfoFailed"))
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+        return
+      }
+
       const errorMessage = getErrorMessage(error)
       toast.error(t("actions.fetchKeyListFailed", { errorMessage }))
       // Fallback to opening dialog
@@ -477,24 +464,10 @@ export default function AccountActionButtons({
         }
       })
 
-      const tokensResponse = await getApiService(
-        site.siteType,
-      ).fetchAccountTokens({
+      const tokensResponse = await fetchDisplayAccountTokens({
+        ...site,
         baseUrl: accountBaseUrl,
-        accountId: site.id,
-        auth: {
-          authType: site.authType,
-          userId: site.userId,
-          accessToken: site.token,
-          cookie: site.cookieAuthSessionCookie,
-        },
       })
-
-      if (!Array.isArray(tokensResponse)) {
-        toast.error(t("actions.channelLocateFailed"))
-        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        return
-      }
 
       if (tokensResponse.length === 0) {
         return handleChannelLocateFallback(
