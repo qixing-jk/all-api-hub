@@ -1,8 +1,9 @@
 import { getAccountSiteApiRouter } from "~/constants/siteType"
 
-import type {
-  AccountBootstrapRouteKind,
-  AccountBootstrapRouteTarget,
+import {
+  ACCOUNT_BOOTSTRAP_ROUTE_KINDS,
+  type AccountBootstrapRouteKind,
+  type AccountBootstrapRouteTarget,
 } from "./contracts/accountBootstrap"
 
 /**
@@ -15,17 +16,17 @@ export function resolveStaticAccountRoutePath(
   const router = getAccountSiteApiRouter(target.siteType)
 
   switch (route) {
-    case "login":
+    case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Login:
       return router.loginPath
-    case "usage":
+    case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Usage:
       return router.usagePath ?? router.loginPath
-    case "checkIn":
+    case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.CheckIn:
       return router.checkInPath ?? router.loginPath
-    case "adminCredentials":
+    case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.AdminCredentials:
       return router.adminCredentialsPath ?? router.loginPath
-    case "redeem":
+    case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Redeem:
       return router.redeemPath ?? router.loginPath
-    case "siteAnnouncements":
+    case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.SiteAnnouncements:
       return router.siteAnnouncementsPath ?? router.loginPath
   }
 }

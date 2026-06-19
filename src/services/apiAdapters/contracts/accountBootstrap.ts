@@ -6,13 +6,17 @@ import type {
   UserInfo,
 } from "~/services/apiService/common/type"
 
+export const ACCOUNT_BOOTSTRAP_ROUTE_KINDS = {
+  Login: "login",
+  Usage: "usage",
+  CheckIn: "checkIn",
+  AdminCredentials: "adminCredentials",
+  Redeem: "redeem",
+  SiteAnnouncements: "siteAnnouncements",
+} as const
+
 export type AccountBootstrapRouteKind =
-  | "login"
-  | "usage"
-  | "checkIn"
-  | "adminCredentials"
-  | "redeem"
-  | "siteAnnouncements"
+  (typeof ACCOUNT_BOOTSTRAP_ROUTE_KINDS)[keyof typeof ACCOUNT_BOOTSTRAP_ROUTE_KINDS]
 
 export type AccountBootstrapRouteTarget = {
   baseUrl: string

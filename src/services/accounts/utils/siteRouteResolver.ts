@@ -6,21 +6,18 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
-import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
+import {
+  ACCOUNT_BOOTSTRAP_ROUTE_KINDS,
+  type AccountBootstrapCapability,
+  type AccountBootstrapRouteKind,
+} from "~/services/apiAdapters/contracts/accountBootstrap"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
 import { joinUrl } from "~/utils/core/url"
 
-export const SITE_ROUTE_KINDS = {
-  Login: "login",
-  Usage: "usage",
-  CheckIn: "checkIn",
-  AdminCredentials: "adminCredentials",
-  Redeem: "redeem",
-  SiteAnnouncements: "siteAnnouncements",
-} as const
+export const SITE_ROUTE_KINDS = ACCOUNT_BOOTSTRAP_ROUTE_KINDS
 
-type SiteRouteKind = (typeof SITE_ROUTE_KINDS)[keyof typeof SITE_ROUTE_KINDS]
+type SiteRouteKind = AccountBootstrapRouteKind
 
 type RouteTarget = {
   baseUrl: string

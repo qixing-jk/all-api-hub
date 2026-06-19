@@ -1,7 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
 
 import type { SiteAdapter } from "../contracts/siteAdapter"
-import { sub2ApiAccountBootstrap } from "./accountBootstrap"
 import { sub2ApiAccountCompletion } from "./accountCompletion"
 import { sub2ApiAccountData } from "./accountData"
 import { sub2ApiAccountRefresh } from "./accountRefresh"

@@ -1,9 +1,9 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
 import { AuthTypeEnum } from "~/types"
 
 import type { AccountCompletionCapability } from "../contracts/accountCompletion"
-import { sub2ApiAccountBootstrap } from "./accountBootstrap"
 
 export const sub2ApiAccountCompletion: AccountCompletionCapability = {
   async complete(request, helpers) {

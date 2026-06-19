@@ -1,7 +1,9 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
 import { aihubmixAccountBootstrap } from "~/services/apiAdapters/aihubmix/accountBootstrap"
+import { ACCOUNT_BOOTSTRAP_ROUTE_KINDS } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/accountBootstrap"
 import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
 import { AuthTypeEnum } from "~/types"
@@ -71,6 +73,10 @@ const tokenInfo = { username: "tester", access_token: "token" }
 const siteStatus = { system_name: "Example Portal", checkin_enabled: true }
 
 describe("account bootstrap adapters", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("delegates New API-family bootstrap operations to the site API service", async () => {
     const accountBootstrap = createNewApiAccountBootstrap(SITE_TYPES.VELOERA)
     mockGetApiService.mockReturnValue({
@@ -102,7 +108,7 @@ describe("account bootstrap adapters", () => {
     await expect(
       accountBootstrap.resolveRoutePath(
         { baseUrl: "https://example.invalid", siteType: SITE_TYPES.VELOERA },
-        "checkIn",
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.CheckIn,
       ),
     ).resolves.toBe("/app/me")
 
@@ -112,6 +118,50 @@ describe("account bootstrap adapters", () => {
     expect(mockFetchSiteStatus).toHaveBeenCalledWith(request)
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(request)
     expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
+  })
+
+  it("resolves static account route paths from shared route kinds", () => {
+    const target = {
+      baseUrl: "https://sub2.example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+    }
+
+    expect(
+      resolveStaticAccountRoutePath(
+        target,
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Login,
+      ),
+    ).toBe("/login")
+    expect(
+      resolveStaticAccountRoutePath(
+        target,
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Usage,
+      ),
+    ).toBe("/usage")
+    expect(
+      resolveStaticAccountRoutePath(
+        target,
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.CheckIn,
+      ),
+    ).toBe("/console/personal")
+    expect(
+      resolveStaticAccountRoutePath(
+        target,
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.AdminCredentials,
+      ),
+    ).toBe("/console/personal")
+    expect(
+      resolveStaticAccountRoutePath(
+        target,
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Redeem,
+      ),
+    ).toBe("/redeem")
+    expect(
+      resolveStaticAccountRoutePath(
+        target,
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.SiteAnnouncements,
+      ),
+    ).toBe("/dashboard")
   })
 
   it("delegates Sub2API bootstrap operations to Sub2API helpers", async () => {
@@ -142,9 +192,18 @@ describe("account bootstrap adapters", () => {
           baseUrl: "https://sub2.example.invalid",
           siteType: SITE_TYPES.SUB2API,
         },
-        "login",
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Login,
       ),
     ).resolves.toBe("/login")
+    await expect(
+      sub2ApiAccountBootstrap.resolveRoutePath(
+        {
+          baseUrl: "https://sub2.example.invalid",
+          siteType: SITE_TYPES.SUB2API,
+        },
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.SiteAnnouncements,
+      ),
+    ).resolves.toBe("/dashboard")
 
     expect(mockSub2ApiFetchUserInfo).toHaveBeenCalledWith(request)
     expect(mockSub2ApiGetOrCreateAccessToken).toHaveBeenCalledWith(request)
@@ -184,7 +243,7 @@ describe("account bootstrap adapters", () => {
           baseUrl: "https://aihubmix.example.invalid",
           siteType: SITE_TYPES.AIHUBMIX,
         },
-        "login",
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Login,
       ),
     ).resolves.toBe("/sign-in")
 

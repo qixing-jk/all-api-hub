@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
 import {
   extractDefaultExchangeRate,
@@ -7,8 +8,6 @@ import {
   fetchUserInfo,
   getOrCreateAccessToken,
 } from "~/services/apiService/sub2api"
-
-import { resolveStaticAccountRoutePath } from "../accountRoutes"
 
 export const sub2ApiAccountBootstrap: AccountBootstrapCapability = {
   fetchUserInfo: (request) => fetchUserInfo(request),
