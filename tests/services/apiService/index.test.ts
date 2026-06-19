@@ -261,14 +261,12 @@ describe("apiService index wrapper", () => {
     expect(getApiService(undefined).capabilities).toEqual({
       keyManagement: true,
       modelPricing: true,
-      redeemCode: true,
       siteAnnouncements: true,
     })
 
     expect(getApiService(SITE_TYPES.ONE_HUB).capabilities).toEqual({
       keyManagement: true,
       modelPricing: true,
-      redeemCode: true,
       siteAnnouncements: true,
     })
   })
@@ -277,16 +275,14 @@ describe("apiService index wrapper", () => {
     expect(getApiService(SITE_TYPES.SUB2API).capabilities).toEqual({
       keyManagement: true,
       modelPricing: false,
-      redeemCode: false,
       siteAnnouncements: true,
     })
   })
 
-  it("should expose AIHubMix capability overrides", () => {
+  it("should expose AIHubMix default apiService capabilities", () => {
     expect(getApiService(SITE_TYPES.AIHUBMIX).capabilities).toEqual({
       keyManagement: true,
       modelPricing: true,
-      redeemCode: false,
       siteAnnouncements: true,
     })
   })

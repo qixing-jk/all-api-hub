@@ -41,7 +41,6 @@ const strictOverrideSites = new Set<ApiOverrideSite>([
 type ApiServiceCapabilities = {
   keyManagement: boolean
   modelPricing: boolean
-  redeemCode: boolean
   siteAnnouncements: boolean
 }
 
@@ -50,7 +49,6 @@ type ApiServiceCapabilityOverrides = Partial<ApiServiceCapabilities>
 const defaultApiServiceCapabilities: ApiServiceCapabilities = {
   keyManagement: true,
   modelPricing: true,
-  redeemCode: true,
   siteAnnouncements: true,
 }
 
@@ -59,10 +57,6 @@ const siteCapabilityOverrides: Partial<
 > = {
   [SITE_TYPES.SUB2API]: {
     modelPricing: false,
-    redeemCode: false,
-  },
-  [SITE_TYPES.AIHUBMIX]: {
-    redeemCode: false,
   },
 }
 

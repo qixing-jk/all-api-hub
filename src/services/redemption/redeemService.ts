@@ -1,6 +1,6 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { getApiService } from "~/services/apiService"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { formatMoneyFixed } from "~/utils/core/money"
@@ -9,7 +9,7 @@ import { t } from "~/utils/i18n/core"
 interface RedeemResult {
   success: boolean
   message: string
-  creditedAmount?: number
+  creditedAmount?: unknown
   account?: DisplaySiteData
 }
 
@@ -44,16 +44,16 @@ class RedeemService {
         }
       }
 
-      const service = getApiService(account.site_type)
-      if (!service.capabilities.redeemCode) {
+      const redemption = getSiteAdapter(account.site_type).redemption
+      if (!redemption) {
         return {
           success: false,
           message: t("redemptionAssist:messages.redeemFailed"),
         }
       }
 
-      const creditedAmount = await service.redeemCode(
-        {
+      const creditedAmount = await redemption.redeem({
+        request: {
           baseUrl: account.site_url,
           accountId,
           auth: {
@@ -64,7 +64,7 @@ class RedeemService {
           },
         },
         code,
-      )
+      })
 
       const displayAccount =
         (await accountStorage.getDisplayDataById(accountId)) ??

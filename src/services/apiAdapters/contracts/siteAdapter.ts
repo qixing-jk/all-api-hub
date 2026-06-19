@@ -7,6 +7,7 @@ import type { AccountRefreshCapability } from "./accountRefresh"
 import type { KeyManagementCapability } from "./keyManagement"
 import type { ModelCatalogCapability } from "./modelCatalog"
 import type { ModelPricingCapability } from "./modelPricing"
+import type { RedemptionCapability } from "./redemption"
 import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
 import type { SiteNoticeCapability } from "./siteNotice"
 
@@ -24,4 +25,5 @@ export type SiteAdapter = {
   accountCompletion?: AccountCompletionCapability
   keyManagement?: KeyManagementCapability
   accountRefresh?: AccountRefreshCapability
+  redemption?: RedemptionCapability
 }

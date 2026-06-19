@@ -7,6 +7,7 @@ import { createNewApiAccountData } from "./accountData"
 import { createNewApiAccountRefresh } from "./accountRefresh"
 import { createNewApiKeyManagement } from "./keyManagement"
 import { createNewApiModelPricing } from "./modelPricing"
+import { createNewApiRedemption } from "./redemption"
 import { newApiSiteNotice } from "./siteNotice"
 
 export const createNewApiAdapter = (
@@ -21,4 +22,5 @@ export const createNewApiAdapter = (
   keyManagement: createNewApiKeyManagement(siteType),
   accountRefresh: createNewApiAccountRefresh(siteType),
   modelPricing: createNewApiModelPricing(siteType),
+  redemption: createNewApiRedemption(siteType),
 })

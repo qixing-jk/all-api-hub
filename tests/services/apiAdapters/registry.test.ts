@@ -48,6 +48,7 @@ describe("apiAdapters registry", () => {
       fetchData: expect.any(Function),
     })
     expect(adapter.modelPricing).toBeUndefined()
+    expect(adapter.redemption).toBeUndefined()
     expect(adapter.siteNotice).toBeUndefined()
   })
 
@@ -108,6 +109,9 @@ describe("apiAdapters registry", () => {
       expect(adapter.modelPricing).toEqual({
         fetchPricing: expect.any(Function),
       })
+      expect(adapter.redemption).toEqual({
+        redeem: expect.any(Function),
+      })
       expect(adapter.siteAnnouncements).toBeUndefined()
       expect(adapter.modelCatalog).toBeUndefined()
     }
@@ -149,6 +153,7 @@ describe("apiAdapters registry", () => {
     expect(adapter.modelPricing).toEqual({
       fetchPricing: expect.any(Function),
     })
+    expect(adapter.redemption).toBeUndefined()
     expect(adapter.siteNotice).toBeUndefined()
     expect(adapter.siteAnnouncements).toBeUndefined()
     expect(adapter.modelCatalog).toBeUndefined()

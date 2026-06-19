@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { getApiService } from "~/services/apiService"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { redeemService } from "~/services/redemption/redeemService"
 
 vi.mock("~/services/accounts/accountStorage", () => ({
@@ -13,8 +13,8 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(),
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: vi.fn(),
 }))
 
 describe("redeemService.redeemCodeForAccount", () => {
@@ -31,7 +31,7 @@ describe("redeemService.redeemCodeForAccount", () => {
 
     expect(result.success).toBe(false)
     expect(result.message).toBe("messages:storage.accountNotFound")
-    expect(getApiService).not.toHaveBeenCalled()
+    expect(getSiteAdapter).not.toHaveBeenCalled()
   })
 
   it("rejects disabled accounts and does not call the API service", async () => {
@@ -50,7 +50,7 @@ describe("redeemService.redeemCodeForAccount", () => {
 
     expect(result.success).toBe(false)
     expect(result.message).toBe("messages:storage.accountDisabled")
-    expect(getApiService).not.toHaveBeenCalled()
+    expect(getSiteAdapter).not.toHaveBeenCalled()
   })
 
   it("redeems successfully and prefers stored display data when available", async () => {
@@ -72,7 +72,7 @@ describe("redeemService.redeemCodeForAccount", () => {
       id: "account-1",
       site_name: "Example Site",
     }
-    const redeemCode = vi.fn().mockResolvedValue(12345)
+    const redeem = vi.fn().mockResolvedValue(12345)
 
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
@@ -80,18 +80,17 @@ describe("redeemService.redeemCodeForAccount", () => {
     ;(
       accountStorage.getDisplayDataById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValueOnce(displayData)
-    ;(getApiService as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      capabilities: {
-        redeemCode: true,
+    ;(getSiteAdapter as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      redemption: {
+        redeem,
       },
-      redeemCode,
     })
 
     const result = await redeemService.redeemCodeForAccount("account-1", "CODE")
 
-    expect(getApiService).toHaveBeenCalledWith("new-api")
-    expect(redeemCode).toHaveBeenCalledWith(
-      {
+    expect(getSiteAdapter).toHaveBeenCalledWith("new-api")
+    expect(redeem).toHaveBeenCalledWith({
+      request: {
         baseUrl: "https://example.com",
         accountId: "account-1",
         auth: {
@@ -101,8 +100,8 @@ describe("redeemService.redeemCodeForAccount", () => {
           cookie: "session=abc",
         },
       },
-      "CODE",
-    )
+      code: "CODE",
+    })
     expect(accountStorage.getDisplayDataById).toHaveBeenCalledWith("account-1")
     expect(accountStorage.convertToDisplayData).not.toHaveBeenCalled()
     expect(result).toEqual({
@@ -129,7 +128,7 @@ describe("redeemService.redeemCodeForAccount", () => {
       id: "account-2",
       site_name: "Converted Site",
     }
-    const redeemCode = vi.fn().mockResolvedValue("unexpected")
+    const redeem = vi.fn().mockResolvedValue("unexpected")
 
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
@@ -140,17 +139,16 @@ describe("redeemService.redeemCodeForAccount", () => {
     ;(
       accountStorage.convertToDisplayData as unknown as ReturnType<typeof vi.fn>
     ).mockReturnValueOnce(convertedDisplayData)
-    ;(getApiService as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      capabilities: {
-        redeemCode: true,
+    ;(getSiteAdapter as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      redemption: {
+        redeem,
       },
-      redeemCode,
     })
 
     const result = await redeemService.redeemCodeForAccount("account-2", "CODE")
 
-    expect(redeemCode).toHaveBeenCalledWith(
-      {
+    expect(redeem).toHaveBeenCalledWith({
+      request: {
         baseUrl: "https://one-api.example.com",
         accountId: "account-2",
         auth: {
@@ -160,8 +158,8 @@ describe("redeemService.redeemCodeForAccount", () => {
           cookie: undefined,
         },
       },
-      "CODE",
-    )
+      code: "CODE",
+    })
     expect(accountStorage.convertToDisplayData).toHaveBeenCalledWith(account)
     expect(result).toEqual({
       success: true,
@@ -183,16 +181,15 @@ describe("redeemService.redeemCodeForAccount", () => {
         access_token: "token-3",
       },
     }
-    const redeemCode = vi.fn().mockRejectedValue(new Error("backend exploded"))
+    const redeem = vi.fn().mockRejectedValue(new Error("backend exploded"))
 
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValueOnce(account)
-    ;(getApiService as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      capabilities: {
-        redeemCode: true,
+    ;(getSiteAdapter as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      redemption: {
+        redeem,
       },
-      redeemCode,
     })
 
     const result = await redeemService.redeemCodeForAccount("account-3", "CODE")
@@ -216,16 +213,15 @@ describe("redeemService.redeemCodeForAccount", () => {
       },
     }
     const blankError = new Error("")
-    const redeemCode = vi.fn().mockRejectedValue(blankError)
+    const redeem = vi.fn().mockRejectedValue(blankError)
 
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValueOnce(account)
-    ;(getApiService as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      capabilities: {
-        redeemCode: true,
+    ;(getSiteAdapter as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      redemption: {
+        redeem,
       },
-      redeemCode,
     })
 
     const result = await redeemService.redeemCodeForAccount("account-4", "CODE")
@@ -248,17 +244,12 @@ describe("redeemService.redeemCodeForAccount", () => {
         access_token: "token-sub2api",
       },
     }
-    const redeemCode = vi.fn()
+    const redeem = vi.fn()
 
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValueOnce(account)
-    ;(getApiService as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      capabilities: {
-        redeemCode: false,
-      },
-      redeemCode,
-    })
+    ;(getSiteAdapter as unknown as ReturnType<typeof vi.fn>).mockReturnValue({})
 
     const result = await redeemService.redeemCodeForAccount("sub2api-1", "CODE")
 
@@ -266,7 +257,7 @@ describe("redeemService.redeemCodeForAccount", () => {
       success: false,
       message: "redemptionAssist:messages.redeemFailed",
     })
-    expect(redeemCode).not.toHaveBeenCalled()
+    expect(redeem).not.toHaveBeenCalled()
   })
 
   it("returns a local failure for unsupported AIHubMix redemption", async () => {
@@ -281,17 +272,12 @@ describe("redeemService.redeemCodeForAccount", () => {
         access_token: "token-aihubmix",
       },
     }
-    const redeemCode = vi.fn()
+    const redeem = vi.fn()
 
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValueOnce(account)
-    ;(getApiService as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      capabilities: {
-        redeemCode: false,
-      },
-      redeemCode,
-    })
+    ;(getSiteAdapter as unknown as ReturnType<typeof vi.fn>).mockReturnValue({})
 
     const result = await redeemService.redeemCodeForAccount(
       "aihubmix-1",
@@ -302,6 +288,6 @@ describe("redeemService.redeemCodeForAccount", () => {
       success: false,
       message: "redemptionAssist:messages.redeemFailed",
     })
-    expect(redeemCode).not.toHaveBeenCalled()
+    expect(redeem).not.toHaveBeenCalled()
   })
 })
