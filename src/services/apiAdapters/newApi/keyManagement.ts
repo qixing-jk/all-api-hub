@@ -19,5 +19,11 @@ export function createNewApiKeyManagement(
       getApiService(siteType).createApiToken(request, tokenData),
     resolveTokenKey: ({ request, token }) =>
       getApiService(siteType).resolveApiTokenKey(request, token),
+    deleteToken: ({ request, tokenId }) =>
+      getApiService(siteType).deleteApiToken(request, tokenId),
+    fetchUserGroups: (request) =>
+      getApiService(siteType).fetchUserGroups(request),
+    fetchAvailableModels: (request) =>
+      getApiService(siteType).fetchAccountAvailableModels(request),
   }
 }

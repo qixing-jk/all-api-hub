@@ -2,6 +2,7 @@ import type {
   ApiServiceRequest,
   CreateTokenRequest,
   CreateTokenResult,
+  UserGroupInfo,
 } from "~/services/apiService/common/type"
 import type { ApiToken } from "~/types"
 
@@ -17,6 +18,11 @@ export type ResolveTokenSecretRequest<
   token: TToken
 }
 
+export type DeleteTokenRequest = {
+  request: ApiServiceRequest
+  tokenId: number
+}
+
 export type KeyManagementCapability = {
   fetchTokens(
     request: ApiServiceRequest,
@@ -29,4 +35,9 @@ export type KeyManagementCapability = {
   resolveTokenKey<TToken extends Pick<ApiToken, "id" | "key">>(
     request: ResolveTokenSecretRequest<TToken>,
   ): Promise<string>
+  deleteToken(request: DeleteTokenRequest): Promise<boolean | void>
+  fetchUserGroups(
+    request: ApiServiceRequest,
+  ): Promise<Record<string, UserGroupInfo>>
+  fetchAvailableModels(request: ApiServiceRequest): Promise<string[]>
 }
