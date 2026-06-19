@@ -1,10 +1,9 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
-import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum } from "~/types"
 
 import type { AccountCompletionCapability } from "../contracts/accountCompletion"
+import { aihubmixAccountBootstrap } from "./accountBootstrap"
 
 const getDetectedTokenInfo = (
   detected: Parameters<AccountCompletionCapability["complete"]>[0]["detected"],
@@ -19,13 +18,12 @@ const getDetectedTokenInfo = (
 
 export const aihubmixAccountCompletion: AccountCompletionCapability = {
   async complete(request, helpers) {
-    const service = getApiService(SITE_TYPES.AIHUBMIX)
     const { url, detected, context } = request
 
     let tokenInfo: unknown = getDetectedTokenInfo(detected, helpers.trimString)
     if (!tokenInfo) {
       try {
-        tokenInfo = await service.getOrCreateAccessToken(
+        tokenInfo = await aihubmixAccountBootstrap.getOrCreateAccessToken(
           helpers.createServiceRequest({
             baseUrl: url,
             context,
@@ -45,7 +43,7 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
 
     let siteStatus = null
     try {
-      siteStatus = await service.fetchSiteStatus(
+      siteStatus = await aihubmixAccountBootstrap.fetchSiteStatus(
         helpers.createServiceRequest({
           baseUrl: url,
           context,
@@ -64,8 +62,8 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
     const checkSupport =
       typeof siteStatus?.checkin_enabled === "boolean"
         ? siteStatus.checkin_enabled
-        : await service
-            .fetchSupportCheckIn(
+        : await aihubmixAccountBootstrap
+            .fetchCheckInSupport(
               helpers.createServiceRequest({
                 baseUrl: url,
                 context,
@@ -98,7 +96,7 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
       accessToken,
       userId: detected.userId.toString(),
       exchangeRate:
-        service.extractDefaultExchangeRate(siteStatus) ??
+        aihubmixAccountBootstrap.extractDefaultExchangeRate(siteStatus) ??
         UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.AccessToken,
       checkIn: helpers.createInitialCheckInConfig({

@@ -13,23 +13,23 @@ import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/ty
 import { AuthTypeEnum } from "~/types"
 
 const {
+  mockCreateNewApiAccountBootstrap,
   mockExtractDefaultExchangeRate,
+  mockFetchCheckInSupport,
   mockFetchSiteStatus,
-  mockFetchSupportCheckIn,
   mockFetchUserInfo,
-  mockGetApiService,
   mockGetOrCreateAccessToken,
 } = vi.hoisted(() => ({
+  mockCreateNewApiAccountBootstrap: vi.fn(),
   mockExtractDefaultExchangeRate: vi.fn(),
+  mockFetchCheckInSupport: vi.fn(),
   mockFetchSiteStatus: vi.fn(),
-  mockFetchSupportCheckIn: vi.fn(),
   mockFetchUserInfo: vi.fn(),
-  mockGetApiService: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
+vi.mock("~/services/apiAdapters/newApi/accountBootstrap", () => ({
+  createNewApiAccountBootstrap: mockCreateNewApiAccountBootstrap,
 }))
 
 const currentTabFetchContext = {
@@ -95,12 +95,13 @@ const helpers = {
 describe("newApiAccountCompletion", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetApiService.mockReturnValue({
+    mockCreateNewApiAccountBootstrap.mockReturnValue({
       extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+      fetchCheckInSupport: mockFetchCheckInSupport,
       fetchSiteStatus: mockFetchSiteStatus,
-      fetchSupportCheckIn: mockFetchSupportCheckIn,
       fetchUserInfo: mockFetchUserInfo,
       getOrCreateAccessToken: mockGetOrCreateAccessToken,
+      resolveRoutePath: vi.fn(),
     })
   })
 
@@ -131,7 +132,9 @@ describe("newApiAccountCompletion", () => {
       helpers,
     )
 
-    expect(mockGetApiService).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(mockCreateNewApiAccountBootstrap).toHaveBeenCalledWith(
+      SITE_TYPES.NEW_API,
+    )
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
       baseUrl: "https://new.example.com",
       fetchContext: currentTabFetchContext,
@@ -147,7 +150,7 @@ describe("newApiAccountCompletion", () => {
         authType: AuthTypeEnum.AccessToken,
       },
     })
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+    expect(mockFetchCheckInSupport).not.toHaveBeenCalled()
     expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith({
       system_name: "  Token Portal  ",
       checkin_enabled: true,
@@ -188,7 +191,7 @@ describe("newApiAccountCompletion", () => {
     mockFetchSiteStatus.mockResolvedValueOnce({
       system_name: "Cookie Portal",
     })
-    mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+    mockFetchCheckInSupport.mockResolvedValueOnce(true)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await newApiAccountCompletion.complete(
@@ -218,7 +221,7 @@ describe("newApiAccountCompletion", () => {
         authType: AuthTypeEnum.Cookie,
       },
     })
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
+    expect(mockFetchCheckInSupport).toHaveBeenCalledWith({
       baseUrl: "https://cookie.example.com",
       auth: {
         authType: AuthTypeEnum.None,
@@ -367,7 +370,7 @@ describe("newApiAccountCompletion", () => {
       AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
       siteStatusError,
     )
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+    expect(mockFetchCheckInSupport).not.toHaveBeenCalled()
   })
 
   it("falls back to disabled check-in detection when support probing fails", async () => {
@@ -379,7 +382,7 @@ describe("newApiAccountCompletion", () => {
     mockFetchSiteStatus.mockResolvedValueOnce({
       system_name: "Token Portal",
     })
-    mockFetchSupportCheckIn.mockRejectedValueOnce(supportError)
+    mockFetchCheckInSupport.mockRejectedValueOnce(supportError)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await newApiAccountCompletion.complete(

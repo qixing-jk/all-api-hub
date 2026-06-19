@@ -1,14 +1,14 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum } from "~/types"
 
 import type { AccountCompletionCapability } from "../contracts/accountCompletion"
+import { createNewApiAccountBootstrap } from "./accountBootstrap"
 
 export const newApiAccountCompletion: AccountCompletionCapability = {
   async complete(request, helpers) {
     const { url, requestedAuthType, detected, context } = request
-    const apiService = getApiService(detected.siteType)
+    const accountBootstrap = createNewApiAccountBootstrap(detected.siteType)
 
     const createRequest = (
       auth: Parameters<typeof helpers.createServiceRequest>[0]["auth"],
@@ -21,7 +21,7 @@ export const newApiAccountCompletion: AccountCompletionCapability = {
 
     const fetchTokenInfo = () => {
       if (requestedAuthType === AuthTypeEnum.Cookie) {
-        return apiService.fetchUserInfo(
+        return accountBootstrap.fetchUserInfo(
           createRequest({
             authType: AuthTypeEnum.Cookie,
             userId: detected.userId,
@@ -30,7 +30,7 @@ export const newApiAccountCompletion: AccountCompletionCapability = {
       }
 
       if (requestedAuthType === AuthTypeEnum.AccessToken) {
-        return apiService.getOrCreateAccessToken(
+        return accountBootstrap.getOrCreateAccessToken(
           createRequest({
             authType: AuthTypeEnum.Cookie,
             userId: detected.userId,
@@ -43,7 +43,7 @@ export const newApiAccountCompletion: AccountCompletionCapability = {
 
     const tokenPromise = fetchTokenInfo()
 
-    const siteStatusPromise = apiService
+    const siteStatusPromise = accountBootstrap
       .fetchSiteStatus(
         createRequest({
           authType: requestedAuthType || AuthTypeEnum.None,
@@ -59,8 +59,8 @@ export const newApiAccountCompletion: AccountCompletionCapability = {
     const checkSupportPromise = siteStatusPromise.then((siteStatus) =>
       typeof siteStatus?.checkin_enabled === "boolean"
         ? siteStatus.checkin_enabled
-        : apiService
-            .fetchSupportCheckIn(
+        : accountBootstrap
+            .fetchCheckInSupport(
               createRequest({
                 authType: AuthTypeEnum.None,
               }),
@@ -107,7 +107,7 @@ export const newApiAccountCompletion: AccountCompletionCapability = {
       accessToken,
       userId: detected.userId.toString(),
       exchangeRate:
-        apiService.extractDefaultExchangeRate(siteStatus) ??
+        accountBootstrap.extractDefaultExchangeRate(siteStatus) ??
         UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: requestedAuthType,
       checkIn: helpers.createInitialCheckInConfig({

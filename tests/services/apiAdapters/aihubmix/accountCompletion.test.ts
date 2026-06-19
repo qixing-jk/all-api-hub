@@ -16,18 +16,25 @@ const {
   mockExtractDefaultExchangeRate,
   mockFetchSiteStatus,
   mockFetchSupportCheckIn,
-  mockGetApiService,
+  mockFetchUserInfo,
   mockGetOrCreateAccessToken,
 } = vi.hoisted(() => ({
   mockExtractDefaultExchangeRate: vi.fn(),
   mockFetchSiteStatus: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
-  mockGetApiService: vi.fn(),
+  mockFetchUserInfo: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
+vi.mock("~/services/apiAdapters/aihubmix/accountBootstrap", () => ({
+  aihubmixAccountBootstrap: {
+    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+    fetchCheckInSupport: mockFetchSupportCheckIn,
+    fetchSiteStatus: mockFetchSiteStatus,
+    fetchUserInfo: mockFetchUserInfo,
+    getOrCreateAccessToken: mockGetOrCreateAccessToken,
+    resolveRoutePath: vi.fn(),
+  },
 }))
 
 const currentTabFetchContext = {
@@ -93,12 +100,6 @@ const helpers = {
 describe("aihubmixAccountCompletion", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetApiService.mockReturnValue({
-      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-      fetchSiteStatus: mockFetchSiteStatus,
-      fetchSupportCheckIn: mockFetchSupportCheckIn,
-      getOrCreateAccessToken: mockGetOrCreateAccessToken,
-    })
   })
 
   it("uses detected access-token data and probes status with Cookie auth", async () => {
@@ -128,7 +129,6 @@ describe("aihubmixAccountCompletion", () => {
       helpers,
     )
 
-    expect(mockGetApiService).toHaveBeenCalledWith(SITE_TYPES.AIHUBMIX)
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchSiteStatus).toHaveBeenCalledWith({
       baseUrl: "https://aihubmix.com",

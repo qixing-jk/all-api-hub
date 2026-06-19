@@ -16,19 +16,24 @@ const {
   mockFetchSiteStatus,
   mockFetchSupportCheckIn,
   mockFetchUserInfo,
-  mockGetApiService,
   mockGetOrCreateAccessToken,
 } = vi.hoisted(() => ({
   mockExtractDefaultExchangeRate: vi.fn(),
   mockFetchSiteStatus: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
   mockFetchUserInfo: vi.fn(),
-  mockGetApiService: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
+vi.mock("~/services/apiAdapters/sub2api/accountBootstrap", () => ({
+  sub2ApiAccountBootstrap: {
+    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+    fetchCheckInSupport: mockFetchSupportCheckIn,
+    fetchSiteStatus: mockFetchSiteStatus,
+    fetchUserInfo: mockFetchUserInfo,
+    getOrCreateAccessToken: mockGetOrCreateAccessToken,
+    resolveRoutePath: vi.fn(),
+  },
 }))
 
 const currentTabFetchContext = {
@@ -94,13 +99,6 @@ const helpers = {
 describe("sub2ApiAccountCompletion", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetApiService.mockReturnValue({
-      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-      fetchSiteStatus: mockFetchSiteStatus,
-      fetchSupportCheckIn: mockFetchSupportCheckIn,
-      fetchUserInfo: mockFetchUserInfo,
-      getOrCreateAccessToken: mockGetOrCreateAccessToken,
-    })
   })
 
   it("uses detected access-token data and disables check-in", async () => {
@@ -135,7 +133,6 @@ describe("sub2ApiAccountCompletion", () => {
       helpers,
     )
 
-    expect(mockGetApiService).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
