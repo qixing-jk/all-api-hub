@@ -24,6 +24,7 @@ describe("apiAdapters registry", () => {
     expect(adapter.keyManagement).toEqual({
       fetchTokens: expect.any(Function),
       createToken: expect.any(Function),
+      updateToken: expect.any(Function),
       resolveTokenKey: expect.any(Function),
       deleteToken: expect.any(Function),
       fetchUserGroups: expect.any(Function),
@@ -79,6 +80,7 @@ describe("apiAdapters registry", () => {
       expect(adapter.keyManagement).toEqual({
         fetchTokens: expect.any(Function),
         createToken: expect.any(Function),
+        updateToken: expect.any(Function),
         resolveTokenKey: expect.any(Function),
         deleteToken: expect.any(Function),
         fetchUserGroups: expect.any(Function),
@@ -119,6 +121,7 @@ describe("apiAdapters registry", () => {
     expect(adapter.keyManagement).toEqual({
       fetchTokens: expect.any(Function),
       createToken: expect.any(Function),
+      updateToken: expect.any(Function),
       resolveTokenKey: expect.any(Function),
       deleteToken: expect.any(Function),
       fetchUserGroups: expect.any(Function),

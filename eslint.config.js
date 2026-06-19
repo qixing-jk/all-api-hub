@@ -70,7 +70,7 @@ const apiServiceBackendImplementationImportPattern = {
 }
 const accountSiteMainlineApiServiceFacadeImportPattern = {
   regex:
-    "^(?:~/services/apiService|(?:\\.\\./){1,6}(?:services/)?apiService)(?:/index)?$",
+    "^(?:~/services/apiService|(?:\\.\\./)+(?:services/)?apiService)(?:/index)?$",
   message:
     "Account-site product flows must use ~/services/apiAdapters or account workflow helpers instead of the legacy apiService facade.",
 }

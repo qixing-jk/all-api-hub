@@ -186,7 +186,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         createDisplayAccountApiContext(currentAccount)
 
       if (isEditMode && editingToken) {
-        await requireDisplayAccountKeyManagement(
+        const updated = await requireDisplayAccountKeyManagement(
           currentAccount,
           keyManagement,
         ).updateToken({
@@ -194,6 +194,9 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
           tokenId: editingToken.id,
           tokenData,
         })
+        if (updated === false) {
+          throw new Error(t("dialog.updateFailed"))
+        }
         toast.success(t("dialog.updateSuccess"))
       } else {
         const created = await requireDisplayAccountKeyManagement(
