@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 
 describe("apiAdapters registry", () => {
@@ -32,6 +32,14 @@ describe("apiAdapters registry", () => {
     expect(adapter.accountRefresh).toEqual({
       fetchCheckInSupport: expect.any(Function),
       refreshAccount: expect.any(Function),
+    })
+    expect(adapter.accountBootstrap).toEqual({
+      fetchUserInfo: expect.any(Function),
+      getOrCreateAccessToken: expect.any(Function),
+      fetchSiteStatus: expect.any(Function),
+      fetchCheckInSupport: expect.any(Function),
+      extractDefaultExchangeRate: expect.any(Function),
+      resolveRoutePath: expect.any(Function),
     })
     expect(adapter.accountData).toEqual({
       fetchData: expect.any(Function),
@@ -80,6 +88,14 @@ describe("apiAdapters registry", () => {
         fetchCheckInSupport: expect.any(Function),
         refreshAccount: expect.any(Function),
       })
+      expect(adapter.accountBootstrap).toEqual({
+        fetchUserInfo: expect.any(Function),
+        getOrCreateAccessToken: expect.any(Function),
+        fetchSiteStatus: expect.any(Function),
+        fetchCheckInSupport: expect.any(Function),
+        extractDefaultExchangeRate: expect.any(Function),
+        resolveRoutePath: expect.any(Function),
+      })
       expect(adapter.accountData).toEqual({
         fetchData: expect.any(Function),
       })
@@ -112,6 +128,14 @@ describe("apiAdapters registry", () => {
       fetchCheckInSupport: expect.any(Function),
       refreshAccount: expect.any(Function),
     })
+    expect(adapter.accountBootstrap).toEqual({
+      fetchUserInfo: expect.any(Function),
+      getOrCreateAccessToken: expect.any(Function),
+      fetchSiteStatus: expect.any(Function),
+      fetchCheckInSupport: expect.any(Function),
+      extractDefaultExchangeRate: expect.any(Function),
+      resolveRoutePath: expect.any(Function),
+    })
     expect(adapter.accountData).toEqual({
       fetchData: expect.any(Function),
     })
@@ -121,5 +145,14 @@ describe("apiAdapters registry", () => {
     expect(adapter.siteNotice).toBeUndefined()
     expect(adapter.siteAnnouncements).toBeUndefined()
     expect(adapter.modelCatalog).toBeUndefined()
+  })
+
+  it("returns an unsupported adapter without account bootstrap", () => {
+    const adapter = getSiteAdapter(SITE_TYPES.OCTOPUS as AccountSiteType)
+
+    expect(adapter).toEqual({
+      siteType: SITE_TYPES.OCTOPUS,
+    })
+    expect(adapter.accountBootstrap).toBeUndefined()
   })
 })
