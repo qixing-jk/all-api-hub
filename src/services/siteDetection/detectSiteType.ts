@@ -1,10 +1,9 @@
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
-  ACCOUNT_SITE_DOMAIN_RULES,
-  ACCOUNT_SITE_TITLE_RULES,
-  SITE_TYPES,
-  type AccountSiteType,
-} from "~/constants/siteType"
-import { COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE } from "~/services/apiService/common/compatHeaders"
+  getAccountSiteCompatUserIdHeaderRules,
+  getAccountSiteDomainRules,
+  getAccountSiteTitleRules,
+} from "~/services/accountSiteOnboarding/registry"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
@@ -16,15 +15,14 @@ import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("DetectSiteType")
-const COMPAT_USER_ID_HEADER_MESSAGE_RULES = Object.entries(
-  COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE,
-).map(([headerName, siteType]) => ({
-  siteType,
-  regex: new RegExp(
-    headerName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[-_ ]?"),
-    "i",
-  ),
-}))
+const COMPAT_USER_ID_HEADER_MESSAGE_RULES =
+  getAccountSiteCompatUserIdHeaderRules().map(({ headerName, siteType }) => ({
+    siteType,
+    regex: new RegExp(
+      headerName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[-_ ]?"),
+      "i",
+    ),
+  }))
 
 /**
  * Fetch the raw HTML title from the site root.
@@ -103,7 +101,7 @@ function detectAccountSiteTypeFromApiErrorMessage(
     }
   }
 
-  for (const rule of ACCOUNT_SITE_TITLE_RULES) {
+  for (const rule of getAccountSiteTitleRules()) {
     if (rule.regex.test(normalizedMessage)) {
       return rule.name
     }
@@ -141,14 +139,14 @@ async function getAccountSiteUserIdType(url: string): Promise<AccountSiteType> {
 
 /**
  * detectAccountSiteTypeFromDomain parses the URL hostname and compares it
- * case-insensitively against ACCOUNT_SITE_DOMAIN_RULES. It returns the matched
+ * case-insensitively against account-site domain rules. It returns the matched
  * AccountSiteType rule name, or SITE_TYPES.UNKNOWN when parsing fails or no
  * domain rule matches.
  */
 function detectAccountSiteTypeFromDomain(url: string): AccountSiteType {
   try {
     const hostname = new URL(url).hostname.toLowerCase()
-    const matchedRule = ACCOUNT_SITE_DOMAIN_RULES.find((rule) =>
+    const matchedRule = getAccountSiteDomainRules().find((rule) =>
       rule.hostnames.some((allowedHostname) => allowedHostname === hostname),
     )
     return matchedRule?.name ?? SITE_TYPES.UNKNOWN
@@ -166,7 +164,7 @@ export const getAccountSiteType = async (
   }
 
   const title = await fetchSiteOriginalTitle(url)
-  for (const rule of ACCOUNT_SITE_TITLE_RULES) {
+  for (const rule of getAccountSiteTitleRules()) {
     if (rule.regex.test(title)) {
       return rule.name
     }

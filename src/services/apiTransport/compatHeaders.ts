@@ -1,4 +1,8 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE } from "~/services/accountSiteOnboarding/metadata"
+import {
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/services/accountSiteOnboarding/siteTypes"
 
 /**
  * Compatibility headers for One-API/New-API family deployments.
@@ -22,19 +26,7 @@ const COMPAT_USER_ID_HEADER_TO_SITE_TYPE = {
   "neo-api-user": SITE_TYPES.NEO_API,
 } as const satisfies Record<string, AccountSiteType>
 
-/**
- * Error-message detection should only use header names that carry an
- * unambiguous site-family signal. Generic compatibility headers like `User-id`
- * are intentionally excluded to avoid over-classifying unrelated deployments.
- */
-export const COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE = {
-  "New-API-User": SITE_TYPES.NEW_API,
-  "Veloera-User": SITE_TYPES.VELOERA,
-  "X-Api-User": SITE_TYPES.V_API,
-  "voapi-user": SITE_TYPES.VO_API,
-  "Rix-Api-User": SITE_TYPES.RIX_API,
-  "neo-api-user": SITE_TYPES.NEO_API,
-} as const satisfies Record<string, AccountSiteType>
+export { COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE }
 
 const COMPAT_USER_ID_HEADER_NAMES = Object.keys(
   COMPAT_USER_ID_HEADER_TO_SITE_TYPE,

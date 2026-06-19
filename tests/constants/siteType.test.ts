@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  ACCOUNT_SITE_DOMAIN_RULES,
+  AIHUBMIX_HOSTNAMES,
   getAccountSiteApiRouter,
   isAccountSiteType,
   isManagedSiteType,
@@ -60,6 +62,21 @@ describe("siteType constants", () => {
       redeemPath: "/topup",
       adminCredentialsPath: "/",
       siteAnnouncementsPath: "/",
+    })
+  })
+
+  it("returns Sub2API account page route overrides", () => {
+    expect(getAccountSiteApiRouter(SITE_TYPES.SUB2API)).toMatchObject({
+      usagePath: "/usage",
+      redeemPath: "/redeem",
+      siteAnnouncementsPath: "/dashboard",
+    })
+  })
+
+  it("includes AIHubMix domain detection rules", () => {
+    expect(ACCOUNT_SITE_DOMAIN_RULES).toContainEqual({
+      name: SITE_TYPES.AIHUBMIX,
+      hostnames: AIHUBMIX_HOSTNAMES,
     })
   })
 })
