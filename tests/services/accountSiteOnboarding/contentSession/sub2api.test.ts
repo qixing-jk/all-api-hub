@@ -280,44 +280,6 @@ describe("sub2ApiContentSessionExtractor", () => {
     ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
   })
 
-  it("bounds stalled refresh requests and reports login-required for expired tokens", async () => {
-    vi.useFakeTimers()
-    const now = 1_700_000_000_000
-    vi.spyOn(Date, "now").mockReturnValue(now)
-
-    localStorage.setItem("auth_token", "old-token")
-    localStorage.setItem(
-      "auth_user",
-      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
-    )
-    localStorage.setItem("refresh_token", "old-refresh")
-    localStorage.setItem("token_expires_at", String(now - 1))
-
-    const fetchMock = vi.fn(
-      (_input: RequestInfo | URL, init?: RequestInit) =>
-        new Promise((_resolve, reject) => {
-          init?.signal?.addEventListener("abort", () => {
-            reject(new DOMException("Aborted", "AbortError"))
-          })
-        }),
-    )
-    vi.stubGlobal("fetch", fetchMock as any)
-
-    const extraction = sub2ApiContentSessionExtractor.extract({
-      url: "https://sub2.example.invalid",
-    })
-    const expectedRejection = expect(extraction).rejects.toBeInstanceOf(
-      Sub2ApiContentSessionLoginRequiredError,
-    )
-
-    await vi.advanceTimersByTimeAsync(10_000)
-
-    await expectedRejection
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-
-    vi.useRealTimers()
-  })
-
   it("uses refreshed tokens saved by a concurrent extraction before reporting login-required", async () => {
     const now = 1_700_000_000_000
     vi.spyOn(Date, "now").mockReturnValue(now)

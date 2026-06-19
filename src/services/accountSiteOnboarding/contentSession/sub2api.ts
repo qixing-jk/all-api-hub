@@ -23,7 +23,6 @@ const SUB2API_AUTH_STORAGE_KEYS = {
 
 // Match upstream buffer: refresh ~2 minutes before expiry.
 const SUB2API_TOKEN_REFRESH_BUFFER_MS = 120 * 1000
-const SUB2API_TOKEN_REFRESH_TIMEOUT_MS = 10_000
 
 export const SUB2API_LOGIN_REQUIRED_I18N_KEY = "messages:sub2api.loginRequired"
 
@@ -92,16 +91,10 @@ const refreshSub2ApiTokensIfNeeded = async (params: {
       ? new URL("/api/v1/auth/refresh", baseUrl).toString()
       : "/api/v1/auth/refresh"
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(
-    () => controller.abort(),
-    SUB2API_TOKEN_REFRESH_TIMEOUT_MS,
-  )
   let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null = null
   try {
     const response = await fetch(endpoint, {
       method: "POST",
-      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -117,8 +110,6 @@ const refreshSub2ApiTokensIfNeeded = async (params: {
       throw new Error("Sub2API token refresh failed")
     }
     return null
-  } finally {
-    clearTimeout(timeoutId)
   }
 
   if (!payload || typeof payload !== "object") {
