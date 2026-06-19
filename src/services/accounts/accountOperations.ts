@@ -37,8 +37,8 @@ import {
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
+import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import { getApiService } from "~/services/apiService"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -186,6 +186,20 @@ async function withTimeout<T>(
       clearTimeout(timeoutId)
     }
   }
+}
+
+const createMissingAccountDataCapabilityError = (siteType: string): Error =>
+  new Error(`accountData is not implemented for ${siteType}`)
+
+const requireAccountDataCapability = (
+  siteType: string,
+  accountData: AccountDataCapability | undefined,
+): AccountDataCapability => {
+  if (!accountData) {
+    throw createMissingAccountDataCapabilityError(siteType)
+  }
+
+  return accountData
 }
 
 /**
@@ -684,8 +698,12 @@ export async function validateAndSaveAccount(
       authType,
       userId: accountIdentity,
     })
+    const accountDataCapability = requireAccountDataCapability(
+      normalizedSiteType,
+      getSiteAdapter(normalizedSiteType).accountData,
+    )
     const freshAccountData = await withTimeout(
-      getApiService(normalizedSiteType).fetchAccountData({
+      accountDataCapability.fetchData({
         baseUrl: requestBaseUrl,
         checkIn: checkInConfig,
         accountId: undefined, // New account, no ID yet
@@ -988,9 +1006,11 @@ export async function validateAndUpdateAccount(
     })
     const includeTodayCashflow =
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
-    const freshAccountData = await getApiService(
+    const accountData = requireAccountDataCapability(
       normalizedSiteType,
-    ).fetchAccountData({
+      getSiteAdapter(normalizedSiteType).accountData,
+    )
+    const freshAccountData = await accountData.fetchData({
       baseUrl: requestBaseUrl,
       checkIn: checkInConfig,
       accountId,

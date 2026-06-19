@@ -14,23 +14,31 @@ import {
 import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum } from "~/types"
 
-const { mockFetchAccountData, mockFetchSiteStatus, mockUpdateAccount } =
-  vi.hoisted(() => ({
-    mockFetchAccountData: vi.fn(),
-    mockFetchSiteStatus: vi.fn(),
-    mockUpdateAccount: vi.fn(),
-  }))
+const {
+  mockFetchAccountData,
+  mockFetchSiteStatus,
+  mockGetApiService,
+  mockGetSiteAdapter,
+  mockUpdateAccount,
+} = vi.hoisted(() => ({
+  mockFetchAccountData: vi.fn(),
+  mockFetchSiteStatus: vi.fn(),
+  mockGetApiService: vi.fn(),
+  mockGetSiteAdapter: vi.fn(),
+  mockUpdateAccount: vi.fn(),
+}))
 
 vi.mock("~/services/apiService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/services/apiService")>()
   return {
     ...actual,
-    getApiService: vi.fn(() => ({
-      fetchAccountData: mockFetchAccountData,
-      fetchSiteStatus: mockFetchSiteStatus,
-    })),
+    getApiService: mockGetApiService,
   }
 })
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: mockGetSiteAdapter,
+}))
 
 vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
   const actual =
@@ -49,7 +57,17 @@ describe("accountOperations", () => {
   beforeEach(() => {
     mockFetchAccountData.mockReset()
     mockFetchSiteStatus.mockReset()
+    mockGetApiService.mockReset()
+    mockGetSiteAdapter.mockReset()
     mockUpdateAccount.mockReset()
+    mockGetApiService.mockReturnValue({
+      fetchSiteStatus: mockFetchSiteStatus,
+    })
+    mockGetSiteAdapter.mockReturnValue({
+      accountData: {
+        fetchData: mockFetchAccountData,
+      },
+    })
   })
 
   describe("validateAndUpdateAccount", () => {
@@ -215,7 +233,8 @@ describe("accountOperations", () => {
       )
 
       expect(result.success).toBe(true)
-      expect(vi.mocked(getApiService)).toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
+      const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
+      expect(vi.mocked(getSiteAdapter)).toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
       expect(mockUpdateAccount).toHaveBeenCalledWith(
         "account-1",
         expect.objectContaining({

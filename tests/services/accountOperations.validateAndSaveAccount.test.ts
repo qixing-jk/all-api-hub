@@ -13,11 +13,17 @@ import {
 } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 
-const { fetchAccountDataMock, ensureDefaultApiTokenForAccountMock } =
-  vi.hoisted(() => ({
-    fetchAccountDataMock: vi.fn(),
-    ensureDefaultApiTokenForAccountMock: vi.fn(),
-  }))
+const {
+  fetchAccountDataMock,
+  getApiServiceMock,
+  getSiteAdapterMock,
+  ensureDefaultApiTokenForAccountMock,
+} = vi.hoisted(() => ({
+  fetchAccountDataMock: vi.fn(),
+  getApiServiceMock: vi.fn(),
+  getSiteAdapterMock: vi.fn(),
+  ensureDefaultApiTokenForAccountMock: vi.fn(),
+}))
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -29,9 +35,11 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
-    fetchAccountData: fetchAccountDataMock,
-  })),
+  getApiService: getApiServiceMock,
+}))
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: getSiteAdapterMock,
 }))
 
 vi.mock(
@@ -78,6 +86,14 @@ describe("accountOperations validateAndSaveAccount", () => {
       ...DEFAULT_PREFERENCES,
       autoProvisionKeyOnAccountAdd: false,
       showTodayCashflow: false,
+    })
+    getApiServiceMock.mockReturnValue({
+      fetchAccountData: fetchAccountDataMock,
+    })
+    getSiteAdapterMock.mockReturnValue({
+      accountData: {
+        fetchData: fetchAccountDataMock,
+      },
     })
   })
 
@@ -215,6 +231,8 @@ describe("accountOperations validateAndSaveAccount", () => {
       today_income: 0,
       checkIn: CHECK_IN_DISABLED,
     })
+    getApiServiceMock.mockClear()
+    getSiteAdapterMock.mockClear()
 
     const result = await validateAndUpdateAccount(
       accountId,
@@ -233,6 +251,8 @@ describe("accountOperations validateAndSaveAccount", () => {
     )
 
     expect(result.success).toBe(true)
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.AIHUBMIX)
+    expect(getApiServiceMock).not.toHaveBeenCalled()
 
     const saved = await accountStorage.getAccountById(accountId)
     expect(saved?.site_url).toBe("https://console.aihubmix.com")
@@ -291,6 +311,115 @@ describe("accountOperations validateAndSaveAccount", () => {
         username: "",
         access_token: "access-123",
         quota: 0,
+      },
+    })
+  })
+
+  it("saves warning-only account data when accountData capability is missing", async () => {
+    getSiteAdapterMock.mockReturnValueOnce({})
+
+    const result = await validateAndSaveAccount(
+      "https://unsupported.example.invalid",
+      "Unsupported Portal",
+      "tester",
+      "token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      message: "messages:warnings.accountSavedWithoutDataRefresh",
+      feedbackLevel: "warning",
+    })
+    expect(fetchAccountDataMock).not.toHaveBeenCalled()
+
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved).toMatchObject({
+      site_name: "Unsupported Portal",
+      health: {
+        status: SiteHealthStatus.Warning,
+        reason: "accountData is not implemented for new-api",
+      },
+      account_info: {
+        id: "1",
+        username: "tester",
+        access_token: "token",
+        quota: 0,
+      },
+    })
+  })
+
+  it("updates warning-only account data when accountData capability is missing", async () => {
+    const accountId = await accountStorage.addAccount({
+      site_name: "Old Example",
+      site_url: "https://old.example.com",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: CHECK_IN_DISABLED,
+      account_info: {
+        id: "previous-id",
+        access_token: "old-token",
+        username: "old-user",
+        quota: 42,
+        today_prompt_tokens: 1,
+        today_completion_tokens: 2,
+        today_quota_consumption: 3,
+        today_requests_count: 4,
+        today_income: 5,
+      },
+      last_sync_time: 123,
+    })
+    getSiteAdapterMock.mockReturnValue({})
+
+    const result = await validateAndUpdateAccount(
+      accountId,
+      "https://unsupported.example.invalid",
+      "Unsupported Portal",
+      "tester",
+      "token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      message: "messages:warnings.accountUpdatedWithoutDataRefresh",
+      feedbackLevel: "warning",
+    })
+    expect(fetchAccountDataMock).not.toHaveBeenCalled()
+
+    const updated = await accountStorage.getAccountById(accountId)
+    expect(updated).toMatchObject({
+      site_name: "Unsupported Portal",
+      health: {
+        status: SiteHealthStatus.Warning,
+        reason: "accountData is not implemented for new-api",
+      },
+      account_info: {
+        id: "1",
+        username: "tester",
+        access_token: "token",
+        quota: 42,
       },
     })
   })
@@ -478,7 +607,7 @@ describe("accountOperations validateAndSaveAccount", () => {
   })
 
   it("normalizes unsupported site types before saving", async () => {
-    const { getApiService } = await import("~/services/apiService")
+    const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
     fetchAccountDataMock.mockResolvedValueOnce({
       quota: 12,
       today_prompt_tokens: 0,
@@ -505,7 +634,7 @@ describe("accountOperations validateAndSaveAccount", () => {
     )
 
     expect(result.success).toBe(true)
-    expect(getApiService).toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
+    expect(getSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
 
     const saved = await accountStorage.getAccountById(result.accountId!)
     expect(saved?.site_type).toBe(SITE_TYPES.UNKNOWN)
@@ -673,6 +802,9 @@ describe("accountOperations validateAndSaveAccount", () => {
   })
 
   it("allows New API-family account sites to update non-canonical string user ids", async () => {
+    getApiServiceMock.mockClear()
+    getSiteAdapterMock.mockClear()
+
     for (const userId of ["1.5", "1e3", "-1", "0", "001"]) {
       const accountId = await accountStorage.addAccount({
         site_name: "Test Site",
@@ -740,6 +872,9 @@ describe("accountOperations validateAndSaveAccount", () => {
     }
 
     expect(fetchAccountDataMock).toHaveBeenCalledTimes(5)
+    expect(getSiteAdapterMock).toHaveBeenCalledTimes(5)
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(getApiServiceMock).not.toHaveBeenCalled()
   })
 
   it("allows AIHubMix to save a stable username identity", async () => {
