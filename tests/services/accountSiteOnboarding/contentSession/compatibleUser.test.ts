@@ -65,6 +65,23 @@ describe("compatibleUserContentSessionExtractor", () => {
     })
   })
 
+  it("omits siteTypeHint when the explicit site type is not account-compatible", async () => {
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: 42, username: "alice", role: "admin" }),
+    )
+
+    await expect(
+      compatibleUserContentSessionExtractor.extract({
+        url: "https://example.invalid",
+        siteTypeHint: "not-a-site-type" as typeof SITE_TYPES.UNKNOWN,
+      }),
+    ).resolves.toEqual({
+      userId: "42",
+      user: { id: 42, username: "alice", role: "admin" },
+    })
+  })
+
   it("uses AIHubMix username identity with an explicit AIHubMix hint", async () => {
     localStorage.setItem(
       "user",

@@ -189,6 +189,54 @@ describe("sub2ApiContentSessionExtractor", () => {
     ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
   })
 
+  it("keeps a still-valid token when the refresh request rejects", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now + 60_000))
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).resolves.toMatchObject({
+      accessToken: "old-token",
+      sub2apiAuth: {
+        refreshToken: "old-refresh",
+        tokenExpiresAt: now + 60_000,
+      },
+    })
+  })
+
+  it("throws login-required when refresh request rejects and the token is expired", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now - 1))
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
+  })
+
   it("keeps a still-valid token when the refresh response is not JSON", async () => {
     const now = 1_700_000_000_000
     vi.spyOn(Date, "now").mockReturnValue(now)
@@ -222,6 +270,35 @@ describe("sub2ApiContentSessionExtractor", () => {
         tokenExpiresAt: now + 60_000,
       },
     })
+  })
+
+  it("throws login-required when an expired refresh response is not JSON", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now - 1))
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("not-json", {
+          status: 200,
+          headers: { "Content-Type": "text/plain" },
+        }),
+      ) as any,
+    )
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
   })
 
   it("keeps a still-valid token when refreshed token fields are incomplete", async () => {
@@ -272,6 +349,66 @@ describe("sub2ApiContentSessionExtractor", () => {
       JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
     )
     localStorage.setItem("token_expires_at", String(now - 1))
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
+  })
+
+  it("keeps a still-valid token when no refresh token is stored", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("token_expires_at", String(now + 60_000))
+
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).resolves.toMatchObject({
+      accessToken: "old-token",
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("throws login-required when an expired refresh response has invalid token field types", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now - 1))
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            data: {
+              access_token: 123,
+              refresh_token: null,
+              expires_in: "3600",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ) as any,
+    )
 
     await expect(
       sub2ApiContentSessionExtractor.extract({
