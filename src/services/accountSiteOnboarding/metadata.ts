@@ -59,7 +59,8 @@ export const COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE = {
  * Builds the legacy title-matching pattern for a site type display name.
  */
 function makeTitleRegex(name: string): RegExp {
-  const pattern = name.replace("-", "[-_ ]?")
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const pattern = escaped.replace(/-/g, "[-_ ]?")
   return new RegExp(`\\b${pattern}\\b`, "i")
 }
 

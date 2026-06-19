@@ -23,6 +23,9 @@ const SUB2API_AUTH_STORAGE_KEYS = {
 
 // Match upstream buffer: refresh ~2 minutes before expiry.
 const SUB2API_TOKEN_REFRESH_BUFFER_MS = 120 * 1000
+const SUB2API_TOKEN_REFRESH_TIMEOUT_MS = 10_000
+
+export const SUB2API_LOGIN_REQUIRED_I18N_KEY = "messages:sub2api.loginRequired"
 
 type Sub2ApiEnvelope<T> = {
   code: number
@@ -39,7 +42,7 @@ type Sub2ApiRefreshTokenData = {
 
 export class Sub2ApiContentSessionLoginRequiredError extends Error {
   constructor() {
-    super("messages:sub2api.loginRequired")
+    super(SUB2API_LOGIN_REQUIRED_I18N_KEY)
   }
 }
 
@@ -48,6 +51,16 @@ const tryParseTimestamp = (value: string | null): number | null => {
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) ? parsed : null
 }
+
+const readStoredTokenState = () => ({
+  accessToken:
+    localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.accessToken)?.trim() ?? "",
+  refreshToken:
+    localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.refreshToken)?.trim() ?? "",
+  tokenExpiresAt: tryParseTimestamp(
+    localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.tokenExpiresAt),
+  ),
+})
 
 const refreshSub2ApiTokensIfNeeded = async (params: {
   baseUrl: string | null
@@ -61,22 +74,34 @@ const refreshSub2ApiTokensIfNeeded = async (params: {
 } | null> => {
   const { baseUrl, accessToken, refreshToken, tokenExpiresAt } = params
 
-  if (!refreshToken.trim() || tokenExpiresAt === null) return null
+  if (tokenExpiresAt === null) return null
 
   const now = Date.now()
   const msUntilExpiry = tokenExpiresAt - now
-  if (msUntilExpiry > SUB2API_TOKEN_REFRESH_BUFFER_MS) return null
   const isExpired = msUntilExpiry <= 0
+  if (!refreshToken.trim()) {
+    if (isExpired) {
+      throw new Error("Sub2API token refresh unavailable")
+    }
+    return null
+  }
+  if (msUntilExpiry > SUB2API_TOKEN_REFRESH_BUFFER_MS) return null
 
   const endpoint =
     typeof baseUrl === "string" && baseUrl.trim()
       ? new URL("/api/v1/auth/refresh", baseUrl).toString()
       : "/api/v1/auth/refresh"
 
+  const controller = new AbortController()
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    SUB2API_TOKEN_REFRESH_TIMEOUT_MS,
+  )
   let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null = null
   try {
     const response = await fetch(endpoint, {
       method: "POST",
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -92,6 +117,8 @@ const refreshSub2ApiTokensIfNeeded = async (params: {
       throw new Error("Sub2API token refresh failed")
     }
     return null
+  } finally {
+    clearTimeout(timeoutId)
   }
 
   if (!payload || typeof payload !== "object") {
@@ -144,8 +171,9 @@ const refreshSub2ApiTokensIfNeeded = async (params: {
 
 export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
   id: "sub2api",
-  canExtract: () => {
+  canExtract: (context) => {
     return (
+      context.siteTypeHint === SITE_TYPES.SUB2API &&
       localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.accessToken) !== null &&
       localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.authUser) !== null
     )
@@ -163,13 +191,7 @@ export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
       throw new Sub2ApiContentSessionLoginRequiredError()
     }
 
-    const refreshTokenRaw = localStorage.getItem(
-      SUB2API_AUTH_STORAGE_KEYS.refreshToken,
-    )
-    let refreshToken = refreshTokenRaw?.trim() ?? ""
-    let tokenExpiresAt = tryParseTimestamp(
-      localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.tokenExpiresAt),
-    )
+    let { refreshToken, tokenExpiresAt } = readStoredTokenState()
     const baseUrl = typeof context.url === "string" ? context.url : null
 
     try {
@@ -185,7 +207,18 @@ export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
         tokenExpiresAt = refreshed.tokenExpiresAt
       }
     } catch {
-      throw new Sub2ApiContentSessionLoginRequiredError()
+      const stored = readStoredTokenState()
+      if (
+        stored.accessToken &&
+        typeof stored.tokenExpiresAt === "number" &&
+        stored.tokenExpiresAt > Date.now()
+      ) {
+        accessToken = stored.accessToken
+        refreshToken = stored.refreshToken
+        tokenExpiresAt = stored.tokenExpiresAt
+      } else {
+        throw new Sub2ApiContentSessionLoginRequiredError()
+      }
     }
 
     try {

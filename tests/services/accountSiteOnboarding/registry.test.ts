@@ -31,6 +31,37 @@ describe("account site onboarding registry", () => {
     expect(titleRuleNames).toContain(SITE_TYPES.AIHUBMIX)
   })
 
+  it("matches hyphenated site titles through generated title rules", () => {
+    const titleRules = getAccountSiteTitleRules()
+
+    expect(
+      titleRules
+        .find((rule) => rule.name === SITE_TYPES.ONE_HUB)
+        ?.regex.test("One Hub"),
+    ).toBe(true)
+    expect(
+      titleRules
+        .find((rule) => rule.name === SITE_TYPES.ONE_HUB)
+        ?.regex.test("one_hub"),
+    ).toBe(true)
+  })
+
+  it("returns title rule object copies", () => {
+    const firstRule = getAccountSiteTitleRules().find(
+      (rule) => rule.name === SITE_TYPES.SUB2API,
+    )
+
+    firstRule!.name = SITE_TYPES.UNKNOWN
+    firstRule!.regex = /mutated/i
+
+    const nextRule = getAccountSiteTitleRules().find(
+      (rule) => rule.name === SITE_TYPES.SUB2API,
+    )
+
+    expect(nextRule?.name).toBe(SITE_TYPES.SUB2API)
+    expect(nextRule?.regex.test(SITE_TYPES.SUB2API)).toBe(true)
+  })
+
   it("projects account site domain rules from metadata", () => {
     expect(getAccountSiteDomainRules()).toEqual(ACCOUNT_SITE_DOMAIN_RULES)
     expect(getAccountSiteDomainRules()).toContainEqual({
@@ -92,6 +123,20 @@ describe("account site onboarding registry", () => {
     ).toBe(false)
   })
 
+  it("returns domain rule object copies", () => {
+    const firstRule = getAccountSiteDomainRules().find(
+      (rule) => rule.name === SITE_TYPES.AIHUBMIX,
+    )
+
+    firstRule!.name = SITE_TYPES.UNKNOWN
+
+    expect(
+      getAccountSiteDomainRules().find(
+        (rule) => rule.name === SITE_TYPES.AIHUBMIX,
+      )?.name,
+    ).toBe(SITE_TYPES.AIHUBMIX)
+  })
+
   it("returns onboarding definition detection array copies", () => {
     const firstDefinition = getAccountSiteOnboardingDefinition(
       SITE_TYPES.AIHUBMIX,
@@ -116,5 +161,9 @@ describe("account site onboarding registry", () => {
     expect(
       getContentSessionExtractors().map((extractor) => extractor.id),
     ).toEqual(["sub2api", "compatible-user"])
+  })
+
+  it("returns empty route overrides for site types without route metadata", () => {
+    expect(getAccountSiteRouteOverrides(SITE_TYPES.UNKNOWN)).toEqual({})
   })
 })

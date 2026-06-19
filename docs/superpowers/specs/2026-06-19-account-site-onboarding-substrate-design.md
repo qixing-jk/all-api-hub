@@ -220,20 +220,14 @@ export type ContentSessionExtractionContext = {
 }
 
 export type ContentSessionExtractionResult = {
-  userId: string
-  username?: string
-  user?: {
-    id?: string | number
-    username?: string
-    balance?: number
-  }
+  userId: string | number
+  user: Record<string, unknown>
   accessToken?: string
   siteTypeHint?: AccountSiteType
   sub2apiAuth?: {
     refreshToken: string
-    tokenExpiresAt?: number | null
+    tokenExpiresAt?: number
   }
-  authType?: AuthTypeEnum
 }
 
 export type ContentSessionExtractor = {

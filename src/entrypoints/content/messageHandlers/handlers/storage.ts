@@ -1,5 +1,8 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
-import { Sub2ApiContentSessionLoginRequiredError } from "~/services/accountSiteOnboarding/contentSession/sub2api"
+import {
+  SUB2API_LOGIN_REQUIRED_I18N_KEY,
+  Sub2ApiContentSessionLoginRequiredError,
+} from "~/services/accountSiteOnboarding/contentSession/sub2api"
 import { getContentSessionExtractors } from "~/services/accountSiteOnboarding/registry"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
@@ -72,7 +75,7 @@ export function handleGetUserFromLocalStorage(
       if (error instanceof Sub2ApiContentSessionLoginRequiredError) {
         sendResponse({
           success: false,
-          error: t("messages:sub2api.loginRequired"),
+          error: t(SUB2API_LOGIN_REQUIRED_I18N_KEY),
         })
         return
       }

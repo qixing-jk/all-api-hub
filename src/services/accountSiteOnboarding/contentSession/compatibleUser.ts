@@ -3,11 +3,13 @@ import { resolveStoredAccountUserIdentity } from "~/services/accounts/accountIde
 
 import type { ContentSessionExtractor } from "../contracts"
 
+const COMPATIBLE_USER_STORAGE_KEY = "user"
+
 export const compatibleUserContentSessionExtractor: ContentSessionExtractor = {
   id: "compatible-user",
-  canExtract: () => true,
+  canExtract: () => localStorage.getItem(COMPATIBLE_USER_STORAGE_KEY) !== null,
   async extract(context) {
-    const rawUser = localStorage.getItem("user")
+    const rawUser = localStorage.getItem(COMPATIBLE_USER_STORAGE_KEY)
     if (!rawUser) return null
 
     let user: unknown

@@ -102,4 +102,22 @@ describe("compatibleUserContentSessionExtractor", () => {
       }),
     ).resolves.toBeNull()
   })
+
+  it("can extract compatible user storage when the user key exists", () => {
+    expect(
+      compatibleUserContentSessionExtractor.canExtract({
+        url: "https://example.invalid",
+        siteTypeHint: SITE_TYPES.NEW_API,
+      }),
+    ).toBe(false)
+
+    localStorage.setItem("user", JSON.stringify({ id: 42 }))
+
+    expect(
+      compatibleUserContentSessionExtractor.canExtract({
+        url: "https://example.invalid",
+        siteTypeHint: SITE_TYPES.NEW_API,
+      }),
+    ).toBe(true)
+  })
 })

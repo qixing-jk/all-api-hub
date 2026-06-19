@@ -57,6 +57,33 @@ describe("sub2ApiContentSessionExtractor", () => {
     })
   })
 
+  it("only claims Sub2API storage when the context is for Sub2API", () => {
+    localStorage.setItem("auth_token", "jwt-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+
+    expect(
+      sub2ApiContentSessionExtractor.canExtract({
+        url: "https://sub2.example.invalid",
+        siteTypeHint: SITE_TYPES.SUB2API,
+      }),
+    ).toBe(true)
+    expect(
+      sub2ApiContentSessionExtractor.canExtract({
+        url: "https://one-api.example.invalid",
+        siteTypeHint: SITE_TYPES.ONE_API,
+      }),
+    ).toBe(false)
+    expect(
+      sub2ApiContentSessionExtractor.canExtract({
+        url: "https://example.invalid",
+        siteTypeHint: SITE_TYPES.UNKNOWN,
+      }),
+    ).toBe(false)
+  })
+
   it("throws login-required when the saved access token is blank", async () => {
     localStorage.setItem("auth_token", "   ")
     localStorage.setItem(
@@ -160,6 +187,184 @@ describe("sub2ApiContentSessionExtractor", () => {
         url: "https://sub2.example.invalid",
       }),
     ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
+  })
+
+  it("keeps a still-valid token when the refresh response is not JSON", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now + 60_000))
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("not-json", {
+          status: 200,
+          headers: { "Content-Type": "text/plain" },
+        }),
+      ) as any,
+    )
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).resolves.toMatchObject({
+      accessToken: "old-token",
+      sub2apiAuth: {
+        refreshToken: "old-refresh",
+        tokenExpiresAt: now + 60_000,
+      },
+    })
+  })
+
+  it("keeps a still-valid token when refreshed token fields are incomplete", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now + 60_000))
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            data: { access_token: "", refresh_token: "", expires_in: 0 },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ) as any,
+    )
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).resolves.toMatchObject({
+      accessToken: "old-token",
+      sub2apiAuth: {
+        refreshToken: "old-refresh",
+        tokenExpiresAt: now + 60_000,
+      },
+    })
+  })
+
+  it("throws login-required when an expired token has no refresh token", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("token_expires_at", String(now - 1))
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
+  })
+
+  it("bounds stalled refresh requests and reports login-required for expired tokens", async () => {
+    vi.useFakeTimers()
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now - 1))
+
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"))
+          })
+        }),
+    )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    const extraction = sub2ApiContentSessionExtractor.extract({
+      url: "https://sub2.example.invalid",
+    })
+    const expectedRejection = expect(extraction).rejects.toBeInstanceOf(
+      Sub2ApiContentSessionLoginRequiredError,
+    )
+
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    await expectedRejection
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    vi.useRealTimers()
+  })
+
+  it("uses refreshed tokens saved by a concurrent extraction before reporting login-required", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now - 1))
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            data: {
+              access_token: "new-token",
+              refresh_token: "new-refresh",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 1, message: "invalid" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    const [firstResult, secondResult] = await Promise.all([
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ])
+
+    expect(firstResult?.accessToken).toBe("new-token")
+    expect(secondResult?.accessToken).toBe("new-token")
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("throws login-required when auth_user is invalid", async () => {

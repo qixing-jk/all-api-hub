@@ -87,7 +87,7 @@ describe("content storage handler", () => {
 
     const response = await new Promise<any>((resolve) => {
       handleGetUserFromLocalStorage(
-        { url: "https://sub2.example.com" },
+        { url: "https://sub2.example.com", siteType: "sub2api" },
         resolve,
       )
     })
@@ -113,7 +113,7 @@ describe("content storage handler", () => {
 
     const response = await new Promise<any>((resolve) => {
       handleGetUserFromLocalStorage(
-        { url: "https://sub2.example.com" },
+        { url: "https://sub2.example.com", siteType: "sub2api" },
         resolve,
       )
     })
@@ -152,7 +152,7 @@ describe("content storage handler", () => {
 
     const response = await new Promise<any>((resolve) => {
       handleGetUserFromLocalStorage(
-        { url: "https://sub2.example.com" },
+        { url: "https://sub2.example.com", siteType: "sub2api" },
         resolve,
       )
     })
@@ -206,7 +206,7 @@ describe("content storage handler", () => {
     vi.stubGlobal("fetch", fetchMock as any)
 
     const response = await new Promise<any>((resolve) => {
-      handleGetUserFromLocalStorage({}, resolve)
+      handleGetUserFromLocalStorage({ siteType: "sub2api" }, resolve)
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -253,7 +253,7 @@ describe("content storage handler", () => {
 
     const response = await new Promise<any>((resolve) => {
       handleGetUserFromLocalStorage(
-        { url: "https://sub2.example.com" },
+        { url: "https://sub2.example.com", siteType: "sub2api" },
         resolve,
       )
     })
@@ -289,7 +289,7 @@ describe("content storage handler", () => {
 
     const response = await new Promise<any>((resolve) => {
       handleGetUserFromLocalStorage(
-        { url: "https://sub2.example.com" },
+        { url: "https://sub2.example.com", siteType: "sub2api" },
         resolve,
       )
     })
@@ -319,7 +319,7 @@ describe("content storage handler", () => {
 
     const response = await new Promise<any>((resolve) => {
       handleGetUserFromLocalStorage(
-        { url: "https://sub2.example.com" },
+        { url: "https://sub2.example.com", siteType: "sub2api" },
         resolve,
       )
     })
@@ -342,7 +342,7 @@ describe("content storage handler", () => {
 
     const response = await new Promise<any>((resolve) => {
       handleGetUserFromLocalStorage(
-        { url: "https://sub2.example.com" },
+        { url: "https://sub2.example.com", siteType: "sub2api" },
         resolve,
       )
     })
@@ -363,7 +363,7 @@ describe("content storage handler", () => {
 
     const response = await new Promise<any>((resolve) => {
       handleGetUserFromLocalStorage(
-        { url: "https://sub2.example.com" },
+        { url: "https://sub2.example.com", siteType: "sub2api" },
         resolve,
       )
     })
@@ -391,6 +391,38 @@ describe("content storage handler", () => {
           username: "alice",
           role: "admin",
         },
+      },
+    })
+  })
+
+  it("falls through to compatible user extraction when non-Sub2API storage also has Sub2API keys", async () => {
+    localStorage.setItem("auth_token", "jwt-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "sub2-user", balance: 1.5 }),
+    )
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: "user-1", username: "alice", role: "admin" }),
+    )
+
+    const response = await new Promise<any>((resolve) => {
+      handleGetUserFromLocalStorage(
+        { url: "https://example.com", siteType: "new-api" },
+        resolve,
+      )
+    })
+
+    expect(response).toEqual({
+      success: true,
+      data: {
+        userId: "user-1",
+        user: {
+          id: "user-1",
+          username: "alice",
+          role: "admin",
+        },
+        siteTypeHint: "new-api",
       },
     })
   })
