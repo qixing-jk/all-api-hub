@@ -10,7 +10,6 @@ import {
   deleteInvalidAccountToken,
   ensureAccountKeysForAvailableGroups,
 } from "~/services/accounts/accountKeyAutoProvisioning/groupCoverage"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS } from "~/types/accountKeyAutoProvisioning"
 import {
@@ -30,7 +29,9 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteAdapter: vi.fn(() => ({
     keyManagement: {
       fetchTokens: (...args: unknown[]) => mocks.fetchAccountTokens(...args),
-      fetchUserGroups: (...args: unknown[]) => mocks.fetchUserGroups(...args),
+      userGroups: {
+        fetch: (...args: unknown[]) => mocks.fetchUserGroups(...args),
+      },
       createToken: (...args: unknown[]) => mocks.createApiToken(...args),
       deleteToken: (...args: unknown[]) => mocks.deleteApiToken(...args),
       resolveTokenKey: vi.fn(),
@@ -174,16 +175,20 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     ])
   })
 
-  it("falls back to one-key behavior when group lookup is unsupported", async () => {
+  it("falls back to one-key behavior when group lookup capability is missing", async () => {
     mocks.fetchAccountTokens.mockResolvedValue([])
-    mocks.fetchUserGroups.mockRejectedValue(
-      new ApiError(
-        "unsupported",
-        undefined,
-        "/api/user/self/groups",
-        API_ERROR_CODES.FEATURE_UNSUPPORTED,
-      ),
-    )
+    const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
+    ;(
+      getSiteAdapter as unknown as ReturnType<typeof vi.fn>
+    ).mockReturnValueOnce({
+      keyManagement: {
+        fetchTokens: (...args: unknown[]) => mocks.fetchAccountTokens(...args),
+        createToken: (...args: unknown[]) => mocks.createApiToken(...args),
+        deleteToken: (...args: unknown[]) => mocks.deleteApiToken(...args),
+        resolveTokenKey: vi.fn(),
+        fetchAvailableModels: vi.fn(),
+      },
+    })
     mocks.createApiToken.mockResolvedValue(true)
 
     const result = await runCoverage()
@@ -203,6 +208,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       }),
       generateDefaultTokenRequest(),
     )
+    expect(mocks.fetchUserGroups).not.toHaveBeenCalled()
   })
 
   it("treats empty group responses as legacy one-key coverage when a token already exists", async () => {

@@ -6,7 +6,6 @@ import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { API_ERROR_CODES } from "~/services/apiService/common/errors"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -20,12 +19,6 @@ import type { FormData } from "./useTokenForm"
 const logger = createLogger("TokenDataHook")
 
 const EMPTY_USER_GROUPS: Record<string, UserGroupInfo> = {}
-
-const isFeatureUnsupportedError = (error: unknown): boolean =>
-  !!error &&
-  typeof error === "object" &&
-  "code" in error &&
-  (error as { code?: unknown }).code === API_ERROR_CODES.FEATURE_UNSUPPORTED
 
 /**
  * Loads available models and user groups for the selected account when dialog opens.
@@ -59,13 +52,7 @@ export function useTokenData(
 
       const [models, groupsData] = await Promise.all([
         capability.fetchAvailableModels(request),
-        capability.fetchUserGroups(request).catch((error) => {
-          if (isFeatureUnsupportedError(error)) {
-            return EMPTY_USER_GROUPS
-          }
-
-          throw error
-        }),
+        capability.userGroups?.fetch(request) ?? EMPTY_USER_GROUPS,
       ])
 
       setAvailableModels(models)

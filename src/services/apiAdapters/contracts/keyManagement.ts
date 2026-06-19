@@ -29,6 +29,10 @@ export type UpdateTokenRequest = {
   tokenData: CreateTokenRequest
 }
 
+export type UserGroupsCapability = {
+  fetch(request: ApiServiceRequest): Promise<Record<string, UserGroupInfo>>
+}
+
 export type KeyManagementCapability = {
   fetchTokens(
     request: ApiServiceRequest,
@@ -43,8 +47,6 @@ export type KeyManagementCapability = {
     request: ResolveTokenSecretRequest<TToken>,
   ): Promise<string>
   deleteToken(request: DeleteTokenRequest): Promise<boolean | void>
-  fetchUserGroups(
-    request: ApiServiceRequest,
-  ): Promise<Record<string, UserGroupInfo>>
   fetchAvailableModels(request: ApiServiceRequest): Promise<string[]>
+  userGroups?: UserGroupsCapability
 }

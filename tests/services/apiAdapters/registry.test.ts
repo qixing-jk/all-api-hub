@@ -27,8 +27,10 @@ describe("apiAdapters registry", () => {
       updateToken: expect.any(Function),
       resolveTokenKey: expect.any(Function),
       deleteToken: expect.any(Function),
-      fetchUserGroups: expect.any(Function),
       fetchAvailableModels: expect.any(Function),
+      userGroups: {
+        fetch: expect.any(Function),
+      },
     })
     expect(adapter.accountRefresh).toEqual({
       fetchCheckInSupport: expect.any(Function),
@@ -83,8 +85,10 @@ describe("apiAdapters registry", () => {
         updateToken: expect.any(Function),
         resolveTokenKey: expect.any(Function),
         deleteToken: expect.any(Function),
-        fetchUserGroups: expect.any(Function),
         fetchAvailableModels: expect.any(Function),
+        userGroups: {
+          fetch: expect.any(Function),
+        },
       })
       expect(adapter.accountRefresh).toEqual({
         fetchCheckInSupport: expect.any(Function),
@@ -124,9 +128,9 @@ describe("apiAdapters registry", () => {
       updateToken: expect.any(Function),
       resolveTokenKey: expect.any(Function),
       deleteToken: expect.any(Function),
-      fetchUserGroups: expect.any(Function),
       fetchAvailableModels: expect.any(Function),
     })
+    expect(adapter.keyManagement?.userGroups).toBeUndefined()
     expect(adapter.accountRefresh).toEqual({
       fetchCheckInSupport: expect.any(Function),
       refreshAccount: expect.any(Function),

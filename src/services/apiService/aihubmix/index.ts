@@ -24,7 +24,6 @@ import {
   type SiteStatusInfo,
   type TodayIncomeData,
   type TodayUsageData,
-  type UserGroupInfo,
   type UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
@@ -668,23 +667,6 @@ export async function searchApiTokens(
   )
   return extractTokenItems(payload).map((token) =>
     normalizeToken(token, request.auth?.userId),
-  )
-}
-
-/**
- * AIHubMix key creation does not use One-API style groups. Surface this as an
- * explicit unsupported capability so callers do not confuse it with an empty
- * but otherwise supported group inventory. The create-key docs list no `group`
- * request field: https://docs.aihubmix.com/en/api/CliEndpoints/create-key
- */
-export async function fetchUserGroups(
-  _request: ApiServiceRequest,
-): Promise<Record<string, UserGroupInfo>> {
-  throw new ApiError(
-    "aihubmix_user_groups_unsupported",
-    undefined,
-    undefined,
-    API_ERROR_CODES.FEATURE_UNSUPPORTED,
   )
 }
 

@@ -19,7 +19,6 @@ import {
   fetchTodayIncome,
   fetchTodayUsage,
   fetchTokenById,
-  fetchUserGroups,
   fetchUserInfo,
   getOrCreateAccessToken,
   refreshAccountData,
@@ -777,26 +776,6 @@ describe("apiService AIHubMix", () => {
         },
       },
     )
-  })
-
-  it("explicitly marks user groups unsupported without calling common group endpoints", async () => {
-    server.use(
-      http.get("https://aihubmix.com/api/user/self/groups", () =>
-        HttpResponse.json(
-          {
-            success: false,
-            message: "AIHubMix has no group endpoint",
-            data: null,
-          },
-          { status: 500 },
-        ),
-      ),
-    )
-
-    await expect(fetchUserGroups(baseRequest)).rejects.toMatchObject({
-      code: API_ERROR_CODES.FEATURE_UNSUPPORTED,
-      message: "aihubmix_user_groups_unsupported",
-    })
   })
 
   it("maps token detail, create, update, and delete to documented endpoints", async () => {

@@ -1,7 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { requireDisplayAccountKeyManagement } from "~/services/accounts/utils/apiServiceRequest"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import { API_ERROR_CODES } from "~/services/apiService/common/errors"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { DisplaySiteData, SiteAccount } from "~/types"
@@ -28,12 +27,6 @@ interface AccountKeyCoverageResult {
 
 const normalizeGroupName = (value: unknown) =>
   typeof value === "string" ? value.trim() : ""
-
-const isFeatureUnsupportedError = (error: unknown) =>
-  !!error &&
-  typeof error === "object" &&
-  "code" in error &&
-  (error as { code?: unknown }).code === API_ERROR_CODES.FEATURE_UNSUPPORTED
 
 /**
  * Builds the default auto-provision token payload for one user group.
@@ -93,17 +86,10 @@ export async function ensureAccountKeysForAvailableGroups(params: {
   const accountId = displaySiteData.id || account.id
 
   const tokens = await keyManagement.fetchTokens(request)
-  let groups: string[]
-
-  try {
-    const groupsData = await keyManagement.fetchUserGroups(request)
-    groups = Object.keys(groupsData).map(normalizeGroupName).filter(Boolean)
-  } catch (error) {
-    if (!isFeatureUnsupportedError(error)) {
-      throw error
-    }
-    groups = []
-  }
+  const groupsData = keyManagement.userGroups
+    ? await keyManagement.userGroups.fetch(request)
+    : {}
+  const groups = Object.keys(groupsData).map(normalizeGroupName).filter(Boolean)
 
   const uniqueGroups = Array.from(new Set(groups))
 

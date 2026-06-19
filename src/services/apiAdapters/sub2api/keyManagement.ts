@@ -17,6 +17,8 @@ export const sub2ApiKeyManagement: KeyManagementCapability = {
     updateApiToken(request, tokenId, tokenData),
   resolveTokenKey: ({ request, token }) => resolveApiTokenKey(request, token),
   deleteToken: ({ request, tokenId }) => deleteApiToken(request, tokenId),
-  fetchUserGroups: (request) => fetchUserGroups(request),
   fetchAvailableModels: (request) => fetchAccountAvailableModels(request),
+  userGroups: {
+    fetch: (request) => fetchUserGroups(request),
+  },
 }

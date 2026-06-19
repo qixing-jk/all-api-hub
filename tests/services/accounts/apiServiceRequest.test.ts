@@ -58,8 +58,10 @@ describe("fetchDisplayAccountTokens", () => {
     updateToken: typeof updateToken
     resolveTokenKey: typeof resolveTokenKey
     deleteToken: typeof deleteToken
-    fetchUserGroups: typeof fetchUserGroups
     fetchAvailableModels: typeof fetchAvailableModels
+    userGroups: {
+      fetch: typeof fetchUserGroups
+    }
   }
   let adapter: {
     siteType: string
@@ -80,8 +82,10 @@ describe("fetchDisplayAccountTokens", () => {
       updateToken,
       resolveTokenKey,
       deleteToken,
-      fetchUserGroups,
       fetchAvailableModels,
+      userGroups: {
+        fetch: fetchUserGroups,
+      },
     }
     adapter = { siteType: "new-api", keyManagement }
 

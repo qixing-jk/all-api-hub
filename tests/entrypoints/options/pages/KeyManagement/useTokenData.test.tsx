@@ -2,7 +2,6 @@ import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useTokenData } from "~/features/KeyManagement/components/AddTokenDialog/hooks/useTokenData"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { AuthTypeEnum } from "~/types"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -99,7 +98,9 @@ describe("useTokenData", () => {
     createDisplayAccountApiContextMock.mockReturnValue({
       keyManagement: {
         fetchAvailableModels: fetchAccountAvailableModelsMock,
-        fetchUserGroups: fetchUserGroupsMock,
+        userGroups: {
+          fetch: fetchUserGroupsMock,
+        },
       },
       request: { accountId: ACCOUNT.id },
     })
@@ -235,16 +236,14 @@ describe("useTokenData", () => {
     })
   })
 
-  it("treats unsupported group capability as no group selection without showing an error", async () => {
+  it("treats missing group capability as no group selection without showing an error", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValue(["gpt-4o-mini"])
-    fetchUserGroupsMock.mockRejectedValue(
-      new ApiError(
-        "groups_unsupported",
-        undefined,
-        undefined,
-        API_ERROR_CODES.FEATURE_UNSUPPORTED,
-      ),
-    )
+    createDisplayAccountApiContextMock.mockReturnValue({
+      keyManagement: {
+        fetchAvailableModels: fetchAccountAvailableModelsMock,
+      },
+      request: { accountId: ACCOUNT.id },
+    })
 
     const { result } = renderSubject({
       isOpen: true,
@@ -257,6 +256,7 @@ describe("useTokenData", () => {
     })
 
     expect(result.current.groups).toEqual({})
+    expect(fetchUserGroupsMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 

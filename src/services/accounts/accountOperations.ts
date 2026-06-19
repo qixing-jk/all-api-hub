@@ -504,10 +504,15 @@ export async function resolveSub2ApiQuickCreateResolution(
   }
 
   const { keyManagement, request } = createDisplayAccountApiContext(account)
-  const groups = await requireDisplayAccountKeyManagement(
+  const userGroups = requireDisplayAccountKeyManagement(
     account,
     keyManagement,
-  ).fetchUserGroups(request)
+  ).userGroups
+  if (!userGroups) {
+    throw new Error("sub2api_group_inventory_not_implemented")
+  }
+
+  const groups = await userGroups.fetch(request)
   const validGroups = normalizeSub2ApiGroupNames(groups)
 
   if (validGroups.length === 0) {

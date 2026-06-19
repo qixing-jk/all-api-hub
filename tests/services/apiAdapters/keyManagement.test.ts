@@ -11,7 +11,6 @@ const {
   mockAihubmixDeleteApiToken,
   mockAihubmixFetchAccountAvailableModels,
   mockAihubmixFetchAccountTokens,
-  mockAihubmixFetchUserGroups,
   mockAihubmixResolveApiTokenKey,
   mockAihubmixUpdateApiToken,
   mockCreateApiToken,
@@ -34,7 +33,6 @@ const {
   mockAihubmixDeleteApiToken: vi.fn(),
   mockAihubmixFetchAccountAvailableModels: vi.fn(),
   mockAihubmixFetchAccountTokens: vi.fn(),
-  mockAihubmixFetchUserGroups: vi.fn(),
   mockAihubmixResolveApiTokenKey: vi.fn(),
   mockAihubmixUpdateApiToken: vi.fn(),
   mockCreateApiToken: vi.fn(),
@@ -73,7 +71,6 @@ vi.mock("~/services/apiService/aihubmix", () => ({
   deleteApiToken: mockAihubmixDeleteApiToken,
   fetchAccountAvailableModels: mockAihubmixFetchAccountAvailableModels,
   fetchAccountTokens: mockAihubmixFetchAccountTokens,
-  fetchUserGroups: mockAihubmixFetchUserGroups,
   resolveApiTokenKey: mockAihubmixResolveApiTokenKey,
   updateApiToken: mockAihubmixUpdateApiToken,
 }))
@@ -157,7 +154,7 @@ describe("apiAdapter keyManagement", () => {
     await expect(
       keyManagement.deleteToken({ request, tokenId: token.id }),
     ).resolves.toBe(true)
-    await expect(keyManagement.fetchUserGroups(request)).resolves.toBe(
+    await expect(keyManagement.userGroups?.fetch(request)).resolves.toBe(
       userGroups,
     )
     await expect(keyManagement.fetchAvailableModels(request)).resolves.toBe(
@@ -229,7 +226,7 @@ describe("apiAdapter keyManagement", () => {
     await expect(
       sub2ApiKeyManagement.deleteToken({ request, tokenId: token.id }),
     ).resolves.toBe(true)
-    await expect(sub2ApiKeyManagement.fetchUserGroups(request)).resolves.toBe(
+    await expect(sub2ApiKeyManagement.userGroups?.fetch(request)).resolves.toBe(
       userGroups,
     )
     await expect(
@@ -266,7 +263,6 @@ describe("apiAdapter keyManagement", () => {
     mockAihubmixUpdateApiToken.mockResolvedValueOnce(true)
     mockAihubmixResolveApiTokenKey.mockResolvedValueOnce("aihubmix-secret")
     mockAihubmixDeleteApiToken.mockResolvedValueOnce(true)
-    mockAihubmixFetchUserGroups.mockResolvedValueOnce(userGroups)
     mockAihubmixFetchAccountAvailableModels.mockResolvedValueOnce(
       availableModels,
     )
@@ -290,9 +286,7 @@ describe("apiAdapter keyManagement", () => {
     await expect(
       aihubmixKeyManagement.deleteToken({ request, tokenId: token.id }),
     ).resolves.toBe(true)
-    await expect(aihubmixKeyManagement.fetchUserGroups(request)).resolves.toBe(
-      userGroups,
-    )
+    expect(aihubmixKeyManagement.userGroups).toBeUndefined()
     await expect(
       aihubmixKeyManagement.fetchAvailableModels(request),
     ).resolves.toBe(availableModels)
@@ -306,19 +300,8 @@ describe("apiAdapter keyManagement", () => {
     )
     expect(mockAihubmixResolveApiTokenKey).toHaveBeenCalledWith(request, token)
     expect(mockAihubmixDeleteApiToken).toHaveBeenCalledWith(request, token.id)
-    expect(mockAihubmixFetchUserGroups).toHaveBeenCalledWith(request)
     expect(mockAihubmixFetchAccountAvailableModels).toHaveBeenCalledWith(
       request,
     )
-  })
-
-  it("propagates AIHubMix unsupported group inventory errors", async () => {
-    const error = new Error("groups unsupported")
-    mockAihubmixFetchUserGroups.mockRejectedValueOnce(error)
-
-    await expect(aihubmixKeyManagement.fetchUserGroups(request)).rejects.toBe(
-      error,
-    )
-    expect(mockAihubmixFetchUserGroups).toHaveBeenCalledWith(request)
   })
 })

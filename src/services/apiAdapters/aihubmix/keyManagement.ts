@@ -4,7 +4,6 @@ import {
   deleteApiToken,
   fetchAccountAvailableModels,
   fetchAccountTokens,
-  fetchUserGroups,
   resolveApiTokenKey,
   updateApiToken,
 } from "~/services/apiService/aihubmix"
@@ -16,7 +15,5 @@ export const aihubmixKeyManagement: KeyManagementCapability = {
     updateApiToken(request, tokenId, tokenData),
   resolveTokenKey: ({ request, token }) => resolveApiTokenKey(request, token),
   deleteToken: ({ request, tokenId }) => deleteApiToken(request, tokenId),
-  // Preserve AIHubMix's explicit FEATURE_UNSUPPORTED group-inventory contract.
-  fetchUserGroups: (request) => fetchUserGroups(request),
   fetchAvailableModels: (request) => fetchAccountAvailableModels(request),
 }

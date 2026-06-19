@@ -38,8 +38,10 @@ const {
         createToken: (...args: unknown[]) => createApiTokenMock(...args),
         resolveTokenKey: vi.fn(),
         deleteToken: vi.fn(),
-        fetchUserGroups: (...args: unknown[]) => fetchUserGroupsMock(...args),
         fetchAvailableModels: vi.fn(),
+        userGroups: {
+          fetch: (...args: unknown[]) => fetchUserGroupsMock(...args),
+        },
       },
     })),
     toastLoadingMock: vi.fn(),
