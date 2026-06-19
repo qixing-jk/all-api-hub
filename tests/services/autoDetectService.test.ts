@@ -15,6 +15,7 @@ const {
   mockGetActiveOrAllTabs,
   mockGetActiveTabs,
   mockGetAccountSiteType,
+  mockGetSiteAdapter,
   mockIsMessageReceiverUnavailableError,
   mockSendRuntimeMessage,
 } = vi.hoisted(() => ({
@@ -22,14 +23,13 @@ const {
   mockGetActiveOrAllTabs: vi.fn(),
   mockGetActiveTabs: vi.fn(),
   mockGetAccountSiteType: vi.fn(),
+  mockGetSiteAdapter: vi.fn(),
   mockIsMessageReceiverUnavailableError: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
-    fetchUserInfo: mockFetchUserInfo,
-  })),
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: mockGetSiteAdapter,
 }))
 
 vi.mock("~/services/siteDetection/detectSiteType", () => ({
@@ -76,6 +76,11 @@ describe("autoDetectSmart", () => {
     mockGetActiveTabs.mockResolvedValue([])
     mockIsMessageReceiverUnavailableError.mockReturnValue(false)
     mockSendRuntimeMessage.mockResolvedValue(null)
+    mockGetSiteAdapter.mockReturnValue({
+      accountBootstrap: {
+        fetchUserInfo: mockFetchUserInfo,
+      },
+    })
     mockFetchUserInfo.mockResolvedValue({
       id: 1,
       username: "tester",
@@ -244,10 +249,11 @@ describe("autoDetectSmart", () => {
         },
       },
     })
+    expect(mockGetSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
       baseUrl: "https://example.com/console",
       auth: {
-        authType: expect.any(String),
+        authType: AuthTypeEnum.Cookie,
       },
       fetchContext: {
         kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -280,6 +286,7 @@ describe("autoDetectSmart", () => {
 
     expect(result.success).toBe(false)
     expect(result.data).toBeUndefined()
+    expect(mockGetSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
     expect(mockFetchUserInfo).toHaveBeenCalledWith(
       expect.objectContaining({
         auth: {
@@ -298,6 +305,28 @@ describe("autoDetectSmart", () => {
         origin: "https://sub2.example.com",
       },
     })
+  })
+
+  it("falls back when the detected site type has no account bootstrap capability", async () => {
+    browserAny.runtime = null
+    mockGetSiteAdapter.mockReturnValue({})
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 1,
+        active: true,
+        url: "https://example.com/home",
+      },
+    ])
+    browserAny.tabs.sendMessage.mockResolvedValueOnce({
+      success: false,
+      error: "no local storage user",
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result.success).toBe(false)
+    expect(mockGetSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
   it("keeps current-tab context when content script fails with a non-receiver error and API fallback succeeds", async () => {
@@ -877,10 +906,11 @@ describe("autoDetectSmart", () => {
         },
       },
     })
+    expect(mockGetSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
       baseUrl: "https://example.com/console",
       auth: {
-        authType: expect.any(String),
+        authType: AuthTypeEnum.Cookie,
       },
       fetchContext: {
         kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
@@ -1160,7 +1190,7 @@ describe("autoDetectSmart", () => {
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
       baseUrl: "not a url",
       auth: {
-        authType: expect.any(String),
+        authType: AuthTypeEnum.Cookie,
       },
     })
   })

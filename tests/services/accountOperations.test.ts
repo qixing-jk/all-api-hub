@@ -11,7 +11,6 @@ import {
   parseManualQuotaFromUsd,
   validateAndUpdateAccount,
 } from "~/services/accounts/accountOperations"
-import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -66,6 +65,9 @@ describe("accountOperations", () => {
     mockGetSiteAdapter.mockReturnValue({
       accountData: {
         fetchData: mockFetchAccountData,
+      },
+      accountBootstrap: {
+        fetchSiteStatus: mockFetchSiteStatus,
       },
     })
   })
@@ -474,12 +476,29 @@ describe("accountOperations", () => {
       })
 
       const result = await getSiteName(
-        "https://sub2.example.com/console",
+        "https://example.com/console",
         SITE_TYPES.SUB2API,
       )
 
       expect(result).toBe("Sub2 Portal")
-      expect(vi.mocked(getApiService)).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
+      const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
+      expect(vi.mocked(getSiteAdapter)).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
+      expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+        baseUrl: "https://example.com",
+        auth: { authType: AuthTypeEnum.None },
+      })
+    })
+
+    it("falls back to the domain when site-type hint has no bootstrap status probe", async () => {
+      mockGetSiteAdapter.mockReturnValueOnce({})
+
+      const result = await getSiteName(
+        "https://api.example.com/dashboard",
+        SITE_TYPES.NEW_API,
+      )
+
+      expect(result).toBe("Example")
+      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
     })
 
     it("falls back to system_name when a default tab title is paired with a site-type hint", async () => {

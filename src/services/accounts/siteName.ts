@@ -1,5 +1,9 @@
-import { ACCOUNT_SITE_TITLE_RULES, SITE_TYPES } from "~/constants/siteType"
-import { getApiService } from "~/services/apiService"
+import {
+  ACCOUNT_SITE_TITLE_RULES,
+  isAccountSiteType,
+  SITE_TYPES,
+} from "~/constants/siteType"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
 
 /**
@@ -86,14 +90,21 @@ export async function getSiteName(
   // 4. 仅在已知 siteType 时才请求站点状态，避免为未知站点增加额外探测请求。
   if (siteTypeHint) {
     let resolvedSiteStatus = siteStatusInfo
-    if (!resolvedSiteStatus) {
+    if (
+      !resolvedSiteStatus &&
+      siteTypeHint &&
+      isAccountSiteType(siteTypeHint)
+    ) {
       try {
-        resolvedSiteStatus = await getApiService(siteTypeHint).fetchSiteStatus({
-          baseUrl: hostWithProtocol,
-          auth: {
-            authType: AuthTypeEnum.None,
-          },
-        })
+        const accountBootstrap = getSiteAdapter(siteTypeHint).accountBootstrap
+        resolvedSiteStatus = accountBootstrap
+          ? await accountBootstrap.fetchSiteStatus({
+              baseUrl: hostWithProtocol,
+              auth: {
+                authType: AuthTypeEnum.None,
+              },
+            })
+          : null
       } catch {
         resolvedSiteStatus = null
       }

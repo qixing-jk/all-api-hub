@@ -5,7 +5,9 @@ import {
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { getApiService } from "~/services/apiService"
+import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
+import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
 import { joinUrl } from "~/utils/core/url"
 
@@ -102,37 +104,19 @@ export function getBestEffortLoginUrl(siteUrl: string): string {
 }
 
 /**
- * Resolve the legacy/static route path for a supported account site type.
- * @param siteType Account site type.
- * @param route Named route kind.
- * @returns Static path from the site route configuration.
- */
-function getStaticRoutePath(siteType: AccountSiteType, route: SiteRouteKind) {
-  const config = getAccountSiteApiRouter(siteType)
-  switch (route) {
-    case SITE_ROUTE_KINDS.Login:
-      return config.loginPath
-    case SITE_ROUTE_KINDS.Usage:
-      return config.usagePath
-    case SITE_ROUTE_KINDS.CheckIn:
-      return config.checkInPath
-    case SITE_ROUTE_KINDS.AdminCredentials:
-      return config.adminCredentialsPath
-    case SITE_ROUTE_KINDS.Redeem:
-      return config.redeemPath
-    case SITE_ROUTE_KINDS.SiteAnnouncements:
-      return config.siteAnnouncementsPath
-  }
-}
-
-/**
  * Fetch the current New API frontend theme, cached briefly per base URL.
  * @param baseUrl New API deployment base URL.
+ * @param accountBootstrap Account bootstrap status capability.
  * @returns Frontend theme identifier when available.
  */
 async function fetchNewApiFrontendTheme(
   baseUrl: string,
+  accountBootstrap?: Pick<AccountBootstrapCapability, "fetchSiteStatus">,
 ): Promise<string | undefined> {
+  if (!accountBootstrap) {
+    return undefined
+  }
+
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl)
   const cached = themeCache.get(normalizedBaseUrl)
   const now = Date.now()
@@ -141,7 +125,7 @@ async function fetchNewApiFrontendTheme(
   }
 
   try {
-    const statusInfo = await getApiService(SITE_TYPES.NEW_API).fetchSiteStatus({
+    const statusInfo = await accountBootstrap.fetchSiteStatus({
       baseUrl: normalizedBaseUrl,
       auth: { authType: AuthTypeEnum.None },
     })
@@ -165,7 +149,10 @@ async function resolveAccountSiteRoutePath(
   target: Pick<RouteTarget, "baseUrl" | "siteType">,
   route: SiteRouteKind,
 ): Promise<string> {
-  const staticPath = getStaticRoutePath(target.siteType, route)
+  const accountBootstrap = getSiteAdapter(target.siteType).accountBootstrap
+  const staticPath = accountBootstrap?.resolveRoutePath
+    ? await accountBootstrap.resolveRoutePath(target, route)
+    : resolveStaticAccountRoutePath(target, route)
 
   if (
     target.siteType !== SITE_TYPES.NEW_API ||
@@ -174,9 +161,9 @@ async function resolveAccountSiteRoutePath(
     return staticPath
   }
 
-  const theme = await fetchNewApiFrontendTheme(target.baseUrl)
+  const theme = await fetchNewApiFrontendTheme(target.baseUrl, accountBootstrap)
   if (theme === NEW_API_FRONTEND_THEMES.Default) {
-    return NEW_API_DEFAULT_THEME_ROUTE_PATHS[route]
+    return NEW_API_DEFAULT_THEME_ROUTE_PATHS[route] ?? staticPath
   }
 
   return staticPath

@@ -22,6 +22,7 @@ const {
   mockFetchSupportCheckIn,
   mockExtractDefaultExchangeRate,
   mockFetchUserInfo,
+  mockCreateNewApiAccountBootstrap,
   mockGetOrCreateAccessToken,
 } = vi.hoisted(() => ({
   mockAutoDetectSmart: vi.fn(),
@@ -30,6 +31,7 @@ const {
   mockFetchSupportCheckIn: vi.fn(),
   mockExtractDefaultExchangeRate: vi.fn(),
   mockFetchUserInfo: vi.fn(),
+  mockCreateNewApiAccountBootstrap: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
 }))
 
@@ -46,19 +48,31 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/apiService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/services/apiService")>()
-  return {
-    ...actual,
-    getApiService: vi.fn(() => ({
-      fetchSiteStatus: mockFetchSiteStatus,
-      fetchSupportCheckIn: mockFetchSupportCheckIn,
-      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-      fetchUserInfo: mockFetchUserInfo,
-      getOrCreateAccessToken: mockGetOrCreateAccessToken,
-    })),
-  }
-})
+vi.mock("~/services/apiAdapters/newApi/accountBootstrap", () => ({
+  createNewApiAccountBootstrap: mockCreateNewApiAccountBootstrap,
+}))
+
+vi.mock("~/services/apiAdapters/sub2api/accountBootstrap", () => ({
+  sub2ApiAccountBootstrap: {
+    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+    fetchCheckInSupport: mockFetchSupportCheckIn,
+    fetchSiteStatus: mockFetchSiteStatus,
+    fetchUserInfo: mockFetchUserInfo,
+    getOrCreateAccessToken: mockGetOrCreateAccessToken,
+    resolveRoutePath: vi.fn(),
+  },
+}))
+
+vi.mock("~/services/apiAdapters/aihubmix/accountBootstrap", () => ({
+  aihubmixAccountBootstrap: {
+    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+    fetchCheckInSupport: mockFetchSupportCheckIn,
+    fetchSiteStatus: mockFetchSiteStatus,
+    fetchUserInfo: mockFetchUserInfo,
+    getOrCreateAccessToken: mockGetOrCreateAccessToken,
+    resolveRoutePath: vi.fn(),
+  },
+}))
 
 const currentTabFetchContext = (origin: string) => ({
   kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -80,6 +94,14 @@ const browserFetchContext = () => ({
 describe("accountOperations autoDetectAccount", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockCreateNewApiAccountBootstrap.mockReturnValue({
+      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+      fetchCheckInSupport: mockFetchSupportCheckIn,
+      fetchSiteStatus: mockFetchSiteStatus,
+      fetchUserInfo: mockFetchUserInfo,
+      getOrCreateAccessToken: mockGetOrCreateAccessToken,
+      resolveRoutePath: vi.fn(),
+    })
   })
 
   it("returns a validation error when the URL is blank", async () => {

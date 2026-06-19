@@ -22,6 +22,7 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import {
   API_SERVICE_FETCH_CONTEXT_KINDS,
   summarizeApiServiceFetchContext,
@@ -40,7 +41,6 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import { getApiService } from "../apiService"
 import { getAccountSiteType } from "./detectSiteType"
 
 /**
@@ -235,6 +235,15 @@ async function combineUserDataAndSiteType(
 }
 
 /**
+ * Resolve the account-bootstrap capability used by API fallback.
+ * @param siteType Detected site type used to select an adapter.
+ * @returns Account-bootstrap capability when supported.
+ */
+function getAccountBootstrapForApiFallback(siteType: AccountSiteType) {
+  return getSiteAdapter(siteType).accountBootstrap
+}
+
+/**
  * Fetch user data via upstream API (cookie-based).
  * @param url Base site URL used for API calls.
  * @param siteType Detected site type used to select an API implementation.
@@ -254,7 +263,16 @@ async function getUserDataViaAPI(
       })
     }
 
-    const userInfo = await getApiService(siteType).fetchUserInfo({
+    const accountBootstrap = getAccountBootstrapForApiFallback(siteType)
+    if (!accountBootstrap) {
+      logger.warn("Account bootstrap capability is unavailable", {
+        siteType,
+        hasFetchContext: Boolean(fetchContext),
+      })
+      return null
+    }
+
+    const userInfo = await accountBootstrap.fetchUserInfo({
       baseUrl: url,
       auth: {
         authType: AuthTypeEnum.Cookie,
