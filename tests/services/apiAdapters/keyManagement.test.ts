@@ -13,6 +13,7 @@ const {
   mockAihubmixFetchAccountTokens,
   mockAihubmixFetchUserGroups,
   mockAihubmixResolveApiTokenKey,
+  mockAihubmixUpdateApiToken,
   mockCreateApiToken,
   mockDeleteApiToken,
   mockFetchAccountAvailableModels,
@@ -26,6 +27,8 @@ const {
   mockSub2ApiFetchAccountTokens,
   mockSub2ApiFetchUserGroups,
   mockSub2ApiResolveApiTokenKey,
+  mockSub2ApiUpdateApiToken,
+  mockUpdateApiToken,
 } = vi.hoisted(() => ({
   mockAihubmixCreateApiToken: vi.fn(),
   mockAihubmixDeleteApiToken: vi.fn(),
@@ -33,6 +36,7 @@ const {
   mockAihubmixFetchAccountTokens: vi.fn(),
   mockAihubmixFetchUserGroups: vi.fn(),
   mockAihubmixResolveApiTokenKey: vi.fn(),
+  mockAihubmixUpdateApiToken: vi.fn(),
   mockCreateApiToken: vi.fn(),
   mockDeleteApiToken: vi.fn(),
   mockFetchAccountAvailableModels: vi.fn(),
@@ -46,6 +50,8 @@ const {
   mockSub2ApiFetchAccountTokens: vi.fn(),
   mockSub2ApiFetchUserGroups: vi.fn(),
   mockSub2ApiResolveApiTokenKey: vi.fn(),
+  mockSub2ApiUpdateApiToken: vi.fn(),
+  mockUpdateApiToken: vi.fn(),
 }))
 
 vi.mock("~/services/apiService", () => ({
@@ -59,6 +65,7 @@ vi.mock("~/services/apiService/sub2api", () => ({
   fetchAccountTokens: mockSub2ApiFetchAccountTokens,
   fetchUserGroups: mockSub2ApiFetchUserGroups,
   resolveApiTokenKey: mockSub2ApiResolveApiTokenKey,
+  updateApiToken: mockSub2ApiUpdateApiToken,
 }))
 
 vi.mock("~/services/apiService/aihubmix", () => ({
@@ -68,6 +75,7 @@ vi.mock("~/services/apiService/aihubmix", () => ({
   fetchAccountTokens: mockAihubmixFetchAccountTokens,
   fetchUserGroups: mockAihubmixFetchUserGroups,
   resolveApiTokenKey: mockAihubmixResolveApiTokenKey,
+  updateApiToken: mockAihubmixUpdateApiToken,
 }))
 
 const request = {
@@ -104,7 +112,7 @@ const availableModels = ["gpt-4o-mini", "claude-3-haiku"]
 
 describe("apiAdapter keyManagement", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     mockGetApiService.mockReturnValue({
       createApiToken: mockCreateApiToken,
       deleteApiToken: mockDeleteApiToken,
@@ -112,6 +120,7 @@ describe("apiAdapter keyManagement", () => {
       fetchAccountTokens: mockFetchAccountTokens,
       fetchUserGroups: mockFetchUserGroups,
       resolveApiTokenKey: mockResolveApiTokenKey,
+      updateApiToken: mockUpdateApiToken,
     })
   })
 
@@ -119,6 +128,7 @@ describe("apiAdapter keyManagement", () => {
     const expectedTokens = [token]
     mockFetchAccountTokens.mockResolvedValueOnce(expectedTokens)
     mockCreateApiToken.mockResolvedValueOnce(true)
+    mockUpdateApiToken.mockResolvedValueOnce(true)
     mockResolveApiTokenKey.mockResolvedValueOnce("sk-real")
     mockDeleteApiToken.mockResolvedValueOnce(true)
     mockFetchUserGroups.mockResolvedValueOnce(userGroups)
@@ -134,6 +144,13 @@ describe("apiAdapter keyManagement", () => {
     await expect(keyManagement.createToken(request, tokenData)).resolves.toBe(
       true,
     )
+    await expect(
+      keyManagement.updateToken({
+        request,
+        tokenId: token.id,
+        tokenData,
+      }),
+    ).resolves.toBe(true)
     await expect(
       keyManagement.resolveTokenKey({ request, token }),
     ).resolves.toBe("sk-real")
@@ -154,9 +171,15 @@ describe("apiAdapter keyManagement", () => {
       [SITE_TYPES.ONE_HUB],
       [SITE_TYPES.ONE_HUB],
       [SITE_TYPES.ONE_HUB],
+      [SITE_TYPES.ONE_HUB],
     ])
     expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, 2, 25)
     expect(mockCreateApiToken).toHaveBeenCalledWith(request, tokenData)
+    expect(mockUpdateApiToken).toHaveBeenCalledWith(
+      request,
+      token.id,
+      tokenData,
+    )
     expect(mockResolveApiTokenKey).toHaveBeenCalledWith(request, token)
     expect(mockDeleteApiToken).toHaveBeenCalledWith(request, token.id)
     expect(mockFetchUserGroups).toHaveBeenCalledWith(request)
@@ -179,6 +202,7 @@ describe("apiAdapter keyManagement", () => {
     const expectedTokens = [token]
     mockSub2ApiFetchAccountTokens.mockResolvedValueOnce(expectedTokens)
     mockSub2ApiCreateApiToken.mockResolvedValueOnce(token)
+    mockSub2ApiUpdateApiToken.mockResolvedValueOnce(true)
     mockSub2ApiResolveApiTokenKey.mockResolvedValueOnce("sk-sub2api")
     mockSub2ApiDeleteApiToken.mockResolvedValueOnce(true)
     mockSub2ApiFetchUserGroups.mockResolvedValueOnce(userGroups)
@@ -192,6 +216,13 @@ describe("apiAdapter keyManagement", () => {
     await expect(
       sub2ApiKeyManagement.createToken(request, tokenData),
     ).resolves.toBe(token)
+    await expect(
+      sub2ApiKeyManagement.updateToken({
+        request,
+        tokenId: token.id,
+        tokenData,
+      }),
+    ).resolves.toBe(true)
     await expect(
       sub2ApiKeyManagement.resolveTokenKey({ request, token }),
     ).resolves.toBe("sk-sub2api")
@@ -207,6 +238,11 @@ describe("apiAdapter keyManagement", () => {
 
     expect(mockSub2ApiFetchAccountTokens).toHaveBeenCalledWith(request, 3, 50)
     expect(mockSub2ApiCreateApiToken).toHaveBeenCalledWith(request, tokenData)
+    expect(mockSub2ApiUpdateApiToken).toHaveBeenCalledWith(
+      request,
+      token.id,
+      tokenData,
+    )
     expect(mockSub2ApiResolveApiTokenKey).toHaveBeenCalledWith(request, token)
     expect(mockSub2ApiDeleteApiToken).toHaveBeenCalledWith(request, token.id)
     expect(mockSub2ApiFetchUserGroups).toHaveBeenCalledWith(request)
@@ -227,6 +263,7 @@ describe("apiAdapter keyManagement", () => {
     const expectedTokens = [token]
     mockAihubmixFetchAccountTokens.mockResolvedValueOnce(expectedTokens)
     mockAihubmixCreateApiToken.mockResolvedValueOnce(token)
+    mockAihubmixUpdateApiToken.mockResolvedValueOnce(true)
     mockAihubmixResolveApiTokenKey.mockResolvedValueOnce("aihubmix-secret")
     mockAihubmixDeleteApiToken.mockResolvedValueOnce(true)
     mockAihubmixFetchUserGroups.mockResolvedValueOnce(userGroups)
@@ -240,6 +277,13 @@ describe("apiAdapter keyManagement", () => {
     await expect(
       aihubmixKeyManagement.createToken(request, tokenData),
     ).resolves.toBe(token)
+    await expect(
+      aihubmixKeyManagement.updateToken({
+        request,
+        tokenId: token.id,
+        tokenData,
+      }),
+    ).resolves.toBe(true)
     await expect(
       aihubmixKeyManagement.resolveTokenKey({ request, token }),
     ).resolves.toBe("aihubmix-secret")
@@ -255,6 +299,11 @@ describe("apiAdapter keyManagement", () => {
 
     expect(mockAihubmixFetchAccountTokens).toHaveBeenCalledWith(request)
     expect(mockAihubmixCreateApiToken).toHaveBeenCalledWith(request, tokenData)
+    expect(mockAihubmixUpdateApiToken).toHaveBeenCalledWith(
+      request,
+      token.id,
+      tokenData,
+    )
     expect(mockAihubmixResolveApiTokenKey).toHaveBeenCalledWith(request, token)
     expect(mockAihubmixDeleteApiToken).toHaveBeenCalledWith(request, token.id)
     expect(mockAihubmixFetchUserGroups).toHaveBeenCalledWith(request)

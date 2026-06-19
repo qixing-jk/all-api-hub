@@ -17,6 +17,8 @@ export function createNewApiKeyManagement(
       ),
     createToken: (request, tokenData) =>
       getApiService(siteType).createApiToken(request, tokenData),
+    updateToken: ({ request, tokenId, tokenData }) =>
+      getApiService(siteType).updateApiToken(request, tokenId, tokenData),
     resolveTokenKey: ({ request, token }) =>
       getApiService(siteType).resolveApiTokenKey(request, token),
     deleteToken: ({ request, tokenId }) =>

@@ -23,6 +23,12 @@ export type DeleteTokenRequest = {
   tokenId: number
 }
 
+export type UpdateTokenRequest = {
+  request: ApiServiceRequest
+  tokenId: number
+  tokenData: CreateTokenRequest
+}
+
 export type KeyManagementCapability = {
   fetchTokens(
     request: ApiServiceRequest,
@@ -32,6 +38,7 @@ export type KeyManagementCapability = {
     request: ApiServiceRequest,
     tokenData: CreateTokenRequest,
   ): Promise<CreateTokenResult>
+  updateToken(request: UpdateTokenRequest): Promise<boolean | void>
   resolveTokenKey<TToken extends Pick<ApiToken, "id" | "key">>(
     request: ResolveTokenSecretRequest<TToken>,
   ): Promise<string>
