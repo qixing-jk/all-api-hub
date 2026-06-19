@@ -10,15 +10,10 @@ import {
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteAdapter: vi.fn(),
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(),
 }))
 
 vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
@@ -52,32 +47,46 @@ const REQUEST = {
 describe("fetchDisplayAccountTokens", () => {
   let fetchTokens: ReturnType<typeof vi.fn>
   let createToken: ReturnType<typeof vi.fn>
+  let updateToken: ReturnType<typeof vi.fn>
   let resolveTokenKey: ReturnType<typeof vi.fn>
+  let deleteToken: ReturnType<typeof vi.fn>
+  let fetchUserGroups: ReturnType<typeof vi.fn>
+  let fetchAvailableModels: ReturnType<typeof vi.fn>
   let keyManagement: {
     fetchTokens: typeof fetchTokens
     createToken: typeof createToken
+    updateToken: typeof updateToken
     resolveTokenKey: typeof resolveTokenKey
+    deleteToken: typeof deleteToken
+    fetchUserGroups: typeof fetchUserGroups
+    fetchAvailableModels: typeof fetchAvailableModels
   }
   let adapter: {
     siteType: string
     keyManagement?: typeof keyManagement
   }
-  let service: {
-    fetchUserGroups: ReturnType<typeof vi.fn>
-  }
 
   beforeEach(() => {
     fetchTokens = vi.fn()
     createToken = vi.fn()
+    updateToken = vi.fn()
     resolveTokenKey = vi.fn()
-    keyManagement = { fetchTokens, createToken, resolveTokenKey }
+    deleteToken = vi.fn()
+    fetchUserGroups = vi.fn()
+    fetchAvailableModels = vi.fn()
+    keyManagement = {
+      fetchTokens,
+      createToken,
+      updateToken,
+      resolveTokenKey,
+      deleteToken,
+      fetchUserGroups,
+      fetchAvailableModels,
+    }
     adapter = { siteType: "new-api", keyManagement }
-    service = { fetchUserGroups: vi.fn() }
 
     vi.mocked(getSiteAdapter).mockReset()
-    vi.mocked(getApiService).mockReset()
     vi.mocked(getSiteAdapter).mockReturnValue(adapter as any)
-    vi.mocked(getApiService).mockReturnValue(service as any)
   })
 
   it("returns the token array when the API payload is valid", async () => {
@@ -88,11 +97,13 @@ describe("fetchDisplayAccountTokens", () => {
     expect(result).toEqual([{ id: 1, key: "sk-test", status: 1 }])
     expect(fetchTokens).toHaveBeenCalledWith(expect.objectContaining(REQUEST))
     expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual({
-      service,
       adapter,
       keyManagement,
       request: expect.objectContaining(REQUEST),
     })
+    expect(createDisplayAccountApiContext(ACCOUNT as any)).not.toHaveProperty(
+      "service",
+    )
     expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual(
       expect.objectContaining({
         request: expect.not.objectContaining({

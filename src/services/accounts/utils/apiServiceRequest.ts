@@ -2,7 +2,6 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import { getApiService } from "~/services/apiService"
 import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
@@ -90,7 +89,7 @@ const withDisplayAccountAuthSession = (
 }
 
 /**
- * Resolve both the site-specific service and its request DTO for a display account.
+ * Resolve the site adapter and request DTO for a display account.
  */
 export const createDisplayAccountApiContext = (
   account: Pick<
@@ -107,7 +106,6 @@ export const createDisplayAccountApiContext = (
   const adapter = getSiteAdapter(account.siteType)
 
   return {
-    service: getApiService(account.siteType),
     adapter,
     keyManagement: adapter.keyManagement,
     request: withDisplayAccountAuthSession(

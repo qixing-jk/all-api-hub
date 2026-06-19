@@ -2269,9 +2269,6 @@ describe("useAccountDialog save and auto-config flows", () => {
     const fetchAccountTokens = vi
       .fn()
       .mockResolvedValue([createdToken, existingToken])
-    const serviceFetchAccountTokens = vi.fn(() => {
-      throw new Error("service token fetch should not be used")
-    })
 
     vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
       savedSiteAccount,
@@ -2295,9 +2292,6 @@ describe("useAccountDialog save and auto-config flows", () => {
         fetchTokens: fetchAccountTokens,
         createToken: vi.fn(),
         resolveTokenKey: vi.fn(),
-      } as any,
-      service: {
-        fetchAccountTokens: serviceFetchAccountTokens,
       } as any,
       request: { accountId: savedDisplayData.id } as any,
     })
@@ -2338,7 +2332,6 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(fetchAccountTokens).toHaveBeenCalledWith({
       accountId: savedDisplayData.id,
     })
-    expect(serviceFetchAccountTokens).not.toHaveBeenCalled()
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
       createdToken,
@@ -2384,9 +2377,6 @@ describe("useAccountDialog save and auto-config flows", () => {
       .fn()
       .mockResolvedValueOnce([existingToken])
       .mockResolvedValueOnce([existingToken])
-    const serviceFetchAccountTokens = vi.fn(() => {
-      throw new Error("service token fetch should not be used")
-    })
 
     vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
       savedSiteAccount,
@@ -2410,9 +2400,6 @@ describe("useAccountDialog save and auto-config flows", () => {
         fetchTokens: fetchAccountTokens,
         createToken: vi.fn(),
         resolveTokenKey: vi.fn(),
-      } as any,
-      service: {
-        fetchAccountTokens: serviceFetchAccountTokens,
       } as any,
       request: { accountId: savedDisplayData.id } as any,
     })
@@ -2447,7 +2434,6 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
-    expect(serviceFetchAccountTokens).not.toHaveBeenCalled()
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
     )
@@ -2492,9 +2478,6 @@ describe("useAccountDialog save and auto-config flows", () => {
           resolveFetchAccountTokens = resolve
         }),
     )
-    const serviceFetchAccountTokens = vi.fn(() => {
-      throw new Error("service token fetch should not be used")
-    })
 
     vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
       savedSiteAccount,
@@ -2518,9 +2501,6 @@ describe("useAccountDialog save and auto-config flows", () => {
         fetchTokens: fetchAccountTokens,
         createToken: vi.fn(),
         resolveTokenKey: vi.fn(),
-      } as any,
-      service: {
-        fetchAccountTokens: serviceFetchAccountTokens,
       } as any,
       request: { accountId: savedDisplayData.id } as any,
     })
@@ -2577,7 +2557,6 @@ describe("useAccountDialog save and auto-config flows", () => {
         accountId: savedDisplayData.id,
       })
     })
-    expect(serviceFetchAccountTokens).not.toHaveBeenCalled()
 
     await act(async () => {
       result.current.handlers.handleClose()
