@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { getApiService } from "~/services/apiService"
+import { requireDisplayAccountKeyManagement } from "~/services/accounts/utils/apiServiceRequest"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES } from "~/services/apiService/common/errors"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -84,15 +85,18 @@ export async function ensureAccountKeysForAvailableGroups(params: {
   siteUrlOrigin: string
 }): Promise<AccountKeyCoverageResult> {
   const { account, displaySiteData, accountName, siteUrlOrigin } = params
-  const service = getApiService(displaySiteData.siteType)
+  const keyManagement = requireDisplayAccountKeyManagement(
+    displaySiteData,
+    getSiteAdapter(displaySiteData.siteType).keyManagement,
+  )
   const request = createAccountApiRequest(account, displaySiteData)
   const accountId = displaySiteData.id || account.id
 
-  const tokens = await service.fetchAccountTokens(request)
+  const tokens = await keyManagement.fetchTokens(request)
   let groups: string[]
 
   try {
-    const groupsData = await service.fetchUserGroups(request)
+    const groupsData = await keyManagement.fetchUserGroups(request)
     groups = Object.keys(groupsData).map(normalizeGroupName).filter(Boolean)
   } catch (error) {
     if (!isFeatureUnsupportedError(error)) {
@@ -123,7 +127,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
       throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
     }
 
-    await service.createApiToken(request, generateDefaultTokenRequest())
+    await keyManagement.createToken(request, generateDefaultTokenRequest())
     return {
       created: true,
       availableGroups: [],
@@ -166,7 +170,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     if (coveredGroupSet.has(group)) continue
 
     try {
-      await service.createApiToken(
+      await keyManagement.createToken(
         request,
         buildGroupDefaultTokenRequest(group),
       )
@@ -196,9 +200,15 @@ export async function deleteInvalidAccountToken(params: {
   displaySiteData: DisplaySiteData
 }): Promise<AccountKeyRepairDeleteInvalidTokensResult["deleted"][number]> {
   const { token, account, displaySiteData } = params
-  const service = getApiService(displaySiteData.siteType)
+  const keyManagement = requireDisplayAccountKeyManagement(
+    displaySiteData,
+    getSiteAdapter(displaySiteData.siteType).keyManagement,
+  )
   const request = createAccountApiRequest(account, displaySiteData)
-  await service.deleteApiToken(request, token.tokenId)
+  await keyManagement.deleteToken({
+    request,
+    tokenId: token.tokenId,
+  })
   return {
     ...token,
     deletedAt: Date.now(),

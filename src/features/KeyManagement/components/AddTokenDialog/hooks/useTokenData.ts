@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  createDisplayAccountApiContext,
+  requireDisplayAccountKeyManagement,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { API_ERROR_CODES } from "~/services/apiService/common/errors"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
@@ -47,12 +50,16 @@ export function useTokenData(
 
     setIsLoading(true)
     try {
-      const { service, request } =
+      const { keyManagement, request } =
         createDisplayAccountApiContext(currentAccount)
+      const capability = requireDisplayAccountKeyManagement(
+        currentAccount,
+        keyManagement,
+      )
 
       const [models, groupsData] = await Promise.all([
-        service.fetchAccountAvailableModels(request),
-        service.fetchUserGroups(request).catch((error) => {
+        capability.fetchAvailableModels(request),
+        capability.fetchUserGroups(request).catch((error) => {
           if (isFeatureUnsupportedError(error)) {
             return EMPTY_USER_GROUPS
           }

@@ -26,13 +26,18 @@ const mocks = vi.hoisted(() => ({
   deleteApiToken: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/services/apiService")>()
-  return {
-    ...actual,
-    getApiService: vi.fn(() => mocks),
-  }
-})
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: vi.fn(() => ({
+    keyManagement: {
+      fetchTokens: (...args: unknown[]) => mocks.fetchAccountTokens(...args),
+      fetchUserGroups: (...args: unknown[]) => mocks.fetchUserGroups(...args),
+      createToken: (...args: unknown[]) => mocks.createApiToken(...args),
+      deleteToken: (...args: unknown[]) => mocks.deleteApiToken(...args),
+      resolveTokenKey: vi.fn(),
+      fetchAvailableModels: vi.fn(),
+    },
+  })),
+}))
 
 const account = buildSiteAccount({
   id: "new-api-1",
@@ -280,8 +285,8 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       },
     })
 
-    expect(mocks.deleteApiToken).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(mocks.deleteApiToken).toHaveBeenCalledWith({
+      request: expect.objectContaining({
         baseUrl: "https://relay.example.com",
         accountId: "new-api-1",
         auth: expect.objectContaining({
@@ -290,8 +295,8 @@ describe("ensureAccountKeysForAvailableGroups", () => {
           accessToken: "access-token",
         }),
       }),
-      9,
-    )
+      tokenId: 9,
+    })
     expect(result).toEqual(
       expect.objectContaining({
         accountId: "new-api-1",

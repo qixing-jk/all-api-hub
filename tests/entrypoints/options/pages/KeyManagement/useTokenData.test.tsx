@@ -37,6 +37,10 @@ vi.mock("react-i18next", async (importOriginal) => {
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
   createDisplayAccountApiContext: (...args: any[]) =>
     createDisplayAccountApiContextMock(...args),
+  requireDisplayAccountKeyManagement: (
+    _account: unknown,
+    keyManagement: unknown,
+  ) => keyManagement,
 }))
 
 const ACCOUNT = {
@@ -93,8 +97,8 @@ describe("useTokenData", () => {
     toastErrorMock.mockReset()
 
     createDisplayAccountApiContextMock.mockReturnValue({
-      service: {
-        fetchAccountAvailableModels: fetchAccountAvailableModelsMock,
+      keyManagement: {
+        fetchAvailableModels: fetchAccountAvailableModelsMock,
         fetchUserGroups: fetchUserGroupsMock,
       },
       request: { accountId: ACCOUNT.id },

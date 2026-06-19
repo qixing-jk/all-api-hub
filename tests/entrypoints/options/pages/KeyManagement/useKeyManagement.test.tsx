@@ -9,6 +9,7 @@ import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/cons
 import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagement"
 import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
 import { useAccountData } from "~/hooks/useAccountData"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { getApiService } from "~/services/apiService"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
@@ -49,6 +50,10 @@ vi.mock("~/hooks/useAccountData", () => ({
 
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(),
+}))
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/tokenChannelStatus", () => ({
@@ -105,6 +110,30 @@ const createWrapper = () => {
   )
 }
 
+const createAdapterWithKeyManagement = (
+  overrides: {
+    fetchTokens?: ReturnType<typeof vi.fn>
+    createToken?: ReturnType<typeof vi.fn>
+    resolveTokenKey?: ReturnType<typeof vi.fn>
+    deleteToken?: ReturnType<typeof vi.fn>
+    fetchUserGroups?: ReturnType<typeof vi.fn>
+    fetchAvailableModels?: ReturnType<typeof vi.fn>
+  } = {},
+) => ({
+  siteType: SITE_TYPES.NEW_API,
+  keyManagement: {
+    fetchTokens: overrides.fetchTokens ?? vi.fn().mockResolvedValue([]),
+    createToken: overrides.createToken ?? vi.fn(),
+    resolveTokenKey:
+      overrides.resolveTokenKey ??
+      vi.fn(async ({ token }: { token: { key: string } }) => token.key),
+    deleteToken: overrides.deleteToken ?? vi.fn().mockResolvedValue(undefined),
+    fetchUserGroups: overrides.fetchUserGroups ?? vi.fn().mockResolvedValue({}),
+    fetchAvailableModels:
+      overrides.fetchAvailableModels ?? vi.fn().mockResolvedValue([]),
+  },
+})
+
 type ManagedSiteContextValue = {
   managedSiteType: string
   newApiBaseUrl: string
@@ -156,6 +185,12 @@ describe("useKeyManagement enabled account filtering", () => {
       octopusUsername: "",
       octopusPassword: "",
     })
+    vi.mocked(getSiteAdapter).mockReset()
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement() as any,
+    )
+    vi.mocked(getApiService).mockReset()
+    vi.mocked(getApiService).mockReturnValue({} as any)
   })
 
   it("uses enabledDisplayData from useAccountData for selectors", () => {
@@ -217,8 +252,12 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([])
-    const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -258,8 +297,12 @@ describe("useKeyManagement enabled account filtering", () => {
       })
     })
 
-    const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -303,8 +346,12 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([])
-    const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(
       () => useKeyManagement({ accountId: "disabled" }),
@@ -360,8 +407,12 @@ describe("useKeyManagement enabled account filtering", () => {
       return []
     })
 
-    const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -448,8 +499,12 @@ describe("useKeyManagement enabled account filtering", () => {
       return []
     })
 
-    const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -503,7 +558,12 @@ describe("useKeyManagement enabled account filtering", () => {
 
       throw new Error(`raw failure for ${request?.accountId}`)
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -560,7 +620,12 @@ describe("useKeyManagement enabled account filtering", () => {
     const fetchAccountTokens = vi.fn(async () => {
       throw new ApiError("private unauthorized", 401, "/api/token")
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -605,7 +670,12 @@ describe("useKeyManagement enabled account filtering", () => {
     const fetchAccountTokens = vi.fn(async () => {
       throw new ApiError("private unauthorized", 401, "/api/token")
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -652,7 +722,12 @@ describe("useKeyManagement enabled account filtering", () => {
           }),
       )
       .mockResolvedValue([])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const allAccountsComplete = vi.fn().mockResolvedValue(undefined)
     const singleAccountComplete = vi.fn().mockResolvedValue(undefined)
@@ -743,7 +818,12 @@ describe("useKeyManagement enabled account filtering", () => {
       }
       return []
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -807,7 +887,12 @@ describe("useKeyManagement enabled account filtering", () => {
         "/api/token",
       )
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -870,7 +955,12 @@ describe("useKeyManagement enabled account filtering", () => {
 
       return []
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const initialRefreshComplete = vi.fn().mockResolvedValue(undefined)
     const retryComplete = vi.fn().mockRejectedValue(new Error("analytics down"))
@@ -966,8 +1056,12 @@ describe("useKeyManagement enabled account filtering", () => {
       return []
     })
 
-    const mockedGetApiService = vi.mocked(getApiService)
-    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1046,7 +1140,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1113,11 +1212,14 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    const resolveApiTokenKey = vi.fn().mockResolvedValue(resolvedKey)
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      resolveApiTokenKey,
-    } as any)
+    const resolveTokenKey = vi.fn().mockResolvedValue(resolvedKey)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        resolveTokenKey,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1140,7 +1242,7 @@ describe("useKeyManagement enabled account filtering", () => {
     await waitFor(() =>
       expect(result.current.visibleKeys.has(tokenIdentityKey)).toBe(true),
     )
-    expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
+    expect(resolveTokenKey).toHaveBeenCalledTimes(1)
     expect(result.current.getVisibleTokenKey(token)).toBe(resolvedKey)
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
@@ -1169,7 +1271,7 @@ describe("useKeyManagement enabled account filtering", () => {
     await waitFor(() =>
       expect(result.current.visibleKeys.has(tokenIdentityKey)).toBe(true),
     )
-    expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
+    expect(resolveTokenKey).toHaveBeenCalledTimes(1)
   })
 
   it("reruns managed-site status checks on manual refresh and replaces the prior result", async () => {
@@ -1203,7 +1305,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1267,7 +1374,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1341,7 +1453,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const initialLoadComplete = vi.fn().mockResolvedValue(undefined)
     const manualRefreshComplete = vi
@@ -1405,7 +1522,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1471,7 +1593,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1557,7 +1684,12 @@ describe("useKeyManagement enabled account filtering", () => {
 
       return secondAccountTokens
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1682,7 +1814,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1767,7 +1904,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1832,7 +1974,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
     getManagedSiteTokenChannelStatusMock
       .mockResolvedValueOnce({
         status: managedSiteTokenChannelStatuses.NOT_ADDED,
@@ -1918,7 +2065,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
     getManagedSiteTokenChannelStatusMock
       .mockResolvedValueOnce({
         status: managedSiteTokenChannelStatuses.ADDED,
@@ -1990,7 +2142,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
     getManagedSiteTokenChannelStatusMock
       .mockReturnValueOnce(initialStatus)
       .mockResolvedValueOnce({
@@ -2067,11 +2224,14 @@ describe("useKeyManagement enabled account filtering", () => {
         }),
       ])
       .mockResolvedValueOnce([])
-    const deleteApiToken = vi.fn().mockResolvedValue(true)
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      deleteApiToken,
-    } as any)
+    const deleteToken = vi.fn().mockResolvedValue(true)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        deleteToken,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
 
@@ -2093,7 +2253,10 @@ describe("useKeyManagement enabled account filtering", () => {
     })
 
     await waitFor(() => expect(result.current.tokens).toHaveLength(0))
-    expect(deleteApiToken).toHaveBeenCalledWith(expect.anything(), 303)
+    expect(deleteToken).toHaveBeenCalledWith({
+      request: expect.anything(),
+      tokenId: 303,
+    })
     expect(
       result.current.managedSiteTokenStatuses["delete-acc:303"],
     ).toBeUndefined()
@@ -2142,7 +2305,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2205,7 +2373,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2270,7 +2443,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2335,7 +2513,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2387,7 +2570,12 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(
       () => useKeyManagement({ accountId: account.id }),
@@ -2412,7 +2600,12 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2455,7 +2648,12 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2500,7 +2698,12 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2554,7 +2757,12 @@ describe("useKeyManagement enabled account filtering", () => {
     const fetchAccountTokens = vi.fn().mockResolvedValue({
       items: [],
     })
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2600,9 +2808,13 @@ describe("useKeyManagement enabled account filtering", () => {
       value: { writeText },
     })
 
-    vi.mocked(getApiService).mockReturnValue({
-      resolveApiTokenKey: vi.fn().mockResolvedValue("resolved-token-secret"),
-    } as any)
+    const resolveTokenKey = vi.fn().mockResolvedValue("resolved-token-secret")
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        resolveTokenKey,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2649,9 +2861,13 @@ describe("useKeyManagement enabled account filtering", () => {
       value: { writeText },
     })
 
-    vi.mocked(getApiService).mockReturnValue({
-      resolveApiTokenKey: vi.fn().mockResolvedValue("resolved-token-secret"),
-    } as any)
+    const resolveTokenKey = vi.fn().mockResolvedValue("resolved-token-secret")
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        resolveTokenKey,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2693,18 +2909,22 @@ describe("useKeyManagement enabled account filtering", () => {
       value: { writeText },
     })
 
-    vi.mocked(getApiService).mockReturnValue({
-      resolveApiTokenKey: vi
-        .fn()
-        .mockRejectedValue(
-          new ApiError(
-            "messages:errors.tokenSecretUnavailable",
-            undefined,
-            undefined,
-            API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE,
-          ),
+    const resolveTokenKey = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(
+          "messages:errors.tokenSecretUnavailable",
+          undefined,
+          undefined,
+          API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE,
         ),
-    } as any)
+      )
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        resolveTokenKey,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2737,11 +2957,11 @@ describe("useKeyManagement enabled account filtering", () => {
       enabledDisplayData: [account],
     } as any)
 
-    let resolveApiTokenKeyPromise: (value: string) => void = () => {}
-    const resolveApiTokenKey = vi.fn().mockImplementation(
+    let resolveTokenKeyPromise: (value: string) => void = () => {}
+    const resolveTokenKey = vi.fn().mockImplementation(
       () =>
         new Promise<string>((resolve) => {
-          resolveApiTokenKeyPromise = resolve
+          resolveTokenKeyPromise = resolve
         }),
     )
     const fetchAccountTokens = vi.fn().mockResolvedValue([
@@ -2754,10 +2974,13 @@ describe("useKeyManagement enabled account filtering", () => {
         expired_time: 0,
       }),
     ])
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      resolveApiTokenKey,
-    } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        resolveTokenKey,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2785,10 +3008,10 @@ describe("useKeyManagement enabled account filtering", () => {
       await result.current.toggleKeyVisibility(account, token)
     })
 
-    expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
+    expect(resolveTokenKey).toHaveBeenCalledTimes(1)
 
     await act(async () => {
-      resolveApiTokenKeyPromise("resolved-token-secret")
+      resolveTokenKeyPromise("resolved-token-secret")
       await firstReveal
     })
 
@@ -2819,7 +3042,7 @@ describe("useKeyManagement enabled account filtering", () => {
       accountName: account.name,
       expired_time: 0,
     })
-    const resolveApiTokenKey = vi
+    const resolveTokenKey = vi
       .fn()
       .mockRejectedValue(
         new ApiError(
@@ -2829,10 +3052,13 @@ describe("useKeyManagement enabled account filtering", () => {
           API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE,
         ),
       )
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens: vi.fn().mockResolvedValue([token]),
-      resolveApiTokenKey,
-    } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi.fn().mockResolvedValue([token]),
+        resolveTokenKey,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2851,7 +3077,7 @@ describe("useKeyManagement enabled account filtering", () => {
       )
     })
 
-    expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
+    expect(resolveTokenKey).toHaveBeenCalledTimes(1)
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
       "messages:errors.tokenSecretUnavailable",
     )
@@ -2887,11 +3113,14 @@ describe("useKeyManagement enabled account filtering", () => {
       enabledDisplayData: [account],
     } as any)
 
-    const resolveApiTokenKey = vi.fn().mockResolvedValue("resolved-token-key")
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens: vi.fn().mockResolvedValue([token]),
-      resolveApiTokenKey,
-    } as any)
+    const resolveTokenKey = vi.fn().mockResolvedValue("resolved-token-key")
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi.fn().mockResolvedValue([token]),
+        resolveTokenKey,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2908,7 +3137,7 @@ describe("useKeyManagement enabled account filtering", () => {
       await result.current.toggleKeyVisibility(account, token)
     })
 
-    expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
+    expect(resolveTokenKey).toHaveBeenCalledTimes(1)
     expect(result.current.getVisibleTokenKey(token)).toBe("resolved-token-key")
     expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
     expect(trackerCompleteMock).toHaveBeenCalledWith(
@@ -2939,7 +3168,12 @@ describe("useKeyManagement enabled account filtering", () => {
       .fn()
       .mockResolvedValueOnce([token])
       .mockResolvedValueOnce([token])
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2980,7 +3214,12 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn()
-    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3050,11 +3289,14 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([token])
-    const deleteApiToken = vi.fn()
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      deleteApiToken,
-    } as any)
+    const deleteToken = vi.fn()
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        deleteToken,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm")
 
@@ -3073,7 +3315,10 @@ describe("useKeyManagement enabled account filtering", () => {
     })
 
     expect(confirmSpy).not.toHaveBeenCalled()
-    expect(deleteApiToken).toHaveBeenCalledWith(expect.anything(), token.id)
+    expect(deleteToken).toHaveBeenCalledWith({
+      request: expect.anything(),
+      tokenId: token.id,
+    })
     expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
       "keyManagement:messages.deleteSuccess",
     )
@@ -3101,11 +3346,14 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([])
-    const deleteApiToken = vi.fn().mockResolvedValue(undefined)
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      deleteApiToken,
-    } as any)
+    const deleteToken = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        deleteToken,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3115,7 +3363,10 @@ describe("useKeyManagement enabled account filtering", () => {
       await result.current.handleDeleteToken(token)
     })
 
-    expect(deleteApiToken).toHaveBeenCalledWith(expect.anything(), token.id)
+    expect(deleteToken).toHaveBeenCalledWith({
+      request: expect.anything(),
+      tokenId: token.id,
+    })
     expect(result.current.tokenInventories[account.id]).toBeUndefined()
     expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
       "keyManagement:messages.deleteSuccess",
@@ -3149,11 +3400,14 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([loadedToken])
-    const deleteApiToken = vi.fn().mockResolvedValue(undefined)
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      deleteApiToken,
-    } as any)
+    const deleteToken = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        deleteToken,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3173,10 +3427,10 @@ describe("useKeyManagement enabled account filtering", () => {
       await result.current.handleDeleteToken(staleToken)
     })
 
-    expect(deleteApiToken).toHaveBeenCalledWith(
-      expect.anything(),
-      staleToken.id,
-    )
+    expect(deleteToken).toHaveBeenCalledWith({
+      request: expect.anything(),
+      tokenId: staleToken.id,
+    })
     expect(result.current.tokenInventories[account.id]?.tokens).toEqual([
       loadedToken,
     ])
@@ -3205,11 +3459,14 @@ describe("useKeyManagement enabled account filtering", () => {
       expired_time: 0,
     })
     const fetchAccountTokens = vi.fn().mockResolvedValue([token])
-    const deleteApiToken = vi.fn().mockRejectedValue(new Error("delete boom"))
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      deleteApiToken,
-    } as any)
+    const deleteToken = vi.fn().mockRejectedValue(new Error("delete boom"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        deleteToken,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
 
@@ -3263,11 +3520,14 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([token])
-    const deleteApiToken = vi.fn().mockResolvedValue(undefined)
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      deleteApiToken,
-    } as any)
+    const deleteToken = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        deleteToken,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
 
@@ -3287,7 +3547,10 @@ describe("useKeyManagement enabled account filtering", () => {
       await result.current.handleDeleteToken(token)
     })
 
-    expect(deleteApiToken).toHaveBeenCalledWith(expect.anything(), token.id)
+    expect(deleteToken).toHaveBeenCalledWith({
+      request: expect.anything(),
+      tokenId: token.id,
+    })
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
@@ -3335,11 +3598,14 @@ describe("useKeyManagement enabled account filtering", () => {
             resolveRefresh = resolve
           }),
       )
-    const deleteApiToken = vi.fn().mockResolvedValue(undefined)
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      deleteApiToken,
-    } as any)
+    const deleteToken = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        deleteToken,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3381,11 +3647,14 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([token])
-    const deleteApiToken = vi.fn().mockResolvedValue(undefined)
-    vi.mocked(getApiService).mockReturnValue({
-      fetchAccountTokens,
-      deleteApiToken,
-    } as any)
+    const deleteToken = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+        deleteToken,
+      }) as any,
+    )
+    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
 
@@ -3404,7 +3673,10 @@ describe("useKeyManagement enabled account filtering", () => {
       await result.current.handleDeleteToken(token)
     })
 
-    expect(deleteApiToken).toHaveBeenCalledWith(expect.anything(), token.id)
+    expect(deleteToken).toHaveBeenCalledWith({
+      request: expect.anything(),
+      tokenId: token.id,
+    })
     expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
       "keyManagement:messages.deleteSuccess",
     )

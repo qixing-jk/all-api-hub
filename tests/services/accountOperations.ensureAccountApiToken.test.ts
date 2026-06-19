@@ -37,6 +37,9 @@ const {
         fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
         createToken: (...args: unknown[]) => createApiTokenMock(...args),
         resolveTokenKey: vi.fn(),
+        deleteToken: vi.fn(),
+        fetchUserGroups: (...args: unknown[]) => fetchUserGroupsMock(...args),
+        fetchAvailableModels: vi.fn(),
       },
     })),
     toastLoadingMock: vi.fn(),
@@ -55,9 +58,7 @@ vi.mock("~/services/apiService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/services/apiService")>()
   return {
     ...actual,
-    getApiService: vi.fn(() => ({
-      fetchUserGroups: (...args: unknown[]) => fetchUserGroupsMock(...args),
-    })),
+    getApiService: vi.fn(() => ({})),
   }
 })
 

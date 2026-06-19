@@ -7,6 +7,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
   createDisplayAccountApiContext,
+  requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/apiService/common/apiKey"
@@ -628,8 +629,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       }))
 
       try {
-        const { service, request } = createDisplayAccountApiContext(account)
-        const tokens = await service.fetchAccountTokens(request)
+        const { keyManagement, request } =
+          createDisplayAccountApiContext(account)
+        const tokens = await requireDisplayAccountKeyManagement(
+          account,
+          keyManagement,
+        ).fetchTokens(request)
 
         if (!isEpochActive(loadEpoch)) return null
         if (!isLatestAccountRequest(accountId, requestEpoch)) return null
@@ -1473,8 +1478,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return
       }
 
-      const { service, request } = createDisplayAccountApiContext(account)
-      await service.deleteApiToken(request, token.id)
+      const { keyManagement, request } = createDisplayAccountApiContext(account)
+      await requireDisplayAccountKeyManagement(
+        account,
+        keyManagement,
+      ).deleteToken({
+        request,
+        tokenId: token.id,
+      })
       clearTokenVisibilityState(token)
       removeTokenFromInventory(token)
       invalidateManagedSiteStatusForToken(token)

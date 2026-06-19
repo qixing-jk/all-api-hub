@@ -503,8 +503,11 @@ export async function resolveSub2ApiQuickCreateResolution(
     throw new Error("sub2api_quick_create_not_applicable")
   }
 
-  const { service, request } = createDisplayAccountApiContext(account)
-  const groups = await service.fetchUserGroups(request)
+  const { keyManagement, request } = createDisplayAccountApiContext(account)
+  const groups = await requireDisplayAccountKeyManagement(
+    account,
+    keyManagement,
+  ).fetchUserGroups(request)
   const validGroups = normalizeSub2ApiGroupNames(groups)
 
   if (validGroups.length === 0) {
