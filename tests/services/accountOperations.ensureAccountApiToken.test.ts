@@ -10,6 +10,7 @@ import {
   ensureAccountApiToken,
   resolveSub2ApiQuickCreateResolution,
 } from "~/services/accounts/accountOperations"
+import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
 import { AuthTypeEnum } from "~/types"
 import {
   buildSiteAccount,
@@ -32,18 +33,22 @@ const {
     fetchAccountTokensMock,
     createApiTokenMock,
     fetchUserGroupsMock,
-    getSiteAdapterMock: vi.fn(() => ({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-        createToken: (...args: unknown[]) => createApiTokenMock(...args),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-        userGroups: {
-          fetch: (...args: unknown[]) => fetchUserGroupsMock(...args),
+    getSiteAdapterMock: vi.fn(
+      (): SiteAdapter => ({
+        siteType: SITE_TYPES.SUB2API,
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+          createToken: (...args: unknown[]) => createApiTokenMock(...args),
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+          userGroups: {
+            fetch: (...args: unknown[]) => fetchUserGroupsMock(...args),
+          },
         },
-      },
-    })),
+      }),
+    ),
     toastLoadingMock: vi.fn(),
   }
 })
@@ -273,6 +278,27 @@ describe("accountOperations Sub2API token creation guards", () => {
       kind: "ready",
       group: "vip",
     })
+  })
+
+  it("rejects quick-create resolution when Sub2API group inventory is missing", async () => {
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.SUB2API,
+      keyManagement: {
+        fetchTokens: vi.fn(),
+        createToken: vi.fn(),
+        updateToken: vi.fn(),
+        resolveTokenKey: vi.fn(),
+        deleteToken: vi.fn(),
+        fetchAvailableModels: vi.fn(),
+        userGroups: undefined,
+      },
+    })
+
+    await expect(
+      resolveSub2ApiQuickCreateResolution(DISPLAY_ACCOUNT),
+    ).rejects.toThrow("sub2api_group_inventory_not_implemented")
+
+    expect(fetchUserGroupsMock).not.toHaveBeenCalled()
   })
 
   it("rejects quick-create resolution for non-Sub2API accounts", async () => {

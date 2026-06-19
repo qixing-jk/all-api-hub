@@ -5,7 +5,6 @@ import { Z_INDEX } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -65,7 +64,7 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: () => ({
+  getSiteAdapter: (siteType: string) => ({
     keyManagement: {
       fetchTokens: vi.fn(async () => []),
       createToken: (...args: any[]) => createApiTokenMock(...args),
@@ -75,9 +74,12 @@ vi.mock("~/services/apiAdapters/registry", () => ({
       deleteToken: vi.fn(),
       fetchAvailableModels: (...args: any[]) =>
         fetchAccountAvailableModelsMock(...args),
-      userGroups: {
-        fetch: (...args: any[]) => fetchUserGroupsMock(...args),
-      },
+      userGroups:
+        siteType === SITE_TYPES.AIHUBMIX
+          ? undefined
+          : {
+              fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+            },
     },
   }),
 }))
@@ -1149,14 +1151,6 @@ describe("AddTokenDialog prefill", () => {
 
   it("creates tokens without rendering or requiring group selection when the site has no groups", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4"])
-    fetchUserGroupsMock.mockRejectedValueOnce(
-      new ApiError(
-        "aihubmix_user_groups_unsupported",
-        undefined,
-        undefined,
-        API_ERROR_CODES.FEATURE_UNSUPPORTED,
-      ),
-    )
     createApiTokenMock.mockResolvedValueOnce(true)
 
     const user = userEvent.setup()
@@ -1165,8 +1159,8 @@ describe("AddTokenDialog prefill", () => {
       <AddTokenDialog
         isOpen={true}
         onClose={() => {}}
-        availableAccounts={[ACCOUNT]}
-        preSelectedAccountId={ACCOUNT.id}
+        availableAccounts={[AIHUBMIX_ACCOUNT]}
+        preSelectedAccountId={AIHUBMIX_ACCOUNT.id}
         createPrefill={{ modelId: "gpt-4", defaultName: "group-less token" }}
       />,
     )
@@ -1174,6 +1168,7 @@ describe("AddTokenDialog prefill", () => {
     await screen.findByLabelText(/keyManagement:dialog\.tokenName/)
 
     expect(screen.queryByText("keyManagement:dialog.groupLabel")).toBeNull()
+    expect(fetchUserGroupsMock).not.toHaveBeenCalled()
 
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
@@ -1192,14 +1187,6 @@ describe("AddTokenDialog prefill", () => {
 
   it("lets AIHubMix submit subnet values for backend validation", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
-    fetchUserGroupsMock.mockRejectedValueOnce(
-      new ApiError(
-        "aihubmix_user_groups_unsupported",
-        undefined,
-        undefined,
-        API_ERROR_CODES.FEATURE_UNSUPPORTED,
-      ),
-    )
     createApiTokenMock.mockResolvedValueOnce(true)
 
     const user = userEvent.setup()
@@ -1224,6 +1211,7 @@ describe("AddTokenDialog prefill", () => {
       screen.getByText("keyManagement:dialog.subnetExample"),
     ).toBeInTheDocument()
     expect(screen.queryByText("keyManagement:dialog.ipExample")).toBeNull()
+    expect(fetchUserGroupsMock).not.toHaveBeenCalled()
 
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
