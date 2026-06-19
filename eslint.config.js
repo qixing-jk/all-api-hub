@@ -68,6 +68,12 @@ const apiServiceBackendImplementationImportPattern = {
   message:
     "Do not import backend-specific apiService implementations from product code. Add or use an adapter/workflow module instead.",
 }
+const accountSiteMainlineApiServiceFacadeImportPattern = {
+  regex:
+    "^(?:~/services/apiService|(?:\\.\\./){1,6}(?:services/)?apiService)(?:/index)?$",
+  message:
+    "Account-site product flows must use ~/services/apiAdapters or account workflow helpers instead of the legacy apiService facade.",
+}
 
 export default defineConfig([
   {
@@ -272,6 +278,31 @@ export default defineConfig([
         "error",
         {
           patterns: [apiServiceBackendImplementationImportPattern],
+        },
+      ],
+    },
+  },
+  // Guardrails: account-mainline product flows must not import the legacy apiService facade.
+  // ESLint flat config replaces rule options for narrower matches, so this block
+  // restates the backend implementation guard instead of relying on option merging.
+  {
+    files: [
+      "src/features/AccountManagement/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/features/KeyManagement/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/features/ModelList/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/components/dialogs/VerifyApiDialog/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/components/dialogs/VerifyCliSupportDialog/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/components/KiloCodeExportDialog.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/services/accounts/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            apiServiceBackendImplementationImportPattern,
+            accountSiteMainlineApiServiceFacadeImportPattern,
+          ],
         },
       ],
     },
