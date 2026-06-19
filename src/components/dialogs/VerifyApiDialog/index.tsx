@@ -13,8 +13,11 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import { getApiService } from "~/services/apiService"
+import {
+  createDisplayAccountApiContext,
+  requireDisplayAccountKeyManagement,
+  resolveDisplayAccountTokenForSecret,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import {
@@ -176,18 +179,11 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const loadTokens = async () => {
     setIsLoadingTokens(true)
     try {
-      const accountTokens = await getApiService(
-        account.siteType,
-      ).fetchAccountTokens({
-        baseUrl: account.baseUrl,
-        accountId: account.id,
-        auth: {
-          authType: account.authType,
-          userId: account.userId,
-          accessToken: account.token,
-          cookie: account.cookieAuthSessionCookie,
-        },
-      })
+      const { keyManagement, request } = createDisplayAccountApiContext(account)
+      const accountTokens = await requireDisplayAccountKeyManagement(
+        account,
+        keyManagement,
+      ).fetchTokens(request)
 
       const sorted = [...accountTokens].sort((a, b) => {
         const aEnabled = a.status === 1 ? 0 : 1

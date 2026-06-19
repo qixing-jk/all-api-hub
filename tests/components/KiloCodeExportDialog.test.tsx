@@ -86,16 +86,15 @@ vi.mock("~/services/aiApi/openaiCompatible", () => ({
 }))
 
 const mockFetchAccountTokens = vi.fn()
-const mockGetApiService = vi.fn()
+const mockGetSiteAdapter = vi.fn()
 const mockResolveApiTokenKey = vi.fn()
 const mockFetchAccountAvailableModels = vi.fn()
 const mockFetchUserGroups = vi.fn()
 const mockEnsureAccountApiToken = vi.fn()
 const mockResolveSub2ApiQuickCreateResolution = vi.fn()
 
-vi.mock("~/services/apiService", () => ({
-  // Forward through a typed wrapper so call sites avoid `any[]`.
-  getApiService: (...args: unknown[]) => mockGetApiService(...args),
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: (...args: unknown[]) => mockGetSiteAdapter(...args),
 }))
 
 vi.mock("~/services/accounts/accountOperations", () => ({
@@ -181,10 +180,35 @@ describe("KiloCodeExportDialog", () => {
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue(["gpt-4o-mini"])
     mockFetchAccountTokens.mockReset()
-    mockGetApiService.mockReset()
+    mockGetSiteAdapter.mockReset()
+    mockGetSiteAdapter.mockReturnValue({
+      keyManagement: {
+        fetchTokens: (...args: unknown[]) => mockFetchAccountTokens(...args),
+        createToken: vi.fn(),
+        resolveTokenKey: (...args: unknown[]) =>
+          mockResolveApiTokenKey(...args),
+        deleteToken: vi.fn(),
+        fetchUserGroups: (...args: unknown[]) => mockFetchUserGroups(...args),
+        fetchAvailableModels: (...args: unknown[]) =>
+          mockFetchAccountAvailableModels(...args),
+      },
+    })
     mockResolveApiTokenKey.mockReset()
     mockResolveApiTokenKey.mockImplementation(
-      async (_request, token: { key: string }) => token.key,
+      async (
+        requestOrPayload: unknown | { token?: { key: string } },
+        token?: { key: string },
+      ) => {
+        if (
+          requestOrPayload &&
+          typeof requestOrPayload === "object" &&
+          "token" in requestOrPayload
+        ) {
+          return (requestOrPayload as { token: { key: string } }).token.key
+        }
+
+        return token?.key
+      },
     )
     mockFetchAccountAvailableModels.mockReset()
     mockFetchAccountAvailableModels.mockResolvedValue([])
@@ -231,10 +255,6 @@ describe("KiloCodeExportDialog", () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       { id: "1", name: "Default", key: "sk-test" },
     ])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     const sitePicker = await screen.findByPlaceholderText(
       "ui:dialog.kiloCode.placeholders.selectSites",
@@ -314,10 +334,6 @@ describe("KiloCodeExportDialog", () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       { id: 1, name: "Default", key: "sk-test" },
     ])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
@@ -379,10 +395,6 @@ describe("KiloCodeExportDialog", () => {
         return [{ id: 1, name: "Default", key: "sk-test" }]
       },
     )
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
@@ -441,10 +453,6 @@ describe("KiloCodeExportDialog", () => {
     mockFetchAccountTokens
       .mockResolvedValueOnce({ items: [] })
       .mockResolvedValueOnce([{ id: 1, name: "Recovered", key: "sk-test" }])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
@@ -498,10 +506,6 @@ describe("KiloCodeExportDialog", () => {
     mockFetchOpenAICompatibleModelIds
       .mockRejectedValueOnce(new Error("model load failed"))
       .mockResolvedValueOnce(["gpt-4o-mini"])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
@@ -559,10 +563,6 @@ describe("KiloCodeExportDialog", () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       { id: 1, name: "Default", key: "sk-test" },
     ])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(
       <KiloCodeExportDialog
@@ -608,10 +608,6 @@ describe("KiloCodeExportDialog", () => {
     mockFetchAccountTokens
       .mockResolvedValueOnce([{ id: 1, name: "Token A", key: "sk-a" }])
       .mockResolvedValueOnce([{ id: 2, name: "Token B", key: "sk-b" }])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     const { rerender } = render(
       <KiloCodeExportDialog
@@ -683,10 +679,6 @@ describe("KiloCodeExportDialog", () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       { id: 1, name: "Default", key: "sk-test" },
     ])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     const { rerender } = render(
       <KiloCodeExportDialog
@@ -741,10 +733,6 @@ describe("KiloCodeExportDialog", () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       { id: 7, name: "   ", key: "sk-test" },
     ])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(
       <KiloCodeExportDialog
@@ -779,12 +767,6 @@ describe("KiloCodeExportDialog", () => {
     mockFetchAccountTokens
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ id: 11, name: "Created", key: "sk-test" }])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-      fetchAccountAvailableModels: mockFetchAccountAvailableModels,
-      fetchUserGroups: mockFetchUserGroups,
-    })
     mockResolveSub2ApiQuickCreateResolution.mockResolvedValueOnce({
       kind: "ready",
       group: "vip",
@@ -848,12 +830,6 @@ describe("KiloCodeExportDialog", () => {
     })
 
     mockFetchAccountTokens.mockResolvedValueOnce([])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-      fetchAccountAvailableModels: mockFetchAccountAvailableModels,
-      fetchUserGroups: mockFetchUserGroups,
-    })
     mockResolveSub2ApiQuickCreateResolution.mockResolvedValueOnce({
       kind: "selection_required",
       allowedGroups: ["default", "vip"],
@@ -932,10 +908,6 @@ describe("KiloCodeExportDialog", () => {
         created_time: 100,
       },
     ])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
     mockResolveSub2ApiQuickCreateResolution.mockResolvedValueOnce({
       kind: "selection_required",
       allowedGroups: ["default", "vip"],
@@ -1018,10 +990,6 @@ describe("KiloCodeExportDialog", () => {
         created_at: "2024-04-01T00:00:00.000Z",
       },
     ])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
     mockResolveSub2ApiQuickCreateResolution.mockResolvedValueOnce({
       kind: "selection_required",
       allowedGroups: ["default", "vip"],
@@ -1098,10 +1066,6 @@ describe("KiloCodeExportDialog", () => {
         key: "sk-newest",
       },
     ])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
     mockResolveSub2ApiQuickCreateResolution.mockResolvedValueOnce({
       kind: "selection_required",
       allowedGroups: ["default", "vip"],
@@ -1162,10 +1126,6 @@ describe("KiloCodeExportDialog", () => {
     })
 
     mockFetchAccountTokens.mockResolvedValueOnce([])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
     mockResolveSub2ApiQuickCreateResolution.mockResolvedValueOnce({
       kind: "blocked",
       message: "   ",
@@ -1214,10 +1174,6 @@ describe("KiloCodeExportDialog", () => {
     })
 
     mockFetchAccountTokens.mockResolvedValueOnce([])
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
@@ -1265,10 +1221,6 @@ describe("KiloCodeExportDialog", () => {
       { id: 1, name: "Default", key: "sk-abcd************wxyz" },
     ])
     mockResolveApiTokenKey.mockResolvedValue("sk-full-secret")
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
@@ -1322,12 +1274,21 @@ describe("KiloCodeExportDialog", () => {
       { id: 1, name: "Default", key: "sk-abcd************wxyz" },
     ])
     mockResolveApiTokenKey.mockImplementation(
-      async (_request, token: { key: string }) => token.key,
+      async (
+        requestOrPayload: unknown | { token?: { key: string } },
+        token?: { key: string },
+      ) => {
+        if (
+          requestOrPayload &&
+          typeof requestOrPayload === "object" &&
+          "token" in requestOrPayload
+        ) {
+          return (requestOrPayload as { token: { key: string } }).token.key
+        }
+
+        return token?.key
+      },
     )
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
@@ -1390,10 +1351,6 @@ describe("KiloCodeExportDialog", () => {
       { id: 1, name: "Default", key: "sk-abcd************wxyz" },
     ])
     mockResolveApiTokenKey.mockResolvedValue("sk-full-secret")
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
@@ -1466,10 +1423,6 @@ describe("KiloCodeExportDialog", () => {
     mockResolveApiTokenKey
       .mockResolvedValueOnce("sk-full-secret")
       .mockRejectedValueOnce(new Error("resolve failed"))
-    mockGetApiService.mockReturnValue({
-      fetchAccountTokens: mockFetchAccountTokens,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-    })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 

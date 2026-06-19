@@ -49,6 +49,10 @@ vi.mock("~/services/apiAdapters/registry", () => ({
         request: unknown
         token: { key: string }
       }) => _params.token.key,
+      deleteToken: vi.fn(),
+      fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
+      fetchAvailableModels: (...args: any[]) =>
+        fetchAccountAvailableModelsMock(...args),
     },
   }),
 }))

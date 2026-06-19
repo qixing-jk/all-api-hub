@@ -17,6 +17,7 @@ import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPost
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   createDisplayAccountApiContext,
+  requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
@@ -104,8 +105,11 @@ export function useChannelDialog() {
       onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
     },
   ): Promise<boolean> => {
-    const { service, request } = createDisplayAccountApiContext(account)
-    const existingTokens = await service.fetchAccountTokens(request)
+    const { keyManagement, request } = createDisplayAccountApiContext(account)
+    const existingTokens = await requireDisplayAccountKeyManagement(
+      account,
+      keyManagement,
+    ).fetchTokens(request)
     if (Array.isArray(existingTokens) && existingTokens.length > 0) {
       return false
     }
@@ -367,9 +371,9 @@ export function useChannelDialog() {
       }
 
       let apiToken = accountToken
-      let accountApiService:
-        | ReturnType<typeof createDisplayAccountApiContext>["service"]
-        | null = null
+      let accountKeyManagement: NonNullable<
+        ReturnType<typeof createDisplayAccountApiContext>["keyManagement"]
+      > | null = null
       let accountApiRequest:
         | ReturnType<typeof createDisplayAccountApiContext>["request"]
         | null = null
@@ -378,10 +382,13 @@ export function useChannelDialog() {
       if (!apiToken) {
         const accountApiContext =
           createDisplayAccountApiContext(displaySiteData)
-        accountApiService = accountApiContext.service
+        accountKeyManagement = requireDisplayAccountKeyManagement(
+          displaySiteData,
+          accountApiContext.keyManagement,
+        )
         accountApiRequest = accountApiContext.request
         const existingTokens =
-          await accountApiService.fetchAccountTokens(accountApiRequest)
+          await accountKeyManagement.fetchTokens(accountApiRequest)
         const existingTokenList = Array.isArray(existingTokens)
           ? existingTokens
           : []
@@ -432,10 +439,8 @@ export function useChannelDialog() {
                 }
 
                 const refetchedTokens =
-                  accountApiService && accountApiRequest
-                    ? await accountApiService.fetchAccountTokens(
-                        accountApiRequest,
-                      )
+                  accountKeyManagement && accountApiRequest
+                    ? await accountKeyManagement.fetchTokens(accountApiRequest)
                     : null
                 if (!shouldContinue()) {
                   return

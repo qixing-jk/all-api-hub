@@ -248,12 +248,23 @@ vi.mock("~/services/apiService", async (importOriginal) => {
 
   return {
     ...actual,
-    getApiService: vi.fn(() => ({
-      fetchAccountTokens: (...args: any[]) => mockFetchAccountTokens(...args),
-      resolveApiTokenKey: (...args: any[]) => mockResolveApiTokenKey(...args),
-    })),
+    getApiService: vi.fn(() => ({})),
   }
 })
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: () => ({
+    keyManagement: {
+      fetchTokens: (...args: any[]) => mockFetchAccountTokens(...args),
+      createToken: vi.fn(),
+      resolveTokenKey: ({ request, token }: any) =>
+        mockResolveApiTokenKey(request, token),
+      deleteToken: vi.fn(),
+      fetchUserGroups: vi.fn(),
+      fetchAvailableModels: vi.fn(),
+    },
+  }),
+}))
 
 describe("useChannelDialog", () => {
   beforeEach(() => {

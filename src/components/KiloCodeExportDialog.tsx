@@ -26,9 +26,12 @@ import {
   resolveSub2ApiQuickCreateResolution,
 } from "~/services/accounts/accountOperations"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  createDisplayAccountApiContext,
+  requireDisplayAccountKeyManagement,
+  resolveDisplayAccountTokenForSecret,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
-import { getApiService } from "~/services/apiService"
 import {
   buildKiloCodeApiConfigs,
   buildKiloCodeSettingsFile,
@@ -151,22 +154,6 @@ function pickNewestToken(tokens: ApiToken[]): ApiToken {
 
     return candidateToken.id > selectedToken.id ? candidateToken : selectedToken
   })
-}
-
-/**
- * Build arguments for `fetchAccountTokens` from display-layer account data.
- */
-function buildFetchTokenArgs(site: DisplaySiteData) {
-  return {
-    baseUrl: site.baseUrl,
-    accountId: site.id,
-    auth: {
-      authType: site.authType,
-      userId: site.userId,
-      accessToken: site.token,
-      cookie: site.cookieAuthSessionCookie,
-    },
-  }
 }
 
 /**
@@ -316,10 +303,11 @@ export function KiloCodeExportDialog({
       }))
 
       try {
-        const service = getApiService(site.siteType)
-        const tokens = await service.fetchAccountTokens(
-          buildFetchTokenArgs(site),
-        )
+        const { keyManagement, request } = createDisplayAccountApiContext(site)
+        const tokens = await requireDisplayAccountKeyManagement(
+          site,
+          keyManagement,
+        ).fetchTokens(request)
         if (!Array.isArray(tokens)) {
           setTokenInventories((prev) => ({
             ...prev,

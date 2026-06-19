@@ -30,17 +30,48 @@ function getCliToolCardTestId(toolId: string) {
 }
 
 vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({
-    fetchAccountTokens: (...args: any[]) => mockFetchAccountTokens(...args),
-    resolveApiTokenKey: async (_request: unknown, token: { key: string }) =>
-      token.key,
-  }),
+  getApiService: () => ({}),
 }))
 
-vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
-  resolveDisplayAccountTokenForSecret: (...args: any[]) =>
-    mockResolveDisplayAccountTokenForSecret(...args),
-}))
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+
+    return {
+      ...actual,
+      createDisplayAccountApiContext: (account: any) => ({
+        keyManagement: {
+          fetchTokens: (...args: any[]) => mockFetchAccountTokens(...args),
+          createToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchUserGroups: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+        },
+        request: {
+          baseUrl: account.baseUrl,
+          accountId: account.id,
+          auth: {
+            authType: account.authType,
+            userId: account.userId,
+            accessToken: account.token,
+            cookie: account.cookieAuthSessionCookie,
+          },
+        },
+      }),
+      requireDisplayAccountKeyManagement: (
+        _account: unknown,
+        keyManagement: unknown,
+      ) => keyManagement,
+      resolveDisplayAccountTokenForSecret: (...args: any[]) =>
+        mockResolveDisplayAccountTokenForSecret(...args),
+    }
+  },
+)
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
