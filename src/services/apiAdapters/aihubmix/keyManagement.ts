@@ -13,6 +13,7 @@ export const aihubmixKeyManagement: KeyManagementCapability = {
   createToken: (request, tokenData) => createApiToken(request, tokenData),
   resolveTokenKey: ({ request, token }) => resolveApiTokenKey(request, token),
   deleteToken: ({ request, tokenId }) => deleteApiToken(request, tokenId),
+  // Preserve AIHubMix's explicit FEATURE_UNSUPPORTED group-inventory contract.
   fetchUserGroups: (request) => fetchUserGroups(request),
   fetchAvailableModels: (request) => fetchAccountAvailableModels(request),
 }

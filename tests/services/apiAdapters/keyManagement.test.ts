@@ -163,6 +163,18 @@ describe("apiAdapter keyManagement", () => {
     expect(mockFetchAccountAvailableModels).toHaveBeenCalledWith(request)
   })
 
+  it("propagates New API-family key lifecycle errors from the site-specific apiService", async () => {
+    const error = new Error("delete failed")
+    mockDeleteApiToken.mockRejectedValueOnce(error)
+
+    const keyManagement = createNewApiKeyManagement(SITE_TYPES.ONE_HUB)
+
+    await expect(
+      keyManagement.deleteToken({ request, tokenId: token.id }),
+    ).rejects.toBe(error)
+    expect(mockDeleteApiToken).toHaveBeenCalledWith(request, token.id)
+  })
+
   it("delegates Sub2API key operations to backend key helpers", async () => {
     const expectedTokens = [token]
     mockSub2ApiFetchAccountTokens.mockResolvedValueOnce(expectedTokens)
@@ -198,6 +210,16 @@ describe("apiAdapter keyManagement", () => {
     expect(mockSub2ApiResolveApiTokenKey).toHaveBeenCalledWith(request, token)
     expect(mockSub2ApiDeleteApiToken).toHaveBeenCalledWith(request, token.id)
     expect(mockSub2ApiFetchUserGroups).toHaveBeenCalledWith(request)
+    expect(mockSub2ApiFetchAccountAvailableModels).toHaveBeenCalledWith(request)
+  })
+
+  it("propagates Sub2API key inventory errors from backend helpers", async () => {
+    const error = new Error("model inventory failed")
+    mockSub2ApiFetchAccountAvailableModels.mockRejectedValueOnce(error)
+
+    await expect(
+      sub2ApiKeyManagement.fetchAvailableModels(request),
+    ).rejects.toBe(error)
     expect(mockSub2ApiFetchAccountAvailableModels).toHaveBeenCalledWith(request)
   })
 
@@ -239,5 +261,15 @@ describe("apiAdapter keyManagement", () => {
     expect(mockAihubmixFetchAccountAvailableModels).toHaveBeenCalledWith(
       request,
     )
+  })
+
+  it("propagates AIHubMix unsupported group inventory errors", async () => {
+    const error = new Error("groups unsupported")
+    mockAihubmixFetchUserGroups.mockRejectedValueOnce(error)
+
+    await expect(aihubmixKeyManagement.fetchUserGroups(request)).rejects.toBe(
+      error,
+    )
+    expect(mockAihubmixFetchUserGroups).toHaveBeenCalledWith(request)
   })
 })
