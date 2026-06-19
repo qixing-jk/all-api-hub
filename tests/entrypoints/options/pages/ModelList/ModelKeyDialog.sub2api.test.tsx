@@ -10,12 +10,14 @@ import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   fetchAccountTokensMock,
-  createApiTokenMock,
+  adapterCreateTokenMock,
+  legacyCreateApiTokenMock,
   toastSuccessMock,
   toastErrorMock,
 } = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
-  createApiTokenMock: vi.fn(),
+  adapterCreateTokenMock: vi.fn(),
+  legacyCreateApiTokenMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
 }))
@@ -29,7 +31,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
-    createApiToken: (...args: any[]) => createApiTokenMock(...args),
+    createApiToken: (...args: any[]) => legacyCreateApiTokenMock(...args),
     fetchAccountAvailableModels: vi.fn(async () => []),
     fetchUserGroups: vi.fn(async () => ({})),
     updateApiToken: vi.fn(async () => true),
@@ -40,7 +42,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteAdapter: () => ({
     keyManagement: {
       fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-      createToken: (...args: any[]) => createApiTokenMock(...args),
+      createToken: (...args: any[]) => adapterCreateTokenMock(...args),
       resolveTokenKey: async ({ token }: { token: { key: string } }) =>
         token.key,
     },
@@ -54,7 +56,8 @@ const TOKEN = buildSub2ApiToken()
 describe("ModelKeyDialog sub2api support", () => {
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
-    createApiTokenMock.mockReset()
+    adapterCreateTokenMock.mockReset()
+    legacyCreateApiTokenMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
   })
@@ -63,7 +66,7 @@ describe("ModelKeyDialog sub2api support", () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([TOKEN])
-    createApiTokenMock.mockResolvedValueOnce(true)
+    adapterCreateTokenMock.mockResolvedValueOnce(true)
 
     const user = userEvent.setup()
 
@@ -84,16 +87,22 @@ describe("ModelKeyDialog sub2api support", () => {
     )
 
     await waitFor(() => {
-      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+      expect(adapterCreateTokenMock.mock.calls[0]?.[1]).toMatchObject({
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+      })
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
     })
+    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
   })
 
   it("refreshes inventory instead of showing one-time UI when Sub2API create returns a token DTO", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([TOKEN])
-    createApiTokenMock.mockResolvedValueOnce({
+    adapterCreateTokenMock.mockResolvedValueOnce({
       ...TOKEN,
       id: 9,
       key: "sk-sub2api-created-full-secret",
@@ -119,9 +128,10 @@ describe("ModelKeyDialog sub2api support", () => {
     )
 
     await waitFor(() => {
-      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
     })
+    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
     expect(
       screen.queryByText("keyManagement:oneTimeKey.title"),
     ).not.toBeInTheDocument()

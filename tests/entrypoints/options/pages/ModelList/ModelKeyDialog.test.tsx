@@ -18,7 +18,8 @@ import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   fetchAccountTokensMock,
-  createApiTokenMock,
+  adapterCreateTokenMock,
+  legacyCreateApiTokenMock,
   toastSuccessMock,
   toastErrorMock,
   resolveDisplayAccountTokenForSecretMock,
@@ -29,7 +30,8 @@ const {
   createApiCredentialProfileMock,
 } = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
-  createApiTokenMock: vi.fn(),
+  adapterCreateTokenMock: vi.fn(),
+  legacyCreateApiTokenMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
@@ -64,7 +66,7 @@ vi.mock(
 
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
-    createApiToken: (...args: any[]) => createApiTokenMock(...args),
+    createApiToken: (...args: any[]) => legacyCreateApiTokenMock(...args),
     fetchAccountAvailableModels: vi.fn(async () => []),
     fetchUserGroups: vi.fn(async () => ({})),
     updateApiToken: vi.fn(async () => true),
@@ -75,7 +77,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteAdapter: () => ({
     keyManagement: {
       fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-      createToken: (...args: any[]) => createApiTokenMock(...args),
+      createToken: (...args: any[]) => adapterCreateTokenMock(...args),
       resolveTokenKey: async ({ token }: { token: { key: string } }) =>
         token.key,
     },
@@ -161,7 +163,8 @@ describe("ModelKeyDialog", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     fetchAccountTokensMock.mockReset()
-    createApiTokenMock.mockReset()
+    adapterCreateTokenMock.mockReset()
+    legacyCreateApiTokenMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockReset()
@@ -360,7 +363,7 @@ describe("ModelKeyDialog", () => {
 
   it("shows a one-time key dialog when AIHubMix default create returns a full token", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    createApiTokenMock.mockResolvedValueOnce({
+    adapterCreateTokenMock.mockResolvedValueOnce({
       ...TOKEN,
       id: 8,
       key: "sk-created-full-secret",
@@ -408,6 +411,13 @@ describe("ModelKeyDialog", () => {
     ).toHaveValue("sk-created-full-secret")
 
     await waitFor(() => {
+      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+      expect(adapterCreateTokenMock.mock.calls[0]?.[1]).toMatchObject({
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+      })
+      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
       expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
     })
@@ -418,7 +428,7 @@ describe("ModelKeyDialog", () => {
 
   it("saves an AIHubMix default-created one-time key to an API credential profile without closing the dialog", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    createApiTokenMock.mockResolvedValueOnce({
+    adapterCreateTokenMock.mockResolvedValueOnce({
       ...TOKEN,
       id: 8,
       key: "sk-created-full-secret",
@@ -460,6 +470,8 @@ describe("ModelKeyDialog", () => {
     )
 
     await waitFor(() => {
+      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
         name: "AIHubMix - model-key",
         apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -479,7 +491,7 @@ describe("ModelKeyDialog", () => {
 
   it("keeps AIHubMix created keys unchanged before showing the one-time dialog", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    createApiTokenMock.mockResolvedValueOnce({
+    adapterCreateTokenMock.mockResolvedValueOnce({
       ...TOKEN,
       id: 8,
       key: "created-full-secret",
@@ -515,6 +527,8 @@ describe("ModelKeyDialog", () => {
     ).toHaveValue("created-full-secret")
 
     await waitFor(() => {
+      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(writeText).toHaveBeenCalledWith("created-full-secret")
     })
   })
@@ -528,7 +542,7 @@ describe("ModelKeyDialog", () => {
         name: "refreshed",
       },
     ])
-    createApiTokenMock.mockResolvedValueOnce({
+    adapterCreateTokenMock.mockResolvedValueOnce({
       ...TOKEN,
       id: 8,
       key: "sk-created********masked",
@@ -554,6 +568,8 @@ describe("ModelKeyDialog", () => {
     )
 
     await waitFor(() => {
+      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
     })
 
@@ -570,7 +586,7 @@ describe("ModelKeyDialog", () => {
 
   it("shows a compatibility error when default create returns an incompatible full token", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    createApiTokenMock.mockResolvedValueOnce({
+    adapterCreateTokenMock.mockResolvedValueOnce({
       ...TOKEN,
       id: 8,
       key: "sk-created-full-secret",
@@ -608,6 +624,8 @@ describe("ModelKeyDialog", () => {
       screen.queryByText("keyManagement:oneTimeKey.title"),
     ).not.toBeInTheDocument()
     expect(writeText).not.toHaveBeenCalled()
+    expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
@@ -623,7 +641,7 @@ describe("ModelKeyDialog", () => {
         name: "refreshed",
       },
     ])
-    createApiTokenMock.mockResolvedValueOnce({
+    adapterCreateTokenMock.mockResolvedValueOnce({
       ...TOKEN,
       id: 8,
       key: null,
@@ -649,6 +667,8 @@ describe("ModelKeyDialog", () => {
     )
 
     await waitFor(() => {
+      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
     })
 
@@ -675,7 +695,7 @@ describe("ModelKeyDialog", () => {
           name: "refreshed",
         },
       ])
-    createApiTokenMock.mockResolvedValueOnce(true)
+    adapterCreateTokenMock.mockResolvedValueOnce(true)
 
     render(
       <ModelKeyDialog
@@ -696,6 +716,13 @@ describe("ModelKeyDialog", () => {
     await user.click(createButton)
 
     await waitFor(() => {
+      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+      expect(adapterCreateTokenMock.mock.calls[0]?.[1]).toMatchObject({
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+      })
+      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(3)
     })
     setTimeoutSpy.mockRestore()
@@ -715,7 +742,7 @@ describe("ModelKeyDialog", () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
       .mockResolvedValue([{ ...TOKEN, id: 11, group: "vip" }])
-    createApiTokenMock.mockResolvedValueOnce(true)
+    adapterCreateTokenMock.mockResolvedValueOnce(true)
 
     render(
       <ModelKeyDialog
@@ -736,6 +763,8 @@ describe("ModelKeyDialog", () => {
     await user.click(createButton)
 
     await waitFor(() => {
+      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(6)
     })
     setTimeoutSpy.mockRestore()
@@ -753,7 +782,7 @@ describe("ModelKeyDialog", () => {
 
   it("shows a create error when the default create request fails", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    createApiTokenMock.mockRejectedValueOnce(new Error("create failed"))
+    adapterCreateTokenMock.mockRejectedValueOnce(new Error("create failed"))
 
     const user = userEvent.setup()
 
@@ -776,6 +805,8 @@ describe("ModelKeyDialog", () => {
     expect(
       await screen.findByText("modelList:keyDialog.createFailed"),
     ).toBeInTheDocument()
+    expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateCompatibleModelKey,
@@ -893,7 +924,7 @@ describe("ModelKeyDialog", () => {
 
   it("shows a create error when the default create request returns false", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    createApiTokenMock.mockResolvedValueOnce(false)
+    adapterCreateTokenMock.mockResolvedValueOnce(false)
 
     const user = userEvent.setup()
 
@@ -916,6 +947,8 @@ describe("ModelKeyDialog", () => {
     expect(
       await screen.findByText("modelList:keyDialog.createFailed"),
     ).toBeInTheDocument()
+    expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },

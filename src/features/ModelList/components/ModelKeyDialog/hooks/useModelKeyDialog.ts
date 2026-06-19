@@ -9,6 +9,7 @@ import {
   createDisplayAccountApiContext,
   fetchDisplayAccountTokens,
   InvalidTokenPayloadError,
+  requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
@@ -330,10 +331,14 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       setCreateError(null)
 
       try {
-        const { service, request } = createDisplayAccountApiContext(account)
+        const { keyManagement, request } =
+          createDisplayAccountApiContext(account)
         const tokenRequest = generateDefaultTokenRequest()
         tokenRequest.group = normalizedGroup
-        const created = await service.createApiToken(request, tokenRequest)
+        const created = await requireDisplayAccountKeyManagement(
+          account,
+          keyManagement,
+        ).createToken(request, tokenRequest)
         if (!created) {
           throw new Error("create_token_failed")
         }
