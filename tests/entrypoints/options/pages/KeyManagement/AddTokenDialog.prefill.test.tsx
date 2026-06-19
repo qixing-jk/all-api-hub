@@ -27,6 +27,7 @@ import {
 const {
   createApiTokenMock,
   updateApiTokenMock,
+  updateTokenMock,
   fetchAccountAvailableModelsMock,
   fetchUserGroupsMock,
   startProductAnalyticsActionMock,
@@ -37,6 +38,7 @@ const {
 } = vi.hoisted(() => ({
   createApiTokenMock: vi.fn(),
   updateApiTokenMock: vi.fn(),
+  updateTokenMock: vi.fn(),
   fetchAccountAvailableModelsMock: vi.fn(),
   fetchUserGroupsMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
@@ -67,6 +69,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     keyManagement: {
       fetchTokens: vi.fn(async () => []),
       createToken: (...args: any[]) => createApiTokenMock(...args),
+      updateToken: (...args: any[]) => updateTokenMock(...args),
       resolveTokenKey: async ({ token }: { token: { key: string } }) =>
         token.key,
       deleteToken: vi.fn(),
@@ -117,6 +120,7 @@ describe("AddTokenDialog prefill", () => {
   beforeEach(() => {
     createApiTokenMock.mockReset()
     updateApiTokenMock.mockReset()
+    updateTokenMock.mockReset()
     fetchAccountAvailableModelsMock.mockReset()
     fetchUserGroupsMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
@@ -266,7 +270,7 @@ describe("AddTokenDialog prefill", () => {
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
     })
-    updateApiTokenMock.mockResolvedValueOnce(true)
+    updateTokenMock.mockResolvedValueOnce(true)
 
     const editingToken = {
       id: 123,
@@ -305,14 +309,18 @@ describe("AddTokenDialog prefill", () => {
     )
 
     await waitFor(() => {
-      expect(updateApiTokenMock).toHaveBeenCalledTimes(1)
+      expect(updateTokenMock).toHaveBeenCalledTimes(1)
     })
 
-    expect(updateApiTokenMock.mock.calls[0]?.[2]).toMatchObject({
-      name: "Existing key",
-      model_limits_enabled: false,
-      model_limits: "",
+    expect(updateTokenMock.mock.calls[0]?.[0]).toMatchObject({
+      tokenId: 123,
+      tokenData: {
+        name: "Existing key",
+        model_limits_enabled: false,
+        model_limits: "",
+      },
     })
+    expect(updateApiTokenMock).not.toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
@@ -376,7 +384,7 @@ describe("AddTokenDialog prefill", () => {
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
     })
-    updateApiTokenMock.mockRejectedValueOnce(new Error("   "))
+    updateTokenMock.mockRejectedValueOnce(new Error("   "))
 
     const editingToken = {
       id: 123,
@@ -415,6 +423,7 @@ describe("AddTokenDialog prefill", () => {
         "keyManagement:dialog.updateFailed",
       )
     })
+    expect(updateApiTokenMock).not.toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
@@ -923,7 +932,7 @@ describe("AddTokenDialog prefill", () => {
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
     })
-    updateApiTokenMock.mockResolvedValueOnce(true)
+    updateTokenMock.mockResolvedValueOnce(true)
     let resolveSuccess: () => void = () => undefined
     const onSuccess = vi.fn(
       () =>
@@ -967,6 +976,7 @@ describe("AddTokenDialog prefill", () => {
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalledWith()
     })
+    expect(updateApiTokenMock).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
 
     resolveSuccess()
@@ -981,7 +991,7 @@ describe("AddTokenDialog prefill", () => {
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
     })
-    updateApiTokenMock.mockResolvedValueOnce(true)
+    updateTokenMock.mockResolvedValueOnce(true)
     const onSuccess = vi
       .fn()
       .mockRejectedValueOnce(new Error("edit callback failed"))
@@ -1022,6 +1032,7 @@ describe("AddTokenDialog prefill", () => {
       expect(onSuccess).toHaveBeenCalledWith()
       expect(onClose).toHaveBeenCalled()
     })
+    expect(updateApiTokenMock).not.toHaveBeenCalled()
   })
 
   it("closes through the AIHubMix one-time key dialog acknowledgement", async () => {
