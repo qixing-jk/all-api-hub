@@ -15,6 +15,7 @@ import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { t } from "~/utils/i18n/core"
 
 export const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
+export const DEFAULT_USER_GROUP_NAME = "default"
 
 /**
  * Generates the default token payload used by key auto-provisioning flows.

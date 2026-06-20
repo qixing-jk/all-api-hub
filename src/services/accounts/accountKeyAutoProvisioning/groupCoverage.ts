@@ -22,6 +22,7 @@ import { t } from "~/utils/i18n/core"
 
 import {
   DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+  DEFAULT_USER_GROUP_NAME,
   generateDefaultTokenRequest,
 } from "./ensureDefaultToken"
 
@@ -46,7 +47,7 @@ export function buildGroupDefaultTokenRequest(
   return {
     ...generateDefaultTokenRequest(),
     name:
-      group && group !== "default"
+      group && group !== DEFAULT_USER_GROUP_NAME
         ? `${group} group (auto)`
         : DEFAULT_AUTO_PROVISION_TOKEN_NAME,
     group,

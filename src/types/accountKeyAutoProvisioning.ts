@@ -1,16 +1,24 @@
 import type { AccountSiteType } from "~/constants/siteType"
 
+export const ACCOUNT_KEY_REPAIR_JOB_STATES = {
+  Idle: "idle",
+  Running: "running",
+  Completed: "completed",
+  Failed: "failed",
+} as const
+
 export type AccountKeyRepairJobState =
-  | "idle"
-  | "running"
-  | "completed"
-  | "failed"
+  (typeof ACCOUNT_KEY_REPAIR_JOB_STATES)[keyof typeof ACCOUNT_KEY_REPAIR_JOB_STATES]
+
+export const ACCOUNT_KEY_REPAIR_OUTCOMES = {
+  Created: "created",
+  AlreadyHad: "alreadyHad",
+  Skipped: "skipped",
+  Failed: "failed",
+} as const
 
 export type AccountKeyRepairOutcome =
-  | "created"
-  | "alreadyHad"
-  | "skipped"
-  | "failed"
+  (typeof ACCOUNT_KEY_REPAIR_OUTCOMES)[keyof typeof ACCOUNT_KEY_REPAIR_OUTCOMES]
 
 export const ACCOUNT_KEY_REPAIR_SKIP_REASONS = {
   Sub2Api: "sub2api",

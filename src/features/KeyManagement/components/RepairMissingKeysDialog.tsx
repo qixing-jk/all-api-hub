@@ -49,7 +49,12 @@ import type {
   AccountKeyRepairProgress,
   AccountKeyRepairSkipReason,
 } from "~/types/accountKeyAutoProvisioning"
-import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
+import {
+  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
+  ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_OUTCOMES,
+  ACCOUNT_KEY_REPAIR_SKIP_REASONS,
+} from "~/types/accountKeyAutoProvisioning"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 
 const repairMissingKeysAnalyticsContext = {
@@ -126,10 +131,10 @@ type RepairResultView =
   (typeof REPAIR_RESULT_VIEWS)[keyof typeof REPAIR_RESULT_VIEWS]
 
 const OUTCOME_BADGE_VARIANTS: Record<AccountKeyRepairOutcome, BadgeVariant> = {
-  created: "success",
-  alreadyHad: "info",
-  skipped: "warning",
-  failed: "danger",
+  [ACCOUNT_KEY_REPAIR_OUTCOMES.Created]: "success",
+  [ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad]: "info",
+  [ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped]: "warning",
+  [ACCOUNT_KEY_REPAIR_OUTCOMES.Failed]: "danger",
 }
 
 /**
@@ -137,13 +142,13 @@ const OUTCOME_BADGE_VARIANTS: Record<AccountKeyRepairOutcome, BadgeVariant> = {
  */
 function getRepairOutcomeLabel(t: TFunction, outcome: AccountKeyRepairOutcome) {
   switch (outcome) {
-    case "created":
+    case ACCOUNT_KEY_REPAIR_OUTCOMES.Created:
       return t("keyManagement:repairMissingKeys.outcomes.created")
-    case "alreadyHad":
+    case ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad:
       return t("keyManagement:repairMissingKeys.outcomes.alreadyHad")
-    case "skipped":
+    case ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped:
       return t("keyManagement:repairMissingKeys.outcomes.skipped")
-    case "failed":
+    case ACCOUNT_KEY_REPAIR_OUTCOMES.Failed:
       return t("keyManagement:repairMissingKeys.outcomes.failed")
   }
 }
@@ -195,7 +200,7 @@ function getInvalidTokenReasonLabel(
   token: AccountKeyRepairInvalidToken,
 ) {
   switch (token.reason) {
-    case "groupUnavailable":
+    case ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable:
       return t("keyManagement:repairMissingKeys.invalidKeys.groupUnavailable", {
         group: token.group,
       })
@@ -227,7 +232,7 @@ function getRepairProgressInsightCounts(progress: AccountKeyRepairProgress) {
  * Maps terminal repair progress into a coarse health status.
  */
 function getRepairProgressStatusKind(progress: AccountKeyRepairProgress) {
-  if (progress.state === "failed") {
+  if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
     return PRODUCT_ANALYTICS_STATUS_KINDS.Error
   }
   if (progress.summary.failed > 0) {
@@ -240,7 +245,7 @@ function getRepairProgressStatusKind(progress: AccountKeyRepairProgress) {
  * Maps terminal repair progress into the product analytics result enum.
  */
 function getRepairProgressResult(progress: AccountKeyRepairProgress) {
-  if (progress.state === "failed") {
+  if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
     return PRODUCT_ANALYTICS_RESULTS.Failure
   }
   if (progress.summary.failed > 0) {
@@ -568,13 +573,16 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     if (!progress) {
       return "bg-blue-600 dark:bg-blue-500"
     }
-    if (progress.state === "failed") {
+    if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
       return "bg-red-600 dark:bg-red-500"
     }
-    if (progress.state === "completed" && progress.summary.failed > 0) {
+    if (
+      progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed &&
+      progress.summary.failed > 0
+    ) {
       return "bg-amber-600 dark:bg-amber-500"
     }
-    if (progress.state === "completed") {
+    if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed) {
       return "bg-emerald-600 dark:bg-emerald-500"
     }
     return "bg-blue-600 dark:bg-blue-500"
@@ -752,7 +760,12 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
   useEffect(() => {
     if (!progress) return
-    if (progress.state !== "completed" && progress.state !== "failed") return
+    if (
+      progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed &&
+      progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Failed
+    ) {
+      return
+    }
     if (startedAnalyticsJobIdRef.current !== progress.jobId) return
     if (completedAnalyticsJobIdRef.current === progress.jobId) return
 
@@ -761,7 +774,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     void trackProductAnalyticsActionCompleted({
       ...repairMissingKeysAnalyticsContext,
       result: getRepairProgressResult(progress),
-      ...(progress.state === "failed"
+      ...(progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed
         ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
         : {}),
       insights: {
@@ -782,7 +795,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
             <h2 className="text-base font-semibold">
               {t("repairMissingKeys.title")}
             </h2>
-            {progress?.state === "running" ? (
+            {progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running ? (
               <Badge
                 variant="info"
                 size="sm"
@@ -791,7 +804,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                 <Spinner size="sm" className="h-3.5 w-3.5" />
                 {t("common:status.processing")}
               </Badge>
-            ) : progress?.state === "failed" ? (
+            ) : progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed ? (
               <Badge
                 variant="danger"
                 size="sm"
@@ -799,7 +812,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
               >
                 {t("common:status.failed")}
               </Badge>
-            ) : progress?.state === "completed" ? (
+            ) : progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed ? (
               <Badge
                 variant={progress.summary.failed > 0 ? "warning" : "success"}
                 size="sm"
@@ -824,7 +837,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     >
       {error ? <Alert variant="destructive" description={error} /> : null}
 
-      {!progress || progress.state === "idle" ? (
+      {!progress || progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Idle ? (
         <Card variant="outlined" className="overflow-hidden">
           <CardContent padding="default" className="space-y-4">
             <div className="flex items-start gap-3">
@@ -858,7 +871,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
         </Card>
       ) : null}
 
-      {progress && progress.state !== "idle" ? (
+      {progress && progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Idle ? (
         <div className="space-y-4">
           <Card>
             <CardContent padding="md" spacing="none" className="space-y-4">
@@ -877,7 +890,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                     <span>
                       {processedTotal}/{eligibleTotal} ({progressPercent}%)
                     </span>
-                    {progress.state !== "running" ? (
+                    {progress.state !==
+                    ACCOUNT_KEY_REPAIR_JOB_STATES.Running ? (
                       <Button
                         type="button"
                         variant="outline"
@@ -1096,25 +1110,25 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                     allCount={visibleResults.length}
                     options={[
                       {
-                        value: "created",
+                        value: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
                         label: t("repairMissingKeys.outcomes.created"),
                         count: outcomeCounts.created,
                         variant: "success",
                       },
                       {
-                        value: "alreadyHad",
+                        value: ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad,
                         label: t("repairMissingKeys.outcomes.alreadyHad"),
                         count: outcomeCounts.alreadyHad,
                         variant: "info",
                       },
                       {
-                        value: "skipped",
+                        value: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
                         label: t("repairMissingKeys.outcomes.skipped"),
                         count: outcomeCounts.skipped,
                         variant: "warning",
                       },
                       {
-                        value: "failed",
+                        value: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed,
                         label: t("repairMissingKeys.outcomes.failed"),
                         count: outcomeCounts.failed,
                         variant: "danger",
@@ -1295,13 +1309,15 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                         result.outcome,
                       )
                       const details =
-                        result.outcome === "skipped"
+                        result.outcome === ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped
                           ? getSkipReasonLabel(t, result.skipReason)
-                          : result.outcome === "failed"
+                          : result.outcome ===
+                              ACCOUNT_KEY_REPAIR_OUTCOMES.Failed
                             ? result.errorMessage || ""
                             : ""
                       const canCreateSub2ApiKey =
-                        result.outcome === "skipped" &&
+                        result.outcome ===
+                          ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped &&
                         result.skipReason ===
                           ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api &&
                         accountById.has(result.accountId)
@@ -1369,7 +1385,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                             <div
                               className={[
                                 "mt-2 text-xs",
-                                result.outcome === "failed"
+                                result.outcome ===
+                                ACCOUNT_KEY_REPAIR_OUTCOMES.Failed
                                   ? "text-red-700 dark:text-red-300"
                                   : "dark:text-dark-text-secondary text-gray-500",
                               ].join(" ")}

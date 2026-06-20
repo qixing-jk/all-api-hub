@@ -16,6 +16,8 @@ import type {
 } from "~/types/accountKeyAutoProvisioning"
 import {
   ACCOUNT_KEY_REPAIR_ERRORS,
+  ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_OUTCOMES,
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
 } from "~/types/accountKeyAutoProvisioning"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
@@ -44,7 +46,7 @@ const logger = createLogger("AccountKeyRepair")
 function createIdleProgress(): AccountKeyRepairProgress {
   return {
     jobId: "idle",
-    state: "idle",
+    state: ACCOUNT_KEY_REPAIR_JOB_STATES.Idle,
     totals: {
       enabledAccounts: 0,
       eligibleAccounts: 0,
@@ -132,7 +134,7 @@ class AccountKeyRepairRunner {
     const now = Date.now()
     const progress: AccountKeyRepairProgress = {
       jobId: safeRandomUUID("accountKeyRepair"),
-      state: "running",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
       startedAt: now,
       updatedAt: now,
       totals: {
@@ -192,7 +194,7 @@ class AccountKeyRepairRunner {
               displaySiteDataById.get(account.id)?.name ?? account.site_name,
             siteType: account.site_type,
             siteUrlOrigin: getOriginKey(account.site_url),
-            outcome: "skipped",
+            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
             skipReason,
             finishedAt: Date.now(),
           })
@@ -225,7 +227,7 @@ class AccountKeyRepairRunner {
 
       this.updateProgress((prev) => ({
         ...prev,
-        state: "completed",
+        state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
         finishedAt: Date.now(),
       }))
       await this.persistAndNotify()
@@ -233,7 +235,7 @@ class AccountKeyRepairRunner {
       logger.error("Repair run failed", error)
       this.updateProgress((prev) => ({
         ...prev,
-        state: "failed",
+        state: ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
         finishedAt: Date.now(),
         lastError: getErrorMessage(error),
       }))
@@ -298,10 +300,10 @@ class AccountKeyRepairRunner {
         siteUrlOrigin: originKey,
         outcome:
           !result.created && result.missingGroups.length > 0
-            ? "failed"
+            ? ACCOUNT_KEY_REPAIR_OUTCOMES.Failed
             : result.created
-              ? "created"
-              : "alreadyHad",
+              ? ACCOUNT_KEY_REPAIR_OUTCOMES.Created
+              : ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad,
         availableGroups: result.availableGroups,
         coveredGroups: result.coveredGroups,
         createdGroups: result.createdGroups,
@@ -315,7 +317,7 @@ class AccountKeyRepairRunner {
         accountName,
         siteType: account.site_type,
         siteUrlOrigin: originKey,
-        outcome: "failed",
+        outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed,
         errorMessage: getErrorMessage(error),
         finishedAt: Date.now(),
       })
@@ -340,23 +342,24 @@ class AccountKeyRepairRunner {
 
       const nextSummary = { ...prev.summary }
       switch (result.outcome) {
-        case "created":
+        case ACCOUNT_KEY_REPAIR_OUTCOMES.Created:
           nextSummary.created += 1
           break
-        case "alreadyHad":
+        case ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad:
           nextSummary.alreadyHad += 1
           break
-        case "skipped":
+        case ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped:
           nextSummary.skipped += 1
           break
-        case "failed":
+        case ACCOUNT_KEY_REPAIR_OUTCOMES.Failed:
           nextSummary.failed += 1
           break
         default:
           break
       }
 
-      const isEligibleOutcome = result.outcome !== "skipped"
+      const isEligibleOutcome =
+        result.outcome !== ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped
       const availableGroupCount = result.availableGroups?.length ?? 0
       const coveredGroupCount = result.coveredGroups?.length ?? 0
       const createdKeyCount = result.createdGroups?.length ?? 0

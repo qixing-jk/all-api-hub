@@ -7,6 +7,8 @@ import { AuthTypeEnum } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_ERRORS,
   ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
+  ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_OUTCOMES,
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
 } from "~/types/accountKeyAutoProvisioning"
 import {
@@ -115,7 +117,7 @@ describe("accountKeyRepair", () => {
 
     await expect(accountKeyRepairRunner.getProgress()).resolves.toEqual({
       jobId: "idle",
-      state: "idle",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Idle,
       totals: {
         enabledAccounts: 0,
         eligibleAccounts: 0,
@@ -135,7 +137,7 @@ describe("accountKeyRepair", () => {
   it("returns stored progress snapshots when a previous repair run was persisted", async () => {
     mocks.storageMap.set("accountKeyRepair_progress", {
       jobId: "job-stored",
-      state: "completed",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       totals: {
         enabledAccounts: 4,
         eligibleAccounts: 3,
@@ -148,7 +150,9 @@ describe("accountKeyRepair", () => {
         skipped: 1,
         failed: 0,
       },
-      results: [{ accountId: "acc-1", outcome: "created" }],
+      results: [
+        { accountId: "acc-1", outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created },
+      ],
     })
 
     const { accountKeyRepairRunner } = await import(
@@ -157,7 +161,7 @@ describe("accountKeyRepair", () => {
 
     await expect(accountKeyRepairRunner.getProgress()).resolves.toMatchObject({
       jobId: "job-stored",
-      state: "completed",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       summary: {
         created: 1,
         alreadyHad: 1,
@@ -281,12 +285,12 @@ describe("accountKeyRepair", () => {
     const started = await accountKeyRepairRunner.start()
     expect(started).toMatchObject({
       jobId: "job-123",
-      state: "running",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
     })
 
     await vi.waitFor(async () => {
       const progress = await accountKeyRepairRunner.getProgress()
-      expect(progress.state).toBe("completed")
+      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
     })
 
     const progress = await accountKeyRepairRunner.getProgress()
@@ -312,24 +316,24 @@ describe("accountKeyRepair", () => {
       expect.arrayContaining([
         expect.objectContaining({
           accountId: "sub2api-1",
-          outcome: "skipped",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
           skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
           siteUrlOrigin: "https://sub2api.example.com",
         }),
         expect.objectContaining({
           accountId: "aihubmix-1",
-          outcome: "skipped",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
           skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
           siteUrlOrigin: "https://aihubmix.com",
         }),
         expect.objectContaining({
           accountId: "new-api-1",
-          outcome: "created",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
           siteUrlOrigin: "https://shared.example.com",
         }),
         expect.objectContaining({
           accountId: "bad-cookie-1",
-          outcome: "failed",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed,
           errorMessage: ACCOUNT_KEY_REPAIR_ERRORS.InvalidDisplaySiteData,
           siteUrlOrigin: "https://cookie.example.com",
         }),
@@ -405,7 +409,7 @@ describe("accountKeyRepair", () => {
 
     await vi.waitFor(async () => {
       const progress = await accountKeyRepairRunner.getProgress()
-      expect(progress.state).toBe("completed")
+      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
     })
 
     const progress = await accountKeyRepairRunner.getProgress()
@@ -422,7 +426,7 @@ describe("accountKeyRepair", () => {
     expect(progress.results).toEqual([
       expect.objectContaining({
         accountId: "new-api-1",
-        outcome: "created",
+        outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
         availableGroups: ["default", "vip"],
         coveredGroups: ["default", "vip"],
         createdGroups: ["vip"],
@@ -487,7 +491,7 @@ describe("accountKeyRepair", () => {
 
     await vi.waitFor(async () => {
       const progress = await accountKeyRepairRunner.getProgress()
-      expect(progress.state).toBe("completed")
+      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
     })
 
     const progress = await accountKeyRepairRunner.getProgress()
@@ -502,7 +506,7 @@ describe("accountKeyRepair", () => {
     expect(progress.results).toEqual([
       expect.objectContaining({
         accountId: "new-api-1",
-        outcome: "failed",
+        outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed,
         availableGroups: ["default", "vip"],
         coveredGroups: ["default"],
         missingGroups: ["vip"],
@@ -662,7 +666,7 @@ describe("accountKeyRepair", () => {
 
     mocks.storageMap.set("accountKeyRepair_progress", {
       jobId: "job-stored",
-      state: "completed",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       startedAt: 100,
       updatedAt: 200,
       finishedAt: 300,
@@ -690,7 +694,7 @@ describe("accountKeyRepair", () => {
           accountName: "Relay Account",
           siteType: SITE_TYPES.NEW_API,
           siteUrlOrigin: "https://relay.example.com",
-          outcome: "created",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
           availableGroups: ["default", "vip"],
           coveredGroups: ["default", "vip"],
           createdGroups: ["vip"],
@@ -722,7 +726,7 @@ describe("accountKeyRepair", () => {
 
     expect(mocks.storageMap.get("accountKeyRepair_progress")).toMatchObject({
       jobId: "job-stored",
-      state: "completed",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       totals: {
         enabledAccounts: 1,
         eligibleAccounts: 1,
@@ -744,7 +748,7 @@ describe("accountKeyRepair", () => {
       results: [
         expect.objectContaining({
           accountId: "new-api-1",
-          outcome: "created",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
           invalidTokens: [invalidTokens[1]],
         }),
       ],
@@ -826,7 +830,7 @@ describe("accountKeyRepair", () => {
 
     mocks.storageMap.set("accountKeyRepair_progress", {
       jobId: "job-stored",
-      state: "completed",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       startedAt: 100,
       updatedAt: 200,
       finishedAt: 300,
@@ -854,7 +858,7 @@ describe("accountKeyRepair", () => {
           accountName: "Relay Account",
           siteType: SITE_TYPES.NEW_API,
           siteUrlOrigin: "https://relay.example.com",
-          outcome: "created",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
           availableGroups: ["default", "vip"],
           coveredGroups: ["default", "vip"],
           createdGroups: ["vip"],
@@ -1019,7 +1023,7 @@ describe("accountKeyRepair", () => {
 
     await vi.waitFor(async () => {
       const progress = await accountKeyRepairRunner.getProgress()
-      expect(progress.state).toBe("completed")
+      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
     })
 
     const progress = await accountKeyRepairRunner.getProgress()
@@ -1045,12 +1049,12 @@ describe("accountKeyRepair", () => {
       expect.arrayContaining([
         expect.objectContaining({
           accountId: "none-auth-1",
-          outcome: "skipped",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
           skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth,
         }),
         expect.objectContaining({
           accountId: "cookie-1",
-          outcome: "alreadyHad",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad,
           siteUrlOrigin: "https://cookie.example.com",
         }),
       ]),
@@ -1137,7 +1141,7 @@ describe("accountKeyRepair", () => {
 
     await vi.waitFor(async () => {
       const progress = await accountKeyRepairRunner.getProgress()
-      expect(progress.state).toBe("completed")
+      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
     })
   })
 
@@ -1151,17 +1155,17 @@ describe("accountKeyRepair", () => {
     const started = await accountKeyRepairRunner.start()
     expect(started).toMatchObject({
       jobId: "job-123",
-      state: "running",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
     })
 
     await vi.waitFor(async () => {
       const progress = await accountKeyRepairRunner.getProgress()
-      expect(progress.state).toBe("failed")
+      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Failed)
     })
 
     await expect(accountKeyRepairRunner.getProgress()).resolves.toMatchObject({
       jobId: "job-123",
-      state: "failed",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
       lastError: "boom",
     })
   })
@@ -1178,7 +1182,7 @@ describe("accountKeyRepair", () => {
       success: true,
       data: expect.objectContaining({
         jobId: "job-123",
-        state: "running",
+        state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
       }),
     })
 
@@ -1194,7 +1198,7 @@ describe("accountKeyRepair", () => {
       success: true,
       data: expect.objectContaining({
         jobId: "job-123",
-        state: "running",
+        state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
       }),
     })
   })

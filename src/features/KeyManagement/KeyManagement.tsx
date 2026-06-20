@@ -20,6 +20,7 @@ import {
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken } from "~/types"
+import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 import { openModelsPage, pushWithinOptionsPage } from "~/utils/navigation"
 
 import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
@@ -164,7 +165,7 @@ export default function KeyManagement(props: {
         if (cancelled) return
         if (!response?.success || !response?.data) return
 
-        if (response.data.state === "running") {
+        if (response.data.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running) {
           setRepairStartOnOpen(false)
           setIsRepairOpen(true)
         }

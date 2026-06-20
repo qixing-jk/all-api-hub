@@ -10,6 +10,9 @@ import {
   PRODUCT_ANALYTICS_STATUS_KINDS,
 } from "~/services/productAnalytics/events"
 import {
+  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
+  ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_OUTCOMES,
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
@@ -165,7 +168,7 @@ vi.mock("~/features/KeyManagement/components/AddTokenDialog", () => ({
 
 const idleProgress: AccountKeyRepairProgress = {
   jobId: "idle",
-  state: "idle",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Idle,
   totals: {
     enabledAccounts: 2,
     eligibleAccounts: 2,
@@ -182,7 +185,7 @@ const idleProgress: AccountKeyRepairProgress = {
 
 const startProgress: AccountKeyRepairProgress = {
   jobId: "job-1",
-  state: "running",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
   startedAt: 1,
   updatedAt: 1,
   totals: {
@@ -202,7 +205,7 @@ const startProgress: AccountKeyRepairProgress = {
       accountName: "Disabled Site",
       siteType: "unknown",
       siteUrlOrigin: "https://disabled.example.com",
-      outcome: "skipped",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth,
       finishedAt: 1,
     },
@@ -211,7 +214,7 @@ const startProgress: AccountKeyRepairProgress = {
       accountName: "Enabled Site",
       siteType: "unknown",
       siteUrlOrigin: "https://enabled.example.com",
-      outcome: "created",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
       finishedAt: 1,
     },
   ],
@@ -220,7 +223,7 @@ const startProgress: AccountKeyRepairProgress = {
 const completedProgress: AccountKeyRepairProgress = {
   ...startProgress,
   jobId: "job-1",
-  state: "completed",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
   finishedAt: 2,
   totals: {
     enabledAccounts: 2,
@@ -240,7 +243,7 @@ const completedProgress: AccountKeyRepairProgress = {
       accountName: "Enabled Site",
       siteType: "unknown",
       siteUrlOrigin: "https://enabled.example.com",
-      outcome: "created",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
       finishedAt: 1,
     },
     {
@@ -248,7 +251,7 @@ const completedProgress: AccountKeyRepairProgress = {
       accountName: "Another Site",
       siteType: "unknown",
       siteUrlOrigin: "https://another.example.com",
-      outcome: "created",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
       finishedAt: 2,
     },
   ],
@@ -256,7 +259,7 @@ const completedProgress: AccountKeyRepairProgress = {
 
 const multiOutcomeProgress: AccountKeyRepairProgress = {
   jobId: "job-2",
-  state: "running",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
   startedAt: 1,
   updatedAt: 1,
   totals: {
@@ -276,7 +279,7 @@ const multiOutcomeProgress: AccountKeyRepairProgress = {
       accountName: "Enabled Site",
       siteType: "unknown",
       siteUrlOrigin: "https://enabled.example.com",
-      outcome: "created",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
       finishedAt: 1,
     },
     {
@@ -284,7 +287,7 @@ const multiOutcomeProgress: AccountKeyRepairProgress = {
       accountName: "Another Site",
       siteType: "unknown",
       siteUrlOrigin: "https://another.example.com",
-      outcome: "failed",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed,
       errorMessage: "boom",
       finishedAt: 2,
     },
@@ -294,14 +297,14 @@ const multiOutcomeProgress: AccountKeyRepairProgress = {
 const failedProgress: AccountKeyRepairProgress = {
   ...multiOutcomeProgress,
   jobId: "job-1",
-  state: "failed",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
   finishedAt: 2,
   lastError: "raw backend detail",
 }
 
 const inflatedProgress: AccountKeyRepairProgress = {
   jobId: "job-3",
-  state: "running",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
   startedAt: 1,
   updatedAt: 1,
   totals: {
@@ -322,7 +325,7 @@ const inflatedProgress: AccountKeyRepairProgress = {
       accountName: "Disabled Site",
       siteType: "unknown",
       siteUrlOrigin: "https://disabled.example.com",
-      outcome: "skipped",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth,
       finishedAt: 1,
     },
@@ -331,7 +334,7 @@ const inflatedProgress: AccountKeyRepairProgress = {
       accountName: "Enabled Site",
       siteType: "unknown",
       siteUrlOrigin: "https://enabled.example.com",
-      outcome: "created",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
       finishedAt: 1,
     },
     {
@@ -339,7 +342,7 @@ const inflatedProgress: AccountKeyRepairProgress = {
       accountName: "Another Site",
       siteType: "unknown",
       siteUrlOrigin: "https://another.example.com",
-      outcome: "alreadyHad",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad,
       finishedAt: 2,
     },
     {
@@ -347,7 +350,7 @@ const inflatedProgress: AccountKeyRepairProgress = {
       accountName: "Another Disabled Site",
       siteType: "unknown",
       siteUrlOrigin: "https://disabled-2.example.com",
-      outcome: "skipped",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
       finishedAt: 2,
     },
@@ -356,7 +359,7 @@ const inflatedProgress: AccountKeyRepairProgress = {
       accountName: "Third Site",
       siteType: "unknown",
       siteUrlOrigin: "https://third.example.com",
-      outcome: "created",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
       finishedAt: 3,
     },
   ],
@@ -364,7 +367,7 @@ const inflatedProgress: AccountKeyRepairProgress = {
 
 const sub2apiSkippedProgress: AccountKeyRepairProgress = {
   jobId: "job-4",
-  state: "completed",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
   startedAt: 1,
   updatedAt: 1,
   finishedAt: 1,
@@ -386,7 +389,7 @@ const sub2apiSkippedProgress: AccountKeyRepairProgress = {
       accountName: "Another Site",
       siteType: "sub2api",
       siteUrlOrigin: "https://another.example.com",
-      outcome: "skipped",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
       finishedAt: 1,
     },
@@ -395,7 +398,7 @@ const sub2apiSkippedProgress: AccountKeyRepairProgress = {
 
 const aihubmixSkippedProgress: AccountKeyRepairProgress = {
   jobId: "job-5",
-  state: "completed",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
   startedAt: 1,
   updatedAt: 1,
   finishedAt: 1,
@@ -417,7 +420,7 @@ const aihubmixSkippedProgress: AccountKeyRepairProgress = {
       accountName: "AIHubMix",
       siteType: "AIHubMix",
       siteUrlOrigin: "https://aihubmix.com",
-      outcome: "skipped",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
       finishedAt: 1,
     },
@@ -426,7 +429,7 @@ const aihubmixSkippedProgress: AccountKeyRepairProgress = {
 
 const coverageProgress: AccountKeyRepairProgress = {
   jobId: "job-coverage",
-  state: "completed",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
   startedAt: 1,
   updatedAt: 2,
   finishedAt: 2,
@@ -452,7 +455,7 @@ const coverageProgress: AccountKeyRepairProgress = {
       accountName: "Enabled Site",
       siteType: "new-api",
       siteUrlOrigin: "https://enabled.example.com",
-      outcome: "created",
+      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
       availableGroups: ["default", "vip"],
       coveredGroups: ["default", "vip"],
       createdGroups: ["vip"],
@@ -466,7 +469,7 @@ const coverageProgress: AccountKeyRepairProgress = {
           tokenId: 9,
           tokenName: "old group key",
           group: "old",
-          reason: "groupUnavailable",
+          reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
         },
       ],
       finishedAt: 2,
@@ -492,7 +495,7 @@ const multiInvalidKeysProgress: AccountKeyRepairProgress = {
         tokenId: index + 1,
         tokenName: `old group key ${index + 1}`,
         group: `old-${index + 1}`,
-        reason: "groupUnavailable",
+        reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
       })),
       missingGroups: ["legacy"],
     },
@@ -767,7 +770,7 @@ describe("KeyManagement repair missing keys entry point", () => {
           accountName: "Another Site",
           siteType: "unknown",
           siteUrlOrigin: "https://another.example.com",
-          outcome: "alreadyHad",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad,
           finishedAt: 2,
         },
       ],
