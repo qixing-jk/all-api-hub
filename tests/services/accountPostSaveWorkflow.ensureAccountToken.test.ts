@@ -14,8 +14,10 @@ import {
   selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
@@ -162,7 +164,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     )
     resolveDefaultTokenCreationMock.mockImplementation(
       ({ defaultTokenData }) => ({
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: defaultTokenData,
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -178,7 +180,9 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
               reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
             },
     )
-    getRepairPolicyMock.mockReturnValue({ kind: "eligible" })
+    getRepairPolicyMock.mockReturnValue({
+      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+    })
   })
 
   it("selects the single newly created token by id diff even when it is not the last refetched token", () => {
@@ -457,7 +461,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     })
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: buildDefaultTokenData(),
       oneTimeSecret: true,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
@@ -526,7 +530,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     ])
     isInventoryTokenUsableMock.mockReturnValueOnce(false)
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: buildDefaultTokenData(),
       oneTimeSecret: true,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
@@ -561,7 +565,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: buildDefaultTokenData(),
       oneTimeSecret: true,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
@@ -593,7 +597,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: buildDefaultTokenData(),
       oneTimeSecret: true,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
@@ -626,9 +630,11 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const createdToken = buildToken({ id: 9, key: "sk-sub2", group: "vip" })
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: buildDefaultTokenData({ group: "vip" }),
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -663,9 +669,11 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
-        kind: "selection_required",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
         allowedGroups: ["default", "vip"],
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
       })
@@ -695,9 +703,11 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
-        kind: "blocked",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({})
@@ -722,9 +732,11 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: buildDefaultTokenData({ group: "vip" }),
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -756,10 +768,10 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     fetchUserGroupsMock.mockResolvedValueOnce({ vip: { ratio: 1 } })
     resolveDefaultTokenCreationMock
       .mockReturnValueOnce({
-        kind: "needs_user_groups",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
       })
       .mockReturnValueOnce({
-        kind: "needs_user_groups",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
       })
 
     await expect(

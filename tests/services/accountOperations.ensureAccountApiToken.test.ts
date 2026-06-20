@@ -12,9 +12,11 @@ import {
 } from "~/services/accounts/accountOperations"
 import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
+  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum } from "~/types"
@@ -65,7 +67,9 @@ const {
             resolveDefaultTokenCreationMock(...args),
           classifyCreatedToken: (...args: unknown[]) =>
             classifyCreatedTokenMock(...args),
-          getRepairPolicy: vi.fn(() => ({ kind: "eligible" as const })),
+          getRepairPolicy: vi.fn(() => ({
+            kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+          })),
         },
       }),
     ),
@@ -200,7 +204,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     toastLoadingMock.mockReset()
     resolveDefaultTokenCreationMock.mockImplementation(
       ({ defaultTokenData }) => ({
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: defaultTokenData,
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -225,7 +229,7 @@ describe("accountOperations Sub2API token creation guards", () => {
   it("blocks implicit Sub2API default-token creation in background helpers", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
     })
 
@@ -258,7 +262,7 @@ describe("accountOperations Sub2API token creation guards", () => {
   it("blocks shared token ensure when no Sub2API group has been resolved", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
     })
 
@@ -278,7 +282,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     createApiTokenMock.mockResolvedValueOnce(true)
     resolveDefaultTokenCreationMock.mockImplementationOnce(
       ({ defaultTokenData, explicitGroup }) => ({
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: { ...defaultTokenData, group: explicitGroup },
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -309,9 +313,11 @@ describe("accountOperations Sub2API token creation guards", () => {
 
   it("resolves quick-create group selection through token provisioning policy", async () => {
     resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
-        kind: "selection_required",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
         allowedGroups: ["default", "vip"],
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
       })
@@ -334,9 +340,11 @@ describe("accountOperations Sub2API token creation guards", () => {
 
   it("reports when Sub2API quick-create has no valid current groups", async () => {
     resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
-        kind: "blocked",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({})
@@ -351,9 +359,11 @@ describe("accountOperations Sub2API token creation guards", () => {
 
   it("requires explicit selection when Sub2API quick-create has multiple groups", async () => {
     resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
-        kind: "selection_required",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
         allowedGroups: ["default", "vip"],
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
       })
@@ -372,9 +382,11 @@ describe("accountOperations Sub2API token creation guards", () => {
 
   it("resolves a ready state when Sub2API quick-create has exactly one unique group", async () => {
     resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: { ...generateDefaultTokenRequest(), group: "vip" },
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -394,7 +406,7 @@ describe("accountOperations Sub2API token creation guards", () => {
 
   it("rejects quick-create resolution when Sub2API group inventory is missing", async () => {
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "needs_user_groups",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
     })
     getSiteAdapterMock.mockReturnValueOnce({
       siteType: SITE_TYPES.SUB2API,
@@ -413,7 +425,9 @@ describe("accountOperations Sub2API token creation guards", () => {
           resolveDefaultTokenCreationMock(...args),
         classifyCreatedToken: (...args: unknown[]) =>
           classifyCreatedTokenMock(...args),
-        getRepairPolicy: vi.fn(() => ({ kind: "eligible" as const })),
+        getRepairPolicy: vi.fn(() => ({
+          kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+        })),
       },
     })
 
@@ -432,8 +446,12 @@ describe("accountOperations Sub2API token creation guards", () => {
     )
 
     resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
-      .mockReturnValueOnce({ kind: "needs_user_groups" })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "Default", ratio: 1 },
     })
@@ -464,7 +482,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     )
 
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
     })
 
@@ -484,7 +502,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     )
 
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
     })
 
@@ -509,7 +527,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     toastLoadingMock.mockReset()
     resolveDefaultTokenCreationMock.mockImplementation(
       ({ defaultTokenData }) => ({
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: defaultTokenData,
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -682,7 +700,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
 
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
     })
 
@@ -805,7 +823,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
 
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
     })
 
@@ -846,7 +864,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
 
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: generateDefaultTokenRequest(),
       oneTimeSecret: true,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
@@ -867,7 +885,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
 
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: generateDefaultTokenRequest(),
       oneTimeSecret: true,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,

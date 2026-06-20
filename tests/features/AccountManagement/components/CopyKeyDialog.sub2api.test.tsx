@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
@@ -49,7 +51,7 @@ const createSub2ApiTokenProvisioningMock = () => ({
 
     if (explicitGroup) {
       return {
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: { ...request.defaultTokenData, group: explicitGroup },
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -61,27 +63,27 @@ const createSub2ApiTokenProvisioningMock = () => ({
       request.workflow !== TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation
     ) {
       return {
-        kind: "blocked",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
       }
     }
 
     if (!request.userGroups) {
-      return { kind: "needs_user_groups" }
+      return { kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups }
     }
 
     const allowedGroups = normalizeGroupNames(request.userGroups)
 
     if (allowedGroups.length === 0) {
       return {
-        kind: "blocked",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
       }
     }
 
     if (allowedGroups.length === 1) {
       return {
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: { ...request.defaultTokenData, group: allowedGroups[0] },
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -89,7 +91,7 @@ const createSub2ApiTokenProvisioningMock = () => ({
     }
 
     return {
-      kind: "selection_required",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
       allowedGroups,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
     }
@@ -103,7 +105,7 @@ const createSub2ApiTokenProvisioningMock = () => ({
         },
   ),
   getRepairPolicy: vi.fn(() => ({
-    kind: "skipped" as const,
+    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
     skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
   })),
 })

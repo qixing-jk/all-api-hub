@@ -1,7 +1,9 @@
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   isCreatedApiToken,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
@@ -12,7 +14,7 @@ const createWithGroup = (
   defaultTokenData: CreateTokenRequest,
   group: string,
 ) => ({
-  kind: "create" as const,
+  kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
   tokenData: { ...defaultTokenData, group },
   oneTimeSecret: false,
   recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -53,19 +55,19 @@ export const sub2ApiTokenProvisioning: TokenProvisioningCapability = {
       workflow !== TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation
     ) {
       return {
-        kind: "blocked",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
       }
     }
 
     if (!userGroups) {
-      return { kind: "needs_user_groups" }
+      return { kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups }
     }
 
     const groups = normalizeTokenProvisioningGroupNames(userGroups)
     if (groups.length === 0) {
       return {
-        kind: "blocked",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
       }
     }
@@ -75,7 +77,7 @@ export const sub2ApiTokenProvisioning: TokenProvisioningCapability = {
     }
 
     return {
-      kind: "selection_required",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
       allowedGroups: groups,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
     }
@@ -99,7 +101,7 @@ export const sub2ApiTokenProvisioning: TokenProvisioningCapability = {
     }
   },
   getRepairPolicy: () => ({
-    kind: "skipped",
+    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
     skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
   }),
 }

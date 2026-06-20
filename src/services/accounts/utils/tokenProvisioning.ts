@@ -1,8 +1,9 @@
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
-import type {
-  DefaultTokenCreationDecision,
-  ResolveDefaultTokenCreationRequest,
-  TokenProvisioningCapability,
+import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
+  type DefaultTokenCreationDecision,
+  type ResolveDefaultTokenCreationRequest,
+  type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
@@ -21,7 +22,7 @@ export async function resolveDefaultTokenCreationWithUserGroups(params: {
     params.decisionRequest,
   )
 
-  if (decision.kind !== "needs_user_groups") {
+  if (decision.kind !== DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups) {
     return decision
   }
 

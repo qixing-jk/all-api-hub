@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import { TOKEN_PROVISIONING_REPAIR_POLICY_KINDS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_ERRORS,
@@ -63,19 +64,21 @@ vi.mock("~/services/apiAdapters/registry", () => ({
       siteType === SITE_TYPES.SUB2API
         ? {
             getRepairPolicy: () => ({
-              kind: "skipped",
+              kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
               skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
             }),
           }
         : siteType === SITE_TYPES.AIHUBMIX
           ? {
               getRepairPolicy: () => ({
-                kind: "skipped",
+                kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
                 skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
               }),
             }
           : {
-              getRepairPolicy: () => ({ kind: "eligible" }),
+              getRepairPolicy: () => ({
+                kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+              }),
             },
   })),
 }))

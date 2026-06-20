@@ -11,9 +11,11 @@ import {
   ensureAccountKeysForAvailableGroups,
 } from "~/services/accounts/accountKeyAutoProvisioning/groupCoverage"
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
+  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum } from "~/types"
@@ -51,7 +53,9 @@ vi.mock("~/services/apiAdapters/registry", () => ({
         mocks.resolveDefaultTokenCreation(...args),
       classifyCreatedToken: (...args: unknown[]) =>
         mocks.classifyCreatedToken(...args),
-      getRepairPolicy: vi.fn(() => ({ kind: "eligible" })),
+      getRepairPolicy: vi.fn(() => ({
+        kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+      })),
     },
   })),
 }))
@@ -103,7 +107,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     mocks.classifyCreatedToken.mockReset()
     mocks.resolveDefaultTokenCreation.mockImplementation(
       ({ defaultTokenData }) => ({
-        kind: "create",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
         tokenData: defaultTokenData,
         oneTimeSecret: false,
         recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -223,7 +227,9 @@ describe("ensureAccountKeysForAvailableGroups", () => {
           mocks.resolveDefaultTokenCreation(...args),
         classifyCreatedToken: (...args: unknown[]) =>
           mocks.classifyCreatedToken(...args),
-        getRepairPolicy: vi.fn(() => ({ kind: "eligible" })),
+        getRepairPolicy: vi.fn(() => ({
+          kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+        })),
       },
     })
     mocks.createApiToken.mockResolvedValue(true)
@@ -258,7 +264,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     mocks.fetchAccountTokens.mockResolvedValue([])
     mocks.fetchUserGroups.mockResolvedValue({})
     mocks.resolveDefaultTokenCreation.mockReturnValueOnce({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
     })
 
@@ -273,7 +279,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     mocks.fetchAccountTokens.mockResolvedValue([])
     mocks.fetchUserGroups.mockResolvedValue({})
     mocks.resolveDefaultTokenCreation.mockReturnValueOnce({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
     })
 

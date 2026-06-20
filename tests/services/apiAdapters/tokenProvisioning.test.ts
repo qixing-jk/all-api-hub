@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixTokenProvisioning } from "~/services/apiAdapters/aihubmix/tokenProvisioning"
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { createNewApiTokenProvisioning } from "~/services/apiAdapters/newApi/tokenProvisioning"
@@ -59,7 +61,7 @@ describe("apiAdapter tokenProvisioning", () => {
         defaultTokenData,
       }),
     ).toEqual({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: defaultTokenData,
       oneTimeSecret: false,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -99,7 +101,9 @@ describe("apiAdapter tokenProvisioning", () => {
         token: maskedToken,
       }),
     ).toBe(true)
-    expect(provisioning.getRepairPolicy()).toEqual({ kind: "eligible" })
+    expect(provisioning.getRepairPolicy()).toEqual({
+      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+    })
   })
 
   it("normalizes token provisioning group names", () => {
@@ -121,7 +125,7 @@ describe("apiAdapter tokenProvisioning", () => {
         defaultTokenData,
       }),
     ).toEqual({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
     })
 
@@ -130,7 +134,9 @@ describe("apiAdapter tokenProvisioning", () => {
         workflow: TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection,
         defaultTokenData,
       }),
-    ).toEqual({ kind: "needs_user_groups" })
+    ).toEqual({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+    })
 
     expect(
       sub2ApiTokenProvisioning.resolveDefaultTokenCreation({
@@ -141,7 +147,7 @@ describe("apiAdapter tokenProvisioning", () => {
         },
       }),
     ).toEqual({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: { ...defaultTokenData, group: "default" },
       oneTimeSecret: false,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -158,7 +164,7 @@ describe("apiAdapter tokenProvisioning", () => {
         },
       }),
     ).toEqual({
-      kind: "selection_required",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
       allowedGroups: ["vip", "default"],
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
     })
@@ -172,12 +178,12 @@ describe("apiAdapter tokenProvisioning", () => {
         },
       }),
     ).toEqual({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
     })
 
     expect(sub2ApiTokenProvisioning.getRepairPolicy()).toEqual({
-      kind: "skipped",
+      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
     })
   })
@@ -199,7 +205,7 @@ describe("apiAdapter tokenProvisioning", () => {
         explicitGroup: " vip ",
       }),
     ).toEqual({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: { ...defaultTokenData, group: "vip" },
       oneTimeSecret: false,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -244,7 +250,7 @@ describe("apiAdapter tokenProvisioning", () => {
         defaultTokenData,
       }),
     ).toEqual({
-      kind: "blocked",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
     })
 
@@ -254,7 +260,7 @@ describe("apiAdapter tokenProvisioning", () => {
         defaultTokenData,
       }),
     ).toEqual({
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: defaultTokenData,
       oneTimeSecret: true,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
@@ -299,7 +305,7 @@ describe("apiAdapter tokenProvisioning", () => {
     ).toBe(false)
 
     expect(aihubmixTokenProvisioning.getRepairPolicy()).toEqual({
-      kind: "skipped",
+      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
     })
   })

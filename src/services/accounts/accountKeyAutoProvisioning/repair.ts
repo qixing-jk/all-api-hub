@@ -2,6 +2,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { TOKEN_PROVISIONING_REPAIR_POLICY_KINDS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { DisplaySiteData, SiteAccount } from "~/types"
@@ -85,7 +86,7 @@ function getSkipReason(
     account.site_type,
   ).tokenProvisioning?.getRepairPolicy()
 
-  if (policy?.kind === "skipped") {
+  if (policy?.kind === TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped) {
     return policy.skipReason
   }
 

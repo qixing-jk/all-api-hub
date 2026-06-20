@@ -41,6 +41,7 @@ import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/sit
 import { resolveDefaultTokenCreationWithUserGroups } from "~/services/accounts/utils/tokenProvisioning"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
   TOKEN_PROVISIONING_WORKFLOWS,
@@ -528,15 +529,17 @@ export async function resolveDefaultTokenQuickCreateResolution(
       TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
   })
 
-  if (decision.kind === "create") {
+  if (decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create) {
     return { kind: "ready", tokenData: decision.tokenData }
   }
 
-  if (decision.kind === "selection_required") {
+  if (
+    decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired
+  ) {
     return { kind: "selection_required", allowedGroups: decision.allowedGroups }
   }
 
-  if (decision.kind === "needs_user_groups") {
+  if (decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups) {
     throw new Error(
       TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
     )
@@ -1267,9 +1270,9 @@ export async function ensureAccountApiToken(
       explicitGroup: options.sub2apiGroup,
     })
 
-    if (decision.kind !== "create") {
+    if (decision.kind !== DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create) {
       if (
-        decision.kind === "blocked" &&
+        decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked &&
         decision.reason ===
           TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
       ) {

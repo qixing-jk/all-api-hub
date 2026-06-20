@@ -1,8 +1,10 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   isCreatedApiToken,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 
@@ -11,7 +13,7 @@ export const createNewApiTokenProvisioning = (
 ): TokenProvisioningCapability => ({
   isInventoryTokenUsable: () => true,
   resolveDefaultTokenCreation: ({ defaultTokenData }) => ({
-    kind: "create",
+    kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
     tokenData: defaultTokenData,
     oneTimeSecret: false,
     recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
@@ -34,5 +36,7 @@ export const createNewApiTokenProvisioning = (
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
     }
   },
-  getRepairPolicy: () => ({ kind: "eligible" }),
+  getRepairPolicy: () => ({
+    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+  }),
 })

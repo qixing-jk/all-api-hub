@@ -3,6 +3,7 @@ import {
   requireDisplayAccountTokenProvisioning,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
   TOKEN_PROVISIONING_WORKFLOWS,
@@ -122,9 +123,9 @@ export async function ensureAccountKeysForAvailableGroups(params: {
       defaultTokenData: generateDefaultTokenRequest(),
     })
 
-    if (decision.kind !== "create") {
+    if (decision.kind !== DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create) {
       if (
-        decision.kind === "blocked" &&
+        decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked &&
         decision.reason ===
           TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
       ) {

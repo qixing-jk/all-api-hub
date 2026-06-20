@@ -1,7 +1,9 @@
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   isCreatedApiToken,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
@@ -20,14 +22,14 @@ export const aihubmixTokenProvisioning: TokenProvisioningCapability = {
   resolveDefaultTokenCreation: ({ defaultTokenData, workflow }) => {
     if (workflow !== TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation) {
       return {
-        kind: "blocked",
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
       }
     }
 
     // AIHubMix only exposes the full key in the create response; later reads can be masked.
     return {
-      kind: "create",
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
       tokenData: defaultTokenData,
       oneTimeSecret: true,
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
@@ -55,7 +57,7 @@ export const aihubmixTokenProvisioning: TokenProvisioningCapability = {
     }
   },
   getRepairPolicy: () => ({
-    kind: "skipped",
+    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
     skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
   }),
 }

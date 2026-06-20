@@ -6,6 +6,7 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import { resolveDefaultTokenCreationWithUserGroups } from "~/services/accounts/utils/tokenProvisioning"
 import {
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_WORKFLOWS,
   type DefaultTokenCreationDecision,
@@ -137,7 +138,10 @@ const blockPostSaveTokenCreation = (params?: {
 async function createDefaultToken(params: {
   account: SiteAccount
   displaySiteData: DisplaySiteData
-  decision: Extract<DefaultTokenCreationDecision, { kind: "create" }>
+  decision: Extract<
+    DefaultTokenCreationDecision,
+    { kind: typeof DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create }
+  >
   existingTokenIds: number[]
 }): Promise<EnsureAccountTokenResult> {
   const { account, displaySiteData, decision, existingTokenIds } = params
@@ -246,7 +250,9 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
     ),
   })
 
-  if (decision.kind === "selection_required") {
+  if (
+    decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired
+  ) {
     return {
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
       allowedGroups: decision.allowedGroups,
@@ -254,11 +260,11 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
     }
   }
 
-  if (decision.kind === "blocked") {
+  if (decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked) {
     return blockPostSaveTokenCreation({ reason: decision.reason })
   }
 
-  if (decision.kind === "needs_user_groups") {
+  if (decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups) {
     return blockPostSaveTokenCreation({
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
     })

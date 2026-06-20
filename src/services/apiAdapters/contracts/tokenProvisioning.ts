@@ -52,23 +52,30 @@ export const TOKEN_PROVISIONING_ERRORS = {
   TokenNotFound: "token_not_found",
 } as const
 
+export const DEFAULT_TOKEN_CREATION_DECISION_KINDS = {
+  Create: "create",
+  NeedsUserGroups: "needs_user_groups",
+  SelectionRequired: "selection_required",
+  Blocked: "blocked",
+} as const
+
 export type DefaultTokenCreationDecision =
   | {
-      kind: "create"
+      kind: typeof DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create
       tokenData: CreateTokenRequest
       oneTimeSecret: boolean
       recoverCreatedToken: TokenCreationSecretRecovery
     }
   | {
-      kind: "needs_user_groups"
+      kind: typeof DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups
     }
   | {
-      kind: "selection_required"
+      kind: typeof DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired
       allowedGroups: string[]
       reason: typeof TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired
     }
   | {
-      kind: "blocked"
+      kind: typeof DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked
       reason: TokenProvisioningBlockReason
     }
 
@@ -95,12 +102,17 @@ export type TokenProvisioningRepairSkipReason = Extract<
   "sub2api" | "aihubmixOneTimeKey"
 >
 
+export const TOKEN_PROVISIONING_REPAIR_POLICY_KINDS = {
+  Eligible: "eligible",
+  Skipped: "skipped",
+} as const
+
 export type TokenProvisioningRepairPolicy =
   | {
-      kind: "eligible"
+      kind: typeof TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible
     }
   | {
-      kind: "skipped"
+      kind: typeof TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped
       skipReason: TokenProvisioningRepairSkipReason
     }
 
