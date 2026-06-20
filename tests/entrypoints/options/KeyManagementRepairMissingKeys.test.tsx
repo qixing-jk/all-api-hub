@@ -32,8 +32,8 @@ const { sendRuntimeActionMessageMock, runtimeMessageState } = vi.hoisted(
     },
   }),
 )
-const { mockOpenSub2ApiTokenCreationDialog } = vi.hoisted(() => ({
-  mockOpenSub2ApiTokenCreationDialog: vi.fn(),
+const { mockOpenDefaultTokenQuickCreateDialogForAccount } = vi.hoisted(() => ({
+  mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
 }))
 const {
   mockTrackProductAnalyticsActionCompleted,
@@ -79,7 +79,8 @@ vi.mock(
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({
-    openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
+    openDefaultTokenQuickCreateDialogForAccount:
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
   }),
 }))
 
@@ -515,7 +516,7 @@ function createDeferred<T>() {
 
 describe("KeyManagement repair missing keys entry point", () => {
   beforeEach(() => {
-    mockOpenSub2ApiTokenCreationDialog.mockReset()
+    mockOpenDefaultTokenQuickCreateDialogForAccount.mockReset()
     mockTrackProductAnalyticsActionCompleted.mockReset()
     mockTrackProductAnalyticsActionStarted.mockReset()
   })
@@ -987,7 +988,9 @@ describe("KeyManagement repair missing keys entry point", () => {
     )
 
     await waitFor(() => {
-      expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledWith(
+      expect(
+        mockOpenDefaultTokenQuickCreateDialogForAccount,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "account-enabled-2",
           siteType: "sub2api",
@@ -1033,7 +1036,9 @@ describe("KeyManagement repair missing keys entry point", () => {
         name: "keyManagement:dialog.createToken",
       }),
     ).not.toBeInTheDocument()
-    expect(mockOpenSub2ApiTokenCreationDialog).not.toHaveBeenCalled()
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).not.toHaveBeenCalled()
   })
 
   it("switches between account coverage and invalid key views", async () => {

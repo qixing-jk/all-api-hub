@@ -261,6 +261,7 @@
         "accountNotFound": "アカウントが見つかりません。",
         "copiedApiConfigs": "apiConfigs をクリップボードにコピーしました",
         "copyFailed": "コピーに失敗しました",
+        "createTokenBlockedFallback": "トークンの作成がブロックされました。サイトポリシーを確認してから再試行してください。",
         "createTokenFailed": "トークンの作成に失敗しました。",
         "downloadedSettings": "設定ファイルをダウンロードしました",
         "downloadFailed": "設定ファイルのダウンロードに失敗しました",

@@ -261,6 +261,7 @@
         "accountNotFound": "未找到帳號。",
         "copiedApiConfigs": "已複製 apiConfigs",
         "copyFailed": "複製失敗",
+        "createTokenBlockedFallback": "金鑰建立被阻止。請檢查站點策略後再試一次。",
         "createTokenFailed": "建立金鑰失敗。",
         "downloadedSettings": "已下載設定檔案",
         "downloadFailed": "設定檔案下載失敗",

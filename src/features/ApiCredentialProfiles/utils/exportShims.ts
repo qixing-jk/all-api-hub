@@ -1,4 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  API_CREDENTIAL_PROFILE_SYNTHETIC_ACCOUNT_ID_PREFIX,
+  buildApiCredentialProfileSyntheticAccountId,
+} from "~/services/apiCredentialProfiles/syntheticAccount"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
@@ -36,9 +40,9 @@ export function createExportAccount(
   profile: ApiCredentialProfile,
 ): DisplaySiteData {
   return {
-    id: `api-credential-profile:${profile.id}`,
+    id: buildApiCredentialProfileSyntheticAccountId(profile.id),
     name: profile.name,
-    username: "api-credential-profile",
+    username: API_CREDENTIAL_PROFILE_SYNTHETIC_ACCOUNT_ID_PREFIX,
     balance: { USD: 0, CNY: 0 },
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },

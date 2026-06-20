@@ -265,6 +265,7 @@
         "accountNotFound": "Account not found.",
         "copiedApiConfigs": "apiConfigs copied to clipboard",
         "copyFailed": "Copy failed",
+        "createTokenBlockedFallback": "Token creation was blocked. Check the site policy and try again.",
         "createTokenFailed": "Failed to create token.",
         "downloadedSettings": "Settings file downloaded",
         "downloadFailed": "Failed to download settings file",

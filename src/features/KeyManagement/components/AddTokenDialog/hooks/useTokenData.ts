@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { DEFAULT_USER_GROUP_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
@@ -85,8 +86,11 @@ export function useTokenData(
             return prev
           }
 
-          if (allowedGroupSet.has("default") && groupsData.default) {
-            return { ...prev, group: "default" }
+          if (
+            allowedGroupSet.has(DEFAULT_USER_GROUP_NAME) &&
+            groupsData[DEFAULT_USER_GROUP_NAME]
+          ) {
+            return { ...prev, group: DEFAULT_USER_GROUP_NAME }
           }
 
           const firstAllowedGroup = normalizedAllowedGroups.find(
@@ -98,8 +102,8 @@ export function useTokenData(
             : prev
         }
 
-        if (groupsData.default) {
-          return { ...prev, group: "default" }
+        if (groupsData[DEFAULT_USER_GROUP_NAME]) {
+          return { ...prev, group: DEFAULT_USER_GROUP_NAME }
         }
 
         const firstGroup = Object.keys(groupsData)[0]

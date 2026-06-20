@@ -741,8 +741,10 @@ export function useAccountDialog({
   const currentTabCookieImportContextRef =
     useRef<CurrentTabCookieImportContext | null>(null)
 
-  const { openWithAccount: openChannelDialog, openSub2ApiTokenCreationDialog } =
-    useChannelDialog()
+  const {
+    openWithAccount: openChannelDialog,
+    openDefaultTokenQuickCreateDialogForAccount,
+  } = useChannelDialog()
 
   const invalidatePostSaveAutoConfigRun = useCallback(() => {
     postSaveAutoConfigRunRef.current += 1
@@ -1974,7 +1976,9 @@ export function useAccountDialog({
             }) &&
             savedDisplaySiteData
           ) {
-            await openSub2ApiTokenCreationDialog(savedDisplaySiteData)
+            await openDefaultTokenQuickCreateDialogForAccount(
+              savedDisplaySiteData,
+            )
           }
         } catch (error) {
           logger.error("Post-save Sub2API token dialog failed", {

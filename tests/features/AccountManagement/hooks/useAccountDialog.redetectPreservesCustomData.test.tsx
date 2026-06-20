@@ -18,11 +18,11 @@ import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 const {
   mockAutoDetectAccount,
   mockOpenWithAccount,
-  mockOpenSub2ApiTokenCreationDialog,
+  mockOpenDefaultTokenQuickCreateDialogForAccount,
 } = vi.hoisted(() => ({
   mockAutoDetectAccount: vi.fn(),
   mockOpenWithAccount: vi.fn(),
-  mockOpenSub2ApiTokenCreationDialog: vi.fn(),
+  mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -37,7 +37,8 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({
     openWithAccount: mockOpenWithAccount,
-    openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
+    openDefaultTokenQuickCreateDialogForAccount:
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
   }),
 }))
 

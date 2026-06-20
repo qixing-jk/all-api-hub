@@ -11,12 +11,11 @@ import { server } from "~~/tests/msw/server"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
-const { mockOpenWithAccount, mockOpenSub2ApiTokenCreationDialog } = vi.hoisted(
-  () => ({
+const { mockOpenWithAccount, mockOpenDefaultTokenQuickCreateDialogForAccount } =
+  vi.hoisted(() => ({
     mockOpenWithAccount: vi.fn(),
-    mockOpenSub2ApiTokenCreationDialog: vi.fn(),
-  }),
-)
+    mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
+  }))
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -30,7 +29,8 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({
     openWithAccount: mockOpenWithAccount,
-    openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
+    openDefaultTokenQuickCreateDialogForAccount:
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
   }),
 }))
 
@@ -848,8 +848,12 @@ describe("useAccountDialog duplicate account warning", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledTimes(1)
-    expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledWith(
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).toHaveBeenCalledTimes(1)
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         siteType: "sub2api",
         baseUrl: "https://sub2.example.com",
@@ -872,7 +876,7 @@ describe("useAccountDialog duplicate account warning", () => {
         }),
       ),
     )
-    mockOpenSub2ApiTokenCreationDialog.mockRejectedValueOnce(
+    mockOpenDefaultTokenQuickCreateDialogForAccount.mockRejectedValueOnce(
       new Error("dialog failed"),
     )
 
@@ -912,7 +916,9 @@ describe("useAccountDialog duplicate account warning", () => {
     })
 
     expect(saveResult).toMatchObject({ success: true })
-    expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledTimes(1)
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).toHaveBeenCalledTimes(1)
 
     const savedAccounts = await accountStorage.getAllAccounts()
     expect(savedAccounts).toHaveLength(1)

@@ -261,6 +261,7 @@
         "accountNotFound": "Không tìm thấy tài khoản.",
         "copiedApiConfigs": "Đã sao chép apiConfigs",
         "copyFailed": "Sao chép thất bại",
+        "createTokenBlockedFallback": "Việc tạo API Key đã bị chặn. Vui lòng kiểm tra chính sách trang web rồi thử lại.",
         "createTokenFailed": "Tạo API Key thất bại.",
         "downloadedSettings": "Đã tải xuống tệp cài đặt",
         "downloadFailed": "Tải tệp cài đặt thất bại",

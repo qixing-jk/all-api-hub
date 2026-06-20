@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USER_GROUP_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import type { AccountToken } from "~/types"
 
 // We duplicate some types here to avoid circular dependencies
@@ -60,7 +61,7 @@ const initialFormData: FormData = {
   modelLimitsEnabled: false,
   modelLimits: [],
   allowIps: "",
-  group: "default",
+  group: DEFAULT_USER_GROUP_NAME,
 }
 
 const isValidIpList = (ips: string): boolean => {
@@ -154,7 +155,7 @@ export function useTokenForm({
             ? editingToken.model_limits.split(",")
             : [],
           allowIps: editingToken.allow_ips || "",
-          group: editingToken.group || "default",
+          group: editingToken.group || DEFAULT_USER_GROUP_NAME,
         })
       } else {
         const defaultAccountId =
@@ -246,7 +247,9 @@ export function useTokenForm({
       allowedGroups.includes(normalizedSelectedGroup)
 
     if (requireGroup && (!normalizedSelectedGroup || !isRestrictedGroupValid)) {
-      newErrors.group = t("messages:sub2api.createRequiresGroupSelection")
+      newErrors.group = t(
+        "messages:tokenProvisioning.createRequiresGroupSelection",
+      )
     }
 
     setErrors(newErrors)

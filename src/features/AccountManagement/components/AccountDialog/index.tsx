@@ -15,7 +15,10 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
-import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import {
+  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+  resolvePreferredDefaultUserGroup,
+} from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import {
@@ -169,9 +172,9 @@ export default function AccountDialog({
       ? {
           modelId: "",
           defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-          group: state.postSaveSub2ApiAllowedGroups.includes("default")
-            ? "default"
-            : state.postSaveSub2ApiAllowedGroups[0] ?? "default",
+          group: resolvePreferredDefaultUserGroup(
+            state.postSaveSub2ApiAllowedGroups,
+          ),
           allowedGroups: state.postSaveSub2ApiAllowedGroups,
         }
       : undefined
@@ -398,7 +401,7 @@ export default function AccountDialog({
           availableAccounts={[state.postSaveSub2ApiAccount]}
           preSelectedAccountId={state.postSaveSub2ApiAccount.id}
           createPrefill={postSaveSub2ApiCreatePrefill}
-          prefillNotice={t("sub2api.createRequiresGroupSelection")}
+          prefillNotice={t("tokenProvisioning.createRequiresGroupSelection")}
           onSuccess={
             postSaveSub2ApiDialogHandlers?.onSuccess ??
             handlers.handlePostSaveSub2ApiTokenCreated

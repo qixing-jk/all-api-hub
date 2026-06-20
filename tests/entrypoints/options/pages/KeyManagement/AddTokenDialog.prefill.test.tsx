@@ -1331,7 +1331,9 @@ describe("AddTokenDialog prefill", () => {
 
     expect(createApiTokenMock).not.toHaveBeenCalled()
     expect(
-      await screen.findByText("messages:sub2api.createRequiresGroupSelection"),
+      await screen.findByText(
+        "messages:tokenProvisioning.createRequiresGroupSelection",
+      ),
     ).toBeInTheDocument()
 
     await user.click(groupTrigger as HTMLElement)

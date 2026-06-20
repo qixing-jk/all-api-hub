@@ -260,7 +260,7 @@ function getRepairProgressResult(progress: AccountKeyRepairProgress) {
 export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   const { isOpen, onClose, accounts, startOnOpen } = props
   const { t } = useTranslation(["keyManagement", "common"])
-  const { openSub2ApiTokenCreationDialog } = useChannelDialog()
+  const { openDefaultTokenQuickCreateDialogForAccount } = useChannelDialog()
 
   const [progress, setProgress] = useState<AccountKeyRepairProgress | null>(
     null,
@@ -531,7 +531,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
     setOpeningSub2ApiAccountId(accountId)
     try {
-      await openSub2ApiTokenCreationDialog(account)
+      await openDefaultTokenQuickCreateDialogForAccount(account)
     } finally {
       setOpeningSub2ApiAccountId((current) =>
         current === accountId ? null : current,

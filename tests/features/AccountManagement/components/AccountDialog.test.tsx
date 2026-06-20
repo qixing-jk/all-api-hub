@@ -845,7 +845,7 @@ describe("AccountDialog", () => {
       }),
     )
     expect(screen.getByTestId("post-save-add-token-notice")).toHaveTextContent(
-      "messages:sub2api.createRequiresGroupSelection",
+      "messages:tokenProvisioning.createRequiresGroupSelection",
     )
     expect(
       screen.getByTestId("post-save-add-token-one-time"),

@@ -2,6 +2,7 @@ import type { FormEvent } from "react"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CHANNEL_DIALOG_MUTATION_RESULTS } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import { DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS } from "~/constants/claudeCodeHub"
 import { DIALOG_MODES } from "~/constants/dialogModes"
@@ -422,7 +423,7 @@ describe("useChannelForm", () => {
 
     expect(onMutationOutcome).toHaveBeenCalledWith({
       mode: DIALOG_MODES.ADD,
-      result: "success",
+      result: CHANNEL_DIALOG_MUTATION_RESULTS.Success,
       siteType: SITE_TYPES.NEW_API,
     })
   })
@@ -464,7 +465,7 @@ describe("useChannelForm", () => {
 
     expect(onMutationOutcome).toHaveBeenCalledWith({
       mode: DIALOG_MODES.EDIT,
-      result: "failure",
+      result: CHANNEL_DIALOG_MUTATION_RESULTS.Failure,
       siteType: SITE_TYPES.NEW_API,
     })
   })

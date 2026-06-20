@@ -42,7 +42,7 @@ const {
   mockInspectAccountTokenInventory,
   mockEnsureAccountTokenForPostSaveWorkflow,
   mockOpenWithAccount,
-  mockOpenSub2ApiTokenCreationDialog,
+  mockOpenDefaultTokenQuickCreateDialogForAccount,
   mockGetManagedSiteConfig,
   mockOpenSettingsTab,
   mockStartProductAnalyticsAction,
@@ -54,7 +54,7 @@ const {
   mockInspectAccountTokenInventory: vi.fn(),
   mockEnsureAccountTokenForPostSaveWorkflow: vi.fn(),
   mockOpenWithAccount: vi.fn(),
-  mockOpenSub2ApiTokenCreationDialog: vi.fn(),
+  mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
   mockGetManagedSiteConfig: vi.fn(),
   mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
   mockStartProductAnalyticsAction: vi.fn(),
@@ -79,7 +79,8 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({
     openWithAccount: mockOpenWithAccount,
-    openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
+    openDefaultTokenQuickCreateDialogForAccount:
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
   }),
 }))
 
@@ -403,9 +404,9 @@ describe("useAccountDialog save and auto-config flows", () => {
         skipAutoProvisionKeyOnAccountAdd: false,
       },
     )
-    expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledWith(
-      savedDisplayData,
-    )
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).toHaveBeenCalledWith(savedDisplayData)
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
   })
 
@@ -782,7 +783,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockOpenSub2ApiTokenCreationDialog.mockRejectedValueOnce(
+    mockOpenDefaultTokenQuickCreateDialogForAccount.mockRejectedValueOnce(
       new Error("dialog boot failed"),
     )
 
@@ -813,9 +814,9 @@ describe("useAccountDialog save and auto-config flows", () => {
         accountId: "saved-account-id",
       }),
     )
-    expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledWith(
-      savedDisplayData,
-    )
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).toHaveBeenCalledWith(savedDisplayData)
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
     expect(toast.error).not.toHaveBeenCalled()
     expect(result.current.state.isSaving).toBe(false)
@@ -1681,7 +1682,9 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     expect(mockValidateAndSaveAccount).toHaveBeenCalledTimes(1)
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
-    expect(mockOpenSub2ApiTokenCreationDialog).not.toHaveBeenCalled()
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).not.toHaveBeenCalled()
     expect(toast.error).toHaveBeenCalledWith(
       "accountDialog:messages.saveAccountFailed",
     )
@@ -3202,7 +3205,9 @@ describe("useAccountDialog save and auto-config flows", () => {
         shouldContinue: expect.any(Function),
       }),
     )
-    expect(mockOpenSub2ApiTokenCreationDialog).not.toHaveBeenCalled()
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).not.toHaveBeenCalled()
     expect(toast.error).not.toHaveBeenCalledWith(
       "messages:toast.error.findAccountDetailsFailed",
     )
@@ -3331,7 +3336,9 @@ describe("useAccountDialog save and auto-config flows", () => {
         shouldContinue: expect.any(Function),
       }),
     )
-    expect(mockOpenSub2ApiTokenCreationDialog).not.toHaveBeenCalled()
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).not.toHaveBeenCalled()
   })
 
   it("reports a missing saved account during auto-config instead of opening the channel dialog", async () => {

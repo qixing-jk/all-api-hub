@@ -11,7 +11,7 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({
     openWithAccount: vi.fn(),
-    openSub2ApiTokenCreationDialog: vi.fn(),
+    openDefaultTokenQuickCreateDialogForAccount: vi.fn(),
   }),
 }))
 

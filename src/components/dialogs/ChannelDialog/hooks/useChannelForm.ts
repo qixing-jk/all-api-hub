@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import {
+  CHANNEL_DIALOG_MUTATION_RESULTS,
+  type ChannelDialogMutationResult,
+} from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { mergeUniqueOptions } from "~/components/dialogs/ChannelDialog/utils/selectOptions"
 import type { CompactMultiSelectOption } from "~/components/ui"
 import { DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS } from "~/constants/claudeCodeHub"
@@ -29,6 +33,12 @@ import { createLogger } from "~/utils/core/logger"
  */
 const logger = createLogger("ChannelFormHook")
 
+const createDefaultChannelGroupOptions = (): CompactMultiSelectOption[] =>
+  DEFAULT_CHANNEL_FIELDS.groups.map((group) => ({
+    label: group,
+    value: group,
+  }))
+
 const isAccessTokenManagedConfig = (
   config: ManagedSiteConfig,
 ): config is Extract<
@@ -44,7 +54,7 @@ export interface UseChannelFormProps {
   onSuccess?: (response: any) => void
   onMutationOutcome?: (outcome: {
     mode: DialogMode
-    result: "success" | "failure"
+    result: ChannelDialogMutationResult
     siteType: string
   }) => void
   initialValues?: Partial<ChannelFormData>
@@ -224,7 +234,7 @@ export function useChannelForm({
         return
       }
       if (service.siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-        const fallback = [{ label: "default", value: "default" }]
+        const fallback = createDefaultChannelGroupOptions()
         const preselectedGroups = (
           initialValues?.groups ??
           initialGroups ??
@@ -242,7 +252,7 @@ export function useChannelForm({
 
       if (!hasConfig) {
         logger.warn("No valid managed-site configuration")
-        const fallback = [{ label: "default", value: "default" }]
+        const fallback = createDefaultChannelGroupOptions()
         setAvailableGroups(mergeUniqueOptions(fallback, preselectedGroups))
         return
       }
@@ -251,7 +261,7 @@ export function useChannelForm({
       if (!config) {
         setAvailableGroups(
           mergeUniqueOptions(
-            [{ label: "default", value: "default" }],
+            createDefaultChannelGroupOptions(),
             preselectedGroups,
           ),
         )
@@ -276,15 +286,22 @@ export function useChannelForm({
         value: group,
       }))
 
-      if (!groupOptions.some((option) => option.value === "default")) {
-        groupOptions.push({ label: "default", value: "default" })
+      const defaultGroupOptions = createDefaultChannelGroupOptions()
+      for (const defaultGroupOption of defaultGroupOptions) {
+        if (
+          !groupOptions.some(
+            (option) => option.value === defaultGroupOption.value,
+          )
+        ) {
+          groupOptions.push(defaultGroupOption)
+        }
       }
 
       groupOptions = mergeUniqueOptions(groupOptions, preselectedGroups)
       setAvailableGroups(groupOptions)
     } catch (error) {
       logger.error("Failed to load groups", error)
-      const fallback = [{ label: "default", value: "default" }]
+      const fallback = createDefaultChannelGroupOptions()
       const preselectedGroups = (
         initialValues?.groups ??
         initialGroups ??
@@ -437,7 +454,7 @@ export function useChannelForm({
 
         onMutationOutcome?.({
           mode,
-          result: "success",
+          result: CHANNEL_DIALOG_MUTATION_RESULTS.Success,
           siteType: service.siteType,
         })
         onSuccess?.(normalizedResponse)
@@ -455,7 +472,7 @@ export function useChannelForm({
           : SITE_TYPES.NEW_API)
       onMutationOutcome?.({
         mode,
-        result: "failure",
+        result: CHANNEL_DIALOG_MUTATION_RESULTS.Failure,
         siteType,
       })
       toast.error(
