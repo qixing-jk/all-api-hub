@@ -131,6 +131,7 @@ export function useChannelDialog() {
     if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready) {
       const selectedGroup = resolution.tokenData.group?.trim()
       if (!selectedGroup) {
+        toast.error(t("messages:tokenProvisioning.createRequiresGroup"))
         return false
       }
 

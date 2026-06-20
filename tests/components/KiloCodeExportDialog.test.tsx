@@ -292,6 +292,14 @@ describe("KiloCodeExportDialog", () => {
         name: "ui:dialog.kiloCode.actions.downloadSettings",
       }),
     ).not.toBeDisabled()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.refresh" }),
+    )
+
+    await waitFor(() => {
+      expect(mockFetchAccountTokens).toHaveBeenCalledTimes(2)
+    })
   })
 
   it("disables export actions when there is nothing exportable", async () => {
@@ -892,6 +900,13 @@ describe("KiloCodeExportDialog", () => {
       allowedGroups: ["default", "vip"],
     })
     expect(latestDialogProps?.createPrefill).not.toHaveProperty("group")
+
+    await user.click(
+      await screen.findByRole("button", { name: "mock-add-token-close" }),
+    )
+    expect(
+      screen.queryByTestId("mock-add-token-dialog"),
+    ).not.toBeInTheDocument()
   })
 
   it("uses the newest created token after constrained Sub2API creation regardless of fetch order", async () => {
@@ -1174,6 +1189,51 @@ describe("KiloCodeExportDialog", () => {
       })
     })
     expect(await screen.findByText(fallbackMessage)).toBeInTheDocument()
+  })
+
+  it("uses the blocked Sub2API create message when one is available", async () => {
+    const user = userEvent.setup()
+    const site = createDisplayAccount({
+      id: "b",
+      name: "Site B",
+      baseUrl: "https://b.test",
+      siteType: "sub2api",
+    })
+
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [createSiteAccount(site)],
+      enabledDisplayData: [site],
+    })
+
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    mockResolveDefaultTokenQuickCreateResolution.mockResolvedValueOnce({
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
+      message: "Policy blocked",
+    })
+
+    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
+
+    const sitePicker = await screen.findByPlaceholderText(
+      "ui:dialog.kiloCode.placeholders.selectSites",
+    )
+    await user.click(sitePicker)
+    await user.clear(sitePicker)
+    await user.type(sitePicker, "Site B")
+    await user.keyboard("{ArrowDown}")
+    await user.click(await screen.findByRole("option", { name: "Site B" }))
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.kiloCode.actions.createDefaultToken",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("Policy blocked", {
+        id: buildKiloCodeCreateTokenToastId("b"),
+      })
+    })
+    expect(await screen.findByText("Policy blocked")).toBeInTheDocument()
   })
 
   it("shows accountNotFound feedback when token creation is requested without a backing account", async () => {

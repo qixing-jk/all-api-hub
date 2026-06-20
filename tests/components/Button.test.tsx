@@ -63,6 +63,23 @@ describe("Button", () => {
     ).toHaveLength(1)
   })
 
+  it("disables user interaction while loading", async () => {
+    const onClick = vi.fn()
+
+    render(
+      <Button loading onClick={onClick}>
+        Save
+      </Button>,
+    )
+
+    const button = await screen.findByRole("button", { name: /Save/ })
+    expect(button).toBeDisabled()
+
+    fireEvent.click(button)
+
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
   it("tracks controlled analytics action without reading button text", async () => {
     const onClick = vi.fn()
 

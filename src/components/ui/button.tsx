@@ -80,9 +80,10 @@ function Button({
     analyticsAction?: ProductAnalyticsScopedActionConfig
   }) {
   const Comp = asChild ? Slot.Root : "button"
+  const isDisabled = Boolean(disabled || loading)
   const analytics = useProductAnalyticsActionTracking({
     analyticsAction,
-    disabled: Boolean(disabled || loading),
+    disabled: isDisabled,
   })
   const trackingProps = analytics.getActionTrackingProps()
 
@@ -105,7 +106,7 @@ function Button({
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (event) => {
     onClick?.(event)
 
-    if (event.defaultPrevented || disabled || loading || !analyticsAction) {
+    if (event.defaultPrevented || isDisabled || !analyticsAction) {
       return
     }
 
@@ -116,7 +117,7 @@ function Button({
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, bleed, className }))}
-      disabled={disabled}
+      disabled={isDisabled}
       onClick={handleClick}
       {...props}
     >

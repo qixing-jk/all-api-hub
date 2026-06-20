@@ -656,7 +656,7 @@ describe("CopyKeyDialog", () => {
 
     const user = userEvent.setup()
 
-    render(
+    const { rerender } = render(
       <CopyKeyDialog
         isOpen={true}
         onClose={() => {}}
@@ -680,6 +680,24 @@ describe("CopyKeyDialog", () => {
       expect.objectContaining({ siteType: SITE_TYPES.NEW_API }),
     )
     expect(createApiTokenMock).not.toHaveBeenCalled()
+
+    rerender(
+      <CopyKeyDialog
+        isOpen={false}
+        onClose={() => {}}
+        account={{
+          ...ACCOUNT,
+          siteType: SITE_TYPES.NEW_API,
+        }}
+      />,
+    )
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "messages:tokenProvisioning.createRequiresGroupSelection",
+        ),
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("creates a default key with the full policy-resolved token payload", async () => {

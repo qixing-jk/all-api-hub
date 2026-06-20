@@ -865,6 +865,102 @@ describe("useChannelDialog", () => {
     )
   })
 
+  it("surfaces blocked default-token creation while opening from an account", async () => {
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
+    )
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
+      message: "No valid upstream groups are available",
+    })
+
+    const { result } = await renderChannelDialogHook()
+
+    let openResult: Awaited<
+      ReturnType<typeof result.current.dialog.openWithAccount>
+    > | null = null
+    await act(async () => {
+      openResult = await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
+        null,
+      )
+    })
+
+    expect(openResult).toEqual({ opened: false })
+    expect(mockToastError).toHaveBeenCalledWith(
+      "No valid upstream groups are available",
+      { id: "toast-id" },
+    )
+    expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
+    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
+    expect(result.current.context.state.isOpen).toBe(false)
+  })
+
+  it("cancels account opening when the caller continuation guard cancels after quick-create resolution", async () => {
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
+    )
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
+      allowedGroups: ["default", "vip"],
+    })
+
+    let shouldContinueCalls = 0
+    const { result } = await renderChannelDialogHook()
+
+    let openResult: Awaited<
+      ReturnType<typeof result.current.dialog.openWithAccount>
+    > | null = null
+    await act(async () => {
+      openResult = await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
+        null,
+        undefined,
+        {
+          shouldContinue: () => {
+            shouldContinueCalls += 1
+            return shouldContinueCalls < 2
+          },
+        },
+      )
+    })
+
+    expect(openResult).toEqual({ opened: false })
+    expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
+    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
+      false,
+    )
+    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
   it("resumes Sub2API channel opening with the single new refetched token when AddTokenDialog does not return one", async () => {
     const existingToken = buildApiToken({
       id: 3,
@@ -916,6 +1012,67 @@ describe("useChannelDialog", () => {
       await result.current.context.handleDefaultTokenQuickCreateSuccess()
     })
 
+    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "account-id",
+      }),
+      expect.objectContaining({
+        id: createdToken.id,
+        key: createdToken.key,
+      }),
+    )
+    expect(result.current.context.state).toMatchObject({
+      isOpen: true,
+      initialValues: {
+        key: createdToken.key,
+      },
+    })
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
+  it("resumes Sub2API channel opening with a token returned from AddTokenDialog", async () => {
+    const createdToken = buildApiToken({
+      id: 11,
+      key: "sk-created-11",
+      name: "Created token",
+    })
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
+    )
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
+      allowedGroups: ["default", "vip"],
+    })
+
+    const { result } = await renderChannelDialogHook()
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
+        null,
+      )
+    })
+
+    await act(async () => {
+      await result.current.context.handleDefaultTokenQuickCreateSuccess(
+        createdToken,
+      )
+    })
+
+    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
     expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "account-id",
@@ -1438,6 +1595,41 @@ describe("useChannelDialog", () => {
       allowedGroups: ["ops"],
       notice: "Use the audited group",
     })
+  })
+
+  it("shows feedback when a resolved quick-create group is empty", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
+      tokenData: {
+        name: "Default token",
+        remain_quota: 500000,
+        expired_time: -1,
+        unlimited_quota: false,
+        model_limits_enabled: false,
+        model_limits: "",
+        allow_ips: "",
+        group: "   ",
+      },
+    })
+
+    const { result } = await renderChannelDialogHook()
+
+    let didOpen = true
+    await act(async () => {
+      didOpen =
+        await result.current.dialog.openDefaultTokenQuickCreateDialogForAccount(
+          buildDisplaySiteData({ siteType: "sub2api" }),
+        )
+    })
+
+    expect(didOpen).toBe(false)
+    expect(mockToastError).toHaveBeenCalledWith(
+      "messages:tokenProvisioning.createRequiresGroup",
+    )
+    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
+      false,
+    )
   })
 
   it("shows an operation failure toast when the account details cannot be loaded", async () => {
