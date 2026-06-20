@@ -52,6 +52,12 @@ describe("fetchDisplayAccountTokens", () => {
   let deleteToken: ReturnType<typeof vi.fn>
   let fetchUserGroups: ReturnType<typeof vi.fn>
   let fetchAvailableModels: ReturnType<typeof vi.fn>
+  let tokenProvisioning: {
+    isInventoryTokenUsable: ReturnType<typeof vi.fn>
+    resolveDefaultTokenCreation: ReturnType<typeof vi.fn>
+    classifyCreatedToken: ReturnType<typeof vi.fn>
+    getRepairPolicy: ReturnType<typeof vi.fn>
+  }
   let keyManagement: {
     fetchTokens: typeof fetchTokens
     createToken: typeof createToken
@@ -66,6 +72,7 @@ describe("fetchDisplayAccountTokens", () => {
   let adapter: {
     siteType: string
     keyManagement?: typeof keyManagement
+    tokenProvisioning?: typeof tokenProvisioning
   }
 
   beforeEach(() => {
@@ -87,7 +94,13 @@ describe("fetchDisplayAccountTokens", () => {
         fetch: fetchUserGroups,
       },
     }
-    adapter = { siteType: "new-api", keyManagement }
+    tokenProvisioning = {
+      isInventoryTokenUsable: vi.fn(),
+      resolveDefaultTokenCreation: vi.fn(),
+      classifyCreatedToken: vi.fn(),
+      getRepairPolicy: vi.fn(),
+    }
+    adapter = { siteType: "new-api", keyManagement, tokenProvisioning }
 
     vi.mocked(getSiteAdapter).mockReset()
     vi.mocked(getSiteAdapter).mockReturnValue(adapter as any)
@@ -103,6 +116,7 @@ describe("fetchDisplayAccountTokens", () => {
     expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual({
       adapter,
       keyManagement,
+      tokenProvisioning,
       request: expect.objectContaining(REQUEST),
     })
     expect(createDisplayAccountApiContext(ACCOUNT as any)).not.toHaveProperty(
@@ -253,6 +267,19 @@ describe("fetchDisplayAccountTokens", () => {
         siteType: "unsupported",
       } as any),
     ).rejects.toThrow("keyManagement is not implemented for unsupported")
+  })
+
+  it("throws when adapter token provisioning is not implemented", async () => {
+    const { requireDisplayAccountTokenProvisioning } = await import(
+      "~/services/accounts/utils/apiServiceRequest"
+    )
+
+    expect(() =>
+      requireDisplayAccountTokenProvisioning(
+        { siteType: "unsupported" } as any,
+        undefined,
+      ),
+    ).toThrow("tokenProvisioning is not implemented for unsupported")
   })
 
   it("only allows token management for enabled accounts with complete auth context", () => {

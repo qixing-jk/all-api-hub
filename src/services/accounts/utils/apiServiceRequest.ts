@@ -1,6 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
+import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
@@ -26,6 +27,21 @@ export const requireDisplayAccountKeyManagement = (
   }
 
   return keyManagement
+}
+
+export const createMissingTokenProvisioningCapabilityError = (
+  siteType: string,
+) => new Error(`tokenProvisioning is not implemented for ${siteType}`)
+
+export const requireDisplayAccountTokenProvisioning = (
+  account: Pick<DisplaySiteData, "siteType">,
+  tokenProvisioning: TokenProvisioningCapability | undefined,
+): TokenProvisioningCapability => {
+  if (!tokenProvisioning) {
+    throw createMissingTokenProvisioningCapabilityError(account.siteType)
+  }
+
+  return tokenProvisioning
 }
 
 export class InvalidTokenPayloadError extends Error {
@@ -108,6 +124,7 @@ export const createDisplayAccountApiContext = (
   return {
     adapter,
     keyManagement: adapter.keyManagement,
+    tokenProvisioning: adapter.tokenProvisioning,
     request: withDisplayAccountAuthSession(
       account,
       buildApiRequestFromDisplayAccount(account),
