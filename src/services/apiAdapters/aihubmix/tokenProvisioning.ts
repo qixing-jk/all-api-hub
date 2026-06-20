@@ -10,6 +10,7 @@ import {
   isMaskedApiTokenKey,
 } from "~/services/apiService/common/apiKey"
 import type { ApiToken } from "~/types"
+import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
 const hasUsableFullTokenSecret = (token: ApiToken): boolean =>
   hasUsableApiTokenKey(token.key) && !isMaskedApiTokenKey(token.key)
@@ -55,6 +56,6 @@ export const aihubmixTokenProvisioning: TokenProvisioningCapability = {
   },
   getRepairPolicy: () => ({
     kind: "skipped",
-    skipReason: "aihubmixOneTimeKey",
+    skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
   }),
 }

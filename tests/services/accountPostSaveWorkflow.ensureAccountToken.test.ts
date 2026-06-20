@@ -16,6 +16,7 @@ import {
 import {
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -172,7 +173,10 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
         ? { kind: "usable", token: result, oneTimeSecret: false }
         : result
           ? { kind: "needs_inventory_refetch" }
-          : { kind: "failed", reason: "create_failed" },
+          : {
+              kind: "failed",
+              reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
+            },
     )
     getRepairPolicyMock.mockReturnValue({ kind: "eligible" })
   })
@@ -301,7 +305,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     )
     expect(resolveDefaultTokenCreationMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        workflow: "post_save_automation",
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
         defaultTokenData: expect.objectContaining({
           name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
         }),
@@ -309,7 +313,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     )
     expect(classifyCreatedTokenMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        workflow: "post_save_automation",
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
       }),
     )
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
@@ -663,7 +667,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       .mockReturnValueOnce({
         kind: "selection_required",
         allowedGroups: ["default", "vip"],
-        reason: "group_selection_required",
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { ratio: 1 },

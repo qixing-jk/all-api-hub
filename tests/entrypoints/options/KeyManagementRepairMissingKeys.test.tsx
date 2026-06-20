@@ -9,7 +9,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
 } from "~/services/productAnalytics/events"
-import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
+import {
+  ACCOUNT_KEY_REPAIR_SKIP_REASONS,
+  type AccountKeyRepairProgress,
+} from "~/types/accountKeyAutoProvisioning"
 import {
   act,
   fireEvent,
@@ -200,7 +203,7 @@ const startProgress: AccountKeyRepairProgress = {
       siteType: "unknown",
       siteUrlOrigin: "https://disabled.example.com",
       outcome: "skipped",
-      skipReason: "noneAuth",
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth,
       finishedAt: 1,
     },
     {
@@ -320,7 +323,7 @@ const inflatedProgress: AccountKeyRepairProgress = {
       siteType: "unknown",
       siteUrlOrigin: "https://disabled.example.com",
       outcome: "skipped",
-      skipReason: "noneAuth",
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth,
       finishedAt: 1,
     },
     {
@@ -345,7 +348,7 @@ const inflatedProgress: AccountKeyRepairProgress = {
       siteType: "unknown",
       siteUrlOrigin: "https://disabled-2.example.com",
       outcome: "skipped",
-      skipReason: "sub2api",
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
       finishedAt: 2,
     },
     {
@@ -384,7 +387,7 @@ const sub2apiSkippedProgress: AccountKeyRepairProgress = {
       siteType: "sub2api",
       siteUrlOrigin: "https://another.example.com",
       outcome: "skipped",
-      skipReason: "sub2api",
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
       finishedAt: 1,
     },
   ],
@@ -415,7 +418,7 @@ const aihubmixSkippedProgress: AccountKeyRepairProgress = {
       siteType: "AIHubMix",
       siteUrlOrigin: "https://aihubmix.com",
       outcome: "skipped",
-      skipReason: "aihubmixOneTimeKey",
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
       finishedAt: 1,
     },
   ],

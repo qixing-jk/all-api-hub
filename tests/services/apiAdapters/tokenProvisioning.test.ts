@@ -14,6 +14,7 @@ import {
 } from "~/services/apiAdapters/sub2api/tokenProvisioning"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiToken } from "~/types"
+import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
 const defaultTokenData: CreateTokenRequest = {
   name: "Example default token",
@@ -177,7 +178,7 @@ describe("apiAdapter tokenProvisioning", () => {
 
     expect(sub2ApiTokenProvisioning.getRepairPolicy()).toEqual({
       kind: "skipped",
-      skipReason: "sub2api",
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
     })
   })
 
@@ -299,7 +300,7 @@ describe("apiAdapter tokenProvisioning", () => {
 
     expect(aihubmixTokenProvisioning.getRepairPolicy()).toEqual({
       kind: "skipped",
-      skipReason: "aihubmixOneTimeKey",
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
     })
   })
 })

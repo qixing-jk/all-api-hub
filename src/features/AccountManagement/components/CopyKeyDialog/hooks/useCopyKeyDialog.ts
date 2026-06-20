@@ -13,6 +13,7 @@ import {
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { TOKEN_PROVISIONING_ERRORS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -292,7 +293,7 @@ export function useCopyKeyDialog(
         keyManagement,
       ).createToken(request, tokenRequest)
       if (!created) {
-        throw new Error("create_token_failed")
+        throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
       }
 
       await refreshTokensAfterCreate(

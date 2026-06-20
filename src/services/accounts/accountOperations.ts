@@ -42,6 +42,7 @@ import { resolveDefaultTokenCreationWithUserGroups } from "~/services/accounts/u
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import {
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_ERRORS,
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningBlockReason,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
@@ -61,6 +62,7 @@ import {
   type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
+import { ACCOUNT_KEY_REPAIR_ERRORS } from "~/types/accountKeyAutoProvisioning"
 import type {
   AccountSaveResponse,
   AccountValidationResponse,
@@ -522,7 +524,8 @@ export async function resolveDefaultTokenQuickCreateResolution(
       defaultTokenData: generateDefaultTokenRequest(),
       explicitGroup: options.explicitGroup,
     },
-    missingUserGroupsMessage: "sub2api_group_inventory_not_implemented",
+    missingUserGroupsMessage:
+      TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
   })
 
   if (decision.kind === "create") {
@@ -534,7 +537,9 @@ export async function resolveDefaultTokenQuickCreateResolution(
   }
 
   if (decision.kind === "needs_user_groups") {
-    throw new Error("sub2api_group_inventory_not_implemented")
+    throw new Error(
+      TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
+    )
   }
 
   return {
@@ -551,7 +556,7 @@ export async function resolveSub2ApiQuickCreateResolution(
   account: DisplaySiteData,
 ): Promise<Sub2ApiQuickCreateResolution> {
   if (account.siteType !== SITE_TYPES.SUB2API) {
-    throw new Error("sub2api_quick_create_not_applicable")
+    throw new Error(TOKEN_PROVISIONING_ERRORS.Sub2ApiQuickCreateNotApplicable)
   }
 
   const resolution = await resolveDefaultTokenQuickCreateResolution(account)
@@ -1368,7 +1373,7 @@ async function autoProvisionKeyOnAccountAdd(
         !hasToken &&
         !hasCookie)
     ) {
-      throw new Error("invalid_display_site_data")
+      throw new Error(ACCOUNT_KEY_REPAIR_ERRORS.InvalidDisplaySiteData)
     }
 
     const { created } = await ensureDefaultApiTokenForAccount({

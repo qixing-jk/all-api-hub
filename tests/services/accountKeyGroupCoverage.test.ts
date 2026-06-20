@@ -13,6 +13,8 @@ import {
 import {
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_ERRORS,
+  TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS } from "~/types/accountKeyAutoProvisioning"
@@ -245,7 +247,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     )
     expect(mocks.resolveDefaultTokenCreation).toHaveBeenCalledWith(
       expect.objectContaining({
-        workflow: "repair",
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.Repair,
         defaultTokenData: generateDefaultTokenRequest(),
       }),
     )
@@ -291,7 +293,9 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
     })
 
-    await expect(runCoverage()).rejects.toThrow("create_token_failed")
+    await expect(runCoverage()).rejects.toThrow(
+      TOKEN_PROVISIONING_ERRORS.CreateTokenFailed,
+    )
   })
 
   it("treats empty group responses as legacy one-key coverage when a token already exists", async () => {

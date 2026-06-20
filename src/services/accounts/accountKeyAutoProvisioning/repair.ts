@@ -13,6 +13,10 @@ import type {
   AccountKeyRepairProgress,
   AccountKeyRepairSkipReason,
 } from "~/types/accountKeyAutoProvisioning"
+import {
+  ACCOUNT_KEY_REPAIR_ERRORS,
+  ACCOUNT_KEY_REPAIR_SKIP_REASONS,
+} from "~/types/accountKeyAutoProvisioning"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -86,7 +90,7 @@ function getSkipReason(
   }
 
   if (account.authType === AuthTypeEnum.None) {
-    return "noneAuth"
+    return ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth
   }
 
   return null
@@ -276,7 +280,7 @@ class AccountKeyRepairRunner {
           !hasToken &&
           !hasCookie)
       ) {
-        throw new Error("invalid_display_site_data")
+        throw new Error(ACCOUNT_KEY_REPAIR_ERRORS.InvalidDisplaySiteData)
       }
 
       const result = await ensureAccountKeysForAvailableGroups({
@@ -508,7 +512,7 @@ export async function deleteInvalidAccountTokens(
     if (!account || !displaySiteData) {
       failed.push({
         ...token,
-        errorMessage: "account_not_found",
+        errorMessage: ACCOUNT_KEY_REPAIR_ERRORS.AccountNotFound,
       })
       continue
     }
@@ -523,7 +527,8 @@ export async function deleteInvalidAccountTokens(
     } catch (error) {
       failed.push({
         ...token,
-        errorMessage: getErrorMessage(error) || "delete_failed",
+        errorMessage:
+          getErrorMessage(error) || ACCOUNT_KEY_REPAIR_ERRORS.DeleteFailed,
       })
     }
   }

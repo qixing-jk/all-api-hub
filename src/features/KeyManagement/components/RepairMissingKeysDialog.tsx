@@ -49,6 +49,7 @@ import type {
   AccountKeyRepairProgress,
   AccountKeyRepairSkipReason,
 } from "~/types/accountKeyAutoProvisioning"
+import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 
 const repairMissingKeysAnalyticsContext = {
@@ -106,11 +107,11 @@ function getSkipReasonLabel(
 ) {
   if (!reason) return ""
   switch (reason) {
-    case "sub2api":
+    case ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api:
       return t("keyManagement:repairMissingKeys.skipReasons.sub2api")
-    case "aihubmixOneTimeKey":
+    case ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey:
       return t("keyManagement:repairMissingKeys.skipReasons.aihubmixOneTimeKey")
-    case "noneAuth":
+    case ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth:
       return t("keyManagement:repairMissingKeys.skipReasons.noneAuth")
   }
 }
@@ -1301,7 +1302,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                             : ""
                       const canCreateSub2ApiKey =
                         result.outcome === "skipped" &&
-                        result.skipReason === "sub2api" &&
+                        result.skipReason ===
+                          ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api &&
                         accountById.has(result.accountId)
 
                       const badgeVariant =

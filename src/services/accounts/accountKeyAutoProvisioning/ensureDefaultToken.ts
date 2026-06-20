@@ -4,6 +4,7 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_ERRORS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
@@ -110,11 +111,11 @@ export async function ensureDefaultApiTokenForAccount(params: {
   }
 
   if (createdTokenDecision.kind === "failed") {
-    throw new Error("create_token_failed")
+    throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
   }
 
   if (createdTokenDecision.kind === "unavailable") {
-    throw new Error("token_not_found")
+    throw new Error(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
   }
 
   // Backends such as AIHubMix may only expose the full API key in the create
@@ -124,7 +125,7 @@ export async function ensureDefaultApiTokenForAccount(params: {
   apiToken = updatedTokens.at(-1)
 
   if (!apiToken) {
-    throw new Error("token_not_found")
+    throw new Error(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
   }
 
   return { token: apiToken, created: true }

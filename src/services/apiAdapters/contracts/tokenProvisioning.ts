@@ -44,6 +44,14 @@ export const TOKEN_CREATION_SECRET_RECOVERY = {
 export type TokenCreationSecretRecovery =
   (typeof TOKEN_CREATION_SECRET_RECOVERY)[keyof typeof TOKEN_CREATION_SECRET_RECOVERY]
 
+export const TOKEN_PROVISIONING_ERRORS = {
+  CreateTokenFailed: "create_token_failed",
+  Sub2ApiGroupInventoryNotImplemented:
+    "sub2api_group_inventory_not_implemented",
+  Sub2ApiQuickCreateNotApplicable: "sub2api_quick_create_not_applicable",
+  TokenNotFound: "token_not_found",
+} as const
+
 export type DefaultTokenCreationDecision =
   | {
       kind: "create"

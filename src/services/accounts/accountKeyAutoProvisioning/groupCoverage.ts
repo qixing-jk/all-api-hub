@@ -4,6 +4,7 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_ERRORS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
@@ -143,7 +144,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     })
 
     if (createdTokenDecision.kind === "failed") {
-      throw new Error("create_token_failed")
+      throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
     }
 
     return {

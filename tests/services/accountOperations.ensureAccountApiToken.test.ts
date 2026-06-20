@@ -14,6 +14,8 @@ import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
 import {
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_ERRORS,
+  TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -209,7 +211,10 @@ describe("accountOperations Sub2API token creation guards", () => {
         ? { kind: "usable", token: result, oneTimeSecret: false }
         : result
           ? { kind: "needs_inventory_refetch" }
-          : { kind: "failed", reason: "create_failed" },
+          : {
+              kind: "failed",
+              reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
+            },
     )
 
     const testAccounts = createTestAccounts()
@@ -292,7 +297,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     )
     expect(resolveDefaultTokenCreationMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        workflow: "shared_ensure",
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
         explicitGroup: "vip",
       }),
     )
@@ -308,7 +313,7 @@ describe("accountOperations Sub2API token creation guards", () => {
       .mockReturnValueOnce({
         kind: "selection_required",
         allowedGroups: ["default", "vip"],
-        reason: "group_selection_required",
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "Default", ratio: 1 },
@@ -350,7 +355,7 @@ describe("accountOperations Sub2API token creation guards", () => {
       .mockReturnValueOnce({
         kind: "selection_required",
         allowedGroups: ["default", "vip"],
-        reason: "group_selection_required",
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "Default", ratio: 1 },
@@ -414,7 +419,9 @@ describe("accountOperations Sub2API token creation guards", () => {
 
     await expect(
       resolveSub2ApiQuickCreateResolution(DISPLAY_ACCOUNT),
-    ).rejects.toThrow("sub2api_group_inventory_not_implemented")
+    ).rejects.toThrow(
+      TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
+    )
 
     expect(fetchUserGroupsMock).not.toHaveBeenCalled()
   })
@@ -433,7 +440,9 @@ describe("accountOperations Sub2API token creation guards", () => {
 
     await expect(
       resolveDefaultTokenQuickCreateResolution(DISPLAY_ACCOUNT),
-    ).rejects.toThrow("sub2api_group_inventory_not_implemented")
+    ).rejects.toThrow(
+      TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
+    )
 
     expect(fetchUserGroupsMock).toHaveBeenCalledTimes(1)
   })
@@ -443,7 +452,7 @@ describe("accountOperations Sub2API token creation guards", () => {
 
     await expect(
       resolveSub2ApiQuickCreateResolution(displayAccount as any),
-    ).rejects.toThrow("sub2api_quick_create_not_applicable")
+    ).rejects.toThrow(TOKEN_PROVISIONING_ERRORS.Sub2ApiQuickCreateNotApplicable)
 
     expect(fetchUserGroupsMock).not.toHaveBeenCalled()
   })
@@ -511,7 +520,10 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
         ? { kind: "usable", token: result, oneTimeSecret: false }
         : result
           ? { kind: "needs_inventory_refetch" }
-          : { kind: "failed", reason: "create_failed" },
+          : {
+              kind: "failed",
+              reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
+            },
     )
   })
 
@@ -871,7 +883,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
         account: siteAccount as any,
         displaySiteData: displayAccount as any,
       }),
-    ).rejects.toThrow("token_not_found")
+    ).rejects.toThrow(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
   })
 
   it("fails when default token creation reports false", async () => {
@@ -885,7 +897,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
         account: siteAccount as any,
         displaySiteData: displayAccount as any,
       }),
-    ).rejects.toThrow("create_token_failed")
+    ).rejects.toThrow(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
   })
 
   it("fails when the token inventory is still empty after a successful create", async () => {
@@ -899,6 +911,6 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
         account: siteAccount as any,
         displaySiteData: displayAccount as any,
       }),
-    ).rejects.toThrow("token_not_found")
+    ).rejects.toThrow(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
   })
 })

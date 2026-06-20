@@ -12,6 +12,7 @@ import {
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { TOKEN_PROVISIONING_ERRORS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
@@ -340,7 +341,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
           keyManagement,
         ).createToken(request, tokenRequest)
         if (!created) {
-          throw new Error("create_token_failed")
+          throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
         }
 
         return await refreshTokensAfterCreate(

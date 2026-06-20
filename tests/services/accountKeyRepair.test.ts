@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AuthTypeEnum } from "~/types"
-import { ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS } from "~/types/accountKeyAutoProvisioning"
+import {
+  ACCOUNT_KEY_REPAIR_ERRORS,
+  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
+  ACCOUNT_KEY_REPAIR_SKIP_REASONS,
+} from "~/types/accountKeyAutoProvisioning"
 import {
   buildDisplaySiteData,
   buildSiteAccount,
@@ -60,14 +64,14 @@ vi.mock("~/services/apiAdapters/registry", () => ({
         ? {
             getRepairPolicy: () => ({
               kind: "skipped",
-              skipReason: "sub2api",
+              skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
             }),
           }
         : siteType === SITE_TYPES.AIHUBMIX
           ? {
               getRepairPolicy: () => ({
                 kind: "skipped",
-                skipReason: "aihubmixOneTimeKey",
+                skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
               }),
             }
           : {
@@ -306,13 +310,13 @@ describe("accountKeyRepair", () => {
         expect.objectContaining({
           accountId: "sub2api-1",
           outcome: "skipped",
-          skipReason: "sub2api",
+          skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
           siteUrlOrigin: "https://sub2api.example.com",
         }),
         expect.objectContaining({
           accountId: "aihubmix-1",
           outcome: "skipped",
-          skipReason: "aihubmixOneTimeKey",
+          skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
           siteUrlOrigin: "https://aihubmix.com",
         }),
         expect.objectContaining({
@@ -323,7 +327,7 @@ describe("accountKeyRepair", () => {
         expect.objectContaining({
           accountId: "bad-cookie-1",
           outcome: "failed",
-          errorMessage: "invalid_display_site_data",
+          errorMessage: ACCOUNT_KEY_REPAIR_ERRORS.InvalidDisplaySiteData,
           siteUrlOrigin: "https://cookie.example.com",
         }),
       ]),
@@ -923,7 +927,7 @@ describe("accountKeyRepair", () => {
         failed: [
           {
             ...invalidToken,
-            errorMessage: "account_not_found",
+            errorMessage: ACCOUNT_KEY_REPAIR_ERRORS.AccountNotFound,
           },
         ],
       },
@@ -1039,7 +1043,7 @@ describe("accountKeyRepair", () => {
         expect.objectContaining({
           accountId: "none-auth-1",
           outcome: "skipped",
-          skipReason: "noneAuth",
+          skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth,
         }),
         expect.objectContaining({
           accountId: "cookie-1",

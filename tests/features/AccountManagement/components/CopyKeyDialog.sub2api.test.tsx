@@ -2,7 +2,12 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
-import { TOKEN_CREATION_SECRET_RECOVERY } from "~/services/apiAdapters/contracts/tokenProvisioning"
+import {
+  TOKEN_CREATION_SECRET_RECOVERY,
+  TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_WORKFLOWS,
+} from "~/services/apiAdapters/contracts/tokenProvisioning"
+import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 import {
   buildSub2ApiAccount,
   buildSub2ApiToken,
@@ -52,10 +57,13 @@ const createSub2ApiTokenProvisioningMock = () => ({
     }
 
     if (
-      request.workflow !== "quick_create_selection" &&
-      request.workflow !== "post_save_automation"
+      request.workflow !== TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection &&
+      request.workflow !== TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation
     ) {
-      return { kind: "blocked", reason: "group_required" }
+      return {
+        kind: "blocked",
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
+      }
     }
 
     if (!request.userGroups) {
@@ -65,7 +73,10 @@ const createSub2ApiTokenProvisioningMock = () => ({
     const allowedGroups = normalizeGroupNames(request.userGroups)
 
     if (allowedGroups.length === 0) {
-      return { kind: "blocked", reason: "available_group_required" }
+      return {
+        kind: "blocked",
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
+      }
     }
 
     if (allowedGroups.length === 1) {
@@ -80,17 +91,20 @@ const createSub2ApiTokenProvisioningMock = () => ({
     return {
       kind: "selection_required",
       allowedGroups,
-      reason: "group_selection_required",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
     }
   }),
   classifyCreatedToken: vi.fn(({ result }: any) =>
     result
       ? { kind: "needs_inventory_refetch" }
-      : { kind: "failed", reason: "create_failed" },
+      : {
+          kind: "failed",
+          reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
+        },
   ),
   getRepairPolicy: vi.fn(() => ({
     kind: "skipped" as const,
-    skipReason: "sub2api" as const,
+    skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
   })),
 })
 

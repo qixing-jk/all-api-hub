@@ -12,10 +12,20 @@ export type AccountKeyRepairOutcome =
   | "skipped"
   | "failed"
 
+export const ACCOUNT_KEY_REPAIR_SKIP_REASONS = {
+  Sub2Api: "sub2api",
+  AihubmixOneTimeKey: "aihubmixOneTimeKey",
+  NoneAuth: "noneAuth",
+} as const
+
 export type AccountKeyRepairSkipReason =
-  | "sub2api"
-  | "aihubmixOneTimeKey"
-  | "noneAuth"
+  (typeof ACCOUNT_KEY_REPAIR_SKIP_REASONS)[keyof typeof ACCOUNT_KEY_REPAIR_SKIP_REASONS]
+
+export const ACCOUNT_KEY_REPAIR_ERRORS = {
+  AccountNotFound: "account_not_found",
+  DeleteFailed: "delete_failed",
+  InvalidDisplaySiteData: "invalid_display_site_data",
+} as const
 
 export const ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS = {
   GroupUnavailable: "groupUnavailable",
