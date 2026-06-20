@@ -23,8 +23,9 @@ import { useAccountData } from "~/hooks/useAccountData"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   ensureAccountApiToken,
-  resolveSub2ApiQuickCreateResolution,
+  resolveDefaultTokenQuickCreateResolution,
 } from "~/services/accounts/accountOperations"
+import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import {
   createDisplayAccountApiContext,
@@ -57,6 +58,20 @@ const kiloCodeAccountExportAnalyticsContext = {
     PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountTokenKiloCodeExportDialog,
 }
 
+const KILO_CODE_INVENTORY_STATUSES = {
+  Idle: "idle",
+  Loading: "loading",
+  Loaded: "loaded",
+  Error: "error",
+} as const
+
+/**
+ * Builds the stable toast id used while Kilo Code export creates a missing token.
+ */
+export function buildKiloCodeCreateTokenToastId(siteId: string) {
+  return `kilocode-create-token-${siteId}`
+}
+
 interface KiloCodeExportDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -71,7 +86,8 @@ interface KiloCodeExportDialogProps {
   initialSelectedTokenIdsBySite?: Record<string, string[]>
 }
 
-type TokenLoadStatus = "idle" | "loading" | "loaded" | "error"
+type TokenLoadStatus =
+  (typeof KILO_CODE_INVENTORY_STATUSES)[keyof typeof KILO_CODE_INVENTORY_STATUSES]
 
 interface TokenInventoryState {
   status: TokenLoadStatus
@@ -79,7 +95,13 @@ interface TokenInventoryState {
   errorMessage?: string
 }
 
-type ModelLoadStatus = "idle" | "loading" | "loaded" | "error"
+type DefaultTokenCreateContext = {
+  siteId: string
+  allowedGroups: string[]
+}
+
+type ModelLoadStatus =
+  (typeof KILO_CODE_INVENTORY_STATUSES)[keyof typeof KILO_CODE_INVENTORY_STATUSES]
 
 interface ModelInventoryState {
   status: ModelLoadStatus
@@ -204,10 +226,8 @@ export function KiloCodeExportDialog({
   const [isCreatingToken, setIsCreatingToken] = useState<
     Record<string, boolean>
   >({})
-  const [sub2apiCreateContext, setSub2apiCreateContext] = useState<{
-    siteId: string
-    allowedGroups: string[]
-  } | null>(null)
+  const [defaultTokenCreateContext, setDefaultTokenCreateContext] =
+    useState<DefaultTokenCreateContext | null>(null)
 
   const [modelInventories, setModelInventories] = useState<
     Record<string, ModelInventoryState>
@@ -234,7 +254,7 @@ export function KiloCodeExportDialog({
     setCurrentApiConfigName("")
     setTokenInventories({})
     setIsCreatingToken({})
-    setSub2apiCreateContext(null)
+    setDefaultTokenCreateContext(null)
     setModelInventories({})
     setSelectedModelIdByToken({})
     modelLoadsInFlightRef.current.clear()
@@ -274,7 +294,12 @@ export function KiloCodeExportDialog({
 
   const getTokenInventory = useCallback(
     (siteId: string): TokenInventoryState => {
-      return tokenInventories[siteId] ?? { status: "idle", tokens: [] }
+      return (
+        tokenInventories[siteId] ?? {
+          status: KILO_CODE_INVENTORY_STATUSES.Idle,
+          tokens: [],
+        }
+      )
     },
     [tokenInventories],
   )
@@ -282,7 +307,10 @@ export function KiloCodeExportDialog({
   const getModelInventory = useCallback(
     (tokenSelectionKey: string): ModelInventoryState => {
       return (
-        modelInventories[tokenSelectionKey] ?? { status: "idle", modelIds: [] }
+        modelInventories[tokenSelectionKey] ?? {
+          status: KILO_CODE_INVENTORY_STATUSES.Idle,
+          modelIds: [],
+        }
       )
     },
     [modelInventories],
@@ -296,7 +324,7 @@ export function KiloCodeExportDialog({
       setTokenInventories((prev) => ({
         ...prev,
         [siteId]: {
-          status: "loading",
+          status: KILO_CODE_INVENTORY_STATUSES.Loading,
           tokens: prev[siteId]?.tokens ?? [],
           errorMessage: undefined,
         },
@@ -312,7 +340,7 @@ export function KiloCodeExportDialog({
           setTokenInventories((prev) => ({
             ...prev,
             [siteId]: {
-              status: "error",
+              status: KILO_CODE_INVENTORY_STATUSES.Error,
               tokens: [],
               errorMessage: t("ui:dialog.kiloCode.messages.loadTokensFailed"),
             },
@@ -322,7 +350,11 @@ export function KiloCodeExportDialog({
 
         setTokenInventories((prev) => ({
           ...prev,
-          [siteId]: { status: "loaded", tokens, errorMessage: undefined },
+          [siteId]: {
+            status: KILO_CODE_INVENTORY_STATUSES.Loaded,
+            tokens,
+            errorMessage: undefined,
+          },
         }))
 
         // UX: default-select the first token (common case is "one token per site"),
@@ -353,7 +385,7 @@ export function KiloCodeExportDialog({
         setTokenInventories((prev) => ({
           ...prev,
           [siteId]: {
-            status: "error",
+            status: KILO_CODE_INVENTORY_STATUSES.Error,
             tokens: [],
             errorMessage: t("ui:dialog.kiloCode.messages.loadTokensFailed"),
           },
@@ -372,14 +404,14 @@ export function KiloCodeExportDialog({
       if (modelLoadsInFlightRef.current.has(tokenSelectionKey)) return
 
       const existingStatus = modelInventories[tokenSelectionKey]?.status
-      if (existingStatus === "loaded") return
+      if (existingStatus === KILO_CODE_INVENTORY_STATUSES.Loaded) return
 
       modelLoadsInFlightRef.current.add(tokenSelectionKey)
 
       setModelInventories((prev) => ({
         ...prev,
         [tokenSelectionKey]: {
-          status: "loading",
+          status: KILO_CODE_INVENTORY_STATUSES.Loading,
           modelIds: prev[tokenSelectionKey]?.modelIds ?? [],
           errorMessage: undefined,
         },
@@ -404,7 +436,7 @@ export function KiloCodeExportDialog({
         setModelInventories((prev) => ({
           ...prev,
           [tokenSelectionKey]: {
-            status: "loaded",
+            status: KILO_CODE_INVENTORY_STATUSES.Loaded,
             modelIds: normalized,
             errorMessage: undefined,
           },
@@ -422,7 +454,7 @@ export function KiloCodeExportDialog({
         setModelInventories((prev) => ({
           ...prev,
           [tokenSelectionKey]: {
-            status: "error",
+            status: KILO_CODE_INVENTORY_STATUSES.Error,
             modelIds: prev[tokenSelectionKey]?.modelIds ?? [],
             errorMessage: t("ui:dialog.kiloCode.messages.loadModelsFailed"),
           },
@@ -442,60 +474,59 @@ export function KiloCodeExportDialog({
       return
     }
 
-    const toastId = `kilocode-create-token-${siteId}`
+    const toastId = buildKiloCodeCreateTokenToastId(siteId)
 
     setIsCreatingToken((prev) => ({ ...prev, [siteId]: true }))
     setTokenInventories((prev) => ({
       ...prev,
-      [siteId]: { status: "loading", tokens: prev[siteId]?.tokens ?? [] },
+      [siteId]: {
+        status: KILO_CODE_INVENTORY_STATUSES.Loading,
+        tokens: prev[siteId]?.tokens ?? [],
+      },
     }))
 
     try {
-      let ensuredToken: ApiToken
-      if (site.siteType === "sub2api") {
-        const resolution = await resolveSub2ApiQuickCreateResolution(site)
-        if (resolution.kind === "blocked") {
-          const userMessage = resolution.message?.trim()
-            ? resolution.message
-            : "Token creation was blocked. Please check site policy or try again."
+      const resolution = await resolveDefaultTokenQuickCreateResolution(site)
+      if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked) {
+        const userMessage = resolution.message?.trim()
+          ? resolution.message
+          : t("ui:dialog.kiloCode.messages.createTokenBlockedFallback")
 
-          toast.error(userMessage, { id: toastId })
-          setTokenInventories((prev) => ({
-            ...prev,
-            [siteId]: {
-              status: "error",
-              tokens: prev[siteId]?.tokens ?? [],
-              errorMessage: userMessage,
-            },
-          }))
-          return
-        }
-
-        if (resolution.kind === "selection_required") {
-          setSub2apiCreateContext({
-            siteId,
-            allowedGroups: resolution.allowedGroups,
-          })
-          setTokenInventories((prev) => ({
-            ...prev,
-            [siteId]: {
-              status: "loaded",
-              tokens: prev[siteId]?.tokens ?? [],
-              errorMessage: undefined,
-            },
-          }))
-          return
-        }
-
-        // Sub2API stays zero-click only when upstream currently exposes exactly
-        // one valid group after the user has triggered creation.
-        ensuredToken = await ensureAccountApiToken(account, site, {
-          toastId,
-          sub2apiGroup: resolution.group,
-        })
-      } else {
-        ensuredToken = await ensureAccountApiToken(account, site, toastId)
+        toast.error(userMessage, { id: toastId })
+        setTokenInventories((prev) => ({
+          ...prev,
+          [siteId]: {
+            status: KILO_CODE_INVENTORY_STATUSES.Error,
+            tokens: prev[siteId]?.tokens ?? [],
+            errorMessage: userMessage,
+          },
+        }))
+        return
       }
+
+      if (
+        resolution.kind ===
+        TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired
+      ) {
+        setDefaultTokenCreateContext({
+          siteId,
+          allowedGroups: resolution.allowedGroups,
+        })
+        setTokenInventories((prev) => ({
+          ...prev,
+          [siteId]: {
+            status: KILO_CODE_INVENTORY_STATUSES.Loaded,
+            tokens: prev[siteId]?.tokens ?? [],
+            errorMessage: undefined,
+          },
+        }))
+        return
+      }
+
+      const ensuredToken = await ensureAccountApiToken(account, site, {
+        toastId,
+        defaultTokenData: resolution.tokenData,
+      })
 
       toast.success(t("ui:dialog.kiloCode.messages.tokenCreated"), {
         id: toastId,
@@ -514,7 +545,7 @@ export function KiloCodeExportDialog({
       setTokenInventories((prev) => ({
         ...prev,
         [siteId]: {
-          status: "error",
+          status: KILO_CODE_INVENTORY_STATUSES.Error,
           tokens: prev[siteId]?.tokens ?? [],
           errorMessage: t("ui:dialog.kiloCode.messages.createTokenFailed"),
         },
@@ -567,8 +598,9 @@ export function KiloCodeExportDialog({
     if (selectedSiteIds.length === 0) return
 
     for (const siteId of selectedSiteIds) {
-      const status = tokenInventories[siteId]?.status ?? "idle"
-      if (status === "idle") {
+      const status =
+        tokenInventories[siteId]?.status ?? KILO_CODE_INVENTORY_STATUSES.Idle
+      if (status === KILO_CODE_INVENTORY_STATUSES.Idle) {
         void loadTokensForSite(siteId)
       }
     }
@@ -580,7 +612,11 @@ export function KiloCodeExportDialog({
 
     for (const siteId of selectedSiteIds) {
       const inventory = tokenInventories[siteId]
-      if (!inventory || inventory.status !== "loaded") continue
+      if (
+        !inventory ||
+        inventory.status !== KILO_CODE_INVENTORY_STATUSES.Loaded
+      )
+        continue
 
       const tokenIds = selectedTokenIdsBySite[siteId] ?? []
       for (const tokenId of tokenIds) {
@@ -591,8 +627,9 @@ export function KiloCodeExportDialog({
 
         const tokenSelectionKey = getTokenSelectionKey(siteId, token.id)
         const modelStatus =
-          modelInventories[tokenSelectionKey]?.status ?? "idle"
-        if (modelStatus === "idle") {
+          modelInventories[tokenSelectionKey]?.status ??
+          KILO_CODE_INVENTORY_STATUSES.Idle
+        if (modelStatus === KILO_CODE_INVENTORY_STATUSES.Idle) {
           void loadModelsForToken(siteId, token)
         }
       }
@@ -821,27 +858,28 @@ export function KiloCodeExportDialog({
     }
   }
 
-  const handleCloseSub2ApiCreateDialog = () => {
-    setSub2apiCreateContext(null)
+  const handleCloseDefaultTokenCreateDialog = () => {
+    setDefaultTokenCreateContext(null)
   }
 
-  const handleSub2ApiCreateSuccess = async () => {
-    if (!sub2apiCreateContext) return
+  const handleDefaultTokenCreateSuccess = async () => {
+    if (!defaultTokenCreateContext) return
 
-    const { siteId } = sub2apiCreateContext
-    setSub2apiCreateContext(null)
+    const { siteId } = defaultTokenCreateContext
+    setDefaultTokenCreateContext(null)
     await loadTokensForSite(siteId, { preferNewest: true })
   }
 
-  const sub2apiQuickCreateSite = sub2apiCreateContext
-    ? displayById.get(sub2apiCreateContext.siteId)
+  const defaultTokenQuickCreateSite = defaultTokenCreateContext
+    ? displayById.get(defaultTokenCreateContext.siteId)
     : undefined
-  const sub2apiQuickCreatePrefill =
-    sub2apiCreateContext && sub2apiCreateContext.allowedGroups.length > 0
+  const defaultTokenQuickCreatePrefill =
+    defaultTokenCreateContext &&
+    defaultTokenCreateContext.allowedGroups.length > 0
       ? {
           modelId: "",
           defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-          allowedGroups: sub2apiCreateContext.allowedGroups,
+          allowedGroups: defaultTokenCreateContext.allowedGroups,
         }
       : undefined
 
@@ -849,7 +887,14 @@ export function KiloCodeExportDialog({
     const siteId = site.id
     const siteName = getSiteDisplayName(site)
     const inventory = getTokenInventory(siteId)
-    const isLoadingTokens = inventory.status === "loading"
+    const isLoadingTokens =
+      inventory.status === KILO_CODE_INVENTORY_STATUSES.Loading
+    const isTokenInventoryIdle =
+      inventory.status === KILO_CODE_INVENTORY_STATUSES.Idle
+    const isTokenInventoryLoaded =
+      inventory.status === KILO_CODE_INVENTORY_STATUSES.Loaded
+    const isTokenInventoryError =
+      inventory.status === KILO_CODE_INVENTORY_STATUSES.Error
     const isCreating = Boolean(isCreatingToken[siteId])
 
     const selectedTokenIds = selectedTokenIdsBySite[siteId] ?? []
@@ -860,62 +905,60 @@ export function KiloCodeExportDialog({
       }),
     )
 
-    const statusBadge =
-      inventory.status === "error" ? (
-        <Badge variant="danger" size="sm">
-          {t("common:status.error")}
-        </Badge>
-      ) : inventory.status === "loading" || inventory.status === "idle" ? (
-        <Badge variant="info" size="sm">
-          {t("common:status.loading")}
-        </Badge>
-      ) : inventory.tokens.length === 0 ? (
-        <Badge variant="warning" size="sm">
-          {t("ui:dialog.kiloCode.messages.noTokensTitle")}
-        </Badge>
-      ) : (
-        <Badge variant="success" size="sm">
-          {t("common:status.success")}
-        </Badge>
-      )
+    const statusBadge = isTokenInventoryError ? (
+      <Badge variant="danger" size="sm">
+        {t("common:status.error")}
+      </Badge>
+    ) : isLoadingTokens || isTokenInventoryIdle ? (
+      <Badge variant="info" size="sm">
+        {t("common:status.loading")}
+      </Badge>
+    ) : inventory.tokens.length === 0 ? (
+      <Badge variant="warning" size="sm">
+        {t("ui:dialog.kiloCode.messages.noTokensTitle")}
+      </Badge>
+    ) : (
+      <Badge variant="success" size="sm">
+        {t("common:status.success")}
+      </Badge>
+    )
 
-    const actionButton =
-      inventory.status === "error" ? (
-        <Button
-          size="sm"
-          type="button"
-          variant="secondary"
-          onClick={() => loadTokensForSite(siteId)}
-          disabled={isLoadingTokens || isCreating}
-          loading={isLoadingTokens}
-        >
-          {t("common:actions.retry")}
-        </Button>
-      ) : inventory.status === "loaded" && inventory.tokens.length === 0 ? (
-        <Button
-          size="sm"
-          type="button"
-          variant="secondary"
-          onClick={() => createDefaultTokenForSite(siteId)}
-          disabled={isCreating}
-          loading={isCreating}
-        >
-          {isCreating
-            ? t("common:status.creating")
-            : t("ui:dialog.kiloCode.actions.createDefaultToken")}
-        </Button>
-      ) : inventory.status === "loaded" && inventory.tokens.length > 0 ? (
-        <Button
-          size="sm"
-          type="button"
-          variant="ghost"
-          onClick={() => loadTokensForSite(siteId)}
-          disabled={isLoadingTokens || isCreating}
-          loading={isLoadingTokens}
-        >
-          {t("common:actions.refresh")}
-        </Button>
-      ) : null
+    const actionButton = isTokenInventoryError ? (
+      <Button
+        size="sm"
+        type="button"
+        variant="secondary"
+        onClick={() => loadTokensForSite(siteId)}
+        disabled={isLoadingTokens || isCreating}
+        loading={isLoadingTokens}
+      >
+        {t("common:actions.retry")}
+      </Button>
+    ) : isTokenInventoryLoaded && inventory.tokens.length === 0 ? (
+      <Button
+        size="sm"
+        type="button"
+        variant="secondary"
+        onClick={() => createDefaultTokenForSite(siteId)}
+        disabled={isCreating}
+        loading={isCreating}
+      >
+        {isCreating
+          ? t("common:status.creating")
+          : t("ui:dialog.kiloCode.actions.createDefaultToken")}
+      </Button>
+    ) : isTokenInventoryLoaded && inventory.tokens.length > 0 ? (
+      <Button
+        size="sm"
+        type="button"
+        variant="ghost"
+        onClick={() => loadTokensForSite(siteId)}
+        disabled={isLoadingTokens || isCreating}
+        loading={isLoadingTokens}
+      >
+        {t("common:actions.refresh")}
+      </Button>
+    ) : null
 
     return (
       <Card key={siteId} padding="sm" className="space-y-2">
@@ -934,7 +977,7 @@ export function KiloCodeExportDialog({
               {site.baseUrl}
             </div>
             {statusBadge}
-            {inventory.status === "loaded" && inventory.tokens.length > 0 && (
+            {isTokenInventoryLoaded && inventory.tokens.length > 0 && (
               <Badge
                 variant="secondary"
                 size="sm"
@@ -947,26 +990,26 @@ export function KiloCodeExportDialog({
           <div className="flex shrink-0 items-center gap-2">{actionButton}</div>
         </div>
 
-        {inventory.status === "error" && (
+        {isTokenInventoryError && (
           <div className="text-sm text-red-700 dark:text-red-300">
             {inventory.errorMessage ||
               t("ui:dialog.kiloCode.messages.loadTokensFailed")}
           </div>
         )}
 
-        {(inventory.status === "idle" || inventory.status === "loading") && (
+        {(isTokenInventoryIdle || isLoadingTokens) && (
           <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
             {t("ui:dialog.kiloCode.messages.loadingTokens")}
           </div>
         )}
 
-        {inventory.status === "loaded" && inventory.tokens.length === 0 && (
+        {isTokenInventoryLoaded && inventory.tokens.length === 0 && (
           <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
             {t("ui:dialog.kiloCode.messages.noTokensDescription")}
           </div>
         )}
 
-        {inventory.status === "loaded" && inventory.tokens.length > 0 && (
+        {isTokenInventoryLoaded && inventory.tokens.length > 0 && (
           <div className="space-y-3">
             <FormField label={t("common:labels.apiKey")}>
               <CompactMultiSelect
@@ -1000,6 +1043,18 @@ export function KiloCodeExportDialog({
                         getModelInventory(tokenSelectionKey)
                       const selectedModelId =
                         selectedModelIdByToken[tokenSelectionKey] ?? ""
+                      const isModelInventoryIdle =
+                        modelInventory.status ===
+                        KILO_CODE_INVENTORY_STATUSES.Idle
+                      const isModelInventoryLoading =
+                        modelInventory.status ===
+                        KILO_CODE_INVENTORY_STATUSES.Loading
+                      const isModelInventoryLoaded =
+                        modelInventory.status ===
+                        KILO_CODE_INVENTORY_STATUSES.Loaded
+                      const isModelInventoryError =
+                        modelInventory.status ===
+                        KILO_CODE_INVENTORY_STATUSES.Error
 
                       const modelOptions = Array.from(
                         new Set(
@@ -1013,25 +1068,23 @@ export function KiloCodeExportDialog({
                         .sort((a, b) => a.localeCompare(b))
                         .map((id) => ({ value: id, label: id }))
 
-                      const statusBadge =
-                        modelInventory.status === "error" ? (
-                          <Badge variant="danger" size="sm">
-                            {t("common:status.error")}
-                          </Badge>
-                        ) : modelInventory.status === "loading" ||
-                          modelInventory.status === "idle" ? (
-                          <Badge variant="info" size="sm">
-                            {t("common:status.loading")}
-                          </Badge>
-                        ) : modelInventory.modelIds.length === 0 ? (
-                          <Badge variant="warning" size="sm">
-                            {t("ui:dialog.kiloCode.messages.noModelsTitle")}
-                          </Badge>
-                        ) : (
-                          <Badge variant="success" size="sm">
-                            {t("common:status.success")}
-                          </Badge>
-                        )
+                      const statusBadge = isModelInventoryError ? (
+                        <Badge variant="danger" size="sm">
+                          {t("common:status.error")}
+                        </Badge>
+                      ) : isModelInventoryLoading || isModelInventoryIdle ? (
+                        <Badge variant="info" size="sm">
+                          {t("common:status.loading")}
+                        </Badge>
+                      ) : modelInventory.modelIds.length === 0 ? (
+                        <Badge variant="warning" size="sm">
+                          {t("ui:dialog.kiloCode.messages.noModelsTitle")}
+                        </Badge>
+                      ) : (
+                        <Badge variant="success" size="sm">
+                          {t("common:status.success")}
+                        </Badge>
+                      )
 
                       return (
                         <div key={tokenSelectionKey} className="space-y-1">
@@ -1049,7 +1102,7 @@ export function KiloCodeExportDialog({
                               {statusBadge}
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
-                              {modelInventory.status === "error" && (
+                              {isModelInventoryError && (
                                 <Button
                                   size="sm"
                                   type="button"
@@ -1071,8 +1124,8 @@ export function KiloCodeExportDialog({
                                     }))
                                   }}
                                   placeholder={
-                                    modelInventory.status === "loading" ||
-                                    modelInventory.status === "idle"
+                                    isModelInventoryLoading ||
+                                    isModelInventoryIdle
                                       ? t("common:status.loading")
                                       : t(
                                           "ui:dialog.kiloCode.placeholders.modelId",
@@ -1085,7 +1138,7 @@ export function KiloCodeExportDialog({
                             </div>
                           </div>
 
-                          {modelInventory.status === "error" && (
+                          {isModelInventoryError && (
                             <div className="text-sm text-red-700 dark:text-red-300">
                               {modelInventory.errorMessage ||
                                 t(
@@ -1094,7 +1147,7 @@ export function KiloCodeExportDialog({
                             </div>
                           )}
 
-                          {modelInventory.status === "loaded" &&
+                          {isModelInventoryLoaded &&
                             modelInventory.modelIds.length === 0 && (
                               <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
                                 {t(
@@ -1268,15 +1321,17 @@ export function KiloCodeExportDialog({
           </div>
         </Alert>
       </Modal>
-      {sub2apiQuickCreateSite && sub2apiQuickCreatePrefill ? (
+      {defaultTokenQuickCreateSite && defaultTokenQuickCreatePrefill ? (
         <AddTokenDialog
           isOpen={true}
-          onClose={handleCloseSub2ApiCreateDialog}
-          availableAccounts={[sub2apiQuickCreateSite]}
-          preSelectedAccountId={sub2apiQuickCreateSite.id}
-          createPrefill={sub2apiQuickCreatePrefill}
-          prefillNotice={t("messages:sub2api.createRequiresGroupSelection")}
-          onSuccess={handleSub2ApiCreateSuccess}
+          onClose={handleCloseDefaultTokenCreateDialog}
+          availableAccounts={[defaultTokenQuickCreateSite]}
+          preSelectedAccountId={defaultTokenQuickCreateSite.id}
+          createPrefill={defaultTokenQuickCreatePrefill}
+          prefillNotice={t(
+            "messages:tokenProvisioning.createRequiresGroupSelection",
+          )}
+          onSuccess={handleDefaultTokenCreateSuccess}
         />
       ) : null}
     </>
