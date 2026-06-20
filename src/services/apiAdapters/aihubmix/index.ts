@@ -7,6 +7,7 @@ import { aihubmixAccountData } from "./accountData"
 import { aihubmixAccountRefresh } from "./accountRefresh"
 import { aihubmixKeyManagement } from "./keyManagement"
 import { aihubmixModelPricing } from "./modelPricing"
+import { aihubmixTokenProvisioning } from "./tokenProvisioning"
 
 export const aihubmixAdapter: SiteAdapter = {
   siteType: SITE_TYPES.AIHUBMIX,
@@ -14,6 +15,7 @@ export const aihubmixAdapter: SiteAdapter = {
   accountBootstrap: aihubmixAccountBootstrap,
   accountCompletion: aihubmixAccountCompletion,
   keyManagement: aihubmixKeyManagement,
+  tokenProvisioning: aihubmixTokenProvisioning,
   accountRefresh: aihubmixAccountRefresh,
   modelPricing: aihubmixModelPricing,
 }

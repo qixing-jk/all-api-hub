@@ -10,6 +10,7 @@ import type { ModelPricingCapability } from "./modelPricing"
 import type { RedemptionCapability } from "./redemption"
 import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
 import type { SiteNoticeCapability } from "./siteNotice"
+import type { TokenProvisioningCapability } from "./tokenProvisioning"
 
 export type SiteBackendFamily = "newApiFamily" | "sub2api"
 
@@ -24,6 +25,7 @@ export type SiteAdapter = {
   accountBootstrap?: AccountBootstrapCapability
   accountCompletion?: AccountCompletionCapability
   keyManagement?: KeyManagementCapability
+  tokenProvisioning?: TokenProvisioningCapability
   accountRefresh?: AccountRefreshCapability
   redemption?: RedemptionCapability
 }

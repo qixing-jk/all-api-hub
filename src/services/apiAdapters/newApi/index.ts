@@ -9,6 +9,7 @@ import { createNewApiKeyManagement } from "./keyManagement"
 import { createNewApiModelPricing } from "./modelPricing"
 import { createNewApiRedemption } from "./redemption"
 import { newApiSiteNotice } from "./siteNotice"
+import { createNewApiTokenProvisioning } from "./tokenProvisioning"
 
 export const createNewApiAdapter = (
   siteType: AccountSiteType = SITE_TYPES.NEW_API,
@@ -20,6 +21,7 @@ export const createNewApiAdapter = (
   accountBootstrap: createNewApiAccountBootstrap(siteType),
   accountCompletion: newApiAccountCompletion,
   keyManagement: createNewApiKeyManagement(siteType),
+  tokenProvisioning: createNewApiTokenProvisioning(siteType),
   accountRefresh: createNewApiAccountRefresh(siteType),
   modelPricing: createNewApiModelPricing(siteType),
   redemption: createNewApiRedemption(siteType),

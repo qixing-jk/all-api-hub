@@ -1,0 +1,114 @@
+import type {
+  CreateTokenRequest,
+  CreateTokenResult,
+  UserGroupInfo,
+} from "~/services/apiService/common/type"
+import type { ApiToken } from "~/types"
+import type { AccountKeyRepairSkipReason } from "~/types/accountKeyAutoProvisioning"
+
+export const TOKEN_PROVISIONING_WORKFLOWS = {
+  BackgroundAutoProvision: "background_auto_provision",
+  SharedEnsure: "shared_ensure",
+  QuickCreateSelection: "quick_create_selection",
+  PostSaveAutomation: "post_save_automation",
+  Repair: "repair",
+} as const
+
+export type TokenProvisioningWorkflow =
+  (typeof TOKEN_PROVISIONING_WORKFLOWS)[keyof typeof TOKEN_PROVISIONING_WORKFLOWS]
+
+export const TOKEN_PROVISIONING_BLOCK_REASONS = {
+  GroupRequired: "group_required",
+  AvailableGroupRequired: "available_group_required",
+  GroupSelectionRequired: "group_selection_required",
+  OneTimeSecretRequired: "one_time_secret_required",
+  CreateFailed: "create_failed",
+  CreatedTokenSecretUnavailable: "created_token_secret_unavailable",
+} as const
+
+export type TokenProvisioningBlockReason =
+  (typeof TOKEN_PROVISIONING_BLOCK_REASONS)[keyof typeof TOKEN_PROVISIONING_BLOCK_REASONS]
+
+export type ResolveDefaultTokenCreationRequest = {
+  workflow: TokenProvisioningWorkflow
+  defaultTokenData: CreateTokenRequest
+  explicitGroup?: string
+  userGroups?: Record<string, UserGroupInfo>
+}
+
+export type TokenCreationSecretRecovery =
+  | "inventory_refetch"
+  | "created_response_first"
+
+export type DefaultTokenCreationDecision =
+  | {
+      kind: "create"
+      tokenData: CreateTokenRequest
+      oneTimeSecret: boolean
+      recoverCreatedToken: TokenCreationSecretRecovery
+    }
+  | {
+      kind: "needs_user_groups"
+    }
+  | {
+      kind: "selection_required"
+      allowedGroups: string[]
+      reason: typeof TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired
+    }
+  | {
+      kind: "blocked"
+      reason: TokenProvisioningBlockReason
+    }
+
+export type CreatedTokenSecretDecision =
+  | {
+      kind: "usable"
+      token: ApiToken
+      oneTimeSecret: boolean
+    }
+  | {
+      kind: "failed"
+      reason: typeof TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed
+    }
+  | {
+      kind: "unavailable"
+      reason: typeof TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable
+    }
+  | {
+      kind: "needs_inventory_refetch"
+    }
+
+export type TokenProvisioningRepairSkipReason = Extract<
+  AccountKeyRepairSkipReason,
+  "sub2api" | "aihubmixOneTimeKey"
+>
+
+export type TokenProvisioningRepairPolicy =
+  | {
+      kind: "eligible"
+    }
+  | {
+      kind: "skipped"
+      skipReason: TokenProvisioningRepairSkipReason
+    }
+
+export type TokenProvisioningCapability = {
+  isInventoryTokenUsable(params: {
+    workflow: TokenProvisioningWorkflow
+    token: ApiToken
+  }): boolean
+  resolveDefaultTokenCreation(
+    request: ResolveDefaultTokenCreationRequest,
+  ): DefaultTokenCreationDecision
+  classifyCreatedToken(params: {
+    workflow: TokenProvisioningWorkflow
+    result: CreateTokenResult
+  }): CreatedTokenSecretDecision
+  getRepairPolicy(): TokenProvisioningRepairPolicy
+}
+
+export const isCreatedApiToken = (value: unknown): value is ApiToken =>
+  !!value &&
+  typeof value === "object" &&
+  typeof (value as Partial<ApiToken>).id === "number" &&
+  typeof (value as Partial<ApiToken>).key === "string"

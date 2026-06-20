@@ -15,6 +15,17 @@ vi.mock("~/services/apiService", () => ({
   })),
 }))
 
+const expectTokenProvisioningCapability = (
+  adapter: ReturnType<typeof getSiteAdapter>,
+) => {
+  expect(adapter.tokenProvisioning).toEqual({
+    resolveDefaultTokenCreation: expect.any(Function),
+    classifyCreatedToken: expect.any(Function),
+    isInventoryTokenUsable: expect.any(Function),
+    getRepairPolicy: expect.any(Function),
+  })
+}
+
 describe("apiAdapters registry", () => {
   it("returns a Sub2API Adapter with account-scoped siteAnnouncements", () => {
     const adapter = getSiteAdapter(SITE_TYPES.SUB2API)
@@ -59,6 +70,7 @@ describe("apiAdapters registry", () => {
     expect(adapter.accountData).toEqual({
       fetchData: expect.any(Function),
     })
+    expectTokenProvisioningCapability(adapter)
     expect(adapter.modelPricing).toBeUndefined()
     expect(adapter.redemption).toBeUndefined()
     expect(adapter.siteNotice).toBeUndefined()
@@ -118,6 +130,7 @@ describe("apiAdapters registry", () => {
       expect(adapter.accountData).toEqual({
         fetchData: expect.any(Function),
       })
+      expectTokenProvisioningCapability(adapter)
       expect(adapter.modelPricing).toEqual({
         fetchPricing: expect.any(Function),
       })
@@ -187,6 +200,7 @@ describe("apiAdapters registry", () => {
     expect(adapter.accountData).toEqual({
       fetchData: expect.any(Function),
     })
+    expectTokenProvisioningCapability(adapter)
     expect(adapter.modelPricing).toEqual({
       fetchPricing: expect.any(Function),
     })
@@ -196,12 +210,19 @@ describe("apiAdapters registry", () => {
     expect(adapter.modelCatalog).toBeUndefined()
   })
 
-  it("returns an unsupported adapter without account bootstrap", () => {
-    const adapter = getSiteAdapter(SITE_TYPES.OCTOPUS as AccountSiteType)
+  it("returns unsupported adapters without account capabilities", () => {
+    for (const siteType of [
+      SITE_TYPES.OCTOPUS,
+      SITE_TYPES.AXON_HUB,
+      SITE_TYPES.CLAUDE_CODE_HUB,
+    ]) {
+      const adapter = getSiteAdapter(siteType as AccountSiteType)
 
-    expect(adapter).toEqual({
-      siteType: SITE_TYPES.OCTOPUS,
-    })
-    expect(adapter.accountBootstrap).toBeUndefined()
+      expect(adapter).toEqual({
+        siteType,
+      })
+      expect(adapter.accountBootstrap).toBeUndefined()
+      expect(adapter.tokenProvisioning).toBeUndefined()
+    }
   })
 })

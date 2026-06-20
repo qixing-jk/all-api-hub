@@ -8,6 +8,7 @@ import { sub2ApiAccountRefresh } from "./accountRefresh"
 import { sub2ApiKeyManagement } from "./keyManagement"
 import { sub2ApiModelCatalog } from "./modelCatalog"
 import { sub2ApiSiteAnnouncements } from "./siteAnnouncements"
+import { sub2ApiTokenProvisioning } from "./tokenProvisioning"
 
 export const sub2ApiAdapter: SiteAdapter = {
   siteType: SITE_TYPES.SUB2API,
@@ -18,5 +19,6 @@ export const sub2ApiAdapter: SiteAdapter = {
   accountBootstrap: sub2ApiAccountBootstrap,
   accountCompletion: sub2ApiAccountCompletion,
   keyManagement: sub2ApiKeyManagement,
+  tokenProvisioning: sub2ApiTokenProvisioning,
   accountRefresh: sub2ApiAccountRefresh,
 }
