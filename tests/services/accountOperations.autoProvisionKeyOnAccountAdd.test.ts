@@ -10,7 +10,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
-import { AuthTypeEnum, type CheckInConfig } from "~/types"
+import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
 
 const {
   fetchAccountDataMock,
@@ -368,7 +368,9 @@ describe("accountOperations auto-provision key on add", () => {
   })
 
   it("shows failure feedback when saved account display data is invalid for auto-provision", async () => {
-    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValueOnce({
+    // Intentionally omit required DisplaySiteData fields to exercise the
+    // defensive validation branch used when storage returns malformed data.
+    const invalidDisplaySiteData: Partial<DisplaySiteData> = {
       id: "invalid-display-account",
       name: "Invalid Display",
       siteType: SITE_TYPES.NEW_API,
@@ -377,7 +379,10 @@ describe("accountOperations auto-provision key on add", () => {
       userId: "1",
       token: "",
       cookieAuthSessionCookie: "",
-    } as any)
+    }
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValueOnce(
+      invalidDisplaySiteData as DisplaySiteData,
+    )
 
     const result = await validateAndSaveAccount(
       "https://api.example.com",
