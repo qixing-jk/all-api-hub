@@ -52,6 +52,30 @@ vi.mock("~/services/accounts/accountKeyAutoProvisioning/groupCoverage", () => ({
   deleteInvalidAccountToken: mocks.deleteInvalidAccountToken,
 }))
 
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteAdapter: vi.fn((siteType: string) => ({
+    siteType,
+    tokenProvisioning:
+      siteType === SITE_TYPES.SUB2API
+        ? {
+            getRepairPolicy: () => ({
+              kind: "skipped",
+              skipReason: "sub2api",
+            }),
+          }
+        : siteType === SITE_TYPES.AIHUBMIX
+          ? {
+              getRepairPolicy: () => ({
+                kind: "skipped",
+                skipReason: "aihubmixOneTimeKey",
+              }),
+            }
+          : {
+              getRepairPolicy: () => ({ kind: "eligible" }),
+            },
+  })),
+}))
+
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()

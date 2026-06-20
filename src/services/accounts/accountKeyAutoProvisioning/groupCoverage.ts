@@ -1,5 +1,11 @@
-import { SITE_TYPES } from "~/constants/siteType"
-import { requireDisplayAccountKeyManagement } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  requireDisplayAccountKeyManagement,
+  requireDisplayAccountTokenProvisioning,
+} from "~/services/accounts/utils/apiServiceRequest"
+import {
+  TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_WORKFLOWS,
+} from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -78,9 +84,14 @@ export async function ensureAccountKeysForAvailableGroups(params: {
   siteUrlOrigin: string
 }): Promise<AccountKeyCoverageResult> {
   const { account, displaySiteData, accountName, siteUrlOrigin } = params
+  const adapter = getSiteAdapter(displaySiteData.siteType)
   const keyManagement = requireDisplayAccountKeyManagement(
     displaySiteData,
-    getSiteAdapter(displaySiteData.siteType).keyManagement,
+    adapter.keyManagement,
+  )
+  const tokenProvisioning = requireDisplayAccountTokenProvisioning(
+    displaySiteData,
+    adapter.tokenProvisioning,
   )
   const request = createAccountApiRequest(account, displaySiteData)
   const accountId = displaySiteData.id || account.id
@@ -105,20 +116,41 @@ export async function ensureAccountKeysForAvailableGroups(params: {
       }
     }
 
-    if (displaySiteData.siteType === SITE_TYPES.SUB2API) {
+    const decision = tokenProvisioning.resolveDefaultTokenCreation({
+      workflow: TOKEN_PROVISIONING_WORKFLOWS.Repair,
+      defaultTokenData: generateDefaultTokenRequest(),
+    })
+
+    if (decision.kind !== "create") {
+      if (
+        decision.kind === "blocked" &&
+        decision.reason ===
+          TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
+      ) {
+        throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
+      }
+
       throw new Error(t("messages:sub2api.createRequiresGroup"))
     }
 
-    if (displaySiteData.siteType === SITE_TYPES.AIHUBMIX) {
-      throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
+    const createResult = await keyManagement.createToken(
+      request,
+      decision.tokenData,
+    )
+    const createdTokenDecision = tokenProvisioning.classifyCreatedToken({
+      workflow: TOKEN_PROVISIONING_WORKFLOWS.Repair,
+      result: createResult,
+    })
+
+    if (createdTokenDecision.kind === "failed") {
+      throw new Error("create_token_failed")
     }
 
-    await keyManagement.createToken(request, generateDefaultTokenRequest())
     return {
       created: true,
       availableGroups: [],
       coveredGroups: [],
-      createdGroups: [""],
+      createdGroups: [decision.tokenData.group],
       missingGroups: [],
       invalidTokens: [],
     }

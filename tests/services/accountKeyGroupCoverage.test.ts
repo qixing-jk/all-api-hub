@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   fetchUserGroups: vi.fn(),
   createApiToken: vi.fn(),
   deleteApiToken: vi.fn(),
+  resolveDefaultTokenCreation: vi.fn(),
+  classifyCreatedToken: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
@@ -36,6 +38,14 @@ vi.mock("~/services/apiAdapters/registry", () => ({
       deleteToken: (...args: unknown[]) => mocks.deleteApiToken(...args),
       resolveTokenKey: vi.fn(),
       fetchAvailableModels: vi.fn(),
+    },
+    tokenProvisioning: {
+      isInventoryTokenUsable: vi.fn(() => true),
+      resolveDefaultTokenCreation: (...args: unknown[]) =>
+        mocks.resolveDefaultTokenCreation(...args),
+      classifyCreatedToken: (...args: unknown[]) =>
+        mocks.classifyCreatedToken(...args),
+      getRepairPolicy: vi.fn(() => ({ kind: "eligible" })),
     },
   })),
 }))
@@ -83,6 +93,19 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     mocks.fetchUserGroups.mockReset()
     mocks.createApiToken.mockReset()
     mocks.deleteApiToken.mockReset()
+    mocks.resolveDefaultTokenCreation.mockReset()
+    mocks.classifyCreatedToken.mockReset()
+    mocks.resolveDefaultTokenCreation.mockImplementation(
+      ({ defaultTokenData }) => ({
+        kind: "create",
+        tokenData: defaultTokenData,
+        oneTimeSecret: false,
+        recoverCreatedToken: "inventory_refetch",
+      }),
+    )
+    mocks.classifyCreatedToken.mockReturnValue({
+      kind: "needs_inventory_refetch",
+    })
   })
 
   it("creates missing group keys and reports tokens tied to unavailable groups", async () => {
@@ -188,6 +211,14 @@ describe("ensureAccountKeysForAvailableGroups", () => {
         resolveTokenKey: vi.fn(),
         fetchAvailableModels: vi.fn(),
       },
+      tokenProvisioning: {
+        isInventoryTokenUsable: vi.fn(() => true),
+        resolveDefaultTokenCreation: (...args: unknown[]) =>
+          mocks.resolveDefaultTokenCreation(...args),
+        classifyCreatedToken: (...args: unknown[]) =>
+          mocks.classifyCreatedToken(...args),
+        getRepairPolicy: vi.fn(() => ({ kind: "eligible" })),
+      },
     })
     mocks.createApiToken.mockResolvedValue(true)
 
@@ -207,6 +238,12 @@ describe("ensureAccountKeysForAvailableGroups", () => {
         accountId: "new-api-1",
       }),
       generateDefaultTokenRequest(),
+    )
+    expect(mocks.resolveDefaultTokenCreation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: "repair",
+        defaultTokenData: generateDefaultTokenRequest(),
+      }),
     )
     expect(mocks.fetchUserGroups).not.toHaveBeenCalled()
   })

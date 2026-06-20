@@ -1,8 +1,8 @@
 import { Storage } from "@plasmohq/storage"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
-import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
@@ -77,12 +77,12 @@ function getOriginKey(siteUrl: string): string {
 function getSkipReason(
   account: SiteAccount,
 ): AccountKeyRepairSkipReason | null {
-  if (account.site_type === SITE_TYPES.SUB2API) {
-    return "sub2api"
-  }
+  const policy = getSiteAdapter(
+    account.site_type,
+  ).tokenProvisioning?.getRepairPolicy()
 
-  if (account.site_type === SITE_TYPES.AIHUBMIX) {
-    return "aihubmixOneTimeKey"
+  if (policy?.kind === "skipped") {
+    return policy.skipReason
   }
 
   if (account.authType === AuthTypeEnum.None) {
