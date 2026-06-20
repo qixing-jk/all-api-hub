@@ -13,6 +13,15 @@ import {
 } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
+  buildSub2ApiAuthFromAccountDialogDraft,
+  getAccountDialogSitePolicy,
+  normalizeAccountDialogDraftForSitePolicy,
+  shouldAutoImportCookieAuthForAccountDialogSite,
+  shouldDeferAccountSaveSuccessForAccountDialogSite,
+  shouldOpenSub2ApiTokenDialogForAccountDialogSite,
+  type AccountDialogSitePolicy,
+} from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
+import {
   isAccountAuthType,
   normalizeOptionalAccountAuthType,
   resolveDefaultAccountAuthType,
@@ -92,7 +101,6 @@ import {
   type CheckInConfig,
   type DisplaySiteData,
   type SiteAccount,
-  type Sub2ApiAuthConfig,
 } from "~/types"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { deepOverride } from "~/utils"
@@ -360,6 +368,7 @@ export function useAccountDialog({
   const sub2apiUseRefreshToken = draft.sub2apiUseRefreshToken
   const sub2apiRefreshToken = draft.sub2apiRefreshToken
   const sub2apiTokenExpiresAt = draft.sub2apiTokenExpiresAt
+  const currentSitePolicy = getAccountDialogSitePolicy(siteType)
   // Keep URL state readable inside async tab-detection guards without rerendering.
   selectedSiteUrlRef.current = url
   const isDetected =
@@ -700,17 +709,15 @@ export function useAccountDialog({
       duplicateAccountWarningResolverRef.current = null
     }, [t, updateWarnOnDuplicateAccountAdd])
 
-  // Enforce Sub2API constraints: JWT-only (access token), no built-in check-in.
   useEffect(() => {
-    if (siteType !== SITE_TYPES.SUB2API) return
+    const policy = getAccountDialogSitePolicy(siteType)
 
-    updateDraft((prev) => applySub2ApiDraftConstraints(prev))
-  }, [siteType, updateDraft])
-
-  useEffect(() => {
-    if (siteType === SITE_TYPES.SUB2API) return
-
-    updateDraft((prev) => clearSub2ApiRefreshTokenState(prev))
+    updateDraft((prev) =>
+      normalizeAccountDialogDraftForSitePolicy({
+        draft: prev,
+        policy,
+      }),
+    )
   }, [siteType, updateDraft])
 
   // useRef 保存跨渲染引用
@@ -856,13 +863,19 @@ export function useAccountDialog({
         nextPrefill?.authType,
       )
       const nextSiteType = nextPrefill?.siteType ?? SITE_TYPES.UNKNOWN
+      const policy = getAccountDialogSitePolicy(nextSiteType)
       hasExplicitAuthTypeRef.current = Boolean(normalizedPrefillAuthType)
       setUrl(nextPrefill?.siteUrl ?? "")
-      setDraft({
-        ...createEmptyAccountDialogDraft(),
-        siteType: nextSiteType,
-        authType: normalizedPrefillAuthType || AuthTypeEnum.AccessToken,
-      })
+      setDraft(
+        normalizeAccountDialogDraftForSitePolicy({
+          draft: {
+            ...createEmptyAccountDialogDraft(),
+            siteType: nextSiteType,
+            authType: normalizedPrefillAuthType || AuthTypeEnum.AccessToken,
+          },
+          policy,
+        }),
+      )
       const nextFlowState = getInitialFlowState(mode)
       setPhase(nextFlowState.phase)
       setFormSource(
@@ -894,57 +907,69 @@ export function useAccountDialog({
             siteAccount.site_type,
             Boolean(siteAccount.sub2apiAuth),
           )
+          const policy = getAccountDialogSitePolicy(normalizedSiteType)
+          const hasActiveSub2ApiRefreshToken =
+            policy.allowSub2ApiRefreshTokenState && Boolean(refreshToken.trim())
           hasExplicitAuthTypeRef.current = true
-          setDraft({
-            siteName: siteAccount.site_name,
-            username: siteAccount.account_info.username,
-            accessToken: siteAccount.account_info.access_token,
-            userId: normalizeAccountIdentity(siteAccount.account_info.id) ?? "",
-            exchangeRate: siteAccount.exchange_rate.toString(),
-            manualBalanceUsd: siteAccount.manualBalanceUsd ?? "",
-            notes: siteAccount.notes || "",
-            tagIds: siteAccount.tagIds || [],
-            excludeFromTotalBalance:
-              siteAccount.excludeFromTotalBalance === true,
-            excludeFromTodayIncome: siteAccount.excludeFromTodayIncome === true,
-            checkIn: {
-              enableDetection: siteAccount.checkIn?.enableDetection ?? false,
-              autoCheckInEnabled:
-                siteAccount.checkIn?.autoCheckInEnabled ?? true,
-              siteStatus: {
-                isCheckedInToday:
-                  siteAccount.checkIn?.siteStatus?.isCheckedInToday ?? false,
-                lastCheckInDate:
-                  siteAccount.checkIn?.siteStatus?.lastCheckInDate,
+          setDraft(
+            normalizeAccountDialogDraftForSitePolicy({
+              draft: {
+                siteName: siteAccount.site_name,
+                username: siteAccount.account_info.username,
+                accessToken: siteAccount.account_info.access_token,
+                userId:
+                  normalizeAccountIdentity(siteAccount.account_info.id) ?? "",
+                exchangeRate: siteAccount.exchange_rate.toString(),
+                manualBalanceUsd: siteAccount.manualBalanceUsd ?? "",
+                notes: siteAccount.notes || "",
+                tagIds: siteAccount.tagIds || [],
+                excludeFromTotalBalance:
+                  siteAccount.excludeFromTotalBalance === true,
+                excludeFromTodayIncome:
+                  siteAccount.excludeFromTodayIncome === true,
+                checkIn: {
+                  enableDetection:
+                    siteAccount.checkIn?.enableDetection ?? false,
+                  autoCheckInEnabled:
+                    siteAccount.checkIn?.autoCheckInEnabled ?? true,
+                  siteStatus: {
+                    isCheckedInToday:
+                      siteAccount.checkIn?.siteStatus?.isCheckedInToday ??
+                      false,
+                    lastCheckInDate:
+                      siteAccount.checkIn?.siteStatus?.lastCheckInDate,
+                  },
+                  customCheckIn: {
+                    url: siteAccount.checkIn?.customCheckIn?.url ?? "",
+                    turnstilePreTrigger:
+                      siteAccount.checkIn?.customCheckIn?.turnstilePreTrigger,
+                    redeemUrl:
+                      siteAccount.checkIn?.customCheckIn?.redeemUrl ?? "",
+                    openRedeemWithCheckIn:
+                      siteAccount.checkIn?.customCheckIn
+                        ?.openRedeemWithCheckIn ?? true,
+                    isCheckedInToday:
+                      siteAccount.checkIn?.customCheckIn?.isCheckedInToday ??
+                      false,
+                    lastCheckInDate:
+                      siteAccount.checkIn?.customCheckIn?.lastCheckInDate,
+                  },
+                },
+                siteType: normalizedSiteType,
+                authType: siteAccount.authType || AuthTypeEnum.AccessToken,
+                cookieAuthSessionCookie:
+                  siteAccount.cookieAuth?.sessionCookie || "",
+                sub2apiUseRefreshToken: hasActiveSub2ApiRefreshToken,
+                sub2apiRefreshToken: hasActiveSub2ApiRefreshToken
+                  ? refreshToken
+                  : "",
+                sub2apiTokenExpiresAt: hasActiveSub2ApiRefreshToken
+                  ? siteAccount.sub2apiAuth?.tokenExpiresAt ?? null
+                  : null,
               },
-              customCheckIn: {
-                url: siteAccount.checkIn?.customCheckIn?.url ?? "",
-                turnstilePreTrigger:
-                  siteAccount.checkIn?.customCheckIn?.turnstilePreTrigger,
-                redeemUrl: siteAccount.checkIn?.customCheckIn?.redeemUrl ?? "",
-                openRedeemWithCheckIn:
-                  siteAccount.checkIn?.customCheckIn?.openRedeemWithCheckIn ??
-                  true,
-                isCheckedInToday:
-                  siteAccount.checkIn?.customCheckIn?.isCheckedInToday ?? false,
-                lastCheckInDate:
-                  siteAccount.checkIn?.customCheckIn?.lastCheckInDate,
-              },
-            },
-            siteType: normalizedSiteType,
-            authType: siteAccount.authType || AuthTypeEnum.AccessToken,
-            cookieAuthSessionCookie:
-              siteAccount.cookieAuth?.sessionCookie || "",
-            sub2apiUseRefreshToken:
-              normalizedSiteType === SITE_TYPES.SUB2API &&
-              Boolean(refreshToken.trim()),
-            sub2apiRefreshToken:
-              normalizedSiteType === SITE_TYPES.SUB2API ? refreshToken : "",
-            sub2apiTokenExpiresAt:
-              normalizedSiteType === SITE_TYPES.SUB2API
-                ? siteAccount.sub2apiAuth?.tokenExpiresAt ?? null
-                : null,
-          })
+              policy,
+            }),
+          )
           enterForm(ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT)
         }
       } catch (error) {
@@ -1256,26 +1281,22 @@ export function useAccountDialog({
     }
   }, [cookieAuthPermissionState.granted, refreshCookieAuthPermissionState, t])
 
-  const isAihubmixNormalSaveForegroundKeyFlow = useCallback(
-    (options?: {
-      skipSub2ApiKeyPrompt?: boolean
-      skipAutoProvisionKeyOnAccountAdd?: boolean
-    }) =>
-      mode === DIALOG_MODES.ADD &&
-      siteType === SITE_TYPES.AIHUBMIX &&
-      autoProvisionKeyOnAccountAdd &&
-      options?.skipAutoProvisionKeyOnAccountAdd !== true,
-    [autoProvisionKeyOnAccountAdd, mode, siteType],
-  )
-
   const shouldDeferAccountSaveSuccess = useCallback(
-    (result: AccountSaveResponse) =>
-      mode === DIALOG_MODES.ADD &&
-      siteType === SITE_TYPES.AIHUBMIX &&
-      autoProvisionKeyOnAccountAdd &&
-      result.success === true &&
-      typeof result.accountId === "string" &&
-      result.accountId.trim().length > 0,
+    (result: AccountSaveResponse) => {
+      const policy = getAccountDialogSitePolicy(siteType)
+
+      return (
+        shouldDeferAccountSaveSuccessForAccountDialogSite({
+          policy,
+          isAddMode: mode === DIALOG_MODES.ADD,
+          autoProvisionKeyOnAccountAdd,
+          skipAutoProvisionKeyOnAccountAdd: false,
+        }) &&
+        result.success === true &&
+        typeof result.accountId === "string" &&
+        result.accountId.trim().length > 0
+      )
+    },
     [autoProvisionKeyOnAccountAdd, mode, siteType],
   )
 
@@ -1655,35 +1676,27 @@ export function useAccountDialog({
         const nextSiteType = isAccountSiteType(resultData.siteType)
           ? resultData.siteType
           : siteType
-        const nextCheckIn =
-          nextSiteType === SITE_TYPES.SUB2API
-            ? {
-                ...detectedCheckIn,
-                enableDetection: false,
-                autoCheckInEnabled: false,
-              }
-            : detectedCheckIn
+        const policy = getAccountDialogSitePolicy(nextSiteType)
 
         setDraft((prev) =>
           buildDraftFromAutoDetectResult({
             draft: prev,
             resultData,
             nextSiteType,
-            nextCheckIn,
+            nextCheckIn: detectedCheckIn,
             preserveExistingCheckIn,
             mode,
+            policy,
           }),
         )
 
-        // Attempt to auto-import session cookies after detection for cookie-auth
-        // accounts. AIHubMix uses cookies only during access-token import, so it
-        // should not keep a saved cookie-auth session.
         if (
-          authType === AuthTypeEnum.Cookie &&
-          resultData.siteType !== SITE_TYPES.SUB2API &&
-          resultData.siteType !== SITE_TYPES.AIHUBMIX &&
-          !cookieAuthSessionCookie.trim() &&
-          url.trim()
+          shouldAutoImportCookieAuthForAccountDialogSite({
+            policy,
+            authType,
+            cookieAuthSessionCookie,
+            url,
+          })
         ) {
           try {
             const cookieResponse = await sendRuntimeMessage({
@@ -1782,17 +1795,19 @@ export function useAccountDialog({
 
     try {
       setIsSaving(true)
-      const sub2apiAuth: Sub2ApiAuthConfig | undefined =
-        siteType === SITE_TYPES.SUB2API &&
-        sub2apiUseRefreshToken &&
-        sub2apiRefreshToken.trim()
-          ? {
-              refreshToken: sub2apiRefreshToken.trim(),
-              ...(typeof sub2apiTokenExpiresAt === "number"
-                ? { tokenExpiresAt: sub2apiTokenExpiresAt }
-                : {}),
-            }
-          : undefined
+      const policy = getAccountDialogSitePolicy(siteType)
+      const shouldDeferSuccessForSitePolicy =
+        shouldDeferAccountSaveSuccessForAccountDialogSite({
+          policy,
+          isAddMode: mode === DIALOG_MODES.ADD,
+          autoProvisionKeyOnAccountAdd,
+          skipAutoProvisionKeyOnAccountAdd:
+            options?.skipAutoProvisionKeyOnAccountAdd === true,
+        })
+      const sub2apiAuth = buildSub2ApiAuthFromAccountDialogDraft({
+        draft,
+        policy,
+      })
 
       const result =
         mode === DIALOG_MODES.ADD
@@ -1817,7 +1832,7 @@ export function useAccountDialog({
                 deferDataRefresh: true,
                 skipAutoProvisionKeyOnAccountAdd:
                   options?.skipAutoProvisionKeyOnAccountAdd === true ||
-                  isAihubmixNormalSaveForegroundKeyFlow(options),
+                  shouldDeferSuccessForSitePolicy,
               },
             )
           : await validateAndUpdateAccount(
@@ -1852,11 +1867,13 @@ export function useAccountDialog({
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       isAnalyticsActionCompleted = true
 
-      if (
-        typeof result.accountId === "string" &&
-        result.accountId.trim().length > 0
-      ) {
-        schedulePostSaveAccountRefresh(result.accountId.trim())
+      const savedAccountId =
+        typeof result.accountId === "string" && result.accountId.trim().length
+          ? result.accountId.trim()
+          : null
+
+      if (savedAccountId) {
+        schedulePostSaveAccountRefresh(savedAccountId)
       }
 
       const feedbackMessage =
@@ -1932,33 +1949,36 @@ export function useAccountDialog({
         toast.success(feedbackMessage)
       }
 
-      if (
-        isAihubmixNormalSaveForegroundKeyFlow(options) &&
-        typeof result.accountId === "string" &&
-        result.accountId.trim().length > 0
-      ) {
+      if (shouldDeferSuccessForSitePolicy && savedAccountId) {
         await handleAihubmixNormalSaveForegroundKeyFlow({
-          accountId: result.accountId,
+          accountId: savedAccountId,
           accountName: siteName.trim() || SITE_TYPES.AIHUBMIX,
         })
       }
 
+      const skipSub2ApiKeyPrompt = options?.skipSub2ApiKeyPrompt === true
       if (
-        siteType === SITE_TYPES.SUB2API &&
-        !options?.skipSub2ApiKeyPrompt &&
-        typeof result.accountId === "string" &&
-        result.accountId.trim().length > 0
+        savedAccountId &&
+        policy.openSub2ApiTokenDialogPostSave &&
+        !skipSub2ApiKeyPrompt
       ) {
         try {
           const savedDisplaySiteData =
-            (await accountStorage.getDisplayDataById(result.accountId)) ?? null
+            (await accountStorage.getDisplayDataById(savedAccountId)) ?? null
 
-          if (savedDisplaySiteData) {
+          if (
+            shouldOpenSub2ApiTokenDialogForAccountDialogSite({
+              policy,
+              skipSub2ApiKeyPrompt,
+              hasDisplayData: Boolean(savedDisplaySiteData),
+            }) &&
+            savedDisplaySiteData
+          ) {
             await openSub2ApiTokenCreationDialog(savedDisplaySiteData)
           }
         } catch (error) {
           logger.error("Post-save Sub2API token dialog failed", {
-            accountId: result.accountId,
+            accountId: savedAccountId,
             error: getErrorMessage(error),
           })
         }
@@ -2528,7 +2548,7 @@ export function useAccountDialog({
     exchangeRate,
   })
   const isSub2ApiRefreshTokenValid =
-    siteType !== SITE_TYPES.SUB2API ||
+    !currentSitePolicy.allowSub2ApiRefreshTokenState ||
     !sub2apiUseRefreshToken ||
     !!sub2apiRefreshToken.trim()
   const isManualBalanceUsdInvalid =
@@ -2764,48 +2784,6 @@ function getInitialFlowState(mode: DialogMode): {
 }
 
 /**
- * Enforces the runtime constraints required by Sub2API-backed accounts.
- */
-function applySub2ApiDraftConstraints(
-  draft: AccountDialogDraft,
-): AccountDialogDraft {
-  const nextDraft: AccountDialogDraft = {
-    ...draft,
-    authType: AuthTypeEnum.AccessToken,
-    cookieAuthSessionCookie: "",
-    checkIn: {
-      ...draft.checkIn,
-      enableDetection: false,
-      autoCheckInEnabled: false,
-    },
-  }
-
-  return areDraftsEquivalent(draft, nextDraft) ? draft : nextDraft
-}
-
-/**
- * Clears refresh-token-only fields when the selected site type is no longer Sub2API.
- */
-function clearSub2ApiRefreshTokenState(
-  draft: AccountDialogDraft,
-): AccountDialogDraft {
-  if (
-    !draft.sub2apiUseRefreshToken &&
-    !draft.sub2apiRefreshToken &&
-    draft.sub2apiTokenExpiresAt === null
-  ) {
-    return draft
-  }
-
-  return {
-    ...draft,
-    sub2apiUseRefreshToken: false,
-    sub2apiRefreshToken: "",
-    sub2apiTokenExpiresAt: null,
-  }
-}
-
-/**
  * Merges auto-detected account data into the current draft while preserving user-owned fields when requested.
  */
 function buildDraftFromAutoDetectResult(params: {
@@ -2815,6 +2793,7 @@ function buildDraftFromAutoDetectResult(params: {
   nextCheckIn: CheckInConfig
   preserveExistingCheckIn: boolean
   mode: DialogMode
+  policy: AccountDialogSitePolicy
 }): AccountDialogDraft {
   const {
     draft,
@@ -2823,6 +2802,7 @@ function buildDraftFromAutoDetectResult(params: {
     nextCheckIn,
     preserveExistingCheckIn,
     mode,
+    policy,
   } = params
 
   const nextDraft: AccountDialogDraft = {
@@ -2839,51 +2819,27 @@ function buildDraftFromAutoDetectResult(params: {
     siteType: nextSiteType,
     authType:
       resultData.authType ??
-      // AIHubMix auto-detect may start from a cookie-auth browser session, but
-      // the saved account must use the retrieved access token.
-      (nextSiteType === SITE_TYPES.SUB2API ||
-      nextSiteType === SITE_TYPES.AIHUBMIX
-        ? AuthTypeEnum.AccessToken
-        : draft.authType),
-    cookieAuthSessionCookie:
-      nextSiteType === SITE_TYPES.SUB2API ||
-      nextSiteType === SITE_TYPES.AIHUBMIX
-        ? ""
-        : draft.cookieAuthSessionCookie,
+      (policy.forceAccessTokenAuth ? AuthTypeEnum.AccessToken : draft.authType),
+    cookieAuthSessionCookie: policy.allowCookieAuthSession
+      ? draft.cookieAuthSessionCookie
+      : "",
     checkIn: preserveExistingCheckIn
       ? deepOverride(nextCheckIn, draft.checkIn)
       : nextCheckIn,
     sub2apiRefreshToken:
-      resultData.siteType === SITE_TYPES.SUB2API && resultData.sub2apiAuth
+      policy.allowSub2ApiRefreshTokenState && resultData.sub2apiAuth
         ? resultData.sub2apiAuth.refreshToken
         : draft.sub2apiRefreshToken,
     sub2apiTokenExpiresAt:
-      resultData.siteType === SITE_TYPES.SUB2API && resultData.sub2apiAuth
+      policy.allowSub2ApiRefreshTokenState && resultData.sub2apiAuth
         ? resultData.sub2apiAuth.tokenExpiresAt ?? null
         : draft.sub2apiTokenExpiresAt,
   }
 
-  return nextSiteType === SITE_TYPES.SUB2API
-    ? applySub2ApiDraftConstraints(nextDraft)
-    : nextDraft
-}
-
-/**
- * Avoids unnecessary draft updates when Sub2API normalization would not change the effective values.
- */
-function areDraftsEquivalent(
-  left: AccountDialogDraft,
-  right: AccountDialogDraft,
-): boolean {
-  return (
-    left.authType === right.authType &&
-    left.cookieAuthSessionCookie === right.cookieAuthSessionCookie &&
-    left.checkIn.enableDetection === right.checkIn.enableDetection &&
-    left.checkIn.autoCheckInEnabled === right.checkIn.autoCheckInEnabled &&
-    left.sub2apiUseRefreshToken === right.sub2apiUseRefreshToken &&
-    left.sub2apiRefreshToken === right.sub2apiRefreshToken &&
-    left.sub2apiTokenExpiresAt === right.sub2apiTokenExpiresAt
-  )
+  return normalizeAccountDialogDraftForSitePolicy({
+    draft: nextDraft,
+    policy,
+  })
 }
 
 /**
