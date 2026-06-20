@@ -13,6 +13,10 @@ import {
   inspectAccountTokenInventory,
   selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/accountPostSaveWorkflow"
+import {
+  TOKEN_CREATION_SECRET_RECOVERY,
+  TOKEN_PROVISIONING_BLOCK_REASONS,
+} from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
@@ -160,7 +164,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
         kind: "create",
         tokenData: defaultTokenData,
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       }),
     )
     classifyCreatedTokenMock.mockImplementation(({ result }) =>
@@ -452,7 +456,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       kind: "create",
       tokenData: buildDefaultTokenData(),
       oneTimeSecret: true,
-      recoverCreatedToken: "created_response_first",
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     })
     classifyCreatedTokenMock.mockReturnValueOnce({
       kind: "usable",
@@ -521,7 +525,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       kind: "create",
       tokenData: buildDefaultTokenData(),
       oneTimeSecret: true,
-      recoverCreatedToken: "created_response_first",
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     })
     classifyCreatedTokenMock.mockReturnValueOnce({
       kind: "usable",
@@ -556,11 +560,11 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       kind: "create",
       tokenData: buildDefaultTokenData(),
       oneTimeSecret: true,
-      recoverCreatedToken: "created_response_first",
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     })
     classifyCreatedTokenMock.mockReturnValueOnce({
       kind: "unavailable",
-      reason: "created_token_secret_unavailable",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
     })
     createApiTokenMock.mockResolvedValueOnce(true)
 
@@ -588,11 +592,11 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       kind: "create",
       tokenData: buildDefaultTokenData(),
       oneTimeSecret: true,
-      recoverCreatedToken: "created_response_first",
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     })
     classifyCreatedTokenMock.mockReturnValueOnce({
       kind: "unavailable",
-      reason: "created_token_secret_unavailable",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
     })
     createApiTokenMock.mockResolvedValueOnce(
       buildToken({ id: 8, key: "sk-***masked***" }),
@@ -623,7 +627,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
         kind: "create",
         tokenData: buildDefaultTokenData({ group: "vip" }),
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({ vip: { ratio: 1 } })
     createApiTokenMock.mockResolvedValueOnce(true)
@@ -690,7 +694,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
         kind: "blocked",
-        reason: "available_group_required",
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({})
 
@@ -719,7 +723,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
         kind: "create",
         tokenData: buildDefaultTokenData({ group: "vip" }),
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({ vip: { ratio: 1 } })
     createApiTokenMock.mockResolvedValueOnce(true)
@@ -736,5 +740,35 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       message: "messages:accountOperations.createTokenFailed",
     })
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("blocks Sub2API when policy still needs groups after current group lookup", async () => {
+    const displayAccount = buildDisplayAccount({
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+    })
+    const account = buildStoredAccount(displayAccount)
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({ vip: { ratio: 1 } })
+    resolveDefaultTokenCreationMock
+      .mockReturnValueOnce({
+        kind: "needs_user_groups",
+      })
+      .mockReturnValueOnce({
+        kind: "needs_user_groups",
+      })
+
+    await expect(
+      ensureAccountTokenForPostSaveWorkflow({
+        account,
+        displaySiteData: displayAccount,
+      }),
+    ).resolves.toEqual({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
+      code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
+      message: "messages:sub2api.createRequiresAvailableGroup",
+    })
+    expect(fetchUserGroupsMock).toHaveBeenCalledTimes(1)
+    expect(createApiTokenMock).not.toHaveBeenCalled()
   })
 })

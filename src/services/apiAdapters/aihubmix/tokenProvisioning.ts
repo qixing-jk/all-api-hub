@@ -1,5 +1,6 @@
 import {
   isCreatedApiToken,
+  TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningCapability,
@@ -28,7 +29,7 @@ export const aihubmixTokenProvisioning: TokenProvisioningCapability = {
       kind: "create",
       tokenData: defaultTokenData,
       oneTimeSecret: true,
-      recoverCreatedToken: "created_response_first",
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     }
   },
   classifyCreatedToken: ({ result }) => {

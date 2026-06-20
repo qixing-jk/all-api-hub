@@ -10,6 +10,10 @@ import {
   deleteInvalidAccountToken,
   ensureAccountKeysForAvailableGroups,
 } from "~/services/accounts/accountKeyAutoProvisioning/groupCoverage"
+import {
+  TOKEN_CREATION_SECRET_RECOVERY,
+  TOKEN_PROVISIONING_BLOCK_REASONS,
+} from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS } from "~/types/accountKeyAutoProvisioning"
 import {
@@ -100,7 +104,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
         kind: "create",
         tokenData: defaultTokenData,
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       }),
     )
     mocks.classifyCreatedToken.mockReturnValue({
@@ -246,6 +250,48 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       }),
     )
     expect(mocks.fetchUserGroups).not.toHaveBeenCalled()
+  })
+
+  it("blocks legacy one-key repair when policy requires a one-time secret dialog", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([])
+    mocks.fetchUserGroups.mockResolvedValue({})
+    mocks.resolveDefaultTokenCreation.mockReturnValueOnce({
+      kind: "blocked",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
+    })
+
+    await expect(runCoverage()).rejects.toThrow(
+      "messages:aihubmix.createRequiresOneTimeKeyDialog",
+    )
+
+    expect(mocks.createApiToken).not.toHaveBeenCalled()
+  })
+
+  it("blocks legacy one-key repair when policy rejects default creation", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([])
+    mocks.fetchUserGroups.mockResolvedValue({})
+    mocks.resolveDefaultTokenCreation.mockReturnValueOnce({
+      kind: "blocked",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
+    })
+
+    await expect(runCoverage()).rejects.toThrow(
+      "messages:sub2api.createRequiresGroup",
+    )
+
+    expect(mocks.createApiToken).not.toHaveBeenCalled()
+  })
+
+  it("fails legacy one-key repair when token creation is rejected", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([])
+    mocks.fetchUserGroups.mockResolvedValue({})
+    mocks.createApiToken.mockResolvedValueOnce(false)
+    mocks.classifyCreatedToken.mockReturnValueOnce({
+      kind: "failed",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
+    })
+
+    await expect(runCoverage()).rejects.toThrow("create_token_failed")
   })
 
   it("treats empty group responses as legacy one-key coverage when a token already exists", async () => {

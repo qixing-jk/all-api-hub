@@ -36,9 +36,13 @@ export type ResolveDefaultTokenCreationRequest = {
   userGroups?: Record<string, UserGroupInfo>
 }
 
+export const TOKEN_CREATION_SECRET_RECOVERY = {
+  InventoryRefetch: "inventory_refetch",
+  CreatedResponseFirst: "created_response_first",
+} as const
+
 export type TokenCreationSecretRecovery =
-  | "inventory_refetch"
-  | "created_response_first"
+  (typeof TOKEN_CREATION_SECRET_RECOVERY)[keyof typeof TOKEN_CREATION_SECRET_RECOVERY]
 
 export type DefaultTokenCreationDecision =
   | {

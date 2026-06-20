@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
+import { TOKEN_CREATION_SECRET_RECOVERY } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import {
   buildSub2ApiAccount,
   buildSub2ApiToken,
@@ -46,7 +47,7 @@ const createSub2ApiTokenProvisioningMock = () => ({
         kind: "create",
         tokenData: { ...request.defaultTokenData, group: explicitGroup },
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       }
     }
 
@@ -72,7 +73,7 @@ const createSub2ApiTokenProvisioningMock = () => ({
         kind: "create",
         tokenData: { ...request.defaultTokenData, group: allowedGroups[0] },
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       }
     }
 

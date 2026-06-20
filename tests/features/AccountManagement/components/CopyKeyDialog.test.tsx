@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { TOKEN_CREATION_SECRET_RECOVERY } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -68,7 +69,7 @@ const createSub2ApiTokenProvisioningMock = () => ({
         kind: "create",
         tokenData: { ...request.defaultTokenData, group: explicitGroup },
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       }
     }
 
@@ -94,7 +95,7 @@ const createSub2ApiTokenProvisioningMock = () => ({
         kind: "create",
         tokenData: { ...request.defaultTokenData, group: allowedGroups[0] },
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       }
     }
 

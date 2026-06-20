@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixTokenProvisioning } from "~/services/apiAdapters/aihubmix/tokenProvisioning"
 import {
+  TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
@@ -60,7 +61,17 @@ describe("apiAdapter tokenProvisioning", () => {
       kind: "create",
       tokenData: defaultTokenData,
       oneTimeSecret: false,
-      recoverCreatedToken: "inventory_refetch",
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+    })
+
+    expect(
+      provisioning.classifyCreatedToken({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        result: false,
+      }),
+    ).toEqual({
+      kind: "failed",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
     })
 
     expect(
@@ -132,7 +143,7 @@ describe("apiAdapter tokenProvisioning", () => {
       kind: "create",
       tokenData: { ...defaultTokenData, group: "default" },
       oneTimeSecret: false,
-      recoverCreatedToken: "inventory_refetch",
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
     })
 
     expect(
@@ -174,6 +185,13 @@ describe("apiAdapter tokenProvisioning", () => {
     const createdToken = token({ group: "vip" })
 
     expect(
+      sub2ApiTokenProvisioning.isInventoryTokenUsable({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        token: token({ key: "sk-****abcd" }),
+      }),
+    ).toBe(true)
+
+    expect(
       sub2ApiTokenProvisioning.resolveDefaultTokenCreation({
         workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
         defaultTokenData,
@@ -183,7 +201,7 @@ describe("apiAdapter tokenProvisioning", () => {
       kind: "create",
       tokenData: { ...defaultTokenData, group: "vip" },
       oneTimeSecret: false,
-      recoverCreatedToken: "inventory_refetch",
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
     })
 
     expect(
@@ -238,7 +256,7 @@ describe("apiAdapter tokenProvisioning", () => {
       kind: "create",
       tokenData: defaultTokenData,
       oneTimeSecret: true,
-      recoverCreatedToken: "created_response_first",
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     })
 
     expect(

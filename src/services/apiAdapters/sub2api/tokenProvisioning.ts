@@ -1,5 +1,6 @@
 import {
   isCreatedApiToken,
+  TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningCapability,
@@ -13,7 +14,7 @@ const createWithGroup = (
   kind: "create" as const,
   tokenData: { ...defaultTokenData, group },
   oneTimeSecret: false,
-  recoverCreatedToken: "inventory_refetch" as const,
+  recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
 })
 
 export const normalizeTokenProvisioningGroupNames = (

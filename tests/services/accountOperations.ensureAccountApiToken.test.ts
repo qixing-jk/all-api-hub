@@ -11,6 +11,10 @@ import {
   resolveSub2ApiQuickCreateResolution,
 } from "~/services/accounts/accountOperations"
 import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
+import {
+  TOKEN_CREATION_SECRET_RECOVERY,
+  TOKEN_PROVISIONING_BLOCK_REASONS,
+} from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum } from "~/types"
 import {
   buildSiteAccount,
@@ -197,7 +201,7 @@ describe("accountOperations Sub2API token creation guards", () => {
         kind: "create",
         tokenData: defaultTokenData,
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       }),
     )
     classifyCreatedTokenMock.mockImplementation(({ result }) =>
@@ -217,7 +221,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
       kind: "blocked",
-      reason: "group_required",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
     })
 
     await expect(
@@ -250,7 +254,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
       kind: "blocked",
-      reason: "group_required",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
     })
 
     await expect(
@@ -272,7 +276,7 @@ describe("accountOperations Sub2API token creation guards", () => {
         kind: "create",
         tokenData: { ...defaultTokenData, group: explicitGroup },
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       }),
     )
 
@@ -328,7 +332,7 @@ describe("accountOperations Sub2API token creation guards", () => {
       .mockReturnValueOnce({ kind: "needs_user_groups" })
       .mockReturnValueOnce({
         kind: "blocked",
-        reason: "available_group_required",
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({})
 
@@ -368,7 +372,7 @@ describe("accountOperations Sub2API token creation guards", () => {
         kind: "create",
         tokenData: { ...generateDefaultTokenRequest(), group: "vip" },
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       })
     fetchUserGroupsMock.mockResolvedValueOnce({
       " vip ": { desc: "VIP", ratio: 2 },
@@ -415,6 +419,25 @@ describe("accountOperations Sub2API token creation guards", () => {
     expect(fetchUserGroupsMock).not.toHaveBeenCalled()
   })
 
+  it("rejects default quick-create resolution when policy still needs groups after lookup", async () => {
+    const { resolveDefaultTokenQuickCreateResolution } = await import(
+      "~/services/accounts/accountOperations"
+    )
+
+    resolveDefaultTokenCreationMock
+      .mockReturnValueOnce({ kind: "needs_user_groups" })
+      .mockReturnValueOnce({ kind: "needs_user_groups" })
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "Default", ratio: 1 },
+    })
+
+    await expect(
+      resolveDefaultTokenQuickCreateResolution(DISPLAY_ACCOUNT),
+    ).rejects.toThrow("sub2api_group_inventory_not_implemented")
+
+    expect(fetchUserGroupsMock).toHaveBeenCalledTimes(1)
+  })
+
   it("rejects quick-create resolution for non-Sub2API accounts", async () => {
     const { displayAccount } = createNonSub2ApiAccounts()
 
@@ -423,6 +446,46 @@ describe("accountOperations Sub2API token creation guards", () => {
     ).rejects.toThrow("sub2api_quick_create_not_applicable")
 
     expect(fetchUserGroupsMock).not.toHaveBeenCalled()
+  })
+
+  it("reports one-time secret policy blocks through default quick-create resolution", async () => {
+    const { displayAccount } = createAIHubMixAccounts()
+    const { resolveDefaultTokenQuickCreateResolution } = await import(
+      "~/services/accounts/accountOperations"
+    )
+
+    resolveDefaultTokenCreationMock.mockReturnValueOnce({
+      kind: "blocked",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
+    })
+
+    await expect(
+      resolveDefaultTokenQuickCreateResolution(displayAccount as any),
+    ).resolves.toEqual({
+      kind: "blocked",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
+      message: "messages:aihubmix.createRequiresOneTimeKeyDialog",
+    })
+  })
+
+  it("reports generic policy blocks through default quick-create resolution", async () => {
+    const { displayAccount } = createNonSub2ApiAccounts()
+    const { resolveDefaultTokenQuickCreateResolution } = await import(
+      "~/services/accounts/accountOperations"
+    )
+
+    resolveDefaultTokenCreationMock.mockReturnValueOnce({
+      kind: "blocked",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
+    })
+
+    await expect(
+      resolveDefaultTokenQuickCreateResolution(displayAccount as any),
+    ).resolves.toEqual({
+      kind: "blocked",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
+      message: "messages:sub2api.createRequiresGroup",
+    })
   })
 })
 
@@ -440,7 +503,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
         kind: "create",
         tokenData: defaultTokenData,
         oneTimeSecret: false,
-        recoverCreatedToken: "inventory_refetch",
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
       }),
     )
     classifyCreatedTokenMock.mockImplementation(({ result }) =>
@@ -608,7 +671,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
       kind: "blocked",
-      reason: "one_time_secret_required",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
     })
 
     await expect(
@@ -731,7 +794,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
       kind: "blocked",
-      reason: "one_time_secret_required",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
     })
 
     await expect(
@@ -764,6 +827,51 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     ).resolves.toEqual(existingToken)
 
     expect(createApiTokenMock).not.toHaveBeenCalled()
+  })
+
+  it("blocks shared token ensure when created token secret cannot be recovered", async () => {
+    const { displayAccount, siteAccount } = createAIHubMixAccounts()
+
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenCreationMock.mockReturnValueOnce({
+      kind: "create",
+      tokenData: generateDefaultTokenRequest(),
+      oneTimeSecret: true,
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+    classifyCreatedTokenMock.mockReturnValueOnce({
+      kind: "unavailable",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
+    })
+
+    await expect(
+      ensureAccountApiToken(siteAccount as any, displayAccount as any),
+    ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
+  })
+
+  it("fails background token ensure when created token secret cannot be recovered", async () => {
+    const { displayAccount, siteAccount } = createAIHubMixAccounts()
+
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenCreationMock.mockReturnValueOnce({
+      kind: "create",
+      tokenData: generateDefaultTokenRequest(),
+      oneTimeSecret: true,
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+    classifyCreatedTokenMock.mockReturnValueOnce({
+      kind: "unavailable",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
+    })
+
+    await expect(
+      ensureDefaultApiTokenForAccount({
+        account: siteAccount as any,
+        displaySiteData: displayAccount as any,
+      }),
+    ).rejects.toThrow("token_not_found")
   })
 
   it("fails when default token creation reports false", async () => {
