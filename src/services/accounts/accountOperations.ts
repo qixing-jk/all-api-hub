@@ -27,6 +27,7 @@ import {
 import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
+  requireDisplayAccountTokenProvisioning,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
@@ -37,8 +38,15 @@ import {
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
+import { resolveDefaultTokenCreationWithUserGroups } from "~/services/accounts/utils/tokenProvisioning"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
+import {
+  TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_WORKFLOWS,
+  type TokenProvisioningBlockReason,
+} from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -69,12 +77,6 @@ const logger = createLogger("AccountOperations")
 export const MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS = 20000
 
 export { extractDomainPrefix, getSiteName } from "~/services/accounts/siteName"
-
-const isCreatedApiToken = (value: unknown): value is ApiToken =>
-  !!value &&
-  typeof value === "object" &&
-  typeof (value as Partial<ApiToken>).id === "number" &&
-  typeof (value as Partial<ApiToken>).key === "string"
 
 /**
  * Pins analytics metadata to the final site type selected for account handling.
@@ -471,65 +473,101 @@ export type Sub2ApiQuickCreateResolution =
   | { kind: "selection_required"; allowedGroups: string[] }
   | { kind: "blocked"; message: string }
 
-const normalizeSub2ApiGroupNames = (
-  groups: Record<string, unknown>,
-): string[] => {
-  return Array.from(
-    new Set(
-      Object.keys(groups)
-        .map((group) => group.trim())
-        .filter(Boolean),
-    ),
-  )
+export type DefaultTokenQuickCreateResolution =
+  | { kind: "ready"; tokenData: CreateTokenRequest }
+  | { kind: "selection_required"; allowedGroups: string[] }
+  | {
+      kind: "blocked"
+      reason: TokenProvisioningBlockReason
+      message: string
+    }
+
+const getDefaultTokenProvisioningBlockMessage = (
+  reason: TokenProvisioningBlockReason,
+): string => {
+  if (reason === TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired) {
+    return t("messages:sub2api.createRequiresAvailableGroup")
+  }
+
+  if (reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired) {
+    return t("messages:aihubmix.createRequiresOneTimeKeyDialog")
+  }
+
+  return t("messages:sub2api.createRequiresGroup")
 }
 
 /**
- * Resolves the current Sub2API quick-create state from upstream groups without
- * guessing a fallback group when multiple choices exist.
+ * Resolves the current default-token quick-create state from adapter policy.
+ */
+export async function resolveDefaultTokenQuickCreateResolution(
+  account: DisplaySiteData,
+  options: { explicitGroup?: string } = {},
+): Promise<DefaultTokenQuickCreateResolution> {
+  const { keyManagement, request, tokenProvisioning } =
+    createDisplayAccountApiContext(account)
+  const requiredKeyManagement = requireDisplayAccountKeyManagement(
+    account,
+    keyManagement,
+  )
+  const requiredTokenProvisioning = requireDisplayAccountTokenProvisioning(
+    account,
+    tokenProvisioning,
+  )
+  const decision = await resolveDefaultTokenCreationWithUserGroups({
+    keyManagement: requiredKeyManagement,
+    tokenProvisioning: requiredTokenProvisioning,
+    request,
+    decisionRequest: {
+      workflow: TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection,
+      defaultTokenData: generateDefaultTokenRequest(),
+      explicitGroup: options.explicitGroup,
+    },
+    missingUserGroupsMessage: "sub2api_group_inventory_not_implemented",
+  })
+
+  if (decision.kind === "create") {
+    return { kind: "ready", tokenData: decision.tokenData }
+  }
+
+  if (decision.kind === "selection_required") {
+    return { kind: "selection_required", allowedGroups: decision.allowedGroups }
+  }
+
+  if (decision.kind === "needs_user_groups") {
+    throw new Error("sub2api_group_inventory_not_implemented")
+  }
+
+  return {
+    kind: "blocked",
+    reason: decision.reason,
+    message: getDefaultTokenProvisioningBlockMessage(decision.reason),
+  }
+}
+
+/**
+ * Resolves the current Sub2API quick-create state through default-token policy.
  */
 export async function resolveSub2ApiQuickCreateResolution(
-  account: Pick<
-    DisplaySiteData,
-    | "siteType"
-    | "baseUrl"
-    | "id"
-    | "authType"
-    | "userId"
-    | "token"
-    | "cookieAuthSessionCookie"
-  >,
+  account: DisplaySiteData,
 ): Promise<Sub2ApiQuickCreateResolution> {
   if (account.siteType !== SITE_TYPES.SUB2API) {
     throw new Error("sub2api_quick_create_not_applicable")
   }
 
-  const { keyManagement, request } = createDisplayAccountApiContext(account)
-  const userGroups = requireDisplayAccountKeyManagement(
-    account,
-    keyManagement,
-  ).userGroups
-  if (!userGroups) {
-    throw new Error("sub2api_group_inventory_not_implemented")
+  const resolution = await resolveDefaultTokenQuickCreateResolution(account)
+
+  if (resolution.kind === "ready") {
+    return { kind: "ready", group: resolution.tokenData.group }
   }
 
-  const groups = await userGroups.fetch(request)
-  const validGroups = normalizeSub2ApiGroupNames(groups)
-
-  if (validGroups.length === 0) {
+  if (resolution.kind === "selection_required") {
     return {
-      kind: "blocked",
-      message: t("messages:sub2api.createRequiresAvailableGroup"),
+      kind: "selection_required",
+      allowedGroups: resolution.allowedGroups,
     }
   }
 
-  if (validGroups.length === 1) {
-    return { kind: "ready", group: validGroups[0] }
-  }
-
-  return {
-    kind: "selection_required",
-    allowedGroups: validGroups,
-  }
+  return { kind: "blocked", message: resolution.message }
 }
 
 /**
@@ -1184,9 +1222,14 @@ export async function ensureAccountApiToken(
     id: options.toastId,
   })
 
+  const context = createDisplayAccountApiContext(displaySiteData)
   const keyManagement = requireDisplayAccountKeyManagement(
     displaySiteData,
-    getSiteAdapter(displaySiteData.siteType).keyManagement,
+    context.keyManagement,
+  )
+  const requiredTokenProvisioning = requireDisplayAccountTokenProvisioning(
+    displaySiteData,
+    context.tokenProvisioning,
   )
   const displayAccountRequest = {
     baseUrl: displaySiteData.baseUrl,
@@ -1213,38 +1256,41 @@ export async function ensureAccountApiToken(
   let apiToken: ApiToken | undefined = tokens.at(-1)
 
   if (!apiToken) {
-    const newTokenData = generateDefaultTokenRequest()
-    if (displaySiteData.siteType === SITE_TYPES.SUB2API) {
-      const normalizedGroup =
-        typeof options.sub2apiGroup === "string"
-          ? options.sub2apiGroup.trim()
-          : ""
+    const decision = requiredTokenProvisioning.resolveDefaultTokenCreation({
+      workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+      defaultTokenData: generateDefaultTokenRequest(),
+      explicitGroup: options.sub2apiGroup,
+    })
 
-      // Sub2API key creation must use a current upstream-valid group. The UI
-      // may auto-resolve the only valid group, but this shared helper must not
-      // silently create an ungrouped key.
-      if (!normalizedGroup) {
-        throw new Error(t("messages:sub2api.createRequiresGroup"))
+    if (decision.kind !== "create") {
+      if (
+        decision.kind === "blocked" &&
+        decision.reason ===
+          TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
+      ) {
+        throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
       }
 
-      newTokenData.group = normalizedGroup
-    }
-
-    if (displaySiteData.siteType === SITE_TYPES.AIHUBMIX) {
-      throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
+      throw new Error(t("messages:sub2api.createRequiresGroup"))
     }
 
     const createApiTokenResult = await keyManagement.createToken(
       createAccountRequest,
-      newTokenData,
+      decision.tokenData,
+    )
+    const createdTokenDecision = requiredTokenProvisioning.classifyCreatedToken(
+      {
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        result: createApiTokenResult,
+      },
     )
 
-    if (!createApiTokenResult) {
+    if (createdTokenDecision.kind === "usable") {
+      apiToken = createdTokenDecision.token
+    } else if (createdTokenDecision.kind === "failed") {
       throw new Error(t("messages:accountOperations.createTokenFailed"))
-    }
-
-    if (isCreatedApiToken(createApiTokenResult)) {
-      apiToken = createApiTokenResult
+    } else if (createdTokenDecision.kind === "unavailable") {
+      throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
     } else {
       // Do not assume a created key can be read back in full. AIHubMix returns
       // complete API keys only at creation time and may list masked keys here.

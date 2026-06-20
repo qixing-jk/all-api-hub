@@ -24,6 +24,75 @@ const {
   toastErrorMock: vi.fn(),
 }))
 
+const normalizeGroupNames = (groups: Record<string, unknown>): string[] =>
+  Array.from(
+    new Set(
+      Object.keys(groups)
+        .map((group) => group.trim())
+        .filter(Boolean),
+    ),
+  )
+
+const createSub2ApiTokenProvisioningMock = () => ({
+  isInventoryTokenUsable: vi.fn(() => true),
+  resolveDefaultTokenCreation: vi.fn((request: any) => {
+    const explicitGroup =
+      typeof request.explicitGroup === "string"
+        ? request.explicitGroup.trim()
+        : ""
+
+    if (explicitGroup) {
+      return {
+        kind: "create",
+        tokenData: { ...request.defaultTokenData, group: explicitGroup },
+        oneTimeSecret: false,
+        recoverCreatedToken: "inventory_refetch",
+      }
+    }
+
+    if (
+      request.workflow !== "quick_create_selection" &&
+      request.workflow !== "post_save_automation"
+    ) {
+      return { kind: "blocked", reason: "group_required" }
+    }
+
+    if (!request.userGroups) {
+      return { kind: "needs_user_groups" }
+    }
+
+    const allowedGroups = normalizeGroupNames(request.userGroups)
+
+    if (allowedGroups.length === 0) {
+      return { kind: "blocked", reason: "available_group_required" }
+    }
+
+    if (allowedGroups.length === 1) {
+      return {
+        kind: "create",
+        tokenData: { ...request.defaultTokenData, group: allowedGroups[0] },
+        oneTimeSecret: false,
+        recoverCreatedToken: "inventory_refetch",
+      }
+    }
+
+    return {
+      kind: "selection_required",
+      allowedGroups,
+      reason: "group_selection_required",
+    }
+  }),
+  classifyCreatedToken: vi.fn(({ result }: any) =>
+    result
+      ? { kind: "needs_inventory_refetch" }
+      : { kind: "failed", reason: "create_failed" },
+  ),
+  getRepairPolicy: vi.fn(() => ({
+    kind: "skipped" as const,
+    skipReason: "sub2api" as const,
+  })),
+})
+
 vi.mock("react-hot-toast", () => ({
   default: {
     success: toastSuccessMock,
@@ -56,6 +125,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
         fetch: (...args: any[]) => fetchUserGroupsMock(...args),
       },
     },
+    tokenProvisioning: createSub2ApiTokenProvisioningMock(),
   }),
 }))
 

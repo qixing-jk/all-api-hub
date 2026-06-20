@@ -2293,6 +2293,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         createToken: vi.fn(),
         resolveTokenKey: vi.fn(),
       } as any,
+      tokenProvisioning: undefined,
       request: { accountId: savedDisplayData.id } as any,
     })
     mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
@@ -2401,6 +2402,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         createToken: vi.fn(),
         resolveTokenKey: vi.fn(),
       } as any,
+      tokenProvisioning: undefined,
       request: { accountId: savedDisplayData.id } as any,
     })
     mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
@@ -2502,6 +2504,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         createToken: vi.fn(),
         resolveTokenKey: vi.fn(),
       } as any,
+      tokenProvisioning: undefined,
       request: { accountId: savedDisplayData.id } as any,
     })
     mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({

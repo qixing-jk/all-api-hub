@@ -1,5 +1,11 @@
-import { SITE_TYPES } from "~/constants/siteType"
-import { requireDisplayAccountKeyManagement } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  requireDisplayAccountKeyManagement,
+  requireDisplayAccountTokenProvisioning,
+} from "~/services/accounts/utils/apiServiceRequest"
+import {
+  TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_WORKFLOWS,
+} from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
@@ -26,12 +32,6 @@ export function generateDefaultTokenRequest(): CreateTokenRequest {
   }
 }
 
-const isCreatedApiToken = (value: unknown): value is ApiToken =>
-  !!value &&
-  typeof value === "object" &&
-  typeof (value as Partial<ApiToken>).id === "number" &&
-  typeof (value as Partial<ApiToken>).key === "string"
-
 /**
  * Ensures that an API token exists for the supplied account by checking the
  * remote token inventory and lazily issuing a default token when none exist.
@@ -43,9 +43,14 @@ export async function ensureDefaultApiTokenForAccount(params: {
   displaySiteData: DisplaySiteData
 }): Promise<{ token: ApiToken; created: boolean }> {
   const { account, displaySiteData } = params
+  const adapter = getSiteAdapter(displaySiteData.siteType)
   const keyManagement = requireDisplayAccountKeyManagement(
     displaySiteData,
-    getSiteAdapter(displaySiteData.siteType).keyManagement,
+    adapter.keyManagement,
+  )
+  const tokenProvisioning = requireDisplayAccountTokenProvisioning(
+    displaySiteData,
+    adapter.tokenProvisioning,
   )
   const displayAccountRequest = {
     baseUrl: displaySiteData.baseUrl,
@@ -75,26 +80,41 @@ export async function ensureDefaultApiTokenForAccount(params: {
     return { token: apiToken, created: false }
   }
 
-  if (displaySiteData.siteType === SITE_TYPES.SUB2API) {
+  const decision = tokenProvisioning.resolveDefaultTokenCreation({
+    workflow: TOKEN_PROVISIONING_WORKFLOWS.BackgroundAutoProvision,
+    defaultTokenData: generateDefaultTokenRequest(),
+  })
+
+  if (decision.kind !== "create") {
+    if (
+      decision.kind === "blocked" &&
+      decision.reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
+    ) {
+      throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
+    }
+
     throw new Error(t("messages:sub2api.createRequiresGroup"))
   }
 
-  if (displaySiteData.siteType === SITE_TYPES.AIHUBMIX) {
-    throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
-  }
-
-  const newTokenData = generateDefaultTokenRequest()
   const createApiTokenResult = await keyManagement.createToken(
     createAccountRequest,
-    newTokenData,
+    decision.tokenData,
   )
+  const createdTokenDecision = tokenProvisioning.classifyCreatedToken({
+    workflow: TOKEN_PROVISIONING_WORKFLOWS.BackgroundAutoProvision,
+    result: createApiTokenResult,
+  })
 
-  if (!createApiTokenResult) {
+  if (createdTokenDecision.kind === "usable") {
+    return { token: createdTokenDecision.token, created: true }
+  }
+
+  if (createdTokenDecision.kind === "failed") {
     throw new Error("create_token_failed")
   }
 
-  if (isCreatedApiToken(createApiTokenResult)) {
-    return { token: createApiTokenResult, created: true }
+  if (createdTokenDecision.kind === "unavailable") {
+    throw new Error("token_not_found")
   }
 
   // Backends such as AIHubMix may only expose the full API key in the create

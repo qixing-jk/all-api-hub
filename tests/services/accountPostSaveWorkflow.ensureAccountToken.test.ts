@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import {
+  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+  generateDefaultTokenRequest,
+} from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
   ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
@@ -17,16 +20,28 @@ const {
   fetchAccountTokensMock,
   createApiTokenMock,
   fetchUserGroupsMock,
+  isInventoryTokenUsableMock,
+  resolveDefaultTokenCreationMock,
+  classifyCreatedTokenMock,
+  getRepairPolicyMock,
   getSiteAdapterMock,
 } = vi.hoisted(() => {
   const fetchAccountTokensMock = vi.fn()
   const createApiTokenMock = vi.fn()
   const fetchUserGroupsMock = vi.fn()
+  const isInventoryTokenUsableMock = vi.fn()
+  const resolveDefaultTokenCreationMock = vi.fn()
+  const classifyCreatedTokenMock = vi.fn()
+  const getRepairPolicyMock = vi.fn()
 
   return {
     fetchAccountTokensMock,
     createApiTokenMock,
     fetchUserGroupsMock,
+    isInventoryTokenUsableMock,
+    resolveDefaultTokenCreationMock,
+    classifyCreatedTokenMock,
+    getRepairPolicyMock,
     getSiteAdapterMock: vi.fn(() => ({
       keyManagement: {
         fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
@@ -37,6 +52,15 @@ const {
         userGroups: {
           fetch: (...args: unknown[]) => fetchUserGroupsMock(...args),
         },
+      },
+      tokenProvisioning: {
+        isInventoryTokenUsable: (...args: unknown[]) =>
+          isInventoryTokenUsableMock(...args),
+        resolveDefaultTokenCreation: (...args: unknown[]) =>
+          resolveDefaultTokenCreationMock(...args),
+        classifyCreatedToken: (...args: unknown[]) =>
+          classifyCreatedTokenMock(...args),
+        getRepairPolicy: (...args: unknown[]) => getRepairPolicyMock(...args),
       },
     })),
   }
@@ -113,12 +137,40 @@ const buildStoredAccount = (
     },
   })
 
+const buildDefaultTokenData = (overrides = {}) => ({
+  ...generateDefaultTokenRequest(),
+  ...overrides,
+})
+
 describe("ensureAccountTokenForPostSaveWorkflow", () => {
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
     fetchUserGroupsMock.mockReset()
+    isInventoryTokenUsableMock.mockReset()
+    resolveDefaultTokenCreationMock.mockReset()
+    classifyCreatedTokenMock.mockReset()
+    getRepairPolicyMock.mockReset()
     getSiteAdapterMock.mockClear()
+    isInventoryTokenUsableMock.mockImplementation(({ token }) =>
+      Boolean(token.key),
+    )
+    resolveDefaultTokenCreationMock.mockImplementation(
+      ({ defaultTokenData }) => ({
+        kind: "create",
+        tokenData: defaultTokenData,
+        oneTimeSecret: false,
+        recoverCreatedToken: "inventory_refetch",
+      }),
+    )
+    classifyCreatedTokenMock.mockImplementation(({ result }) =>
+      typeof result === "object" && result !== null
+        ? { kind: "usable", token: result, oneTimeSecret: false }
+        : result
+          ? { kind: "needs_inventory_refetch" }
+          : { kind: "failed", reason: "create_failed" },
+    )
+    getRepairPolicyMock.mockReturnValue({ kind: "eligible" })
   })
 
   it("selects the single newly created token by id diff even when it is not the last refetched token", () => {
@@ -198,6 +250,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     })
     const maskedToken = buildToken({ id: 8, key: "sk-***masked***" })
     fetchAccountTokensMock.mockResolvedValueOnce([maskedToken])
+    isInventoryTokenUsableMock.mockReturnValueOnce(false)
 
     await expect(
       inspectAccountTokenInventory({
@@ -240,6 +293,19 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       expect.objectContaining({
         name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
         group: "",
+      }),
+    )
+    expect(resolveDefaultTokenCreationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: "post_save_automation",
+        defaultTokenData: expect.objectContaining({
+          name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        }),
+      }),
+    )
+    expect(classifyCreatedTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: "post_save_automation",
       }),
     )
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
@@ -382,6 +448,17 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
     })
     fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenCreationMock.mockReturnValueOnce({
+      kind: "create",
+      tokenData: buildDefaultTokenData(),
+      oneTimeSecret: true,
+      recoverCreatedToken: "created_response_first",
+    })
+    classifyCreatedTokenMock.mockReturnValueOnce({
+      kind: "usable",
+      token: createdToken,
+      oneTimeSecret: true,
+    })
     createApiTokenMock.mockResolvedValueOnce(createdToken)
 
     await expect(
@@ -409,6 +486,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       key: "sk-aihubmix-existing-full-secret",
     })
     fetchAccountTokensMock.mockResolvedValueOnce([existingToken])
+    isInventoryTokenUsableMock.mockReturnValueOnce(true)
 
     await expect(
       ensureAccountTokenForPostSaveWorkflow({
@@ -438,6 +516,18 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     fetchAccountTokensMock.mockResolvedValueOnce([
       buildToken({ id: 8, key: "sk-***masked***" }),
     ])
+    isInventoryTokenUsableMock.mockReturnValueOnce(false)
+    resolveDefaultTokenCreationMock.mockReturnValueOnce({
+      kind: "create",
+      tokenData: buildDefaultTokenData(),
+      oneTimeSecret: true,
+      recoverCreatedToken: "created_response_first",
+    })
+    classifyCreatedTokenMock.mockReturnValueOnce({
+      kind: "usable",
+      token: createdToken,
+      oneTimeSecret: true,
+    })
     createApiTokenMock.mockResolvedValueOnce(createdToken)
 
     await expect(
@@ -462,6 +552,16 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     })
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenCreationMock.mockReturnValueOnce({
+      kind: "create",
+      tokenData: buildDefaultTokenData(),
+      oneTimeSecret: true,
+      recoverCreatedToken: "created_response_first",
+    })
+    classifyCreatedTokenMock.mockReturnValueOnce({
+      kind: "unavailable",
+      reason: "created_token_secret_unavailable",
+    })
     createApiTokenMock.mockResolvedValueOnce(true)
 
     await expect(
@@ -484,6 +584,16 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     })
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenCreationMock.mockReturnValueOnce({
+      kind: "create",
+      tokenData: buildDefaultTokenData(),
+      oneTimeSecret: true,
+      recoverCreatedToken: "created_response_first",
+    })
+    classifyCreatedTokenMock.mockReturnValueOnce({
+      kind: "unavailable",
+      reason: "created_token_secret_unavailable",
+    })
     createApiTokenMock.mockResolvedValueOnce(
       buildToken({ id: 8, key: "sk-***masked***" }),
     )
@@ -507,6 +617,14 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const account = buildStoredAccount(displayAccount)
     const createdToken = buildToken({ id: 9, key: "sk-sub2", group: "vip" })
     fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenCreationMock
+      .mockReturnValueOnce({ kind: "needs_user_groups" })
+      .mockReturnValueOnce({
+        kind: "create",
+        tokenData: buildDefaultTokenData({ group: "vip" }),
+        oneTimeSecret: false,
+        recoverCreatedToken: "inventory_refetch",
+      })
     fetchUserGroupsMock.mockResolvedValueOnce({ vip: { ratio: 1 } })
     createApiTokenMock.mockResolvedValueOnce(true)
     fetchAccountTokensMock.mockResolvedValueOnce([createdToken])
@@ -536,6 +654,13 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     })
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenCreationMock
+      .mockReturnValueOnce({ kind: "needs_user_groups" })
+      .mockReturnValueOnce({
+        kind: "selection_required",
+        allowedGroups: ["default", "vip"],
+        reason: "group_selection_required",
+      })
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { ratio: 1 },
       vip: { ratio: 2 },
@@ -561,6 +686,12 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     })
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenCreationMock
+      .mockReturnValueOnce({ kind: "needs_user_groups" })
+      .mockReturnValueOnce({
+        kind: "blocked",
+        reason: "available_group_required",
+      })
     fetchUserGroupsMock.mockResolvedValueOnce({})
 
     await expect(
@@ -582,6 +713,14 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     })
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenCreationMock
+      .mockReturnValueOnce({ kind: "needs_user_groups" })
+      .mockReturnValueOnce({
+        kind: "create",
+        tokenData: buildDefaultTokenData({ group: "vip" }),
+        oneTimeSecret: false,
+        recoverCreatedToken: "inventory_refetch",
+      })
     fetchUserGroupsMock.mockResolvedValueOnce({ vip: { ratio: 1 } })
     createApiTokenMock.mockResolvedValueOnce(true)
     fetchAccountTokensMock.mockResolvedValueOnce(null)

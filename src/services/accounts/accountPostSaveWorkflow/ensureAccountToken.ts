@@ -1,12 +1,16 @@
-import { SITE_TYPES } from "~/constants/siteType"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import { resolveSub2ApiQuickCreateResolution } from "~/services/accounts/accountOperations"
-import { requireDisplayAccountKeyManagement } from "~/services/accounts/utils/apiServiceRequest"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import {
-  hasUsableApiTokenKey,
-  isMaskedApiTokenKey,
-} from "~/services/apiService/common/apiKey"
+  createDisplayAccountApiContext,
+  requireDisplayAccountKeyManagement,
+  requireDisplayAccountTokenProvisioning,
+} from "~/services/accounts/utils/apiServiceRequest"
+import { resolveDefaultTokenCreationWithUserGroups } from "~/services/accounts/utils/tokenProvisioning"
+import {
+  TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_WORKFLOWS,
+  type DefaultTokenCreationDecision,
+  type TokenProvisioningBlockReason,
+} from "~/services/apiAdapters/contracts/tokenProvisioning"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { t } from "~/utils/i18n/core"
@@ -18,15 +22,6 @@ import {
   type AccountTokenInventoryState,
   type EnsureAccountTokenResult,
 } from "./constants"
-
-const isCreatedApiToken = (value: unknown): value is ApiToken =>
-  !!value &&
-  typeof value === "object" &&
-  typeof (value as Partial<ApiToken>).id === "number" &&
-  typeof (value as Partial<ApiToken>).key === "string"
-
-const hasUsableFullTokenSecret = (token: ApiToken): boolean =>
-  hasUsableApiTokenKey(token.key) && !isMaskedApiTokenKey(token.key)
 
 const isApiTokenWithValidId = (value: unknown): value is ApiToken =>
   !!value &&
@@ -65,19 +60,6 @@ const buildCreateRequest = (account: SiteAccount): ApiServiceRequest => ({
   },
 })
 
-const buildDisplayAccountRequest = (
-  displaySiteData: DisplaySiteData,
-): ApiServiceRequest => ({
-  baseUrl: displaySiteData.baseUrl,
-  accountId: displaySiteData.id,
-  auth: {
-    authType: displaySiteData.authType,
-    userId: displaySiteData.userId,
-    accessToken: displaySiteData.token,
-    cookie: displaySiteData.cookieAuthSessionCookie,
-  },
-})
-
 /**
  * Inspects whether the saved account already has a token and whether that
  * inventory value is usable as a secret for follow-up automation.
@@ -86,13 +68,16 @@ export async function inspectAccountTokenInventory(params: {
   displaySiteData: DisplaySiteData
 }): Promise<AccountTokenInventoryState> {
   const { displaySiteData } = params
+  const context = createDisplayAccountApiContext(displaySiteData)
   const keyManagement = requireDisplayAccountKeyManagement(
     displaySiteData,
-    getSiteAdapter(displaySiteData.siteType).keyManagement,
+    context.keyManagement,
   )
-  const tokens = await keyManagement.fetchTokens(
-    buildDisplayAccountRequest(displaySiteData),
+  const tokenProvisioning = requireDisplayAccountTokenProvisioning(
+    displaySiteData,
+    context.tokenProvisioning,
   )
+  const tokens = await keyManagement.fetchTokens(context.request)
   const existingTokens = sanitizeApiTokens(tokens)
   const existingTokenIds = getTokenIds(existingTokens)
   const existingToken = existingTokens.at(-1)
@@ -108,9 +93,41 @@ export async function inspectAccountTokenInventory(params: {
     kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present,
     token: existingToken,
     existingTokenIds,
-    hasUsableSecret:
-      displaySiteData.siteType !== SITE_TYPES.AIHUBMIX ||
-      hasUsableFullTokenSecret(existingToken),
+    hasUsableSecret: tokenProvisioning.isInventoryTokenUsable({
+      workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
+      token: existingToken,
+    }),
+  }
+}
+
+const blockPostSaveTokenCreation = (params?: {
+  reason?: TokenProvisioningBlockReason
+}): EnsureAccountTokenResult => {
+  const reason = params?.reason
+
+  if (
+    reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired ||
+    reason === TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable
+  ) {
+    return {
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
+      code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
+      message: t("messages:aihubmix.createRequiresOneTimeKeyDialog"),
+    }
+  }
+
+  if (reason === TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired) {
+    return {
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
+      code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
+      message: t("messages:sub2api.createRequiresAvailableGroup"),
+    }
+  }
+
+  return {
+    kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
+    code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
+    message: t("messages:accountOperations.createTokenFailed"),
   }
 }
 
@@ -120,48 +137,68 @@ export async function inspectAccountTokenInventory(params: {
 async function createDefaultToken(params: {
   account: SiteAccount
   displaySiteData: DisplaySiteData
-  group?: string
+  decision: Extract<DefaultTokenCreationDecision, { kind: "create" }>
   existingTokenIds: number[]
-}): Promise<ApiToken | null> {
-  const { account, displaySiteData, group, existingTokenIds } = params
+}): Promise<EnsureAccountTokenResult> {
+  const { account, displaySiteData, decision, existingTokenIds } = params
+  const context = createDisplayAccountApiContext(displaySiteData)
   const keyManagement = requireDisplayAccountKeyManagement(
     displaySiteData,
-    getSiteAdapter(displaySiteData.siteType).keyManagement,
+    context.keyManagement,
   )
-  const tokenData = generateDefaultTokenRequest()
-  if (typeof group === "string") {
-    tokenData.group = group
-  }
+  const tokenProvisioning = requireDisplayAccountTokenProvisioning(
+    displaySiteData,
+    context.tokenProvisioning,
+  )
 
   const created = await keyManagement.createToken(
     buildCreateRequest(account),
-    tokenData,
+    decision.tokenData,
   )
+  const createdTokenDecision = tokenProvisioning.classifyCreatedToken({
+    workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
+    result: created,
+  })
 
-  if (!created) {
-    return null
+  if (createdTokenDecision.kind === "usable") {
+    return {
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
+      token: createdTokenDecision.token,
+      created: true,
+      oneTimeSecret: createdTokenDecision.oneTimeSecret,
+    }
   }
 
-  if (isCreatedApiToken(created)) {
-    return created
+  if (createdTokenDecision.kind === "failed") {
+    return blockPostSaveTokenCreation({ reason: createdTokenDecision.reason })
   }
 
-  if (displaySiteData.siteType === SITE_TYPES.AIHUBMIX) {
-    return null
+  if (createdTokenDecision.kind === "unavailable") {
+    return blockPostSaveTokenCreation({ reason: createdTokenDecision.reason })
   }
 
-  const updatedTokens = await keyManagement.fetchTokens(
-    buildDisplayAccountRequest(displaySiteData),
-  )
+  const updatedTokens = await keyManagement.fetchTokens(context.request)
 
   const sanitizedUpdatedTokens = sanitizeApiTokens(updatedTokens)
 
-  return sanitizedUpdatedTokens.length > 0
-    ? selectSingleNewApiTokenByIdDiff({
-        existingTokenIds,
-        tokens: sanitizedUpdatedTokens,
-      })
-    : null
+  const token =
+    sanitizedUpdatedTokens.length > 0
+      ? selectSingleNewApiTokenByIdDiff({
+          existingTokenIds,
+          tokens: sanitizedUpdatedTokens,
+        })
+      : null
+
+  if (!token) {
+    return blockPostSaveTokenCreation()
+  }
+
+  return {
+    kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
+    token,
+    created: true,
+    oneTimeSecret: decision.oneTimeSecret,
+  }
 }
 
 /**
@@ -186,84 +223,51 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
     }
   }
 
-  if (displaySiteData.siteType === SITE_TYPES.SUB2API) {
-    const resolution =
-      await resolveSub2ApiQuickCreateResolution(displaySiteData)
-
-    if (resolution.kind === "blocked") {
-      return {
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
-        code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
-        message: resolution.message,
-      }
-    }
-
-    if (resolution.kind === "selection_required") {
-      return {
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-        allowedGroups: resolution.allowedGroups,
-        existingTokenIds,
-      }
-    }
-
-    const token = await createDefaultToken({
-      account,
-      displaySiteData,
-      group: resolution.group,
-      existingTokenIds,
-    })
-
-    if (!token) {
-      return {
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
-        code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
-        message: t("messages:accountOperations.createTokenFailed"),
-      }
-    }
-
-    return {
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
-      token,
-      created: true,
-      oneTimeSecret: false,
-    }
-  }
-
-  const token = await createDefaultToken({
-    account,
+  const context = createDisplayAccountApiContext(displaySiteData)
+  const keyManagement = requireDisplayAccountKeyManagement(
     displaySiteData,
-    existingTokenIds,
+    context.keyManagement,
+  )
+  const tokenProvisioning = requireDisplayAccountTokenProvisioning(
+    displaySiteData,
+    context.tokenProvisioning,
+  )
+  const defaultTokenData = generateDefaultTokenRequest()
+  const decision = await resolveDefaultTokenCreationWithUserGroups({
+    keyManagement,
+    tokenProvisioning,
+    request: context.request,
+    decisionRequest: {
+      workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
+      defaultTokenData,
+    },
+    missingUserGroupsMessage: t(
+      "messages:sub2api.createRequiresAvailableGroup",
+    ),
   })
 
-  if (!token) {
+  if (decision.kind === "selection_required") {
     return {
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
-      code:
-        displaySiteData.siteType === SITE_TYPES.AIHUBMIX
-          ? ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable
-          : ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
-      message:
-        displaySiteData.siteType === SITE_TYPES.AIHUBMIX
-          ? t("messages:aihubmix.createRequiresOneTimeKeyDialog")
-          : t("messages:accountOperations.createTokenFailed"),
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
+      allowedGroups: decision.allowedGroups,
+      existingTokenIds,
     }
   }
 
-  if (
-    displaySiteData.siteType === SITE_TYPES.AIHUBMIX &&
-    !hasUsableFullTokenSecret(token)
-  ) {
-    return {
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
-      code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
-      message: t("messages:aihubmix.createRequiresOneTimeKeyDialog"),
-    }
+  if (decision.kind === "blocked") {
+    return blockPostSaveTokenCreation({ reason: decision.reason })
   }
 
-  return {
-    kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
-    token,
-    created: true,
-    oneTimeSecret: displaySiteData.siteType === SITE_TYPES.AIHUBMIX,
+  if (decision.kind === "needs_user_groups") {
+    return blockPostSaveTokenCreation({
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
+    })
   }
+
+  return createDefaultToken({
+    account,
+    displaySiteData,
+    decision,
+    existingTokenIds,
+  })
 }
