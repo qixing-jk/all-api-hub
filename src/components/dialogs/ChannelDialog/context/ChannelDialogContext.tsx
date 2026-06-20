@@ -12,9 +12,17 @@ import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSite
 import type { ApiToken, DisplaySiteData } from "~/types"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 
+export const CHANNEL_DIALOG_MUTATION_RESULTS = {
+  Success: "success",
+  Failure: "failure",
+} as const
+
+export type ChannelDialogMutationResult =
+  (typeof CHANNEL_DIALOG_MUTATION_RESULTS)[keyof typeof CHANNEL_DIALOG_MUTATION_RESULTS]
+
 type ChannelDialogMutationOutcomeHandler = (outcome: {
   mode: DialogMode
-  result: "success" | "failure"
+  result: ChannelDialogMutationResult
   siteType: string
 }) => void
 
@@ -46,7 +54,7 @@ interface DuplicateChannelWarningState {
   existingChannelName: string | null
 }
 
-interface Sub2ApiTokenDialogState {
+interface DefaultTokenQuickCreateDialogState {
   isOpen: boolean
   sessionId: number
   account: DisplaySiteData | null
@@ -58,7 +66,7 @@ interface Sub2ApiTokenDialogState {
 interface ChannelDialogContextValue {
   state: ChannelDialogState
   duplicateChannelWarning: DuplicateChannelWarningState
-  sub2apiTokenDialog: Sub2ApiTokenDialogState
+  defaultTokenQuickCreateDialog: DefaultTokenQuickCreateDialogState
   openDialog: (config: {
     mode?: DialogMode
     channel?: ManagedSiteChannel | null
@@ -75,14 +83,16 @@ interface ChannelDialogContextValue {
   }) => void
   closeDialog: () => void
   handleSuccess: (result: any) => void
-  openSub2ApiTokenDialog: (config: {
+  openDefaultTokenQuickCreateDialog: (config: {
     account: DisplaySiteData
     allowedGroups: string[]
     notice?: string
     onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
   }) => void
-  closeSub2ApiTokenDialog: () => void
-  handleSub2ApiTokenSuccess: (createdToken?: ApiToken) => Promise<void>
+  closeDefaultTokenQuickCreateDialog: () => void
+  handleDefaultTokenQuickCreateSuccess: (
+    createdToken?: ApiToken,
+  ) => Promise<void>
   requestDuplicateChannelWarning: (options: {
     existingChannelName: string
   }) => Promise<boolean>
@@ -112,8 +122,8 @@ export function ChannelDialogProvider({
       isOpen: false,
       existingChannelName: null,
     })
-  const [sub2apiTokenDialog, setSub2apiTokenDialog] =
-    useState<Sub2ApiTokenDialogState>({
+  const [defaultTokenQuickCreateDialog, setDefaultTokenQuickCreateDialog] =
+    useState<DefaultTokenQuickCreateDialogState>({
       isOpen: false,
       sessionId: 0,
       account: null,
@@ -121,8 +131,12 @@ export function ChannelDialogProvider({
       notice: undefined,
       onSuccessCallback: null,
     })
-  const sub2apiTokenDialogSessionIdRef = useRef(sub2apiTokenDialog.sessionId)
-  const sub2apiTokenOnSuccessRef = useRef(sub2apiTokenDialog.onSuccessCallback)
+  const defaultTokenQuickCreateDialogSessionIdRef = useRef(
+    defaultTokenQuickCreateDialog.sessionId,
+  )
+  const defaultTokenQuickCreateOnSuccessRef = useRef(
+    defaultTokenQuickCreateDialog.onSuccessCallback,
+  )
 
   const openDialog = useCallback(
     (config: {
@@ -177,18 +191,19 @@ export function ChannelDialogProvider({
     [closeDialog],
   )
 
-  const openSub2ApiTokenDialog = useCallback(
+  const openDefaultTokenQuickCreateDialog = useCallback(
     (config: {
       account: DisplaySiteData
       allowedGroups: string[]
       notice?: string
       onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
     }) => {
-      const nextSessionId = sub2apiTokenDialogSessionIdRef.current + 1
+      const nextSessionId =
+        defaultTokenQuickCreateDialogSessionIdRef.current + 1
       const nextOnSuccess = config.onSuccess ?? null
-      sub2apiTokenDialogSessionIdRef.current = nextSessionId
-      sub2apiTokenOnSuccessRef.current = nextOnSuccess
-      setSub2apiTokenDialog(() => ({
+      defaultTokenQuickCreateDialogSessionIdRef.current = nextSessionId
+      defaultTokenQuickCreateOnSuccessRef.current = nextOnSuccess
+      setDefaultTokenQuickCreateDialog(() => ({
         isOpen: true,
         sessionId: nextSessionId,
         account: config.account,
@@ -200,11 +215,11 @@ export function ChannelDialogProvider({
     [],
   )
 
-  const closeSub2ApiTokenDialog = useCallback(() => {
-    const nextSessionId = sub2apiTokenDialogSessionIdRef.current + 1
-    sub2apiTokenDialogSessionIdRef.current = nextSessionId
-    sub2apiTokenOnSuccessRef.current = null
-    setSub2apiTokenDialog(() => ({
+  const closeDefaultTokenQuickCreateDialog = useCallback(() => {
+    const nextSessionId = defaultTokenQuickCreateDialogSessionIdRef.current + 1
+    defaultTokenQuickCreateDialogSessionIdRef.current = nextSessionId
+    defaultTokenQuickCreateOnSuccessRef.current = null
+    setDefaultTokenQuickCreateDialog(() => ({
       isOpen: false,
       sessionId: nextSessionId,
       account: null,
@@ -214,25 +229,28 @@ export function ChannelDialogProvider({
     }))
   }, [])
 
-  const handleSub2ApiTokenSuccess = useCallback(
+  const handleDefaultTokenQuickCreateSuccess = useCallback(
     async (createdToken?: ApiToken) => {
-      const sessionIdAtInvocation = sub2apiTokenDialog.sessionId
-      if (!sub2apiTokenDialog.isOpen) {
+      const sessionIdAtInvocation = defaultTokenQuickCreateDialog.sessionId
+      if (!defaultTokenQuickCreateDialog.isOpen) {
         return
       }
 
-      if (sub2apiTokenDialogSessionIdRef.current !== sessionIdAtInvocation) {
+      if (
+        defaultTokenQuickCreateDialogSessionIdRef.current !==
+        sessionIdAtInvocation
+      ) {
         return
       }
 
-      const callback = sub2apiTokenOnSuccessRef.current
-      closeSub2ApiTokenDialog()
+      const callback = defaultTokenQuickCreateOnSuccessRef.current
+      closeDefaultTokenQuickCreateDialog()
       await callback?.(createdToken)
     },
     [
-      closeSub2ApiTokenDialog,
-      sub2apiTokenDialog.isOpen,
-      sub2apiTokenDialog.sessionId,
+      closeDefaultTokenQuickCreateDialog,
+      defaultTokenQuickCreateDialog.isOpen,
+      defaultTokenQuickCreateDialog.sessionId,
     ],
   )
 
@@ -283,13 +301,13 @@ export function ChannelDialogProvider({
       value={{
         state,
         duplicateChannelWarning,
-        sub2apiTokenDialog,
+        defaultTokenQuickCreateDialog,
         openDialog,
         closeDialog,
         handleSuccess,
-        openSub2ApiTokenDialog,
-        closeSub2ApiTokenDialog,
-        handleSub2ApiTokenSuccess,
+        openDefaultTokenQuickCreateDialog,
+        closeDefaultTokenQuickCreateDialog,
+        handleDefaultTokenQuickCreateSuccess,
         requestDuplicateChannelWarning,
         resolveDuplicateChannelWarning,
       }}

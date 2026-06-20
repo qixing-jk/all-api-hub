@@ -11,15 +11,20 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   ensureAccountApiToken,
-  resolveSub2ApiQuickCreateResolution,
+  resolveDefaultTokenQuickCreateResolution,
 } from "~/services/accounts/accountOperations"
 import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  API_CREDENTIAL_PROFILE_SYNTHETIC_ACCOUNT_ID_PREFIX,
+  buildApiCredentialProfileSyntheticAccountId,
+} from "~/services/apiCredentialProfiles/syntheticAccount"
 import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
@@ -95,10 +100,13 @@ function getApiTokenIds(tokens: ApiToken[]): number[] {
  */
 export function useChannelDialog() {
   const { t } = useTranslation(["messages", "channelDialog"])
-  const { openDialog, openSub2ApiTokenDialog, requestDuplicateChannelWarning } =
-    useChannelDialogContext()
+  const {
+    openDialog,
+    openDefaultTokenQuickCreateDialog,
+    requestDuplicateChannelWarning,
+  } = useChannelDialogContext()
 
-  const openSub2ApiTokenCreationDialog = async (
+  const openDefaultTokenQuickCreateDialogForAccount = async (
     account: DisplaySiteData,
     options?: {
       notice?: string
@@ -114,23 +122,33 @@ export function useChannelDialog() {
       return false
     }
 
-    const resolution = await resolveSub2ApiQuickCreateResolution(account)
-    if (resolution.kind === "blocked") {
+    const resolution = await resolveDefaultTokenQuickCreateResolution(account)
+    if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked) {
       toast.error(resolution.message)
       return false
     }
 
-    openSub2ApiTokenDialog({
+    if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready) {
+      const selectedGroup = resolution.tokenData.group?.trim()
+      if (!selectedGroup) {
+        return false
+      }
+
+      openDefaultTokenQuickCreateDialog({
+        account,
+        allowedGroups: [selectedGroup],
+        notice: options?.notice,
+        onSuccess: options?.onSuccess,
+      })
+      return true
+    }
+
+    openDefaultTokenQuickCreateDialog({
       account,
-      allowedGroups:
-        resolution.kind === "selection_required"
-          ? resolution.allowedGroups
-          : [resolution.group],
+      allowedGroups: resolution.allowedGroups,
       notice:
         options?.notice ??
-        (resolution.kind === "selection_required"
-          ? t("messages:sub2api.createRequiresGroupSelection")
-          : undefined),
+        t("messages:tokenProvisioning.createRequiresGroupSelection"),
       onSuccess: options?.onSuccess,
     })
 
@@ -142,9 +160,9 @@ export function useChannelDialog() {
     baseUrl: string
   }): DisplaySiteData => {
     return {
-      id: `api-credential-profile:${options.name}`,
+      id: buildApiCredentialProfileSyntheticAccountId(options.name),
       name: options.name,
-      username: "api-credential-profile",
+      username: API_CREDENTIAL_PROFILE_SYNTHETIC_ACCOUNT_ID_PREFIX,
       balance: { USD: 0, CNY: 0 },
       todayConsumption: { USD: 0, CNY: 0 },
       todayIncome: { USD: 0, CNY: 0 },
@@ -398,88 +416,84 @@ export function useChannelDialog() {
       }
 
       if (!apiToken) {
-        if (displaySiteData.siteType === SITE_TYPES.SUB2API) {
-          const resolution =
-            await resolveSub2ApiQuickCreateResolution(displaySiteData)
+        const resolution =
+          await resolveDefaultTokenQuickCreateResolution(displaySiteData)
+        if (!shouldContinue()) {
+          return cancelOpen()
+        }
+
+        if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked) {
+          toast.error(resolution.message, { id: toastId })
+          return { opened: false }
+        }
+
+        if (
+          resolution.kind ===
+          TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired
+        ) {
           if (!shouldContinue()) {
             return cancelOpen()
           }
+          toast.dismiss(toastId)
+          openDefaultTokenQuickCreateDialog({
+            account: displaySiteData,
+            allowedGroups: resolution.allowedGroups,
+            notice: t(
+              "messages:tokenProvisioning.createRequiresGroupSelection",
+            ),
+            onSuccess: async (createdToken?: ApiToken) => {
+              if (!shouldContinue()) {
+                return
+              }
 
-          if (resolution.kind === "blocked") {
-            toast.error(resolution.message, { id: toastId })
-            return { opened: false }
-          }
-
-          if (resolution.kind === "selection_required") {
-            if (!shouldContinue()) {
-              return cancelOpen()
-            }
-            toast.dismiss(toastId)
-            openSub2ApiTokenDialog({
-              account: displaySiteData,
-              allowedGroups: resolution.allowedGroups,
-              notice: t("messages:sub2api.createRequiresGroupSelection"),
-              onSuccess: async (createdToken?: ApiToken) => {
-                if (!shouldContinue()) {
-                  return
-                }
-
-                if (createdToken) {
-                  await openWithAccount(
-                    displaySiteData!,
-                    createdToken,
-                    onSuccess,
-                    options,
-                  )
-                  return
-                }
-
-                if (!shouldContinue()) {
-                  return
-                }
-
-                const refetchedTokens =
-                  accountKeyManagement && accountApiRequest
-                    ? await accountKeyManagement.fetchTokens(accountApiRequest)
-                    : null
-                if (!shouldContinue()) {
-                  return
-                }
-                const recoveredToken = Array.isArray(refetchedTokens)
-                  ? selectSingleNewApiTokenByIdDiff({
-                      existingTokenIds,
-                      tokens: refetchedTokens,
-                    })
-                  : null
-
-                if (!recoveredToken) {
-                  toast.error(t("messages:accountOperations.createTokenFailed"))
-                  return
-                }
-
+              if (createdToken) {
                 await openWithAccount(
                   displaySiteData!,
-                  recoveredToken,
+                  createdToken,
                   onSuccess,
                   options,
                 )
-              },
-            })
-            return { opened: false, deferred: true }
-          }
+                return
+              }
 
-          apiToken = await ensureAccountApiToken(siteAccount, displaySiteData, {
-            toastId,
-            sub2apiGroup: resolution.group,
+              if (!shouldContinue()) {
+                return
+              }
+
+              const refetchedTokens =
+                accountKeyManagement && accountApiRequest
+                  ? await accountKeyManagement.fetchTokens(accountApiRequest)
+                  : null
+              if (!shouldContinue()) {
+                return
+              }
+              const recoveredToken = Array.isArray(refetchedTokens)
+                ? selectSingleNewApiTokenByIdDiff({
+                    existingTokenIds,
+                    tokens: refetchedTokens,
+                  })
+                : null
+
+              if (!recoveredToken) {
+                toast.error(t("messages:accountOperations.createTokenFailed"))
+                return
+              }
+
+              await openWithAccount(
+                displaySiteData!,
+                recoveredToken,
+                onSuccess,
+                options,
+              )
+            },
           })
-        } else {
-          // Ensure API token exists
-          apiToken = await ensureAccountApiToken(
-            siteAccount,
-            displaySiteData,
-            toastId,
-          )
+          return { opened: false, deferred: true }
         }
+
+        apiToken = await ensureAccountApiToken(siteAccount, displaySiteData, {
+          toastId,
+          defaultTokenData: resolution.tokenData,
+        })
       }
       if (!shouldContinue()) {
         return cancelOpen()
@@ -672,7 +686,7 @@ export function useChannelDialog() {
 
   return {
     openWithAccount,
-    openSub2ApiTokenCreationDialog,
+    openDefaultTokenQuickCreateDialogForAccount,
     openWithCredentials,
     openWithCustom,
   }
