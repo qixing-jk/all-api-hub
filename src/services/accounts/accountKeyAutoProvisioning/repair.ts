@@ -38,6 +38,11 @@ import { runPerKeySequential } from "./perOriginQueue"
 
 const logger = createLogger("AccountKeyRepair")
 
+const getInvalidTokenDeleteErrorMessage = (error: unknown) => {
+  const message = getErrorMessage(error)
+  return message === "{}" ? "" : message
+}
+
 /**
  * Creates a default idle progress snapshot used when no repair job has started
  * yet (or when the stored progress blob is missing).
@@ -532,7 +537,8 @@ export async function deleteInvalidAccountTokens(
       failed.push({
         ...token,
         errorMessage:
-          getErrorMessage(error) || ACCOUNT_KEY_REPAIR_ERRORS.DeleteFailed,
+          getInvalidTokenDeleteErrorMessage(error) ||
+          ACCOUNT_KEY_REPAIR_ERRORS.DeleteFailed,
       })
     }
   }

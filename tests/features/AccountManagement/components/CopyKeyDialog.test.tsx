@@ -282,6 +282,25 @@ describe("CopyKeyDialog", () => {
     })
   })
 
+  it("shows a create failure when default key creation returns false", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce(false)
+
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.copyKey.createFailed"),
+    ).toBeInTheDocument()
+  })
+
   it("shows a one-time key dialog when AIHubMix create returns a full token", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     createApiTokenMock.mockResolvedValueOnce({

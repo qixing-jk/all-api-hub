@@ -366,4 +366,41 @@ describe("accountOperations auto-provision key on add", () => {
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).toHaveBeenCalledTimes(1)
   })
+
+  it("shows failure feedback when saved account display data is invalid for auto-provision", async () => {
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValueOnce({
+      id: "invalid-display-account",
+      name: "Invalid Display",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://api.example.com",
+      authType: AuthTypeEnum.AccessToken,
+      userId: "1",
+      token: "",
+      cookieAuthSessionCookie: "",
+    } as any)
+
+    const result = await validateAndSaveAccount(
+      "https://api.example.com",
+      "Test Site",
+      "tester",
+      "test-token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      "unknown",
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).toHaveBeenCalledTimes(1)
+  })
 })

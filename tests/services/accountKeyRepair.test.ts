@@ -942,6 +942,69 @@ describe("accountKeyRepair", () => {
     expect(mocks.deleteInvalidAccountToken).not.toHaveBeenCalled()
   })
 
+  it("uses the delete-failed fallback when invalid token deletion rejects without a message", async () => {
+    const account = buildSiteAccount({
+      id: "new-api-1",
+      site_type: "new-api",
+      site_url: "https://relay.example.com",
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      account_info: {
+        id: "101",
+        access_token: "access-token",
+        username: "valid",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const displayAccount = buildDisplaySiteData({
+      id: account.id,
+      name: "Relay Account",
+      baseUrl: account.site_url,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      userId: "101",
+      token: "access-token",
+    })
+    const invalidToken = {
+      accountId: "new-api-1",
+      accountName: "Relay Account",
+      siteType: SITE_TYPES.NEW_API,
+      siteUrlOrigin: "https://relay.example.com",
+      tokenId: 9,
+      tokenName: "old one",
+      group: "old",
+      reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+    }
+
+    mocks.getAllAccounts.mockResolvedValue([account])
+    mocks.convertToDisplayData.mockReturnValue([displayAccount])
+    mocks.deleteInvalidAccountToken.mockRejectedValueOnce({})
+
+    const { deleteInvalidAccountTokens } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    await expect(
+      deleteInvalidAccountTokens({ tokens: [invalidToken] }),
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        deleted: [],
+        failed: [
+          {
+            ...invalidToken,
+            errorMessage: ACCOUNT_KEY_REPAIR_ERRORS.DeleteFailed,
+          },
+        ],
+      },
+    })
+  })
+
   it("skips none-auth accounts, ignores disabled accounts, and falls back to per-account display conversion", async () => {
     const noneAuthAccount = buildSiteAccount({
       id: "none-auth-1",

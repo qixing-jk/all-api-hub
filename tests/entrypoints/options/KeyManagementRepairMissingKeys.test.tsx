@@ -829,6 +829,48 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect(progressBar).toHaveAttribute("aria-valuenow", "3")
   })
 
+  it("shows the none-auth skip reason for skipped accounts", async () => {
+    const visibleNoneAuthProgress: AccountKeyRepairProgress = {
+      ...startProgress,
+      results: [
+        {
+          ...startProgress.results[0],
+          accountId: "account-enabled",
+          accountName: "Enabled Site",
+        },
+      ],
+    }
+
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message === AccountKeyRepairMessageTypes.Start) {
+        return { success: true, data: visibleNoneAuthProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    )
+
+    expect(await screen.findByText("Enabled Site")).toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:repairMissingKeys.skipReasons.noneAuth"),
+    ).toBeInTheDocument()
+  })
+
   it("supports search and outcome filtering in the dialog", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {

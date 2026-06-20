@@ -4,7 +4,7 @@ import type {
   UserGroupInfo,
 } from "~/services/apiService/common/type"
 import type { ApiToken } from "~/types"
-import type { AccountKeyRepairSkipReason } from "~/types/accountKeyAutoProvisioning"
+import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
 export const TOKEN_PROVISIONING_WORKFLOWS = {
   BackgroundAutoProvision: "background_auto_provision",
@@ -104,10 +104,9 @@ export type CreatedTokenSecretDecision =
       kind: typeof CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch
     }
 
-export type TokenProvisioningRepairSkipReason = Extract<
-  AccountKeyRepairSkipReason,
-  "sub2api" | "aihubmixOneTimeKey"
->
+export type TokenProvisioningRepairSkipReason =
+  | typeof ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api
+  | typeof ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey
 
 export const TOKEN_PROVISIONING_REPAIR_POLICY_KINDS = {
   Eligible: "eligible",
