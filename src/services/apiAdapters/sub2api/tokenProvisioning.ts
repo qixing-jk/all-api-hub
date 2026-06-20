@@ -1,4 +1,5 @@
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   isCreatedApiToken,
   TOKEN_CREATION_SECRET_RECOVERY,
@@ -85,18 +86,18 @@ export const sub2ApiTokenProvisioning: TokenProvisioningCapability = {
   classifyCreatedToken: ({ result }) => {
     if (isCreatedApiToken(result)) {
       return {
-        kind: "usable",
+        kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
         token: result,
         oneTimeSecret: false,
       }
     }
 
     if (result) {
-      return { kind: "needs_inventory_refetch" }
+      return { kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch }
     }
 
     return {
-      kind: "failed",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
     }
   },

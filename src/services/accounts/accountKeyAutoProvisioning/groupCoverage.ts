@@ -3,6 +3,7 @@ import {
   requireDisplayAccountTokenProvisioning,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
@@ -144,7 +145,9 @@ export async function ensureAccountKeysForAvailableGroups(params: {
       result: createResult,
     })
 
-    if (createdTokenDecision.kind === "failed") {
+    if (
+      createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Failed
+    ) {
       throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
     }
 

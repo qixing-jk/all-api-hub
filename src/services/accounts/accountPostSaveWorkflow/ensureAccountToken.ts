@@ -6,6 +6,7 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import { resolveDefaultTokenCreationWithUserGroups } from "~/services/accounts/utils/tokenProvisioning"
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_WORKFLOWS,
@@ -164,7 +165,9 @@ async function createDefaultToken(params: {
     result: created,
   })
 
-  if (createdTokenDecision.kind === "usable") {
+  if (
+    createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Usable
+  ) {
     return {
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
       token: createdTokenDecision.token,
@@ -173,11 +176,16 @@ async function createDefaultToken(params: {
     }
   }
 
-  if (createdTokenDecision.kind === "failed") {
+  if (
+    createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Failed
+  ) {
     return blockPostSaveTokenCreation({ reason: createdTokenDecision.reason })
   }
 
-  if (createdTokenDecision.kind === "unavailable") {
+  if (
+    createdTokenDecision.kind ===
+    CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable
+  ) {
     return blockPostSaveTokenCreation({ reason: createdTokenDecision.reason })
   }
 

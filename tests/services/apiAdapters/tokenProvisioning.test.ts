@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixTokenProvisioning } from "~/services/apiAdapters/aihubmix/tokenProvisioning"
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
@@ -73,7 +74,7 @@ describe("apiAdapter tokenProvisioning", () => {
         result: false,
       }),
     ).toEqual({
-      kind: "failed",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
     })
 
@@ -82,7 +83,9 @@ describe("apiAdapter tokenProvisioning", () => {
         workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
         result: true,
       }),
-    ).toEqual({ kind: "needs_inventory_refetch" })
+    ).toEqual({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+    })
 
     expect(
       provisioning.classifyCreatedToken({
@@ -90,7 +93,7 @@ describe("apiAdapter tokenProvisioning", () => {
         result: createdToken,
       }),
     ).toEqual({
-      kind: "usable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
       token: createdToken,
       oneTimeSecret: false,
     })
@@ -217,7 +220,7 @@ describe("apiAdapter tokenProvisioning", () => {
         result: createdToken,
       }),
     ).toEqual({
-      kind: "usable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
       token: createdToken,
       oneTimeSecret: false,
     })
@@ -227,7 +230,9 @@ describe("apiAdapter tokenProvisioning", () => {
         workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
         result: true,
       }),
-    ).toEqual({ kind: "needs_inventory_refetch" })
+    ).toEqual({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+    })
 
     expect(
       sub2ApiTokenProvisioning.classifyCreatedToken({
@@ -235,7 +240,7 @@ describe("apiAdapter tokenProvisioning", () => {
         result: false,
       }),
     ).toEqual({
-      kind: "failed",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
     })
   })
@@ -272,7 +277,7 @@ describe("apiAdapter tokenProvisioning", () => {
         result: false,
       }),
     ).toEqual({
-      kind: "failed",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
     })
 
@@ -282,7 +287,7 @@ describe("apiAdapter tokenProvisioning", () => {
         result: fullToken,
       }),
     ).toEqual({
-      kind: "usable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
       token: fullToken,
       oneTimeSecret: true,
     })
@@ -293,7 +298,7 @@ describe("apiAdapter tokenProvisioning", () => {
         result: maskedToken,
       }),
     ).toEqual({
-      kind: "unavailable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
     })
 

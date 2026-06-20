@@ -1,4 +1,5 @@
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   isCreatedApiToken,
   TOKEN_CREATION_SECRET_RECOVERY,
@@ -38,21 +39,21 @@ export const aihubmixTokenProvisioning: TokenProvisioningCapability = {
   classifyCreatedToken: ({ result }) => {
     if (!result) {
       return {
-        kind: "failed",
+        kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
       }
     }
 
     if (isCreatedApiToken(result) && hasUsableFullTokenSecret(result)) {
       return {
-        kind: "usable",
+        kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
         token: result,
         oneTimeSecret: true,
       }
     }
 
     return {
-      kind: "unavailable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
     }
   },

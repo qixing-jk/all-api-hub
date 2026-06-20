@@ -3,6 +3,7 @@ import {
   requireDisplayAccountTokenProvisioning,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
@@ -107,15 +108,22 @@ export async function ensureDefaultApiTokenForAccount(params: {
     result: createApiTokenResult,
   })
 
-  if (createdTokenDecision.kind === "usable") {
+  if (
+    createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Usable
+  ) {
     return { token: createdTokenDecision.token, created: true }
   }
 
-  if (createdTokenDecision.kind === "failed") {
+  if (
+    createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Failed
+  ) {
     throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
   }
 
-  if (createdTokenDecision.kind === "unavailable") {
+  if (
+    createdTokenDecision.kind ===
+    CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable
+  ) {
     throw new Error(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
   }
 

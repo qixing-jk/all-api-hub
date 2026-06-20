@@ -11,6 +11,7 @@ import {
   ensureAccountKeysForAvailableGroups,
 } from "~/services/accounts/accountKeyAutoProvisioning/groupCoverage"
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
@@ -114,7 +115,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       }),
     )
     mocks.classifyCreatedToken.mockReturnValue({
-      kind: "needs_inventory_refetch",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
     })
   })
 
@@ -295,7 +296,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     mocks.fetchUserGroups.mockResolvedValue({})
     mocks.createApiToken.mockResolvedValueOnce(false)
     mocks.classifyCreatedToken.mockReturnValueOnce({
-      kind: "failed",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
     })
 

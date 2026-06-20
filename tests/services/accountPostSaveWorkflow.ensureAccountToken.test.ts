@@ -14,6 +14,7 @@ import {
   selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
@@ -172,11 +173,17 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     )
     classifyCreatedTokenMock.mockImplementation(({ result }) =>
       typeof result === "object" && result !== null
-        ? { kind: "usable", token: result, oneTimeSecret: false }
+        ? {
+            kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+            token: result,
+            oneTimeSecret: false,
+          }
         : result
-          ? { kind: "needs_inventory_refetch" }
+          ? {
+              kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+            }
           : {
-              kind: "failed",
+              kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
               reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
             },
     )
@@ -467,7 +474,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     })
     classifyCreatedTokenMock.mockReturnValueOnce({
-      kind: "usable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
       token: createdToken,
       oneTimeSecret: true,
     })
@@ -536,7 +543,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     })
     classifyCreatedTokenMock.mockReturnValueOnce({
-      kind: "usable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
       token: createdToken,
       oneTimeSecret: true,
     })
@@ -571,7 +578,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     })
     classifyCreatedTokenMock.mockReturnValueOnce({
-      kind: "unavailable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
     })
     createApiTokenMock.mockResolvedValueOnce(true)
@@ -603,7 +610,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
     })
     classifyCreatedTokenMock.mockReturnValueOnce({
-      kind: "unavailable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
     })
     createApiTokenMock.mockResolvedValueOnce(

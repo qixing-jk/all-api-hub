@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
@@ -98,9 +99,9 @@ const createSub2ApiTokenProvisioningMock = () => ({
   }),
   classifyCreatedToken: vi.fn(({ result }: any) =>
     result
-      ? { kind: "needs_inventory_refetch" }
+      ? { kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch }
       : {
-          kind: "failed",
+          kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
           reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
         },
   ),

@@ -12,6 +12,7 @@ import {
 } from "~/services/accounts/accountOperations"
 import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
@@ -212,11 +213,17 @@ describe("accountOperations Sub2API token creation guards", () => {
     )
     classifyCreatedTokenMock.mockImplementation(({ result }) =>
       typeof result === "object" && result !== null
-        ? { kind: "usable", token: result, oneTimeSecret: false }
+        ? {
+            kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+            token: result,
+            oneTimeSecret: false,
+          }
         : result
-          ? { kind: "needs_inventory_refetch" }
+          ? {
+              kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+            }
           : {
-              kind: "failed",
+              kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
               reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
             },
     )
@@ -535,11 +542,17 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     )
     classifyCreatedTokenMock.mockImplementation(({ result }) =>
       typeof result === "object" && result !== null
-        ? { kind: "usable", token: result, oneTimeSecret: false }
+        ? {
+            kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+            token: result,
+            oneTimeSecret: false,
+          }
         : result
-          ? { kind: "needs_inventory_refetch" }
+          ? {
+              kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+            }
           : {
-              kind: "failed",
+              kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
               reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
             },
     )
@@ -871,7 +884,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     })
     createApiTokenMock.mockResolvedValueOnce(true)
     classifyCreatedTokenMock.mockReturnValueOnce({
-      kind: "unavailable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
     })
 
@@ -892,7 +905,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     })
     createApiTokenMock.mockResolvedValueOnce(true)
     classifyCreatedTokenMock.mockReturnValueOnce({
-      kind: "unavailable",
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
     })
 

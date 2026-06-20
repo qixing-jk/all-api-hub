@@ -79,22 +79,29 @@ export type DefaultTokenCreationDecision =
       reason: TokenProvisioningBlockReason
     }
 
+export const CREATED_TOKEN_SECRET_DECISION_KINDS = {
+  Usable: "usable",
+  Failed: "failed",
+  Unavailable: "unavailable",
+  NeedsInventoryRefetch: "needs_inventory_refetch",
+} as const
+
 export type CreatedTokenSecretDecision =
   | {
-      kind: "usable"
+      kind: typeof CREATED_TOKEN_SECRET_DECISION_KINDS.Usable
       token: ApiToken
       oneTimeSecret: boolean
     }
   | {
-      kind: "failed"
+      kind: typeof CREATED_TOKEN_SECRET_DECISION_KINDS.Failed
       reason: typeof TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed
     }
   | {
-      kind: "unavailable"
+      kind: typeof CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable
       reason: typeof TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable
     }
   | {
-      kind: "needs_inventory_refetch"
+      kind: typeof CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch
     }
 
 export type TokenProvisioningRepairSkipReason = Extract<

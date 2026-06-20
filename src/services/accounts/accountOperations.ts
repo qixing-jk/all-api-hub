@@ -41,6 +41,7 @@ import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/sit
 import { resolveDefaultTokenCreationWithUserGroups } from "~/services/accounts/utils/tokenProvisioning"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
@@ -1293,11 +1294,18 @@ export async function ensureAccountApiToken(
       },
     )
 
-    if (createdTokenDecision.kind === "usable") {
+    if (
+      createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Usable
+    ) {
       apiToken = createdTokenDecision.token
-    } else if (createdTokenDecision.kind === "failed") {
+    } else if (
+      createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Failed
+    ) {
       throw new Error(t("messages:accountOperations.createTokenFailed"))
-    } else if (createdTokenDecision.kind === "unavailable") {
+    } else if (
+      createdTokenDecision.kind ===
+      CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable
+    ) {
       throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
     } else {
       // Do not assume a created key can be read back in full. AIHubMix returns
