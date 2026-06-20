@@ -5,6 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import * as accountOperations from "~/services/accounts/accountOperations"
+import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
@@ -195,6 +198,14 @@ vi.mock(
   }),
 )
 
+const actualResolveDefaultTokenQuickCreateResolution =
+  accountOperations.resolveDefaultTokenQuickCreateResolution
+
+const resolveDefaultTokenQuickCreateResolutionSpy = vi.spyOn(
+  accountOperations,
+  "resolveDefaultTokenQuickCreateResolution",
+)
+
 const ACCOUNT = {
   id: "acc-1",
   name: "Example",
@@ -252,6 +263,22 @@ describe("CopyKeyDialog", () => {
     completeProductAnalyticsActionMock.mockResolvedValue(undefined)
     resolveApiTokenKeyMock.mockImplementation(
       async ({ token }: { token: { key: string } }) => token.key,
+    )
+    resolveDefaultTokenQuickCreateResolutionSpy.mockReset()
+    resolveDefaultTokenQuickCreateResolutionSpy.mockImplementation(
+      async (account, options) => {
+        if (account.siteType === SITE_TYPES.SUB2API) {
+          return actualResolveDefaultTokenQuickCreateResolution(
+            account,
+            options,
+          )
+        }
+
+        return {
+          kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
+          tokenData: generateDefaultTokenRequest(),
+        }
+      },
     )
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
@@ -620,6 +647,80 @@ describe("CopyKeyDialog", () => {
     expect(createApiTokenMock).not.toHaveBeenCalled()
   })
 
+  it("opens a generic constrained Add Token dialog when default token policy requires selection", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
+      allowedGroups: ["default", "vip"],
+    })
+
+    const user = userEvent.setup()
+
+    render(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          ...ACCOUNT,
+          siteType: SITE_TYPES.NEW_API,
+        }}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    await screen.findByText(
+      "messages:tokenProvisioning.createRequiresGroupSelection",
+    )
+    expect(resolveDefaultTokenQuickCreateResolutionSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ siteType: SITE_TYPES.NEW_API }),
+    )
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+  })
+
+  it("creates a default key with the full policy-resolved token payload", async () => {
+    const policyTokenData = {
+      name: "Policy Resolved Copy Key",
+      remain_quota: 777,
+      expired_time: -1,
+      unlimited_quota: false,
+      model_limits_enabled: false,
+      model_limits: "",
+      allow_ips: "",
+      group: "vip",
+    }
+
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([TOKEN])
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
+      tokenData: policyTokenData,
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledWith(
+        expect.any(Object),
+        policyTokenData,
+      )
+    })
+  })
+
   it("requires manual Sub2API group selection when quick create cannot pick one", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({
@@ -657,7 +758,9 @@ describe("CopyKeyDialog", () => {
       }),
     )
 
-    await screen.findByText("messages:sub2api.createRequiresGroupSelection")
+    await screen.findByText(
+      "messages:tokenProvisioning.createRequiresGroupSelection",
+    )
     expect(fetchUserGroupsMock).toHaveBeenCalled()
     expect(createApiTokenMock).not.toHaveBeenCalled()
   })

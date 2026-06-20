@@ -248,7 +248,9 @@ describe("CopyKeyDialog sub2api support", () => {
 
     expect(createApiTokenMock).not.toHaveBeenCalled()
     expect(
-      await screen.findByText("messages:sub2api.createRequiresGroupSelection"),
+      await screen.findByText(
+        "messages:tokenProvisioning.createRequiresGroupSelection",
+      ),
     ).toBeInTheDocument()
   })
 

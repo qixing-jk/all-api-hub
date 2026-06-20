@@ -46,7 +46,7 @@ export default function CopyKeyDialog({
     isCreating,
     createError,
     oneTimeToken,
-    sub2apiCreateAllowedGroups,
+    defaultTokenCreateAllowedGroups,
     copiedTokenId,
     expandedTokens,
     canCreateDefaultKey,
@@ -55,7 +55,7 @@ export default function CopyKeyDialog({
     createDefaultKey,
     refreshTokensAfterCreate,
     toggleTokenExpansion,
-    clearSub2ApiCreateAllowedGroups,
+    clearDefaultTokenCreateAllowedGroups,
     clearOneTimeToken,
   } = useCopyKeyDialog(isOpen, account)
   const oneTimeKeySaveAction =
@@ -73,15 +73,15 @@ export default function CopyKeyDialog({
       : undefined
 
   const handleOpenAddTokenDialog = () => {
-    clearSub2ApiCreateAllowedGroups()
+    clearDefaultTokenCreateAllowedGroups()
     setIsAddTokenDialogOpen(true)
   }
   const handleCloseAddTokenDialog = () => {
-    clearSub2ApiCreateAllowedGroups()
+    clearDefaultTokenCreateAllowedGroups()
     setIsAddTokenDialogOpen(false)
   }
   const handleAddTokenSuccess = (createdToken?: ApiToken) => {
-    clearSub2ApiCreateAllowedGroups()
+    clearDefaultTokenCreateAllowedGroups()
     return refreshTokensAfterCreate(createdToken)
   }
 
@@ -95,31 +95,32 @@ export default function CopyKeyDialog({
 
   useEffect(() => {
     if (!isOpen || !account) {
-      clearSub2ApiCreateAllowedGroups()
+      clearDefaultTokenCreateAllowedGroups()
       setIsAddTokenDialogOpen(false)
     }
-  }, [account, clearSub2ApiCreateAllowedGroups, isOpen])
+  }, [account, clearDefaultTokenCreateAllowedGroups, isOpen])
 
   useEffect(() => {
     if (
       !isMountedRef.current ||
       !isOpen ||
       !account ||
-      !sub2apiCreateAllowedGroups ||
-      sub2apiCreateAllowedGroups.length === 0
+      !defaultTokenCreateAllowedGroups ||
+      defaultTokenCreateAllowedGroups.length === 0
     ) {
       return
     }
 
     setIsAddTokenDialogOpen(true)
-  }, [account, isOpen, sub2apiCreateAllowedGroups])
+  }, [account, defaultTokenCreateAllowedGroups, isOpen])
 
-  const sub2apiQuickCreatePrefill =
-    sub2apiCreateAllowedGroups && sub2apiCreateAllowedGroups.length > 0
+  const defaultTokenQuickCreatePrefill =
+    defaultTokenCreateAllowedGroups &&
+    defaultTokenCreateAllowedGroups.length > 0
       ? {
           modelId: "",
           defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-          allowedGroups: sub2apiCreateAllowedGroups,
+          allowedGroups: defaultTokenCreateAllowedGroups,
         }
       : undefined
 
@@ -185,10 +186,10 @@ export default function CopyKeyDialog({
           onClose={handleCloseAddTokenDialog}
           availableAccounts={[account]}
           preSelectedAccountId={account.id}
-          createPrefill={sub2apiQuickCreatePrefill}
+          createPrefill={defaultTokenQuickCreatePrefill}
           prefillNotice={
-            sub2apiQuickCreatePrefill
-              ? t("sub2api.createRequiresGroupSelection")
+            defaultTokenQuickCreatePrefill
+              ? t("tokenProvisioning.createRequiresGroupSelection")
               : undefined
           }
           onSuccess={handleAddTokenSuccess}
