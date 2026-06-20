@@ -18,6 +18,23 @@ export const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
 export const DEFAULT_USER_GROUP_NAME = "default"
 
 /**
+ * Selects the preferred default user group from a constrained group list.
+ */
+export function resolvePreferredDefaultUserGroup(
+  allowedGroups: readonly string[],
+): string {
+  const normalizedGroups = allowedGroups
+    .map((group) => group.trim())
+    .filter(Boolean)
+
+  if (normalizedGroups.includes(DEFAULT_USER_GROUP_NAME)) {
+    return DEFAULT_USER_GROUP_NAME
+  }
+
+  return normalizedGroups[0] ?? DEFAULT_USER_GROUP_NAME
+}
+
+/**
  * Generates the default token payload used by key auto-provisioning flows.
  *
  * Default token definition MUST remain stable (see OpenSpec requirements).
@@ -97,7 +114,7 @@ export async function ensureDefaultApiTokenForAccount(params: {
       throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
     }
 
-    throw new Error(t("messages:sub2api.createRequiresGroup"))
+    throw new Error(t("messages:tokenProvisioning.createRequiresGroup"))
   }
 
   const createApiTokenResult = await keyManagement.createToken(

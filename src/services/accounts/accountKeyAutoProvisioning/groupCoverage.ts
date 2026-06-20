@@ -134,7 +134,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
         throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
       }
 
-      throw new Error(t("messages:sub2api.createRequiresGroup"))
+      throw new Error(t("messages:tokenProvisioning.createRequiresGroup"))
     }
 
     const createResult = await keyManagement.createToken(

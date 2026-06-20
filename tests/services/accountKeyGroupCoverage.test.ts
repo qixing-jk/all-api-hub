@@ -285,7 +285,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     })
 
     await expect(runCoverage()).rejects.toThrow(
-      "messages:sub2api.createRequiresGroup",
+      "messages:tokenProvisioning.createRequiresGroup",
     )
 
     expect(mocks.createApiToken).not.toHaveBeenCalled()

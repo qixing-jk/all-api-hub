@@ -172,8 +172,6 @@
   },
   "sub2api": {
     "createRequiresAvailableGroup": "Tài khoản hiện tại không có nhóm khả dụng để tạo khóa, vui lòng kiểm tra tình trạng nhóm của tài khoản trước khi thử lại.",
-    "createRequiresGroup": "Cần xác định nhóm trước khi tạo khóa, vui lòng chọn một nhóm khả dụng trước khi tiếp tục.",
-    "createRequiresGroupSelection": "Tài khoản hiện tại có nhiều nhóm khả dụng, vui lòng chọn nhóm muốn sử dụng trước khi tạo khóa.",
     "groupMissing": "Nhóm Sub2API \"{{group}}\" không còn khả dụng. Vui lòng làm mới danh sách nhóm rồi thử lại.",
     "loginRequired": "Vui lòng đăng nhập vào bảng điều khiển Sub2API (tiện ích sẽ đọc auth_token/auth_user để nhập phiên) rồi thử lại.",
     "refreshTokenInvalid": "refresh_token của Sub2API đã hết hạn/bị xoay vòng. Vui lòng nhập lại phiên từ bảng điều khiển (khuyến nghị dùng cửa sổ ẩn danh/riêng tư) hoặc dán refresh_token mới rồi thử lại."
@@ -221,6 +219,10 @@
       "shareSnapshotDownloaded": "Đã tải xuống ảnh chụp nhanh",
       "urlCopied": "Đã sao chép URL của {{accountName}} vào khay nhớ tạm"
     }
+  },
+  "tokenProvisioning": {
+    "createRequiresGroup": "Cần xác định nhóm trước khi tạo khóa, vui lòng chọn một nhóm khả dụng trước khi tiếp tục.",
+    "createRequiresGroupSelection": "Tài khoản hiện tại có nhiều nhóm khả dụng, vui lòng chọn nhóm muốn sử dụng trước khi tạo khóa."
   },
   "veloera": {
     "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",

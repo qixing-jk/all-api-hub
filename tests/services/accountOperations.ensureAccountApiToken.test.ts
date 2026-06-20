@@ -10,6 +10,7 @@ import {
   ensureAccountApiToken,
   resolveSub2ApiQuickCreateResolution,
 } from "~/services/accounts/accountOperations"
+import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
@@ -245,7 +246,7 @@ describe("accountOperations Sub2API token creation guards", () => {
         account: SITE_ACCOUNT,
         displaySiteData: DISPLAY_ACCOUNT,
       }),
-    ).rejects.toThrow("messages:sub2api.createRequiresGroup")
+    ).rejects.toThrow("messages:tokenProvisioning.createRequiresGroup")
 
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
     expect(createApiTokenMock).not.toHaveBeenCalled()
@@ -275,7 +276,7 @@ describe("accountOperations Sub2API token creation guards", () => {
 
     await expect(
       ensureAccountApiToken(SITE_ACCOUNT, DISPLAY_ACCOUNT),
-    ).rejects.toThrow("messages:sub2api.createRequiresGroup")
+    ).rejects.toThrow("messages:tokenProvisioning.createRequiresGroup")
 
     expect(toastLoadingMock).toHaveBeenCalled()
     expect(createApiTokenMock).not.toHaveBeenCalled()
@@ -318,6 +319,84 @@ describe("accountOperations Sub2API token creation guards", () => {
     )
   })
 
+  it("keeps explicitGroup as the generic group-selection alias", async () => {
+    const token = buildSub2ApiToken({ id: 12, key: "sk-vip" })
+
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([token])
+    createApiTokenMock.mockResolvedValueOnce(true)
+    resolveDefaultTokenCreationMock.mockImplementationOnce((request) => ({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+      tokenData: { ...request.defaultTokenData, group: request.explicitGroup },
+      oneTimeSecret: false,
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+    }))
+    classifyCreatedTokenMock.mockReturnValueOnce({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+    })
+
+    await expect(
+      ensureAccountApiToken(SITE_ACCOUNT, DISPLAY_ACCOUNT, {
+        toastId: "toast-explicit-group",
+        explicitGroup: "vip",
+      }),
+    ).resolves.toEqual(token)
+
+    expect(resolveDefaultTokenCreationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        explicitGroup: "vip",
+      }),
+    )
+    expect(createApiTokenMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ group: "vip" }),
+    )
+  })
+
+  it("passes policy-resolved default token data to shared ensure", async () => {
+    const token = buildSub2ApiToken({ id: 42, key: "sk-created" })
+    const policyTokenData = {
+      ...generateDefaultTokenRequest(),
+      name: "Policy Resolved Default Key",
+      group: "vip",
+      remain_quota: 12345,
+    }
+
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([token])
+    createApiTokenMock.mockResolvedValueOnce(true)
+    resolveDefaultTokenCreationMock.mockImplementationOnce((request) => ({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+      tokenData: request.defaultTokenData,
+      oneTimeSecret: false,
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+    }))
+    classifyCreatedTokenMock.mockReturnValueOnce({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+    })
+
+    await expect(
+      ensureAccountApiToken(SITE_ACCOUNT, DISPLAY_ACCOUNT, {
+        toastId: "toast-policy-token-data",
+        defaultTokenData: policyTokenData,
+      }),
+    ).resolves.toEqual(token)
+
+    expect(resolveDefaultTokenCreationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        defaultTokenData: policyTokenData,
+      }),
+    )
+    expect(createApiTokenMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      policyTokenData,
+    )
+  })
+
   it("resolves quick-create group selection through token provisioning policy", async () => {
     resolveDefaultTokenCreationMock
       .mockReturnValueOnce({
@@ -340,7 +419,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     await expect(
       resolveDefaultTokenQuickCreateResolution(DISPLAY_ACCOUNT),
     ).resolves.toEqual({
-      kind: "selection_required",
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
       allowedGroups: ["default", "vip"],
     })
   })
@@ -359,7 +438,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     await expect(
       resolveSub2ApiQuickCreateResolution(DISPLAY_ACCOUNT),
     ).resolves.toEqual({
-      kind: "blocked",
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
       message: "messages:sub2api.createRequiresAvailableGroup",
     })
   })
@@ -382,7 +461,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     await expect(
       resolveSub2ApiQuickCreateResolution(DISPLAY_ACCOUNT),
     ).resolves.toEqual({
-      kind: "selection_required",
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
       allowedGroups: ["default", "vip"],
     })
   })
@@ -406,7 +485,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     await expect(
       resolveSub2ApiQuickCreateResolution(DISPLAY_ACCOUNT),
     ).resolves.toEqual({
-      kind: "ready",
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
       group: "vip",
     })
   })
@@ -496,7 +575,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     await expect(
       resolveDefaultTokenQuickCreateResolution(displayAccount as any),
     ).resolves.toEqual({
-      kind: "blocked",
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
       message: "messages:aihubmix.createRequiresOneTimeKeyDialog",
     })
@@ -516,9 +595,9 @@ describe("accountOperations Sub2API token creation guards", () => {
     await expect(
       resolveDefaultTokenQuickCreateResolution(displayAccount as any),
     ).resolves.toEqual({
-      kind: "blocked",
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
-      message: "messages:sub2api.createRequiresGroup",
+      message: "messages:tokenProvisioning.createRequiresGroup",
     })
   })
 })

@@ -25,6 +25,11 @@ import {
   getAutoDetectCompletionFailureReason,
 } from "~/services/accounts/autoDetectCompletion/completion"
 import {
+  TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
+  type DefaultTokenQuickCreateResolution,
+  type Sub2ApiQuickCreateResolution,
+} from "~/services/accounts/tokenQuickCreateResolution"
+import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
   requireDisplayAccountTokenProvisioning,
@@ -391,12 +396,12 @@ export function isValidAccount({
 
 type TagIdsInput = string[] | undefined
 
-export interface ValidateAndSaveAccountOptions {
+interface ValidateAndSaveAccountOptions {
   skipAutoProvisionKeyOnAccountAdd?: boolean
   deferDataRefresh?: boolean
 }
 
-export interface ValidateAndUpdateAccountOptions {
+interface ValidateAndUpdateAccountOptions {
   deferDataRefresh?: boolean
 }
 
@@ -472,19 +477,16 @@ function resolveExchangeRate(input: string): number {
   return parsePositiveExchangeRate(input) ?? UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 }
 
-export type Sub2ApiQuickCreateResolution =
-  | { kind: "ready"; group: string }
-  | { kind: "selection_required"; allowedGroups: string[] }
-  | { kind: "blocked"; message: string }
-
-export type DefaultTokenQuickCreateResolution =
-  | { kind: "ready"; tokenData: CreateTokenRequest }
-  | { kind: "selection_required"; allowedGroups: string[] }
-  | {
-      kind: "blocked"
-      reason: TokenProvisioningBlockReason
-      message: string
-    }
+type EnsureAccountApiTokenOptions = {
+  toastId?: string
+  defaultTokenData?: CreateTokenRequest
+  explicitGroup?: string
+  /**
+   * Temporary compatibility alias for older Sub2API callers.
+   * New product code should pass `defaultTokenData` from policy resolution.
+   */
+  sub2apiGroup?: string
+}
 
 const getDefaultTokenProvisioningBlockMessage = (
   reason: TokenProvisioningBlockReason,
@@ -497,7 +499,7 @@ const getDefaultTokenProvisioningBlockMessage = (
     return t("messages:aihubmix.createRequiresOneTimeKeyDialog")
   }
 
-  return t("messages:sub2api.createRequiresGroup")
+  return t("messages:tokenProvisioning.createRequiresGroup")
 }
 
 /**
@@ -531,13 +533,19 @@ export async function resolveDefaultTokenQuickCreateResolution(
   })
 
   if (decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create) {
-    return { kind: "ready", tokenData: decision.tokenData }
+    return {
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
+      tokenData: decision.tokenData,
+    }
   }
 
   if (
     decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired
   ) {
-    return { kind: "selection_required", allowedGroups: decision.allowedGroups }
+    return {
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
+      allowedGroups: decision.allowedGroups,
+    }
   }
 
   if (decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups) {
@@ -547,7 +555,7 @@ export async function resolveDefaultTokenQuickCreateResolution(
   }
 
   return {
-    kind: "blocked",
+    kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
     reason: decision.reason,
     message: getDefaultTokenProvisioningBlockMessage(decision.reason),
   }
@@ -565,18 +573,26 @@ export async function resolveSub2ApiQuickCreateResolution(
 
   const resolution = await resolveDefaultTokenQuickCreateResolution(account)
 
-  if (resolution.kind === "ready") {
-    return { kind: "ready", group: resolution.tokenData.group }
+  if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready) {
+    return {
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
+      group: resolution.tokenData.group,
+    }
   }
 
-  if (resolution.kind === "selection_required") {
+  if (
+    resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired
+  ) {
     return {
-      kind: "selection_required",
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
       allowedGroups: resolution.allowedGroups,
     }
   }
 
-  return { kind: "blocked", message: resolution.message }
+  return {
+    kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
+    message: resolution.message,
+  }
 }
 
 /**
@@ -1220,7 +1236,7 @@ export function isValidExchangeRate(rate: string): boolean {
 export async function ensureAccountApiToken(
   account: SiteAccount,
   displaySiteData: DisplaySiteData,
-  toastIdOrOptions?: string | { toastId?: string; sub2apiGroup?: string },
+  toastIdOrOptions?: string | EnsureAccountApiTokenOptions,
 ): Promise<ApiToken> {
   const options =
     typeof toastIdOrOptions === "string"
@@ -1265,10 +1281,14 @@ export async function ensureAccountApiToken(
   let apiToken: ApiToken | undefined = tokens.at(-1)
 
   if (!apiToken) {
+    const defaultTokenData =
+      options.defaultTokenData ?? generateDefaultTokenRequest()
+    const explicitGroup = options.explicitGroup ?? options.sub2apiGroup
+
     const decision = requiredTokenProvisioning.resolveDefaultTokenCreation({
       workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
-      defaultTokenData: generateDefaultTokenRequest(),
-      explicitGroup: options.sub2apiGroup,
+      defaultTokenData,
+      explicitGroup,
     })
 
     if (decision.kind !== DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create) {
@@ -1280,7 +1300,7 @@ export async function ensureAccountApiToken(
         throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
       }
 
-      throw new Error(t("messages:sub2api.createRequiresGroup"))
+      throw new Error(t("messages:tokenProvisioning.createRequiresGroup"))
     }
 
     const createApiTokenResult = await keyManagement.createToken(
