@@ -24,7 +24,7 @@ import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerificati
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { parseDelimitedList } from "~/utils/core/string"
 
-type LoadAccountTokenFallbackPricingParams = {
+interface LoadAccountTokenFallbackPricingParams {
   account: Pick<
     DisplaySiteData,
     | "siteType"
@@ -164,6 +164,8 @@ export async function loadAccountTokenFallbackPricingResponse(
   } catch (error) {
     const sanitizedMessage = toSanitizedErrorSummary(error, [
       params.account.baseUrl,
+      params.account.token,
+      params.account.cookieAuthSessionCookie ?? "",
       params.token.key,
       resolvedTokenKey,
     ])

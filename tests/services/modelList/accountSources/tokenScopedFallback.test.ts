@@ -626,6 +626,48 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     expect(message).not.toBe(ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED)
   })
 
+  it("redacts account auth secrets when account-scoped pricing fails", async () => {
+    const fetchPricingMock = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new Error(
+          "401 for account-token and session=sensitive-cookie at https://example.com/api/pricing",
+        ),
+      )
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.AIHUBMIX,
+      modelPricing: {
+        fetchPricing: fetchPricingMock,
+      },
+    })
+
+    let caughtError: unknown
+
+    try {
+      await loadAccountTokenFallbackPricingResponse({
+        account: {
+          ...ACCOUNT,
+          siteType: SITE_TYPES.AIHUBMIX,
+          cookieAuthSessionCookie: "session=sensitive-cookie",
+        },
+        token: {
+          ...TOKEN,
+          models: "",
+        },
+      })
+    } catch (error) {
+      caughtError = error
+    }
+
+    expect(caughtError).toBeInstanceOf(Error)
+
+    const message = caughtError instanceof Error ? caughtError.message : ""
+    expect(message).not.toContain("account-token")
+    expect(message).not.toContain("session=sensitive-cookie")
+    expect(message).not.toContain("https://example.com")
+    expect(message.length).toBeGreaterThan(0)
+  })
+
   it("preserves structured fallback load failure metadata for analytics", async () => {
     resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
       ...TOKEN,

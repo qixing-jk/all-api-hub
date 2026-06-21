@@ -21,26 +21,26 @@ import {
 } from "~/services/modelPricing/modelPriceTable"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 
-type Sub2ApiGroupLike = {
+interface Sub2ApiGroupLike {
   id?: number | string | null
   name?: string | null
   rate_multiplier?: number | string | null
 }
 
-type ResolvedSub2ApiPriceGroup = {
+interface ResolvedSub2ApiPriceGroup {
   groupId: string
   groupName: string
   rate_multiplier?: number
 }
 
-type ResolveSub2ApiKeyGroupParams = {
+interface ResolveSub2ApiKeyGroupParams {
   selectedToken: ApiToken
   resolvedKey: string
   accountTokens: ApiToken[]
   groups: unknown[]
 }
 
-type ApplySub2ApiPriceEstimatesParams = {
+interface ApplySub2ApiPriceEstimatesParams {
   modelIds: string[]
   group: ResolvedSub2ApiPriceGroup | null
   groupRates: Record<string, number>
@@ -58,7 +58,7 @@ type Sub2ApiEstimateAccount = Pick<
   | "cookieAuthSessionCookie"
 >
 
-type LoadSub2ApiEstimatedPricingResponseParams = {
+interface LoadSub2ApiEstimatedPricingResponseParams {
   account: Sub2ApiEstimateAccount
   selectedToken: ApiToken
   resolvedKey: string

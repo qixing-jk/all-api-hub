@@ -26,7 +26,7 @@ export const MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS = {
 type ModelListAccountSourceUnsupportedReason =
   (typeof MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS)[keyof typeof MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS]
 
-type ModelListAccountSourceBaseReadiness = {
+interface ModelListAccountSourceBaseReadiness {
   statusScope: AccountSiteModelListStatusScope
   displayCapabilitiesSource: AccountSiteModelListDisplayCapabilitySource
 }

@@ -7,7 +7,7 @@ import {
   type PricingResponse,
 } from "~/services/apiService/common/type"
 
-type BuildModelListCatalogPricingResponseParams = {
+interface BuildModelListCatalogPricingResponseParams {
   modelIds: unknown[]
   unavailableReason?: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS]
   source?: PricingResponse["model_list_source"]

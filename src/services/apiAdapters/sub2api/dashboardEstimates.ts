@@ -6,7 +6,7 @@ import {
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 
-type Sub2ApiDashboardEstimateData = {
+interface Sub2ApiDashboardEstimateData {
   groups: unknown[]
   groupRates: Record<string, number>
   accountTokens: ApiToken[]
