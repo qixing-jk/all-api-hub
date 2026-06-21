@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SITE_TYPES } from "~/constants/siteType"
 import {
   createAccountModelListSourceIdentity,
   createAccountTokenModelListSourceIdentity,
@@ -12,6 +11,12 @@ import {
   type ModelListSourceIdentity,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
+import {
+  getAccountSiteModelListProfile,
+  shouldUseAccountSiteRuntimeKeyCatalogFallback,
+  supportsAccountSiteDirectModelPricing,
+  type AccountSiteModelListStatusScope,
+} from "~/services/accounts/accountSiteProfile"
 import {
   canManageDisplayAccountTokens,
   fetchDisplayAccountTokens,
@@ -98,6 +103,7 @@ interface SettledContextResult {
 export interface AccountFallbackControls {
   isAvailable: boolean
   isActive: boolean
+  statusScope: AccountSiteModelListStatusScope
   hasLoadedTokens: boolean
   isLoadingTokens: boolean
   isLoadingCatalog: boolean
@@ -925,7 +931,7 @@ function useSingleAccountModelData(params: {
       return
     }
     if (!fallbackAvailable) return
-    if (currentAccount.siteType !== SITE_TYPES.SUB2API) return
+    if (!shouldUseAccountSiteRuntimeKeyCatalogFallback(currentAccount)) return
     if (!query.isError) return
     if (!isUnsupportedModelPricingError(query.error)) return
     if (!scopedHasLoadedFallbackTokens) return
@@ -1013,7 +1019,7 @@ function useSingleAccountModelData(params: {
 
       setDataFormatError(false)
       if (
-        currentAccount.siteType === SITE_TYPES.SUB2API &&
+        !supportsAccountSiteDirectModelPricing(currentAccount) &&
         isUnsupportedModelPricingError(query.error) &&
         fallbackAvailable
       ) {
@@ -1112,6 +1118,8 @@ function useSingleAccountModelData(params: {
     return {
       isAvailable: fallbackAvailable,
       isActive: isFallbackCatalogActive,
+      statusScope: getAccountSiteModelListProfile(currentAccount.siteType)
+        .statusScope,
       hasLoadedTokens: scopedHasLoadedFallbackTokens,
       isLoadingTokens: scopedIsLoadingFallbackTokens,
       isLoadingCatalog: scopedIsLoadingFallbackCatalog,
@@ -1183,7 +1191,7 @@ function useAllAccountsModelData(
       queryFn: async () => {
         const modelPricing = getSiteAdapter(account.siteType).modelPricing
         if (!modelPricing) {
-          if (account.siteType === SITE_TYPES.SUB2API) {
+          if (shouldUseAccountSiteRuntimeKeyCatalogFallback(account)) {
             return fetchSub2ApiAllAccountsFallbackPricingContexts(account)
           }
 

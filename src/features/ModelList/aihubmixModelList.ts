@@ -5,6 +5,10 @@ import {
   type ModelManagementAccountSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
+  ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
+  getAccountSiteModelListProfile,
+} from "~/services/accounts/accountSiteProfile"
+import {
   MODEL_LIST_SOURCE_KINDS,
   type PricingResponse,
 } from "~/services/apiService/common/type"
@@ -41,6 +45,23 @@ export function isAihubmixCatalogFallbackPricing(
  * Applies AIHubMix-specific model-list capability downgrades to an account row source.
  */
 export function applyAihubmixModelListCapabilities<
+  TSource extends ModelManagementAccountSource,
+>(source: TSource, pricing: PricingResponse | null | undefined): TSource {
+  const profile = getAccountSiteModelListProfile(source.account.siteType)
+  if (
+    profile.displayCapabilitiesSource !==
+    ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile
+  ) {
+    return source
+  }
+
+  return applyCurrentAihubmixCapabilityDowngrade(source, pricing)
+}
+
+/**
+ * Applies the current AIHubMix response-source capability downgrade rules.
+ */
+function applyCurrentAihubmixCapabilityDowngrade<
   TSource extends ModelManagementAccountSource,
 >(source: TSource, pricing: PricingResponse | null | undefined): TSource {
   if (isAihubmixCatalogFallbackPricing(source.account, pricing)) {

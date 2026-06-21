@@ -2048,6 +2048,7 @@ describe("useModelData all-accounts loading", () => {
     expect(fetchPricing).not.toHaveBeenCalled()
     await waitFor(() => {
       expect(result.current.accountFallback?.selectedTokenId).toBeNull()
+      expect(result.current.accountFallback?.statusScope).toBe("token")
       expect(result.current.accountFallback?.tokens).toEqual(fallbackTokens)
     })
 
@@ -2111,6 +2112,48 @@ describe("useModelData all-accounts loading", () => {
         },
       },
     ])
+  })
+
+  it("keeps New API direct-pricing failures account-scoped instead of token fallback-scoped", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("direct pricing failed"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
+    )
+    const account = createDisplayAccount({
+      id: "new-api-direct-failure",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://new-api-direct-failure.example.invalid",
+      userId: "new-api-user",
+    })
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([])
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(result.current.loadErrorMessage).toBe(
+          "modelList:status.loadFailed",
+        )
+      },
+      { timeout: 3000 },
+    )
+    await waitFor(() => {
+      expect(result.current.accountFallback?.statusScope).toBe("account")
+    })
+    expect(fetchPricing).toHaveBeenCalled()
+    expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(account)
   })
 
   it("auto-loads Sub2API runtime models when a single fallback key is available", async () => {
@@ -2209,6 +2252,7 @@ describe("useModelData all-accounts loading", () => {
 
     await waitFor(() => {
       expect(result.current.accountFallback?.isActive).toBe(true)
+      expect(result.current.accountFallback?.statusScope).toBe("token")
       expect(result.current.pricingData).toEqual(fallbackPricing)
     })
     expect(fetchPricing).not.toHaveBeenCalled()

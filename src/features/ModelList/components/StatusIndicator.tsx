@@ -14,12 +14,12 @@ import {
   Spinner,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import { SITE_TYPES } from "~/constants/siteType"
 import type { AccountFallbackControls } from "~/features/ModelList/hooks/useModelData"
 import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
+import { ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES } from "~/services/accounts/accountSiteProfile"
 import type { DisplaySiteData } from "~/types"
 
 interface StatusIndicatorProps {
@@ -75,9 +75,10 @@ export function StatusIndicator({
     )
   }
 
-  const isSub2ApiKeyScopedStatus =
+  const isKeyScopedStatus =
     selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
-    currentAccount?.siteType === SITE_TYPES.SUB2API &&
+    accountFallback?.statusScope ===
+      ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token &&
     accountFallback?.isAvailable === true &&
     !accountFallback.isActive
 
@@ -96,12 +97,12 @@ export function StatusIndicator({
       <div className="dark:border-dark-bg-tertiary mt-4 space-y-4 border-t border-gray-200 pt-4">
         <div>
           <h4 className="dark:text-dark-text-primary text-sm font-semibold text-gray-900">
-            {isSub2ApiKeyScopedStatus
+            {isKeyScopedStatus
               ? t("status.sub2apiKeyScopedFallbackTitle")
               : t("status.fallback.title")}
           </h4>
           <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-600">
-            {isSub2ApiKeyScopedStatus
+            {isKeyScopedStatus
               ? t("status.sub2apiKeyScopedFallbackDescription")
               : t("status.fallback.description")}
           </p>
@@ -251,7 +252,7 @@ export function StatusIndicator({
     )
   }
 
-  if (isSub2ApiKeyScopedStatus) {
+  if (isKeyScopedStatus) {
     return (
       <Alert
         variant="info"

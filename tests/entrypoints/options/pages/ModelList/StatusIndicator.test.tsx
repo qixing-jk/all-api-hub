@@ -6,6 +6,7 @@ import {
   createAccountSource,
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
+import { ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES } from "~/services/accounts/accountSiteProfile"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -45,6 +46,7 @@ describe("StatusIndicator", () => {
         accountFallback={{
           isAvailable: true,
           isActive: false,
+          statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
           hasLoadedTokens: false,
           isLoadingTokens: true,
           isLoadingCatalog: false,
@@ -71,6 +73,47 @@ describe("StatusIndicator", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("drives key-scoped fallback labels from fallback status scope", async () => {
+    const compatibleAccount = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.NEW_API,
+    }
+
+    render(
+      <StatusIndicator
+        selectedSource={createAccountSource(compatibleAccount as any)}
+        isLoading={false}
+        dataFormatError={false}
+        loadErrorMessage={null}
+        currentAccount={compatibleAccount as any}
+        loadPricingData={vi.fn()}
+        accountFallback={{
+          isAvailable: true,
+          isActive: false,
+          statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
+          hasLoadedTokens: false,
+          isLoadingTokens: true,
+          isLoadingCatalog: false,
+          tokenLoadErrorMessage: null,
+          catalogLoadErrorMessage: null,
+          tokens: [],
+          selectedTokenId: null,
+          activeTokenName: null,
+          loadTokens: vi.fn(),
+          setSelectedTokenId: vi.fn(),
+          loadCatalog: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText("modelList:status.sub2apiKeyScopedTitle"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:status.genericLoadFailedTitle"),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows automatic key loading feedback before the fallback list is ready", async () => {
     render(
       <StatusIndicator
@@ -83,6 +126,7 @@ describe("StatusIndicator", () => {
         accountFallback={{
           isAvailable: true,
           isActive: false,
+          statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
           hasLoadedTokens: false,
           isLoadingTokens: true,
           isLoadingCatalog: false,
@@ -120,6 +164,7 @@ describe("StatusIndicator", () => {
         accountFallback={{
           isAvailable: true,
           isActive: false,
+          statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
           hasLoadedTokens: true,
           isLoadingTokens: false,
           isLoadingCatalog: false,
@@ -178,6 +223,7 @@ describe("StatusIndicator", () => {
         accountFallback={{
           isAvailable: true,
           isActive: false,
+          statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
           hasLoadedTokens: false,
           isLoadingTokens: false,
           isLoadingCatalog: false,

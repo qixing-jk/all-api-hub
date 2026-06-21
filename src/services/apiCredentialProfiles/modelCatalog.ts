@@ -1,4 +1,10 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
+  getAccountSiteModelListProfile,
+  shouldUseAccountSiteRuntimeKeyCatalogFallback,
+  supportsAccountSiteDirectModelPricing,
+} from "~/services/accounts/accountSiteProfile"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
@@ -57,8 +63,17 @@ export const ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED =
 const createMissingModelCatalogCapabilityError = () =>
   new Error("modelCatalog is not implemented for sub2api")
 
-const createMissingModelPricingCapabilityError = (siteType: string) =>
-  new Error(`modelPricing is not implemented for ${siteType}`)
+const shouldUseAccountScopedDirectPricingFallback = (
+  account: LoadAccountTokenFallbackPricingParams["account"],
+) => {
+  const profile = getAccountSiteModelListProfile(account.siteType)
+
+  return (
+    supportsAccountSiteDirectModelPricing(account) &&
+    profile.displayCapabilitiesSource ===
+      ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile
+  )
+}
 
 /**
  * Fetch raw model ids using a stored API credential profile.
@@ -104,15 +119,13 @@ export async function loadAccountTokenFallbackPricingResponse(
   let resolvedTokenKey = ""
 
   try {
-    if (params.account.siteType === SITE_TYPES.AIHUBMIX) {
+    if (shouldUseAccountScopedDirectPricingFallback(params.account)) {
       const adapter = getSiteAdapter(params.account.siteType)
-      if (!adapter.modelPricing) {
-        throw createMissingModelPricingCapabilityError(params.account.siteType)
+      if (adapter.modelPricing) {
+        return await adapter.modelPricing.fetchPricing(
+          createAccountModelPricingRequest(params.account),
+        )
       }
-
-      return await adapter.modelPricing.fetchPricing(
-        createAccountModelPricingRequest(params.account),
-      )
     }
 
     const resolvedToken = await resolveDisplayAccountTokenForSecret(
@@ -121,8 +134,8 @@ export async function loadAccountTokenFallbackPricingResponse(
     )
     resolvedTokenKey = resolvedToken.key
 
-    if (params.account.siteType === SITE_TYPES.SUB2API) {
-      const adapter = getSiteAdapter(SITE_TYPES.SUB2API)
+    if (shouldUseAccountSiteRuntimeKeyCatalogFallback(params.account)) {
+      const adapter = getSiteAdapter(params.account.siteType)
       if (!adapter.modelCatalog) {
         throw createMissingModelCatalogCapabilityError()
       }
