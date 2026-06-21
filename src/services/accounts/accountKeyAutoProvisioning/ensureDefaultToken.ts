@@ -48,7 +48,9 @@ export async function ensureDefaultApiTokenForAccount(params: {
 
   if (
     result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
-    result.reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
+    (result.reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired ||
+      result.reason ===
+        TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable)
   ) {
     throw new DefaultTokenLifecyclePolicyBlockedError({
       reason: result.reason,
@@ -67,9 +69,7 @@ export async function ensureDefaultApiTokenForAccount(params: {
     result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
     (result.reason === DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.TokenNotFound ||
       result.reason ===
-        DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.AmbiguousCreatedToken ||
-      result.reason ===
-        TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable)
+        DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.AmbiguousCreatedToken)
   ) {
     throw new Error(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
   }

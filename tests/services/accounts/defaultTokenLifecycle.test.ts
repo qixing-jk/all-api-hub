@@ -6,6 +6,7 @@ import {
   createStoredAccountTokenRequest,
   DEFAULT_TOKEN_INVENTORY_STATE_KINDS,
   DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
+  DEFAULT_TOKEN_LIFECYCLE_ERRORS,
   DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
   ensureDefaultTokenLifecycle,
   generateDefaultTokenRequest,
@@ -439,6 +440,20 @@ describe("ensureDefaultTokenLifecycle", () => {
     isInventoryTokenUsableMock.mockReturnValue(true)
   })
 
+  it("rejects quick-create selection because it only resolves creation decisions", async () => {
+    await expect(
+      ensureDefaultTokenLifecycle({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection,
+        account: buildStoredAccount(),
+        displaySiteData: buildDisplayAccount(),
+      }),
+    ).rejects.toThrow(
+      DEFAULT_TOKEN_LIFECYCLE_ERRORS.QuickCreateSelectionIsDecisionOnly,
+    )
+
+    expect(getSiteAdapterMock).not.toHaveBeenCalled()
+  })
+
   it("returns Ready for an existing usable inventory token", async () => {
     const existingToken = buildToken({ id: 5, key: "sk-ready" })
     fetchAccountTokensMock.mockResolvedValueOnce([existingToken])
@@ -634,5 +649,57 @@ describe("ensureDefaultTokenLifecycle", () => {
         displaySiteData: buildDisplayAccount(),
       }),
     ).rejects.toBe(userGroupsError)
+  })
+
+  it("captures baseline token ids before inventory-refetch recovery when initial inspection is skipped", async () => {
+    const existingToken = buildToken({ id: 8, key: "sk-existing" })
+    const createdToken = buildToken({ id: 9, key: "sk-created" })
+    const createTokenMock = vi.fn().mockResolvedValueOnce(true)
+    const resolveDefaultTokenCreationMock = vi.fn(() => ({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+      tokenData: generateDefaultTokenRequest(),
+      oneTimeSecret: false,
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+    }))
+
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([existingToken])
+      .mockResolvedValueOnce([existingToken, createdToken])
+    getSiteAdapterMock.mockReturnValueOnce({
+      keyManagement: {
+        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+        createToken: createTokenMock,
+        updateToken: vi.fn(),
+        resolveTokenKey: vi.fn(),
+        deleteToken: vi.fn(),
+        fetchAvailableModels: vi.fn(),
+      },
+      tokenProvisioning: {
+        isInventoryTokenUsable: vi.fn(),
+        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+        classifyCreatedToken: vi.fn(() => ({
+          kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+        })),
+        getRepairPolicy: vi.fn(),
+      },
+    } satisfies Partial<SiteAdapter>)
+
+    await expect(
+      ensureDefaultTokenLifecycle({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
+        account: buildStoredAccount(),
+        displaySiteData: buildDisplayAccount(),
+        inspectInventory: false,
+      }),
+    ).resolves.toEqual({
+      kind: DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Created,
+      token: createdToken,
+      created: true,
+      oneTimeSecret: false,
+      existingTokenIds: [8],
+    })
+
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
+    expect(createTokenMock).toHaveBeenCalledTimes(1)
   })
 })

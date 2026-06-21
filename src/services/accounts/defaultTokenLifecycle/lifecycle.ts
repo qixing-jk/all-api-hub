@@ -7,6 +7,7 @@ import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/k
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
+  TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_WORKFLOWS,
   type DefaultTokenCreationDecision,
   type ResolveDefaultTokenCreationRequest,
@@ -437,6 +438,17 @@ export async function ensureDefaultTokenLifecycle(params: {
       reason: DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.MissingUserGroups,
       existingTokenIds,
     }
+  }
+
+  if (
+    params.inspectInventory === false &&
+    decision.recoverCreatedToken ===
+      TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch &&
+    existingTokenIds.length === 0
+  ) {
+    existingTokenIds = getTokenIds(
+      sanitizeApiTokens(await keyManagement.fetchTokens(context.request)),
+    )
   }
 
   const createResult = await createDefaultTokenFromDecision({

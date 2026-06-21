@@ -356,6 +356,53 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     )
   })
 
+  it("blocks legacy one-key repair when created token secret cannot be recovered", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([])
+    mocks.fetchUserGroups.mockResolvedValue({})
+    mocks.createApiToken.mockResolvedValueOnce(true)
+    mocks.classifyCreatedToken.mockReturnValueOnce({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable,
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
+    })
+
+    await expect(runCoverage()).rejects.toThrow(
+      "messages:aihubmix.createRequiresOneTimeKeyDialog",
+    )
+  })
+
+  it("maps ambiguous legacy one-key repair recovery to token not found", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([])
+    mocks.fetchUserGroups.mockResolvedValue({})
+    mocks.createApiToken.mockResolvedValueOnce(true)
+    mocks.classifyCreatedToken.mockReturnValueOnce({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+    })
+    mocks.fetchAccountTokens
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        buildApiToken({ id: 22, name: "created a" }),
+        buildApiToken({ id: 23, name: "created b" }),
+      ])
+
+    await expect(runCoverage()).rejects.toThrow(
+      TOKEN_PROVISIONING_ERRORS.TokenNotFound,
+    )
+  })
+
+  it("falls back to the generic policy-block message for unexpected repair blocks", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([])
+    mocks.fetchUserGroups.mockResolvedValue({})
+    mocks.createApiToken.mockResolvedValueOnce(true)
+    mocks.classifyCreatedToken.mockReturnValueOnce({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable,
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
+    })
+
+    await expect(runCoverage()).rejects.toThrow(
+      "messages:tokenProvisioning.createRequiresGroup",
+    )
+  })
+
   it("treats empty group responses as legacy one-key coverage when a token already exists", async () => {
     mocks.fetchAccountTokens.mockResolvedValue([
       buildApiToken({
