@@ -2,6 +2,10 @@ import { Storage } from "@plasmohq/storage"
 
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { normalizeOptionalAccountAuthType } from "~/features/AccountManagement/utils/accountAuthType"
+import {
+  normalizeAccountSiteProfileUrlForStorage,
+  resolveAccountSiteDefaultAuthType,
+} from "~/services/accounts/accountSiteProfile"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { createLogger } from "~/utils/core/logger"
 
@@ -25,7 +29,7 @@ type PendingSponsorAddAccountPrefillSignal = () => void
 export async function setPendingSponsorAddAccountPrefill(
   prefill: AddAccountPrefill,
 ): Promise<void> {
-  const normalized = normalizeAddAccountPrefill(prefill)
+  const normalized = normalizeSponsorAddAccountPrefill(prefill)
   if (!normalized) return
 
   try {
@@ -83,7 +87,7 @@ export function watchPendingSponsorAddAccountPrefill(
 export function isSponsorAddAccountPrefill(
   value: unknown,
 ): value is AddAccountPrefill {
-  return normalizeAddAccountPrefill(value) !== null
+  return normalizeSponsorAddAccountPrefill(value) !== null
 }
 
 /**
@@ -100,13 +104,15 @@ function normalizePendingEnvelope(value: unknown): AddAccountPrefill | null {
     return null
   }
 
-  return normalizeAddAccountPrefill(value.prefill)
+  return normalizeSponsorAddAccountPrefill(value.prefill)
 }
 
 /**
  * Validates the sponsor prefill payload before it is written into an envelope.
  */
-function normalizeAddAccountPrefill(value: unknown): AddAccountPrefill | null {
+export function normalizeSponsorAddAccountPrefill(
+  value: unknown,
+): AddAccountPrefill | null {
   const envelopePrefill = normalizePendingEnvelope(value)
   if (envelopePrefill) return envelopePrefill
 
@@ -115,10 +121,8 @@ function normalizeAddAccountPrefill(value: unknown): AddAccountPrefill | null {
   if (typeof value.sponsorId !== "string" || !value.sponsorId.trim()) {
     return null
   }
-  if (
-    !isAccountSiteType(value.siteType) ||
-    value.siteType === SITE_TYPES.UNKNOWN
-  ) {
+  const siteType = value.siteType
+  if (!isAccountSiteType(siteType) || siteType === SITE_TYPES.UNKNOWN) {
     return null
   }
   if (typeof value.siteUrl !== "string") return null
@@ -128,13 +132,19 @@ function normalizeAddAccountPrefill(value: unknown): AddAccountPrefill | null {
   try {
     const url = new URL(value.siteUrl)
     if (url.protocol !== "https:" && url.protocol !== "http:") return null
+    const siteUrl = normalizeAccountSiteProfileUrlForStorage({
+      siteType,
+      url: value.siteUrl,
+    })
 
     return {
       source: SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE,
       sponsorId: value.sponsorId.trim(),
-      siteType: value.siteType,
-      siteUrl: value.siteUrl.trim(),
-      ...(normalizedAuthType ? { authType: normalizedAuthType } : {}),
+      siteType,
+      siteUrl,
+      authType:
+        normalizedAuthType ??
+        resolveAccountSiteDefaultAuthType({ siteType, url: siteUrl }),
     }
   } catch {
     return null

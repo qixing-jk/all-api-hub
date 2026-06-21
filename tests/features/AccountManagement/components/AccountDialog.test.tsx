@@ -642,7 +642,7 @@ describe("AccountDialog", () => {
     )
   })
 
-  it("does not infer auth when continuing a sponsor without explicit auth", async () => {
+  it("applies profile default auth when continuing a sponsor without explicit auth", async () => {
     const user = userEvent.setup()
     vi.stubGlobal("open", vi.fn())
     mockSponsorRecommendationItems[0] = {
@@ -650,7 +650,7 @@ describe("AccountDialog", () => {
       actions: {
         addAccount: {
           siteType: SITE_TYPES.ANYROUTER,
-          siteUrl: "https://anyrouter.example.com",
+          siteUrl: "https://anyrouter.top",
         },
       },
     }
@@ -674,11 +674,11 @@ describe("AccountDialog", () => {
     )
 
     expect(mockHandlers.handleUrlChange).toHaveBeenCalledWith(
-      "https://anyrouter.example.com",
+      "https://anyrouter.top",
       { applyAuthDefault: false },
     )
     expect(mockSetters.setSiteType).toHaveBeenCalledWith(SITE_TYPES.ANYROUTER)
-    expect(mockSetters.setAuthType).not.toHaveBeenCalled()
+    expect(mockSetters.setAuthType).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
   })
 
   it("shows the selected sponsor post-click note below the site URL helpers", async () => {

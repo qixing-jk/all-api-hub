@@ -249,7 +249,7 @@ describe("useAccountDialog duplicate account warning", () => {
         account_info: {
           ...defaultAccountInfo,
           id: "11",
-          username: "aihubmix-user",
+          username: "AIHubMix User",
         },
       }),
     )
@@ -288,7 +288,7 @@ describe("useAccountDialog duplicate account warning", () => {
         account_info: {
           ...defaultAccountInfo,
           id: "11",
-          username: "aihubmix-user",
+          username: "AIHubMix User",
         },
       }),
     )
@@ -309,7 +309,7 @@ describe("useAccountDialog duplicate account warning", () => {
         isOpen: true,
         siteUrl: "https://console.aihubmix.com",
         existingUserId: "11",
-        existingUsername: "aihubmix-user",
+        existingUsername: "AIHubMix User",
       })
     })
   })

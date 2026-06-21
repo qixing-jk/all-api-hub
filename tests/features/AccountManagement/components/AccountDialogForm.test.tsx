@@ -6,6 +6,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import AccountForm from "~/features/AccountManagement/components/AccountDialog/AccountForm"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
@@ -77,6 +78,7 @@ describe("AccountDialog AccountForm", () => {
       siteType: SITE_TYPES.UNKNOWN,
       checkIn: createCheckIn(),
     },
+    sitePolicy: getAccountDialogSitePolicy(SITE_TYPES.UNKNOWN),
     isDetected: false,
     isManualBalanceUsdInvalid: false,
     showAccessToken: false,
@@ -111,10 +113,19 @@ describe("AccountDialog AccountForm", () => {
     onCheckInChange: vi.fn(),
   })
 
+  const withSitePolicy = (
+    props: ComponentProps<typeof AccountForm>,
+  ): ComponentProps<typeof AccountForm> => ({
+    ...props,
+    sitePolicy: getAccountDialogSitePolicy(
+      props.draft.siteType ?? SITE_TYPES.UNKNOWN,
+    ),
+  })
+
   it("renders the desktop sections in the expected order and groups auth fields together", async () => {
     const props = createProps()
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     const sections = await screen.findAllByTestId(
       /^account-management-account-form-section-(site-info|auth|tags-notes|check-in|balance)$/,
@@ -165,7 +176,7 @@ describe("AccountDialog AccountForm", () => {
     const user = userEvent.setup()
     const props = createProps()
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     await user.click(
       await screen.findByTestId("account-management-auth-type-trigger"),
@@ -182,7 +193,7 @@ describe("AccountDialog AccountForm", () => {
   it("uses text input for manual account identities across account site types", async () => {
     const props = createProps()
 
-    const { rerender } = render(<AccountForm {...props} />)
+    const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
     const newApiUserIdInput = await screen.findByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput,
@@ -197,7 +208,7 @@ describe("AccountDialog AccountForm", () => {
     props.draft.siteType = SITE_TYPES.AIHUBMIX
     props.draft.userId = "aihubmix-user"
 
-    rerender(<AccountForm {...props} />)
+    rerender(<AccountForm {...withSitePolicy(props)} />)
 
     const userIdInput = screen.getByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput,
@@ -214,7 +225,7 @@ describe("AccountDialog AccountForm", () => {
     const user = userEvent.setup()
     const props = createProps()
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     await user.click(
       await screen.findByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger),
@@ -242,7 +253,7 @@ describe("AccountDialog AccountForm", () => {
     const props = createProps()
     props.isDetected = true
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     const authTypeTrigger = await screen.findByTestId(
       "account-management-auth-type-trigger",
@@ -264,7 +275,7 @@ describe("AccountDialog AccountForm", () => {
     const user = userEvent.setup()
     const props = createProps()
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     const siteInfoSection = await screen.findByTestId(
       "account-management-account-form-section-site-info",
@@ -326,7 +337,7 @@ describe("AccountDialog AccountForm", () => {
     props.draft.manualBalanceUsd = "-1"
     props.isManualBalanceUsdInvalid = true
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     const accessTokenInput = await screen.findByDisplayValue("secret-token")
     expect(accessTokenInput).toHaveAttribute("type", "password")
@@ -409,7 +420,7 @@ describe("AccountDialog AccountForm", () => {
     const props = createProps()
     props.showAccessToken = true
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(await screen.findByDisplayValue("secret-token")).toHaveAttribute(
       "type",
@@ -425,7 +436,7 @@ describe("AccountDialog AccountForm", () => {
     props.isImportingCookies = true
     props.showCookiePermissionWarning = true
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByText(
@@ -457,7 +468,7 @@ describe("AccountDialog AccountForm", () => {
     const props = createProps()
     props.draft.authType = AuthTypeEnum.Cookie
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByRole("button", {
@@ -477,7 +488,7 @@ describe("AccountDialog AccountForm", () => {
     props.draft.authType = AuthTypeEnum.Cookie
     props.cookieAuthPermissionsGranted = false
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByTestId(
@@ -514,7 +525,7 @@ describe("AccountDialog AccountForm", () => {
     props.draft.sub2apiTokenExpiresAt = 1700000000000
     props.isImportingSub2apiSession = true
 
-    render(<AccountForm {...props} />)
+    render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByText(
@@ -570,7 +581,7 @@ describe("AccountDialog AccountForm", () => {
     const props = createProps()
     const onCheckInChange = vi.mocked(props.onCheckInChange)
 
-    const { rerender } = render(<AccountForm {...props} />)
+    const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
     await user.click(
       await screen.findByRole("switch", {
@@ -590,7 +601,7 @@ describe("AccountDialog AccountForm", () => {
     })
     props.draft.checkIn = explicitFalseCheckIn
 
-    rerender(<AccountForm {...props} />)
+    rerender(<AccountForm {...withSitePolicy(props)} />)
 
     await user.click(
       screen.getByRole("switch", {
@@ -626,7 +637,7 @@ describe("AccountDialog AccountForm", () => {
     })
     props.draft.checkIn = nextCheckIn
 
-    rerender(<AccountForm {...props} />)
+    rerender(<AccountForm {...withSitePolicy(props)} />)
 
     await user.click(
       screen.getByRole("switch", {
@@ -672,7 +683,7 @@ describe("AccountDialog AccountForm", () => {
     })
     props.draft.checkIn = missingRedeemToggleCheckIn
 
-    rerender(<AccountForm {...props} />)
+    rerender(<AccountForm {...withSitePolicy(props)} />)
 
     await user.click(
       screen.getByRole("switch", {

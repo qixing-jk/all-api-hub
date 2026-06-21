@@ -18,9 +18,12 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import {
+  doAccountSiteIdentitiesMatch,
+  resolveAccountSiteContentSessionHintForOrigin,
+} from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { isSameAccountSiteOrigin } from "~/services/accounts/utils/siteUrlNormalization"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
@@ -372,6 +375,7 @@ export const AccountDataProvider = ({
     tabId: number
     url: string
     userId: string | null
+    user: Record<string, unknown> | null
     attemptedAt: number
   } | null>(null)
 
@@ -434,9 +438,10 @@ export const AccountDataProvider = ({
         )
       })
       const siteTypeForUserRead =
-        originAccounts.find(
-          (account) => account.site_type !== SITE_TYPES.UNKNOWN,
-        )?.site_type ?? originAccounts[0]?.site_type
+        resolveAccountSiteContentSessionHintForOrigin({
+          origin: parsedUrl.origin,
+          candidateAccounts: originAccounts,
+        }) ?? originAccounts[0]?.site_type
 
       if (seq !== currentTabCheckSeqRef.current) return
       setDetectedSiteAccounts(originAccounts)
@@ -467,6 +472,12 @@ export const AccountDataProvider = ({
         cacheMatches && cached ? cached.userId : null
 
       let verifiedUserId: string | null = cachedUserId
+      let verifiedUser: Record<string, unknown> | null =
+        cacheMatches && cached?.user
+          ? cached.user
+          : cachedUserId
+            ? { id: cachedUserId, username: cachedUserId }
+            : null
 
       const shouldAttemptReadUserId =
         verifiedUserId === null &&
@@ -485,6 +496,7 @@ export const AccountDataProvider = ({
           tabId,
           url: tabUrl,
           userId: null,
+          user: null,
           attemptedAt: now,
         }
 
@@ -499,13 +511,26 @@ export const AccountDataProvider = ({
           const userIdRaw = userResponse?.success
             ? userResponse?.data?.userId
             : null
+          const userRaw =
+            userResponse?.success &&
+            userResponse?.data?.user &&
+            typeof userResponse.data.user === "object" &&
+            !Array.isArray(userResponse.data.user)
+              ? (userResponse.data.user as Record<string, unknown>)
+              : null
           verifiedUserId = normalizeAccountIdentity(userIdRaw)
+          verifiedUser =
+            userRaw ??
+            (verifiedUserId
+              ? { id: verifiedUserId, username: verifiedUserId }
+              : null)
 
-          // Cache the verified user ID by tab+url to prevent duplicate reads.
+          // Cache verified user identity data by tab+url to prevent duplicate reads.
           currentTabUserCacheRef.current = {
             tabId,
             url: tabUrl,
             userId: verifiedUserId,
+            user: verifiedUser,
             attemptedAt: now,
           }
         } catch (error) {
@@ -515,10 +540,12 @@ export const AccountDataProvider = ({
             error,
           })
           verifiedUserId = null
+          verifiedUser = null
           currentTabUserCacheRef.current = {
             tabId,
             url: tabUrl,
             userId: null,
+            user: null,
             attemptedAt: now,
           }
         }
@@ -534,10 +561,12 @@ export const AccountDataProvider = ({
 
       // If we can verify userId, match it to a specific stored account for this origin.
       const matchedAccount =
-        originAccounts.find(
-          (account) =>
-            normalizeAccountIdentity(account.account_info.id) ===
-            verifiedUserId,
+        originAccounts.find((account) =>
+          doAccountSiteIdentitiesMatch({
+            siteType: account.site_type,
+            savedUser: account.account_info,
+            currentUser: verifiedUser,
+          }),
         ) ?? null
 
       setDetectedAccount(matchedAccount)

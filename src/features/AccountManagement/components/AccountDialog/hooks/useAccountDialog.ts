@@ -21,9 +21,9 @@ import {
   shouldOpenSub2ApiTokenDialogForAccountDialogSite,
   type AccountDialogSitePolicy,
 } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
+import { normalizeSponsorAddAccountPrefill } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import {
   isAccountAuthType,
-  normalizeOptionalAccountAuthType,
   resolveDefaultAccountAuthType,
 } from "~/features/AccountManagement/utils/accountAuthType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
@@ -44,6 +44,7 @@ import {
   selectSingleNewApiTokenByIdDiff,
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
+import { doAccountSiteIdentitiesMatch } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   createDisplayAccountApiContext,
@@ -592,6 +593,9 @@ export function useAccountDialog({
       siteType,
     })
     const currentUserId = normalizeAccountIdentity(userId)
+    const currentUserRecord = currentUserId
+      ? { id: currentUserId, username: currentUserId }
+      : null
 
     if (!baseUrl) {
       return true
@@ -625,7 +629,6 @@ export function useAccountDialog({
         },
         {
           url: baseUrl,
-          siteType,
         },
       )
     })
@@ -634,15 +637,24 @@ export function useAccountDialog({
       return true
     }
 
+    const warningSiteUrl =
+      normalizeSiteUrlForDuplicateCheck({
+        value: existingSiteAccounts[0].site_url,
+        siteType: existingSiteAccounts[0].site_type,
+      }) || normalizedBaseUrl
+
     const exactMatch = currentUserId
-      ? existingSiteAccounts.find(
-          (acc) =>
-            normalizeAccountIdentity(acc.account_info.id) === currentUserId,
+      ? existingSiteAccounts.find((acc) =>
+          doAccountSiteIdentitiesMatch({
+            siteType: acc.site_type,
+            savedUser: acc.account_info,
+            currentUser: currentUserRecord,
+          }),
         )
       : undefined
 
     const shouldContinue = await requestDuplicateAccountAddConfirmation({
-      siteUrl: normalizedBaseUrl,
+      siteUrl: warningSiteUrl,
       existingAccountsCount: existingSiteAccounts.length,
       ...(exactMatch
         ? {
@@ -861,19 +873,16 @@ export function useAccountDialog({
       currentTabSiteNameRef.current = ""
       duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
       hasConsumedAutoFillCurrentSiteUrlRef.current = Boolean(nextPrefill)
-      const normalizedPrefillAuthType = normalizeOptionalAccountAuthType(
-        nextPrefill?.authType,
-      )
       const nextSiteType = nextPrefill?.siteType ?? SITE_TYPES.UNKNOWN
       const policy = getAccountDialogSitePolicy(nextSiteType)
-      hasExplicitAuthTypeRef.current = Boolean(normalizedPrefillAuthType)
+      hasExplicitAuthTypeRef.current = Boolean(nextPrefill?.authType)
       setUrl(nextPrefill?.siteUrl ?? "")
       setDraft(
         normalizeAccountDialogDraftForSitePolicy({
           draft: {
             ...createEmptyAccountDialogDraft(),
             siteType: nextSiteType,
-            authType: normalizedPrefillAuthType || AuthTypeEnum.AccessToken,
+            authType: nextPrefill?.authType ?? AuthTypeEnum.AccessToken,
           },
           policy,
         }),
@@ -1043,7 +1052,9 @@ export function useAccountDialog({
   useEffect(() => {
     if (isOpen) {
       const nextPrefill =
-        mode === DIALOG_MODES.ADD ? normalizeSponsorPrefill(prefill) : null
+        mode === DIALOG_MODES.ADD
+          ? normalizeSponsorAddAccountPrefill(prefill)
+          : null
       resetForm(nextPrefill)
       if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
@@ -2686,32 +2697,6 @@ function normalizeSiteUrlForDuplicateCheck(params: {
       siteType: params.siteType,
     }) ?? params.value.trim().toLowerCase()
   )
-}
-
-/**
- * Normalizes sponsor-provided add-account metadata to the dialog's base URL contract.
- */
-function normalizeSponsorPrefill(
-  prefill: AddAccountPrefill | null | undefined,
-): AddAccountPrefill | null {
-  if (!prefill || prefill.source !== "sponsor") return null
-  if (!isAccountSiteType(prefill.siteType)) return null
-  const normalizedAuthType = normalizeOptionalAccountAuthType(prefill.authType)
-  if (normalizedAuthType === false) return null
-
-  try {
-    const url = new URL(prefill.siteUrl)
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null
-
-    return {
-      ...prefill,
-      siteUrl: `${url.protocol}//${url.host}`,
-      siteType: prefill.siteType,
-      ...(normalizedAuthType ? { authType: normalizedAuthType } : {}),
-    }
-  } catch {
-    return null
-  }
 }
 
 /**

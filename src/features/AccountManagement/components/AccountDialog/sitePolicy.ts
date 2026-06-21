@@ -1,5 +1,9 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import {
+  ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
+  getAccountSiteProductProfile,
+} from "~/services/accounts/accountSiteProfile"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 
 /**
@@ -15,34 +19,29 @@ export interface AccountDialogSitePolicy {
   deferSuccessForOneTimeKeyPostSaveFlow: boolean
 }
 
-const DEFAULT_ACCOUNT_DIALOG_SITE_POLICY: AccountDialogSitePolicy = {
+type AccountDialogWorkflowPolicy = Pick<
+  AccountDialogSitePolicy,
+  | "forceAccessTokenAuth"
+  | "openSub2ApiTokenDialogPostSave"
+  | "deferSuccessForOneTimeKeyPostSaveFlow"
+>
+
+const DEFAULT_ACCOUNT_DIALOG_WORKFLOW_POLICY: AccountDialogWorkflowPolicy = {
   forceAccessTokenAuth: false,
-  allowCookieAuthSession: true,
-  allowCookieAutoImport: true,
-  allowBuiltInCheckInDetection: true,
-  allowSub2ApiRefreshTokenState: false,
   openSub2ApiTokenDialogPostSave: false,
   deferSuccessForOneTimeKeyPostSaveFlow: false,
 }
 
 const ACCOUNT_DIALOG_SITE_POLICIES: Partial<
-  Record<AccountSiteType, AccountDialogSitePolicy>
+  Record<AccountSiteType, AccountDialogWorkflowPolicy>
 > = {
   [SITE_TYPES.SUB2API]: {
     forceAccessTokenAuth: true,
-    allowCookieAuthSession: false,
-    allowCookieAutoImport: false,
-    allowBuiltInCheckInDetection: false,
-    allowSub2ApiRefreshTokenState: true,
     openSub2ApiTokenDialogPostSave: true,
     deferSuccessForOneTimeKeyPostSaveFlow: false,
   },
   [SITE_TYPES.AIHUBMIX]: {
     forceAccessTokenAuth: true,
-    allowCookieAuthSession: false,
-    allowCookieAutoImport: false,
-    allowBuiltInCheckInDetection: true,
-    allowSub2ApiRefreshTokenState: false,
     openSub2ApiTokenDialogPostSave: false,
     deferSuccessForOneTimeKeyPostSaveFlow: true,
   },
@@ -54,9 +53,20 @@ const ACCOUNT_DIALOG_SITE_POLICIES: Partial<
 export function getAccountDialogSitePolicy(
   siteType: AccountSiteType,
 ): AccountDialogSitePolicy {
+  const productProfile = getAccountSiteProductProfile(siteType)
+  const workflowPolicy =
+    ACCOUNT_DIALOG_SITE_POLICIES[siteType] ??
+    DEFAULT_ACCOUNT_DIALOG_WORKFLOW_POLICY
+
   return {
-    ...(ACCOUNT_DIALOG_SITE_POLICIES[siteType] ??
-      DEFAULT_ACCOUNT_DIALOG_SITE_POLICY),
+    ...workflowPolicy,
+    allowCookieAuthSession: productProfile.auth.supportsCookieAuth,
+    allowCookieAutoImport: productProfile.auth.supportsCookieAuth,
+    allowBuiltInCheckInDetection:
+      productProfile.auth.supportsBuiltInCheckInDetection,
+    allowSub2ApiRefreshTokenState:
+      productProfile.supplementalAuth.kind ===
+      ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
   }
 }
 

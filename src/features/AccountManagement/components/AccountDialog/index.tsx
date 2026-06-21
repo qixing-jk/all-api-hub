@@ -8,6 +8,7 @@ import { AIHUBMIX_API_ORIGIN } from "~/constants/siteType"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
+import { normalizeSponsorAddAccountPrefill } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import { SponsorRecommendationsSection } from "~/features/AccountManagement/sponsors/SponsorRecommendationsSection"
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
 import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
@@ -38,6 +39,7 @@ import InfoPanel from "./InfoPanel"
 import { ManagedSiteConfigPromptDialog } from "./ManagedSiteConfigPromptDialog"
 import { ACCOUNT_DIALOG_PHASES } from "./models"
 import SiteInfoInput from "./SiteInfoInput"
+import { getAccountDialogSitePolicy } from "./sitePolicy"
 
 const logger = createLogger("AccountDialog")
 
@@ -142,6 +144,7 @@ export default function AccountDialog({
     isRequestingCookieAuthPermissions: state.isRequestingCookieAuthPermissions,
     onRequestCookieAuthPermissions: handlers.handleRequestCookieAuthPermissions,
   }
+  const currentSitePolicy = getAccountDialogSitePolicy(state.siteType)
   const siteInfoInputProps: ComponentProps<typeof SiteInfoInput> =
     showEntryAuthTypeSelector
       ? {
@@ -150,6 +153,7 @@ export default function AccountDialog({
           isDetected: state.isDetected,
           onClearUrl: handlers.handleClearUrl,
           siteType: state.siteType,
+          sitePolicy: currentSitePolicy,
           showAuthTypeSelector: true,
           authType: state.authType,
           onAuthTypeChange: setters.setAuthType,
@@ -162,6 +166,7 @@ export default function AccountDialog({
           isDetected: state.isDetected,
           onClearUrl: handlers.handleClearUrl,
           siteType: state.siteType,
+          sitePolicy: currentSitePolicy,
           ...cookieAuthPermissionProps,
           ...addModeSiteInfoProps,
         }
@@ -269,15 +274,19 @@ export default function AccountDialog({
                   surface={SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog}
                   items={sponsorRecommendations.items}
                   onContinueAddAccount={(nextPrefill) => {
-                    handlers.handleUrlChange(nextPrefill.siteUrl, {
+                    const normalizedPrefill =
+                      normalizeSponsorAddAccountPrefill(nextPrefill)
+                    if (!normalizedPrefill) return
+
+                    handlers.handleUrlChange(normalizedPrefill.siteUrl, {
                       applyAuthDefault: false,
                     })
-                    setters.setSiteType(nextPrefill.siteType)
-                    if (nextPrefill.authType) {
-                      setters.setAuthType(nextPrefill.authType)
+                    setters.setSiteType(normalizedPrefill.siteType)
+                    if (normalizedPrefill.authType) {
+                      setters.setAuthType(normalizedPrefill.authType)
                     }
                     const selectedSponsor = sponsorRecommendations.items.find(
-                      (item) => item.id === nextPrefill.sponsorId,
+                      (item) => item.id === normalizedPrefill.sponsorId,
                     )
                     setSelectedSponsorPostClickNote(
                       selectedSponsor?.postClickNote ?? null,
@@ -296,6 +305,7 @@ export default function AccountDialog({
             {state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
               <AccountForm
                 draft={state.draft}
+                sitePolicy={currentSitePolicy}
                 isDetected={state.isDetected}
                 isImportingSub2apiSession={state.isImportingSub2apiSession}
                 isManualBalanceUsdInvalid={state.isManualBalanceUsdInvalid}

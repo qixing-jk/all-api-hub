@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -80,6 +80,61 @@ describe("Account Dialog site policy", () => {
         url: "https://example.invalid",
       }),
     ).toBe(true)
+  })
+
+  it("derives shared auth and supplemental-auth facts from product profiles", async () => {
+    vi.resetModules()
+    const mockedGetAccountSiteProductProfile = vi.fn()
+    vi.doMock("~/services/accounts/accountSiteProfile", async () => {
+      const actual = await vi.importActual<
+        typeof import("~/services/accounts/accountSiteProfile")
+      >("~/services/accounts/accountSiteProfile")
+      mockedGetAccountSiteProductProfile.mockImplementation((siteType) => {
+        const profile = actual.getAccountSiteProductProfile(siteType)
+
+        return siteType === SITE_TYPES.AIHUBMIX
+          ? {
+              ...profile,
+              auth: {
+                ...profile.auth,
+                supportsCookieAuth: false,
+              },
+              supplementalAuth: {
+                ...profile.supplementalAuth,
+                kind: actual.ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
+              },
+            }
+          : profile
+      })
+
+      return {
+        ...actual,
+        getAccountSiteProductProfile: mockedGetAccountSiteProductProfile,
+      }
+    })
+
+    const { getAccountDialogSitePolicy: getIsolatedSitePolicy } = await import(
+      "~/features/AccountManagement/components/AccountDialog/sitePolicy"
+    )
+
+    const sub2apiPolicy = getIsolatedSitePolicy(SITE_TYPES.SUB2API)
+    expect(mockedGetAccountSiteProductProfile).toHaveBeenCalledWith(
+      SITE_TYPES.SUB2API,
+    )
+    expect(sub2apiPolicy.allowCookieAuthSession).toBe(false)
+    expect(sub2apiPolicy.allowBuiltInCheckInDetection).toBe(false)
+    expect(sub2apiPolicy.allowSub2ApiRefreshTokenState).toBe(true)
+
+    const aihubmixPolicy = getIsolatedSitePolicy(SITE_TYPES.AIHUBMIX)
+    expect(mockedGetAccountSiteProductProfile).toHaveBeenCalledWith(
+      SITE_TYPES.AIHUBMIX,
+    )
+    expect(aihubmixPolicy.allowCookieAuthSession).toBe(false)
+    expect(aihubmixPolicy.allowSub2ApiRefreshTokenState).toBe(false)
+    expect(aihubmixPolicy.deferSuccessForOneTimeKeyPostSaveFlow).toBe(true)
+
+    vi.doUnmock("~/services/accounts/accountSiteProfile")
+    vi.resetModules()
   })
 
   it("preserves draft identity when site policy normalization is a no-op", () => {

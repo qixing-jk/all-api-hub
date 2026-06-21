@@ -31,14 +31,24 @@ import {
   type CookieAuthPermissionRecommendationProps,
 } from "~/features/AccountManagement/components/AccountDialog/CookieAuthPermissionRecommendation"
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import type { AccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { isValidExchangeRate } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
+type AccountFormPresentationSitePolicy = Pick<
+  AccountDialogSitePolicy,
+  | "forceAccessTokenAuth"
+  | "allowCookieAuthSession"
+  | "allowBuiltInCheckInDetection"
+  | "allowSub2ApiRefreshTokenState"
+>
+
 interface AccountFormProps {
   draft: AccountDialogDraft
+  sitePolicy: AccountFormPresentationSitePolicy
   isDetected: boolean
   isManualBalanceUsdInvalid: boolean
   showAccessToken: boolean
@@ -80,6 +90,7 @@ interface AccountFormProps {
  */
 export default function AccountForm({
   draft,
+  sitePolicy,
   isDetected,
   isManualBalanceUsdInvalid,
   showAccessToken,
@@ -135,7 +146,10 @@ export default function AccountForm({
     checkIn,
     siteType,
   } = draft
-  const isSub2Api = siteType === SITE_TYPES.SUB2API
+  const isAuthTypeLocked = sitePolicy.forceAccessTokenAuth
+  const canUseCookieAuth = sitePolicy.allowCookieAuthSession
+  const canUseBuiltInCheckInDetection = sitePolicy.allowBuiltInCheckInDetection
+  const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
 
   return (
     <div className="space-y-3">
@@ -192,7 +206,7 @@ export default function AccountForm({
         <FormField
           label={t("siteInfo.authMethod")}
           description={
-            isSub2Api
+            isAuthTypeLocked
               ? t("siteInfo.sub2apiAuthOnly")
               : t("siteInfo.cookieWarning")
           }
@@ -200,7 +214,7 @@ export default function AccountForm({
           <Select
             value={authType}
             onValueChange={(value) => onAuthTypeChange(value as AuthTypeEnum)}
-            disabled={isDetected || isSub2Api}
+            disabled={isDetected || isAuthTypeLocked}
           >
             <SelectTrigger
               className="w-full"
@@ -217,7 +231,7 @@ export default function AccountForm({
                   <span>{t("siteInfo.authType.accessToken")}</span>
                 </div>
               </SelectItem>
-              {!isSub2Api && (
+              {canUseCookieAuth && (
                 <SelectItem value={AuthTypeEnum.Cookie}>
                   <div className="flex items-center gap-2">
                     <Cookie className="h-4 w-4" />
@@ -276,7 +290,7 @@ export default function AccountForm({
           </FormField>
         )}
 
-        {isSub2Api && (
+        {canUseSub2ApiRefreshToken && (
           <div className="space-y-4">
             <div className="flex w-full items-center justify-between gap-4">
               <div className="flex-1">
@@ -472,7 +486,7 @@ export default function AccountForm({
             >
               {t("form.checkInStatus")}
             </label>
-            {isSub2Api && (
+            {!canUseBuiltInCheckInDetection && (
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {t("form.sub2apiCheckInUnsupported")}
               </p>
@@ -494,7 +508,7 @@ export default function AccountForm({
               })
             }
             id="supports-check-in"
-            disabled={isSub2Api}
+            disabled={!canUseBuiltInCheckInDetection}
             className={`${
               checkIn.enableDetection ? "bg-green-600" : "bg-gray-200"
             } focus:ring-green-500`}

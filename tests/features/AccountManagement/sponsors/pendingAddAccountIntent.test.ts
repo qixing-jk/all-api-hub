@@ -104,7 +104,7 @@ describe("pending sponsor add-account intent", () => {
     ).resolves.toBeUndefined()
   })
 
-  it("stores and consumes blank auth type as an omitted sponsor prefill auth type", async () => {
+  it("stores and consumes blank auth type as the profile default auth type", async () => {
     await setPendingSponsorAddAccountPrefill({
       source: "sponsor",
       sponsorId: "supported-provider",
@@ -119,6 +119,26 @@ describe("pending sponsor add-account intent", () => {
         sponsorId: "supported-provider",
         siteType: SITE_TYPES.NEW_API,
         siteUrl: "https://supported.example.test",
+        authType: AuthTypeEnum.AccessToken,
+      },
+    )
+  })
+
+  it("fills omitted sponsor prefill auth type from profile defaults", async () => {
+    await setPendingSponsorAddAccountPrefill({
+      source: "sponsor",
+      sponsorId: "supported-provider",
+      siteType: SITE_TYPES.ANYROUTER,
+      siteUrl: "https://anyrouter.top",
+    })
+
+    await expect(getAndClearPendingSponsorAddAccountPrefill()).resolves.toEqual(
+      {
+        source: "sponsor",
+        sponsorId: "supported-provider",
+        siteType: SITE_TYPES.ANYROUTER,
+        siteUrl: "https://anyrouter.top",
+        authType: AuthTypeEnum.Cookie,
       },
     )
   })

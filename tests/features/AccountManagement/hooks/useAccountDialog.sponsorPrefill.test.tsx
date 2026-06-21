@@ -225,6 +225,30 @@ describe("useAccountDialog sponsor prefill", () => {
     })
   })
 
+  it("fills omitted sponsor prefill auth type from profile defaults", async () => {
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      prefill: {
+        siteUrl: "https://anyrouter.top",
+        siteType: SITE_TYPES.ANYROUTER,
+        source: "sponsor",
+        sponsorId: "anyrouter",
+      },
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://anyrouter.top")
+      expect(result.current.state.siteType).toBe(SITE_TYPES.ANYROUTER)
+      expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
+      expect(result.current.state.formSource).toBe(
+        ACCOUNT_DIALOG_FORM_SOURCES.SPONSOR,
+      )
+    })
+  })
+
   it("ignores blank auth updates after a sponsor prefill selected cookie auth", async () => {
     const { result } = renderAccountDialogHook({
       mode: DIALOG_MODES.ADD,

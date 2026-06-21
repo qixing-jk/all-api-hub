@@ -9,14 +9,24 @@ import {
   useAccountDataContext,
 } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { getActiveTabs } from "~/utils/browser/browserApi"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 let activeTabs: any[] = []
-let tabUpdatedListener: any = null
+let tabUpdatedListeners: any[] = []
 
 type MockIndexedAccountSearchEntry = {
   __indexed: true
   account: any
+}
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+
+  return { promise, resolve }
 }
 
 const {
@@ -98,9 +108,11 @@ vi.mock("~/utils/browser/browserApi", () => ({
   onTabActivated: vi.fn(() => () => {}),
   onTabRemoved: vi.fn(() => () => {}),
   onTabUpdated: vi.fn((listener: any) => {
-    tabUpdatedListener = listener
+    tabUpdatedListeners.push(listener)
     return () => {
-      tabUpdatedListener = null
+      tabUpdatedListeners = tabUpdatedListeners.filter(
+        (currentListener) => currentListener !== listener,
+      )
     }
   }),
   sendTabMessage: vi.fn(
@@ -176,7 +188,7 @@ describe("AccountDataContext current tab detection", () => {
   afterEach(() => {
     vi.restoreAllMocks()
     activeTabs = []
-    tabUpdatedListener = null
+    tabUpdatedListeners = []
   })
 
   it("distinguishes site-level match vs user-level match by re-verifying website userId", async () => {
@@ -243,6 +255,7 @@ describe("AccountDataContext current tab detection", () => {
       userId: "aihubmix-user",
       siteType: SITE_TYPES.AIHUBMIX,
     })
+    aihubmixAccount.account_info.username = "AIHubMix User"
 
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
@@ -347,20 +360,21 @@ describe("AccountDataContext current tab detection", () => {
   })
 
   it("prefers a known same-origin site type for current-tab user verification", async () => {
-    activeTabs = [{ id: 103, url: "https://foo.example.com/dashboard" }]
+    activeTabs = [{ id: 103, url: "https://aihubmix.com/statistics" }]
 
     const legacyUnknownAccount = createAccount({
       id: "acc-legacy",
-      baseUrl: "https://foo.example.com",
+      baseUrl: "https://console.aihubmix.com",
       userId: "legacy-user",
       siteType: SITE_TYPES.UNKNOWN,
     })
     const aihubmixAccount = createAccount({
       id: "acc-aihubmix",
-      baseUrl: "https://foo.example.com",
+      baseUrl: "https://console.aihubmix.com",
       userId: "aihubmix-user",
       siteType: SITE_TYPES.AIHUBMIX,
     })
+    aihubmixAccount.account_info.username = "AIHubMix User"
 
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
@@ -407,6 +421,74 @@ describe("AccountDataContext current tab detection", () => {
 
     expect(sendMessageSpy).toHaveBeenCalledWith(
       103,
+      expect.objectContaining({
+        siteType: SITE_TYPES.AIHUBMIX,
+      }),
+    )
+  })
+
+  it("prefers AIHubMix profile host aliases over same-origin account order for user verification", async () => {
+    activeTabs = [{ id: 105, url: "https://console.aihubmix.com/dashboard" }]
+
+    const newApiAccount = createAccount({
+      id: "acc-new-api",
+      baseUrl: "https://console.aihubmix.com",
+      userId: "new-api-user",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    const aihubmixAccount = createAccount({
+      id: "acc-aihubmix",
+      baseUrl: "https://console.aihubmix.com",
+      userId: "aihubmix-stable-id",
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    aihubmixAccount.account_info.username = "AIHubMix User"
+
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([newApiAccount, aihubmixAccount])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue([])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue({
+      total_quota: 0,
+      today_total_consumption: 0,
+      today_total_requests: 0,
+      today_total_prompt_tokens: 0,
+      today_total_completion_tokens: 0,
+      today_total_income: 0,
+    })
+    mockConvertToDisplayData.mockReturnValue([
+      { id: "acc-new-api" },
+      { id: "acc-aihubmix" },
+    ])
+
+    const sendMessageSpy = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockResolvedValue({
+        success: true,
+        data: {
+          userId: "aihubmix-stable-id",
+          user: { username: "aihubmix-stable-id" },
+        },
+      } as any)
+
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => {
+      expect(latestCtx?.detectedAccount?.id).toBe("acc-aihubmix")
+    })
+
+    expect(sendMessageSpy).toHaveBeenCalledWith(
+      105,
       expect.objectContaining({
         siteType: SITE_TYPES.AIHUBMIX,
       }),
@@ -518,13 +600,109 @@ describe("AccountDataContext current tab detection", () => {
     sendMessageSpy.mockClear()
 
     await act(async () => {
-      await tabUpdatedListener?.(303, {}, {})
-      await tabUpdatedListener?.(303, {}, {})
+      for (const listener of tabUpdatedListeners) {
+        await listener(303, {}, {})
+        await listener(303, {}, {})
+      }
     })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     // Cached userId (keyed by tabId+url) prevents duplicate reads.
+    expect(sendMessageSpy).not.toHaveBeenCalled()
+  })
+
+  it("keeps AIHubMix username identity match when reusing current-tab user cache", async () => {
+    activeTabs = [{ id: 404, url: "https://aihubmix.com/statistics" }]
+
+    const aihubmixAccount = createAccount({
+      id: "acc-aihubmix",
+      baseUrl: "https://console.aihubmix.com",
+      userId: "aihubmix-user",
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    aihubmixAccount.account_info.username = "AIHubMix User"
+
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([aihubmixAccount])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue([])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue({
+      total_quota: 0,
+      today_total_consumption: 0,
+      today_total_requests: 0,
+      today_total_prompt_tokens: 0,
+      today_total_completion_tokens: 0,
+      today_total_income: 0,
+    })
+    mockConvertToDisplayData.mockReturnValue([{ id: "acc-aihubmix" }])
+
+    const firstUserResponse = createDeferred<any>()
+    const sendMessageSpy = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockReturnValue(firstUserResponse.promise as any)
+
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => {
+      expect(sendMessageSpy).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      firstUserResponse.resolve({
+        success: true,
+        data: {
+          userId: "aihubmix-user",
+          user: {
+            id: "numeric-aihubmix-id",
+            username: "aihubmix-user",
+          },
+        },
+      })
+      await firstUserResponse.promise
+    })
+
+    await waitFor(() => {
+      expect(latestCtx?.detectedAccount?.id).toBe("acc-aihubmix")
+    })
+
+    sendMessageSpy.mockClear()
+    const updateListenerActiveTabs = Promise.resolve(activeTabs)
+    const cacheReuseActiveTabs = createDeferred<any[]>()
+    vi.mocked(getActiveTabs)
+      .mockReturnValueOnce(updateListenerActiveTabs)
+      .mockReturnValueOnce(cacheReuseActiveTabs.promise)
+
+    act(() => {
+      for (const listener of tabUpdatedListeners) {
+        void listener(404, {}, {})
+      }
+    })
+
+    await waitFor(() => {
+      expect(getActiveTabs).toHaveBeenCalledTimes(3)
+      expect(latestCtx?.isDetecting).toBe(true)
+    })
+
+    await act(async () => {
+      cacheReuseActiveTabs.resolve(activeTabs)
+      await cacheReuseActiveTabs.promise
+    })
+
+    await waitFor(() => {
+      expect(latestCtx?.isDetecting).toBe(false)
+      expect(latestCtx?.detectedAccount?.id).toBe("acc-aihubmix")
+    })
     expect(sendMessageSpy).not.toHaveBeenCalled()
   })
 })

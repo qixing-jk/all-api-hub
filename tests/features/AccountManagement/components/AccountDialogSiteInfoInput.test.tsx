@@ -2,8 +2,9 @@ import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import SiteInfoInput from "~/features/AccountManagement/components/AccountDialog/SiteInfoInput"
+import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum } from "~/types"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
@@ -19,7 +20,8 @@ describe("AccountDialog SiteInfoInput", () => {
     onUrlChange: vi.fn(),
     isDetected: false,
     onClearUrl: vi.fn(),
-    siteType: "new-api",
+    siteType: SITE_TYPES.NEW_API,
+    sitePolicy: getAccountDialogSitePolicy(SITE_TYPES.NEW_API),
     authType: AuthTypeEnum.AccessToken,
     onAuthTypeChange: vi.fn(),
     onRequestCookieAuthPermissions: vi.fn(),
@@ -31,11 +33,20 @@ describe("AccountDialog SiteInfoInput", () => {
     onEditAccount: vi.fn(),
   })
 
+  const withSitePolicy = <T extends ComponentProps<typeof SiteInfoInput>>(
+    props: T,
+  ): T => ({
+    ...props,
+    sitePolicy: getAccountDialogSitePolicy(
+      (props.siteType as AccountSiteType | undefined) ?? SITE_TYPES.UNKNOWN,
+    ),
+  })
+
   it("propagates URL edits, clears the field, and reuses the current tab URL", async () => {
     const user = userEvent.setup()
     const props = createAddModeProps()
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     const urlInput = await screen.findByLabelText(
       "accountDialog:siteInfo.siteUrl",
@@ -68,7 +79,7 @@ describe("AccountDialog SiteInfoInput", () => {
     const user = userEvent.setup()
     const props = createAddModeProps()
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByLabelText("accountDialog:siteInfo.authMethod"),
@@ -92,7 +103,7 @@ describe("AccountDialog SiteInfoInput", () => {
     props.authType = AuthTypeEnum.Cookie
     props.cookieAuthPermissionsGranted = false
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByText(
@@ -115,7 +126,7 @@ describe("AccountDialog SiteInfoInput", () => {
     props.authType = AuthTypeEnum.Cookie
     props.cookieAuthPermissionsGranted = false
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByText("accountDialog:siteInfo.sub2apiHint"),
@@ -130,7 +141,7 @@ describe("AccountDialog SiteInfoInput", () => {
   it("stacks auth above the URL before switching to a wide two-column layout", async () => {
     const props = createAddModeProps()
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     const urlInput = await screen.findByLabelText(
       "accountDialog:siteInfo.siteUrl",
@@ -172,7 +183,7 @@ describe("AccountDialog SiteInfoInput", () => {
     props.currentTabUrl = null
     props.isCurrentSiteAdded = true
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByText("accountDialog:siteInfo.alreadyAdded"),
@@ -197,7 +208,7 @@ describe("AccountDialog SiteInfoInput", () => {
     props.isDetected = true
     props.siteType = SITE_TYPES.SUB2API
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByText("accountDialog:siteInfo.sub2apiHint"),
@@ -222,7 +233,7 @@ describe("AccountDialog SiteInfoInput", () => {
     const props = createAddModeProps()
     props.siteType = SITE_TYPES.SUB2API
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByText("accountDialog:siteInfo.sub2apiHint"),
@@ -245,7 +256,7 @@ describe("AccountDialog SiteInfoInput", () => {
     props.isCurrentSiteAdded = true
     props.detectedAccount = detectedAccount
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByText(
@@ -269,6 +280,7 @@ describe("AccountDialog SiteInfoInput", () => {
       isDetected: false,
       onClearUrl: vi.fn(),
       siteType: "new-api",
+      sitePolicy: getAccountDialogSitePolicy(SITE_TYPES.NEW_API),
       currentTabUrl: "https://current.example.com",
       isCurrentSiteAdded: false,
       detectedAccount: null,
@@ -276,7 +288,7 @@ describe("AccountDialog SiteInfoInput", () => {
       onEditAccount: vi.fn(),
     }
 
-    render(<SiteInfoInput {...props} />)
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     const urlInput = await screen.findByLabelText(
       "accountDialog:siteInfo.siteUrl",

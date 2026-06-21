@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -20,12 +21,16 @@ const createDeferred = <T,>() => {
 const {
   mockGetSiteName,
   mockGetActiveTabs,
+  mockGetAllAccountsOrThrow,
+  mockValidateAndSaveAccount,
   onTabActivatedMock,
   onTabUpdatedMock,
   mockUserPreferencesContext,
 } = vi.hoisted(() => ({
   mockGetSiteName: vi.fn(),
   mockGetActiveTabs: vi.fn(),
+  mockGetAllAccountsOrThrow: vi.fn(),
+  mockValidateAndSaveAccount: vi.fn(),
   onTabActivatedMock: vi.fn(),
   onTabUpdatedMock: vi.fn(),
   mockUserPreferencesContext: {
@@ -63,8 +68,16 @@ vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
   return {
     ...actual,
     getSiteName: mockGetSiteName,
+    validateAndSaveAccount: mockValidateAndSaveAccount,
   }
 })
+
+vi.mock("~/services/accounts/accountStorage", () => ({
+  accountStorage: {
+    getAllAccountsOrThrow: mockGetAllAccountsOrThrow,
+    refreshAccount: vi.fn(),
+  },
+}))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
@@ -129,6 +142,11 @@ describe("useAccountDialog current tab detection", () => {
     })
     onTabActivatedMock.mockImplementation(() => () => {})
     onTabUpdatedMock.mockImplementation(() => () => {})
+    mockGetAllAccountsOrThrow.mockResolvedValue([])
+    mockValidateAndSaveAccount.mockResolvedValue({
+      success: true,
+      accountId: "saved-account",
+    })
   })
 
   it("loads the current tab url and derived site name for add mode", async () => {
@@ -607,6 +625,52 @@ describe("useAccountDialog current tab detection", () => {
 
     expect(result.current.state.url).toBe("https://anyrouter.top")
     expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
+  })
+
+  it("warns about duplicate AIHubMix accounts matched by stable identity", async () => {
+    mockGetAllAccountsOrThrow.mockResolvedValue([
+      {
+        id: "existing-aihubmix",
+        site_url: "https://console.aihubmix.com",
+        site_type: SITE_TYPES.AIHUBMIX,
+        account_info: {
+          id: "aihubmix-user",
+          username: "AIHubMix User",
+          access_token: "token",
+        },
+      },
+    ])
+
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+      result.current.setters.setUrl("https://aihubmix.com/statistics")
+      result.current.setters.setUserId("aihubmix-user")
+    })
+
+    act(() => {
+      void result.current.handlers.handleShowManualForm()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.duplicateAccountWarning).toMatchObject({
+        isOpen: true,
+        existingUserId: "aihubmix-user",
+        existingUsername: "AIHubMix User",
+      })
+    })
+
+    expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
   })
 
   it("prefills the add-account url from the current tab when the setting is enabled", async () => {

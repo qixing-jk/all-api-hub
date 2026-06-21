@@ -18,13 +18,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { SITE_TYPES } from "~/constants/siteType"
 import {
   CookieAuthPermissionRecommendation,
   type CookieAuthPermissionRecommendationProps,
 } from "~/features/AccountManagement/components/AccountDialog/CookieAuthPermissionRecommendation"
+import type { AccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
+
+type SiteInfoInputPresentationSitePolicy = Pick<
+  AccountDialogSitePolicy,
+  | "forceAccessTokenAuth"
+  | "allowCookieAuthSession"
+  | "allowBuiltInCheckInDetection"
+  | "allowSub2ApiRefreshTokenState"
+>
 
 interface SiteInfoInputBaseProps {
   url: string
@@ -32,6 +40,7 @@ interface SiteInfoInputBaseProps {
   isDetected: boolean
   onClearUrl: () => void
   siteType?: string
+  sitePolicy: SiteInfoInputPresentationSitePolicy
   // Props for "add" mode
   currentTabUrl?: string | null
   isCurrentSiteAdded?: boolean
@@ -80,7 +89,6 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
     onUrlChange,
     isDetected,
     onClearUrl,
-    siteType,
     currentTabUrl,
     isCurrentSiteAdded,
     detectedAccount,
@@ -88,10 +96,13 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
     onEditAccount,
   } = props
   const { t } = useTranslation(["accountDialog", "common"])
-  const isSub2Api = siteType === SITE_TYPES.SUB2API
+  const isAuthTypeLocked = props.sitePolicy.forceAccessTokenAuth
+  const canUseCookieAuth = props.sitePolicy.allowCookieAuthSession
+  const canUseSub2ApiRefreshToken =
+    props.sitePolicy.allowSub2ApiRefreshTokenState
   const shouldShowCookiePermissionRecommendation =
     !isDetected &&
-    !isSub2Api &&
+    canUseCookieAuth &&
     props.showAuthTypeSelector === true &&
     props.authType === AuthTypeEnum.Cookie
 
@@ -122,7 +133,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               <Tooltip
                 wrapperClassName="w-full [@container(min-width:28rem)]:w-auto"
                 content={
-                  isSub2Api
+                  isAuthTypeLocked
                     ? t("siteInfo.sub2apiAuthOnly")
                     : t("siteInfo.cookieWarning")
                 }
@@ -132,7 +143,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                   onValueChange={(value) =>
                     props.onAuthTypeChange(value as AuthTypeEnum)
                   }
-                  disabled={isSub2Api}
+                  disabled={isAuthTypeLocked}
                 >
                   <SelectTrigger
                     className="w-full max-w-full [@container(min-width:28rem)]:w-auto"
@@ -151,7 +162,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                         <span>{t("siteInfo.authType.accessToken")}</span>
                       </div>
                     </SelectItem>
-                    {!isSub2Api && (
+                    {canUseCookieAuth && (
                       <SelectItem value={AuthTypeEnum.Cookie}>
                         <div className="flex items-center gap-2">
                           <Cookie className="h-4 w-4" />
@@ -222,7 +233,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
             }
           />
         )}
-        {isSub2Api && (
+        {canUseSub2ApiRefreshToken && (
           <div className="flex w-full items-start gap-2 rounded-md bg-blue-50 p-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
             <InformationCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{t("siteInfo.sub2apiHint")}</span>
