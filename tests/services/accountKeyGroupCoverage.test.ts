@@ -210,7 +210,15 @@ describe("ensureAccountKeysForAvailableGroups", () => {
   })
 
   it("falls back to one-key behavior when group lookup capability is missing", async () => {
-    mocks.fetchAccountTokens.mockResolvedValue([])
+    const createdToken = buildApiToken({
+      id: 22,
+      name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+      group: "",
+    })
+
+    mocks.fetchAccountTokens
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([createdToken])
     const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
     ;(
       getSiteAdapter as unknown as ReturnType<typeof vi.fn>
@@ -259,6 +267,49 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       }),
     )
     expect(mocks.fetchUserGroups).not.toHaveBeenCalled()
+  })
+
+  it("recovers the empty-group fallback token by id diff through lifecycle recovery", async () => {
+    const createdToken = buildApiToken({
+      id: 22,
+      name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+      group: "",
+    })
+
+    mocks.fetchAccountTokens
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([createdToken])
+    mocks.fetchUserGroups.mockResolvedValue({})
+    mocks.createApiToken.mockResolvedValueOnce(true)
+    mocks.classifyCreatedToken.mockReturnValueOnce({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+    })
+
+    const result = await runCoverage()
+
+    expect(result).toEqual({
+      created: true,
+      availableGroups: [],
+      coveredGroups: [],
+      createdGroups: [""],
+      missingGroups: [],
+      invalidTokens: [],
+    })
+    expect(mocks.fetchAccountTokens).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports empty-group fallback recovery failures as token not found", async () => {
+    mocks.fetchAccountTokens.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+    mocks.fetchUserGroups.mockResolvedValue({})
+    mocks.createApiToken.mockResolvedValueOnce(true)
+    mocks.classifyCreatedToken.mockReturnValueOnce({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+    })
+
+    await expect(runCoverage()).rejects.toThrow(
+      TOKEN_PROVISIONING_ERRORS.TokenNotFound,
+    )
+    expect(mocks.fetchAccountTokens).toHaveBeenCalledTimes(2)
   })
 
   it("blocks legacy one-key repair when policy requires a one-time secret dialog", async () => {

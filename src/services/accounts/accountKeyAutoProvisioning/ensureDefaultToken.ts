@@ -1,57 +1,23 @@
 import {
-  requireDisplayAccountKeyManagement,
-  requireDisplayAccountTokenProvisioning,
-} from "~/services/accounts/utils/apiServiceRequest"
+  DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
+  DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
+  DefaultTokenLifecyclePolicyBlockedError,
+  ensureDefaultTokenLifecycle,
+} from "~/services/accounts/defaultTokenLifecycle"
 import {
-  CREATED_TOKEN_SECRET_DECISION_KINDS,
-  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { t } from "~/utils/i18n/core"
 
-export const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
-export const DEFAULT_USER_GROUP_NAME = "default"
-
-/**
- * Selects the preferred default user group from a constrained group list.
- */
-export function resolvePreferredDefaultUserGroup(
-  allowedGroups: readonly string[],
-): string {
-  const normalizedGroups = allowedGroups
-    .map((group) => group.trim())
-    .filter(Boolean)
-
-  if (normalizedGroups.includes(DEFAULT_USER_GROUP_NAME)) {
-    return DEFAULT_USER_GROUP_NAME
-  }
-
-  return normalizedGroups[0] ?? DEFAULT_USER_GROUP_NAME
-}
-
-/**
- * Generates the default token payload used by key auto-provisioning flows.
- *
- * Default token definition MUST remain stable (see OpenSpec requirements).
- */
-export function generateDefaultTokenRequest(): CreateTokenRequest {
-  return {
-    name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-    unlimited_quota: true,
-    expired_time: -1, // Never expires
-    remain_quota: 0,
-    allow_ips: "", // No IP restriction
-    model_limits_enabled: false,
-    model_limits: "", // All models allowed
-    // Empty string follows the user's group
-    group: "",
-  }
-}
+export {
+  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+  DEFAULT_USER_GROUP_NAME,
+  generateDefaultTokenRequest,
+  resolvePreferredDefaultUserGroup,
+} from "~/services/accounts/defaultTokenLifecycle"
 
 /**
  * Ensures that an API token exists for the supplied account by checking the
@@ -64,96 +30,55 @@ export async function ensureDefaultApiTokenForAccount(params: {
   displaySiteData: DisplaySiteData
 }): Promise<{ token: ApiToken; created: boolean }> {
   const { account, displaySiteData } = params
-  const adapter = getSiteAdapter(displaySiteData.siteType)
-  const keyManagement = requireDisplayAccountKeyManagement(
-    displaySiteData,
-    adapter.keyManagement,
-  )
-  const tokenProvisioning = requireDisplayAccountTokenProvisioning(
-    displaySiteData,
-    adapter.tokenProvisioning,
-  )
-  const displayAccountRequest = {
-    baseUrl: displaySiteData.baseUrl,
-    accountId: displaySiteData.id,
-    auth: {
-      authType: displaySiteData.authType,
-      userId: displaySiteData.userId,
-      accessToken: displaySiteData.token,
-      cookie: displaySiteData.cookieAuthSessionCookie,
-    },
-  }
-  const createAccountRequest = {
-    baseUrl: account.site_url,
-    accountId: account.id,
-    auth: {
-      authType: account.authType,
-      userId: account.account_info.id,
-      accessToken: account.account_info.access_token,
-      cookie: account.cookieAuth?.sessionCookie,
-    },
-  }
-
-  const tokens = await keyManagement.fetchTokens(displayAccountRequest)
-
-  let apiToken: ApiToken | undefined = tokens.at(-1)
-  if (apiToken) {
-    return { token: apiToken, created: false }
-  }
-
-  const decision = tokenProvisioning.resolveDefaultTokenCreation({
+  const result = await ensureDefaultTokenLifecycle({
     workflow: TOKEN_PROVISIONING_WORKFLOWS.BackgroundAutoProvision,
-    defaultTokenData: generateDefaultTokenRequest(),
-  })
-
-  if (decision.kind !== DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create) {
-    if (
-      decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked &&
-      decision.reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
-    ) {
-      throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
-    }
-
-    throw new Error(t("messages:tokenProvisioning.createRequiresGroup"))
-  }
-
-  const createApiTokenResult = await keyManagement.createToken(
-    createAccountRequest,
-    decision.tokenData,
-  )
-  const createdTokenDecision = tokenProvisioning.classifyCreatedToken({
-    workflow: TOKEN_PROVISIONING_WORKFLOWS.BackgroundAutoProvision,
-    result: createApiTokenResult,
+    account,
+    displaySiteData,
   })
 
   if (
-    createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Usable
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Ready ||
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Created
   ) {
-    return { token: createdTokenDecision.token, created: true }
+    return {
+      token: result.token,
+      created: result.created,
+    }
   }
 
   if (
-    createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Failed
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
+    result.reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
+  ) {
+    throw new DefaultTokenLifecyclePolicyBlockedError({
+      reason: result.reason,
+      message: t("messages:aihubmix.createRequiresOneTimeKeyDialog"),
+    })
+  }
+
+  if (
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
+    result.reason === DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.CreateTokenFailed
   ) {
     throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
   }
 
   if (
-    createdTokenDecision.kind ===
-    CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
+    (result.reason === DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.TokenNotFound ||
+      result.reason ===
+        DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.AmbiguousCreatedToken ||
+      result.reason ===
+        TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable)
   ) {
     throw new Error(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
   }
 
-  // Backends such as AIHubMix may only expose the full API key in the create
-  // response; a follow-up inventory fetch can return a masked key that cannot
-  // be revealed later. This helper currently returns inventory data only.
-  const updatedTokens = await keyManagement.fetchTokens(displayAccountRequest)
-  apiToken = updatedTokens.at(-1)
-
-  if (!apiToken) {
-    throw new Error(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
-  }
-
-  return { token: apiToken, created: true }
+  throw new DefaultTokenLifecyclePolicyBlockedError({
+    reason:
+      result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked
+        ? result.reason
+        : TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
+    message: t("messages:tokenProvisioning.createRequiresGroup"),
+  })
 }

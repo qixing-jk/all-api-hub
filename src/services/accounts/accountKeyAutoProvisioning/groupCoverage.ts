@@ -1,9 +1,14 @@
 import {
+  createDefaultTokenFromDecision,
+  DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
+  DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
+  resolveDefaultTokenLifecycleDecisionFromCapabilities,
+} from "~/services/accounts/defaultTokenLifecycle"
+import {
   requireDisplayAccountKeyManagement,
   requireDisplayAccountTokenProvisioning,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
-  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
@@ -120,8 +125,9 @@ export async function ensureAccountKeysForAvailableGroups(params: {
       }
     }
 
-    const decision = tokenProvisioning.resolveDefaultTokenCreation({
+    const decision = resolveDefaultTokenLifecycleDecisionFromCapabilities({
       workflow: TOKEN_PROVISIONING_WORKFLOWS.Repair,
+      tokenProvisioning,
       defaultTokenData: generateDefaultTokenRequest(),
     })
 
@@ -137,19 +143,43 @@ export async function ensureAccountKeysForAvailableGroups(params: {
       throw new Error(t("messages:tokenProvisioning.createRequiresGroup"))
     }
 
-    const createResult = await keyManagement.createToken(
-      request,
-      decision.tokenData,
-    )
-    const createdTokenDecision = tokenProvisioning.classifyCreatedToken({
+    const createResult = await createDefaultTokenFromDecision({
       workflow: TOKEN_PROVISIONING_WORKFLOWS.Repair,
-      result: createResult,
+      keyManagement,
+      tokenProvisioning,
+      createRequest: request,
+      inventoryRequest: request,
+      decision,
+      existingTokenIds: [],
     })
 
-    if (
-      createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Failed
-    ) {
-      throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
+    if (createResult.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked) {
+      if (
+        createResult.reason ===
+        DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.CreateTokenFailed
+      ) {
+        throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
+      }
+
+      if (
+        createResult.reason ===
+          TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable ||
+        createResult.reason ===
+          TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
+      ) {
+        throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
+      }
+
+      if (
+        createResult.reason ===
+          DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.TokenNotFound ||
+        createResult.reason ===
+          DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.AmbiguousCreatedToken
+      ) {
+        throw new Error(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
+      }
+
+      throw new Error(t("messages:tokenProvisioning.createRequiresGroup"))
     }
 
     return {

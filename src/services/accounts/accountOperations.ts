@@ -15,25 +15,25 @@ import {
 import { UI_CONSTANTS } from "~/constants/ui"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import {
-  ensureDefaultApiTokenForAccount,
-  generateDefaultTokenRequest,
-} from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { ensureDefaultApiTokenForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   completeAutoDetectedAccount,
   getAutoDetectCompletionFailureReason,
 } from "~/services/accounts/autoDetectCompletion/completion"
 import {
+  DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
+  DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
+  DefaultTokenLifecyclePolicyBlockedError,
+  ensureDefaultTokenLifecycle,
+  generateDefaultTokenRequest,
+  resolveDefaultTokenLifecycleDecision,
+} from "~/services/accounts/defaultTokenLifecycle"
+import {
   TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
   type DefaultTokenQuickCreateResolution,
   type Sub2ApiQuickCreateResolution,
 } from "~/services/accounts/tokenQuickCreateResolution"
-import {
-  createDisplayAccountApiContext,
-  requireDisplayAccountKeyManagement,
-  requireDisplayAccountTokenProvisioning,
-} from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
   AUTO_DETECT_FAILURE_REASONS,
@@ -43,10 +43,8 @@ import {
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
-import { resolveDefaultTokenCreationWithUserGroups } from "~/services/accounts/utils/tokenProvisioning"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import {
-  CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
@@ -84,6 +82,11 @@ import { t } from "~/utils/i18n/core"
 const logger = createLogger("AccountOperations")
 
 export const MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS = 20000
+
+const isDefaultTokenAutoProvisionPolicyBlock = (
+  error: unknown,
+): error is DefaultTokenLifecyclePolicyBlockedError =>
+  error instanceof DefaultTokenLifecyclePolicyBlockedError
 
 export { extractDomainPrefix, getSiteName } from "~/services/accounts/siteName"
 
@@ -509,25 +512,11 @@ export async function resolveDefaultTokenQuickCreateResolution(
   account: DisplaySiteData,
   options: { explicitGroup?: string } = {},
 ): Promise<DefaultTokenQuickCreateResolution> {
-  const { keyManagement, request, tokenProvisioning } =
-    createDisplayAccountApiContext(account)
-  const requiredKeyManagement = requireDisplayAccountKeyManagement(
-    account,
-    keyManagement,
-  )
-  const requiredTokenProvisioning = requireDisplayAccountTokenProvisioning(
-    account,
-    tokenProvisioning,
-  )
-  const decision = await resolveDefaultTokenCreationWithUserGroups({
-    keyManagement: requiredKeyManagement,
-    tokenProvisioning: requiredTokenProvisioning,
-    request,
-    decisionRequest: {
-      workflow: TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection,
-      defaultTokenData: generateDefaultTokenRequest(),
-      explicitGroup: options.explicitGroup,
-    },
+  const decision = await resolveDefaultTokenLifecycleDecision({
+    workflow: TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection,
+    displaySiteData: account,
+    defaultTokenData: generateDefaultTokenRequest(),
+    explicitGroup: options.explicitGroup,
     missingUserGroupsMessage:
       TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
   })
@@ -1247,101 +1236,47 @@ export async function ensureAccountApiToken(
     id: options.toastId,
   })
 
-  const context = createDisplayAccountApiContext(displaySiteData)
-  const keyManagement = requireDisplayAccountKeyManagement(
+  const result = await ensureDefaultTokenLifecycle({
+    workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+    account,
     displaySiteData,
-    context.keyManagement,
-  )
-  const requiredTokenProvisioning = requireDisplayAccountTokenProvisioning(
-    displaySiteData,
-    context.tokenProvisioning,
-  )
-  const displayAccountRequest = {
-    baseUrl: displaySiteData.baseUrl,
-    accountId: displaySiteData.id,
-    auth: {
-      authType: displaySiteData.authType,
-      userId: displaySiteData.userId,
-      accessToken: displaySiteData.token,
-      cookie: displaySiteData.cookieAuthSessionCookie,
-    },
-  }
-  const createAccountRequest = {
-    baseUrl: account.site_url,
-    accountId: account.id,
-    auth: {
-      authType: account.authType,
-      userId: account.account_info.id,
-      accessToken: account.account_info.access_token,
-      cookie: account.cookieAuth?.sessionCookie,
-    },
+    defaultTokenData: options.defaultTokenData,
+    explicitGroup: options.explicitGroup ?? options.sub2apiGroup,
+  })
+
+  if (
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Ready ||
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Created
+  ) {
+    return result.token
   }
 
-  const tokens = await keyManagement.fetchTokens(displayAccountRequest)
-  let apiToken: ApiToken | undefined = tokens.at(-1)
-
-  if (!apiToken) {
-    const defaultTokenData =
-      options.defaultTokenData ?? generateDefaultTokenRequest()
-    const explicitGroup = options.explicitGroup ?? options.sub2apiGroup
-
-    const decision = requiredTokenProvisioning.resolveDefaultTokenCreation({
-      workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
-      defaultTokenData,
-      explicitGroup,
-    })
-
-    if (decision.kind !== DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create) {
-      if (
-        decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked &&
-        decision.reason ===
-          TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
-      ) {
-        throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
-      }
-
-      throw new Error(t("messages:tokenProvisioning.createRequiresGroup"))
-    }
-
-    const createApiTokenResult = await keyManagement.createToken(
-      createAccountRequest,
-      decision.tokenData,
-    )
-    const createdTokenDecision = requiredTokenProvisioning.classifyCreatedToken(
-      {
-        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
-        result: createApiTokenResult,
-      },
-    )
-
-    if (
-      createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Usable
-    ) {
-      apiToken = createdTokenDecision.token
-    } else if (
-      createdTokenDecision.kind === CREATED_TOKEN_SECRET_DECISION_KINDS.Failed
-    ) {
-      throw new Error(t("messages:accountOperations.createTokenFailed"))
-    } else if (
-      createdTokenDecision.kind ===
-      CREATED_TOKEN_SECRET_DECISION_KINDS.Unavailable
-    ) {
-      throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
-    } else {
-      // Do not assume a created key can be read back in full. AIHubMix returns
-      // complete API keys only at creation time and may list masked keys here.
-      const updatedTokens = await keyManagement.fetchTokens(
-        displayAccountRequest,
-      )
-      apiToken = updatedTokens.at(-1)
-    }
+  if (
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
+    (result.reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired ||
+      result.reason ===
+        TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable)
+  ) {
+    throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
   }
 
-  if (!apiToken) {
+  if (
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
+    result.reason === DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.CreateTokenFailed
+  ) {
+    throw new Error(t("messages:accountOperations.createTokenFailed"))
+  }
+
+  if (
+    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
+    (result.reason === DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.TokenNotFound ||
+      result.reason ===
+        DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.AmbiguousCreatedToken)
+  ) {
     throw new Error(t("messages:accountOperations.tokenNotFound"))
   }
 
-  return apiToken
+  throw new Error(t("messages:tokenProvisioning.createRequiresGroup"))
 }
 
 /**
@@ -1365,13 +1300,6 @@ async function autoProvisionKeyOnAccountAdd(
     }
 
     if (account.disabled === true) {
-      return
-    }
-
-    if (
-      account.site_type === SITE_TYPES.SUB2API ||
-      account.site_type === SITE_TYPES.AIHUBMIX
-    ) {
       return
     }
 
@@ -1426,6 +1354,10 @@ async function autoProvisionKeyOnAccountAdd(
       )
     }
   } catch (error) {
+    if (isDefaultTokenAutoProvisionPolicyBlock(error)) {
+      return
+    }
+
     toast.error(
       t("messages:accountOperations.autoProvisionFailed", {
         actionLabel: t("keyManagement:repairMissingKeys.action"),

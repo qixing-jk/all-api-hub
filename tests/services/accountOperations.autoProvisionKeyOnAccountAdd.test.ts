@@ -5,6 +5,8 @@ import { Storage } from "@plasmohq/storage"
 import { SITE_TYPES } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
+import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
@@ -287,7 +289,14 @@ describe("accountOperations auto-provision key on add", () => {
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
   })
 
-  it("skips auto-provision for sub2api accounts", async () => {
+  it("silently ignores policy-blocked auto-provision for sub2api accounts", async () => {
+    ensureDefaultApiTokenForAccountMock.mockRejectedValueOnce(
+      new DefaultTokenLifecyclePolicyBlockedError({
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
+        message: "messages:tokenProvisioning.createRequiresGroup",
+      }),
+    )
+
     const result = await validateAndSaveAccount(
       "https://api.example.com",
       "Test Site",
@@ -308,7 +317,40 @@ describe("accountOperations auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("silently ignores policy-blocked auto-provision for AIHubMix accounts", async () => {
+    ensureDefaultApiTokenForAccountMock.mockRejectedValueOnce(
+      new DefaultTokenLifecyclePolicyBlockedError({
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
+        message: "messages:aihubmix.createRequiresOneTimeKeyDialog",
+      }),
+    )
+
+    const result = await validateAndSaveAccount(
+      "https://aihubmix.example.invalid",
+      "AIHubMix",
+      "tester",
+      "test-token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.AIHUBMIX,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })

@@ -7,12 +7,15 @@ import {
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
-  ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
   ensureAccountTokenForPostSaveWorkflow,
   inspectAccountTokenInventory,
-  selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/accountPostSaveWorkflow"
+import {
+  DEFAULT_TOKEN_INVENTORY_STATE_KINDS,
+  inspectDefaultTokenInventory,
+  selectSingleNewApiTokenByIdDiff,
+} from "~/services/accounts/defaultTokenLifecycle"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
@@ -272,17 +275,43 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     isInventoryTokenUsableMock.mockReturnValueOnce(false)
 
     await expect(
-      inspectAccountTokenInventory({
+      inspectDefaultTokenInventory({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
         displaySiteData: displayAccount,
       }),
     ).resolves.toEqual({
-      kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present,
+      kind: DEFAULT_TOKEN_INVENTORY_STATE_KINDS.Present,
       token: maskedToken,
       existingTokenIds: [maskedToken.id],
       hasUsableSecret: false,
     })
     expect(createApiTokenMock).not.toHaveBeenCalled()
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the post-save inventory compatibility wrapper on the old call shape", async () => {
+    const displayAccount = buildDisplayAccount({
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+    })
+    const maskedToken = buildToken({ id: 18, key: "sk-***masked***" })
+    fetchAccountTokensMock.mockResolvedValueOnce([maskedToken])
+    isInventoryTokenUsableMock.mockReturnValueOnce(false)
+
+    await expect(
+      inspectAccountTokenInventory({
+        displaySiteData: displayAccount,
+      }),
+    ).resolves.toEqual({
+      kind: DEFAULT_TOKEN_INVENTORY_STATE_KINDS.Present,
+      token: maskedToken,
+      existingTokenIds: [maskedToken.id],
+      hasUsableSecret: false,
+    })
+    expect(isInventoryTokenUsableMock).toHaveBeenCalledWith({
+      workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
+      token: maskedToken,
+    })
   })
 
   it("creates a default token for ordinary accounts without existing tokens", async () => {
@@ -440,6 +469,25 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const account = buildStoredAccount(displayAccount)
     fetchAccountTokensMock.mockResolvedValueOnce([])
     createApiTokenMock.mockResolvedValueOnce(false)
+
+    await expect(
+      ensureAccountTokenForPostSaveWorkflow({
+        account,
+        displaySiteData: displayAccount,
+      }),
+    ).resolves.toEqual({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
+      code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
+      message: "messages:accountOperations.createTokenFailed",
+    })
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("maps rejected token creation to a post-save blocked result", async () => {
+    const displayAccount = buildDisplayAccount()
+    const account = buildStoredAccount(displayAccount)
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockRejectedValueOnce(new Error("create failed"))
 
     await expect(
       ensureAccountTokenForPostSaveWorkflow({
