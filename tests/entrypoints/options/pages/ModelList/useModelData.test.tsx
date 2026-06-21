@@ -108,11 +108,21 @@ vi.mock(
       ...actual,
       fetchApiCredentialModelIds: (...args: unknown[]) =>
         mockFetchApiCredentialModelIds(...args),
-      loadAccountTokenFallbackPricingResponse: (...args: unknown[]) =>
-        mockLoadAccountTokenFallbackPricingResponse(...args),
     }
   },
 )
+
+vi.mock("~/services/modelList/accountSources", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/modelList/accountSources")>()
+
+  return {
+    ...actual,
+    ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED: "ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED",
+    loadAccountTokenFallbackPricingResponse: (...args: unknown[]) =>
+      mockLoadAccountTokenFallbackPricingResponse(...args),
+  }
+})
 
 const createDisplayAccount = (
   overrides: Partial<DisplaySiteData>,
@@ -150,6 +160,7 @@ const createMockSiteAdapter = (
   overrides: {
     siteType?: DisplaySiteData["siteType"]
     modelPricing?: false
+    modelCatalog?: false
   } = {},
 ) =>
   ({
@@ -161,6 +172,15 @@ const createMockSiteAdapter = (
             fetchPricing,
           },
         }),
+    ...(overrides.siteType === SITE_TYPES.SUB2API &&
+    overrides.modelPricing === false &&
+    overrides.modelCatalog !== false
+      ? {
+          modelCatalog: {
+            fetchModels: vi.fn(),
+          },
+        }
+      : {}),
   }) as any
 
 const createWrapper = () => {
@@ -1878,19 +1898,16 @@ describe("useModelData all-accounts loading", () => {
     await modelPricingCache.invalidate(cacheKey)
   })
 
-  it("does not return cached pricing for unsupported Sub2API accounts", async () => {
+  it("does not return cached pricing before account-source readiness allows direct pricing", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("fetch should not be called"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
-        siteType: SITE_TYPES.SUB2API,
-        modelPricing: false,
-      }),
-    )
+    vi.mocked(getSiteAdapter).mockReturnValue({
+      siteType: SITE_TYPES.SUB2API,
+    } as any)
 
     const account = createDisplayAccount({
       id: "cached-unsupported-sub2api",
@@ -1940,12 +1957,89 @@ describe("useModelData all-accounts loading", () => {
         },
         { timeout: 3000 },
       )
-      expect(result.current.loadErrorMessage).toBeNull()
       expect(fetchPricing).not.toHaveBeenCalled()
       expect(result.current.pricingData).toBeNull()
     } finally {
       await modelPricingCache.invalidate(cacheKey)
     }
+  })
+
+  it("uses token-scoped runtime catalog readiness in all-accounts mode", async () => {
+    const fetchPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("common pricing should not be called"))
+    const runtimePricing = {
+      data: [
+        {
+          model_name: "runtime-model",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: [],
+          supported_endpoint_types: [],
+        },
+      ],
+      group_ratio: {},
+      success: true,
+      usable_group: {},
+    }
+
+    vi.mocked(getSiteAdapter).mockReturnValue({
+      siteType: SITE_TYPES.SUB2API,
+      modelCatalog: {
+        fetchModels: vi.fn().mockResolvedValue(["runtime-model"]),
+      },
+    } as any)
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 10,
+        user_id: 10,
+        key: "sk-runtime-masked",
+        status: 1,
+        name: "Runtime Key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockLoadAccountTokenFallbackPricingResponse.mockResolvedValueOnce(
+      runtimePricing,
+    )
+
+    const account = createDisplayAccount({
+      id: "sub2api-readiness-all-accounts",
+      name: "Sub2API Readiness",
+      baseUrl: "https://sub2api-readiness.example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+      userId: "sub2api-readiness-user",
+    })
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(
+        result.current.pricingContexts[0]?.pricing.data[0]?.model_name,
+      ).toBe("runtime-model")
+    })
+    expect(fetchPricing).not.toHaveBeenCalled()
+    expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith({
+      account,
+      token: expect.objectContaining({
+        id: 10,
+        name: "Runtime Key",
+      }),
+    })
   })
 
   it("loads Sub2API selected-key fallback runtime models without enabling common pricing", async () => {

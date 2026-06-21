@@ -23,14 +23,17 @@ import {
   InvalidTokenPayloadError,
 } from "~/services/accounts/utils/apiServiceRequest"
 import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import {
-  ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
-  loadAccountTokenFallbackPricingResponse,
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import type { PricingResponse } from "~/services/apiService/common/type"
+import {
+  ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
+  loadAccountTokenFallbackPricingResponse,
+  MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
+  resolveModelListAccountSourceReadiness,
+} from "~/services/modelList/accountSources"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
   modelPricingCache,
@@ -416,7 +419,7 @@ function createDisplayAccountModelPricingRequest(
   }
 }
 
-const SUB2API_ALL_ACCOUNTS_TOKEN_CONCURRENCY = 4
+const TOKEN_SCOPED_CATALOG_CONCURRENCY = 4
 
 /** Checks that a pricing response exposes the expected model row array. */
 function hasValidPricingData(data: PricingResponse) {
@@ -446,8 +449,8 @@ async function mapWithConcurrency<T, R>(
   return results
 }
 
-/** Loads one Sub2API token fallback catalog as a row source context. */
-async function loadSub2ApiTokenPricingContext(params: {
+/** Loads one token-scoped catalog as a row source context. */
+async function loadTokenScopedCatalogPricingContext(params: {
   account: DisplaySiteData
   token: ApiToken
 }): Promise<SettledContextResult> {
@@ -473,8 +476,8 @@ async function loadSub2ApiTokenPricingContext(params: {
   }
 }
 
-/** Loads Sub2API fallback catalogs for every account token in comparison mode. */
-async function fetchSub2ApiAllAccountsFallbackPricingContexts(
+/** Loads token-scoped catalog fallbacks for every account token in comparison mode. */
+async function fetchTokenScopedCatalogPricingContexts(
   account: DisplaySiteData,
 ): Promise<AccountPricingQueryResult> {
   const tokens = (await fetchDisplayAccountTokens(account)).filter(
@@ -486,8 +489,8 @@ async function fetchSub2ApiAllAccountsFallbackPricingContexts(
 
   const settledResults = await mapWithConcurrency(
     tokens,
-    SUB2API_ALL_ACCOUNTS_TOKEN_CONCURRENCY,
-    (token) => loadSub2ApiTokenPricingContext({ account, token }),
+    TOKEN_SCOPED_CATALOG_CONCURRENCY,
+    (token) => loadTokenScopedCatalogPricingContext({ account, token }),
   )
   const contexts = settledResults.flatMap((result) =>
     result.context ? [result.context] : [],
@@ -714,8 +717,8 @@ function useSingleAccountModelData(params: {
         throw new Error("No account selected")
       }
 
-      const modelPricing = getSiteAdapter(currentAccount.siteType).modelPricing
-      if (!modelPricing) {
+      const readiness = resolveModelListAccountSourceReadiness(currentAccount)
+      if (readiness.route !== MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing) {
         throw createUnsupportedModelPricingError()
       }
 
@@ -728,7 +731,7 @@ function useSingleAccountModelData(params: {
       }
       directLoadCacheHitRef.current = false
 
-      const data = await modelPricing.fetchPricing(
+      const data = await readiness.modelPricing.fetchPricing(
         createDisplayAccountModelPricingRequest(currentAccount),
       )
 
@@ -1189,12 +1192,17 @@ function useAllAccountsModelData(
       refetchOnWindowFocus: false,
       retry: shouldRetryModelPricingQuery,
       queryFn: async () => {
-        const modelPricing = getSiteAdapter(account.siteType).modelPricing
-        if (!modelPricing) {
-          if (shouldUseAccountSiteRuntimeKeyCatalogFallback(account)) {
-            return fetchSub2ApiAllAccountsFallbackPricingContexts(account)
-          }
+        const readiness = resolveModelListAccountSourceReadiness(account)
+        if (
+          readiness.route ===
+          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
+        ) {
+          return fetchTokenScopedCatalogPricingContexts(account)
+        }
 
+        if (
+          readiness.route !== MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing
+        ) {
           throw createUnsupportedModelPricingError()
         }
 
@@ -1214,7 +1222,7 @@ function useAllAccountsModelData(
           }
         }
 
-        const data = await modelPricing.fetchPricing(
+        const data = await readiness.modelPricing.fetchPricing(
           createDisplayAccountModelPricingRequest(account),
         )
 
