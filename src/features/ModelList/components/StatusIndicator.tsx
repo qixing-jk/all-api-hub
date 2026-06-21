@@ -98,12 +98,12 @@ export function StatusIndicator({
         <div>
           <h4 className="dark:text-dark-text-primary text-sm font-semibold text-gray-900">
             {isKeyScopedStatus
-              ? t("status.sub2apiKeyScopedFallbackTitle")
+              ? t("status.tokenScopedCatalogFallbackTitle")
               : t("status.fallback.title")}
           </h4>
           <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-600">
             {isKeyScopedStatus
-              ? t("status.sub2apiKeyScopedFallbackDescription")
+              ? t("status.tokenScopedCatalogFallbackDescription")
               : t("status.fallback.description")}
           </p>
         </div>
@@ -257,8 +257,8 @@ export function StatusIndicator({
       <Alert
         variant="info"
         className="mb-6"
-        title={t("status.sub2apiKeyScopedTitle")}
-        description={t("status.sub2apiKeyScopedDescription")}
+        title={t("status.tokenScopedCatalogTitle")}
+        description={t("status.tokenScopedCatalogDescription")}
         aria-live="polite"
       >
         {renderAccountFallbackSection()}

@@ -234,10 +234,10 @@
     "profileLoadFailed": "加载该 API 凭据的模型失败：{{errorMessage}}",
     "profileLoadFailedTitle": "加载该 API 凭据的模型失败",
     "retryLoad": "重新尝试加载",
-    "sub2apiKeyScopedDescription": "Sub2API 不提供账号级模型列表。插件会通过该账号下的 API 密钥获取实际可用模型。",
-    "sub2apiKeyScopedFallbackDescription": "请选择一个 API 密钥；如果只有一个可用密钥，插件会自动使用它加载模型。",
-    "sub2apiKeyScopedFallbackTitle": "通过密钥获取模型",
-    "sub2apiKeyScopedTitle": "正在通过 API 密钥获取模型列表"
+    "tokenScopedCatalogDescription": "该来源账号不提供账号级模型列表。插件会通过账号下的 API 密钥获取实际可用模型。",
+    "tokenScopedCatalogFallbackDescription": "请选择一个 API 密钥；如果只有一个可用密钥，插件会自动使用它加载模型。",
+    "tokenScopedCatalogFallbackTitle": "通过密钥获取模型",
+    "tokenScopedCatalogTitle": "正在通过 API 密钥获取模型列表"
   },
   "title": "模型列表",
   "totalModels": "总计 {{count}} 个模型",

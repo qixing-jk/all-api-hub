@@ -234,10 +234,10 @@
     "profileLoadFailed": "載入該 API 憑據的模型失敗：{{errorMessage}}",
     "profileLoadFailedTitle": "載入該 API 憑據的模型失敗",
     "retryLoad": "重新嘗試載入",
-    "sub2apiKeyScopedDescription": "Sub2API 不提供帳號級模型列表。擴充功能會透過該帳號下的 API 密鑰取得實際可用模型。",
-    "sub2apiKeyScopedFallbackDescription": "請選擇一個 API 密鑰；如果只有一個可用密鑰，擴充功能會自動使用它載入模型。",
-    "sub2apiKeyScopedFallbackTitle": "透過密鑰取得模型",
-    "sub2apiKeyScopedTitle": "正在透過 API 密鑰取得模型列表"
+    "tokenScopedCatalogDescription": "此來源帳號不提供帳號級模型列表。擴充功能會透過該帳號下的 API 密鑰取得實際可用模型。",
+    "tokenScopedCatalogFallbackDescription": "請選擇一個 API 密鑰；如果只有一個可用密鑰，擴充功能會自動使用它載入模型。",
+    "tokenScopedCatalogFallbackTitle": "透過密鑰取得模型",
+    "tokenScopedCatalogTitle": "正在透過 API 密鑰取得模型列表"
   },
   "title": "模型列表",
   "totalModels_other": "總計 {{count}} 個模型",

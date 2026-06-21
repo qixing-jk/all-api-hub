@@ -241,10 +241,10 @@
     "profileLoadFailed": "Failed to load models for this API credential: {{errorMessage}}",
     "profileLoadFailedTitle": "Failed to load models for this API credential",
     "retryLoad": "Retry Load",
-    "sub2apiKeyScopedDescription": "Sub2API does not provide an account-level model list. The extension fetches the models available to this account through its API keys.",
-    "sub2apiKeyScopedFallbackDescription": "Select an API key. If only one available key exists, the extension will use it automatically.",
-    "sub2apiKeyScopedFallbackTitle": "Fetch models through a key",
-    "sub2apiKeyScopedTitle": "Fetching the model list through an API key"
+    "tokenScopedCatalogDescription": "This source account does not provide an account-level model list. The extension fetches the models available to this account through its API keys.",
+    "tokenScopedCatalogFallbackDescription": "Select an API key. If only one available key exists, the extension will use it automatically.",
+    "tokenScopedCatalogFallbackTitle": "Fetch models through a key",
+    "tokenScopedCatalogTitle": "Fetching the model list through an API key"
   },
   "title": "Model List",
   "totalModels_one": "Total {{count}} model",

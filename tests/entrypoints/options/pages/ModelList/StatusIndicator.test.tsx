@@ -63,10 +63,18 @@ describe("StatusIndicator", () => {
     )
 
     expect(
-      await screen.findByText("modelList:status.sub2apiKeyScopedTitle"),
+      await screen.findByText("modelList:status.tokenScopedCatalogTitle"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("modelList:status.sub2apiKeyScopedDescription"),
+      screen.getByText("modelList:status.tokenScopedCatalogDescription"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("modelList:status.tokenScopedCatalogFallbackTitle"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "modelList:status.tokenScopedCatalogFallbackDescription",
+      ),
     ).toBeInTheDocument()
     expect(
       screen.queryByText("modelList:status.genericLoadFailedTitle"),
@@ -107,7 +115,7 @@ describe("StatusIndicator", () => {
     )
 
     expect(
-      await screen.findByText("modelList:status.sub2apiKeyScopedTitle"),
+      await screen.findByText("modelList:status.tokenScopedCatalogTitle"),
     ).toBeInTheDocument()
     expect(
       screen.queryByText("modelList:status.genericLoadFailedTitle"),
@@ -145,6 +153,9 @@ describe("StatusIndicator", () => {
     expect(
       await screen.findByText("modelList:status.fallback.loadingKeys"),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:status.tokenScopedCatalogTitle"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
         name: "modelList:status.fallback.loadKeys",
