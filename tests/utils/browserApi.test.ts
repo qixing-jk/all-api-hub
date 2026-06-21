@@ -1365,6 +1365,58 @@ describe("browserApi window and manifest helpers", () => {
     expect(requestUpdateCheck).toHaveBeenCalledTimes(1)
   })
 
+  it("returns null when runtime update checks are unavailable", async () => {
+    ;(globalThis as any).browser.runtime.requestUpdateCheck = undefined
+    ;(globalThis as any).chrome = undefined
+
+    await expect(requestRuntimeUpdateCheck()).resolves.toBeNull()
+  })
+
+  it("normalizes string results from promise-based runtime update checks", async () => {
+    ;(globalThis as any).browser.runtime.requestUpdateCheck = vi
+      .fn()
+      .mockResolvedValue("no_update")
+
+    await expect(requestRuntimeUpdateCheck()).resolves.toEqual({
+      status: "no_update",
+    })
+  })
+
+  it("rejects runtime update check errors from the promise API", async () => {
+    const error = new Error("update check unavailable")
+    ;(globalThis as any).browser.runtime.requestUpdateCheck = vi
+      .fn()
+      .mockRejectedValue(error)
+
+    await expect(requestRuntimeUpdateCheck()).rejects.toThrow(
+      "update check unavailable",
+    )
+  })
+
+  it("rejects synchronous runtime update check errors", async () => {
+    ;(globalThis as any).browser.runtime.requestUpdateCheck = vi.fn(() => {
+      throw new Error("update check threw")
+    })
+
+    await expect(requestRuntimeUpdateCheck()).rejects.toThrow(
+      "update check threw",
+    )
+  })
+
+  it("uses the first runtime update check result when both API styles respond", async () => {
+    ;(globalThis as any).browser.runtime.requestUpdateCheck = vi.fn(
+      (callback) => {
+        callback("update_available", { version: "3.48.0" })
+        return Promise.resolve({ status: "no_update" })
+      },
+    )
+
+    await expect(requestRuntimeUpdateCheck()).resolves.toEqual({
+      status: "update_available",
+      version: "3.48.0",
+    })
+  })
+
   it("returns incognito access as null when the browser API throws", async () => {
     ;(globalThis as any).browser.extension.isAllowedIncognitoAccess = vi
       .fn()

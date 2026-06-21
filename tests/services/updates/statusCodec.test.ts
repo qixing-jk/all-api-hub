@@ -136,4 +136,21 @@ describe("parseReleaseUpdateStatus", () => {
       },
     })
   })
+
+  it("infers browser store support from a valid non-default status", () => {
+    expect(
+      parseReleaseUpdateStatus({
+        currentVersion: "3.31.0",
+        storeUpdate: {
+          status: "no_update",
+        },
+      }),
+    ).toMatchObject({
+      storeUpdate: {
+        supported: true,
+        status: "no_update",
+        version: null,
+      },
+    })
+  })
 })

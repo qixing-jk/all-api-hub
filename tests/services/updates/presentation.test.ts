@@ -117,6 +117,8 @@ describe("release update presentation", () => {
   })
 
   it("collapses manual check results into toast outcomes", () => {
+    expect(deriveReleaseUpdateCheckOutcome(null)).toBe("check-failed")
+
     expect(
       deriveReleaseUpdateCheckOutcome(
         buildStatus({

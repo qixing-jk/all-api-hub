@@ -1293,6 +1293,9 @@ export async function requestRuntimeUpdateCheck(): Promise<RuntimeUpdateCheckRes
   return await new Promise<RuntimeUpdateCheckResult>((resolve, reject) => {
     let settled = false
 
+    // Browser implementations differ here: older Chromium builds report via
+    // callback while newer WebExtension-style APIs may also return a promise.
+    // `settled` keeps a hybrid implementation from resolving twice.
     const finish = (result: RuntimeUpdateCheckResult) => {
       if (settled) return
       settled = true

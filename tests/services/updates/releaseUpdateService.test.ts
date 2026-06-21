@@ -290,6 +290,99 @@ describe("releaseUpdateService", () => {
     expect(requestRuntimeUpdateCheckMock).toHaveBeenCalledTimes(1)
   })
 
+  it("falls back when the browser store update API is unavailable", async () => {
+    browserAny.runtime.id = "lapnciffpekdengooeolaienkeoilfeo"
+    requestRuntimeUpdateCheckMock.mockResolvedValueOnce(null)
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        tag_name: "v3.40.0",
+        html_url:
+          "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.40.0",
+      }),
+    } as Response)
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.checkNow()
+
+    expect(status.storeUpdate).toEqual({
+      supported: false,
+      status: "unsupported",
+      version: null,
+    })
+  })
+
+  it("records browser store update check failures without failing release checks", async () => {
+    browserAny.runtime.id = "lapnciffpekdengooeolaienkeoilfeo"
+    requestRuntimeUpdateCheckMock.mockRejectedValueOnce(
+      new Error("store check failed"),
+    )
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        tag_name: "v3.40.0",
+        html_url:
+          "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.40.0",
+      }),
+    } as Response)
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.checkNow()
+
+    expect(status).toMatchObject({
+      latestVersion: "3.40.0",
+      lastError: null,
+      storeUpdate: {
+        supported: true,
+        status: "failed",
+        version: null,
+      },
+    })
+  })
+
+  it("reuses same-version store update metadata from storage", async () => {
+    browserAny.runtime.id = "lapnciffpekdengooeolaienkeoilfeo"
+    const { Storage } = await import("@plasmohq/storage")
+    ;(Storage as any).__store.set(STORAGE_KEYS.RELEASE_UPDATE_STATUS, {
+      eligible: true,
+      reason: "store-build",
+      currentVersion: "3.32.0",
+      latestVersion: "3.40.0",
+      updateAvailable: true,
+      releaseUrl:
+        "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.40.0",
+      checkedAt: 123,
+      lastError: null,
+      storeUpdate: {
+        supported: true,
+        status: "no_update",
+        version: "3.32.0",
+      },
+    })
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.getStatus()
+
+    expect(status).toMatchObject({
+      latestVersion: "3.40.0",
+      updateAvailable: true,
+      storeUpdate: {
+        supported: true,
+        status: "no_update",
+        version: "3.32.0",
+      },
+    })
+  })
+
   it("registers the daily alarm once and preserves an existing matching schedule", async () => {
     getAlarmMock.mockResolvedValueOnce({
       name: "releaseUpdateDailyCheck",
@@ -402,5 +495,28 @@ describe("releaseUpdateService", () => {
         lastError: null,
       }),
     )
+  })
+
+  it("stores release fetch failures for eligible installs", async () => {
+    ;(globalThis as any).browser.management.getSelf.mockResolvedValueOnce({
+      installType: "development",
+    })
+    vi.mocked(globalThis.fetch).mockRejectedValueOnce(
+      new Error("release lookup failed"),
+    )
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.checkNow()
+
+    expect(status).toMatchObject({
+      eligible: true,
+      latestVersion: null,
+      updateAvailable: false,
+      lastError: "release lookup failed",
+    })
+    expect(status.checkedAt).toEqual(expect.any(Number))
   })
 })
