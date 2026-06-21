@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
-  applySub2ApiPriceEstimates,
-  resolveSub2ApiKeyGroupForPriceEstimation,
-} from "~/services/apiCredentialProfiles/sub2apiPriceEstimation"
-import {
+  MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/apiService/common/type"
+import {
+  applySub2ApiPriceEstimates,
+  buildSub2ApiRuntimePricingResponse,
+  resolveSub2ApiKeyGroupForPriceEstimation,
+} from "~/services/modelList/accountSources/sub2apiEstimates"
 import type { ApiToken } from "~/types"
 
 const createToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
@@ -180,6 +183,27 @@ describe("resolveSub2ApiKeyGroupForPriceEstimation", () => {
         groups,
       }),
     ).toBeNull()
+  })
+})
+
+describe("buildSub2ApiRuntimePricingResponse", () => {
+  it("builds Sub2API runtime-key source metadata without pricing", () => {
+    const result = buildSub2ApiRuntimePricingResponse(["runtime-model"])
+
+    expect(result.model_list_source).toEqual({
+      kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+      provider: SITE_TYPES.SUB2API,
+      supportsRuntimeModelList: true,
+      supportsPricing: false,
+    })
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        model_name: "runtime-model",
+        price_metadata: expect.objectContaining({
+          unavailable_reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+        }),
+      }),
+    ])
   })
 })
 

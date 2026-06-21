@@ -1,5 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import type { ModelPriceTable } from "~/services/apiCredentialProfiles/modelPriceTable"
+import { loadSub2ApiDashboardEstimateData } from "~/services/apiAdapters/sub2api/dashboardEstimates"
 import {
   isMaskedApiTokenKey,
   normalizeApiTokenKeyValue,
@@ -13,7 +13,13 @@ import {
   type PricingResponse,
 } from "~/services/apiService/common/type"
 import { parseSub2ApiGroupRates } from "~/services/apiService/sub2api/parsing"
-import type { ApiToken } from "~/types"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { buildModelListCatalogPricingResponse } from "~/services/modelList/pricingResponse"
+import {
+  loadModelPriceTable,
+  type ModelPriceTable,
+} from "~/services/modelPricing/modelPriceTable"
+import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 
 type Sub2ApiGroupLike = {
   id?: number | string | null
@@ -39,6 +45,25 @@ type ApplySub2ApiPriceEstimatesParams = {
   group: ResolvedSub2ApiPriceGroup | null
   groupRates: Record<string, number>
   priceTable: ModelPriceTable
+}
+
+type Sub2ApiEstimateAccount = Pick<
+  DisplaySiteData,
+  | "siteType"
+  | "baseUrl"
+  | "id"
+  | "authType"
+  | "userId"
+  | "token"
+  | "cookieAuthSessionCookie"
+>
+
+type LoadSub2ApiEstimatedPricingResponseParams = {
+  account: Sub2ApiEstimateAccount
+  selectedToken: ApiToken
+  resolvedKey: string
+  runtimeModelIds: string[]
+  fallbackResponse: PricingResponse
 }
 
 const toTrimmedString = (value: unknown): string =>
@@ -289,5 +314,81 @@ export function applySub2ApiPriceEstimates(
     data: modelIds.map((modelId) =>
       createEstimatedModel(modelId, group, effectiveRate, params.priceTable),
     ),
+  }
+}
+
+/**
+ * Build a Sub2API runtime-key model catalog where model visibility is known
+ * but no JWT/group pricing estimate has been applied yet.
+ */
+export function buildSub2ApiRuntimePricingResponse(
+  modelIds: string[],
+  unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+): PricingResponse {
+  return buildModelListCatalogPricingResponse({
+    modelIds,
+    unavailableReason,
+    source: {
+      kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+      provider: SITE_TYPES.SUB2API,
+      supportsRuntimeModelList: true,
+      supportsPricing: false,
+    },
+  })
+}
+
+const hasSub2ApiDashboardAuth = (account: Sub2ApiEstimateAccount): boolean => {
+  return (
+    account.authType === AuthTypeEnum.AccessToken &&
+    typeof account.token === "string" &&
+    account.token.trim().length > 0
+  )
+}
+
+const createSub2ApiDashboardRequest = (
+  account: Sub2ApiEstimateAccount,
+): ApiServiceRequest => ({
+  baseUrl: account.baseUrl,
+  accountId: account.id,
+  auth: {
+    authType: AuthTypeEnum.AccessToken,
+    userId: account.userId,
+    accessToken: account.token,
+    cookie: account.cookieAuthSessionCookie,
+  },
+})
+
+export const loadSub2ApiEstimatedPricingResponse = async (
+  params: LoadSub2ApiEstimatedPricingResponseParams,
+): Promise<PricingResponse> => {
+  if (!hasSub2ApiDashboardAuth(params.account)) {
+    return params.fallbackResponse
+  }
+
+  try {
+    const dashboardRequest = createSub2ApiDashboardRequest(params.account)
+    const [dashboardEstimateData, priceTable] = await Promise.all([
+      loadSub2ApiDashboardEstimateData(dashboardRequest),
+      loadModelPriceTable(),
+    ])
+    const { groups, groupRates, accountTokens } = dashboardEstimateData
+    const group = resolveSub2ApiKeyGroupForPriceEstimation({
+      selectedToken: params.selectedToken,
+      resolvedKey: params.resolvedKey,
+      accountTokens,
+      groups,
+    })
+
+    return applySub2ApiPriceEstimates({
+      modelIds: params.runtimeModelIds,
+      group,
+      groupRates,
+      priceTable,
+    })
+  } catch {
+    return buildSub2ApiRuntimePricingResponse(
+      params.runtimeModelIds,
+      MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+    )
   }
 }

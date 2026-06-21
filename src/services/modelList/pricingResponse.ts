@@ -1,0 +1,74 @@
+import {
+  MODEL_LIST_SOURCE_KINDS,
+  MODEL_PRICE_PRECISION_KINDS,
+  MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
+  type ModelPricing,
+  type PricingResponse,
+} from "~/services/apiService/common/type"
+
+type BuildModelListCatalogPricingResponseParams = {
+  modelIds: unknown[]
+  unavailableReason?: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS]
+  source?: PricingResponse["model_list_source"]
+}
+
+/**
+ * Normalize and de-duplicate model ids returned by upstream model-list endpoints.
+ */
+export function normalizeModelListModelIds(modelIds: unknown[]): string[] {
+  return Array.from(
+    new Set(
+      modelIds
+        .filter(
+          (id): id is string => typeof id === "string" && id.trim().length > 0,
+        )
+        .map((id) => id.trim()),
+    ),
+  )
+}
+
+/**
+ * Convert a raw model id into the minimal pricing-model shape used by Model List.
+ */
+function createModelListCatalogModel(
+  modelId: string,
+  unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+): ModelPricing {
+  return {
+    model_name: modelId,
+    quota_type: 0,
+    model_ratio: 0,
+    model_price: 0,
+    price_metadata: {
+      source: MODEL_PRICE_SOURCE_KINDS.NONE,
+      precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+      unavailable_reason: unavailableReason,
+    },
+    completion_ratio: 1,
+    enable_groups: [],
+    supported_endpoint_types: [],
+  }
+}
+
+/**
+ * Build a minimal Model-List-compatible response for catalog-only sources.
+ */
+export function buildModelListCatalogPricingResponse({
+  modelIds,
+  unavailableReason = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+  source = {
+    kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+    supportsPricing: false,
+  },
+}: BuildModelListCatalogPricingResponseParams): PricingResponse {
+  return {
+    data: normalizeModelListModelIds(modelIds).map((modelId) =>
+      createModelListCatalogModel(modelId, unavailableReason),
+    ),
+    group_ratio: {},
+    model_list_source: source,
+    success: true,
+    usable_group: {},
+  }
+}

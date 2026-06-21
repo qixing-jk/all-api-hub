@@ -4,7 +4,7 @@ import {
   LITELLM_MODEL_PRICE_TABLE_URL,
   loadModelPriceTable,
   MODEL_PRICE_TABLE_FETCH_TIMEOUT_MS,
-} from "~/services/apiCredentialProfiles/modelPriceTable"
+} from "~/services/modelPricing/modelPriceTable"
 
 describe("loadModelPriceTable", () => {
   afterEach(() => {
