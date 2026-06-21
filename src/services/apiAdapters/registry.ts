@@ -1,25 +1,13 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import {
+  ACCOUNT_SITE_ADAPTER_FAMILIES,
+  type AccountSiteType,
+} from "~/constants/siteType"
+import { getAccountSiteAdapterFamily } from "~/services/accountSiteOnboarding/registry"
 
 import { aihubmixAdapter } from "./aihubmix"
 import type { SiteAdapter } from "./contracts/siteAdapter"
 import { createNewApiAdapter } from "./newApi"
 import { sub2ApiAdapter } from "./sub2api"
-
-const newApiFamilySiteTypes = new Set<AccountSiteType>([
-  SITE_TYPES.ONE_API,
-  SITE_TYPES.NEW_API,
-  SITE_TYPES.ANYROUTER,
-  SITE_TYPES.VELOERA,
-  SITE_TYPES.ONE_HUB,
-  SITE_TYPES.DONE_HUB,
-  SITE_TYPES.V_API,
-  SITE_TYPES.VO_API,
-  SITE_TYPES.SUPER_API,
-  SITE_TYPES.RIX_API,
-  SITE_TYPES.NEO_API,
-  SITE_TYPES.WONG_GONGYI,
-  SITE_TYPES.UNKNOWN,
-])
 
 const createNewApiFamilyAdapter = (siteType: AccountSiteType): SiteAdapter =>
   createNewApiAdapter(siteType)
@@ -32,15 +20,17 @@ const createUnsupportedAdapter = (siteType: AccountSiteType): SiteAdapter => ({
  * Resolve the narrow capability adapter for an account site type.
  */
 export function getSiteAdapter(siteType: AccountSiteType): SiteAdapter {
-  if (siteType === SITE_TYPES.SUB2API) {
+  const adapterFamily = getAccountSiteAdapterFamily(siteType)
+
+  if (adapterFamily === ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api) {
     return sub2ApiAdapter
   }
 
-  if (siteType === SITE_TYPES.AIHUBMIX) {
+  if (adapterFamily === ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix) {
     return aihubmixAdapter
   }
 
-  if (newApiFamilySiteTypes.has(siteType)) {
+  if (adapterFamily === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily) {
     return createNewApiFamilyAdapter(siteType)
   }
 

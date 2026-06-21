@@ -1,13 +1,58 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import {
+  ACCOUNT_SITE_ADAPTER_FAMILIES,
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/constants/siteType"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum } from "~/types"
 
-const { redeemCodeMock } = vi.hoisted(() => ({
+const { getAccountSiteAdapterFamilyMock, redeemCodeMock } = vi.hoisted(() => ({
+  getAccountSiteAdapterFamilyMock: vi.fn((siteType: AccountSiteType) => {
+    if (siteType === SITE_TYPES.SUB2API) {
+      return ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api
+    }
+
+    if (siteType === SITE_TYPES.AIHUBMIX) {
+      return ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix
+    }
+
+    if (
+      [
+        SITE_TYPES.ONE_API,
+        SITE_TYPES.NEW_API,
+        SITE_TYPES.ANYROUTER,
+        SITE_TYPES.VELOERA,
+        SITE_TYPES.ONE_HUB,
+        SITE_TYPES.DONE_HUB,
+        SITE_TYPES.V_API,
+        SITE_TYPES.VO_API,
+        SITE_TYPES.SUPER_API,
+        SITE_TYPES.RIX_API,
+        SITE_TYPES.NEO_API,
+        SITE_TYPES.WONG_GONGYI,
+        SITE_TYPES.UNKNOWN,
+      ].includes(siteType)
+    ) {
+      return ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
+    }
+
+    return ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported
+  }),
   redeemCodeMock: vi.fn(),
 }))
+
+vi.mock(
+  "~/services/accountSiteOnboarding/registry",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accountSiteOnboarding/registry")
+    >()),
+    getAccountSiteAdapterFamily: getAccountSiteAdapterFamilyMock,
+  }),
+)
 
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(() => ({
@@ -27,6 +72,22 @@ const expectTokenProvisioningCapability = (
 }
 
 describe("apiAdapters registry", () => {
+  it("routes compatible account sites through the onboarding adapter-family projection", () => {
+    getAccountSiteAdapterFamilyMock.mockReturnValueOnce(
+      ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    )
+
+    const adapter = getSiteAdapter(SITE_TYPES.OCTOPUS as AccountSiteType)
+
+    expect(getAccountSiteAdapterFamilyMock).toHaveBeenCalledWith(
+      SITE_TYPES.OCTOPUS,
+    )
+    expect(adapter).toMatchObject({
+      siteType: SITE_TYPES.OCTOPUS,
+      family: "newApiFamily",
+    })
+  })
+
   it("returns a Sub2API Adapter with account-scoped siteAnnouncements", () => {
     const adapter = getSiteAdapter(SITE_TYPES.SUB2API)
 

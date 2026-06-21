@@ -15,6 +15,16 @@ export type AccountSiteDetectionMetadata = {
   compatUserIdHeaderNames?: readonly string[]
 }
 
+export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
+  NewApiFamily: "newApiFamily",
+  Sub2Api: "sub2api",
+  Aihubmix: "aihubmix",
+  Unsupported: "unsupported",
+} as const
+
+export type AccountSiteAdapterFamily =
+  (typeof ACCOUNT_SITE_ADAPTER_FAMILIES)[keyof typeof ACCOUNT_SITE_ADAPTER_FAMILIES]
+
 export type ContentSessionExtractionContext = {
   url?: string
   siteTypeHint?: AccountSiteType
@@ -41,6 +51,7 @@ export type ContentSessionExtractor = {
 
 export type AccountSiteOnboardingMetadata = {
   siteType: AccountSiteType
+  adapterFamily: AccountSiteAdapterFamily
   detection?: AccountSiteDetectionMetadata
   routes?: AccountSiteRouteConfig
 }

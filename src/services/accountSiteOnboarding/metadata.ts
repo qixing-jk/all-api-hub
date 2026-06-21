@@ -2,6 +2,7 @@ import type {
   AccountSiteOnboardingMetadata,
   AccountSiteRouteConfig,
 } from "./contracts"
+import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "./contracts"
 import {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_LOGIN_PATH,
@@ -84,11 +85,13 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
   [
     {
       siteType: SITE_TYPES.ONE_API,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.ONE_API)] },
       routes: { usagePath: DEFAULT_USAGE_PATH },
     },
     {
       siteType: SITE_TYPES.NEW_API,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.NEW_API)],
       },
@@ -100,11 +103,13 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
     },
     {
       siteType: SITE_TYPES.ANYROUTER,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: { titlePatterns: [/\bany\s*router\b/i] },
       routes: { checkInPath: "/console/topup" },
     },
     {
       siteType: SITE_TYPES.VELOERA,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.VELOERA)],
       },
@@ -117,6 +122,7 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
     },
     {
       siteType: SITE_TYPES.ONE_HUB,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.ONE_HUB)] },
       routes: {
         usagePath: "/panel/log",
@@ -126,6 +132,7 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
     },
     {
       siteType: SITE_TYPES.DONE_HUB,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.DONE_HUB)] },
       routes: {
         usagePath: "/panel/log",
@@ -135,6 +142,7 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
     },
     {
       siteType: SITE_TYPES.V_API,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.V_API)],
       },
@@ -147,6 +155,7 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
     },
     {
       siteType: SITE_TYPES.VO_API,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.VO_API)],
       },
@@ -154,10 +163,12 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
     },
     {
       siteType: SITE_TYPES.SUPER_API,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUPER_API)] },
     },
     {
       siteType: SITE_TYPES.RIX_API,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.RIX_API)],
       },
@@ -169,17 +180,20 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
     },
     {
       siteType: SITE_TYPES.NEO_API,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.NEO_API)],
       },
     },
     {
       siteType: SITE_TYPES.WONG_GONGYI,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: { titlePatterns: [/wong\s*公益站/i] },
       routes: { checkInPath: "/console/topup" },
     },
     {
       siteType: SITE_TYPES.SUB2API,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUB2API)] },
       routes: {
         usagePath: "/usage",
@@ -189,6 +203,7 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
     },
     {
       siteType: SITE_TYPES.AIHUBMIX,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.AIHUBMIX)],
         hostnames: AIHUBMIX_HOSTNAMES,
@@ -203,6 +218,7 @@ const accountSiteOnboardingMetadata: readonly AccountSiteOnboardingMetadata[] =
     },
     {
       siteType: SITE_TYPES.UNKNOWN,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.UNKNOWN)] },
     },
   ]
@@ -260,6 +276,16 @@ export function getAccountSiteRouteOverrideMetadata(
   siteType: AccountSiteType,
 ): AccountSiteRouteOverrideMetadata {
   return { ...(getAccountSiteMetadata(siteType)?.routes ?? {}) }
+}
+
+/**
+ * Returns the adapter family declared by account-site metadata.
+ */
+export function getAccountSiteAdapterFamilyMetadata(siteType: AccountSiteType) {
+  return (
+    getAccountSiteMetadata(siteType)?.adapterFamily ??
+    ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported
+  )
 }
 
 /**

@@ -2,6 +2,7 @@ import { compatibleUserContentSessionExtractor } from "./contentSession/compatib
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
 import type { ContentSessionExtractor } from "./contracts"
 import {
+  getAccountSiteAdapterFamilyMetadata,
   getAccountSiteCompatUserIdHeaderRules as getAccountSiteCompatUserIdHeaderRuleMetadata,
   getAccountSiteDomainRuleMetadata,
   getAccountSiteMetadata,
@@ -36,6 +37,13 @@ export function getAccountSiteTitleRules() {
  */
 export function getAccountSiteCompatUserIdHeaderRules() {
   return getAccountSiteCompatUserIdHeaderRuleMetadata()
+}
+
+/**
+ * Returns the adapter family declared for one account site type.
+ */
+export function getAccountSiteAdapterFamily(siteType: AccountSiteType) {
+  return getAccountSiteAdapterFamilyMetadata(siteType)
 }
 
 /**

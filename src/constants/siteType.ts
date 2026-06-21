@@ -15,6 +15,7 @@ import {
   type ManagedSiteType,
 } from "~/services/accountSiteOnboarding/siteTypes"
 
+export { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteOnboarding/contracts"
 export {
   ACCOUNT_SITE_TYPES,
   ACCOUNT_SITE_TYPE_VALUES,
