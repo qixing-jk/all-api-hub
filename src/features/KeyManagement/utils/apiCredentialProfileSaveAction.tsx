@@ -1,10 +1,10 @@
 import type { TFunction } from "i18next"
 import toast from "react-hot-toast"
 
-import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { buildApiCredentialProfileName } from "~/features/KeyManagement/utils/apiCredentialProfileName"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -243,7 +243,10 @@ async function createApiCredentialProfileFromToken({
       tokenName: token.name ?? "",
     }),
     apiType: API_TYPES.OPENAI_COMPATIBLE,
-    baseUrl: siteType === SITE_TYPES.AIHUBMIX ? AIHUBMIX_API_ORIGIN : baseUrl,
+    baseUrl: normalizeAccountSiteUrlForManagedChannel({
+      siteType,
+      url: baseUrl,
+    }),
     apiKey: token.key,
     tagIds: tagIds ?? [],
   })

@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { DEFAULT_USER_GROUP_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import {
+  ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
+  resolveAccountSiteTokenFormNetworkLimitPolicy,
+} from "~/services/accounts/accountSiteProfile"
 import type { AccountToken } from "~/types"
 
 // We duplicate some types here to avoid circular dependencies
@@ -122,7 +126,10 @@ export function useTokenForm({
     () => availableAccounts.find((acc) => acc.id === formData.accountId),
     [availableAccounts, formData.accountId],
   )
-  const shouldValidateIpList = selectedAccount?.siteType !== SITE_TYPES.AIHUBMIX
+  const shouldValidateIpList =
+    !selectedAccount ||
+    resolveAccountSiteTokenFormNetworkLimitPolicy(selectedAccount) ===
+      ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.IpList
 
   useEffect(() => {
     if (isOpen) {

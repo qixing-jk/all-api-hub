@@ -3,6 +3,11 @@ import type { ReactNode } from "react"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  AIHUBMIX_API_ORIGIN,
+  AIHUBMIX_WEB_ORIGIN,
+  SITE_TYPES,
+} from "~/constants/siteType"
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
@@ -105,7 +110,7 @@ function createAccountStub(): DisplaySiteData {
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
     health: { status: SiteHealthStatus.Healthy },
-    siteType: "new-api",
+    siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://example.com/v1",
     token: "token",
     userId: "1",
@@ -290,6 +295,71 @@ describe("TokenHeader save to API profiles", () => {
         name: expectedProfileName,
         apiType: API_TYPES.OPENAI_COMPATIBLE,
         baseUrl: account.baseUrl,
+        apiKey: token.key,
+        tagIds: [],
+      })
+    })
+  })
+
+  it("normalizes AIHubMix row saves to the API origin", async () => {
+    const user = userEvent.setup()
+    const account = {
+      ...createAccountStub(),
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: AIHUBMIX_WEB_ORIGIN,
+    }
+    const expectedProfileName = `${account.name} - Token`
+
+    const token = {
+      id: 1,
+      user_id: 1,
+      key: "sk-aihubmix",
+      status: 1,
+      name: "Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    mockCreateProfile.mockResolvedValue({
+      id: "p-aihubmix",
+      name: expectedProfileName,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: AIHUBMIX_API_ORIGIN,
+      apiKey: token.key,
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.saveToApiProfiles",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCreateProfile).toHaveBeenCalledWith({
+        name: expectedProfileName,
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: AIHUBMIX_API_ORIGIN,
         apiKey: token.key,
         tagIds: [],
       })

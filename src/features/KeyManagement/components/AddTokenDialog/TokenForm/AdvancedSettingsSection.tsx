@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next"
 
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 import { isNotEmptyArray } from "~/utils"
 
@@ -18,7 +17,7 @@ interface AdvancedSettingsSectionProps {
   allowedGroups?: string[]
   availableModels: string[]
   showGroupSelection: boolean
-  currentSiteType?: AccountSiteType
+  usesSubnetLimits?: boolean
   handleInputChange: (
     field: keyof FormData,
   ) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
@@ -36,7 +35,7 @@ interface AdvancedSettingsSectionProps {
  * @param props.allowedGroups Optional allow-list restricting selectable groups.
  * @param props.availableModels List of model IDs that can be targeted.
  * @param props.showGroupSelection Whether group selection is supported.
- * @param props.currentSiteType Site type for site-specific field semantics.
+ * @param props.usesSubnetLimits Whether the selected account uses subnet-limit semantics.
  * @param props.handleInputChange Factory for text input change handlers.
  * @param props.handleSelectChange Factory for select change handlers.
  * @param props.handleModelLimitsChange Emits updated model whitelist.
@@ -50,7 +49,7 @@ export function AdvancedSettingsSection({
   allowedGroups,
   availableModels,
   showGroupSelection,
-  currentSiteType,
+  usesSubnetLimits = false,
   handleInputChange,
   handleSelectChange,
   handleModelLimitsChange,
@@ -79,7 +78,7 @@ export function AdvancedSettingsSection({
       )}
       <IpLimitsInput
         allowIps={formData.allowIps}
-        usesSubnetLimits={currentSiteType === SITE_TYPES.AIHUBMIX}
+        usesSubnetLimits={usesSubnetLimits}
         handleInputChange={handleInputChange}
         error={errors.allowIps}
       />

@@ -1230,6 +1230,46 @@ describe("AddTokenDialog prefill", () => {
     )
   })
 
+  it("validates comma-separated IP lists for compatible sites", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "Compatible IP validation",
+    )
+    await user.type(
+      screen.getByLabelText("keyManagement:dialog.ipLimits"),
+      "127.0.0.1, 111",
+    )
+    expect(
+      screen.getByText("keyManagement:dialog.ipExample"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("keyManagement:dialog.subnetExample")).toBeNull()
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+    expect(
+      await screen.findByText("keyManagement:dialog.validIp"),
+    ).toBeInTheDocument()
+  })
+
   it("keeps the group selector popover above the modal and allows changing the group", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4", "gpt-3.5"])
     fetchUserGroupsMock.mockResolvedValueOnce({

@@ -1,3 +1,7 @@
+import {
+  ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
+  resolveAccountSiteTokenFormNetworkLimitPolicy,
+} from "~/services/accounts/accountSiteProfile"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 
 import type { FormData } from "../hooks/useTokenForm"
@@ -49,6 +53,13 @@ export function TokenForm({
   const handleModelLimitsChange = (values: string[]) => {
     setFormData((prev) => ({ ...prev, modelLimits: values }))
   }
+  const selectedAccount = availableAccounts.find(
+    (account) => account.id === formData.accountId,
+  )
+  const usesSubnetLimits = selectedAccount
+    ? resolveAccountSiteTokenFormNetworkLimitPolicy(selectedAccount) ===
+      ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.SubnetLimit
+    : false
 
   return (
     <div className="space-y-6">
@@ -70,10 +81,7 @@ export function TokenForm({
         allowedGroups={allowedGroups}
         availableModels={availableModels}
         showGroupSelection={showGroupSelection}
-        currentSiteType={
-          availableAccounts.find((account) => account.id === formData.accountId)
-            ?.siteType
-        }
+        usesSubnetLimits={usesSubnetLimits}
         handleInputChange={handleInputChange}
         handleSelectChange={handleSelectChange}
         handleModelLimitsChange={handleModelLimitsChange}

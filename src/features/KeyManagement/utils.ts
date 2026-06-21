@@ -1,6 +1,9 @@
 // 格式化密钥显示
-import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import {
+  ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
+  resolveAccountSiteCreatedTokenSecretHandling,
+} from "~/services/accounts/accountSiteProfile"
 import {
   hasUsableApiTokenKey,
   isMaskedApiTokenKey,
@@ -48,7 +51,9 @@ export const formatQuota = (quota: number, unlimited: boolean) => {
  */
 export const shouldShowOneTimeKeyDialogForAccount = (
   account: Pick<DisplaySiteData, "siteType">,
-) => account.siteType === SITE_TYPES.AIHUBMIX
+) =>
+  resolveAccountSiteCreatedTokenSecretHandling(account) ===
+  ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.OneTimeSecretDialog
 
 export const shouldShowOneTimeKeyDialogForCreatedToken = (
   account: Pick<DisplaySiteData, "siteType">,

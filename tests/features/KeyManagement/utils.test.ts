@@ -93,6 +93,14 @@ describe("KeyManagement utils", () => {
         }),
       ).toBe(false)
     })
+
+    it("does not force a one-time key dialog for New API create responses", () => {
+      expect(
+        shouldShowOneTimeKeyDialogForAccount({
+          siteType: SITE_TYPES.NEW_API,
+        }),
+      ).toBe(false)
+    })
   })
 
   describe("shouldShowOneTimeKeyDialogForCreatedToken", () => {

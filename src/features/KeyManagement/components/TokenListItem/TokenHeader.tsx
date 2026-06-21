@@ -43,6 +43,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { buildApiCredentialProfileName } from "~/features/KeyManagement/utils/apiCredentialProfileName"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import {
@@ -397,7 +398,10 @@ function TokenActionButtons({
       const profile = await apiCredentialProfilesStorage.createProfile({
         name: profileName,
         apiType,
-        baseUrl: account.baseUrl,
+        baseUrl: normalizeAccountSiteUrlForManagedChannel({
+          siteType: account.siteType,
+          url: account.baseUrl,
+        }),
         apiKey: resolvedToken.key,
         tagIds: account.tagIds ?? [],
       })
