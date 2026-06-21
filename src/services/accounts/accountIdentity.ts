@@ -1,4 +1,5 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
+import { resolveAccountSiteUserIdentity } from "~/services/accounts/accountSiteProfile"
 import type { AccountIdentity } from "~/types"
 
 type StoredAccountUserIdentity = {
@@ -36,9 +37,10 @@ export function resolveStoredAccountUserIdentity(
   if (!user || typeof user !== "object" || Array.isArray(user)) return null
 
   const userRecord = user as Record<string, unknown>
-  const identitySource =
-    siteType === SITE_TYPES.AIHUBMIX ? userRecord.username : userRecord.id
-  const userId = normalizeAccountIdentity(identitySource)
+  const userId = resolveAccountSiteUserIdentity({
+    siteType,
+    user: userRecord,
+  })
 
   if (!userId) return null
 

@@ -467,6 +467,40 @@ describe("accountOperations validateAndSaveAccount", () => {
     })
   })
 
+  it("ignores Sub2API supplemental auth for non-Sub2API account sites", async () => {
+    const addAccountSpy = vi.spyOn(accountStorage, "addAccount")
+
+    const result = await validateAndSaveAccount(
+      "https://api.example.com",
+      "Example",
+      "user",
+      "token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      { refreshToken: " refresh-token " },
+      { deferDataRefresh: true },
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      feedbackLevel: "success",
+    })
+    expect(addAccountSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sub2apiAuth: undefined,
+      }),
+    )
+  })
+
   it("returns a stable save failure when deferred account persistence fails", async () => {
     vi.spyOn(accountStorage, "addAccount").mockRejectedValueOnce(
       new Error("disk full"),

@@ -142,7 +142,7 @@ describe("fetchDisplayAccountTokens", () => {
     expect(request).not.toHaveProperty("sub2apiAuthSession")
   })
 
-  it("adds a Sub2API auth session only for Sub2API display-account contexts", async () => {
+  it("adds an auth session only when the account site profile permits it", async () => {
     const sub2apiAccount = {
       ...ACCOUNT,
       siteType: SITE_TYPES.SUB2API,

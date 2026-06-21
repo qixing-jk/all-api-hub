@@ -1,41 +1,17 @@
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
-  AIHUBMIX_API_ORIGIN,
-  AIHUBMIX_HOSTNAMES,
-  AIHUBMIX_WEB_ORIGIN,
-  SITE_TYPES,
-  type AccountSiteType,
-} from "~/constants/siteType"
-import { sanitizeOriginUrl } from "~/utils/core/url"
-import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
-
-const AIHUBMIX_HOSTNAME_SET: ReadonlySet<string> = new Set(AIHUBMIX_HOSTNAMES)
-
-const parseHttpUrl = (value: string): URL | null => {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-
-  const candidate = /^https?:\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`
-
-  try {
-    const parsed = new URL(candidate)
-    return parsed.protocol === "http:" || parsed.protocol === "https:"
-      ? parsed
-      : null
-  } catch {
-    return null
-  }
-}
+  isAccountSiteProfileUrl,
+  normalizeAccountSiteProfileUrlForDuplicateCheck,
+  normalizeAccountSiteProfileUrlForManagedChannel,
+  normalizeAccountSiteProfileUrlForOriginKey,
+  normalizeAccountSiteProfileUrlForStorage,
+} from "~/services/accounts/accountSiteProfile"
 
 /**
  * Checks whether a user-supplied URL points at one of AIHubMix's supported hosts.
  */
 export function isAIHubMixSiteUrl(value: string): boolean {
-  const parsed = parseHttpUrl(value)
-  return parsed
-    ? AIHUBMIX_HOSTNAME_SET.has(parsed.hostname.toLowerCase())
-    : false
+  return isAccountSiteProfileUrl(SITE_TYPES.AIHUBMIX, value)
 }
 
 /**
@@ -48,11 +24,7 @@ export function normalizeAccountSiteUrlForStorage(params: {
   siteType: AccountSiteType | string
   url: string
 }): string {
-  if (params.siteType === SITE_TYPES.AIHUBMIX) {
-    return AIHUBMIX_WEB_ORIGIN
-  }
-
-  return params.url.trim()
+  return normalizeAccountSiteProfileUrlForStorage(params)
 }
 
 /**
@@ -67,14 +39,7 @@ export function normalizeAccountSiteUrlForManagedChannel(params: {
   siteType?: AccountSiteType | string
   url: string
 }): string {
-  if (
-    params.siteType === SITE_TYPES.AIHUBMIX ||
-    isAIHubMixSiteUrl(params.url)
-  ) {
-    return AIHUBMIX_API_ORIGIN
-  }
-
-  return params.url.trim()
+  return normalizeAccountSiteProfileUrlForManagedChannel(params)
 }
 
 /**
@@ -100,14 +65,7 @@ export function normalizeAccountSiteUrlForOriginKey(params: {
   siteType?: AccountSiteType | string
   url: string
 }): string {
-  if (
-    params.siteType === SITE_TYPES.AIHUBMIX ||
-    isAIHubMixSiteUrl(params.url)
-  ) {
-    return AIHUBMIX_WEB_ORIGIN.toLowerCase()
-  }
-
-  return normalizeUrlForOriginKey(params.url, { lowerCase: true })
+  return normalizeAccountSiteProfileUrlForOriginKey(params)
 }
 
 /**
@@ -117,18 +75,7 @@ export function normalizeAccountSiteUrlForDuplicateCheck(params: {
   siteType?: AccountSiteType | string
   url: string
 }): string | undefined {
-  if (
-    params.siteType === SITE_TYPES.AIHUBMIX &&
-    (!params.url.trim() || isAIHubMixSiteUrl(params.url))
-  ) {
-    return AIHUBMIX_WEB_ORIGIN.toLowerCase()
-  }
-
-  if (isAIHubMixSiteUrl(params.url)) {
-    return AIHUBMIX_WEB_ORIGIN.toLowerCase()
-  }
-
-  return sanitizeOriginUrl(params.url)?.toLowerCase()
+  return normalizeAccountSiteProfileUrlForDuplicateCheck(params)
 }
 
 /**

@@ -1169,9 +1169,16 @@ describe("accountStorage core behaviors", () => {
       "https://console.aihubmix.com/statistics?tab=detail",
       "123",
     )
+    const canonicalWebFound = await accountStorage.getAccountByBaseUrlAndUserId(
+      "https://aihubmix.com/statistics",
+      "123",
+    )
 
     expect(found?.id).toBe("aihubmix-target")
     expect(found?.site_url).toBe("https://console.aihubmix.com")
+    expect(canonicalWebFound).toMatchObject({
+      site_type: SITE_TYPES.AIHUBMIX,
+    })
   })
 
   it("getAccountByBaseUrlAndUserId normalizes string account identities before matching", async () => {
@@ -2093,6 +2100,61 @@ describe("accountStorage core behaviors", () => {
       refreshToken: "old-refresh",
       tokenExpiresAt: 123,
     })
+  })
+
+  it("refreshAccount ignores Sub2API auth updates when profile does not permit supplemental auth", async () => {
+    const account = createAccount({
+      id: "new-api-sub2api-auth-update",
+      site_url: "https://new.example.com",
+      site_type: SITE_TYPES.NEW_API,
+      account_info: {
+        id: "8",
+        access_token: "old-token",
+        username: "new-api-user",
+        quota: 1_000_000,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    seedStorage([account])
+
+    mockFetchSupportCheckIn.mockResolvedValue(false)
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: true,
+      data: {
+        quota: 42,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: {
+          enableDetection: false,
+        },
+      },
+      healthStatus: {
+        status: SiteHealthStatus.Healthy,
+        message: "",
+      },
+      authUpdate: {
+        accessToken: "new-token",
+        sub2apiAuth: {
+          refreshToken: "new-refresh",
+          tokenExpiresAt: 456,
+        },
+      },
+    })
+
+    await accountStorage.refreshAccount("new-api-sub2api-auth-update", true)
+
+    const updatedAccount = await accountStorage.getAccountById(
+      "new-api-sub2api-auth-update",
+    )
+    expect(updatedAccount?.account_info.access_token).toBe("new-token")
+    expect(updatedAccount?.sub2apiAuth).toBeUndefined()
   })
 
   it("refreshAccount should persist health code for actionable UI", async () => {

@@ -301,7 +301,7 @@ describe("accountOperations", () => {
       ).toBe(false)
     })
 
-    it("allows empty username for Sub2API accounts", () => {
+    it("allows empty usernames only for profile-permitted account sites", () => {
       expect(
         isValidAccount({
           siteName: "Test",
@@ -313,6 +313,18 @@ describe("accountOperations", () => {
           exchangeRate: "7.0",
         }),
       ).toBe(true)
+
+      expect(
+        isValidAccount({
+          siteName: "Test",
+          username: "",
+          userId: "123",
+          siteType: SITE_TYPES.NEW_API,
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "token",
+          exchangeRate: "7.0",
+        }),
+      ).toBe(false)
     })
 
     it("rejects empty userId", () => {

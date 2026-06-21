@@ -4,6 +4,11 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
+  isAccountSiteProfileUrl,
+  normalizeAccountSiteProfileUrlForOriginKey,
+  normalizeAccountSiteSupplementalAuth,
+} from "~/services/accounts/accountSiteProfile"
+import {
   collectDuplicateAccountNameKeys,
   resolveAccountDisplayName,
 } from "~/services/accounts/utils/accountDisplayName"
@@ -51,10 +56,6 @@ import {
   migrateAccountsConfig,
   needsConfigMigration,
 } from "./migrations/accountDataMigration"
-import {
-  isAIHubMixSiteUrl,
-  normalizeAccountSiteUrlForOriginKey,
-} from "./utils/siteUrlNormalization"
 
 // Re-export for backward compatibility across the codebase.
 export { ACCOUNT_STORAGE_KEYS }
@@ -325,9 +326,6 @@ class AccountStorageService {
         return null
       }
       const accounts = await this.getAllAccounts()
-      const requestedOriginKey = isAIHubMixSiteUrl(baseUrl)
-        ? normalizeAccountSiteUrlForOriginKey({ url: baseUrl })
-        : null
       const account = accounts.find((acc) => {
         if (
           normalizeAccountIdentity(acc.account_info.id) !== normalizedUserId
@@ -339,14 +337,22 @@ class AccountStorageService {
           return true
         }
 
-        if (!requestedOriginKey || !isAIHubMixSiteUrl(acc.site_url)) {
+        if (!isAccountSiteProfileUrl(acc.site_type, baseUrl)) {
+          return false
+        }
+
+        const requestedOriginKey = normalizeAccountSiteProfileUrlForOriginKey({
+          siteType: acc.site_type,
+          url: baseUrl,
+        })
+        if (!requestedOriginKey) {
           return false
         }
 
         return (
-          normalizeAccountSiteUrlForOriginKey({
-            url: acc.site_url,
+          normalizeAccountSiteProfileUrlForOriginKey({
             siteType: acc.site_type,
+            url: acc.site_url,
           }) === requestedOriginKey
         )
       })
@@ -1203,19 +1209,13 @@ class AccountStorageService {
               : {}),
           }
 
-          if (
-            account.site_type === SITE_TYPES.SUB2API &&
-            authUpdate.sub2apiAuth &&
-            typeof authUpdate.sub2apiAuth.refreshToken === "string" &&
-            authUpdate.sub2apiAuth.refreshToken.trim()
-          ) {
-            updateData.sub2apiAuth = {
-              refreshToken: authUpdate.sub2apiAuth.refreshToken.trim(),
-              ...(typeof authUpdate.sub2apiAuth.tokenExpiresAt === "number" &&
-              Number.isFinite(authUpdate.sub2apiAuth.tokenExpiresAt)
-                ? { tokenExpiresAt: authUpdate.sub2apiAuth.tokenExpiresAt }
-                : {}),
-            }
+          const normalizedSupplementalAuth =
+            normalizeAccountSiteSupplementalAuth({
+              siteType: account.site_type,
+              sub2apiAuth: authUpdate.sub2apiAuth,
+            })
+          if (normalizedSupplementalAuth.sub2apiAuth) {
+            updateData.sub2apiAuth = normalizedSupplementalAuth.sub2apiAuth
           }
         }
 

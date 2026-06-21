@@ -16,6 +16,10 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { ensureDefaultApiTokenForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import {
+  getAccountSiteProductProfile,
+  normalizeAccountSiteSupplementalAuth,
+} from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   completeAutoDetectedAccount,
@@ -385,11 +389,11 @@ export function isValidAccount({
   const normalizedSiteType = isAccountSiteType(siteType)
     ? siteType
     : SITE_TYPES.UNKNOWN
+  const profile = getAccountSiteProductProfile(normalizedSiteType)
 
   return (
     !!siteName.trim() &&
-    // Sub2API 默认可能返回空 username（""），允许保存账号信息
-    (normalizedSiteType === SITE_TYPES.SUB2API || !!username.trim()) &&
+    (!profile.identity.usernameRequired || !!username.trim()) &&
     !!userId.trim() &&
     isValidExchangeRate(exchangeRate) &&
     (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim()) &&
@@ -435,29 +439,14 @@ function normalizeSub2ApiAuthInput(
   siteType: AccountSiteType,
   sub2apiAuth: Sub2ApiAuthConfig | undefined,
 ): Sub2ApiAuthConfig | undefined {
-  if (siteType !== SITE_TYPES.SUB2API) return undefined
-
-  const refreshToken =
-    typeof sub2apiAuth?.refreshToken === "string"
-      ? sub2apiAuth.refreshToken.trim()
-      : ""
-  if (!refreshToken) return undefined
-
-  const tokenExpiresAtRaw = sub2apiAuth?.tokenExpiresAt
-  const tokenExpiresAt =
-    typeof tokenExpiresAtRaw === "number" &&
-    Number.isFinite(tokenExpiresAtRaw) &&
-    tokenExpiresAtRaw > 0
-      ? tokenExpiresAtRaw
-      : undefined
-
-  return tokenExpiresAt ? { refreshToken, tokenExpiresAt } : { refreshToken }
+  return normalizeAccountSiteSupplementalAuth({ siteType, sub2apiAuth })
+    .sub2apiAuth
 }
 
 /**
- * Parses the user-provided exchange rate (CNY per USD) with a safe fallback.
+ * Parses the user-provided exchange rate (CNY per USD).
  *
- * Returns {@link UI_CONSTANTS.EXCHANGE_RATE.DEFAULT} when the input is empty or invalid.
+ * Returns undefined when the input is empty or invalid.
  */
 function parsePositiveExchangeRate(input: string): number | undefined {
   const trimmed = input.trim()

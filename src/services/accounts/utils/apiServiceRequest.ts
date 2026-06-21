@@ -1,4 +1,4 @@
-import { SITE_TYPES } from "~/constants/siteType"
+import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
@@ -94,7 +94,7 @@ const withDisplayAccountAuthSession = (
   account: Pick<DisplaySiteData, "siteType">,
   request: ApiServiceRequest,
 ): ApiServiceRequest | Sub2ApiAuthSessionRequest => {
-  if (account.siteType !== SITE_TYPES.SUB2API) {
+  if (!shouldDecorateAccountApiRequestWithAuthSession(account.siteType)) {
     return request
   }
 

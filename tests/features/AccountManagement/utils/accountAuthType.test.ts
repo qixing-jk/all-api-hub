@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   normalizeAccountAuthTypeOrDefault,
   normalizeOptionalAccountAuthType,
@@ -33,6 +34,12 @@ describe("account auth type utilities", () => {
 
   it("resolves unknown and unsupported URL defaults to access-token auth", () => {
     expect(resolveDefaultAccountAuthType()).toBe(AuthTypeEnum.AccessToken)
+    expect(
+      resolveDefaultAccountAuthType({
+        siteType: SITE_TYPES.NEW_API,
+        siteUrl: "https://example.invalid",
+      }),
+    ).toBe(AuthTypeEnum.AccessToken)
     expect(
       resolveDefaultAccountAuthType({ siteUrl: "https://example.com" }),
     ).toBe(AuthTypeEnum.AccessToken)

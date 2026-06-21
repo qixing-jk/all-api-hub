@@ -37,12 +37,16 @@ describe("accountIdentity", () => {
 
     expect(
       resolveStoredAccountUserIdentity(
-        { username: "aihubmix-user", display_name: "AIHubMix User" },
+        { id: 42, username: "aihubmix-user", display_name: "AIHubMix User" },
         SITE_TYPES.AIHUBMIX,
       ),
     ).toEqual({
       userId: "aihubmix-user",
-      user: { username: "aihubmix-user", display_name: "AIHubMix User" },
+      user: {
+        id: 42,
+        username: "aihubmix-user",
+        display_name: "AIHubMix User",
+      },
     })
   })
 
