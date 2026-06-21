@@ -1,6 +1,3 @@
-import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
-import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
-import type { ContentSessionExtractor } from "./contracts"
 import {
   getAccountSiteAdapterFamilyMetadata,
   getAccountSiteCompatUserIdHeaderRules as getAccountSiteCompatUserIdHeaderRuleMetadata,
@@ -8,7 +5,11 @@ import {
   getAccountSiteMetadata,
   getAccountSiteRouteOverrideMetadata,
   getAccountSiteTitleRuleMetadata,
-} from "./metadata"
+} from "~/services/accountSiteOnboarding/metadata"
+
+import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
+import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
+import type { ContentSessionExtractor } from "./contracts"
 import type { AccountSiteType } from "./siteTypes"
 
 /**

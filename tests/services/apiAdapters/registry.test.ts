@@ -84,7 +84,7 @@ describe("apiAdapters registry", () => {
     )
     expect(adapter).toMatchObject({
       siteType: SITE_TYPES.OCTOPUS,
-      family: "newApiFamily",
+      family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     })
   })
 
@@ -93,7 +93,7 @@ describe("apiAdapters registry", () => {
 
     expect(adapter).toMatchObject({
       siteType: SITE_TYPES.SUB2API,
-      family: "sub2api",
+      family: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
     })
     expect(adapter.siteAnnouncements).toEqual({
       fetch: expect.any(Function),
@@ -157,7 +157,7 @@ describe("apiAdapters registry", () => {
 
       expect(adapter).toMatchObject({
         siteType,
-        family: "newApiFamily",
+        family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
       })
       expect(adapter.siteNotice).toEqual({
         fetch: expect.any(Function),

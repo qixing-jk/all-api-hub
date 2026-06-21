@@ -7,6 +7,7 @@ import {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_LOGIN_PATH,
   SITE_TYPES,
+  type AccountSiteType,
 } from "~/constants/siteType"
 import {
   getAccountSiteAdapterFamily,
@@ -171,6 +172,12 @@ describe("account site onboarding registry", () => {
     )
     expect(getAccountSiteAdapterFamily(SITE_TYPES.AIHUBMIX)).toBe(
       ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
+    )
+  })
+
+  it("falls back to unsupported adapter family for unmapped site types", () => {
+    expect(getAccountSiteAdapterFamily("unmapped" as AccountSiteType)).toBe(
+      ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     )
   })
 

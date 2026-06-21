@@ -1,8 +1,9 @@
 import type {
   AccountSiteOnboardingMetadata,
   AccountSiteRouteConfig,
-} from "./contracts"
-import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "./contracts"
+} from "~/services/accountSiteOnboarding/contracts"
+import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteOnboarding/contracts"
+
 import {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_LOGIN_PATH,
@@ -282,10 +283,11 @@ export function getAccountSiteRouteOverrideMetadata(
  * Returns the adapter family declared by account-site metadata.
  */
 export function getAccountSiteAdapterFamilyMetadata(siteType: AccountSiteType) {
-  return (
-    getAccountSiteMetadata(siteType)?.adapterFamily ??
-    ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported
+  const metadata = accountSiteOnboardingMetadata.find(
+    (metadata) => metadata.siteType === siteType,
   )
+
+  return metadata?.adapterFamily ?? ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported
 }
 
 /**
