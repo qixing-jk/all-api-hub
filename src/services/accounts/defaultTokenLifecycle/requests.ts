@@ -1,0 +1,57 @@
+import type { CreateTokenRequest } from "~/services/apiService/common/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { SiteAccount } from "~/types"
+
+export const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
+export const DEFAULT_USER_GROUP_NAME = "default"
+
+/**
+ * Selects the preferred default user group from a constrained group list.
+ */
+export function resolvePreferredDefaultUserGroup(
+  allowedGroups: readonly string[],
+): string {
+  const normalizedGroups = allowedGroups
+    .map((group) => group.trim())
+    .filter(Boolean)
+
+  if (normalizedGroups.includes(DEFAULT_USER_GROUP_NAME)) {
+    return DEFAULT_USER_GROUP_NAME
+  }
+
+  return normalizedGroups[0] ?? DEFAULT_USER_GROUP_NAME
+}
+
+/**
+ * Generates the default token payload used by key auto-provisioning flows.
+ */
+export function generateDefaultTokenRequest(): CreateTokenRequest {
+  return {
+    name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+    unlimited_quota: true,
+    expired_time: -1,
+    remain_quota: 0,
+    allow_ips: "",
+    model_limits_enabled: false,
+    model_limits: "",
+    group: "",
+  }
+}
+
+/**
+ * Creates an adapter request DTO from a stored account record.
+ */
+export function createStoredAccountTokenRequest(
+  account: SiteAccount,
+): ApiServiceRequest {
+  return {
+    baseUrl: account.site_url,
+    accountId: account.id,
+    auth: {
+      authType: account.authType,
+      userId: account.account_info.id,
+      accessToken: account.account_info.access_token,
+      cookie: account.cookieAuth?.sessionCookie,
+    },
+  }
+}
