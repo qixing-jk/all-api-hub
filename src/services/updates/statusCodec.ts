@@ -2,8 +2,12 @@ import { trimToNull } from "~/utils/core/string"
 import { tryParseUrl } from "~/utils/core/urlParsing"
 
 import {
+  BROWSER_STORE_UPDATE_STATUS_VALUES,
+  createDefaultBrowserStoreUpdateState,
   createDefaultReleaseUpdateStatus,
   RELEASE_UPDATE_REASON_VALUES,
+  type BrowserStoreUpdateState,
+  type BrowserStoreUpdateStatus,
   type ReleaseUpdateReason,
   type ReleaseUpdateStatus,
 } from "./releaseUpdateStatus"
@@ -38,6 +42,44 @@ function isReleaseUpdateReason(value: unknown): value is ReleaseUpdateReason {
     typeof value === "string" &&
     RELEASE_UPDATE_REASON_VALUES.includes(value as ReleaseUpdateReason)
   )
+}
+
+/**
+ * Check whether an unknown string is one of the supported browser-store update statuses.
+ */
+function isBrowserStoreUpdateStatus(
+  value: unknown,
+): value is BrowserStoreUpdateStatus {
+  return (
+    typeof value === "string" &&
+    BROWSER_STORE_UPDATE_STATUS_VALUES.includes(
+      value as BrowserStoreUpdateStatus,
+    )
+  )
+}
+
+/**
+ * Validate and normalize persisted/runtime browser-store update metadata.
+ */
+function parseBrowserStoreUpdateState(raw: unknown): BrowserStoreUpdateState {
+  const fallback = createDefaultBrowserStoreUpdateState()
+  if (!raw || typeof raw !== "object") {
+    return fallback
+  }
+
+  const record = raw as Record<string, unknown>
+  if (!isBrowserStoreUpdateStatus(record.status)) {
+    return fallback
+  }
+
+  return {
+    supported:
+      typeof record.supported === "boolean"
+        ? record.supported
+        : record.status !== fallback.status,
+    status: record.status,
+    version: trimToNull(record.version),
+  }
 }
 
 /**
@@ -78,5 +120,6 @@ export function parseReleaseUpdateStatus(
         ? record.checkedAt
         : null,
     lastError: trimToNull(record.lastError),
+    storeUpdate: parseBrowserStoreUpdateState(record.storeUpdate),
   }
 }

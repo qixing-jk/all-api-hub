@@ -63,6 +63,7 @@ import {
   removeTabOrWindow,
   requestPermissions,
   requestPermissionsDetailed,
+  requestRuntimeUpdateCheck,
   sendRuntimeActionMessage,
   sendRuntimeMessageOnce,
   sendTabMessage,
@@ -1334,6 +1335,34 @@ describe("browserApi window and manifest helpers", () => {
     })
 
     expect(() => reloadRuntime()).not.toThrow()
+  })
+
+  it("normalizes promise-based runtime update checks", async () => {
+    ;(globalThis as any).browser.runtime.requestUpdateCheck = vi
+      .fn()
+      .mockResolvedValue({ status: "update_available", version: "3.48.0" })
+
+    await expect(requestRuntimeUpdateCheck()).resolves.toEqual({
+      status: "update_available",
+      version: "3.48.0",
+    })
+  })
+
+  it("uses chrome runtime update checks when browser namespace lacks the API", async () => {
+    const requestUpdateCheck = vi.fn((callback) => {
+      callback("no_update")
+    })
+    ;(globalThis as any).browser.runtime.requestUpdateCheck = undefined
+    ;(globalThis as any).chrome = {
+      runtime: {
+        requestUpdateCheck,
+      },
+    }
+
+    await expect(requestRuntimeUpdateCheck()).resolves.toEqual({
+      status: "no_update",
+    })
+    expect(requestUpdateCheck).toHaveBeenCalledTimes(1)
   })
 
   it("returns incognito access as null when the browser API throws", async () => {

@@ -101,7 +101,7 @@
 | GitHub Stable | [下载 Stable](https://github.com/qixing-jk/all-api-hub/releases/latest) | 无法安装商店版，或需要临时手动安装已发布修复 |
 | Nightly 预发布 | [下载 Nightly](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | 想抢先体验新功能并协助测试，可能不如商店稳定版稳定 |
 
-GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 Star / Watch 仓库接收新版本通知。
+GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 Star / Watch 仓库接收新版本通知。更多说明见 [安装与更新说明](https://all-api-hub.qixing1217.top/extension-update-install.html)。
 
 **其他环境支持：**
 - **手机端**：支持 Edge 手机版、Firefox Android、Kiwi 等浏览器，详见 [移动端使用指南](https://all-api-hub.qixing1217.top/faq.html#mobile-browser-support)。

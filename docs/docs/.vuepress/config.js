@@ -53,6 +53,7 @@ export default defineUserConfig({
             children: [
               '/get-started',
               '/permissions',
+              '/extension-update-install',
               '/safari-install',
               '/other-browser-install',
             ]
@@ -144,6 +145,7 @@ export default defineUserConfig({
             children: [
               '/en/get-started',
               '/en/permissions',
+              '/en/extension-update-install',
               '/en/safari-install',
               '/en/other-browser-install',
             ]
@@ -235,6 +237,7 @@ export default defineUserConfig({
             children: [
               '/ja/get-started',
               '/ja/permissions',
+              '/ja/extension-update-install',
               '/ja/safari-install',
               '/ja/other-browser-install',
             ]

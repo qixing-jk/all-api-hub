@@ -1,8 +1,10 @@
 import type { ReleaseUpdateStatus } from "./releaseUpdateStatus"
+import { BROWSER_STORE_UPDATE_STATUSES } from "./releaseUpdateStatus"
 
 export const RELEASE_UPDATE_PRESENTATION_STATES = {
   Loading: "loading",
   Unavailable: "unavailable",
+  StoreUpdateReady: "store-update-ready",
   UpdateAvailable: "update-available",
   CheckFailed: "check-failed",
   UpToDate: "up-to-date",
@@ -16,6 +18,7 @@ type ReleaseUpdatePresentationState =
 const RELEASE_UPDATE_ACTION_KINDS = {
   DownloadUpdate: "download-update",
   OpenLatest: "open-latest",
+  ReloadToUpdate: "reload-to-update",
 } as const
 
 type ReleaseUpdateActionKind =
@@ -23,6 +26,7 @@ type ReleaseUpdateActionKind =
 
 export const RELEASE_UPDATE_CHECK_OUTCOMES = {
   CheckFailed: "check-failed",
+  StoreUpdateReady: "store-update-ready",
   UpdateAvailable: "update-available",
   UpToDate: "up-to-date",
 } as const
@@ -85,6 +89,17 @@ export function deriveReleaseUpdatePresentation(options: {
     }
   }
 
+  if (
+    status.storeUpdate.status === BROWSER_STORE_UPDATE_STATUSES.UpdateAvailable
+  ) {
+    return {
+      actionKind: RELEASE_UPDATE_ACTION_KINDS.ReloadToUpdate,
+      hasUpdate: true,
+      latestVersion,
+      state: RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdateReady,
+    }
+  }
+
   if (hasUpdate) {
     return {
       actionKind: RELEASE_UPDATE_ACTION_KINDS.DownloadUpdate,
@@ -135,7 +150,17 @@ export function deriveReleaseUpdatePresentation(options: {
 export function deriveReleaseUpdateCheckOutcome(
   status: ReleaseUpdateStatus | null | undefined,
 ): ReleaseUpdateCheckOutcome {
-  if (!status || status.lastError) {
+  if (!status) {
+    return RELEASE_UPDATE_CHECK_OUTCOMES.CheckFailed
+  }
+
+  if (
+    status.storeUpdate.status === BROWSER_STORE_UPDATE_STATUSES.UpdateAvailable
+  ) {
+    return RELEASE_UPDATE_CHECK_OUTCOMES.StoreUpdateReady
+  }
+
+  if (status.lastError) {
     return RELEASE_UPDATE_CHECK_OUTCOMES.CheckFailed
   }
 

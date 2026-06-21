@@ -100,6 +100,11 @@ describe("VersionBadge", () => {
         releaseUrl: "https://github.com/qixing-jk/all-api-hub/releases/latest",
         checkedAt: 0,
         lastError: null,
+        storeUpdate: {
+          supported: false,
+          status: "unsupported",
+          version: null,
+        },
       },
       isLoading: false,
       isChecking: false,

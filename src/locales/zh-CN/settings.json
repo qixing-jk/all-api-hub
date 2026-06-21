@@ -435,7 +435,8 @@
       "manualUpdateGeneric": "请按当前安装渠道完成更新，必要时可前往发布页手动获取新版本。",
       "notChecked": "点击“立即检查”后即可确认当前版本是否需要更新。",
       "openLatest": "可前往发布页查看最新正式版与更新内容。",
-      "storeUpdate": "当前安装通常会自动更新，也可前往商店或发布页查看最新版本。",
+      "storeUpdate": "当前安装会随浏览器商店自动更新；如果 GitHub 已发布但商店暂未可用，通常是审核或分发仍在进行。",
+      "storeUpdateReady": "浏览器已发现可用的商店更新，重新加载扩展后即可使用新版本。",
       "unavailable": "可稍后重试，或直接前往发布页查看最新正式版。",
       "upToDate": "可前往发布页查看更新内容，确认本次版本包含的变更。"
     },
@@ -448,12 +449,14 @@
       "chromium-development": "当前安装渠道支持检查最新正式版，可手动发起检查",
       "firefox-ambiguous": "Firefox 当前无法可靠判断安装渠道，建议按需手动检查最新正式版",
       "safari-unsupported": "Safari 暂不支持自动检测，建议前往发布页查看最新正式版",
-      "store-build": "当前安装渠道不支持自动检测，但仍可手动检查最新正式版",
+      "store-build": "当前为浏览器商店版，可检查商店更新并对比 GitHub 最新正式版",
       "unknown": "当前安装渠道暂不支持自动检测，可手动检查最新正式版"
     },
+    "reloadToUpdate": "重新加载完成更新",
     "states": {
       "checkFailed": "检查失败，暂未获取最新正式版信息",
       "notChecked": "尚未检查最新正式版，可手动检查",
+      "storeUpdateReady": "商店更新已可用，等待重新加载",
       "unavailable": "暂时无法读取更新状态",
       "updateAvailable": "发现可升级的新版本",
       "upToDate": "已完成检查，当前版本已是最新正式版"

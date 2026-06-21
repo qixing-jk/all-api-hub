@@ -33,6 +33,11 @@ describe("release update runtime client", () => {
           "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.32.0",
         checkedAt: 1,
         lastError: null,
+        storeUpdate: {
+          supported: true,
+          status: "no_update",
+          version: null,
+        },
       },
     })
 
@@ -52,6 +57,11 @@ describe("release update runtime client", () => {
           "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.32.0",
         checkedAt: 1,
         lastError: null,
+        storeUpdate: {
+          supported: true,
+          status: "no_update",
+          version: null,
+        },
       },
     })
     expect(sendReleaseUpdateMessageMock).toHaveBeenCalledWith(

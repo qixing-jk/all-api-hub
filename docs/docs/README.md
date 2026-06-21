@@ -80,6 +80,7 @@ footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 
 > 如果你在 macOS 上使用 Safari，请先查看 [Safari 安装指南](./safari-install.md)。
 > 如果你使用 QQ/360/Brave 等浏览器，请查看 [手动安装指南](./other-browser-install.md)。
+> 如果你想了解商店版为什么会晚于 GitHub Release、如何手动检查更新，请查看 [安装渠道与更新说明](./extension-update-install.md)。
 
 <a id="community"></a>
 ## 💬 社区交流

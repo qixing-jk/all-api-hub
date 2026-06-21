@@ -102,7 +102,7 @@ But once you have multiple accounts, management quickly becomes painful:
 | GitHub Stable | [Download Stable](https://github.com/qixing-jk/all-api-hub/releases/latest) | When you cannot install the store build or need to temporarily install a published fix manually |
 | Nightly pre-release | [Download Nightly](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | When you want early access and are willing to help test; it may be less stable than the store build |
 
-GitHub Stable and Nightly are manual installation channels and do not auto-update. Star / Watch the repository to receive new version notifications.
+GitHub Stable and Nightly are manual installation channels and do not auto-update. Star / Watch the repository to receive new version notifications. See the [installation and update guide](https://all-api-hub.qixing1217.top/en/extension-update-install.html) for more details.
 
 **Other environments:**
 - **Mobile browsers**: Supports mobile Edge, Firefox for Android, Kiwi, and more. See the [mobile browser guide](https://all-api-hub.qixing1217.top/en/faq.html#mobile-browser-support).

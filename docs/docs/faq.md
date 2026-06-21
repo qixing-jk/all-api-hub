@@ -119,23 +119,11 @@ Sub2API 站点常见特征：控制台接口在 `/api/v1/*`，并使用 **短期
 2. **使用最新版本**：
    - 大多数用户建议优先使用商店版，等待浏览器商店自动更新
    - 如果修复尚未上架商店，或你无法安装商店版，可临时从 GitHub Releases 手动安装
-   - GitHub Stable、Nightly 或 main 分支开发版适合临时验证和协助测试，手动安装后不会自动更新；你可以 Star / Watch 仓库来接收新版本通知
+   - GitHub Stable、Nightly 或 main 分支开发版适合临时验证和协助测试，手动安装后不会自动更新；你可以 Star / Watch 仓库来接收新版本通知，更多区别请查看 [安装渠道与更新说明](./extension-update-install.md)
 
 ### 如何获取最新版本？
 
-插件在多个平台发布，建议优先选择与你的浏览器匹配的官方商店版本：
-
-| 平台 | 更新速度          | 版本获取 |
-|------|---------------|---------|
-| **Chrome Web Store** | 自动更新，需等待审核 | [前往安装](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
-| **Edge Add-ons** | 自动更新，需等待审核 | [前往安装](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
-| **Firefox Add-ons** | ⚡ 快（几个小时审核）   | [前往安装](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
-| **GitHub Stable** | 最快获取已发布版本，需手动安装 | [前往下载](https://github.com/qixing-jk/all-api-hub/releases/latest) |
-| **Nightly 预发布** | 最快体验开发中变更，可能不稳定 | [前往下载](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) |
-
-::: tip 建议
-Chrome、Edge、Firefox 用户优先使用商店版。只有在修复尚未上架商店、无法安装商店版，或使用 QQ 浏览器、360 系浏览器、猎豹浏览器、Brave、Vivaldi、Opera 等需要手动加载的浏览器时，才建议从 GitHub Releases 临时安装；这类手动安装版本不会自动更新，可 Star / Watch 仓库接收新版本通知，并参考 [QQ / 360 等浏览器安装指南](./other-browser-install.md)。
-:::
+插件在多个平台发布，Chrome、Edge、Firefox 用户建议优先使用对应商店版本。如果你想确认当前是否有新版本、为什么商店版可能晚于 GitHub Release、或需要手动安装 GitHub 包，请查看 [安装渠道与更新说明](./extension-update-install.md)。
 
 ## ⚙️ 功能使用问题
 

@@ -96,8 +96,22 @@ const lines = [
   `- Firefox：优先使用 Firefox Add-ons，${firefoxStoreUrl}`,
   `- Safari：暂无通用商店版，请按 Safari 安装指南手动安装，${docsBaseUrl}/safari-install.html`,
   "",
-  "### 产物说明",
+  "### 使用说明",
+  "- 大多数用户：Chrome / Edge / Firefox 优先从上方商店链接安装；商店版安装更直接，并会跟随浏览器自动更新。",
+  "- GitHub 附件：适合无法使用商店版、需要临时验证已发布修复、调试问题，或使用商店暂未覆盖的浏览器环境。",
+  "- 手动安装版通常不会自动更新；如果你通过 GitHub 附件安装，建议 Star / Watch 仓库，以便及时看到新版本发布通知。",
+  "- Chrome / Edge / Kiwi 等 Chromium 浏览器：如确需手动安装，下载 `*-chrome.zip`，先解压，再在扩展管理页选择“加载已解压的扩展程序”。",
+  "- Firefox：优先使用 Firefox Add-ons 商店；`*-firefox.zip` 与 `*-sources.zip` 更适合高级用户、自行验证或发布流程使用。",
+  "- Safari：请下载 `*-safari-xcode-bundle.zip`，解压后直接打开其中的 Xcode 工程；不要只下载 `*-safari.zip`。",
+  "",
+  "### 文档链接",
+  `- 快速上手：${docsBaseUrl}/get-started.html`,
+  `- 安装与更新说明：${docsBaseUrl}/extension-update-install.html`,
+  `- 常见问题：${docsBaseUrl}/faq.html`,
+  `- 更新日志：${docsBaseUrl}/changelog.html`,
 ]
+
+lines.push("", "### 产物说明")
 
 if (assetNames.length === 0) {
   lines.push("- 当前 release 暂未检测到附件。")
@@ -112,21 +126,7 @@ if (assetNames.length === 0) {
     })
 }
 
-lines.push(
-  "",
-  "### 使用说明",
-  "- 大多数用户：Chrome / Edge / Firefox 优先从上方商店链接安装；商店版安装更直接，并会跟随浏览器自动更新。",
-  "- GitHub 附件：适合无法使用商店版、需要临时验证已发布修复、调试问题，或使用商店暂未覆盖的浏览器环境。",
-  "- Chrome / Edge / Kiwi 等 Chromium 浏览器：如确需手动安装，下载 `*-chrome.zip`，先解压，再在扩展管理页选择“加载已解压的扩展程序”。",
-  "- Firefox：优先使用 Firefox Add-ons 商店；`*-firefox.zip` 与 `*-sources.zip` 更适合高级用户、自行验证或发布流程使用。",
-  "- Safari：请下载 `*-safari-xcode-bundle.zip`，解压后直接打开其中的 Xcode 工程；不要只下载 `*-safari.zip`。",
-  "",
-  "### 文档链接",
-  `- 快速上手：${docsBaseUrl}/get-started.html`,
-  `- 常见问题：${docsBaseUrl}/faq.html`,
-  `- 更新日志：${docsBaseUrl}/changelog.html`,
-  "<!-- all-api-hub-release-extra:end -->",
-)
+lines.push("<!-- all-api-hub-release-extra:end -->")
 
 process.stdout.write(`${lines.join("\n")}\n`)
 EOF

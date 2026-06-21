@@ -21,6 +21,7 @@ import {
   RELEASE_UPDATE_REASONS,
   type ReleaseUpdateReason,
 } from "~/services/updates/releaseUpdateStatus"
+import { reloadRuntime } from "~/utils/browser/browserApi"
 
 /**
  * Format the last release-check timestamp for a localized status line.
@@ -82,6 +83,8 @@ function getStatusTitle(options: {
       return t("common:status.loading")
     case RELEASE_UPDATE_PRESENTATION_STATES.Unavailable:
       return t("settings:releaseUpdate.states.unavailable")
+    case RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdateReady:
+      return t("settings:releaseUpdate.states.storeUpdateReady")
     case RELEASE_UPDATE_PRESENTATION_STATES.UpdateAvailable:
       return t("settings:releaseUpdate.states.updateAvailable")
     case RELEASE_UPDATE_PRESENTATION_STATES.CheckFailed:
@@ -111,6 +114,8 @@ function getStatusHelper(options: {
       return undefined
     case RELEASE_UPDATE_PRESENTATION_STATES.Unavailable:
       return t("settings:releaseUpdate.helpers.unavailable")
+    case RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdateReady:
+      return t("settings:releaseUpdate.helpers.storeUpdateReady")
     case RELEASE_UPDATE_PRESENTATION_STATES.UpdateAvailable:
       switch (reason) {
         case RELEASE_UPDATE_REASONS.StoreBuild:
@@ -194,11 +199,19 @@ export function ReleaseUpdateStatusPanel() {
   })
   const hasUpdate = presentation.hasUpdate
   const actionHref = status?.releaseUrl ?? LATEST_STABLE_RELEASE_URL
+  const isStoreUpdateReady =
+    presentation.state === RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdateReady
   const actionLabel = hasUpdate
-    ? t("settings:releaseUpdate.downloadUpdate")
+    ? isStoreUpdateReady
+      ? t("settings:releaseUpdate.reloadToUpdate")
+      : t("settings:releaseUpdate.downloadUpdate")
     : t("settings:releaseUpdate.openLatest")
   const actionIcon = hasUpdate ? (
-    <ArrowDownTrayIcon className="h-4 w-4" />
+    isStoreUpdateReady ? (
+      <ArrowPathIcon className="h-4 w-4" />
+    ) : (
+      <ArrowDownTrayIcon className="h-4 w-4" />
+    )
   ) : (
     <ArrowTopRightOnSquareIcon className="h-4 w-4" />
   )
@@ -215,6 +228,9 @@ export function ReleaseUpdateStatusPanel() {
     switch (outcome) {
       case RELEASE_UPDATE_CHECK_OUTCOMES.CheckFailed:
         toast.error(t("settings:releaseUpdate.states.checkFailed"))
+        return
+      case RELEASE_UPDATE_CHECK_OUTCOMES.StoreUpdateReady:
+        toast.success(t("settings:releaseUpdate.states.storeUpdateReady"))
         return
       case RELEASE_UPDATE_CHECK_OUTCOMES.UpdateAvailable:
         toast.success(t("settings:releaseUpdate.states.updateAvailable"))
@@ -265,16 +281,32 @@ export function ReleaseUpdateStatusPanel() {
               >
                 {t("settings:releaseUpdate.checkNow")}
               </Button>
-              <Button
-                asChild
-                variant={hasUpdate ? "default" : "secondary"}
-                size="sm"
-                rightIcon={actionIcon}
-              >
-                <a href={actionHref} target="_blank" rel="noopener noreferrer">
+              {isStoreUpdateReady ? (
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  rightIcon={actionIcon}
+                  onClick={reloadRuntime}
+                >
                   {actionLabel}
-                </a>
-              </Button>
+                </Button>
+              ) : (
+                <Button
+                  asChild
+                  variant={hasUpdate ? "default" : "secondary"}
+                  size="sm"
+                  rightIcon={actionIcon}
+                >
+                  <a
+                    href={actionHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {actionLabel}
+                  </a>
+                </Button>
+              )}
             </div>
           }
         />

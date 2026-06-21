@@ -100,4 +100,40 @@ describe("parseReleaseUpdateStatus", () => {
       }),
     ).toMatchObject({ releaseUrl: fallback })
   })
+
+  it("normalizes browser store update metadata", () => {
+    expect(
+      parseReleaseUpdateStatus({
+        currentVersion: "3.31.0",
+        storeUpdate: {
+          supported: true,
+          status: "update_available",
+          version: " 3.32.0 ",
+        },
+      }),
+    ).toMatchObject({
+      storeUpdate: {
+        supported: true,
+        status: "update_available",
+        version: "3.32.0",
+      },
+    })
+
+    expect(
+      parseReleaseUpdateStatus({
+        currentVersion: "3.31.0",
+        storeUpdate: {
+          supported: true,
+          status: "unexpected",
+          version: " ",
+        },
+      }),
+    ).toMatchObject({
+      storeUpdate: {
+        supported: false,
+        status: "unsupported",
+        version: null,
+      },
+    })
+  })
 })

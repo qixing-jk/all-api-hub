@@ -174,9 +174,11 @@ These browsers typically retain Chromium's extension management page, with sligh
 
 Once on the extension management page, follow the [General Procedure for Other Desktop Browsers](#desktop-browser-common-flow) to enable Developer mode and load the unpacked directory.
 
+<a id="update-extension"></a>
+
 ## Updating the Extension
 
-Manually loaded versions do not update automatically. To update, follow these steps:
+Manually loaded versions do not update automatically. For the differences between store versions, GitHub Stable, and Nightly, read [Installation Channels and Updates](./extension-update-install.md) first. To update a manually loaded version, follow these steps:
 
 1. Open the [Latest Release](https://github.com/qixing-jk/all-api-hub/releases/latest).
 2. Download the new `all-api-hub-<version>-chrome.zip`.
@@ -229,6 +231,7 @@ Some browsers do not support the sidebar capabilities of Chrome/Edge. In such ca
 
 - [Get Started](./get-started.md)
 - [FAQ](./faq.md)
+- [Installation Channels and Updates](./extension-update-install.md)
 - [Permissions Management (Optional Permissions)](./permissions.md)
 - [Safari Extension Installation Guide](./safari-install.md)
 

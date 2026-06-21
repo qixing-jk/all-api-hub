@@ -13,6 +13,7 @@ import {
   getRuntimeId,
   hasAlarmsAPI,
   onAlarm,
+  requestRuntimeUpdateCheck,
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -23,9 +24,12 @@ import {
   type ReleaseUpdateRuntimeResponse,
 } from "./messaging"
 import {
+  BROWSER_STORE_UPDATE_STATUSES,
+  createDefaultBrowserStoreUpdateState,
   createDefaultReleaseUpdateStatus,
   LATEST_STABLE_RELEASE_URL,
   RELEASE_UPDATE_REASONS,
+  type BrowserStoreUpdateState,
   type ReleaseUpdateReason,
   type ReleaseUpdateStatus,
 } from "./releaseUpdateStatus"
@@ -116,7 +120,10 @@ class ReleaseUpdateService {
       return base
     }
 
-    return await this.refreshStatus(base, { allowNetwork: true })
+    return await this.refreshStatus(base, {
+      allowNetwork: true,
+      includeBrowserStoreCheck: true,
+    })
   }
 
   private async runScheduledCheck(): Promise<ReleaseUpdateStatus> {
@@ -162,40 +169,53 @@ class ReleaseUpdateService {
 
   private async refreshStatus(
     base: ReleaseUpdateStatus,
-    options?: { allowNetwork?: boolean },
+    options?: { allowNetwork?: boolean; includeBrowserStoreCheck?: boolean },
   ): Promise<ReleaseUpdateStatus> {
     if (!options?.allowNetwork) {
       return base
     }
 
-    try {
-      const latestRelease = await fetchLatestStableRelease()
-      const next: ReleaseUpdateStatus = {
-        ...base,
-        latestVersion: latestRelease.latestVersion,
-        updateAvailable:
-          compareNormalizedVersions(
-            normalizeVersion(base.currentVersion),
-            latestRelease.latestVersion,
-          ) < 0,
-        releaseUrl: latestRelease.releaseUrl,
-        checkedAt: Date.now(),
-        lastError: null,
-      }
+    let latestRelease: LatestReleaseInfo | null = null
+    let latestReleaseError: unknown = null
+    let storeUpdate = base.storeUpdate
 
-      await this.writeStatus(next)
-      return next
+    try {
+      latestRelease = await fetchLatestStableRelease()
     } catch (error) {
       logger.warn("Failed to fetch latest stable release", error)
-
-      const next: ReleaseUpdateStatus = {
-        ...base,
-        lastError: getErrorMessage(error),
-      }
-
-      await this.writeStatus(next)
-      return next
+      latestReleaseError = error
     }
+
+    if (
+      options.includeBrowserStoreCheck &&
+      base.reason === RELEASE_UPDATE_REASONS.StoreBuild
+    ) {
+      storeUpdate = await checkBrowserStoreUpdate()
+    }
+
+    const next: ReleaseUpdateStatus = latestRelease
+      ? {
+          ...base,
+          latestVersion: latestRelease.latestVersion,
+          updateAvailable:
+            compareNormalizedVersions(
+              normalizeVersion(base.currentVersion),
+              latestRelease.latestVersion,
+            ) < 0,
+          releaseUrl: latestRelease.releaseUrl,
+          checkedAt: Date.now(),
+          lastError: null,
+          storeUpdate,
+        }
+      : {
+          ...base,
+          checkedAt: Date.now(),
+          lastError: getErrorMessage(latestReleaseError),
+          storeUpdate,
+        }
+
+    await this.writeStatus(next)
+    return next
   }
 
   private async buildBaseStatus(
@@ -206,6 +226,10 @@ class ReleaseUpdateService {
     const fallback = createDefaultReleaseUpdateStatus(currentVersion)
     const isSameVersion = stored?.currentVersion === currentVersion
     const canReuseStoredReleaseFields = isSameVersion && detected.eligible
+    const fallbackStoreUpdate =
+      detected.reason === RELEASE_UPDATE_REASONS.StoreBuild
+        ? createStoreBuildNotCheckedState()
+        : fallback.storeUpdate
 
     return {
       ...fallback,
@@ -222,6 +246,9 @@ class ReleaseUpdateService {
         : fallback.releaseUrl,
       checkedAt: canReuseStoredReleaseFields ? stored?.checkedAt ?? null : null,
       lastError: canReuseStoredReleaseFields ? stored?.lastError ?? null : null,
+      storeUpdate: canReuseStoredReleaseFields
+        ? stored?.storeUpdate ?? fallbackStoreUpdate
+        : fallbackStoreUpdate,
     }
   }
 
@@ -298,10 +325,47 @@ async function detectInstallEligibility(): Promise<DetectInstallEligibilityResul
   }
 
   if (isKnownChromiumStoreBuild()) {
-    return { eligible: false, reason: RELEASE_UPDATE_REASONS.StoreBuild }
+    return { eligible: true, reason: RELEASE_UPDATE_REASONS.StoreBuild }
   }
 
   return { eligible: false, reason: RELEASE_UPDATE_REASONS.Unknown }
+}
+
+/**
+ * Initial browser-store state for known Chromium store installs.
+ */
+function createStoreBuildNotCheckedState(): BrowserStoreUpdateState {
+  return {
+    supported: true,
+    status: BROWSER_STORE_UPDATE_STATUSES.NotChecked,
+    version: null,
+  }
+}
+
+/**
+ * Ask the browser-managed store channel whether an update is already available.
+ */
+async function checkBrowserStoreUpdate(): Promise<BrowserStoreUpdateState> {
+  try {
+    const result = await requestRuntimeUpdateCheck()
+    if (!result) {
+      return createDefaultBrowserStoreUpdateState()
+    }
+
+    return {
+      supported: true,
+      status: result.status,
+      version: normalizeVersion(result.version),
+    }
+  } catch (error) {
+    logger.warn("Browser store update check failed", error)
+
+    return {
+      supported: true,
+      status: BROWSER_STORE_UPDATE_STATUSES.Failed,
+      version: null,
+    }
+  }
 }
 
 /**
@@ -430,7 +494,10 @@ function areStatusesEquivalent(
     left.updateAvailable === right.updateAvailable &&
     left.releaseUrl === right.releaseUrl &&
     left.checkedAt === right.checkedAt &&
-    left.lastError === right.lastError
+    left.lastError === right.lastError &&
+    left.storeUpdate.supported === right.storeUpdate.supported &&
+    left.storeUpdate.status === right.storeUpdate.status &&
+    left.storeUpdate.version === right.storeUpdate.version
   )
 }
 

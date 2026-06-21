@@ -33,6 +33,11 @@ function buildStatus(
     releaseUrl: "https://github.com/qixing-jk/all-api-hub/releases/latest",
     checkedAt: null,
     lastError: null,
+    storeUpdate: {
+      supported: false,
+      status: "unsupported",
+      version: null,
+    },
     ...overrides,
   }
 }
@@ -261,18 +266,18 @@ describe("ReleaseUpdateStatusPanel", () => {
     ).toBeInTheDocument()
   })
 
-  it("shows an unavailable latest-version line for ineligible installs before any check", () => {
+  it("shows an unavailable latest-version line for unsupported installs before any check", () => {
     mockHook(
       buildStatus({
         eligible: false,
-        reason: "store-build",
+        reason: "unknown",
       }),
     )
 
     renderSubject()
 
     expect(
-      screen.getByText("settings:releaseUpdate.reasons.store-build"),
+      screen.getByText("settings:releaseUpdate.reasons.unknown"),
     ).toBeInTheDocument()
     expect(
       screen.getByText("settings:releaseUpdate.latestVersionUnavailable"),
@@ -289,7 +294,7 @@ describe("ReleaseUpdateStatusPanel", () => {
     mockHookState({
       status: buildStatus({
         eligible: false,
-        reason: "store-build",
+        reason: "unknown",
       }),
       checkNow,
     })
@@ -301,8 +306,55 @@ describe("ReleaseUpdateStatusPanel", () => {
 
     expect(checkNow).not.toHaveBeenCalled()
     expect(toastMocks.error).toHaveBeenCalledWith(
-      "settings:releaseUpdate.reasons.store-build",
+      "settings:releaseUpdate.reasons.unknown",
     )
+  })
+
+  it("allows store builds to check browser-store updates from the unified panel", async () => {
+    const user = userEvent.setup()
+
+    mockInteractiveHook({
+      initialStatus: buildStatus({
+        eligible: true,
+        reason: "store-build",
+        storeUpdate: {
+          supported: true,
+          status: "not_checked",
+          version: null,
+        },
+      }),
+      nextStatus: buildStatus({
+        eligible: true,
+        reason: "store-build",
+        checkedAt: Date.now(),
+        latestVersion: "3.32.0",
+        updateAvailable: true,
+        storeUpdate: {
+          supported: true,
+          status: "update_available",
+          version: "3.32.0",
+        },
+      }),
+    })
+
+    renderSubject()
+    await user.click(
+      screen.getByRole("button", { name: "settings:releaseUpdate.checkNow" }),
+    )
+
+    await waitFor(() => {
+      expect(toastMocks.success).toHaveBeenCalledWith(
+        "settings:releaseUpdate.states.storeUpdateReady",
+      )
+      expect(
+        screen.getByText("settings:releaseUpdate.states.storeUpdateReady"),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", {
+          name: "settings:releaseUpdate.reloadToUpdate",
+        }),
+      ).toBeInTheDocument()
+    })
   })
 
   it("falls back to localized unavailable copy instead of exposing raw errors", () => {

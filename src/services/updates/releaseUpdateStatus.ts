@@ -14,6 +14,28 @@ export const RELEASE_UPDATE_REASON_VALUES = Object.values(
   RELEASE_UPDATE_REASONS,
 ) as ReleaseUpdateReason[]
 
+export const BROWSER_STORE_UPDATE_STATUSES = {
+  NotChecked: "not_checked",
+  NoUpdate: "no_update",
+  UpdateAvailable: "update_available",
+  Throttled: "throttled",
+  Unsupported: "unsupported",
+  Failed: "failed",
+} as const
+
+export type BrowserStoreUpdateStatus =
+  (typeof BROWSER_STORE_UPDATE_STATUSES)[keyof typeof BROWSER_STORE_UPDATE_STATUSES]
+
+export const BROWSER_STORE_UPDATE_STATUS_VALUES = Object.values(
+  BROWSER_STORE_UPDATE_STATUSES,
+) as BrowserStoreUpdateStatus[]
+
+export type BrowserStoreUpdateState = {
+  supported: boolean
+  status: BrowserStoreUpdateStatus
+  version: string | null
+}
+
 export type ReleaseUpdateStatus = {
   eligible: boolean
   reason: ReleaseUpdateReason
@@ -23,10 +45,18 @@ export type ReleaseUpdateStatus = {
   releaseUrl: string
   checkedAt: number | null
   lastError: string | null
+  storeUpdate: BrowserStoreUpdateState
 }
 
 export const LATEST_STABLE_RELEASE_URL =
   "https://github.com/qixing-jk/all-api-hub/releases/latest"
+
+export const createDefaultBrowserStoreUpdateState =
+  (): BrowserStoreUpdateState => ({
+    supported: false,
+    status: BROWSER_STORE_UPDATE_STATUSES.Unsupported,
+    version: null,
+  })
 
 /**
  * Create a baseline release-update status before any remote check runs.
@@ -43,5 +73,6 @@ export function createDefaultReleaseUpdateStatus(
     releaseUrl: LATEST_STABLE_RELEASE_URL,
     checkedAt: null,
     lastError: null,
+    storeUpdate: createDefaultBrowserStoreUpdateState(),
   }
 }

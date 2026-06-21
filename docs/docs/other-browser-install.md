@@ -174,9 +174,11 @@ liebao://extensions/
 
 进入扩展管理页后，按 [其他桌面浏览器通用流程](#desktop-browser-common-flow) 开启开发者模式并加载解压目录即可。
 
+<a id="update-extension"></a>
+
 ## 更新扩展
 
-手动加载版本不会自动更新。更新时请按下面流程处理：
+手动加载版本不会自动更新。关于商店版、GitHub Stable 和 Nightly 的区别，请先查看 [安装渠道与更新说明](./extension-update-install.md)。手动加载版本更新时请按下面流程处理：
 
 1. 打开 [最新版本 Release](https://github.com/qixing-jk/all-api-hub/releases/latest)。
 2. 下载新的 `all-api-hub-<version>-chrome.zip`。
@@ -229,6 +231,7 @@ all-api-hub-<version>-chrome.zip
 
 - [开始使用](./get-started.md)
 - [常见问题](./faq.md)
+- [安装渠道与更新说明](./extension-update-install.md)
 - [权限管理（可选权限）](./permissions.md)
 - [Safari 扩展安装指南](./safari-install.md)
 

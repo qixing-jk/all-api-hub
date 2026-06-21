@@ -20,6 +20,11 @@ function buildStatus(
     releaseUrl: "https://github.com/qixing-jk/all-api-hub/releases/latest",
     checkedAt: null,
     lastError: null,
+    storeUpdate: {
+      supported: false,
+      status: "unsupported",
+      version: null,
+    },
     ...overrides,
   }
 }
@@ -63,6 +68,52 @@ describe("release update presentation", () => {
       hasUpdate: false,
       state: "ineligible",
     })
+  })
+
+  it("prioritizes a browser-store update that is ready to apply", () => {
+    expect(
+      deriveReleaseUpdatePresentation({
+        isLoading: false,
+        status: buildStatus({
+          latestVersion: "3.32.0",
+          updateAvailable: true,
+          storeUpdate: {
+            supported: true,
+            status: "update_available",
+            version: "3.32.0",
+          },
+        }),
+      }),
+    ).toMatchObject({
+      actionKind: "reload-to-update",
+      hasUpdate: true,
+      state: "store-update-ready",
+    })
+
+    expect(
+      deriveReleaseUpdateCheckOutcome(
+        buildStatus({
+          storeUpdate: {
+            supported: true,
+            status: "update_available",
+            version: "3.32.0",
+          },
+        }),
+      ),
+    ).toBe("store-update-ready")
+
+    expect(
+      deriveReleaseUpdateCheckOutcome(
+        buildStatus({
+          lastError: "network error",
+          storeUpdate: {
+            supported: true,
+            status: "update_available",
+            version: "3.32.0",
+          },
+        }),
+      ),
+    ).toBe("store-update-ready")
   })
 
   it("collapses manual check results into toast outcomes", () => {

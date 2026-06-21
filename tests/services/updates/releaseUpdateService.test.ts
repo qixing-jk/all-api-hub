@@ -13,6 +13,7 @@ const {
   getRuntimeIdMock,
   hasAlarmsApiMock,
   onAlarmMock,
+  requestRuntimeUpdateCheckMock,
   withExtensionStorageWriteLockMock,
 } = vi.hoisted(() => ({
   createAlarmMock: vi.fn(),
@@ -33,6 +34,7 @@ const {
   getRuntimeIdMock: vi.fn(() => (globalThis as any).browser?.runtime?.id),
   hasAlarmsApiMock: vi.fn(() => true),
   onAlarmMock: vi.fn(),
+  requestRuntimeUpdateCheckMock: vi.fn(),
   withExtensionStorageWriteLockMock: vi.fn(
     async (_key: string, work: () => Promise<unknown>) => await work(),
   ),
@@ -70,6 +72,7 @@ vi.mock("~/utils/browser/browserApi", () => ({
   getRuntimeId: getRuntimeIdMock,
   hasAlarmsAPI: hasAlarmsApiMock,
   onAlarm: onAlarmMock,
+  requestRuntimeUpdateCheck: requestRuntimeUpdateCheckMock,
 }))
 
 describe("releaseUpdateService", () => {
@@ -227,7 +230,7 @@ describe("releaseUpdateService", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
-  it("classifies known Chromium store builds as ineligible", async () => {
+  it("classifies known Chromium store builds as browser-store check eligible", async () => {
     browserAny.runtime.id = "lapnciffpekdengooeolaienkeoilfeo"
 
     const { releaseUpdateService } = await import(
@@ -237,13 +240,54 @@ describe("releaseUpdateService", () => {
     const status = await releaseUpdateService.getStatus()
 
     expect(status).toMatchObject({
-      eligible: false,
+      eligible: true,
       reason: "store-build",
       currentVersion: "3.32.0",
       latestVersion: null,
       updateAvailable: false,
+      storeUpdate: {
+        supported: true,
+        status: "not_checked",
+        version: null,
+      },
     })
     expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it("checks GitHub and the browser store for known Chromium store builds", async () => {
+    browserAny.runtime.id = "lapnciffpekdengooeolaienkeoilfeo"
+    requestRuntimeUpdateCheckMock.mockResolvedValueOnce({
+      status: "update_available",
+      version: "3.40.0",
+    })
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        tag_name: "v3.40.0",
+        html_url:
+          "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.40.0",
+      }),
+    } as Response)
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.checkNow()
+
+    expect(status).toMatchObject({
+      eligible: true,
+      reason: "store-build",
+      currentVersion: "3.32.0",
+      latestVersion: "3.40.0",
+      updateAvailable: true,
+      storeUpdate: {
+        supported: true,
+        status: "update_available",
+        version: "3.40.0",
+      },
+    })
+    expect(requestRuntimeUpdateCheckMock).toHaveBeenCalledTimes(1)
   })
 
   it("registers the daily alarm once and preserves an existing matching schedule", async () => {

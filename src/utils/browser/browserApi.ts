@@ -1249,6 +1249,99 @@ export function reloadRuntime(): void {
   }
 }
 
+export type RuntimeUpdateCheckStatus =
+  | "throttled"
+  | "no_update"
+  | "update_available"
+
+export type RuntimeUpdateCheckResult = {
+  status: RuntimeUpdateCheckStatus
+  version?: string
+}
+
+type RuntimeRequestUpdateCheck = (
+  callback?: (
+    status: RuntimeUpdateCheckStatus,
+    details?: { version?: string },
+  ) => void,
+) => Promise<RuntimeUpdateCheckResult | RuntimeUpdateCheckStatus> | void
+
+/**
+ * Ask the host browser to check its extension store for an update.
+ *
+ * Chrome exposes `runtime.requestUpdateCheck` for manually checking the
+ * browser-managed update channel. It can only find versions already published
+ * by the store and may return `throttled` when called too often.
+ *
+ * Sources:
+ * - https://developer.chrome.com/docs/extensions/reference/api/runtime#method-requestUpdateCheck
+ * - https://developer.chrome.com/docs/extensions/develop/concepts/extensions-update-lifecycle
+ */
+export async function requestRuntimeUpdateCheck(): Promise<RuntimeUpdateCheckResult | null> {
+  const requestUpdateCheck =
+    ((globalThis as any).browser?.runtime?.requestUpdateCheck as
+      | RuntimeRequestUpdateCheck
+      | undefined) ??
+    ((globalThis as any).chrome?.runtime?.requestUpdateCheck as
+      | RuntimeRequestUpdateCheck
+      | undefined)
+
+  if (typeof requestUpdateCheck !== "function") {
+    return null
+  }
+
+  return await new Promise<RuntimeUpdateCheckResult>((resolve, reject) => {
+    let settled = false
+
+    const finish = (result: RuntimeUpdateCheckResult) => {
+      if (settled) return
+      settled = true
+      resolve(result)
+    }
+
+    try {
+      const maybePromise = requestUpdateCheck(
+        (status: RuntimeUpdateCheckStatus, details?: { version?: string }) => {
+          finish({
+            status,
+            version: details?.version,
+          })
+        },
+      )
+
+      if (
+        maybePromise &&
+        typeof (maybePromise as Promise<unknown>).then === "function"
+      ) {
+        ;(
+          maybePromise as Promise<
+            RuntimeUpdateCheckResult | RuntimeUpdateCheckStatus
+          >
+        )
+          .then((result) => {
+            if (typeof result === "string") {
+              finish({ status: result })
+              return
+            }
+
+            finish(result)
+          })
+          .catch((error) => {
+            if (!settled) {
+              settled = true
+              reject(error)
+            }
+          })
+      }
+    } catch (error) {
+      if (!settled) {
+        settled = true
+        reject(error)
+      }
+    }
+  })
+}
+
 /**
  * Returns whether the extension is allowed to run in incognito/private windows.
  *

@@ -435,7 +435,8 @@
       "manualUpdateGeneric": "Vui lòng cập nhật theo kênh cài đặt hiện tại; khi cần có thể vào trang phát hành để lấy phiên bản mới thủ công.",
       "notChecked": "Bấm \"Kiểm tra ngay\" để xác nhận phiên bản hiện tại có cần cập nhật hay không.",
       "openLatest": "Có thể vào trang phát hành để xem bản chính thức mới nhất và nội dung cập nhật.",
-      "storeUpdate": "Kênh cài đặt hiện tại thường tự động cập nhật; bạn cũng có thể vào cửa hàng hoặc trang phát hành để xem phiên bản mới.",
+      "storeUpdate": "Bản cài từ cửa hàng sẽ cập nhật qua trình duyệt. Nếu GitHub đã có bản mới nhưng cửa hàng chưa sẵn sàng, thường là do đang duyệt hoặc phân phối.",
+      "storeUpdateReady": "Trình duyệt đã tìm thấy bản cập nhật từ cửa hàng. Hãy tải lại tiện ích để dùng phiên bản mới.",
       "unavailable": "Có thể thử lại sau hoặc trực tiếp vào trang phát hành để xem bản chính thức mới nhất.",
       "upToDate": "Có thể vào trang phát hành để xem nội dung cập nhật và xác nhận các thay đổi trong phiên bản này."
     },
@@ -448,12 +449,14 @@
       "chromium-development": "Kênh cài đặt hiện tại hỗ trợ kiểm tra bản chính thức mới nhất; có thể kiểm tra thủ công",
       "firefox-ambiguous": "Firefox hiện không thể xác định kênh cài đặt một cách đáng tin cậy; nên kiểm tra bản chính thức mới nhất thủ công khi cần",
       "safari-unsupported": "Safari tạm thời chưa hỗ trợ tự động kiểm tra; nên vào trang phát hành để xem bản chính thức mới nhất",
-      "store-build": "Kênh cài đặt hiện tại không hỗ trợ tự động kiểm tra nhưng vẫn có thể kiểm tra bản chính thức mới nhất thủ công",
+      "store-build": "Đây là bản cài từ cửa hàng trình duyệt. Có thể kiểm tra cập nhật cửa hàng và so sánh với bản GitHub mới nhất",
       "unknown": "Kênh cài đặt hiện tại tạm thời chưa hỗ trợ tự động kiểm tra; có thể kiểm tra thủ công"
     },
+    "reloadToUpdate": "Tải lại để cập nhật",
     "states": {
       "checkFailed": "Kiểm tra thất bại, chưa lấy được thông tin bản chính thức mới nhất",
       "notChecked": "Chưa kiểm tra bản chính thức mới nhất, có thể kiểm tra thủ công",
+      "storeUpdateReady": "Bản cập nhật cửa hàng đã sẵn sàng, hãy tải lại để áp dụng",
       "unavailable": "Tạm thời không thể đọc trạng thái cập nhật",
       "updateAvailable": "Phát hiện phiên bản mới có thể nâng cấp",
       "upToDate": "Đã kiểm tra xong, phiên bản hiện tại là bản chính thức mới nhất"
