@@ -68,6 +68,7 @@ const shouldUseAccountScopedDirectPricingFallback = (
 ) => {
   const profile = getAccountSiteModelListProfile(account.siteType)
 
+  // Only profile-sourced capability sites can bypass masked token reveal safely.
   return (
     supportsAccountSiteDirectModelPricing(account) &&
     profile.displayCapabilitiesSource ===

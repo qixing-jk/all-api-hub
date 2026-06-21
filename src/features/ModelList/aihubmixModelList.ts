@@ -48,6 +48,7 @@ export function applyAihubmixModelListCapabilities<
   TSource extends ModelManagementAccountSource,
 >(source: TSource, pricing: PricingResponse | null | undefined): TSource {
   const profile = getAccountSiteModelListProfile(source.account.siteType)
+  // Non-profile sources already describe capabilities in the normalized response.
   if (
     profile.displayCapabilitiesSource !==
     ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile

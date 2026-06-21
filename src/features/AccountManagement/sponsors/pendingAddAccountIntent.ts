@@ -87,7 +87,7 @@ export function watchPendingSponsorAddAccountPrefill(
 export function isSponsorAddAccountPrefill(
   value: unknown,
 ): value is AddAccountPrefill {
-  return normalizeSponsorAddAccountPrefill(value) !== null
+  return normalizeSponsorAddAccountPrefillPayload(value) !== null
 }
 
 /**
@@ -104,7 +104,7 @@ function normalizePendingEnvelope(value: unknown): AddAccountPrefill | null {
     return null
   }
 
-  return normalizeSponsorAddAccountPrefill(value.prefill)
+  return normalizeSponsorAddAccountPrefillPayload(value.prefill)
 }
 
 /**
@@ -116,6 +116,15 @@ export function normalizeSponsorAddAccountPrefill(
   const envelopePrefill = normalizePendingEnvelope(value)
   if (envelopePrefill) return envelopePrefill
 
+  return normalizeSponsorAddAccountPrefillPayload(value)
+}
+
+/**
+ * Validates a raw sponsor prefill payload without accepting storage envelopes.
+ */
+function normalizeSponsorAddAccountPrefillPayload(
+  value: unknown,
+): AddAccountPrefill | null {
   if (!isRecord(value)) return null
   if (value.source !== SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE) return null
   if (typeof value.sponsorId !== "string" || !value.sponsorId.trim()) {

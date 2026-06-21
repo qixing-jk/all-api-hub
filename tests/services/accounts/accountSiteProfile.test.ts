@@ -227,6 +227,13 @@ describe("accountSiteProfile", () => {
   it("matches saved and current identities through the same profile rule", () => {
     expect(
       doAccountSiteIdentitiesMatch({
+        siteType: SITE_TYPES.NEW_API,
+        savedUser: null,
+        currentUser: { id: 42 },
+      }),
+    ).toBe(false)
+    expect(
+      doAccountSiteIdentitiesMatch({
         siteType: SITE_TYPES.AIHUBMIX,
         savedUser: {
           id: "aihubmix-stable-id",
@@ -263,6 +270,9 @@ describe("accountSiteProfile", () => {
 
   it("normalizes AIHubMix URLs through profile URL rules", () => {
     expect(
+      isAccountSiteProfileUrl(SITE_TYPES.AIHUBMIX, "ftp://aihubmix.com"),
+    ).toBe(false)
+    expect(
       normalizeAccountSiteProfileUrlForStorage({
         siteType: SITE_TYPES.AIHUBMIX,
         url: "https://aihubmix.com/statistics",
@@ -288,6 +298,12 @@ describe("accountSiteProfile", () => {
     expect(
       isAccountSiteProfileUrl(SITE_TYPES.AIHUBMIX, "console.aihubmix.com"),
     ).toBe(true)
+    expect(
+      normalizeAccountSiteProfileUrlForStorage({
+        siteType: "future-site",
+        url: " https://future.example.invalid/path ",
+      }),
+    ).toBe("https://future.example.invalid/path")
   })
 
   it("preserves compatible URL trimming and origin behavior", () => {
@@ -312,6 +328,7 @@ describe("accountSiteProfile", () => {
   })
 
   it("resolves default auth type from profile host aliases", () => {
+    expect(resolveAccountSiteDefaultAuthType()).toBe(AuthTypeEnum.AccessToken)
     expect(
       resolveAccountSiteDefaultAuthType({
         siteType: SITE_TYPES.ANYROUTER,

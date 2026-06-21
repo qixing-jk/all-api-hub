@@ -1282,6 +1282,11 @@ export function resolveStoredAccountUserIdentity(
 ```
 
 Keep `normalizeAccountIdentity(...)` and `coerceAccountIdentity(...)` unchanged because callers use them for storage coercion.
+This keeps the existing `resolveStoredAccountUserIdentity(...)` caller contract:
+it still returns `StoredAccountUserIdentity | null` with `{ userId, user }` on
+success. The change is limited to how `userId` is resolved for each
+`AccountSiteType`; current spread-based consumers should continue to work, while
+Task 10 grep checks catch any caller that needs the typed return shape.
 
 - [ ] **Step 6: Route Account Dialog current-user matching through identity helper**
 

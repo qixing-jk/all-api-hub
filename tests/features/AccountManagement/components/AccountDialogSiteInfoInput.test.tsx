@@ -13,14 +13,16 @@ describe("AccountDialog SiteInfoInput", () => {
   type AddModeSiteInfoInputProps = Extract<
     ComponentProps<typeof SiteInfoInput>,
     { showAuthTypeSelector: true }
-  >
+  > & {
+    testSiteType?: AccountSiteType
+  }
 
   const createAddModeProps = (): AddModeSiteInfoInputProps => ({
     url: "https://api.example.com",
     onUrlChange: vi.fn(),
     isDetected: false,
     onClearUrl: vi.fn(),
-    siteType: SITE_TYPES.NEW_API,
+    testSiteType: SITE_TYPES.NEW_API,
     sitePolicy: getAccountDialogSitePolicy(SITE_TYPES.NEW_API),
     authType: AuthTypeEnum.AccessToken,
     onAuthTypeChange: vi.fn(),
@@ -33,14 +35,20 @@ describe("AccountDialog SiteInfoInput", () => {
     onEditAccount: vi.fn(),
   })
 
-  const withSitePolicy = <T extends ComponentProps<typeof SiteInfoInput>>(
-    props: T,
-  ): T => ({
-    ...props,
-    sitePolicy: getAccountDialogSitePolicy(
-      (props.siteType as AccountSiteType | undefined) ?? SITE_TYPES.UNKNOWN,
-    ),
-  })
+  const withSitePolicy = (
+    props: ComponentProps<typeof SiteInfoInput> & {
+      testSiteType?: AccountSiteType
+    },
+  ): ComponentProps<typeof SiteInfoInput> => {
+    const { testSiteType, ...componentProps } = props
+
+    return {
+      ...componentProps,
+      sitePolicy: getAccountDialogSitePolicy(
+        testSiteType ?? SITE_TYPES.UNKNOWN,
+      ),
+    }
+  }
 
   it("propagates URL edits, clears the field, and reuses the current tab URL", async () => {
     const user = userEvent.setup()
@@ -122,7 +130,7 @@ describe("AccountDialog SiteInfoInput", () => {
 
   it("hides the cookie permission action for Sub2API even when stale cookie auth is selected", async () => {
     const props = createAddModeProps()
-    props.siteType = SITE_TYPES.SUB2API
+    props.testSiteType = SITE_TYPES.SUB2API
     props.authType = AuthTypeEnum.Cookie
     props.cookieAuthPermissionsGranted = false
 
@@ -206,7 +214,7 @@ describe("AccountDialog SiteInfoInput", () => {
   it("locks the site fields for detected Sub2API sites and hides the add-mode current-tab helper", async () => {
     const props = createAddModeProps()
     props.isDetected = true
-    props.siteType = SITE_TYPES.SUB2API
+    props.testSiteType = SITE_TYPES.SUB2API
 
     render(<SiteInfoInput {...withSitePolicy(props)} />)
 
@@ -231,7 +239,7 @@ describe("AccountDialog SiteInfoInput", () => {
 
   it("keeps the entry auth selector visible but locked for add-mode Sub2API", async () => {
     const props = createAddModeProps()
-    props.siteType = SITE_TYPES.SUB2API
+    props.testSiteType = SITE_TYPES.SUB2API
 
     render(<SiteInfoInput {...withSitePolicy(props)} />)
 
@@ -279,7 +287,6 @@ describe("AccountDialog SiteInfoInput", () => {
       onUrlChange: vi.fn(),
       isDetected: false,
       onClearUrl: vi.fn(),
-      siteType: "new-api",
       sitePolicy: getAccountDialogSitePolicy(SITE_TYPES.NEW_API),
       currentTabUrl: "https://current.example.com",
       isCurrentSiteAdded: false,

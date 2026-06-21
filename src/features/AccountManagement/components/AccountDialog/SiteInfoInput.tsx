@@ -39,7 +39,6 @@ interface SiteInfoInputBaseProps {
   onUrlChange: (url: string) => void
   isDetected: boolean
   onClearUrl: () => void
-  siteType?: string
   sitePolicy: SiteInfoInputPresentationSitePolicy
   // Props for "add" mode
   currentTabUrl?: string | null
@@ -74,7 +73,6 @@ type SiteInfoInputProps =
  * @param props.onUrlChange Handler updating the site URL.
  * @param props.isDetected Whether the site info was auto-detected (locks inputs when true).
  * @param props.onClearUrl Clears the URL field.
- * @param props.siteType Detected or selected site type, used for contextual hints.
  * @param props.showAuthTypeSelector Whether to show the auth selector in the add-mode entry flow.
  * When true, authType and onAuthTypeChange are required.
  * @param props.currentTabUrl URL detected from the active browser tab.

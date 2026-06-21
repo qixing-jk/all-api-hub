@@ -3,6 +3,10 @@ import type { AccountIdentity } from "~/types"
 
 import { getAccountSiteProductProfile } from "./registry"
 
+type AccountSiteIdentityRecord = {
+  id?: unknown
+}
+
 /**
  * Normalizes account-site identity field values into persisted string form.
  */
@@ -56,7 +60,7 @@ export function doAccountSiteIdentitiesMatch({
 }): boolean {
   const savedIdentity =
     savedUser && typeof savedUser === "object" && !Array.isArray(savedUser)
-      ? normalizeIdentityValue((savedUser as Record<string, unknown>).id)
+      ? normalizeIdentityValue((savedUser as AccountSiteIdentityRecord).id)
       : null
   const currentIdentity = resolveAccountSiteUserIdentity({
     siteType,

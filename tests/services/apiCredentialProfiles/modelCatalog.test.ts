@@ -370,6 +370,39 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
   })
 
+  it("falls back to token lookup when a profile-priced site has no pricing adapter", async () => {
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
+      ...TOKEN,
+      key: "sk-real-secret",
+    })
+    fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce(["profile-model"])
+
+    const result = await loadAccountTokenFallbackPricingResponse({
+      account: {
+        ...ACCOUNT,
+        siteType: SITE_TYPES.AIHUBMIX,
+        baseUrl: "https://aihubmix.com",
+      },
+      token: {
+        ...TOKEN,
+        key: "sk-masked",
+      },
+    })
+
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.AIHUBMIX)
+    expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenCalled()
+    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith({
+      baseUrl: "https://aihubmix.com",
+      apiKey: "sk-real-secret",
+    })
+    expect(result.data.map((item) => item.model_name)).toEqual([
+      "profile-model",
+    ])
+  })
+
   it("does not use the Sub2API runtime-key fallback for compatible accounts without direct pricing adapters", async () => {
     getSiteAdapterMock.mockReturnValueOnce({
       siteType: SITE_TYPES.NEW_API,

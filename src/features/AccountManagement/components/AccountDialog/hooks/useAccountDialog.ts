@@ -637,11 +637,10 @@ export function useAccountDialog({
       return true
     }
 
-    const warningSiteUrl =
-      normalizeSiteUrlForDuplicateCheck({
-        value: existingSiteAccounts[0].site_url,
-        siteType: existingSiteAccounts[0].site_type,
-      }) || normalizedBaseUrl
+    const warningSiteUrl = normalizeSiteUrlForDuplicateCheck({
+      value: existingSiteAccounts[0].site_url,
+      siteType: existingSiteAccounts[0].site_type,
+    })
 
     const exactMatch = currentUserId
       ? existingSiteAccounts.find((acc) =>

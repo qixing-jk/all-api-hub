@@ -355,7 +355,7 @@ export type AccountSiteModelListDisplayCapabilitySource =
   (typeof ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES)[keyof typeof ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES]
 
 export type AccountSiteUrlProfile = {
-  recognizedHostnames?: readonly string[]
+  recognizedHostnames: readonly string[]
   storageOrigin?: string
   managedChannelOrigin?: string
   duplicateOrigin?: string
@@ -369,7 +369,7 @@ export type AccountSiteIdentityProfile = {
 export type AccountSiteAuthProfile = {
   allowedAuthTypes: readonly AccountAuthType[]
   defaultAuthType: AccountAuthType
-  defaultAuthHostnames?: readonly string[]
+  defaultAuthHostnames: readonly string[]
   supportsCookieAuth: boolean
   supportsBuiltInCheckInDetection: boolean
 }
@@ -441,8 +441,9 @@ Sub2API profile:
 AIHubMix profile:
 
 - username is required;
-- access-token auth is the default and cookie auth/built-in check-in detection
-  stay unavailable;
+- access-token auth is the default and cookie auth stays unavailable;
+- built-in check-in detection remains available in the product profile, while
+  AIHubMix adapter check-in execution/status remains unsupported;
 - stored browser-session identity uses `username`;
 - recognized hostnames come from `AIHUBMIX_HOSTNAMES`;
 - saved-account storage and duplicate comparison use `AIHUBMIX_WEB_ORIGIN`;
@@ -459,11 +460,12 @@ Export:
 
 ```ts
 export function getAccountSiteProductProfile(
-  siteType: AccountSiteType | string | undefined,
+  siteType: AccountSiteType,
 ): AccountSiteProductProfile
 ```
 
-Unknown or unsupported values should return the default compatible profile with
+Callers should normalize or validate unknown values before calling the resolver.
+Passing `SITE_TYPES.UNKNOWN` should return the default compatible profile with
 `SITE_TYPES.UNKNOWN` as the effective site type.
 
 The profile resolver should not call backend adapters, browser APIs, storage,

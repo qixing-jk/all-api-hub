@@ -612,6 +612,66 @@ describe("AccountDataContext current tab detection", () => {
     expect(sendMessageSpy).not.toHaveBeenCalled()
   })
 
+  it("matches from cached user id when cached user payload is unavailable", async () => {
+    activeTabs = [{ id: 306, url: "https://foo.example.com" }]
+
+    const matchingAccount = createAccount({
+      id: "acc-2",
+      baseUrl: "https://foo.example.com",
+      userId: "2",
+    })
+
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([matchingAccount])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue([])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue({
+      total_quota: 0,
+      today_total_consumption: 0,
+      today_total_requests: 0,
+      today_total_prompt_tokens: 0,
+      today_total_completion_tokens: 0,
+      today_total_income: 0,
+    })
+    mockConvertToDisplayData.mockReturnValue([{ id: "acc-2" }])
+
+    const sendMessageSpy = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockResolvedValue({
+        success: true,
+        data: { userId: "2" },
+      } as any)
+
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => {
+      expect(latestCtx?.detectedAccount?.id).toBe("acc-2")
+    })
+
+    sendMessageSpy.mockClear()
+
+    await act(async () => {
+      for (const listener of tabUpdatedListeners) {
+        await listener(306, {}, {})
+      }
+    })
+
+    await waitFor(() => {
+      expect(latestCtx?.detectedAccount?.id).toBe("acc-2")
+    })
+    expect(sendMessageSpy).not.toHaveBeenCalled()
+  })
+
   it("keeps AIHubMix username identity match when reusing current-tab user cache", async () => {
     activeTabs = [{ id: 404, url: "https://aihubmix.com/statistics" }]
 
