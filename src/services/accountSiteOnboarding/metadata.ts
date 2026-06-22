@@ -66,7 +66,7 @@ const getAccountSiteOnboardingMetadata =
 /**
  * Returns the static onboarding metadata for an account site type.
  */
-export function getAccountSiteMetadata(siteType: AccountSiteType) {
+function getAccountSiteMetadata(siteType: AccountSiteType) {
   const metadata = getAccountSiteOnboardingMetadata().find(
     (metadata) => metadata.siteType === siteType,
   )

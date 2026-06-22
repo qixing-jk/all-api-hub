@@ -5,14 +5,13 @@ import {
   ACCOUNT_SITE_DOMAIN_RULES,
   ACCOUNT_SITE_TITLE_RULES,
   AIHUBMIX_HOSTNAMES,
-  AIHUBMIX_LOGIN_PATH,
+  getAccountSiteApiRouter,
   SITE_TYPES,
 } from "~/constants/siteType"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import {
   getAccountSiteCompatUserIdHeaderRules,
   getAccountSiteDomainRules,
-  getAccountSiteOnboardingDefinition,
-  getAccountSiteRouteOverrides,
   getAccountSiteTitleRules,
   getContentSessionExtractors,
 } from "~/services/accountSiteOnboarding/registry"
@@ -80,52 +79,29 @@ describe("account site onboarding registry", () => {
     )
   })
 
-  it("returns account site route overrides from metadata", () => {
-    expect(getAccountSiteRouteOverrides(SITE_TYPES.AIHUBMIX)).toMatchObject({
-      loginPath: AIHUBMIX_LOGIN_PATH,
+  it("projects account site route overrides through the public router", () => {
+    expect(getAccountSiteApiRouter(SITE_TYPES.AIHUBMIX)).toMatchObject({
+      loginPath: "/sign-in",
       usagePath: "/statistics",
       redeemPath: "/topup",
     })
   })
 
-  it("returns route override copies instead of mutable metadata objects", () => {
-    const firstRoutes = getAccountSiteRouteOverrides(SITE_TYPES.AIHUBMIX)
-    firstRoutes.loginPath = "/mutated"
-
-    expect(getAccountSiteRouteOverrides(SITE_TYPES.AIHUBMIX).loginPath).toBe(
-      AIHUBMIX_LOGIN_PATH,
-    )
-  })
-
-  it("returns onboarding definition copies instead of mutable metadata objects", () => {
-    const firstDefinition = getAccountSiteOnboardingDefinition(
-      SITE_TYPES.AIHUBMIX,
-    )
-
-    firstDefinition!.routes!.loginPath = "/mutated"
-
-    expect(
-      getAccountSiteOnboardingDefinition(SITE_TYPES.AIHUBMIX)?.routes
-        ?.loginPath,
-    ).toBe(AIHUBMIX_LOGIN_PATH)
-  })
-
-  it("projects onboarding definitions from the account-site definition registry", async () => {
-    const { getAccountSiteDefinition } = await import(
-      "~/services/accountSiteDefinitions"
-    )
-
+  it("projects onboarding definitions from the account-site definition registry", () => {
     const aihubmixDefinition = getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)
-    const onboardingDefinition = getAccountSiteOnboardingDefinition(
-      SITE_TYPES.AIHUBMIX,
-    )
 
-    expect(onboardingDefinition).toMatchObject({
+    expect(aihubmixDefinition).toMatchObject({
       siteType: SITE_TYPES.AIHUBMIX,
       adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
-      routes: aihubmixDefinition?.onboarding?.routes,
+      onboarding: {
+        routes: {
+          loginPath: "/sign-in",
+          usagePath: "/statistics",
+          redeemPath: "/topup",
+        },
+      },
     })
-    expect(onboardingDefinition?.detection?.hostnames).toEqual([
+    expect(aihubmixDefinition?.onboarding?.detection?.hostnames).toEqual([
       ...AIHUBMIX_HOSTNAMES,
     ])
   })
@@ -159,23 +135,23 @@ describe("account site onboarding registry", () => {
   })
 
   it("returns onboarding definition detection array copies", () => {
-    const firstDefinition = getAccountSiteOnboardingDefinition(
-      SITE_TYPES.AIHUBMIX,
-    )
+    const firstDefinition = getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)
 
-    ;(firstDefinition!.detection!.hostnames as string[]).push(
+    ;(firstDefinition!.onboarding!.detection!.hostnames as string[]).push(
       "mutated.example.invalid",
     )
-    ;(firstDefinition!.detection!.titlePatterns as RegExp[]).push(/mutated/i)
-
-    const nextDefinition = getAccountSiteOnboardingDefinition(
-      SITE_TYPES.AIHUBMIX,
+    ;(firstDefinition!.onboarding!.detection!.titlePatterns as RegExp[]).push(
+      /mutated/i,
     )
 
+    const nextDefinition = getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)
+
     expect(
-      nextDefinition?.detection?.hostnames?.includes("mutated.example.invalid"),
+      nextDefinition?.onboarding?.detection?.hostnames?.includes(
+        "mutated.example.invalid",
+      ),
     ).toBe(false)
-    expect(nextDefinition?.detection?.titlePatterns).toHaveLength(1)
+    expect(nextDefinition?.onboarding?.detection?.titlePatterns).toHaveLength(1)
   })
 
   it("returns content session extractors in onboarding order", () => {
@@ -184,7 +160,11 @@ describe("account site onboarding registry", () => {
     ).toEqual(["sub2api", "compatible-user"])
   })
 
-  it("returns empty route overrides for site types without route metadata", () => {
-    expect(getAccountSiteRouteOverrides(SITE_TYPES.UNKNOWN)).toEqual({})
+  it("returns default routes for site types without route metadata", () => {
+    expect(getAccountSiteApiRouter(SITE_TYPES.UNKNOWN)).toMatchObject({
+      loginPath: "/login",
+      usagePath: "/console/log",
+      redeemPath: "/console/topup",
+    })
   })
 })

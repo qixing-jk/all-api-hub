@@ -20,7 +20,7 @@ import {
   resolveLatencyAggregateForSelection,
   resolveLatencyDailyForTokens,
   topNWithOther,
-} from "~/entrypoints/options/pages/UsageAnalytics/echartsOptions"
+} from "~/features/UsageAnalytics/charts/echartsOptions"
 import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import {
   createEmptyUsageHistoryAccountStore,

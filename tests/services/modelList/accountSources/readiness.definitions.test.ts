@@ -6,7 +6,7 @@ import {
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
 } from "~/services/accounts/accountSiteProfile"
 import {
-  getAccountSiteReadinessExpectation,
+  getAccountSiteDefinition,
   getAccountSiteTypeValues,
 } from "~/services/accountSiteDefinitions"
 import {
@@ -17,7 +17,7 @@ import {
 describe("Model List readiness definition expectations", () => {
   it("resolves each expected account site route without throwing", () => {
     for (const siteType of getAccountSiteTypeValues()) {
-      const expectation = getAccountSiteReadinessExpectation(siteType)
+      const expectation = getAccountSiteDefinition(siteType)?.readiness
       const readiness = resolveModelListAccountSourceReadiness({ siteType })
 
       expect(readiness.route, `${siteType} readiness route`).toBe(

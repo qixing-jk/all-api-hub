@@ -103,7 +103,7 @@ function cloneProductProfile(
 }
 
 /**
- * Clones readiness expectation data before exposing it to Model List tests.
+ * Clones readiness expectation data before exposing definition copies.
  */
 function cloneReadiness(
   readiness: AccountSiteDefinitionReadiness | undefined,
@@ -228,17 +228,5 @@ export function getAccountSiteProductProfileOverride(
   return cloneProductProfile(
     SITE_TYPE_DEFINITIONS.find((definition) => definition.siteType === siteType)
       ?.productProfile,
-  )
-}
-
-/**
- * Returns the Model List readiness expectation for one site type.
- */
-export function getAccountSiteReadinessExpectation(
-  siteType: SiteType | string,
-) {
-  return cloneReadiness(
-    SITE_TYPE_DEFINITIONS.find((definition) => definition.siteType === siteType)
-      ?.readiness,
   )
 }

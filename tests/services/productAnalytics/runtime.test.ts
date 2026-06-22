@@ -4,14 +4,16 @@ import { fakeBrowser } from "wxt/testing/fake-browser"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createDefaultPreferences } from "~/services/preferences/userPreferences"
 import {
-  handleProductAnalyticsMessage,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
+} from "~/services/productAnalytics/events"
+import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
+import {
+  handleProductAnalyticsMessage,
   setupProductAnalyticsAccountChangeListener,
   setupProductAnalyticsMessagingListeners,
   setupProductAnalyticsPreferencesChangeListener,
-} from "~/services/productAnalytics"
-import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
+} from "~/services/productAnalytics/runtime"
 
 const {
   captureMock,

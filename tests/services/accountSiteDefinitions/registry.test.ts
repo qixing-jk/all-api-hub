@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  getAccountSiteApiRouter,
   ACCOUNT_SITE_TYPE_VALUES as LEGACY_ACCOUNT_SITE_TYPE_VALUES,
   ACCOUNT_SITE_TYPES as LEGACY_ACCOUNT_SITE_TYPES,
   MANAGED_SITE_TYPES as LEGACY_MANAGED_SITE_TYPES,
@@ -30,7 +31,6 @@ import {
   getAccountSiteDefinitions,
   getAccountSiteOnboardingDefinitions,
   getAccountSiteProductProfileOverride,
-  getAccountSiteReadinessExpectation,
   getAccountSiteTypeValues,
   getManagedSiteTypeValues,
   MANAGED_SITE_TYPES,
@@ -45,10 +45,6 @@ import {
   SITE_TYPE_DEFINITIONS,
 } from "~/services/accountSiteDefinitions/definitions"
 import type { SiteType } from "~/services/accountSiteDefinitions/identifiers"
-import {
-  getAccountSiteOnboardingDefinition as getLegacyAccountSiteOnboardingDefinition,
-  getAccountSiteRouteOverrides as getLegacyAccountSiteRouteOverrides,
-} from "~/services/accountSiteOnboarding/registry"
 import { MODEL_LIST_ACCOUNT_SOURCE_ROUTES } from "~/services/modelList/accountSources/readiness"
 import { AuthTypeEnum } from "~/types"
 
@@ -163,17 +159,15 @@ describe("account site definition registry", () => {
     expect(legacy.isManagedSiteType(SITE_TYPES.SUB2API)).toBe(false)
   })
 
-  it("matches current legacy onboarding route metadata", () => {
+  it("keeps the public route facade aligned with definition route metadata", () => {
     for (const siteType of ACCOUNT_SITE_TYPES) {
       const routes = getAccountSiteOnboardingDefinitions().find(
         (definition) => definition.siteType === siteType,
       )?.routes
 
-      expect(routes ?? {}).toEqual(getLegacyAccountSiteRouteOverrides(siteType))
-      expect(
+      expect(getAccountSiteApiRouter(siteType)).toMatchObject(routes ?? {})
+      expect(routes ?? {}).toEqual(
         getAccountSiteDefinition(siteType)?.onboarding?.routes ?? {},
-      ).toEqual(
-        getLegacyAccountSiteOnboardingDefinition(siteType)?.routes ?? {},
       )
     }
   })
@@ -398,13 +392,13 @@ describe("account site definition registry", () => {
   })
 
   it("returns defensive readiness expectation copies", () => {
-    const readiness = getAccountSiteReadinessExpectation(SITE_TYPES.SUB2API)
+    const readiness = getAccountSiteDefinition(SITE_TYPES.SUB2API)?.readiness
 
     readiness!.modelList!.expectedRoute =
       MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported
 
     expect(
-      getAccountSiteReadinessExpectation(SITE_TYPES.SUB2API)?.modelList
+      getAccountSiteDefinition(SITE_TYPES.SUB2API)?.readiness?.modelList
         ?.expectedRoute,
     ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog)
   })
@@ -494,15 +488,15 @@ describe("account site definition registry", () => {
 
   it("projects model-list readiness expectations", () => {
     expect(
-      getAccountSiteReadinessExpectation(SITE_TYPES.NEW_API)?.modelList
+      getAccountSiteDefinition(SITE_TYPES.NEW_API)?.readiness?.modelList
         ?.expectedRoute,
     ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing)
     expect(
-      getAccountSiteReadinessExpectation(SITE_TYPES.SUB2API)?.modelList
+      getAccountSiteDefinition(SITE_TYPES.SUB2API)?.readiness?.modelList
         ?.expectedRoute,
     ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog)
     expect(
-      getAccountSiteReadinessExpectation(SITE_TYPES.AIHUBMIX)?.modelList
+      getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)?.readiness?.modelList
         ?.expectedRoute,
     ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing)
   })

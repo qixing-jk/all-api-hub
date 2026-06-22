@@ -5,7 +5,6 @@ import { getAccountSiteTypeValues, getManagedSiteTypeValues } from "./registry"
 export {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_HOSTNAMES,
-  AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
 } from "./identifiers"
 
