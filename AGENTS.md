@@ -173,6 +173,7 @@ Treat telemetry and settings discoverability as related release-readiness checks
 
 - For new or materially changed product behavior, make an explicit telemetry decision before handoff: `none`, `reuse existing`, `add action`, `add settings snapshot`, or `add result/summary event`. Do not default to silent feature work.
 - Add or update product analytics for new user-visible actions, settings, async/background flows, automatic detection branches, confirmation/cancel paths, shortcuts, and recovery actions when the data is needed to understand adoption, success, failure, skipped states, or funnel drop-off.
+- For high-volume, low-meaning telemetry such as passive impressions, prefer persisted daily summary events over per-event capture with short TTL dedupe.
 - Keep analytics privacy-safe: record controlled booleans, enums, counts, durations, and status categories only. Do not record URLs, hosts, paths, raw IDs, names, API keys, tokens, cookies, prompts, responses, user-entered text, backend messages, or stack traces.
 - When adding analytics fields, update the typed event payload, privacy allow-list/sanitizer, snapshot builders, and focused tests together. If telemetry is intentionally not added, state the reason in the final handoff.
 
