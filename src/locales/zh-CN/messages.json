@@ -33,7 +33,7 @@
   },
   "axonhub": {
     "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
-    "configMissing": "请先在基础设置中配置 AxonHub 地址、管理员邮箱和密码",
+    "configMissing": "请先在设置中配置 AxonHub 地址、管理员邮箱和密码",
     "deleteFailed": "删除 AxonHub 渠道失败",
     "importFailed": "导入失败，发生未知错误",
     "importSuccess": "成功导入新渠道 {{channelName}}",
@@ -65,7 +65,7 @@
   },
   "claudecodehub": {
     "channelExists": "提供商 {{channelName}} 已存在，无需再次导入",
-    "configMissing": "请先在基础设置中配置 Claude Code Hub 地址和管理员令牌",
+    "configMissing": "请先在设置中配置 Claude Code Hub 地址和管理员令牌",
     "deleteFailed": "删除 Claude Code Hub 提供商失败",
     "importFailed": "导入失败，发生未知错误",
     "importSuccess": "成功导入新提供商 {{channelName}}",
@@ -102,7 +102,7 @@
   },
   "donehub": {
     "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
-    "configMissing": "请先在基础设置中配置 Done Hub 地址、管理员令牌和用户 ID",
+    "configMissing": "请先在设置中配置 Done Hub 地址、管理员令牌和用户 ID",
     "importFailed": "导入失败，发生未知错误",
     "importSuccess": "成功导入新渠道 {{channelName}}",
     "noChannelsToSync": "没有可同步的渠道"
@@ -141,14 +141,14 @@
   "newapi": {
     "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
     "channelMatchUnresolved": "可能已经存在重复渠道，但当前需要先完成 New API 验证才能确认。请先完成验证后再重试导入。",
-    "configMissing": "请先在基础设置中配置 New API 地址、管理员令牌和用户 ID",
+    "configMissing": "请先在设置中配置 New API 地址、管理员令牌和用户 ID",
     "importFailed": "导入失败，发生未知错误",
     "importSuccess": "成功导入新渠道 {{channelName}}",
     "noChannelsToSync": "没有可同步的渠道"
   },
   "octopus": {
     "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
-    "configMissing": "请先在基础设置中配置 Octopus 地址、用户名和密码",
+    "configMissing": "请先在设置中配置 Octopus 地址、用户名和密码",
     "corsError": "这可能是 CORS 配置问题。请在 Octopus 设置中检查 CORS 白名单配置。",
     "importFailed": "导入失败，发生未知错误",
     "importSuccess": "成功导入新渠道 {{channelName}}",
@@ -226,7 +226,7 @@
   },
   "veloera": {
     "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
-    "configMissing": "请先在基础设置中配置 Veloera 地址、管理员令牌和用户 ID",
+    "configMissing": "请先在设置中配置 Veloera 地址、管理员令牌和用户 ID",
     "importFailed": "导入失败，发生未知错误",
     "importSuccess": "成功导入新渠道 {{channelName}}",
     "noChannelsToSync": "没有可同步的渠道"

@@ -590,7 +590,7 @@
       },
       "setup": {
         "description": "Turn scheduled task notifications on or off before choosing channels and event types.",
-        "title": "Basic settings"
+        "title": "Settings"
       },
       "tasks": {
         "description": "Select which scheduled task completions or site announcement updates should notify you.",

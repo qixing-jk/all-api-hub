@@ -590,7 +590,7 @@
       },
       "setup": {
         "description": "Trước tiên bật hoặc tắt thông báo tác vụ định kỳ, sau đó chọn kênh thông báo và sự kiện cần nhắc.",
-        "title": "Cài đặt cơ bản"
+        "title": "Cài đặt"
       },
       "tasks": {
         "description": "Chọn các tác vụ nền hoặc cập nhật thông báo website cần gửi thông báo khi hoàn tất.",

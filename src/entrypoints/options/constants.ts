@@ -78,12 +78,6 @@ const BASE_MENU_ITEMS: MenuItem[] = [
     category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
   },
   {
-    id: MENU_ITEM_IDS.BASIC,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.BASIC],
-    component: BasicSettings,
-    category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
-  },
-  {
     id: MENU_ITEM_IDS.ACCOUNT,
     icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.ACCOUNT],
     component: AccountManagement,
@@ -148,6 +142,12 @@ const BASE_MENU_ITEMS: MenuItem[] = [
     icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC],
     component: ManagedSiteModelSync,
     category: OPTIONS_MENU_CATEGORY_IDS.SITE_MANAGEMENT,
+  },
+  {
+    id: MENU_ITEM_IDS.BASIC,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.BASIC],
+    component: BasicSettings,
+    category: OPTIONS_MENU_CATEGORY_IDS.SYSTEM,
   },
   {
     id: MENU_ITEM_IDS.IMPORT_EXPORT,

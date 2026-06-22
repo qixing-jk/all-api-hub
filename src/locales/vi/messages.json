@@ -33,7 +33,7 @@
   },
   "axonhub": {
     "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
-    "configMissing": "Vui lòng cấu hình địa chỉ AxonHub, email quản trị viên và mật khẩu trong phần Cài đặt cơ bản trước",
+    "configMissing": "Vui lòng cấu hình địa chỉ AxonHub, email quản trị viên và mật khẩu trong phần Cài đặt trước",
     "deleteFailed": "Xóa kênh AxonHub thất bại",
     "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
     "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
@@ -65,7 +65,7 @@
   },
   "claudecodehub": {
     "channelExists": "Nhà cung cấp {{channelName}} đã tồn tại, không cần nhập lại",
-    "configMissing": "Vui lòng cấu hình địa chỉ Claude Code Hub và token quản trị viên trong phần Cài đặt cơ bản trước",
+    "configMissing": "Vui lòng cấu hình địa chỉ Claude Code Hub và token quản trị viên trong phần Cài đặt trước",
     "deleteFailed": "Xóa nhà cung cấp Claude Code Hub thất bại",
     "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
     "importSuccess": "Đã nhập thành công nhà cung cấp mới {{channelName}}",
@@ -102,7 +102,7 @@
   },
   "donehub": {
     "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
-    "configMissing": "Vui lòng cấu hình địa chỉ Done Hub, token quản trị viên và ID người dùng trong phần Cài đặt cơ bản trước",
+    "configMissing": "Vui lòng cấu hình địa chỉ Done Hub, token quản trị viên và ID người dùng trong phần Cài đặt trước",
     "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
     "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
@@ -141,14 +141,14 @@
   "newapi": {
     "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
     "channelMatchUnresolved": "Có thể đã tồn tại kênh trùng lặp, nhưng hiện tại cần hoàn thành xác minh New API trước để xác nhận. Vui lòng hoàn thành xác minh trước khi thử nhập lại.",
-    "configMissing": "Vui lòng cấu hình địa chỉ New API, token quản trị viên và ID người dùng trong phần Cài đặt cơ bản trước",
+    "configMissing": "Vui lòng cấu hình địa chỉ New API, token quản trị viên và ID người dùng trong phần Cài đặt trước",
     "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
     "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "octopus": {
     "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
-    "configMissing": "Vui lòng cấu hình địa chỉ Octopus, tên người dùng và mật khẩu trong phần Cài đặt cơ bản trước",
+    "configMissing": "Vui lòng cấu hình địa chỉ Octopus, tên người dùng và mật khẩu trong phần Cài đặt trước",
     "corsError": "Đây có thể là vấn đề cấu hình CORS. Vui lòng kiểm tra cấu hình danh sách trắng CORS trong phần cài đặt Octopus.",
     "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
     "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
@@ -226,7 +226,7 @@
   },
   "veloera": {
     "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
-    "configMissing": "Vui lòng cấu hình địa chỉ Veloera, token quản trị viên và ID người dùng trong phần Cài đặt cơ bản trước",
+    "configMissing": "Vui lòng cấu hình địa chỉ Veloera, token quản trị viên và ID người dùng trong phần Cài đặt trước",
     "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
     "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"

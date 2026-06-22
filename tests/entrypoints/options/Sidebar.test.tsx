@@ -75,24 +75,6 @@ describe("Options Sidebar", () => {
     ).toBeInTheDocument()
 
     expect(
-      within(nav)
-        .getAllByRole("button")
-        .slice(0, 10)
-        .map((button) => button.textContent),
-    ).toEqual([
-      "ui:navigation.overview",
-      "ui:navigation.basic",
-      "ui:navigation.account",
-      "ui:navigation.apiCredentialProfiles",
-      "ui:navigation.bookmark",
-      "ui:navigation.models",
-      "ui:navigation.keys",
-      "ui:navigation.autoCheckin",
-      "ui:navigation.siteAnnouncements",
-      "ui:navigation.balanceHistory",
-    ])
-
-    expect(
       within(nav).getByText("ui:navigation.categories.general"),
     ).toBeInTheDocument()
     expect(
@@ -104,7 +86,13 @@ describe("Options Sidebar", () => {
     expect(
       within(nav).getByText("ui:navigation.categories.insights"),
     ).toBeInTheDocument()
+    expect(
+      within(nav).getByText("ui:navigation.categories.system"),
+    ).toBeInTheDocument()
 
+    expect(
+      within(nav).getByRole("button", { name: "ui:navigation.basic" }),
+    ).toBeInTheDocument()
     expect(
       within(nav).getByRole("button", { name: "ui:navigation.autoCheckin" }),
     ).toBeInTheDocument()
@@ -117,6 +105,9 @@ describe("Options Sidebar", () => {
       within(nav).getByRole("button", {
         name: "ui:navigation.managedSiteModelSync",
       }),
+    ).toBeInTheDocument()
+    expect(
+      within(nav).getByRole("button", { name: "ui:navigation.importExport" }),
     ).toBeInTheDocument()
 
     fireEvent.click(

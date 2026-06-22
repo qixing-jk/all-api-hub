@@ -33,7 +33,7 @@
   },
   "axonhub": {
     "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
-    "configMissing": "請先在基礎設定中配置 AxonHub 地址、管理員信箱和密碼",
+    "configMissing": "請先在設定中配置 AxonHub 地址、管理員信箱和密碼",
     "deleteFailed": "刪除 AxonHub 渠道失敗",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新渠道 {{channelName}}",
@@ -65,7 +65,7 @@
   },
   "claudecodehub": {
     "channelExists": "提供商 {{channelName}} 已存在，無需再次匯入",
-    "configMissing": "請先在基礎設定中設定 Claude Code Hub 地址和管理員權杖",
+    "configMissing": "請先在設定中設定 Claude Code Hub 地址和管理員權杖",
     "deleteFailed": "刪除 Claude Code Hub 提供商失敗",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新提供商 {{channelName}}",
@@ -102,7 +102,7 @@
   },
   "donehub": {
     "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
-    "configMissing": "請先在基礎設定中配置 Done Hub 地址、管理員令牌和使用者 ID",
+    "configMissing": "請先在設定中配置 Done Hub 地址、管理員令牌和使用者 ID",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新渠道 {{channelName}}",
     "noChannelsToSync": "沒有可同步的渠道"
@@ -141,14 +141,14 @@
   "newapi": {
     "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
     "channelMatchUnresolved": "可能已經存在重複渠道，但當前需要先完成 New API 驗證才能確認。請先完成驗證後再重試匯入。",
-    "configMissing": "請先在基礎設定中配置 New API 地址、管理員令牌和使用者 ID",
+    "configMissing": "請先在設定中配置 New API 地址、管理員令牌和使用者 ID",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新渠道 {{channelName}}",
     "noChannelsToSync": "沒有可同步的渠道"
   },
   "octopus": {
     "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
-    "configMissing": "請先在基礎設定中配置 Octopus 地址、使用者名稱和密碼",
+    "configMissing": "請先在設定中配置 Octopus 地址、使用者名稱和密碼",
     "corsError": "這可能是 CORS 配置問題。請在 Octopus 設定中檢查 CORS 白名單配置。",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新渠道 {{channelName}}",
@@ -226,7 +226,7 @@
   },
   "veloera": {
     "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
-    "configMissing": "請先在基礎設定中配置 Veloera 地址、管理員令牌和使用者 ID",
+    "configMissing": "請先在設定中配置 Veloera 地址、管理員令牌和使用者 ID",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新渠道 {{channelName}}",
     "noChannelsToSync": "沒有可同步的渠道"

@@ -33,7 +33,7 @@
   },
   "axonhub": {
     "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
-    "configMissing": "先に基本設定で AxonHub のアドレス、管理者メール、パスワードを設定してください",
+    "configMissing": "先に設定で AxonHub のアドレス、管理者メール、パスワードを設定してください",
     "deleteFailed": "AxonHub チャネルの削除に失敗しました",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
@@ -65,7 +65,7 @@
   },
   "claudecodehub": {
     "channelExists": "プロバイダー {{channelName}} は既に存在するため、再インポートは不要です",
-    "configMissing": "先に基本設定で Claude Code Hub のアドレスと管理者トークンを設定してください",
+    "configMissing": "先に設定で Claude Code Hub のアドレスと管理者トークンを設定してください",
     "deleteFailed": "Claude Code Hub プロバイダーの削除に失敗しました",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいプロバイダー {{channelName}} をインポートしました",
@@ -102,7 +102,7 @@
   },
   "donehub": {
     "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
-    "configMissing": "先に基本設定で Done Hub のアドレス、管理者トークン、ユーザー ID を設定してください",
+    "configMissing": "先に設定で Done Hub のアドレス、管理者トークン、ユーザー ID を設定してください",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
     "noChannelsToSync": "同期するチャネルがありません"
@@ -141,14 +141,14 @@
   "newapi": {
     "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
     "channelMatchUnresolved": "重複の可能性があるチャネルが存在しますが、確認には New API の検証手順が必要です。先に検証を完了してから再度インポートしてください。",
-    "configMissing": "先に基本設定で New API のアドレス、管理者トークン、ユーザー ID を設定してください",
+    "configMissing": "先に設定で New API のアドレス、管理者トークン、ユーザー ID を設定してください",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "octopus": {
     "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
-    "configMissing": "先に基本設定で Octopus のアドレス、ユーザー名、パスワードを設定してください",
+    "configMissing": "先に設定で Octopus のアドレス、ユーザー名、パスワードを設定してください",
     "corsError": "これは CORS 設定が原因の可能性があります。Octopus 設定の CORS ホワイトリストを確認してください。",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
@@ -226,7 +226,7 @@
   },
   "veloera": {
     "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
-    "configMissing": "先に基本設定で Veloera のアドレス、管理者トークン、ユーザー ID を設定してください",
+    "configMissing": "先に設定で Veloera のアドレス、管理者トークン、ユーザー ID を設定してください",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
     "noChannelsToSync": "同期するチャネルがありません"
