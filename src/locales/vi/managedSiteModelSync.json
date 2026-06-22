@@ -36,6 +36,8 @@
     "overview": {
       "autoSync": "Tự động đồng bộ hóa",
       "disabled": "Đã tắt",
+      "disabledHint": "Danh sách mô hình hiện chỉ đồng bộ hóa khi bạn chạy thủ công. Bật tự động đồng bộ hóa để tiện ích chạy theo lịch.",
+      "enableAutoSync": "Bật tự động đồng bộ hóa",
       "enabled": "Đã bật",
       "everyHours_other": "Mỗi {{count}} giờ",
       "everyMinutes_other": "Mỗi {{count}} phút",

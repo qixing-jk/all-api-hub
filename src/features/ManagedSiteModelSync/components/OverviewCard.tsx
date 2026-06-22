@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
-import { Card, CardContent } from "~/components/ui"
+import { Button, Card, CardContent } from "~/components/ui"
 import { formatFullTime } from "~/utils/core/formatters"
 
 interface OverviewCardProps {
@@ -9,6 +9,7 @@ interface OverviewCardProps {
   intervalMs?: number
   nextScheduledAt?: string | number | null
   lastRunAt?: number | string | null
+  onConfigureAutoSync?: () => void
 }
 
 /**
@@ -49,7 +50,13 @@ const formatIsoOrFallback = (
  * Shows current scheduler state (enabled, next scheduled run) even when no execution history exists.
  */
 export default function OverviewCard(props: OverviewCardProps) {
-  const { enabled, intervalMs, nextScheduledAt, lastRunAt } = props
+  const {
+    enabled,
+    intervalMs,
+    nextScheduledAt,
+    lastRunAt,
+    onConfigureAutoSync,
+  } = props
   const { t } = useTranslation("managedSiteModelSync")
 
   return (
@@ -99,6 +106,22 @@ export default function OverviewCard(props: OverviewCardProps) {
             </div>
           </div>
         </div>
+
+        {!enabled && onConfigureAutoSync ? (
+          <div className="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700 dark:bg-gray-800/60">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              {t("execution.overview.disabledHint")}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onConfigureAutoSync}
+            >
+              {t("execution.overview.enableAutoSync")}
+            </Button>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

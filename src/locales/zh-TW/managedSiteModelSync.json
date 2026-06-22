@@ -36,6 +36,8 @@
     "overview": {
       "autoSync": "自動同步",
       "disabled": "已禁用",
+      "disabledHint": "目前只會在你手動執行時同步模型列表。啟用自動同步後，擴充套件會按照設定間隔自動執行。",
+      "enableAutoSync": "啟用自動同步",
       "enabled": "已啟用",
       "everyHours_other": "每 {{count}} 小時",
       "everyMinutes_other": "每 {{count}} 分鐘",

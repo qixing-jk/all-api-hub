@@ -10,6 +10,7 @@ import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { Button, EmptyState, Input } from "~/components/ui"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import {
@@ -50,6 +51,7 @@ import type {
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { showWarningToast } from "~/utils/core/toastHelpers"
+import { openSettingsTab } from "~/utils/navigation"
 
 import ActionBar from "./components/ActionBar"
 import EmptyResults from "./components/EmptyResults"
@@ -1309,6 +1311,12 @@ export default function ManagedSiteModelSync({
               intervalMs={intervalMs}
               nextScheduledAt={nextScheduledAt}
               lastRunAt={lastExecution?.statistics?.endedAt ?? null}
+              onConfigureAutoSync={() => {
+                void openSettingsTab("managedSite", {
+                  preserveHistory: true,
+                  anchor: SETTINGS_ANCHORS.MANAGED_SITE_MODEL_SYNC,
+                })
+              }}
             />
           </div>
 

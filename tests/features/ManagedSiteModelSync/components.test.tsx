@@ -149,6 +149,32 @@ describe("ManagedSiteModelSync components", () => {
     expect(screen.getByText("4.2s")).toBeInTheDocument()
   })
 
+  it("guides users to configure auto-sync when the scheduler is disabled", () => {
+    const configureAutoSync = vi.fn()
+
+    render(
+      <OverviewCard
+        enabled={false}
+        intervalMs={24 * 60 * 60 * 1000}
+        nextScheduledAt={null}
+        lastRunAt={null}
+        onConfigureAutoSync={configureAutoSync}
+      />,
+    )
+
+    expect(
+      screen.getByText("managedSiteModelSync:execution.overview.disabledHint"),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.overview.enableAutoSync",
+      }),
+    )
+
+    expect(configureAutoSync).toHaveBeenCalledTimes(1)
+  })
+
   it("wires action and filter callbacks", () => {
     const onRunAll = vi.fn()
     const onRunSelected = vi.fn()

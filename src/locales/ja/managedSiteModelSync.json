@@ -36,6 +36,8 @@
     "overview": {
       "autoSync": "自動同期",
       "disabled": "無効",
+      "disabledHint": "現在、モデル一覧は手動実行時のみ同期されます。自動同期を有効にすると、拡張機能が設定した間隔で実行します。",
+      "enableAutoSync": "自動同期を有効化",
       "enabled": "有効",
       "everyHours_other": "{{count}} 時間ごと",
       "everyMinutes_other": "{{count}} 分ごと",

@@ -37,6 +37,8 @@
     "overview": {
       "autoSync": "Auto-sync",
       "disabled": "Disabled",
+      "disabledHint": "Model lists only sync when you run them manually. Enable auto-sync to let the extension run on schedule.",
+      "enableAutoSync": "Enable Auto-Sync",
       "enabled": "Enabled",
       "everyHours_one": "Every {{count}}h",
       "everyHours_other": "Every {{count}}h",
