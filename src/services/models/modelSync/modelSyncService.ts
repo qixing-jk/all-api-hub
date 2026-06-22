@@ -108,11 +108,16 @@ export class ModelSyncService {
       auth.userId = config.userId
     }
 
-    return {
+    const request: ApiServiceRequest = {
       baseUrl: config.baseUrl,
       auth,
-      bypassSiteRequestLimit: true,
     }
+
+    if (this.rateLimiter) {
+      request.bypassSiteRequestLimit = true
+    }
+
+    return request
   }
 
   /**

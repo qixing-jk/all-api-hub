@@ -400,7 +400,6 @@ describe("ModelSyncService - siteType routing", () => {
     expect(listAllChannelsMock).toHaveBeenCalledWith(
       {
         baseUrl: runtimeConfig.config.baseUrl,
-        bypassSiteRequestLimit: true,
         auth: {
           authType: "access_token",
           accessToken: runtimeConfig.config.password,
@@ -429,7 +428,6 @@ describe("ModelSyncService - siteType routing", () => {
       1,
       {
         baseUrl: octopusConfig.config.baseUrl,
-        bypassSiteRequestLimit: true,
         auth: {
           authType: "access_token",
           accessToken: "",
@@ -442,7 +440,6 @@ describe("ModelSyncService - siteType routing", () => {
       2,
       {
         baseUrl: cchConfig.config.baseUrl,
-        bypassSiteRequestLimit: true,
         auth: {
           authType: "access_token",
           accessToken: cchConfig.config.adminToken,
@@ -1236,6 +1233,21 @@ describe("ModelSyncService - batching and mapping", () => {
 
     expect(fetchChannelModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        bypassSiteRequestLimit: true,
+      }),
+      123,
+    )
+  })
+
+  it("keeps the generic site limiter when model sync has no configured limiter", async () => {
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+
+    fetchChannelModelsMock.mockResolvedValueOnce(["gpt-4o"])
+
+    await service.fetchChannelModels(123)
+
+    expect(fetchChannelModelsMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({
         bypassSiteRequestLimit: true,
       }),
       123,
