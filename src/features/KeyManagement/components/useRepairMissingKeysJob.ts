@@ -248,7 +248,10 @@ export function useRepairMissingKeysJob({
         if (cancelled) return
         if (response?.success && response.data) {
           setProgress(response.data)
+          return
         }
+
+        setError(t("keyManagement:repairMissingKeys.messages.loadFailed"))
       } catch {
         if (!cancelled) {
           setError(t("keyManagement:repairMissingKeys.messages.loadFailed"))

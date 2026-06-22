@@ -146,7 +146,6 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     setIsDeleteConfirmOpen,
     setSelectedInvalidTokenKeys,
   } = useInvalidKeyDeletion({
-    filteredInvalidTokens,
     invalidTokens,
     setProgress,
     t,

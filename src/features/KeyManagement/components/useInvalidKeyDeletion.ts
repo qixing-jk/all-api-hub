@@ -41,7 +41,6 @@ const deleteInvalidKeysAnalyticsContext = {
 
 interface UseInvalidKeyDeletionOptions {
   invalidTokens: AccountKeyRepairInvalidToken[]
-  filteredInvalidTokens: AccountKeyRepairInvalidToken[]
   setProgress: Dispatch<SetStateAction<AccountKeyRepairProgress | null>>
   t: TFunction
 }
@@ -51,7 +50,6 @@ interface UseInvalidKeyDeletionOptions {
  */
 export function useInvalidKeyDeletion({
   invalidTokens,
-  filteredInvalidTokens,
   setProgress,
   t,
 }: UseInvalidKeyDeletionOptions) {
@@ -63,10 +61,10 @@ export function useInvalidKeyDeletion({
   const [deleteResultMessage, setDeleteResultMessage] = useState("")
 
   const selectedInvalidTokens = useMemo(() => {
-    return filteredInvalidTokens.filter((token) =>
+    return invalidTokens.filter((token) =>
       selectedInvalidTokenKeys.has(getInvalidTokenKey(token)),
     )
-  }, [filteredInvalidTokens, selectedInvalidTokenKeys])
+  }, [invalidTokens, selectedInvalidTokenKeys])
 
   useEffect(() => {
     const currentInvalidTokenKeys = new Set(
@@ -93,6 +91,10 @@ export function useInvalidKeyDeletion({
   }, [])
 
   const handleDeleteInvalidKeys = useCallback(async () => {
+    if (isDeletingInvalidKeys) {
+      return
+    }
+
     const tokensToDelete = selectedInvalidTokens
     if (tokensToDelete.length === 0) {
       return
@@ -218,7 +220,7 @@ export function useInvalidKeyDeletion({
     } finally {
       setIsDeletingInvalidKeys(false)
     }
-  }, [selectedInvalidTokens, setProgress, t])
+  }, [isDeletingInvalidKeys, selectedInvalidTokens, setProgress, t])
 
   return {
     deleteResultMessage,
