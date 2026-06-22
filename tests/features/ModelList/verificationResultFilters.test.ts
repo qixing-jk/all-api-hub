@@ -143,4 +143,60 @@ describe("model list verification result view", () => {
       "gpt-unverified",
     ])
   })
+
+  it("returns no rows when no verification statuses are selected", () => {
+    const result = applyVerificationResultView(
+      [createModelItem("gpt-pass"), createModelItem("gpt-unverified")],
+      {
+        selectedResults: [],
+        shouldSortByLatency: false,
+        verificationSummariesByKey: {},
+      },
+    )
+
+    expect(result).toEqual([])
+  })
+
+  it("keeps original order for equal latency and places null latency last", () => {
+    const alphaSummary = createSummary("gpt-alpha", {
+      status: "pass",
+      latencies: [50],
+    })
+    const betaSummary = createSummary("gpt-beta", {
+      status: "pass",
+      latencies: [50],
+    })
+    const nullLatencySummary = createSummary("gpt-null", {
+      status: "pass",
+      latencies: [],
+    })
+
+    const result = applyVerificationResultView(
+      [
+        createModelItem("gpt-alpha"),
+        createModelItem("gpt-null"),
+        createModelItem("gpt-beta"),
+        createModelItem("gpt-unverified"),
+      ],
+      {
+        selectedResults: [
+          MODEL_LIST_VERIFICATION_RESULT_FILTERS.PASS,
+          MODEL_LIST_VERIFICATION_RESULT_FILTERS.UNVERIFIED,
+        ],
+        shouldSortByLatency: true,
+        verificationSummariesByKey: {
+          [alphaSummary.targetKey]: alphaSummary,
+          [betaSummary.targetKey]: betaSummary,
+          [nullLatencySummary.targetKey]: nullLatencySummary,
+        },
+      },
+    )
+
+    expect(result.map((item) => item.model.model_name)).toEqual([
+      "gpt-alpha",
+      "gpt-beta",
+      "gpt-null",
+      "gpt-unverified",
+    ])
+  })
 })

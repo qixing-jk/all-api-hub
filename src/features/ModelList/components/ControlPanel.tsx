@@ -159,7 +159,11 @@ export function ControlPanel({
   const isAllAccountsSource =
     selectedSourceValue === ALL_ACCOUNTS_SOURCE_VALUE ||
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-  const supportsPriceSorting = sourceCapabilities.supportsPricing
+  const supportsLatencySorting =
+    sourceCapabilities.supportsCredentialVerification ||
+    sourceCapabilities.supportsBatchCredentialVerification
+  const supportsSortControls =
+    sourceCapabilities.supportsPricing || supportsLatencySorting
   const isPriceComparisonActive =
     isAllAccountsSource &&
     sortMode === MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST &&
@@ -182,18 +186,26 @@ export function ControlPanel({
       value: MODEL_LIST_SORT_MODES.DEFAULT,
       label: t("sortOptions.default"),
     },
-    {
-      value: MODEL_LIST_SORT_MODES.PRICE_ASC,
-      label: t("sortOptions.priceAsc"),
-    },
-    {
-      value: MODEL_LIST_SORT_MODES.PRICE_DESC,
-      label: t("sortOptions.priceDesc"),
-    },
-    {
-      value: MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC,
-      label: t("sortOptions.verificationLatencyAsc"),
-    },
+    ...(sourceCapabilities.supportsPricing
+      ? [
+          {
+            value: MODEL_LIST_SORT_MODES.PRICE_ASC,
+            label: t("sortOptions.priceAsc"),
+          },
+          {
+            value: MODEL_LIST_SORT_MODES.PRICE_DESC,
+            label: t("sortOptions.priceDesc"),
+          },
+        ]
+      : []),
+    ...(supportsLatencySorting
+      ? [
+          {
+            value: MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC,
+            label: t("sortOptions.verificationLatencyAsc"),
+          },
+        ]
+      : []),
     ...(selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
       ? [
           {
@@ -380,7 +392,7 @@ export function ControlPanel({
             />
           </FormField>
 
-          {supportsPriceSorting && (
+          {supportsSortControls && (
             <FormField label={t("sortBy")} className="w-full lg:w-72">
               <SearchableSelect
                 options={sortOptions}

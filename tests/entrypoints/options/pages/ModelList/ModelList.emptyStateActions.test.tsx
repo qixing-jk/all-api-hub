@@ -21,6 +21,8 @@ vi.mock("~/services/models/utils/modelProviders", () => ({
 vi.mock("~/services/verification/verificationResultHistory", () => ({
   createAccountModelVerificationHistoryTarget: vi.fn(() => "account-target"),
   createProfileModelVerificationHistoryTarget: vi.fn(() => "profile-target"),
+  serializeVerificationHistoryTarget: vi.fn((target) => String(target)),
+  getVerificationSummaryLatencyMs: vi.fn(() => null),
   useVerificationResultHistorySummaries: vi.fn(() => ({
     summariesByKey: {},
   })),

@@ -891,7 +891,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     [baseFilteredRawModels, getAccountFilteredRawModels],
   )
 
-  const getFilteredResultCount = useCallback(
+  const getFilteredModels = useCallback(
     (overrides: FilterOverrides = {}) => {
       const baseModels = resolveCalculatedModels({
         rawItems: getAccountFilteredRawModels(
@@ -909,13 +909,13 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       })
 
       if (selectedProvider === MODEL_PROVIDER_FILTER_VALUES.ALL) {
-        return baseModels.length
+        return baseModels
       }
 
       return baseModels.filter(
         (item) =>
           filterModelsByProvider([item.model], selectedProvider).length > 0,
-      ).length
+      )
     },
     [
       getAccountFilteredRawModels,
@@ -926,6 +926,11 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       selectedSource?.capabilities.supportsGroupFiltering,
       showRealPrice,
     ],
+  )
+
+  const getFilteredResultCount = useCallback(
+    (overrides: FilterOverrides = {}) => getFilteredModels(overrides).length,
+    [getFilteredModels],
   )
 
   const accountSummaryCountsByAccountId = useMemo(() => {
@@ -1164,6 +1169,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     baseFilteredModels,
     allProvidersFilteredCount: baseFilteredModels.length,
     getProviderFilteredCount,
+    getFilteredModels,
     getFilteredResultCount,
     availableGroups,
     availableAccountGroupsByAccountId,

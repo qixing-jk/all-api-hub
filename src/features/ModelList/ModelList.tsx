@@ -125,6 +125,7 @@ export default function ModelList(props: {
     filteredModels,
     accountSummaryCountsByAccountId,
     allProvidersFilteredCount,
+    getFilteredModels,
     getFilteredResultCount,
     availableGroups,
     availableAccountGroupsByAccountId,
@@ -275,7 +276,12 @@ export default function ModelList(props: {
 
       const selectedResults =
         filters.selectedVerificationResults ?? selectedVerificationResults
-      return applyVerificationResultView(filteredModels, {
+      const {
+        selectedVerificationResults: _selectedVerificationResults,
+        ...baseFilters
+      } = filters
+
+      return applyVerificationResultView(getFilteredModels(baseFilters), {
         selectedResults,
         shouldSortByLatency:
           filters.sortMode === MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC,
@@ -283,7 +289,7 @@ export default function ModelList(props: {
       }).length
     },
     [
-      filteredModels,
+      getFilteredModels,
       getFilteredResultCount,
       selectedVerificationResults,
       verificationSummariesByKey,

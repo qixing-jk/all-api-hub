@@ -75,7 +75,27 @@ vi.mock("~/features/ModelList/components/BatchVerifyModelsDialog", () => ({
 }))
 
 vi.mock("~/features/ModelList/components/ControlPanel", () => ({
-  ControlPanel: () => <div data-testid="control-panel" />,
+  ControlPanel: ({
+    getFilteredResultCount,
+  }: {
+    getFilteredResultCount?: (filters: {
+      searchTerm?: string
+      selectedVerificationResults?: string[]
+    }) => number
+  }) => (
+    <button
+      type="button"
+      data-testid="control-panel"
+      onClick={() =>
+        getFilteredResultCount?.({
+          searchTerm: "target",
+          selectedVerificationResults: ["pass"],
+        })
+      }
+    >
+      control-panel
+    </button>
+  ),
 }))
 
 vi.mock("~/features/ModelList/components/Footer", () => ({
@@ -333,5 +353,44 @@ describe("ModelList", () => {
       "gpt-test",
     )
     expect(screen.getByTestId("verify-api-dialog")).toHaveTextContent("vip")
+  })
+
+  it("estimates verification result counts from pending base filters", async () => {
+    const user = userEvent.setup()
+    const getFilteredModels = vi.fn((filters?: { searchTerm?: string }) => {
+      const matchingModelName =
+        filters?.searchTerm === "target" ? "gpt-target" : "gpt-other"
+      return [
+        {
+          model: {
+            model_name: matchingModelName,
+            quota_type: 0,
+            model_ratio: 1,
+            model_price: 0,
+            completion_ratio: 1,
+            enable_groups: ["vip"],
+            supported_endpoint_types: [],
+          },
+          source: ACCOUNT_SOURCE,
+          calculatedPrice: {},
+          groupRatios: {},
+        },
+      ]
+    })
+
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      filteredModels: getFilteredModels(),
+      getFilteredModels,
+      getFilteredResultCount: vi.fn(() => 1),
+    })
+
+    render(<ModelList />)
+
+    await user.click(screen.getByTestId("control-panel"))
+
+    expect(getFilteredModels).toHaveBeenCalledWith({
+      searchTerm: "target",
+    })
   })
 })

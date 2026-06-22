@@ -89,12 +89,8 @@ export function applyVerificationResultView(
         return a.latencyMs - b.latencyMs
       }
 
-      if (a.latencyMs !== null) return -1
-      if (b.latencyMs !== null) return 1
-
-      if (a.itemKey !== b.itemKey) {
-        return a.index - b.index
-      }
+      if (a.latencyMs !== null && b.latencyMs === null) return -1
+      if (a.latencyMs === null && b.latencyMs !== null) return 1
 
       return a.index - b.index
     })

@@ -11,6 +11,7 @@ import {
   toAihubmixCatalogFallbackCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+import { DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS } from "~/features/ModelList/verificationResultFilters"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -44,6 +45,8 @@ vi.mock("~/services/models/utils/modelProviders", async (importOriginal) => {
 vi.mock("~/services/verification/verificationResultHistory", () => ({
   createAccountModelVerificationHistoryTarget: vi.fn(() => "account-target"),
   createProfileModelVerificationHistoryTarget: vi.fn(() => "profile-target"),
+  serializeVerificationHistoryTarget: vi.fn((target) => String(target)),
+  getVerificationSummaryLatencyMs: vi.fn(() => null),
   useVerificationResultHistorySummaries: vi.fn(() => ({
     summariesByKey: {},
   })),
@@ -281,7 +284,7 @@ vi.mock("~/features/ModelList/components/ModelKeyDialog", () => ({
 }))
 
 function buildState(overrides: Record<string, any> = {}) {
-  return {
+  const state: Record<string, any> = {
     accounts: [ACCOUNT, SECOND_ACCOUNT],
     profiles: [PROFILE],
     selectedSource: ACCOUNT_SOURCE,
@@ -300,6 +303,8 @@ function buildState(overrides: Record<string, any> = {}) {
     setSelectedBillingMode: vi.fn(),
     selectedGroups: [],
     setSelectedGroups: vi.fn(),
+    selectedVerificationResults: DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
+    setSelectedVerificationResults: vi.fn(),
 
     showRealPrice: false,
     setShowRealPrice: vi.fn(),
@@ -338,6 +343,9 @@ function buildState(overrides: Record<string, any> = {}) {
     setAllAccountsFilterAccountIds: mockSetAllAccountsFilterAccountIds,
     ...overrides,
   }
+  state.getFilteredModels ??= vi.fn(() => state.filteredModels)
+
+  return state
 }
 
 describe("ModelList page flows", () => {

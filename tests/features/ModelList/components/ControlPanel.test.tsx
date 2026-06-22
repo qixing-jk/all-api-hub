@@ -343,6 +343,21 @@ describe("ControlPanel", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("keeps verification latency sorting available when pricing is unavailable", () => {
+    renderControlPanel({
+      sourceCapabilities: {
+        ...CAPABILITIES,
+        supportsPricing: false,
+      },
+    })
+
+    const sortSelect = screen.getByLabelText("sortBy")
+    expect(sortSelect).toHaveTextContent("sortOptions.default")
+    expect(sortSelect).toHaveTextContent("sortOptions.verificationLatencyAsc")
+    expect(sortSelect).not.toHaveTextContent("sortOptions.priceAsc")
+    expect(sortSelect).not.toHaveTextContent("sortOptions.priceDesc")
+  })
+
   it("offers latest verification latency sorting and result status filters", async () => {
     const user = userEvent.setup()
     const props = renderControlPanel()

@@ -104,8 +104,14 @@ describe("ControlPanel profile capabilities", () => {
     expect(screen.queryByText("modelList:userGroup")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:realAmount")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:showRatio")).not.toBeInTheDocument()
-    expect(screen.queryByText("modelList:sortBy")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:billingMode")).not.toBeInTheDocument()
+    const [sortSelect] = await screen.findAllByRole("combobox")
+    fireEvent.click(sortSelect)
+    expect(
+      await screen.findByText("modelList:sortOptions.verificationLatencyAsc"),
+    ).toBeInTheDocument()
+    expect(sortSelect).not.toHaveTextContent("modelList:sortOptions.priceAsc")
+    expect(sortSelect).not.toHaveTextContent("modelList:sortOptions.priceDesc")
     expect(
       await screen.findByText("modelList:endpointTypes"),
     ).toBeInTheDocument()
@@ -152,10 +158,16 @@ describe("ControlPanel profile capabilities", () => {
       await screen.findByText("modelList:searchModels"),
     ).toBeInTheDocument()
     expect(screen.queryByText("modelList:userGroup")).not.toBeInTheDocument()
-    expect(screen.queryByText("modelList:sortBy")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:billingMode")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:realAmount")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:showRatio")).not.toBeInTheDocument()
+    const [sortSelect] = await screen.findAllByRole("combobox")
+    fireEvent.click(sortSelect)
+    expect(
+      await screen.findByText("modelList:sortOptions.verificationLatencyAsc"),
+    ).toBeInTheDocument()
+    expect(sortSelect).not.toHaveTextContent("modelList:sortOptions.priceAsc")
+    expect(sortSelect).not.toHaveTextContent("modelList:sortOptions.priceDesc")
   })
 
   it("keeps pricing controls but hides the ratio toggle when ratio display is unsupported", async () => {
@@ -706,6 +718,7 @@ describe("ControlPanel profile capabilities", () => {
       sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
       selectedBillingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
       selectedGroups: [],
+      selectedVerificationResults: ["pass", "fail", "unverified"],
     })
     expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
