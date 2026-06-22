@@ -4,7 +4,10 @@ import type { BrowserContext, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
-import { getKeyManagementTokenRowTestId } from "~/features/KeyManagement/testIds"
+import {
+  getKeyManagementTokenRowTestId,
+  KEY_MANAGEMENT_TEST_IDS,
+} from "~/features/KeyManagement/testIds"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -313,6 +316,16 @@ test("isolates same-site cookie and access-token accounts through account refres
         ),
       ).toHaveCount(0)
 
+      expectTokenDnrFallbackSequence(
+        localSite.tokenRequests,
+        ACCOUNT_A_SESSION_COOKIE,
+      )
+      expectOnlyTargetTokenRequests(
+        localSite.tokenRequests,
+        ACCOUNT_A_SESSION_COOKIE,
+      )
+      localSite.clearTokenRequests()
+
       await openKeyManagementForAccount({
         page,
         extensionId,
@@ -335,9 +348,9 @@ test("isolates same-site cookie and access-token accounts through account refres
 
       expectTokenDnrFallbackSequence(
         localSite.tokenRequests,
-        ACCOUNT_A_SESSION_COOKIE,
+        ACCOUNT_B_SESSION_COOKIE,
       )
-      expectTokenDnrFallbackSequence(
+      expectOnlyTargetTokenRequests(
         localSite.tokenRequests,
         ACCOUNT_B_SESSION_COOKIE,
       )
@@ -350,7 +363,7 @@ test("isolates same-site cookie and access-token accounts through account refres
         page,
         extensionId,
       })
-      await page.getByRole("button", { name: "Expand all" }).click()
+      await page.getByTestId(KEY_MANAGEMENT_TEST_IDS.expandAllButton).click()
       await expect(
         page.getByTestId(
           getKeyManagementTokenRowTestId(
@@ -891,6 +904,21 @@ function expectTokenDnrFallbackSequence(
   ).toHaveLength(0)
 }
 
+function expectOnlyTargetTokenRequests(
+  requests: CapturedTokenRequest[],
+  targetSessionCookie: string,
+) {
+  expect(
+    requests.filter(
+      (request) =>
+        request.responseStatus === 200 &&
+        request.matchedSessionCookie &&
+        request.matchedSessionCookie !== targetSessionCookie,
+    ),
+    `${targetSessionCookie} non-target token-list requests`,
+  ).toHaveLength(0)
+}
+
 function extractCompatUserIdHeader(headers: http.IncomingHttpHeaders) {
   const rawValue =
     headers["new-api-user"] ??
@@ -956,6 +984,10 @@ async function openKeyManagementForAllAccounts(params: {
   )
   await waitForExtensionRoot(params.page)
   await expectPermissionOnboardingHidden(params.page)
-  await params.page.getByRole("combobox").click()
-  await params.page.getByRole("option", { name: "All accounts" }).click()
+  await params.page
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.accountScopeSelect)
+    .click()
+  await params.page
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.accountScopeAllOption)
+    .click()
 }

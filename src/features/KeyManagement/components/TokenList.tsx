@@ -707,6 +707,7 @@ export function TokenList(props: TokenListProps) {
               size="sm"
               variant="outline"
               type="button"
+              data-testid={KEY_MANAGEMENT_TEST_IDS.expandAllButton}
               onClick={expandAll}
               leftIcon={<ChevronDownIcon className="h-4 w-4" />}
             >

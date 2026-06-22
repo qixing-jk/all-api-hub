@@ -2,6 +2,7 @@ import type { Ref } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Button, Heading3, SearchableSelect } from "~/components/ui"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
@@ -60,6 +61,7 @@ export function AccountSelectorPanel({
         <Heading3 className="mb-1">{t("selectAccount")}</Heading3>
         <SearchableSelect
           ref={selectorTriggerRef}
+          data-testid={KEY_MANAGEMENT_TEST_IDS.accountScopeSelect}
           options={[
             ...(displayData.length > 0
               ? [
@@ -78,6 +80,11 @@ export function AccountSelectorPanel({
           onChange={setSelectedAccount}
           open={selectorOpen}
           onOpenChange={onSelectorOpenChange}
+          getOptionTestId={(option) =>
+            option.value === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+              ? KEY_MANAGEMENT_TEST_IDS.accountScopeAllOption
+              : undefined
+          }
           placeholder={t("pleaseSelectAccount")}
         />
       </div>

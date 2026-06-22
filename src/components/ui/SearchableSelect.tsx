@@ -103,6 +103,11 @@ export interface SearchableSelectProps
    * Optional class applied to the internal option list.
    */
   listClassName?: string
+
+  /**
+   * Optional stable test id resolver for option rows.
+   */
+  getOptionTestId?: (option: SearchableSelectOption) => string | undefined
 }
 
 /**
@@ -128,6 +133,7 @@ export const SearchableSelect = React.forwardRef<
     onOpenChange,
     portalContainer,
     listClassName,
+    getOptionTestId,
     className,
     disabled,
     ...buttonProps
@@ -251,6 +257,7 @@ export const SearchableSelect = React.forwardRef<
                 <CommandItem
                   key={option.value}
                   value={option.label}
+                  data-testid={getOptionTestId?.(option)}
                   disabled={option.disabled}
                   onSelect={() => {
                     if (option.disabled) return
