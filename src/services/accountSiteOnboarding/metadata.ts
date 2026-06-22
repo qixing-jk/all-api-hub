@@ -1,15 +1,10 @@
 import {
-  getAccountSiteDefinition,
   getAccountSiteDefinitions,
   getAccountSiteOnboardingDefinitions,
 } from "~/services/accountSiteDefinitions"
-import type {
-  AccountSiteOnboardingMetadata,
-  AccountSiteRouteConfig,
-} from "~/services/accountSiteOnboarding/contracts"
-import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteOnboarding/contracts"
-
-import type { AccountSiteType } from "./siteTypes"
+import type { AccountSiteRouteConfig } from "~/services/accountSiteDefinitions/contracts"
+import type { AccountSiteType } from "~/services/accountSiteDefinitions/siteTypes"
+import type { AccountSiteOnboardingMetadata } from "~/services/accountSiteOnboarding/contracts"
 
 type AccountSiteRouteOverrideMetadata = Partial<AccountSiteRouteConfig>
 
@@ -121,16 +116,6 @@ export function getAccountSiteRouteOverrideMetadata(
   siteType: AccountSiteType,
 ): AccountSiteRouteOverrideMetadata {
   return { ...(getAccountSiteMetadata(siteType)?.routes ?? {}) }
-}
-
-/**
- * Returns the adapter family declared by account-site metadata.
- */
-export function getAccountSiteAdapterFamilyMetadata(siteType: AccountSiteType) {
-  return (
-    getAccountSiteDefinition(siteType)?.adapterFamily ??
-    ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported
-  )
 }
 
 /**

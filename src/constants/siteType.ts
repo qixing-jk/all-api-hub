@@ -3,19 +3,19 @@
 import merge from "lodash-es/merge.js"
 
 import {
+  ACCOUNT_SITE_TYPE_VALUES,
+  MANAGED_SITE_TYPES,
+  type AccountSiteType,
+  type ManagedSiteType,
+} from "~/services/accountSiteDefinitions/siteTypes"
+import {
   DEFAULT_SITE_ROUTE_CONFIG,
   getAccountSiteDomainRuleMetadata,
   getAccountSiteRouteOverrideMetadata,
   getAccountSiteTitleRuleMetadata,
 } from "~/services/accountSiteOnboarding/metadata"
-import {
-  ACCOUNT_SITE_TYPE_VALUES,
-  MANAGED_SITE_TYPES,
-  type AccountSiteType,
-  type ManagedSiteType,
-} from "~/services/accountSiteOnboarding/siteTypes"
 
-export { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteOnboarding/contracts"
+export { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteDefinitions/contracts"
 export {
   ACCOUNT_SITE_TYPES,
   ACCOUNT_SITE_TYPE_VALUES,
@@ -27,7 +27,7 @@ export {
   SITE_TYPES,
   type AccountSiteType,
   type ManagedSiteType,
-} from "~/services/accountSiteOnboarding/siteTypes"
+} from "~/services/accountSiteDefinitions/siteTypes"
 
 /**
  * Checks whether a value is one of the supported account site type identifiers.

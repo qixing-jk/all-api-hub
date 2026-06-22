@@ -1,7 +1,7 @@
 import {
   SITE_TYPES,
   type AccountSiteType,
-} from "~/services/accountSiteOnboarding/siteTypes"
+} from "~/services/accountSiteDefinitions/siteTypes"
 
 /**
  * Compatibility headers for One-API/New-API family deployments.
