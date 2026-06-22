@@ -1,14 +1,14 @@
-import { productAnalyticsClient } from "./client"
+import { productAnalyticsClient } from "~/services/productAnalytics/client"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-} from "./events"
+} from "~/services/productAnalytics/events"
 import {
   productAnalyticsState,
   type ProductAnalyticsSponsorRecommendationsSummaryPatch,
   type ProductAnalyticsSponsorRecommendationsSummaryState,
-} from "./state"
+} from "~/services/productAnalytics/state"
 
 /**
  * Formats timestamps into the UTC day bucket used for daily summaries.
@@ -89,8 +89,7 @@ export async function flushSponsorRecommendationsDailySummary(): Promise<boolean
   )
   if (!captured) return false
 
-  await productAnalyticsState.replaceSponsorRecommendationsSummaryState(
+  return await productAnalyticsState.replaceSponsorRecommendationsSummaryState(
     emptySummary(today),
   )
-  return true
 }

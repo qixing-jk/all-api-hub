@@ -4,6 +4,7 @@ import {
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { flushSponsorRecommendationsDailySummary } from "~/services/productAnalytics/sponsorRecommendationsSummary"
 import {
   hasStorageChangedListener,
   onStorageChanged,
@@ -32,7 +33,6 @@ import {
   buildSiteEcosystemAnalyticsEvents,
   shouldSendSiteEcosystemSnapshot,
 } from "./siteEcosystem"
-import { flushSponsorRecommendationsDailySummary } from "./sponsorRecommendationsSummary"
 import { productAnalyticsState } from "./state"
 
 const logger = createLogger("ProductAnalyticsRuntime")

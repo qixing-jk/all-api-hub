@@ -142,6 +142,30 @@ describe("sponsor recommendations product analytics summary", () => {
     ).not.toHaveBeenCalled()
   })
 
+  it("reports failure when rolling the uploaded summary forward fails", async () => {
+    stateMocks.replaceSponsorRecommendationsSummaryState.mockResolvedValue(
+      false,
+    )
+    const { flushSponsorRecommendationsDailySummary } = await import(
+      "~/services/productAnalytics/sponsorRecommendationsSummary"
+    )
+
+    await expect(flushSponsorRecommendationsDailySummary()).resolves.toBe(false)
+
+    expect(captureMock).toHaveBeenCalledTimes(1)
+    expect(
+      stateMocks.replaceSponsorRecommendationsSummaryState,
+    ).toHaveBeenCalledWith({
+      day: "2026-05-12",
+      impressionCount: 0,
+      itemTotal: 0,
+      supportedItemTotal: 0,
+      unsupportedItemTotal: 0,
+      addAccountSurfaceCount: 0,
+      newcomerSurfaceCount: 0,
+    })
+  })
+
   it("does not upload an empty previous-day summary", async () => {
     stateMocks.getSponsorRecommendationsSummaryState.mockResolvedValue({
       day: "2026-05-11",

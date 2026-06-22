@@ -132,6 +132,7 @@ describe("background onInstalled changelog opening", () => {
       setupProductAnalyticsPreferencesChangeListener: vi.fn(),
       triggerStartupSettingsSnapshot: vi.fn(),
       triggerStartupShieldBypassDailySummary: vi.fn(),
+      triggerStartupSponsorRecommendationsDailySummary: vi.fn(),
       triggerStartupSiteEcosystemSnapshot: vi.fn(),
     }))
     vi.doMock("~/services/tags/tagStorage", () => ({
