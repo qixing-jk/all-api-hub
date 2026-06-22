@@ -7,10 +7,8 @@ import {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_LOGIN_PATH,
   SITE_TYPES,
-  type AccountSiteType,
 } from "~/constants/siteType"
 import {
-  getAccountSiteAdapterFamily,
   getAccountSiteCompatUserIdHeaderRules,
   getAccountSiteDomainRules,
   getAccountSiteOnboardingDefinition,
@@ -178,27 +176,6 @@ describe("account site onboarding registry", () => {
       nextDefinition?.detection?.hostnames?.includes("mutated.example.invalid"),
     ).toBe(false)
     expect(nextDefinition?.detection?.titlePatterns).toHaveLength(1)
-  })
-
-  it("projects adapter families from account site metadata", () => {
-    expect(getAccountSiteAdapterFamily(SITE_TYPES.NEW_API)).toBe(
-      ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
-    )
-    expect(getAccountSiteAdapterFamily(SITE_TYPES.V_API)).toBe(
-      ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
-    )
-    expect(getAccountSiteAdapterFamily(SITE_TYPES.SUB2API)).toBe(
-      ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
-    )
-    expect(getAccountSiteAdapterFamily(SITE_TYPES.AIHUBMIX)).toBe(
-      ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
-    )
-  })
-
-  it("falls back to unsupported adapter family for unmapped site types", () => {
-    expect(getAccountSiteAdapterFamily("unmapped" as AccountSiteType)).toBe(
-      ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
-    )
   })
 
   it("returns content session extractors in onboarding order", () => {

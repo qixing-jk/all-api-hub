@@ -46,7 +46,6 @@ import {
 } from "~/services/accountSiteDefinitions/definitions"
 import type { SiteType } from "~/services/accountSiteDefinitions/identifiers"
 import {
-  getAccountSiteAdapterFamily as getLegacyAccountSiteAdapterFamily,
   getAccountSiteOnboardingDefinition as getLegacyAccountSiteOnboardingDefinition,
   getAccountSiteRouteOverrides as getLegacyAccountSiteRouteOverrides,
 } from "~/services/accountSiteOnboarding/registry"
@@ -162,14 +161,6 @@ describe("account site definition registry", () => {
     expect(legacy.isAccountSiteType(SITE_TYPES.OCTOPUS)).toBe(false)
     expect(legacy.isManagedSiteType(SITE_TYPES.OCTOPUS)).toBe(true)
     expect(legacy.isManagedSiteType(SITE_TYPES.SUB2API)).toBe(false)
-  })
-
-  it("matches current legacy onboarding adapter families", () => {
-    for (const siteType of ACCOUNT_SITE_TYPES) {
-      expect(getAccountSiteDefinition(siteType)?.adapterFamily).toBe(
-        getLegacyAccountSiteAdapterFamily(siteType),
-      )
-    }
   })
 
   it("matches current legacy onboarding route metadata", () => {

@@ -1,5 +1,5 @@
+import type { AccountSiteType } from "~/services/accountSiteDefinitions"
 import {
-  getAccountSiteAdapterFamilyMetadata,
   getAccountSiteCompatUserIdHeaderRules as getAccountSiteCompatUserIdHeaderRuleMetadata,
   getAccountSiteDomainRuleMetadata,
   getAccountSiteMetadata,
@@ -10,7 +10,6 @@ import {
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
 import type { ContentSessionExtractor } from "./contracts"
-import type { AccountSiteType } from "./siteTypes"
 
 /**
  * Returns the onboarding definition for one account site type.
@@ -38,13 +37,6 @@ export function getAccountSiteTitleRules() {
  */
 export function getAccountSiteCompatUserIdHeaderRules() {
   return getAccountSiteCompatUserIdHeaderRuleMetadata()
-}
-
-/**
- * Returns the adapter family declared for one account site type.
- */
-export function getAccountSiteAdapterFamily(siteType: AccountSiteType) {
-  return getAccountSiteAdapterFamilyMetadata(siteType)
 }
 
 /**
