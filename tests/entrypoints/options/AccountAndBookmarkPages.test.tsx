@@ -320,7 +320,7 @@ describe("options AccountManagement page", () => {
             failure: {
               category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
               reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
             },
             outcome: {
               itemCount: 3,
@@ -518,7 +518,7 @@ describe("options AccountManagement page", () => {
           failure: {
             category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
           },
           outcome: {
             itemCount: 3,

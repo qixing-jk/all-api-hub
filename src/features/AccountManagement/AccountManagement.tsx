@@ -131,7 +131,9 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         successCount: result.success,
         failureCount: result.failed,
         skippedCount,
-        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        ...(result.failed > 0
+          ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
+          : {}),
       })
       if (result.failed > 0) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -199,7 +201,9 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         successCount: refreshInsights.successCount,
         failureCount: refreshInsights.failureCount,
         skippedCount: 0,
-        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        ...(result.failedCount > 0
+          ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
+          : {}),
       })
       if (result.failedCount > 0) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
