@@ -7,7 +7,7 @@ import {
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
 import type { DisplaySiteData } from "~/types"
-import { isExtensionPopup, OPTIONS_PAGE_URL } from "~/utils/browser"
+import { isExtensionPopup } from "~/utils/browser"
 import {
   openSidePanel as _openSidePanel,
   createTab as createTabApi,
@@ -18,6 +18,7 @@ import {
   queryTabs as queryTabsApi,
   updateTab as updateTabApi,
 } from "~/utils/browser/browserApi"
+import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {

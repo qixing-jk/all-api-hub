@@ -102,10 +102,13 @@ vi.mock("~/utils/browser/protectionBypass", () => ({
 }))
 
 vi.mock("~/utils/browser/index", () => ({
-  OPTIONS_PAGE_URL: "chrome-extension://test/options.html",
   isExtensionBackground: vi.fn(() => false),
   isExtensionPopup: vi.fn(() => false),
   isExtensionSidePanel: vi.fn(() => false),
+}))
+
+vi.mock("~/utils/browser/extensionPageUrls", () => ({
+  OPTIONS_PAGE_URL: "chrome-extension://test/options.html",
 }))
 
 const BASE_URL = "https://example.com/base/"

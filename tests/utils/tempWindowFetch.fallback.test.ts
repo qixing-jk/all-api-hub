@@ -67,10 +67,13 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 }))
 
 vi.mock("~/utils/browser/index", () => ({
-  OPTIONS_PAGE_URL: "chrome-extension://test/options.html",
   isExtensionBackground: mocks.isExtensionBackgroundMock,
   isExtensionPopup: mocks.isExtensionPopupMock,
   isExtensionSidePanel: mocks.isExtensionSidePanelMock,
+}))
+
+vi.mock("~/utils/browser/extensionPageUrls", () => ({
+  OPTIONS_PAGE_URL: "chrome-extension://test/options.html",
 }))
 
 vi.mock("~/utils/browser/protectionBypass", () => ({

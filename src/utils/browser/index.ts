@@ -1,5 +1,4 @@
 import {
-  OPTIONS_PAGE_PATH,
   POPUP_PAGE_PATH,
   SIDEPANEL_PAGE_PATH,
 } from "~/constants/extensionPages"
@@ -14,8 +13,6 @@ import {
 
 export { detectBrowserFamily } from "./userAgent"
 
-export const OPTIONS_PAGE_URL = getExtensionURL(OPTIONS_PAGE_PATH)
-
 export type ExtensionStoreId = "chrome" | "edge" | "firefox"
 export { getDeviceTypeInfo, isDesktopDevice, isMobileDevice, isTabletDevice }
 
@@ -29,7 +26,6 @@ export function isFirefoxByUA(): boolean {
     navigator.userAgent.indexOf(" Gecko/") !== -1
   )
 }
-
 /**
  * Checks whether the current extension runtime is Firefox.
  * Relies on the moz-extension protocol prefix exposed by WebExtensions.
@@ -109,7 +105,6 @@ export function isExtensionPopup() {
     return false
   }
 }
-
 /**
  * Determines if the current page is loaded inside the extension side panel.
  * @returns True when sidepanel.html is detected in the URL path.

@@ -52,6 +52,9 @@ const OPTIONS_PAGE_URL = "http://localhost:3000/options.html"
 
 vi.mock("~/utils/browser", () => ({
   isExtensionPopup: vi.fn().mockReturnValue(false),
+}))
+
+vi.mock("~/utils/browser/extensionPageUrls", () => ({
   OPTIONS_PAGE_URL: "http://localhost:3000/options.html",
 }))
 
