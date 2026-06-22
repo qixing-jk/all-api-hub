@@ -31,6 +31,7 @@ import {
 } from "~/types"
 import type { LogLevel } from "~/types/logging"
 import type { ThemeMode } from "~/types/theme"
+import { isExtensionBackground } from "~/utils/browser"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ProductAnalyticsEvents")
@@ -1274,6 +1275,26 @@ export async function trackProductAnalyticsEvent<
       eventName,
       properties,
     } satisfies ProductAnalyticsTrackRequest<TEventName>
+
+    if (isExtensionBackground()) {
+      void import("~/services/productAnalytics/runtime")
+        .then(({ handleProductAnalyticsMessage }) =>
+          handleProductAnalyticsMessage(
+            ProductAnalyticsMessageTypes.TrackEvent,
+            request as ProductAnalyticsTrackRequestDiscriminated,
+          ),
+        )
+        .then((response) => {
+          if (response.success === false) {
+            logger.warn("Product analytics event dispatch was rejected")
+          }
+        })
+        .catch((error) => {
+          logger.warn("Product analytics event dispatch failed", error)
+        })
+      return true
+    }
+
     void Promise.resolve(
       sendProductAnalyticsMessage(
         ProductAnalyticsMessageTypes.TrackEvent,

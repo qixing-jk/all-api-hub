@@ -21,8 +21,19 @@ import {
 } from "~/services/productAnalytics/events"
 import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
 
-const { sendProductAnalyticsMessageMock } = vi.hoisted(() => ({
+const {
+  handleProductAnalyticsMessageMock,
+  isExtensionBackgroundMock,
+  sendProductAnalyticsMessageMock,
+} = vi.hoisted(() => ({
+  handleProductAnalyticsMessageMock: vi.fn(),
+  isExtensionBackgroundMock: vi.fn(),
   sendProductAnalyticsMessageMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser")>()),
+  isExtensionBackground: isExtensionBackgroundMock,
 }))
 
 vi.mock("~/services/productAnalytics/messaging", async (importOriginal) => ({
@@ -32,8 +43,14 @@ vi.mock("~/services/productAnalytics/messaging", async (importOriginal) => ({
   sendProductAnalyticsMessage: sendProductAnalyticsMessageMock,
 }))
 
+vi.mock("~/services/productAnalytics/runtime", () => ({
+  handleProductAnalyticsMessage: handleProductAnalyticsMessageMock,
+}))
+
 beforeEach(() => {
   vi.clearAllMocks()
+  isExtensionBackgroundMock.mockReturnValue(false)
+  handleProductAnalyticsMessageMock.mockResolvedValue({ success: true })
   sendProductAnalyticsMessageMock.mockResolvedValue({ success: true })
 })
 
@@ -367,6 +384,41 @@ describe("trackProductAnalyticsEvent", () => {
         },
       },
     )
+  })
+
+  it("captures directly through the product analytics runtime in background contexts", async () => {
+    isExtensionBackgroundMock.mockReturnValue(true)
+
+    await expect(
+      trackProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.ScheduledManagedSiteModelSync,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+          result: "success",
+          source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+        },
+      ),
+    ).resolves.toBe(true)
+
+    await vi.waitFor(() => {
+      expect(handleProductAnalyticsMessageMock).toHaveBeenCalledWith(
+        ProductAnalyticsMessageTypes.TrackEvent,
+        {
+          eventName: PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+          properties: {
+            feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+            action_id:
+              PRODUCT_ANALYTICS_ACTION_IDS.ScheduledManagedSiteModelSync,
+            entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+            result: "success",
+            source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+          },
+        },
+      )
+    })
+    expect(sendProductAnalyticsMessageMock).not.toHaveBeenCalled()
   })
 
   it("does not wait for an in-flight background analytics response", async () => {
