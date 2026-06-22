@@ -407,11 +407,20 @@ describe("ManagedSiteModelSync page", () => {
       ),
     ).toBeInTheDocument()
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "managedSiteModelSync:execution.overview.enableAutoSync",
-      }),
+    const configureButton = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.overview.enableAutoSync",
+    })
+
+    expect(configureButton).toHaveAttribute(
+      "data-analytics-action",
+      [
+        PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteModelSyncSettings,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+        PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      ].join(":"),
     )
+    fireEvent.click(configureButton)
 
     expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite", {
       anchor: "managed-site-model-sync",

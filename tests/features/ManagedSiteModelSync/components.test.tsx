@@ -15,6 +15,12 @@ import OverviewCard from "~/features/ManagedSiteModelSync/components/OverviewCar
 import ProgressCard from "~/features/ManagedSiteModelSync/components/ProgressCard"
 import ResultsTable from "~/features/ManagedSiteModelSync/components/ResultsTable"
 import StatisticsCard from "~/features/ManagedSiteModelSync/components/StatisticsCard"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { trackStartedMock } = vi.hoisted(() => ({
@@ -151,6 +157,13 @@ describe("ManagedSiteModelSync components", () => {
 
   it("guides users to configure auto-sync when the scheduler is disabled", () => {
     const configureAutoSync = vi.fn()
+    const analyticsAction = {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteModelSyncSettings,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    }
 
     render(
       <OverviewCard
@@ -159,6 +172,7 @@ describe("ManagedSiteModelSync components", () => {
         nextScheduledAt={null}
         lastRunAt={null}
         onConfigureAutoSync={configureAutoSync}
+        configureAutoSyncAnalyticsAction={analyticsAction}
       />,
     )
 
@@ -173,6 +187,30 @@ describe("ManagedSiteModelSync components", () => {
     )
 
     expect(configureAutoSync).toHaveBeenCalledTimes(1)
+    expect(trackStartedMock).toHaveBeenCalledWith(analyticsAction)
+  })
+
+  it("hides auto-sync configuration guidance when no configuration callback is provided", () => {
+    render(
+      <OverviewCard
+        enabled={false}
+        intervalMs={24 * 60 * 60 * 1000}
+        nextScheduledAt={null}
+        lastRunAt={null}
+      />,
+    )
+
+    expect(
+      screen.queryByText(
+        "managedSiteModelSync:execution.overview.disabledHint",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "managedSiteModelSync:execution.overview.enableAutoSync",
+      }),
+    ).not.toBeInTheDocument()
+    expect(trackStartedMock).not.toHaveBeenCalled()
   })
 
   it("wires action and filter callbacks", () => {

@@ -1311,6 +1311,11 @@ export default function ManagedSiteModelSync({
               intervalMs={intervalMs}
               nextScheduledAt={nextScheduledAt}
               lastRunAt={lastExecution?.statistics?.endedAt ?? null}
+              configureAutoSyncAnalyticsAction={{
+                ...actionBarAnalyticsScope,
+                actionId:
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteModelSyncSettings,
+              }}
               onConfigureAutoSync={() => {
                 void openSettingsTab("managedSite", {
                   preserveHistory: true,

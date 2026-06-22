@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
 import { Button, Card, CardContent } from "~/components/ui"
+import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
 import { formatFullTime } from "~/utils/core/formatters"
 
 interface OverviewCardProps {
@@ -10,6 +11,7 @@ interface OverviewCardProps {
   nextScheduledAt?: string | number | null
   lastRunAt?: number | string | null
   onConfigureAutoSync?: () => void
+  configureAutoSyncAnalyticsAction?: ProductAnalyticsScopedActionConfig
 }
 
 /**
@@ -56,6 +58,7 @@ export default function OverviewCard(props: OverviewCardProps) {
     nextScheduledAt,
     lastRunAt,
     onConfigureAutoSync,
+    configureAutoSyncAnalyticsAction,
   } = props
   const { t } = useTranslation("managedSiteModelSync")
 
@@ -116,6 +119,7 @@ export default function OverviewCard(props: OverviewCardProps) {
               type="button"
               variant="outline"
               size="sm"
+              analyticsAction={configureAutoSyncAnalyticsAction}
               onClick={onConfigureAutoSync}
             >
               {t("execution.overview.enableAutoSync")}

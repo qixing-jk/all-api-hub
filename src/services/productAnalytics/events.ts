@@ -444,6 +444,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenManagedSiteChannelModelSync: "open_managed_site_channel_model_sync",
   OpenManagedSiteModelSyncConfigRequired:
     "open_managed_site_model_sync_config_required",
+  OpenManagedSiteModelSyncSettings: "open_managed_site_model_sync_settings",
   OpenModelKeyDialog: "open_model_key_dialog",
   OpenModelManagement: "open_model_management",
   OpenOptionsOverviewTarget: "open_options_overview_target",

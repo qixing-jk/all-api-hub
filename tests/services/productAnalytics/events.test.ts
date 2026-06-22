@@ -238,6 +238,7 @@ describe("product analytics event enums", () => {
       OpenManagedSiteChannelManagement: "open_managed_site_channel_management",
       OpenManagedSiteModelSyncConfigRequired:
         "open_managed_site_model_sync_config_required",
+      OpenManagedSiteModelSyncSettings: "open_managed_site_model_sync_settings",
       ScheduledManagedSiteModelSync: "scheduled_managed_site_model_sync",
       UpdateManagedSiteModelSyncSettings:
         "update_managed_site_model_sync_settings",
