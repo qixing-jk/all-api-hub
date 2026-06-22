@@ -361,8 +361,14 @@ export function ControlPanel({
           />
         )}
 
-        <div className="mb-4 flex flex-col gap-4 lg:flex-row">
-          <FormField label={t("searchModels")} className="flex-1">
+        <div
+          className="mb-4 flex flex-col gap-4 lg:flex-row lg:flex-wrap"
+          data-testid="model-list-filter-row"
+        >
+          <FormField
+            label={t("searchModels")}
+            className="min-w-[16rem] flex-1 lg:basis-[18rem]"
+          >
             <Input
               type="text"
               placeholder={t("searchPlaceholder")}
@@ -403,6 +409,7 @@ export function ControlPanel({
                   options={groupOptions}
                   selected={selectedGroups}
                   onChange={handleGroupSelectionChange}
+                  size="default"
                   displayMode="summary"
                   placeholder={t("allGroups")}
                   emptyMessage={t("allGroups")}
@@ -421,6 +428,7 @@ export function ControlPanel({
               options={verificationResultOptions}
               selected={selectedVerificationResults}
               onChange={handleVerificationResultSelectionChange}
+              size="default"
               displayMode="summary"
               placeholder={t("verificationResults.all")}
               emptyMessage={t("verificationResults.none")}

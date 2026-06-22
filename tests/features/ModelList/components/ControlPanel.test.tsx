@@ -96,13 +96,15 @@ vi.mock("~/components/ui", () => ({
     selected,
     onChange,
     placeholder,
+    size = "sm",
   }: {
     options: Array<{ value: string; label: string }>
     selected: string[]
     onChange: (selected: string[]) => void
     placeholder?: string
+    size?: string
   }) => (
-    <div data-testid={placeholder}>
+    <div data-size={size} data-testid={placeholder}>
       {options.map((option) => (
         <label key={option.value}>
           {option.label}
@@ -124,8 +126,9 @@ vi.mock("~/components/ui", () => ({
   FormField: ({
     label,
     children,
-  }: React.PropsWithChildren<{ label: string }>) => (
-    <label>
+    className,
+  }: React.PropsWithChildren<{ label: string; className?: string }>) => (
+    <label data-testid={`field-${label}`} className={className}>
       {label}
       {children}
     </label>
@@ -357,5 +360,24 @@ describe("ControlPanel", () => {
       MODEL_LIST_VERIFICATION_RESULT_FILTERS.PASS,
       MODEL_LIST_VERIFICATION_RESULT_FILTERS.UNVERIFIED,
     ])
+  })
+
+  it("keeps the search field usable when all top filters are visible", () => {
+    renderControlPanel()
+
+    expect(screen.getByTestId("model-list-filter-row")).toHaveClass(
+      "lg:flex-wrap",
+    )
+    expect(screen.getByTestId("field-searchModels")).toHaveClass(
+      "min-w-[16rem]",
+    )
+    expect(screen.getByTestId("allGroups")).toHaveAttribute(
+      "data-size",
+      "default",
+    )
+    expect(screen.getByTestId("verificationResults.all")).toHaveAttribute(
+      "data-size",
+      "default",
+    )
   })
 })
