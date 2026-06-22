@@ -9,7 +9,7 @@ import {
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
 } from "~/services/accounts/accountSiteProfile/contracts"
-import type { AuthTypeEnum } from "~/types"
+import { AuthTypeEnum } from "~/types/auth"
 
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
@@ -38,8 +38,8 @@ const DEFAULT_USAGE_PATH = "/console/log"
 const DEFAULT_CHECKIN_PATH = "/console/personal"
 
 const ACCOUNT_SITE_AUTH_TYPES = {
-  AccessToken: "access_token" as AuthTypeEnum.AccessToken,
-  Cookie: "cookie" as AuthTypeEnum.Cookie,
+  AccessToken: AuthTypeEnum.AccessToken,
+  Cookie: AuthTypeEnum.Cookie,
 } as const
 
 const ACCOUNT_SCOPE = [ACCOUNT_SITE_DEFINITION_SCOPES.Account] as const

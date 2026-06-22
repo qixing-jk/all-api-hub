@@ -2,7 +2,7 @@ import type { AccountSiteProductProfileOverride } from "~/services/accounts/acco
 
 import type { SiteType } from "./identifiers"
 
-export type AccountSiteRouteConfig = {
+export interface AccountSiteRouteConfig {
   loginPath?: string
   usagePath?: string
   checkInPath?: string
@@ -11,7 +11,7 @@ export type AccountSiteRouteConfig = {
   siteAnnouncementsPath?: string
 }
 
-export type AccountSiteDetectionMetadata = {
+export interface AccountSiteDetectionMetadata {
   titlePatterns?: readonly RegExp[]
   hostnames?: readonly string[]
   compatUserIdHeaderNames?: readonly string[]
@@ -35,7 +35,7 @@ export const ACCOUNT_SITE_DEFINITION_SCOPES = {
 export type AccountSiteDefinitionScope =
   (typeof ACCOUNT_SITE_DEFINITION_SCOPES)[keyof typeof ACCOUNT_SITE_DEFINITION_SCOPES]
 
-export type AccountSiteDefinitionOnboardingMetadata = {
+export interface AccountSiteDefinitionOnboardingMetadata {
   detection?: AccountSiteDetectionMetadata
   routes?: AccountSiteRouteConfig
 }
@@ -49,13 +49,13 @@ export const ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES = {
 export type AccountSiteModelListExpectedRoute =
   (typeof ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES)[keyof typeof ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES]
 
-export type AccountSiteDefinitionReadiness = {
+export interface AccountSiteDefinitionReadiness {
   modelList?: {
     expectedRoute: AccountSiteModelListExpectedRoute
   }
 }
 
-export type AccountSiteDefinition = {
+export interface AccountSiteDefinition {
   siteType: SiteType
   scopes: readonly AccountSiteDefinitionScope[]
   adapterFamily: AccountSiteAdapterFamily

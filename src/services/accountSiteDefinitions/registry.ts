@@ -21,6 +21,13 @@ function cloneRegExp(pattern: RegExp): RegExp {
 }
 
 /**
+ * Clones an optional readonly array while preserving absent optional fields.
+ */
+function cloneArray<Item>(items: readonly Item[] | undefined) {
+  return items ? [...items] : undefined
+}
+
+/**
  * Clones onboarding projection data before exposing it to compatibility callers.
  */
 function cloneOnboarding(
@@ -32,12 +39,10 @@ function cloneOnboarding(
     detection: onboarding.detection
       ? {
           titlePatterns: onboarding.detection.titlePatterns?.map(cloneRegExp),
-          hostnames: onboarding.detection.hostnames
-            ? [...onboarding.detection.hostnames]
-            : undefined,
-          compatUserIdHeaderNames: onboarding.detection.compatUserIdHeaderNames
-            ? [...onboarding.detection.compatUserIdHeaderNames]
-            : undefined,
+          hostnames: cloneArray(onboarding.detection.hostnames),
+          compatUserIdHeaderNames: cloneArray(
+            onboarding.detection.compatUserIdHeaderNames,
+          ),
         }
       : undefined,
     routes: onboarding.routes ? { ...onboarding.routes } : undefined,
@@ -57,12 +62,10 @@ function cloneProductProfile(
     auth: productProfile.auth
       ? {
           ...productProfile.auth,
-          allowedAuthTypes: productProfile.auth.allowedAuthTypes
-            ? [...productProfile.auth.allowedAuthTypes]
-            : undefined,
-          defaultAuthHostnames: productProfile.auth.defaultAuthHostnames
-            ? [...productProfile.auth.defaultAuthHostnames]
-            : undefined,
+          allowedAuthTypes: cloneArray(productProfile.auth.allowedAuthTypes),
+          defaultAuthHostnames: cloneArray(
+            productProfile.auth.defaultAuthHostnames,
+          ),
         }
       : undefined,
     authSession: productProfile.authSession
@@ -74,10 +77,9 @@ function cloneProductProfile(
     identity: productProfile.identity
       ? {
           ...productProfile.identity,
-          storedUserIdentityFields: productProfile.identity
-            .storedUserIdentityFields
-            ? [...productProfile.identity.storedUserIdentityFields]
-            : undefined,
+          storedUserIdentityFields: cloneArray(
+            productProfile.identity.storedUserIdentityFields,
+          ),
         }
       : undefined,
     modelList: productProfile.modelList
@@ -92,9 +94,9 @@ function cloneProductProfile(
     urls: productProfile.urls
       ? {
           ...productProfile.urls,
-          recognizedHostnames: productProfile.urls.recognizedHostnames
-            ? [...productProfile.urls.recognizedHostnames]
-            : undefined,
+          recognizedHostnames: cloneArray(
+            productProfile.urls.recognizedHostnames,
+          ),
         }
       : undefined,
   }

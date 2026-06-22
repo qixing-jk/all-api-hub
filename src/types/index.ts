@@ -6,6 +6,7 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import type { AccountSiteType } from "~/constants/siteType"
+import type { AuthTypeEnum } from "~/types/auth"
 import { TempWindowHealthStatusCode } from "~/types/tempWindow"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 
@@ -539,11 +540,7 @@ export const DASHBOARD_TAB_TYPES = [
 ] as const
 export type DashboardTabType = (typeof DASHBOARD_TAB_TYPES)[number]
 
-export enum AuthTypeEnum {
-  AccessToken = "access_token",
-  Cookie = "cookie",
-  None = "none",
-}
+export { AuthTypeEnum } from "~/types/auth"
 export type { AccountToken } from "~/types/accountToken"
 export type { TempWindowHealthStatusCode } from "~/types/tempWindow"
 export { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types/tempWindow"

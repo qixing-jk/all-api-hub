@@ -1,4 +1,3 @@
-import { getAccountSiteCompatUserIdHeaderRules } from "~/services/accountSiteOnboarding/metadata"
 import {
   SITE_TYPES,
   type AccountSiteType,
@@ -25,13 +24,6 @@ const COMPAT_USER_ID_HEADER_TO_SITE_TYPE = {
   "Rix-Api-User": SITE_TYPES.RIX_API,
   "neo-api-user": SITE_TYPES.NEO_API,
 } as const satisfies Record<string, AccountSiteType>
-
-export const COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE = Object.fromEntries(
-  getAccountSiteCompatUserIdHeaderRules().map(({ headerName, siteType }) => [
-    headerName,
-    siteType,
-  ]),
-) as Record<string, AccountSiteType>
 
 const COMPAT_USER_ID_HEADER_NAMES = Object.keys(
   COMPAT_USER_ID_HEADER_TO_SITE_TYPE,
