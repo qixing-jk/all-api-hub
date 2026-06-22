@@ -31,6 +31,9 @@ describe("background onInstalled changelog opening", () => {
   let setPendingVersionMock: ReturnType<typeof vi.fn>
   let setLastSeenOptionalPermissionsMock: ReturnType<typeof vi.fn>
   let shouldAutoOpenChangelogForUpdateMock: ReturnType<typeof vi.fn>
+  let triggerStartupSponsorRecommendationsDailySummaryMock: ReturnType<
+    typeof vi.fn
+  >
   let isTestModeMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
@@ -56,6 +59,7 @@ describe("background onInstalled changelog opening", () => {
     setPendingVersionMock = vi.fn().mockResolvedValue(undefined)
     setLastSeenOptionalPermissionsMock = vi.fn().mockResolvedValue(undefined)
     shouldAutoOpenChangelogForUpdateMock = vi.fn().mockResolvedValue(true)
+    triggerStartupSponsorRecommendationsDailySummaryMock = vi.fn()
     isTestModeMock = vi.fn().mockReturnValue(true)
 
     vi.resetModules()
@@ -132,7 +136,8 @@ describe("background onInstalled changelog opening", () => {
       setupProductAnalyticsPreferencesChangeListener: vi.fn(),
       triggerStartupSettingsSnapshot: vi.fn(),
       triggerStartupShieldBypassDailySummary: vi.fn(),
-      triggerStartupSponsorRecommendationsDailySummary: vi.fn(),
+      triggerStartupSponsorRecommendationsDailySummary:
+        triggerStartupSponsorRecommendationsDailySummaryMock,
       triggerStartupSiteEcosystemSnapshot: vi.fn(),
     }))
     vi.doMock("~/services/tags/tagStorage", () => ({
@@ -216,6 +221,15 @@ describe("background onInstalled changelog opening", () => {
     expect(setPendingVersionMock).toHaveBeenCalledWith("2.39.0")
     expect(getDocsChangelogUrlMock).not.toHaveBeenCalled()
     expect(createTabMock).not.toHaveBeenCalled()
+  })
+
+  it("triggers sponsor recommendations summary capture during background startup", async () => {
+    await import("~/entrypoints/background/index")
+    await flushPromises()
+
+    expect(
+      triggerStartupSponsorRecommendationsDailySummaryMock,
+    ).toHaveBeenCalledTimes(1)
   })
 
   it("passes current and previous versions to the changelog index gate", async () => {

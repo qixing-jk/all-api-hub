@@ -23,6 +23,7 @@ const {
   mockLoggerDebug,
   mockOnProductAnalyticsMessage,
   preferenceMocks,
+  flushSponsorRecommendationsDailySummaryMock,
   stateMocks,
 } = vi.hoisted(() => ({
   captureMock: vi.fn(),
@@ -31,6 +32,7 @@ const {
   mockIsDevBuild: vi.fn(() => false),
   mockLoggerDebug: vi.fn(),
   mockOnProductAnalyticsMessage: vi.fn(() => vi.fn()),
+  flushSponsorRecommendationsDailySummaryMock: vi.fn(),
   preferenceMocks: {
     isEnabled: vi.fn(),
   },
@@ -46,6 +48,11 @@ vi.mock("~/services/productAnalytics/client", () => ({
   productAnalyticsClient: {
     capture: captureMock,
   },
+}))
+
+vi.mock("~/services/productAnalytics/sponsorRecommendationsSummary", () => ({
+  flushSponsorRecommendationsDailySummary:
+    flushSponsorRecommendationsDailySummaryMock,
 }))
 
 vi.mock("~/utils/core/environment", () => ({
@@ -136,6 +143,7 @@ describe("product analytics runtime", () => {
     stateMocks.setLastSiteEcosystemSnapshotAt.mockResolvedValue(true)
     getAllAccountsMock.mockResolvedValue([])
     getPreferencesMock.mockResolvedValue(createDefaultPreferences())
+    flushSponsorRecommendationsDailySummaryMock.mockResolvedValue(true)
     mockIsDevBuild.mockReturnValue(false)
   })
 
@@ -482,6 +490,25 @@ describe("product analytics runtime", () => {
 
     expect(mockLoggerDebug).toHaveBeenCalledWith(
       "Product analytics shield bypass summary failed",
+      expect.any(Error),
+    )
+  })
+
+  it("logs startup sponsor recommendations summary failures in dev builds", async () => {
+    mockIsDevBuild.mockReturnValue(true)
+    flushSponsorRecommendationsDailySummaryMock.mockRejectedValueOnce(
+      new Error("sponsor summary unavailable"),
+    )
+
+    const { triggerStartupSponsorRecommendationsDailySummary } = await import(
+      "~/services/productAnalytics/runtime"
+    )
+
+    triggerStartupSponsorRecommendationsDailySummary()
+    await vi.runAllTimersAsync()
+
+    expect(mockLoggerDebug).toHaveBeenCalledWith(
+      "Product analytics sponsor recommendations summary failed",
       expect.any(Error),
     )
   })

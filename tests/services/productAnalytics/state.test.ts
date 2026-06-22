@@ -12,6 +12,9 @@ import {
 
 describe("productAnalyticsState", () => {
   const storage = new Storage({ area: "local" })
+  const analyticsStorage = (
+    productAnalyticsState as unknown as { storage: Storage }
+  ).storage
 
   beforeEach(async () => {
     vi.useFakeTimers()
@@ -181,6 +184,44 @@ describe("productAnalyticsState", () => {
         },
       }),
     )
+  })
+
+  it("reports sponsor recommendations summary replacement write failures", async () => {
+    const storageSetSpy = vi
+      .spyOn(analyticsStorage, "set")
+      .mockRejectedValueOnce(new Error("write failed"))
+
+    await expect(
+      productAnalyticsState.replaceSponsorRecommendationsSummaryState({
+        day: "2026-05-12",
+        impressionCount: 1,
+      }),
+    ).resolves.toBe(false)
+
+    await expect(
+      storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE),
+    ).resolves.toBeUndefined()
+
+    storageSetSpy.mockRestore()
+  })
+
+  it("reports sponsor recommendations summary increment write failures", async () => {
+    const storageSetSpy = vi
+      .spyOn(analyticsStorage, "set")
+      .mockRejectedValueOnce(new Error("write failed"))
+
+    await expect(
+      productAnalyticsState.incrementSponsorRecommendationsSummary({
+        impressionCount: 1,
+        itemTotal: 2,
+      }),
+    ).resolves.toBe(false)
+
+    await expect(
+      storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE),
+    ).resolves.toBeUndefined()
+
+    storageSetSpy.mockRestore()
   })
 
   it("normalizes persisted analytics state timestamps", () => {
