@@ -16,7 +16,7 @@ export function normalizeChannelProcessingTimeout(
     return 0
   }
 
-  return Math.trunc(timeoutSeconds)
+  return Math.max(1, Math.trunc(timeoutSeconds))
 }
 
 /**

@@ -429,6 +429,23 @@ describe("ManagedSiteModelSync.updateSettings and setupAlarm", () => {
     expect(setupAlarmSpy).toHaveBeenCalledTimes(1)
   })
 
+  it("normalizes channel processing timeout updates before saving", async () => {
+    const setupAlarmSpy = vi
+      .spyOn(modelSyncScheduler, "setupAlarm")
+      .mockResolvedValue(undefined)
+
+    await modelSyncScheduler.updateSettings({
+      channelProcessingTimeout: 0.5,
+    })
+
+    expect(mockedUserPreferences.savePreferences).toHaveBeenCalledWith({
+      managedSiteModelSync: expect.objectContaining({
+        channelProcessingTimeout: 1,
+      }),
+    })
+    expect(setupAlarmSpy).toHaveBeenCalledTimes(1)
+  })
+
   it("clears the alarm when sync is disabled in preferences", async () => {
     mockedUserPreferences.getPreferences.mockResolvedValue({
       managedSiteModelSync: {

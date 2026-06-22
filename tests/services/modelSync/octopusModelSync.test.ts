@@ -320,4 +320,30 @@ describe("runOctopusBatch", () => {
       vi.useRealTimers()
     }
   })
+
+  it("passes abort signals to Octopus fetch and update requests", async () => {
+    fetchRemoteModelsMock.mockResolvedValueOnce(["model-b"])
+    updateChannelMock.mockResolvedValueOnce(undefined)
+
+    await runOctopusBatch(config as any, [createChannel()], {
+      concurrency: 1,
+      maxRetries: 0,
+      channelProcessingTimeout: 30,
+    })
+
+    expect(fetchRemoteModelsMock).toHaveBeenCalledWith(
+      config,
+      expect.anything(),
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
+    expect(updateChannelMock).toHaveBeenCalledWith(
+      config,
+      { id: 1, model: "model-b" },
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
+  })
 })

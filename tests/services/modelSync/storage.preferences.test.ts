@@ -204,6 +204,27 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
     )
   })
 
+  it("falls back to the default timeout when stored preferences omit it", async () => {
+    mockUserPreferences.getPreferences.mockResolvedValueOnce({
+      managedSiteModelSync: {
+        enabled: true,
+        interval: 120_000,
+        concurrency: 3,
+        maxRetries: 4,
+        rateLimit: {
+          requestsPerMinute: 45,
+          burst: 7,
+        },
+      } as any,
+    })
+
+    await expect(managedSiteModelSyncStorage.getPreferences()).resolves.toEqual(
+      expect.objectContaining({
+        channelProcessingTimeout: 0,
+      }),
+    )
+  })
+
   it("merges partial preference updates into the current managed-site sync config", async () => {
     const currentConfig = {
       enabled: false,

@@ -211,17 +211,19 @@ vi.mock("~/components/ui", () => ({
   ),
   Card: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CardItem: ({
+    id,
     title,
     description,
     rightContent,
     children,
   }: {
+    id?: string
     title?: ReactNode
     description?: ReactNode
     rightContent?: ReactNode
     children?: ReactNode
   }) => (
-    <div>
+    <div data-card-id={id}>
       {title ? <div>{title}</div> : null}
       {description ? <div>{description}</div> : null}
       {rightContent}
@@ -510,6 +512,32 @@ describe("ManagedSiteModelSyncSettings", () => {
     )
   })
 
+  it("falls back to the default timeout when legacy preferences omit it", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        preferences: {
+          newApiModelSync: {
+            enabled: true,
+            interval: 6 * 60 * 60 * 1000,
+            concurrency: 4,
+            maxRetries: 1,
+            rateLimit: { requestsPerMinute: 35, burst: 9 },
+            allowedModels: [],
+            globalChannelModelFilters: [],
+          },
+        },
+      }),
+    )
+
+    render(<ManagedSiteModelSyncSettings />)
+
+    await waitFor(() => {
+      expect(mockedSendModelSyncMessage).toHaveBeenCalled()
+    })
+
+    expect(screen.getByDisplayValue("0")).toBeInTheDocument()
+  })
+
   it("falls back to model metadata when the runtime response is unsuccessful", async () => {
     mockedSendModelSyncMessage.mockResolvedValue({
       success: false,
@@ -577,6 +605,7 @@ describe("ManagedSiteModelSyncSettings", () => {
     fireEvent.change(concurrencyInput, { target: { value: "11" } })
     fireEvent.change(retriesInput, { target: { value: "6" } })
     fireEvent.change(channelTimeoutInput, { target: { value: "-1" } })
+    fireEvent.change(channelTimeoutInput, { target: { value: "43201" } })
     fireEvent.change(rpmInput, { target: { value: "4" } })
     fireEvent.change(burstInput, { target: { value: "21" } })
 
@@ -631,6 +660,56 @@ describe("ManagedSiteModelSyncSettings", () => {
         },
       })
     })
+  })
+
+  it("accepts zero as the no-limit timeout value", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        preferences: {
+          managedSiteModelSync: {
+            enabled: true,
+            interval: 24 * 60 * 60 * 1000,
+            concurrency: 2,
+            maxRetries: 2,
+            channelProcessingTimeout: 15,
+            rateLimit: { requestsPerMinute: 20, burst: 5 },
+            allowedModels: [],
+            globalChannelModelFilters: [],
+          },
+        },
+      }),
+    )
+
+    render(<ManagedSiteModelSyncSettings />)
+
+    await waitFor(() => {
+      expect(mockedSendModelSyncMessage).toHaveBeenCalled()
+    })
+
+    vi.clearAllMocks()
+
+    const [, , , channelTimeoutInput] = screen.getAllByRole("spinbutton")
+    fireEvent.change(channelTimeoutInput, { target: { value: "0" } })
+
+    await waitFor(() => {
+      expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
+        channelProcessingTimeout: 0,
+      })
+    })
+  })
+
+  it("uses the shared anchor id for the timeout setting control", async () => {
+    const { container } = render(<ManagedSiteModelSyncSettings />)
+
+    await waitFor(() => {
+      expect(mockedSendModelSyncMessage).toHaveBeenCalled()
+    })
+
+    expect(
+      container.querySelector(
+        '[data-card-id="managed-site-model-sync-channel-processing-timeout"]',
+      ),
+    ).toBeInTheDocument()
   })
 
   it("shows a save error when preference updates return false", async () => {

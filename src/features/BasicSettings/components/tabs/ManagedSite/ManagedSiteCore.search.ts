@@ -6,6 +6,8 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
+import { MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID } from "./managedSiteModelSyncTargetIds"
+
 const isStandardManagedSite = (managedSiteType: ManagedSiteType) =>
   managedSiteType !== SITE_TYPES.AXON_HUB &&
   managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB
@@ -164,7 +166,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:managed-site-model-sync-channel-processing-timeout",
     "managedSite",
-    "managed-site-model-sync-channel-processing-timeout",
+    MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID,
     "managedSiteModelSync:settings.channelProcessingTimeout",
     653,
     {

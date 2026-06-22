@@ -625,6 +625,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
         concurrency: 2,
         maxRetries: 3,
+        channelProcessingTimeout: 600,
       },
     })
     mocks.octopusListChannels.mockResolvedValue([
@@ -663,6 +664,15 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     })
 
     expect(mocks.runOctopusBatch).toHaveBeenCalledTimes(1)
+    expect(mocks.runOctopusBatch).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        concurrency: 2,
+        maxRetries: 3,
+        channelProcessingTimeout: 600,
+      }),
+    )
     expect(mocks.saveLastExecution).toHaveBeenCalledTimes(1)
     expect(mocks.saveChannelUpstreamModelOptions).not.toHaveBeenCalled()
     expect(mocks.sendRuntimeMessage).toHaveBeenNthCalledWith(

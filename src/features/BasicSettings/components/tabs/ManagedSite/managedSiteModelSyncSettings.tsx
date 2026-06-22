@@ -47,6 +47,8 @@ import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
+import { MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID } from "./managedSiteModelSyncTargetIds"
+
 type UserManagedSiteModelSyncConfig = NonNullable<
   typeof DEFAULT_PREFERENCES.managedSiteModelSync
 >
@@ -632,7 +634,7 @@ export default function ManagedSiteModelSyncSettings() {
 
           {/* Per-Channel Timeout */}
           <CardItem
-            id="managed-site-model-sync-channel-processing-timeout"
+            id={MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID}
             title={t("managedSiteModelSync:settings.channelProcessingTimeout")}
             description={t(
               "managedSiteModelSync:settings.channelProcessingTimeoutDesc",

@@ -1297,6 +1297,90 @@ describe("ModelSyncService - batching and mapping", () => {
     )
   })
 
+  it("passes abort signals to fetch and update requests", async () => {
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+    const controller = new AbortController()
+
+    fetchChannelModelsMock.mockResolvedValueOnce(["gpt-4o"])
+    updateChannelModelsMock.mockResolvedValueOnce(undefined)
+    updateChannelModelMappingMock.mockResolvedValueOnce(undefined)
+
+    await service.fetchChannelModels(123, controller.signal)
+    await service.updateChannelModels(
+      makeChannel({ id: 123, models: "" }),
+      ["gpt-4o"],
+      controller.signal,
+    )
+    await service.updateChannelModelMapping(
+      makeChannel({ id: 123, models: "gpt-4o" }),
+      { "gpt-4o": "gpt-4o" },
+      controller.signal,
+    )
+
+    expect(fetchChannelModelsMock).toHaveBeenCalledWith(
+      expect.anything(),
+      123,
+      { signal: controller.signal },
+    )
+    expect(updateChannelModelsMock).toHaveBeenCalledWith(
+      expect.anything(),
+      123,
+      "gpt-4o",
+      { signal: controller.signal },
+    )
+    expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
+      expect.anything(),
+      123,
+      "gpt-4o",
+      JSON.stringify({ "gpt-4o": "gpt-4o" }),
+      { signal: controller.signal },
+    )
+  })
+
+  it("throws before request work when the abort signal is already cancelled", async () => {
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+    const controller = new AbortController()
+    controller.abort(new Error("cancelled"))
+
+    await expect(
+      service.fetchChannelModels(123, controller.signal),
+    ).rejects.toThrow("cancelled")
+    await expect(
+      service.updateChannelModels(
+        makeChannel({ id: 123, models: "" }),
+        ["gpt-4o"],
+        controller.signal,
+      ),
+    ).rejects.toThrow("cancelled")
+    await expect(
+      service.updateChannelModelMapping(
+        makeChannel({ id: 123, models: "gpt-4o" }),
+        { "gpt-4o": "gpt-4o" },
+        controller.signal,
+      ),
+    ).rejects.toThrow("cancelled")
+  })
+
+  it("rethrows cancellation after fetch before channel update", async () => {
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+    const controller = new AbortController()
+
+    fetchChannelModelsMock.mockImplementationOnce(async () => {
+      controller.abort(new Error("cancelled after fetch"))
+      return ["gpt-4o"]
+    })
+
+    await expect(
+      service.runForChannel(
+        makeChannel({ id: 123, models: "" }),
+        0,
+        controller.signal,
+      ),
+    ).rejects.toThrow("cancelled after fetch")
+
+    expect(updateChannelModelsMock).not.toHaveBeenCalled()
+  })
+
   it("keeps the generic site limiter when model sync has no configured limiter", async () => {
     const service = new ModelSyncService(makeExampleRuntimeConfig())
 
