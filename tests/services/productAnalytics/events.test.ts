@@ -20,6 +20,7 @@ import {
   trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
 import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
+import { setLoggingPreferences } from "~/utils/core/logger"
 
 const {
   handleProductAnalyticsMessageMock,
@@ -49,6 +50,7 @@ vi.mock("~/services/productAnalytics/runtime", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  setLoggingPreferences({ consoleEnabled: false, level: "debug" })
   isExtensionBackgroundMock.mockReturnValue(false)
   handleProductAnalyticsMessageMock.mockResolvedValue({ success: true })
   sendProductAnalyticsMessageMock.mockResolvedValue({ success: true })
@@ -419,6 +421,75 @@ describe("trackProductAnalyticsEvent", () => {
       )
     })
     expect(sendProductAnalyticsMessageMock).not.toHaveBeenCalled()
+  })
+
+  it("does not block when direct background analytics capture is rejected", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      setLoggingPreferences({ consoleEnabled: true, level: "debug" })
+      isExtensionBackgroundMock.mockReturnValue(true)
+      handleProductAnalyticsMessageMock.mockResolvedValue({ success: false })
+
+      await expect(
+        trackProductAnalyticsEvent(
+          PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+          {
+            feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+            action_id:
+              PRODUCT_ANALYTICS_ACTION_IDS.ScheduledManagedSiteModelSync,
+            entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+            result: "success",
+            source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+          },
+        ),
+      ).resolves.toBe(true)
+
+      await vi.waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          "[Background][ProductAnalyticsEvents] Product analytics event dispatch was rejected",
+        )
+      })
+      expect(sendProductAnalyticsMessageMock).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it("does not block when direct background analytics capture fails asynchronously", async () => {
+    const error = new Error("analytics unavailable")
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      setLoggingPreferences({ consoleEnabled: true, level: "debug" })
+      isExtensionBackgroundMock.mockReturnValue(true)
+      handleProductAnalyticsMessageMock.mockRejectedValue(error)
+
+      await expect(
+        trackProductAnalyticsEvent(
+          PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+          {
+            feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+            action_id:
+              PRODUCT_ANALYTICS_ACTION_IDS.ScheduledManagedSiteModelSync,
+            entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+            result: "success",
+            source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+          },
+        ),
+      ).resolves.toBe(true)
+
+      await vi.waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          "[Background][ProductAnalyticsEvents] Product analytics event dispatch failed",
+          expect.objectContaining({
+            message: "analytics unavailable",
+            name: "Error",
+          }),
+        )
+      })
+      expect(sendProductAnalyticsMessageMock).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 
   it("does not wait for an in-flight background analytics response", async () => {
