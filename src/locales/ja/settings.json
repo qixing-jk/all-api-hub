@@ -238,6 +238,7 @@
     "resetConfirmDesc": "{{name}} を既定設定に戻しますか？ この操作は元に戻せません。",
     "resetFailed": "{{name}} のリセットに失敗しました",
     "resetSuccess": "{{name}} を既定設定にリセットしました",
+    "runtimeRequestFailed": "ランタイムリクエストに失敗しました。後でもう一度お試しください。",
     "saveSettingsFailed": "設定の保存に失敗しました",
     "updateFailed": "{{name}} の更新に失敗しました",
     "updateSuccess": "{{name}} を更新しました"

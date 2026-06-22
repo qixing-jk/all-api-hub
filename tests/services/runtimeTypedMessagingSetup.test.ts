@@ -40,6 +40,13 @@ describe("typed runtime messaging setup", () => {
       DEFAULT_PREFERENCES: { managedSiteModelSync: {} },
       userPreferences: { getPreferences: vi.fn(), savePreferences: vi.fn() },
     }))
+    vi.doMock("~/utils/i18n/core", () => ({
+      t: vi.fn((key: string) =>
+        key === "settings:messages.runtimeRequestFailed"
+          ? "Runtime request failed"
+          : key,
+      ),
+    }))
     vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
       const actual =
         await importOriginal<typeof import("~/utils/browser/browserApi")>()
@@ -65,7 +72,7 @@ describe("typed runtime messaging setup", () => {
     expect(getPreferencesHandler).toBeTypeOf("function")
     await expect(getPreferencesHandler!()).resolves.toEqual({
       success: false,
-      error: "settings:messages.runtimeRequestFailed",
+      error: "boom",
     })
   })
 
@@ -112,6 +119,13 @@ describe("typed runtime messaging setup", () => {
     vi.doMock("~/services/preferences/userPreferences", () => ({
       DEFAULT_PREFERENCES: { managedSiteModelSync: {} },
       userPreferences: { getPreferences: vi.fn(), savePreferences: vi.fn() },
+    }))
+    vi.doMock("~/utils/i18n/core", () => ({
+      t: vi.fn((key: string) =>
+        key === "settings:messages.runtimeRequestFailed"
+          ? "Runtime request failed"
+          : key,
+      ),
     }))
     vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
       const actual =
@@ -238,7 +252,7 @@ describe("typed runtime messaging setup", () => {
     expect(updateSettings).toHaveBeenCalledWith({ enableSync: false })
   })
 
-  it("wraps every model sync typed listener failure with the stable runtime fallback", async () => {
+  it("wraps every model sync typed listener failure with its error message", async () => {
     const onModelSyncMessage: OnMessageMock = vi.fn(() => vi.fn())
 
     vi.doMock("~/services/models/modelSync/messaging", () => ({
@@ -296,23 +310,31 @@ describe("typed runtime messaging setup", () => {
 
     scheduler.setupManagedSiteModelSyncMessagingListeners()
 
-    for (const [type, input] of [
-      ["modelSync:getNextRun", undefined],
-      ["modelSync:triggerAll", undefined],
-      ["modelSync:triggerSelected", { data: { channelIds: [1] } }],
-      ["modelSync:triggerFailedOnly", undefined],
-      ["modelSync:getLastExecution", undefined],
-      ["modelSync:getProgress", undefined],
-      ["modelSync:updateSettings", { data: { settings: {} } }],
-      ["modelSync:getPreferences", undefined],
-      ["modelSync:getChannelUpstreamModelOptions", undefined],
-      ["modelSync:listChannels", undefined],
+    for (const [type, input, error] of [
+      ["modelSync:getNextRun", undefined, "alarm failed"],
+      ["modelSync:triggerAll", undefined, "sync failed"],
+      [
+        "modelSync:triggerSelected",
+        { data: { channelIds: [1] } },
+        "sync failed",
+      ],
+      ["modelSync:triggerFailedOnly", undefined, "failed-only sync failed"],
+      ["modelSync:getLastExecution", undefined, "last execution failed"],
+      ["modelSync:getProgress", undefined, "progress failed"],
+      ["modelSync:updateSettings", { data: { settings: {} } }, "update failed"],
+      ["modelSync:getPreferences", undefined, "prefs failed"],
+      [
+        "modelSync:getChannelUpstreamModelOptions",
+        undefined,
+        "upstream options failed",
+      ],
+      ["modelSync:listChannels", undefined, "list failed"],
     ] as const) {
       await expect(
         getRegisteredHandler(onModelSyncMessage, type)(input),
       ).resolves.toEqual({
         success: false,
-        error: "settings:messages.runtimeRequestFailed",
+        error,
       })
     }
   })

@@ -87,6 +87,14 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+vi.mock("~/utils/i18n/core", () => ({
+  t: vi.fn((key: string) =>
+    key === "settings:messages.runtimeRequestFailed"
+      ? "Runtime request failed"
+      : key,
+  ),
+}))
+
 const mockedUserPreferences = userPreferences as unknown as {
   getPreferences: ReturnType<typeof vi.fn>
   savePreferences: ReturnType<typeof vi.fn>
@@ -246,7 +254,7 @@ describe("ManagedSiteModelSync operation helpers", () => {
     await expect(triggerAllModelSync()).rejects.toThrow("scheduler exploded")
   })
 
-  it("returns app-owned listener failure copy instead of raw scheduler errors", async () => {
+  it("returns listener error messages and falls back when they are empty", async () => {
     const executeSyncSpy = vi.spyOn(modelSyncScheduler, "executeSync")
 
     setupManagedSiteModelSyncMessagingListeners()
@@ -259,14 +267,23 @@ describe("ManagedSiteModelSync operation helpers", () => {
     })
     expect(executeSyncSpy).not.toHaveBeenCalled()
 
-    executeSyncSpy.mockRejectedValue(new Error("upstream token secret leaked"))
+    executeSyncSpy.mockRejectedValueOnce(
+      new Error("upstream token secret leaked"),
+    )
     const triggerAllHandler = modelSyncMessageHandlers.get(
       "modelSync:triggerAll",
     )
 
     await expect(triggerAllHandler?.({ data: {} })).resolves.toEqual({
       success: false,
-      error: "settings:messages.runtimeRequestFailed",
+      error: "upstream token secret leaked",
+    })
+
+    executeSyncSpy.mockRejectedValueOnce(new Error(""))
+
+    await expect(triggerAllHandler?.({ data: {} })).resolves.toEqual({
+      success: false,
+      error: "Runtime request failed",
     })
   })
 

@@ -861,7 +861,10 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.ListChannels:
             channelLoadAttempt += 1
             if (channelLoadAttempt === 1) {
-              return { success: false, error: "channel load failed" }
+              return {
+                success: false,
+                error: "Runtime request failed",
+              }
             }
             return {
               success: true,
@@ -877,7 +880,12 @@ describe("ManagedSiteModelSync page", () => {
 
     render(<ManagedSiteModelSync />)
 
-    expect(await screen.findByText("channel load failed")).toBeInTheDocument()
+    expect(
+      await screen.findByText("Runtime request failed"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("settings:messages.runtimeRequestFailed"),
+    ).not.toBeInTheDocument()
     expect(toast.error).toHaveBeenCalledWith(
       "managedSiteModelSync:messages.error.loadFailed",
     )
@@ -1682,7 +1690,7 @@ describe("ManagedSiteModelSync page", () => {
         if (type === ModelSyncMessageTypes.TriggerAll) {
           return {
             success: false,
-            error: "backend unavailable",
+            error: "Runtime request failed",
           }
         }
 
@@ -1758,6 +1766,9 @@ describe("ManagedSiteModelSync page", () => {
         "managedSiteModelSync:messages.error.syncFailed",
       )
     })
+    expect(toast.error).not.toHaveBeenCalledWith(
+      expect.stringContaining("settings:messages.runtimeRequestFailed"),
+    )
 
     expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
       actionBarAnalyticsContext(
@@ -1783,7 +1794,7 @@ describe("ManagedSiteModelSync page", () => {
         if (type === ModelSyncMessageTypes.TriggerSelected) {
           return {
             success: false,
-            error: "permission denied",
+            error: "Runtime request failed",
           }
         }
 
@@ -1863,6 +1874,9 @@ describe("ManagedSiteModelSync page", () => {
         "managedSiteModelSync:messages.error.syncFailed",
       )
     })
+    expect(toast.error).not.toHaveBeenCalledWith(
+      expect.stringContaining("settings:messages.runtimeRequestFailed"),
+    )
 
     expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
       actionBarAnalyticsContext(

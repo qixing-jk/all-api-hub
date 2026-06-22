@@ -970,7 +970,8 @@ function toModelSyncFailure(error: unknown) {
   logger.error("Message handling failed", error)
   return {
     success: false as const,
-    error: "settings:messages.runtimeRequestFailed",
+    error:
+      getErrorMessage(error) || t("settings:messages.runtimeRequestFailed"),
   }
 }
 

@@ -238,6 +238,7 @@
     "resetConfirmDesc": "Bạn có chắc muốn đặt lại {{name}} về cài đặt mặc định không? Thao tác này không thể hoàn tác.",
     "resetFailed": "Đặt lại {{name}} thất bại",
     "resetSuccess": "{{name}} đã được đặt lại về cài đặt mặc định",
+    "runtimeRequestFailed": "Yêu cầu runtime thất bại. Vui lòng thử lại sau.",
     "saveSettingsFailed": "Lưu cài đặt thất bại",
     "updateFailed": "Cập nhật {{name}} thất bại",
     "updateSuccess": "Cập nhật {{name}} thành công"

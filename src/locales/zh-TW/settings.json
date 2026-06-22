@@ -238,6 +238,7 @@
     "resetConfirmDesc": "確定要將{{name}}重置為預設設定嗎？此操作無法撤銷。",
     "resetFailed": "重置{{name}}失敗",
     "resetSuccess": "{{name}}已重置為預設設定",
+    "runtimeRequestFailed": "執行階段請求失敗，請稍後再試。",
     "saveSettingsFailed": "儲存設定失敗",
     "updateFailed": "{{name}}更新失敗",
     "updateSuccess": "{{name}}更新成功"

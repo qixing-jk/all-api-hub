@@ -238,6 +238,7 @@
     "resetConfirmDesc": "Are you sure you want to reset {{name}} to default settings? This operation cannot be undone.",
     "resetFailed": "Failed to reset {{name}}",
     "resetSuccess": "{{name}} has been reset to default settings",
+    "runtimeRequestFailed": "Runtime request failed. Try again later.",
     "saveSettingsFailed": "Failed to save settings",
     "updateFailed": "{{name}} Update failed",
     "updateSuccess": "{{name}} Update successful"

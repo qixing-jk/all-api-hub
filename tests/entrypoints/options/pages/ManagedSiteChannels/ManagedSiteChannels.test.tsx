@@ -970,7 +970,7 @@ describe("ManagedSiteChannels", () => {
     mockChannels([])
     vi.mocked(sendModelSyncMessage).mockResolvedValue({
       success: false,
-      error: "backend exploded",
+      error: "Runtime request failed",
     } as any)
 
     render(<ManagedSiteChannels />)
@@ -983,6 +983,9 @@ describe("ManagedSiteChannels", () => {
       },
       { timeout: 3000 },
     )
+    expect(
+      screen.queryByText("settings:messages.runtimeRequestFailed"),
+    ).not.toBeInTheDocument()
     expect(toast.error).toHaveBeenCalledWith(
       "managedSiteChannels:alerts.loadError.description",
     )
@@ -1321,7 +1324,7 @@ describe("ManagedSiteChannels", () => {
       if (type === "modelSync:triggerSelected") {
         return {
           success: false,
-          error: "sync failed",
+          error: "Runtime request failed",
         } as any
       }
 
@@ -1355,6 +1358,9 @@ describe("ManagedSiteChannels", () => {
 
     expect(toast.error).toHaveBeenCalledWith(
       "managedSiteChannels:toasts.syncFailed",
+    )
+    expect(toast.error).not.toHaveBeenCalledWith(
+      expect.stringContaining("settings:messages.runtimeRequestFailed"),
     )
     expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
