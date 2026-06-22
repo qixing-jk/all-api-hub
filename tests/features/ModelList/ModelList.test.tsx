@@ -83,18 +83,31 @@ vi.mock("~/features/ModelList/components/ControlPanel", () => ({
       selectedVerificationResults?: string[]
     }) => number
   }) => (
-    <button
-      type="button"
-      data-testid="control-panel"
-      onClick={() =>
-        getFilteredResultCount?.({
-          searchTerm: "target",
-          selectedVerificationResults: ["pass"],
-        })
-      }
-    >
-      control-panel
-    </button>
+    <div>
+      <button
+        type="button"
+        data-testid="control-panel"
+        onClick={() =>
+          getFilteredResultCount?.({
+            searchTerm: "target",
+            selectedVerificationResults: ["pass"],
+          })
+        }
+      >
+        control-panel
+      </button>
+      <button
+        type="button"
+        data-testid="base-count-control"
+        onClick={() =>
+          getFilteredResultCount?.({
+            searchTerm: "target",
+          })
+        }
+      >
+        base-count-control
+      </button>
+    </div>
   ),
 }))
 
@@ -392,5 +405,26 @@ describe("ModelList", () => {
     expect(getFilteredModels).toHaveBeenCalledWith({
       searchTerm: "target",
     })
+  })
+
+  it("uses the base count for non-verification result estimates", async () => {
+    const user = userEvent.setup()
+    const getFilteredModels = vi.fn(() => [])
+    const getFilteredResultCount = vi.fn(() => 3)
+
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      getFilteredModels,
+      getFilteredResultCount,
+    })
+
+    render(<ModelList />)
+
+    await user.click(screen.getByTestId("base-count-control"))
+
+    expect(getFilteredResultCount).toHaveBeenCalledWith({
+      searchTerm: "target",
+    })
+    expect(getFilteredModels).not.toHaveBeenCalled()
   })
 })

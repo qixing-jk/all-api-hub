@@ -57,9 +57,12 @@ import {
   type ModelListVerificationResultFilter,
 } from "./verificationResultFilters"
 
-type ModelListDisplayedResultCountFilters = Parameters<
-  ReturnType<typeof useModelListData>["getFilteredResultCount"]
->[0] & {
+type ModelListDisplayedResultCountBaseFilters = NonNullable<
+  Parameters<ReturnType<typeof useModelListData>["getFilteredResultCount"]>[0]
+>
+
+interface ModelListDisplayedResultCountFilters
+  extends ModelListDisplayedResultCountBaseFilters {
   selectedVerificationResults?: ModelListVerificationResultFilter[]
 }
 

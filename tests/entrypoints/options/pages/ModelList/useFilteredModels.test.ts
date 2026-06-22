@@ -332,6 +332,50 @@ describe("useFilteredModels", () => {
     expect(result.current.getProviderFilteredCount("Gemini")).toBe(1)
   })
 
+  it("estimates filtered models and counts from pending filters", async () => {
+    const account = createDisplayAccount({
+      id: "account-pending-filter-estimate",
+      balance: { USD: 5, CNY: 35 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "gpt-4o-mini",
+          model_description: "Fast OpenAI model",
+          enable_groups: ["default"],
+        },
+        {
+          model_name: "claude-3-5-sonnet",
+          model_description: "Batch reasoning model",
+          enable_groups: ["default"],
+        },
+        {
+          model_name: "gemini-1.5-pro",
+          model_description: "Batch multimodal model",
+          enable_groups: ["default"],
+        },
+      ]),
+      selectedSource: createAccountSource(account),
+      selectedProvider: "Claude",
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["claude-3-5-sonnet"]),
+    )
+
+    expect(
+      result.current
+        .getFilteredModels({ searchTerm: "batch" })
+        .map((item) => item.model.model_name),
+    ).toEqual(["claude-3-5-sonnet"])
+    expect(result.current.getFilteredResultCount({ searchTerm: "batch" })).toBe(
+      1,
+    )
+  })
+
   it("skips malformed account pricing payloads while keeping valid account models and groups", async () => {
     const accountA = createDisplayAccount({
       id: "account-valid",

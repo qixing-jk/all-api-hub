@@ -110,8 +110,12 @@ describe("ControlPanel profile capabilities", () => {
     expect(
       await screen.findByText("modelList:sortOptions.verificationLatencyAsc"),
     ).toBeInTheDocument()
-    expect(sortSelect).not.toHaveTextContent("modelList:sortOptions.priceAsc")
-    expect(sortSelect).not.toHaveTextContent("modelList:sortOptions.priceDesc")
+    expect(
+      screen.queryByText("modelList:sortOptions.priceAsc"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:sortOptions.priceDesc"),
+    ).not.toBeInTheDocument()
     expect(
       await screen.findByText("modelList:endpointTypes"),
     ).toBeInTheDocument()
@@ -166,8 +170,12 @@ describe("ControlPanel profile capabilities", () => {
     expect(
       await screen.findByText("modelList:sortOptions.verificationLatencyAsc"),
     ).toBeInTheDocument()
-    expect(sortSelect).not.toHaveTextContent("modelList:sortOptions.priceAsc")
-    expect(sortSelect).not.toHaveTextContent("modelList:sortOptions.priceDesc")
+    expect(
+      screen.queryByText("modelList:sortOptions.priceAsc"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:sortOptions.priceDesc"),
+    ).not.toBeInTheDocument()
   })
 
   it("keeps pricing controls but hides the ratio toggle when ratio display is unsupported", async () => {

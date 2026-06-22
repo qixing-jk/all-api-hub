@@ -377,6 +377,23 @@ describe("ControlPanel", () => {
     ])
   })
 
+  it("keeps verification result filters interactive when the setter is omitted", async () => {
+    const user = userEvent.setup()
+
+    renderControlPanel({
+      setSelectedVerificationResults: undefined,
+    })
+
+    await user.click(screen.getByLabelText("verificationResults.filters.fail"))
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+      }),
+    )
+  })
+
   it("keeps the search field usable when all top filters are visible", () => {
     renderControlPanel()
 

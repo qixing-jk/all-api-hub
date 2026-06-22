@@ -37,6 +37,17 @@ function createModelItem(modelName: string) {
   } as any
 }
 
+function createProfileModelItem(modelName: string) {
+  return {
+    ...createModelItem(modelName),
+    source: {
+      kind: "profile",
+      profile: { id: "profile-1", name: "Profile One" },
+      capabilities: {},
+    },
+  } as any
+}
+
 function createSummary(
   modelName: string,
   params: { status: "pass" | "fail"; latencies: number[] },
@@ -155,6 +166,31 @@ describe("model list verification result view", () => {
     )
 
     expect(result).toEqual([])
+  })
+
+  it("treats rows without a model id as unverified", () => {
+    const result = applyVerificationResultView([createModelItem(" ")], {
+      selectedResults: [MODEL_LIST_VERIFICATION_RESULT_FILTERS.UNVERIFIED],
+      shouldSortByLatency: false,
+      verificationSummariesByKey: {},
+    })
+
+    expect(result).toHaveLength(1)
+  })
+
+  it("treats profile rows without a stored summary as unverified", () => {
+    const result = applyVerificationResultView(
+      [createProfileModelItem("profile-model")],
+      {
+        selectedResults: [MODEL_LIST_VERIFICATION_RESULT_FILTERS.UNVERIFIED],
+        shouldSortByLatency: false,
+        verificationSummariesByKey: {},
+      },
+    )
+
+    expect(result.map((item) => item.model.model_name)).toEqual([
+      "profile-model",
+    ])
   })
 
   it("keeps original order for equal latency and places null latency last", () => {
