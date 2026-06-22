@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { TFunction } from "i18next"
+import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -111,17 +112,61 @@ function renderPanel(
   )
 }
 
+function renderPanelWithSearchState({
+  onSearchTermChange = vi.fn(),
+  ...props
+}: Partial<Parameters<typeof RepairMissingKeysResultsPanel>[0]> = {}) {
+  function StatefulPanel() {
+    const [searchTerm, setSearchTerm] = useState("Example")
+    const handleSearchTermChange = (value: string) => {
+      setSearchTerm(value)
+      onSearchTermChange(value)
+    }
+
+    return (
+      <RepairMissingKeysResultsPanel
+        accountIds={new Set(["account-1"])}
+        activeView={REPAIR_RESULT_VIEWS.AccountCoverage}
+        deleteResultMessage=""
+        filteredInvalidTokens={[buildToken()]}
+        filteredResults={[buildResult()]}
+        invalidTokens={[buildToken()]}
+        openingSub2ApiAccountId={null}
+        outcomeCounts={{
+          created: 1,
+          alreadyHad: 0,
+          skipped: 0,
+          failed: 0,
+        }}
+        outcomeFilter={null}
+        searchTerm={searchTerm}
+        selectedInvalidTokenKeys={new Set()}
+        selectedInvalidTokens={[]}
+        visibleResults={[buildResult()]}
+        onActiveViewChange={vi.fn()}
+        onOpenDeleteConfirm={vi.fn()}
+        onOpenSub2ApiTokenDialog={vi.fn()}
+        onOutcomeFilterChange={vi.fn()}
+        onSearchTermChange={handleSearchTermChange}
+        onSelectedInvalidTokenKeysChange={vi.fn()}
+        t={t}
+        {...props}
+      />
+    )
+  }
+
+  return render(<StatefulPanel />)
+}
+
 describe("RepairMissingKeysResultsPanel", () => {
   it("renders account coverage counts, search controls, and outcome filters", async () => {
     const user = userEvent.setup()
     const onActiveViewChange = vi.fn()
     const onOutcomeFilterChange = vi.fn()
-    const onSearchTermChange = vi.fn()
 
     renderPanel({
       onActiveViewChange,
       onOutcomeFilterChange,
-      onSearchTermChange,
     })
 
     expect(
@@ -153,19 +198,6 @@ describe("RepairMissingKeysResultsPanel", () => {
       REPAIR_RESULT_VIEWS.InvalidKeys,
     )
 
-    await user.type(
-      screen.getByRole("textbox", {
-        name: "keyManagement:repairMissingKeys.searchLabel",
-      }),
-      " 1",
-    )
-    expect(onSearchTermChange).toHaveBeenLastCalledWith("Example1")
-
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.clear" }),
-    )
-    expect(onSearchTermChange).toHaveBeenLastCalledWith("")
-
     await user.click(
       screen.getByRole("button", {
         name: /keyManagement:repairMissingKeys\.outcomes\.created/,
@@ -174,6 +206,27 @@ describe("RepairMissingKeysResultsPanel", () => {
     expect(onOutcomeFilterChange).toHaveBeenCalledWith(
       ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
     )
+  })
+
+  it("forwards controlled search updates and clear actions", async () => {
+    const user = userEvent.setup()
+    const onSearchTermChange = vi.fn()
+
+    renderPanelWithSearchState({ onSearchTermChange })
+
+    const searchInput = screen.getByRole("textbox", {
+      name: "keyManagement:repairMissingKeys.searchLabel",
+    })
+    expect(searchInput).toHaveValue("Example")
+
+    await user.type(searchInput, " 1")
+    expect(onSearchTermChange).toHaveBeenLastCalledWith("Example 1")
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+    expect(onSearchTermChange).toHaveBeenLastCalledWith("")
+    expect(searchInput).toHaveValue("")
   })
 
   it("routes invalid-key view selection and delete actions", async () => {

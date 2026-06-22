@@ -137,6 +137,26 @@ describe("useInvalidKeyDeletion", () => {
     expect(progress.summary.deletedKeys).toBe(2)
   })
 
+  it("skips deletion when no invalid tokens are selected", async () => {
+    const setProgress = vi.fn()
+
+    const { result } = renderHook(() =>
+      useInvalidKeyDeletion({
+        invalidTokens: [visibleToken],
+        setProgress,
+        t: testI18n.t,
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleDeleteInvalidKeys()
+    })
+
+    expect(sendAccountKeyRepairMessageMock).not.toHaveBeenCalled()
+    expect(setProgress).not.toHaveBeenCalled()
+    expect(result.current.isDeletingInvalidKeys).toBe(false)
+  })
+
   it("ignores repeated delete submissions while a delete request is in flight", async () => {
     let resolveDelete:
       | ((

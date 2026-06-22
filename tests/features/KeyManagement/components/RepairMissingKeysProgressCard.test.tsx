@@ -103,9 +103,9 @@ describe("RepairMissingKeysProgressCard", () => {
     )
 
     expect(
-      screen
-        .getByText("keyManagement:repairMissingKeys.actions.rerun")
-        .closest("button"),
+      screen.getByRole("button", {
+        name: /keyManagement:repairMissingKeys\.actions\.rerun/,
+      }),
     ).toBeDisabled()
   })
 
