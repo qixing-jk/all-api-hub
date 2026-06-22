@@ -19,6 +19,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -363,9 +364,16 @@ describe("useAccountDialog analytics", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            accountAutoDetectFailureReason:
+              AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+          },
+        },
         insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
           accountAutoDetectFailureReason:
             AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
           requestedAuthMode: AuthTypeEnum.AccessToken,
@@ -413,9 +421,16 @@ describe("useAccountDialog analytics", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            accountAutoDetectFailureReason:
+              AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
+          },
+        },
         insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
           accountAutoDetectFailureReason:
             AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
           requestedAuthMode: AuthTypeEnum.AccessToken,
@@ -456,9 +471,16 @@ describe("useAccountDialog analytics", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            accountAutoDetectFailureReason:
+              AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+          },
+        },
         insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
           requestedAuthMode: AuthTypeEnum.AccessToken,
           accountAutoDetectFailureReason:
             AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
@@ -509,9 +531,14 @@ describe("useAccountDialog analytics", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory,
+          diagnostics: {
+            failure: {
+              category: errorCategory,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            },
+          },
           insights: {
-            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
             requestedAuthMode: AuthTypeEnum.AccessToken,
           },
         },
@@ -546,9 +573,14 @@ describe("useAccountDialog analytics", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          },
+        },
         insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
           requestedAuthMode: AuthTypeEnum.AccessToken,
         },
       },
@@ -649,10 +681,15 @@ describe("useAccountDialog analytics", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          },
+        },
         insights: {
           requestedAuthMode: AuthTypeEnum.AccessToken,
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
         },
       },
     )
@@ -726,9 +763,14 @@ describe("useAccountDialog analytics", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          },
+        },
         insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
           requestedAuthMode: AuthTypeEnum.AccessToken,
         },
       },
@@ -762,9 +804,14 @@ describe("useAccountDialog analytics", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.RateLimited,
+          },
+        },
         insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
           requestedAuthMode: AuthTypeEnum.AccessToken,
         },
       },
@@ -822,7 +869,118 @@ describe("useAccountDialog analytics", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Permission,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.PermissionDenied,
+          },
+        },
+      },
+    )
+    expectNoSensitiveAnalyticsFields()
+  })
+
+  it("tracks cookie import responses without a failure code as invalid responses", async () => {
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: false,
+      error: "private backend message",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await setUrlAndWait(result, "https://private.example.com")
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountCookies)
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Response,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
+          },
+        },
+      },
+    )
+    expectNoSensitiveAnalyticsFields()
+  })
+
+  it("tracks cookie read failures with request diagnostics", async () => {
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: false,
+      errorCode: COOKIE_IMPORT_FAILURE_REASONS.ReadFailed,
+      error: "private read failure",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await setUrlAndWait(result, "https://private.example.com")
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountCookies)
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          },
+        },
+      },
+    )
+    expectNoSensitiveAnalyticsFields()
+  })
+
+  it("tracks thrown cookie import errors with sanitized diagnostics", async () => {
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
+      Object.assign(new Error("private cookie failure"), { statusCode: 403 }),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await setUrlAndWait(result, "https://private.example.com")
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountCookies)
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
+          },
+        },
       },
     )
     expectNoSensitiveAnalyticsFields()
@@ -939,7 +1097,7 @@ describe("useAccountDialog analytics", () => {
   it("tracks Sub2API import runtime errors as failures without raw error text", async () => {
     const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
     vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
-      new Error("private backend error"),
+      Object.assign(new Error("private backend error"), { statusCode: 401 }),
     )
 
     const { result } = renderAddHook()
@@ -966,7 +1124,13 @@ describe("useAccountDialog analytics", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
+          },
+        },
       },
     )
     expectNoSensitiveAnalyticsFields()

@@ -814,7 +814,16 @@ describe("AccountActionsContext", () => {
     expectExternalCheckInAnalyticsStarted()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      {
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+          },
+        },
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
     )
   })
 
@@ -843,7 +852,16 @@ describe("AccountActionsContext", () => {
     expectExternalCheckInAnalyticsStarted()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      {
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Response,
+          },
+        },
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      },
     )
   })
 
@@ -867,7 +885,16 @@ describe("AccountActionsContext", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission },
+      {
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.PermissionDenied,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+          },
+        },
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+      },
     )
     expect(
       JSON.stringify(mockCompleteProductAnalyticsAction.mock.calls),
@@ -901,7 +928,16 @@ describe("AccountActionsContext", () => {
     expectExternalCheckInAnalyticsStarted()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      {
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+          },
+        },
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
     )
   })
 })

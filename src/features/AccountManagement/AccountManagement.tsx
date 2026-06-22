@@ -21,6 +21,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -130,6 +131,7 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         successCount: result.success,
         failureCount: result.failed,
         skippedCount,
+        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
       })
       if (result.failed > 0) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -197,6 +199,7 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         successCount: refreshInsights.successCount,
         failureCount: refreshInsights.failureCount,
         skippedCount: 0,
+        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
       })
       if (result.failedCount > 0) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {

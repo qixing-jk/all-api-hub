@@ -160,7 +160,7 @@ describe("AccountManagement refresh analytics", () => {
             },
             failure: {
               category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
               reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
             },
           },
@@ -218,7 +218,7 @@ describe("AccountManagement refresh analytics", () => {
             },
             failure: {
               category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
               reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
             },
           },

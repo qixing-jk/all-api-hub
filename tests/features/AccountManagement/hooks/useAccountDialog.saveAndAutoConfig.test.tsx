@@ -21,6 +21,8 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -904,7 +906,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   })
 
-  it("tracks failed account saves with a controlled category and no backend message", async () => {
+  it("tracks failed account saves with controlled diagnostics and no backend message", async () => {
     mockValidateAndSaveAccount.mockResolvedValueOnce({
       success: false,
       message: "backend leaked details",
@@ -927,7 +929,13 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          },
+        },
       },
     )
     expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
@@ -3242,6 +3250,61 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     expect(toast.success).not.toHaveBeenCalled()
     expect(result.current.state.isSaving).toBe(false)
+  })
+
+  it("tracks create-account failures with a sanitized failure reason", async () => {
+    mockValidateAndSaveAccount.mockRejectedValueOnce(
+      Object.assign(new Error("private backend https://private.example.com"), {
+        code: "HTTP_401",
+      }),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("private-user")
+      result.current.setters.setAccessToken("private-token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await expect(
+      act(async () => {
+        await result.current.handlers.handleSaveAccount()
+      }),
+    ).rejects.toThrow("private backend")
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        diagnostics: {
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
+          },
+        },
+      },
+    )
+    expect(
+      JSON.stringify(mockCompleteProductAnalyticsAction.mock.calls),
+    ).not.toContain("private backend")
+    expect(
+      JSON.stringify(mockCompleteProductAnalyticsAction.mock.calls),
+    ).not.toContain("private.example.com")
   })
 
   it("uses the saveFailed fallback when edit-mode updates return unsuccessful without a message", async () => {

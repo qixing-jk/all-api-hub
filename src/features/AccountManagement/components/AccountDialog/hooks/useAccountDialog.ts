@@ -82,10 +82,12 @@ import {
   startProductAnalyticsAction,
   type ProductAnalyticsActionInsights,
 } from "~/services/productAnalytics/actions"
+import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -1341,7 +1343,13 @@ export function useAccountDialog({
 
         if (!response?.errorCode) {
           analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            diagnostics: {
+              failure: buildActionFailureDiagnostics({
+                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+                stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Response,
+                reason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
+              }),
+            },
           })
           toast.error(
             response?.error
@@ -1355,13 +1363,25 @@ export function useAccountDialog({
           case COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied:
             setShowCookiePermissionWarning(true)
             analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+              diagnostics: {
+                failure: buildActionFailureDiagnostics({
+                  errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+                  stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Permission,
+                  reason: PRODUCT_ANALYTICS_FAILURE_REASONS.PermissionDenied,
+                }),
+              },
             })
             toast.error(t("messages.importCookiesPermissionDenied"))
             break
           case COOKIE_IMPORT_FAILURE_REASONS.ReadFailed:
             analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              diagnostics: {
+                failure: buildActionFailureDiagnostics({
+                  errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+                  stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+                  reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+                }),
+              },
             })
             toast.error(
               response.error
@@ -1382,7 +1402,9 @@ export function useAccountDialog({
         t("messages.importCookiesFailed", { error: getErrorMessage(error) }),
       )
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          failure: buildActionFailureDiagnostics({ error }),
+        },
       })
     } finally {
       setIsImportingCookies(false)
@@ -1545,7 +1567,9 @@ export function useAccountDialog({
         t("messages.operationFailed", { error: getErrorMessage(error) }),
       )
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          failure: buildActionFailureDiagnostics({ error }),
+        },
       })
     } finally {
       setIsImportingSub2apiSession(false)
@@ -1611,10 +1635,14 @@ export function useAccountDialog({
         }),
       )
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          failure: buildActionFailureDiagnostics({
+            error,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+          }),
+        },
         insights: {
           ...createAutoDetectAnalyticsInsights(),
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
         },
       })
       return
@@ -1635,12 +1663,25 @@ export function useAccountDialog({
         setDetectionError(result.detailedError || null)
         enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: getAutoDetectAnalyticsErrorCategory(
-            result.detailedError?.type,
-          ),
+          diagnostics: {
+            failure: {
+              ...buildActionFailureDiagnostics({
+                errorCategory: getAutoDetectAnalyticsErrorCategory(
+                  result.detailedError?.type,
+                ),
+                stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+                reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+              }),
+              ...(result.autoDetectFailureReason
+                ? {
+                    accountAutoDetectFailureReason:
+                      result.autoDetectFailureReason,
+                  }
+                : {}),
+            },
+          },
           insights: {
             ...createAutoDetectAnalyticsInsights(result),
-            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
             ...(result.autoDetectFailureReason
               ? {
                   accountAutoDetectFailureReason:
@@ -1757,13 +1798,18 @@ export function useAccountDialog({
       setDetectionError(detectionError)
       enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: getAutoDetectAnalyticsErrorCategory(
-          detectionError.type,
-          error,
-        ),
+        diagnostics: {
+          failure: buildActionFailureDiagnostics({
+            error,
+            errorCategory: getAutoDetectAnalyticsErrorCategory(
+              detectionError.type,
+              error,
+            ),
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+          }),
+        },
         insights: {
           ...createAutoDetectAnalyticsInsights(),
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
         },
       })
     } finally {
@@ -1870,7 +1916,11 @@ export function useAccountDialog({
 
       if (!result.success) {
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          diagnostics: {
+            failure: buildActionFailureDiagnostics({
+              error: new Error(result.message || t("messages.saveFailed")),
+            }),
+          },
         })
         isAnalyticsActionCompleted = true
         throw new Error(result.message || t("messages.saveFailed"))
@@ -2002,7 +2052,11 @@ export function useAccountDialog({
     } catch (error: any) {
       if (!isAnalyticsActionCompleted) {
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          diagnostics: {
+            failure: buildActionFailureDiagnostics({
+              error,
+            }),
+          },
         })
       }
       toast.error(

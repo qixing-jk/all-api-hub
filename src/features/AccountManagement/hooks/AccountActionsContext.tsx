@@ -15,14 +15,16 @@ import {
 } from "~/services/checkin/externalCheckInMessaging"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import {
-  resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
   type ProductAnalyticsActionContext,
 } from "~/services/productAnalytics/actions"
+import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -379,8 +381,14 @@ export const AccountActionsProvider = ({
 
         if (!response?.success || !response.data) {
           analyticsCompleted = true
+          const failure = buildActionFailureDiagnostics({
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Response,
+          })
           tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            diagnostics: { failure },
+            errorCategory: failure.category,
           })
           throw new Error(
             response?.success === false ? response.error : "Empty response",
@@ -391,8 +399,14 @@ export const AccountActionsProvider = ({
 
         if (response.data.failedCount > 0) {
           analyticsCompleted = true
-          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          const failure = buildActionFailureDiagnostics({
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+          })
+          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            diagnostics: { failure },
+            errorCategory: failure.category,
           })
           toast.error(
             t("messages:errors.operation.failed", {
@@ -407,8 +421,10 @@ export const AccountActionsProvider = ({
         logger.error("Error opening external check-ins", error)
         if (!analyticsCompleted) {
           analyticsCompleted = true
+          const failure = buildActionFailureDiagnostics({ error })
           tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
+            diagnostics: { failure },
+            errorCategory: failure.category,
           })
         }
         toast.error(
