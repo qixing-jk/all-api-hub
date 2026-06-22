@@ -1,3 +1,4 @@
+import { waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -18,9 +19,12 @@ import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/events"
 import { AuthTypeEnum } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
-const { trackProductAnalyticsEventMock } = vi.hoisted(() => ({
-  trackProductAnalyticsEventMock: vi.fn(),
-}))
+const { recordSponsorSummaryMock, trackProductAnalyticsEventMock } = vi.hoisted(
+  () => ({
+    recordSponsorSummaryMock: vi.fn(),
+    trackProductAnalyticsEventMock: vi.fn(),
+  }),
+)
 
 vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
   const actual =
@@ -32,6 +36,10 @@ vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
       trackProductAnalyticsEventMock(...args),
   }
 })
+
+vi.mock("~/services/productAnalytics/sponsorRecommendationsSummary", () => ({
+  recordSponsorRecommendationsSummary: recordSponsorSummaryMock,
+}))
 
 const onContinueAddAccount = vi.fn()
 const onOpenBookmarkManager = vi.fn()
@@ -118,6 +126,8 @@ describe("SponsorRecommendationsSection", () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
     trackProductAnalyticsEventMock.mockReset()
+    recordSponsorSummaryMock.mockReset()
+    recordSponsorSummaryMock.mockResolvedValue(undefined)
     onContinueAddAccount.mockReset()
     onOpenBookmarkManager.mockReset()
     onOpenApiCredentialProfiles.mockReset()
@@ -361,7 +371,7 @@ describe("SponsorRecommendationsSection", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("tracks one safe impression for a non-empty rendered recommendation set without rerender duplicates", () => {
+  it("records rendered recommendation impressions into the daily summary", async () => {
     const { rerender } = renderSection([
       createSupportedSponsor(),
       createUnsupportedSponsor({
@@ -388,44 +398,51 @@ describe("SponsorRecommendationsSection", () => {
       />,
     )
 
-    expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(1)
-    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
-      expect.objectContaining({
-        feature_id: "sponsor_recommendations",
-        action_id: "view_sponsor_recommendations",
-        surface_id:
-          "options_account_management_add_account_sponsor_recommendations",
-        entrypoint: "options",
-        result: "success",
-        item_count: 2,
-        sponsor_catalog_source: "mixed",
-        sponsor_supported_count: 1,
-        sponsor_unsupported_count: 1,
-      }),
-    )
+    await waitFor(() => {
+      expect(recordSponsorSummaryMock).toHaveBeenCalledTimes(2)
+    })
+    expect(recordSponsorSummaryMock).toHaveBeenNthCalledWith(1, {
+      impressionCount: 1,
+      itemTotal: 2,
+      supportedItemTotal: 1,
+      unsupportedItemTotal: 1,
+      addAccountSurfaceCount: 1,
+      newcomerSurfaceCount: 0,
+    })
+    expect(recordSponsorSummaryMock).toHaveBeenNthCalledWith(2, {
+      impressionCount: 1,
+      itemTotal: 2,
+      supportedItemTotal: 1,
+      unsupportedItemTotal: 1,
+      addAccountSurfaceCount: 1,
+      newcomerSurfaceCount: 0,
+    })
+    expect(trackProductAnalyticsEventMock).not.toHaveBeenCalled()
   })
 
   it("does not track impressions when no recommendations are available", () => {
     renderSection([])
 
+    expect(recordSponsorSummaryMock).not.toHaveBeenCalled()
     expect(trackProductAnalyticsEventMock).not.toHaveBeenCalled()
   })
 
-  it("tracks newcomer recommendation impressions with a distinct surface", () => {
+  it("records newcomer recommendation impressions with a distinct surface count", async () => {
     renderSection(
       [createSupportedSponsor()],
       SPONSOR_RECOMMENDATION_SURFACES.Newcomer,
     )
 
-    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
-      expect.objectContaining({
-        action_id: "view_sponsor_recommendations",
-        surface_id:
-          "options_account_management_newcomer_sponsor_recommendations",
-      }),
-    )
+    await waitFor(() => {
+      expect(recordSponsorSummaryMock).toHaveBeenCalledWith({
+        impressionCount: 1,
+        itemTotal: 1,
+        supportedItemTotal: 1,
+        unsupportedItemTotal: 0,
+        addAccountSurfaceCount: 0,
+        newcomerSurfaceCount: 1,
+      })
+    })
   })
 
   it("tracks safe sponsor click metadata without leaking URLs, provider names, or promo notes", async () => {
@@ -439,6 +456,9 @@ describe("SponsorRecommendationsSection", () => {
         rank: 2,
       }),
     ])
+    await waitFor(() => {
+      expect(recordSponsorSummaryMock).toHaveBeenCalledTimes(1)
+    })
     trackProductAnalyticsEventMock.mockClear()
 
     await user.click(
@@ -524,6 +544,9 @@ describe("SponsorRecommendationsSection", () => {
       [createSupportedSponsor()],
       SPONSOR_RECOMMENDATION_SURFACES.Newcomer,
     )
+    await waitFor(() => {
+      expect(recordSponsorSummaryMock).toHaveBeenCalledTimes(1)
+    })
     trackProductAnalyticsEventMock.mockClear()
 
     await user.click(
@@ -601,6 +624,9 @@ describe("SponsorRecommendationsSection", () => {
         rank: 3,
       }),
     ])
+    await waitFor(() => {
+      expect(recordSponsorSummaryMock).toHaveBeenCalledTimes(1)
+    })
     trackProductAnalyticsEventMock.mockClear()
 
     await user.click(

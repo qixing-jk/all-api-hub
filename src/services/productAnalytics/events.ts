@@ -41,6 +41,8 @@ export const PRODUCT_ANALYTICS_EVENTS = {
   FeatureActionStarted: "feature_action_started",
   FeatureActionCompleted: "feature_action_completed",
   ShieldBypassSummaryCaptured: "shield_bypass_summary_captured",
+  SponsorRecommendationsDailySummaryCaptured:
+    "sponsor_recommendations_daily_summary_captured",
   AutoCheckinRunSummaryCaptured: "auto_checkin_run_summary_captured",
   AutoCheckinAccountGroupCaptured: "auto_checkin_account_group_captured",
   SettingChanged: "setting_changed",
@@ -991,6 +993,17 @@ export type ProductAnalyticsEventPayloadMap = {
     temp_window_fetch_failure_count?: number
     temp_window_turnstile_fetch_success_count?: number
     temp_window_turnstile_fetch_failure_count?: number
+  }
+  [PRODUCT_ANALYTICS_EVENTS.SponsorRecommendationsDailySummaryCaptured]: {
+    feature_id: typeof PRODUCT_ANALYTICS_FEATURE_IDS.SponsorRecommendations
+    entrypoint: typeof PRODUCT_ANALYTICS_ENTRYPOINTS.Background
+    day: string
+    impression_count: number
+    item_total: number
+    supported_item_total: number
+    unsupported_item_total: number
+    add_account_surface_count: number
+    newcomer_surface_count: number
   }
   [PRODUCT_ANALYTICS_EVENTS.AutoCheckinRunSummaryCaptured]: {
     run_kind: ProductAnalyticsAutoCheckinRunKind

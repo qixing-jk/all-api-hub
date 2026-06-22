@@ -1,10 +1,7 @@
-import { useEffect, useId, useRef } from "react"
+import { useEffect, useId } from "react"
 import { useTranslation } from "react-i18next"
 
-import {
-  getSponsorRecommendationImpressionKey,
-  trackSponsorRecommendationsImpression,
-} from "~/features/AccountManagement/sponsors/analytics"
+import { trackSponsorRecommendationsImpression } from "~/features/AccountManagement/sponsors/analytics"
 import {
   SPONSOR_RECOMMENDATION_SURFACES,
   type SponsorRecommendationSurface,
@@ -38,21 +35,12 @@ export function SponsorRecommendationsSection({
 }: SponsorRecommendationsSectionProps) {
   const { t } = useTranslation("account")
   const headingId = useId()
-  const trackedImpressionKeys = useRef(new Set<string>())
   const showVisibleHeader =
     surface !== SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog
 
   useEffect(() => {
     if (items.length === 0) return
-
-    const impressionKey = getSponsorRecommendationImpressionKey({
-      items,
-      surface,
-    })
-    if (trackedImpressionKeys.current.has(impressionKey)) return
-
-    trackedImpressionKeys.current.add(impressionKey)
-    trackSponsorRecommendationsImpression({ items, surface })
+    void trackSponsorRecommendationsImpression({ items, surface })
   }, [items, surface])
 
   if (items.length === 0) {

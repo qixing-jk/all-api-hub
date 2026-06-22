@@ -151,6 +151,17 @@ const EVENT_ALLOWED_KEYS = {
     "temp_window_turnstile_fetch_success_count",
     "temp_window_turnstile_fetch_failure_count",
   ],
+  [PRODUCT_ANALYTICS_EVENTS.SponsorRecommendationsDailySummaryCaptured]: [
+    "feature_id",
+    "entrypoint",
+    "day",
+    "impression_count",
+    "item_total",
+    "supported_item_total",
+    "unsupported_item_total",
+    "add_account_surface_count",
+    "newcomer_surface_count",
+  ],
   [PRODUCT_ANALYTICS_EVENTS.AutoCheckinRunSummaryCaptured]: [
     "run_kind",
     "entrypoint",

@@ -21,6 +21,7 @@ import {
   triggerStartupSettingsSnapshot,
   triggerStartupShieldBypassDailySummary,
   triggerStartupSiteEcosystemSnapshot,
+  triggerStartupSponsorRecommendationsDailySummary,
 } from "~/services/productAnalytics/runtime"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { shouldAutoOpenChangelogForUpdate } from "~/services/updates/changelogIndex"
@@ -218,4 +219,5 @@ async function main() {
   triggerStartupSiteEcosystemSnapshot()
   triggerStartupSettingsSnapshot()
   triggerStartupShieldBypassDailySummary()
+  triggerStartupSponsorRecommendationsDailySummary()
 }

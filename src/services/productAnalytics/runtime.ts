@@ -32,6 +32,7 @@ import {
   buildSiteEcosystemAnalyticsEvents,
   shouldSendSiteEcosystemSnapshot,
 } from "./siteEcosystem"
+import { flushSponsorRecommendationsDailySummary } from "./sponsorRecommendationsSummary"
 import { productAnalyticsState } from "./state"
 
 const logger = createLogger("ProductAnalyticsRuntime")
@@ -253,6 +254,20 @@ function flushShieldBypassDailySummaryBestEffort() {
 }
 
 /**
+ * Starts sponsor recommendations summary capture without failing background startup.
+ */
+function flushSponsorRecommendationsDailySummaryBestEffort() {
+  void flushSponsorRecommendationsDailySummary().catch((error) => {
+    if (isDevBuild()) {
+      logger.debug(
+        "Product analytics sponsor recommendations summary failed",
+        error,
+      )
+    }
+  })
+}
+
+/**
  * Watches local account storage changes and debounces site ecosystem snapshot capture.
  */
 export function setupProductAnalyticsAccountChangeListener() {
@@ -375,4 +390,11 @@ export function triggerStartupSettingsSnapshot() {
  */
 export function triggerStartupShieldBypassDailySummary() {
   flushShieldBypassDailySummaryBestEffort()
+}
+
+/**
+ * Triggers the startup sponsor recommendations summary flush in the background worker.
+ */
+export function triggerStartupSponsorRecommendationsDailySummary() {
+  flushSponsorRecommendationsDailySummaryBestEffort()
 }

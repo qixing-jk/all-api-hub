@@ -25,6 +25,7 @@ import {
   type ProductAnalyticsSponsorSupportStatus,
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/events"
+import { recordSponsorRecommendationsSummary } from "~/services/productAnalytics/sponsorRecommendationsSummary"
 
 export const SPONSOR_RECOMMENDATION_ACTION_KINDS = {
   ApiCredentialProfilesFallback:
@@ -55,8 +56,8 @@ const SPONSOR_ACTION_TO_PRODUCT_ANALYTICS_ACTION = {
     PRODUCT_ANALYTICS_ACTION_IDS.OpenSponsorProvider,
 } satisfies Record<SponsorRecommendationActionKind, ProductAnalyticsActionId>
 
-/** Tracks a visible sponsor recommendation set using only controlled fields. */
-export function trackSponsorRecommendationsImpression({
+/** Records a visible sponsor recommendation set into the daily summary. */
+export async function trackSponsorRecommendationsImpression({
   surface,
   items,
 }: {
@@ -64,25 +65,20 @@ export function trackSponsorRecommendationsImpression({
   items: SponsorRecommendation[]
 }) {
   if (items.length === 0) return
+  const supportedItemCount = items.filter(
+    (item) => item.supportStatus === SPONSOR_SUPPORT_STATUS.Supported,
+  ).length
 
-  void trackProductAnalyticsEvent(
-    PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
-    {
-      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.SponsorRecommendations,
-      action_id: PRODUCT_ANALYTICS_ACTION_IDS.ViewSponsorRecommendations,
-      surface_id: resolveProductAnalyticsSponsorSurface(surface),
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      result: PRODUCT_ANALYTICS_RESULTS.Success,
-      item_count: items.length,
-      sponsor_catalog_source: resolveSponsorCatalogSource(items),
-      sponsor_supported_count: items.filter(
-        (item) => item.supportStatus === SPONSOR_SUPPORT_STATUS.Supported,
-      ).length,
-      sponsor_unsupported_count: items.filter(
-        (item) => item.supportStatus === SPONSOR_SUPPORT_STATUS.Unsupported,
-      ).length,
-    },
-  )
+  await recordSponsorRecommendationsSummary({
+    impressionCount: 1,
+    itemTotal: items.length,
+    supportedItemTotal: supportedItemCount,
+    unsupportedItemTotal: items.length - supportedItemCount,
+    addAccountSurfaceCount:
+      surface === SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog ? 1 : 0,
+    newcomerSurfaceCount:
+      surface === SPONSOR_RECOMMENDATION_SURFACES.Newcomer ? 1 : 0,
+  })
 }
 
 /** Tracks a sponsor recommendation click without reading URLs or display copy. */
@@ -117,32 +113,6 @@ export function trackSponsorRecommendationClick({
       sponsor_support_status: resolveSponsorSupportStatus(item),
     },
   )
-}
-
-/** Builds a stable key for deduplicating rendered sponsor impression sets. */
-export function getSponsorRecommendationImpressionKey({
-  items,
-  surface,
-}: {
-  items: SponsorRecommendation[]
-  surface: SponsorRecommendationSurface
-}) {
-  return [
-    surface,
-    ...items.map((item) =>
-      [
-        item.id,
-        item.rank,
-        item.source,
-        item.supportStatus,
-        item.actions.bookmarkFallback ? "bookmark" : "no-bookmark",
-        item.actions.apiCredentialProfileFallback ? "api" : "no-api",
-        item.actions.addAccount ? "add-account" : "no-add-account",
-        item.selectedLocale ?? "unknown-locale",
-        String(item.schemaVersion),
-      ].join(":"),
-    ),
-  ].join("|")
 }
 
 /** Maps sponsor recommendation surfaces into the product analytics taxonomy. */

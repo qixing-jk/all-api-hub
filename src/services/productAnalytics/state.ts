@@ -13,6 +13,7 @@ interface ProductAnalyticsState {
   lastSiteEcosystemSnapshotAt?: number
   lastSettingsSnapshotAt?: number
   shieldBypassSummary?: ProductAnalyticsShieldBypassSummaryState
+  sponsorRecommendationsSummary?: ProductAnalyticsSponsorRecommendationsSummaryState
 }
 
 type ProductAnalyticsStatePatch = Partial<ProductAnalyticsState>
@@ -30,6 +31,21 @@ export type ProductAnalyticsShieldBypassSummaryState = {
 
 export type ProductAnalyticsShieldBypassSummaryPatch = Omit<
   ProductAnalyticsShieldBypassSummaryState,
+  "day"
+>
+
+export type ProductAnalyticsSponsorRecommendationsSummaryState = {
+  day?: string
+  impressionCount?: number
+  itemTotal?: number
+  supportedItemTotal?: number
+  unsupportedItemTotal?: number
+  addAccountSurfaceCount?: number
+  newcomerSurfaceCount?: number
+}
+
+export type ProductAnalyticsSponsorRecommendationsSummaryPatch = Omit<
+  ProductAnalyticsSponsorRecommendationsSummaryState,
   "day"
 >
 
@@ -81,6 +97,42 @@ export function normalizeShieldBypassSummaryState(
 }
 
 /**
+ * Keeps only valid sponsor recommendation daily summary fields from storage.
+ */
+export function normalizeSponsorRecommendationsSummaryState(
+  value: unknown,
+): ProductAnalyticsSponsorRecommendationsSummaryState | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined
+  }
+
+  const state = value as ProductAnalyticsSponsorRecommendationsSummaryState
+  const normalized: ProductAnalyticsSponsorRecommendationsSummaryState = {}
+
+  if (typeof state.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(state.day)) {
+    normalized.day = state.day
+  }
+
+  const countKeys = [
+    "impressionCount",
+    "itemTotal",
+    "supportedItemTotal",
+    "unsupportedItemTotal",
+    "addAccountSurfaceCount",
+    "newcomerSurfaceCount",
+  ] as const
+
+  for (const key of countKeys) {
+    const count = normalizeCount(state[key])
+    if (typeof count === "number") {
+      normalized[key] = count
+    }
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined
+}
+
+/**
  * Keeps only analytics runtime state from persisted analytics state payloads.
  */
 export function normalizeProductAnalyticsState(
@@ -112,6 +164,14 @@ export function normalizeProductAnalyticsState(
   )
   if (shieldBypassSummary) {
     normalized.shieldBypassSummary = shieldBypassSummary
+  }
+
+  const sponsorRecommendationsSummary =
+    normalizeSponsorRecommendationsSummaryState(
+      state.sponsorRecommendationsSummary,
+    )
+  if (sponsorRecommendationsSummary) {
+    normalized.sponsorRecommendationsSummary = sponsorRecommendationsSummary
   }
 
   return normalized
@@ -242,6 +302,69 @@ class ProductAnalyticsStateService {
       return true
     } catch (error) {
       logger.warn("Failed to increment shield bypass summary state", error)
+      return false
+    }
+  }
+
+  async getSponsorRecommendationsSummaryState(): Promise<ProductAnalyticsSponsorRecommendationsSummaryState> {
+    const state = await this.getState()
+    return state.sponsorRecommendationsSummary ?? {}
+  }
+
+  async replaceSponsorRecommendationsSummaryState(
+    nextSummary: ProductAnalyticsSponsorRecommendationsSummaryState,
+  ): Promise<boolean> {
+    try {
+      await this.withStorageWriteLock(async () => {
+        await this.saveState({
+          sponsorRecommendationsSummary:
+            normalizeSponsorRecommendationsSummaryState(nextSummary) ?? {},
+        })
+      })
+      return true
+    } catch (error) {
+      logger.warn("Failed to replace sponsor recommendations summary", error)
+      return false
+    }
+  }
+
+  async incrementSponsorRecommendationsSummary(
+    patch: ProductAnalyticsSponsorRecommendationsSummaryPatch,
+  ): Promise<boolean> {
+    try {
+      await this.withStorageWriteLock(async () => {
+        const state = await this.getState()
+        const today = new Date().toISOString().slice(0, 10)
+        const current =
+          state.sponsorRecommendationsSummary?.day === today
+            ? state.sponsorRecommendationsSummary
+            : { day: today }
+        const nextSummary: ProductAnalyticsSponsorRecommendationsSummaryState =
+          {
+            ...current,
+            day: today,
+          }
+
+        for (const [key, value] of Object.entries(patch) as Array<
+          [
+            keyof ProductAnalyticsSponsorRecommendationsSummaryPatch,
+            number | undefined,
+          ]
+        >) {
+          if (typeof value !== "number" || !Number.isFinite(value)) continue
+          nextSummary[key] = Math.max(0, (nextSummary[key] ?? 0) + value)
+        }
+
+        await this.saveState({
+          sponsorRecommendationsSummary:
+            normalizeSponsorRecommendationsSummaryState(nextSummary) ?? {
+              day: today,
+            },
+        })
+      })
+      return true
+    } catch (error) {
+      logger.warn("Failed to increment sponsor recommendations summary", error)
       return false
     }
   }
