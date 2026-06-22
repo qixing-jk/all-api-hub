@@ -204,7 +204,8 @@
     "default": "Default Order",
     "modelCheapestFirst": "Cheapest First Per Model",
     "priceAsc": "Price: Low to High",
-    "priceDesc": "Price: High to Low"
+    "priceDesc": "Price: High to Low",
+    "verificationLatencyAsc": "Test latency: Low to High"
   },
   "sourceLabels": {
     "profileBadge": "Profile: {{name}} · {{host}}",
@@ -256,5 +257,15 @@
     "officialPriceMissing": "This model is not in the price table.",
     "pricingSourceUnavailable": "Price data is unavailable for this source."
   },
-  "userGroup": "User Group"
+  "userGroup": "User Group",
+  "verificationResults": {
+    "all": "All test results",
+    "filters": {
+      "fail": "Failed",
+      "pass": "Passed",
+      "unverified": "Untested"
+    },
+    "label": "Test result",
+    "none": "No test results selected"
+  }
 }

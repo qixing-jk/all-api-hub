@@ -197,7 +197,8 @@
     "default": "Thứ tự mặc định",
     "modelCheapestFirst": "Ưu tiên giá thấp nhất của cùng mô hình",
     "priceAsc": "Giá từ thấp đến cao",
-    "priceDesc": "Giá từ cao xuống thấp"
+    "priceDesc": "Giá từ cao xuống thấp",
+    "verificationLatencyAsc": "Độ trễ kiểm thử từ thấp đến cao"
   },
   "sourceLabels": {
     "profileBadge": "Thông tin xác thực: {{name}} · {{host}}",
@@ -248,5 +249,15 @@
     "officialPriceMissing": "Mô hình này không có trong bảng giá.",
     "pricingSourceUnavailable": "Dữ liệu giá không khả dụng cho nguồn này."
   },
-  "userGroup": "Nhóm người dùng"
+  "userGroup": "Nhóm người dùng",
+  "verificationResults": {
+    "all": "Tất cả kết quả kiểm thử",
+    "filters": {
+      "fail": "Thất bại",
+      "pass": "Thành công",
+      "unverified": "Chưa kiểm thử"
+    },
+    "label": "Kết quả kiểm thử",
+    "none": "Chưa chọn kết quả kiểm thử"
+  }
 }

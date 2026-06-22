@@ -5,6 +5,10 @@ import {
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
 import {
+  DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
+  type ModelListVerificationResultFilter,
+} from "~/features/ModelList/verificationResultFilters"
+import {
   MODEL_PROVIDER_FILTER_VALUES,
   type ModelProviderFilterValue,
 } from "~/services/models/utils/modelProviders"
@@ -37,6 +41,10 @@ export function useModelListState() {
   ] = useState<Record<string, string[]>>({}) // "所有账号"模式下按账号排除的分组；空对象表示所有账号都保留全部可用分组
   const [allAccountsFilterAccountIds, setAllAccountsFilterAccountIds] =
     useState<string[]>([]) // 在"所有账号"模式下用于临时筛选一个或多个账号
+  const [selectedVerificationResults, setSelectedVerificationResults] =
+    useState<ModelListVerificationResultFilter[]>(
+      DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
+    )
 
   // 显示选项
   const [showRealPrice, setShowRealPrice] = useState(false) // 是否显示真实价格
@@ -60,6 +68,8 @@ export function useModelListState() {
     setAllAccountsExcludedGroupsByAccountId,
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
+    selectedVerificationResults,
+    setSelectedVerificationResults,
     showRealPrice,
     setShowRealPrice,
     showRatioColumn,

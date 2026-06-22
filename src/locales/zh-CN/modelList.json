@@ -197,7 +197,8 @@
     "default": "默认顺序",
     "modelCheapestFirst": "同模型最低价优先",
     "priceAsc": "价格从低到高",
-    "priceDesc": "价格从高到低"
+    "priceDesc": "价格从高到低",
+    "verificationLatencyAsc": "测试延迟从低到高"
   },
   "sourceLabels": {
     "profileBadge": "凭据：{{name}} · {{host}}",
@@ -248,5 +249,15 @@
     "officialPriceMissing": "此模型不在价格表中。",
     "pricingSourceUnavailable": "此来源的价格数据不可用。"
   },
-  "userGroup": "用户分组"
+  "userGroup": "用户分组",
+  "verificationResults": {
+    "all": "全部测试结果",
+    "filters": {
+      "fail": "失败",
+      "pass": "成功",
+      "unverified": "未测试"
+    },
+    "label": "测试结果",
+    "none": "未选择测试结果"
+  }
 }

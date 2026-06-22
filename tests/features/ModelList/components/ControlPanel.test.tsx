@@ -12,6 +12,10 @@ import {
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import {
+  DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
+  MODEL_LIST_VERIFICATION_RESULT_FILTERS,
+} from "~/features/ModelList/verificationResultFilters"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/events"
@@ -87,7 +91,36 @@ vi.mock("~/components/ui", () => ({
     <div {...props}>{children}</div>
   ),
   CardContent: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
-  CompactMultiSelect: () => <div data-testid="group-filter" />,
+  CompactMultiSelect: ({
+    options,
+    selected,
+    onChange,
+    placeholder,
+  }: {
+    options: Array<{ value: string; label: string }>
+    selected: string[]
+    onChange: (selected: string[]) => void
+    placeholder?: string
+  }) => (
+    <div data-testid={placeholder}>
+      {options.map((option) => (
+        <label key={option.value}>
+          {option.label}
+          <input
+            type="checkbox"
+            checked={selected.includes(option.value)}
+            onChange={(event) => {
+              onChange(
+                event.target.checked
+                  ? [...selected, option.value]
+                  : selected.filter((value) => value !== option.value),
+              )
+            }}
+          />
+        </label>
+      ))}
+    </div>
+  ),
   FormField: ({
     label,
     children,
@@ -183,6 +216,8 @@ function renderControlPanel(
     setSearchTerm: vi.fn(),
     sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
     setSortMode: vi.fn(),
+    selectedVerificationResults: DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
+    setSelectedVerificationResults: vi.fn(),
     selectedBillingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
     setSelectedBillingMode: vi.fn(),
     selectedGroups: ["vip"],
@@ -303,5 +338,24 @@ describe("ControlPanel", () => {
     expect(
       screen.queryByRole("button", { name: "comparison.cta" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("offers latest verification latency sorting and result status filters", async () => {
+    const user = userEvent.setup()
+    const props = renderControlPanel()
+
+    await user.selectOptions(
+      screen.getByLabelText("sortBy"),
+      MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC,
+    )
+    expect(props.setSortMode).toHaveBeenCalledWith(
+      MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC,
+    )
+
+    await user.click(screen.getByLabelText("verificationResults.filters.fail"))
+    expect(props.setSelectedVerificationResults).toHaveBeenCalledWith([
+      MODEL_LIST_VERIFICATION_RESULT_FILTERS.PASS,
+      MODEL_LIST_VERIFICATION_RESULT_FILTERS.UNVERIFIED,
+    ])
   })
 })

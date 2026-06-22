@@ -10,6 +10,7 @@ import {
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
+  isModelListPriceSortMode,
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
@@ -1120,26 +1121,24 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       return a.index - b.index
     }
 
-    const sortedWithIndices =
-      sortMode === MODEL_LIST_SORT_MODES.DEFAULT
-        ? indexedItems
-        : (() => {
-            const pricedItems = indexedItems
-              .filter(
-                (
-                  item,
-                ): item is (typeof indexedItems)[number] & {
-                  priceKey: ComparablePriceKey
-                } => !!item.priceKey && hasComparablePriceValue(item.priceKey),
-              )
-              .sort(comparePricedRows)
-
-            const missingPriceItems = indexedItems.filter(
-              (item) =>
-                !item.priceKey || !hasComparablePriceValue(item.priceKey),
+    const sortedWithIndices = !isModelListPriceSortMode(sortMode)
+      ? indexedItems
+      : (() => {
+          const pricedItems = indexedItems
+            .filter(
+              (
+                item,
+              ): item is (typeof indexedItems)[number] & {
+                priceKey: ComparablePriceKey
+              } => !!item.priceKey && hasComparablePriceValue(item.priceKey),
             )
-            return [...pricedItems, ...missingPriceItems]
-          })()
+            .sort(comparePricedRows)
+
+          const missingPriceItems = indexedItems.filter(
+            (item) => !item.priceKey || !hasComparablePriceValue(item.priceKey),
+          )
+          return [...pricedItems, ...missingPriceItems]
+        })()
 
     return sortedWithIndices.map(({ item, itemKey }) => ({
       ...item,

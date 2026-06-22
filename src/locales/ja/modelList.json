@@ -197,7 +197,8 @@
     "default": "デフォルト順",
     "modelCheapestFirst": "同一モデルの最安値を優先",
     "priceAsc": "価格の安い順",
-    "priceDesc": "価格の高い順"
+    "priceDesc": "価格の高い順",
+    "verificationLatencyAsc": "テスト遅延の低い順"
   },
   "sourceLabels": {
     "profileBadge": "プロファイル: {{name}} · {{host}}",
@@ -248,5 +249,15 @@
     "officialPriceMissing": "このモデルは料金表にありません。",
     "pricingSourceUnavailable": "このソースの料金データは利用できません。"
   },
-  "userGroup": "ユーザーグループ"
+  "userGroup": "ユーザーグループ",
+  "verificationResults": {
+    "all": "すべてのテスト結果",
+    "filters": {
+      "fail": "失敗",
+      "pass": "成功",
+      "unverified": "未テスト"
+    },
+    "label": "テスト結果",
+    "none": "テスト結果が選択されていません"
+  }
 }

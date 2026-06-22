@@ -18,6 +18,7 @@ export {
   createProfileVerificationHistoryTarget,
   createVerificationHistorySummary,
   deriveVerificationHistoryStatus,
+  getVerificationSummaryLatencyMs,
   serializeVerificationHistoryTarget,
   toPersistedProbeSummary,
 } from "./utils"

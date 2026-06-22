@@ -234,6 +234,20 @@ export function toPersistedProbeSummary(
   }
 }
 
+/** Sums persisted probe latencies into the user-visible verification latency. */
+export function getVerificationSummaryLatencyMs(
+  summary?: ApiVerificationHistorySummary | null,
+) {
+  if (!summary) return null
+
+  const latencyMs = summary.probes.reduce(
+    (total, probe) => total + (probe.latencyMs || 0),
+    0,
+  )
+
+  return Number.isFinite(latencyMs) && latencyMs > 0 ? latencyMs : null
+}
+
 /**
  * Creates a sanitized verification history summary from probe results.
  * @param params - Verification history inputs for a completed run.

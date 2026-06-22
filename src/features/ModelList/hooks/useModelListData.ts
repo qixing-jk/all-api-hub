@@ -21,7 +21,7 @@ import {
   toProfileSourceValue,
   type ModelManagementSource,
 } from "../modelManagementSources"
-import { MODEL_LIST_SORT_MODES } from "../sortModes"
+import { isModelListPriceSortMode, MODEL_LIST_SORT_MODES } from "../sortModes"
 import { useFilteredModels } from "./useFilteredModels"
 import { useModelData } from "./useModelData"
 import { useModelListState } from "./useModelListState"
@@ -233,7 +233,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
 
   useEffect(() => {
     if (!sourceCapabilities.supportsPricing) {
-      if (sortMode !== MODEL_LIST_SORT_MODES.DEFAULT) {
+      if (isModelListPriceSortMode(sortMode)) {
         setSortMode(MODEL_LIST_SORT_MODES.DEFAULT)
       }
       return

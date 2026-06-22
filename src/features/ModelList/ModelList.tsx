@@ -50,7 +50,18 @@ import { ProviderTabs } from "./components/ProviderTabs"
 import { StatusIndicator } from "./components/StatusIndicator"
 import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "./groupSelectionScopes"
 import { useModelListData } from "./hooks/useModelListData"
+import { MODEL_LIST_SORT_MODES } from "./sortModes"
 import { MODEL_LIST_TEST_IDS } from "./testIds"
+import {
+  applyVerificationResultView,
+  type ModelListVerificationResultFilter,
+} from "./verificationResultFilters"
+
+type ModelListDisplayedResultCountFilters = Parameters<
+  ReturnType<typeof useModelListData>["getFilteredResultCount"]
+>[0] & {
+  selectedVerificationResults?: ModelListVerificationResultFilter[]
+}
 
 /**
  * Model list page showing pricing details with filtering by account, provider, and group.
@@ -98,6 +109,8 @@ export default function ModelList(props: {
     setShowRatioColumn,
     showEndpointTypes,
     setShowEndpointTypes,
+    selectedVerificationResults,
+    setSelectedVerificationResults,
 
     // Data state
     pricingData,
@@ -235,6 +248,47 @@ export default function ModelList(props: {
   }, [filteredModels])
   const { summariesByKey: verificationSummariesByKey } =
     useVerificationResultHistorySummaries(modelVerificationTargets)
+  const displayedModels = useMemo(
+    () =>
+      applyVerificationResultView(filteredModels, {
+        selectedResults: selectedVerificationResults,
+        shouldSortByLatency:
+          sortMode === MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC,
+        verificationSummariesByKey,
+      }),
+    [
+      filteredModels,
+      selectedVerificationResults,
+      sortMode,
+      verificationSummariesByKey,
+    ],
+  )
+  const getDisplayedResultCount = useCallback(
+    (filters: ModelListDisplayedResultCountFilters = {}) => {
+      const baseCount = getFilteredResultCount(filters)
+      if (
+        !filters.selectedVerificationResults &&
+        filters.sortMode !== MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC
+      ) {
+        return baseCount
+      }
+
+      const selectedResults =
+        filters.selectedVerificationResults ?? selectedVerificationResults
+      return applyVerificationResultView(filteredModels, {
+        selectedResults,
+        shouldSortByLatency:
+          filters.sortMode === MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC,
+        verificationSummariesByKey,
+      }).length
+    },
+    [
+      filteredModels,
+      getFilteredResultCount,
+      selectedVerificationResults,
+      verificationSummariesByKey,
+    ],
+  )
 
   const [verifyContext, setVerifyContext] = useState<{
     account: DisplaySiteData
@@ -308,8 +362,8 @@ export default function ModelList(props: {
   }
 
   const batchVerifyItems = useMemo(
-    () => createBatchVerifyModelItems(filteredModels),
-    [filteredModels],
+    () => createBatchVerifyModelItems(displayedModels),
+    [displayedModels],
   )
 
   const handleOpenBatchVerify = () => {
@@ -597,8 +651,10 @@ export default function ModelList(props: {
             showEndpointTypes={showEndpointTypes}
             setShowEndpointTypes={setShowEndpointTypes}
             totalModels={totalModels}
-            filteredModels={filteredModels}
-            getFilteredResultCount={getFilteredResultCount}
+            filteredModels={displayedModels}
+            getFilteredResultCount={getDisplayedResultCount}
+            selectedVerificationResults={selectedVerificationResults}
+            setSelectedVerificationResults={setSelectedVerificationResults}
             onBatchVerifyModels={
               canBatchVerifyModels ? handleOpenBatchVerify : undefined
             }
@@ -614,7 +670,7 @@ export default function ModelList(props: {
             <Tab.Panels>
               <Tab.Panel>
                 <ModelDisplay
-                  models={filteredModels}
+                  models={displayedModels}
                   verificationSummariesByKey={verificationSummariesByKey}
                   onVerifyModel={handleVerifyModel}
                   onVerifyCliSupport={handleVerifyCliSupport}
@@ -639,7 +695,7 @@ export default function ModelList(props: {
               {providers.map((provider) => (
                 <Tab.Panel key={provider}>
                   <ModelDisplay
-                    models={filteredModels}
+                    models={displayedModels}
                     verificationSummariesByKey={verificationSummariesByKey}
                     onVerifyModel={handleVerifyModel}
                     onVerifyCliSupport={handleVerifyCliSupport}
