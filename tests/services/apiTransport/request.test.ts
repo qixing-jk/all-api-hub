@@ -1514,6 +1514,29 @@ describe("apiTransport request helpers", () => {
     },
   )
 
+  it("allows callers with their own limiter to bypass the generic site API limiter", async () => {
+    server.use(
+      http.get("https://example.com/base/api/test", () => {
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        })
+      }),
+    )
+
+    await fetchApiData(
+      {
+        baseUrl: BASE_URL,
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        bypassSiteRequestLimit: true,
+      },
+      { endpoint: ENDPOINT },
+    )
+
+    expect(mockWithSiteApiRequestLimit).not.toHaveBeenCalled()
+  })
+
   it("fetchApi supports text responses", async () => {
     server.use(
       http.get("https://example.com/base/api/text", () => {

@@ -64,6 +64,7 @@ import StatisticsCard from "./components/StatisticsCard"
  * Unified logger scoped to the Managed Site model sync options dashboard.
  */
 const logger = createLogger("ManagedSiteModelSyncPage")
+const MODEL_SYNC_PROGRESS_POLL_INTERVAL_MS = 5_000
 
 const TAB_INDEX = {
   history: 0,
@@ -491,6 +492,20 @@ export default function ManagedSiteModelSync({
       setRunningChannelId(null)
     }
   }, [progress?.isRunning])
+
+  useEffect(() => {
+    if (!progress?.isRunning) {
+      return
+    }
+
+    const intervalId = setInterval(() => {
+      void loadProgress()
+    }, MODEL_SYNC_PROGRESS_POLL_INTERVAL_MS)
+
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [loadProgress, progress?.isRunning])
 
   useEffect(() => {
     if (isLoading || hasInitializedTab.current) {

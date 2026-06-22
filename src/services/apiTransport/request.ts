@@ -566,9 +566,7 @@ const _fetchApi = async <T>(
     )
   }
 
-  const siteRequestLimitKey = resolveSiteRequestLimitKey(baseUrl)
-
-  return await withSiteApiRequestLimit(siteRequestLimitKey, async () => {
+  const executeRequest = async () => {
     const fallback = async () =>
       await executeWithTempWindowFallback(context, async () => {
         if (onlyData) {
@@ -605,7 +603,15 @@ const _fetchApi = async <T>(
       },
       fallback,
     )
-  })
+  }
+
+  if (request.bypassSiteRequestLimit) {
+    return await executeRequest()
+  }
+
+  const siteRequestLimitKey = resolveSiteRequestLimitKey(baseUrl)
+
+  return await withSiteApiRequestLimit(siteRequestLimitKey, executeRequest)
 }
 
 /**

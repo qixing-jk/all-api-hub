@@ -400,6 +400,7 @@ describe("ModelSyncService - siteType routing", () => {
     expect(listAllChannelsMock).toHaveBeenCalledWith(
       {
         baseUrl: runtimeConfig.config.baseUrl,
+        bypassSiteRequestLimit: true,
         auth: {
           authType: "access_token",
           accessToken: runtimeConfig.config.password,
@@ -428,6 +429,7 @@ describe("ModelSyncService - siteType routing", () => {
       1,
       {
         baseUrl: octopusConfig.config.baseUrl,
+        bypassSiteRequestLimit: true,
         auth: {
           authType: "access_token",
           accessToken: "",
@@ -440,6 +442,7 @@ describe("ModelSyncService - siteType routing", () => {
       2,
       {
         baseUrl: cchConfig.config.baseUrl,
+        bypassSiteRequestLimit: true,
         auth: {
           authType: "access_token",
           accessToken: cchConfig.config.adminToken,
@@ -1219,6 +1222,24 @@ describe("ModelSyncService - batching and mapping", () => {
         message: "worker exploded",
       }),
     ])
+  })
+
+  it("marks managed-site API requests as already rate-limited by model sync", async () => {
+    const service = new ModelSyncService(makeExampleRuntimeConfig(), {
+      requestsPerMinute: 120,
+      burst: 5,
+    })
+
+    fetchChannelModelsMock.mockResolvedValueOnce(["gpt-4o"])
+
+    await service.fetchChannelModels(123)
+
+    expect(fetchChannelModelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bypassSiteRequestLimit: true,
+      }),
+      123,
+    )
   })
 
   it("merges existing channel models with mapping keys before updating model_mapping", async () => {

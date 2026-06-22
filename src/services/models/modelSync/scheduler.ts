@@ -488,6 +488,7 @@ class ModelSyncScheduler {
       completed: 0,
       failed: 0,
     }
+    this.notifyProgress()
 
     let failureCount = 0
     let mappingSuccessCount = 0
@@ -683,6 +684,7 @@ class ModelSyncScheduler {
       completed: 0,
       failed: 0,
     }
+    this.notifyProgress()
 
     let failureCount = 0
 

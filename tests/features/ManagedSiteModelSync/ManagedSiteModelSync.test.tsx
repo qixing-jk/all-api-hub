@@ -2233,4 +2233,102 @@ describe("ManagedSiteModelSync page", () => {
     unmount()
     expect(removeListener).toHaveBeenCalledWith(listener)
   })
+
+  it("polls background progress while a sync is still running", async () => {
+    vi.useFakeTimers()
+    try {
+      const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+      let progressSnapshot = {
+        isRunning: false,
+        completed: 0,
+        total: 0,
+        failed: 0,
+      }
+      mockSendRuntimeMessage.mockImplementation(
+        async (type: string, _data?: any) => {
+          switch (type) {
+            case ModelSyncMessageTypes.GetLastExecution:
+              return {
+                success: true,
+                data: {
+                  items: [],
+                  statistics: {
+                    total: 0,
+                    successCount: 0,
+                    failureCount: 0,
+                    durationMs: 0,
+                    startedAt: 0,
+                    endedAt: 0,
+                  },
+                },
+              }
+            case ModelSyncMessageTypes.GetProgress:
+              return {
+                success: true,
+                data: progressSnapshot,
+              }
+            case ModelSyncMessageTypes.GetNextRun:
+              return { success: true, data: { nextScheduledAt: null } }
+            case ModelSyncMessageTypes.GetPreferences:
+              return {
+                success: true,
+                data: { enableSync: false, intervalMs: 0 },
+              }
+            case ModelSyncMessageTypes.ListChannels:
+              return { success: true, data: { items: [] } }
+            default:
+              return { success: true }
+          }
+        },
+      )
+
+      render(<ManagedSiteModelSync />)
+
+      await act(async () => {
+        await vi.runOnlyPendingTimersAsync()
+      })
+
+      expect(addListener).toHaveBeenCalled()
+
+      const listener = addListener.mock.calls.at(-1)?.[0] as (
+        message: any,
+      ) => void
+
+      await act(async () => {
+        listener({
+          type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+          payload: {
+            isRunning: true,
+            completed: 0,
+            total: 361,
+            failed: 0,
+          },
+        })
+      })
+
+      const getProgressCallsBefore = mockSendRuntimeMessage.mock.calls.filter(
+        ([type]) => type === ModelSyncMessageTypes.GetProgress,
+      ).length
+
+      progressSnapshot = {
+        isRunning: true,
+        completed: 5,
+        total: 361,
+        failed: 1,
+      }
+
+      await act(async () => {
+        vi.advanceTimersByTime(5_000)
+        await vi.runOnlyPendingTimersAsync()
+      })
+
+      expect(
+        mockSendRuntimeMessage.mock.calls.filter(
+          ([type]) => type === ModelSyncMessageTypes.GetProgress,
+        ).length,
+      ).toBeGreaterThan(getProgressCallsBefore)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

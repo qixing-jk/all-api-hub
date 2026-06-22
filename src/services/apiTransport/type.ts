@@ -86,6 +86,8 @@ export interface ApiTransportRequest {
   accountId?: string
   cookieAuthSessionCookie?: string
   fetchContext?: ApiTransportFetchContext
+  /** Skip the generic per-site limiter when the caller already applies a narrower limiter. */
+  bypassSiteRequestLimit?: boolean
 }
 
 export type ApiServiceRequest = ApiTransportRequest

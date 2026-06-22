@@ -479,6 +479,37 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     expect(modelSyncScheduler.getProgress()).toBeNull()
   })
 
+  it("notifies listeners as soon as a new-api sync run starts", async () => {
+    const batchStarted = new Promise<void>((resolve) => {
+      mocks.runBatch.mockImplementation(async () => {
+        resolve()
+        return new Promise(() => {})
+      })
+    })
+
+    mocks.listChannels.mockResolvedValue({
+      items: [{ id: 1, name: "Known channel" }],
+      total: 1,
+      type_counts: {},
+    })
+
+    void modelSyncScheduler.executeSync()
+    await batchStarted
+
+    expect(mocks.sendRuntimeMessage).toHaveBeenCalledWith(
+      {
+        type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+        payload: {
+          isRunning: true,
+          total: 1,
+          completed: 0,
+          failed: 0,
+        },
+      },
+      { maxAttempts: 1 },
+    )
+  })
+
   it("tracks failed progress updates and skips redirect mapping when a channel sync fails", async () => {
     const failedResult = {
       channelId: 1,

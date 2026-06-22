@@ -111,6 +111,7 @@ export class ModelSyncService {
     return {
       baseUrl: config.baseUrl,
       auth,
+      bypassSiteRequestLimit: true,
     }
   }
 
