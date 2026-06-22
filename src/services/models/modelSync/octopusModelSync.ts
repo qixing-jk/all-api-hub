@@ -19,7 +19,18 @@ import type { OctopusConfig } from "~/types/octopusConfig"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
+import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
+
 const logger = createLogger("OctopusModelSync")
+
+/**
+ * Stop Octopus channel work before writeback when timeout cancellation has fired.
+ */
+function throwIfAborted(abortSignal?: AbortSignal) {
+  if (abortSignal?.aborted) {
+    throw abortSignal.reason ?? new Error("Channel processing aborted")
+  }
+}
 
 /**
  * 类型守卫：检查 channel 是否为 OctopusChannelWithData
@@ -48,6 +59,7 @@ function getOctopusChannelData(
 async function fetchChannelModels(
   config: OctopusConfig,
   channel: ManagedSiteChannel,
+  abortSignal?: AbortSignal,
 ): Promise<string[]> {
   const octopusData = getOctopusChannelData(channel)
   if (!octopusData) {
@@ -61,7 +73,12 @@ async function fetchChannelModels(
     proxy: octopusData.proxy,
   }
 
-  return await octopusApi.fetchRemoteModels(config, request)
+  throwIfAborted(abortSignal)
+  return abortSignal
+    ? await octopusApi.fetchRemoteModels(config, request, {
+        signal: abortSignal,
+      })
+    : await octopusApi.fetchRemoteModels(config, request)
 }
 
 /**
@@ -71,11 +88,20 @@ async function updateChannelModels(
   config: OctopusConfig,
   channel: ManagedSiteChannel,
   models: string[],
+  abortSignal?: AbortSignal,
 ): Promise<void> {
-  await octopusApi.updateChannel(config, {
+  throwIfAborted(abortSignal)
+  const payload = {
     id: channel.id,
     model: models.join(","),
-  })
+  }
+  if (abortSignal) {
+    await octopusApi.updateChannel(config, payload, {
+      signal: abortSignal,
+    })
+  } else {
+    await octopusApi.updateChannel(config, payload)
+  }
 }
 
 /**
@@ -105,6 +131,7 @@ async function runForChannel(
   config: OctopusConfig,
   channel: ManagedSiteChannel,
   maxRetries: number = 2,
+  abortSignal?: AbortSignal,
 ): Promise<ExecutionItemResult> {
   let attempts = 0
   let lastError: unknown = null
@@ -118,13 +145,24 @@ async function runForChannel(
 
   while (attempts <= maxRetries) {
     try {
-      const fetchedModels = await fetchChannelModels(config, channel)
+      throwIfAborted(abortSignal)
+      const fetchedModels = await fetchChannelModels(
+        config,
+        channel,
+        abortSignal,
+      )
+      throwIfAborted(abortSignal)
       const normalizedModels = Array.from(
         new Set(fetchedModels.map((model) => model.trim()).filter(Boolean)),
       )
 
       if (haveModelsChanged(oldModels, normalizedModels)) {
-        await updateChannelModels(config, channel, normalizedModels)
+        await updateChannelModels(
+          config,
+          channel,
+          normalizedModels,
+          abortSignal,
+        )
       }
 
       return {
@@ -138,6 +176,10 @@ async function runForChannel(
         message: "Success",
       }
     } catch (error: unknown) {
+      if (abortSignal?.aborted) {
+        throw error
+      }
+
       lastError = error
       logger.error("Unexpected error for channel", {
         channelId: channel.id,
@@ -176,7 +218,8 @@ export async function runOctopusBatch(
   channels: ManagedSiteChannel[],
   options: BatchExecutionOptions,
 ): Promise<ExecutionResult> {
-  const { concurrency, maxRetries, onProgress } = options
+  const { concurrency, maxRetries, channelProcessingTimeout, onProgress } =
+    options
   const startedAt = Date.now()
   const total = channels.length
   const results: (ExecutionItemResult | undefined)[] = new Array(total)
@@ -196,7 +239,13 @@ export async function runOctopusBatch(
       let result: ExecutionItemResult
 
       try {
-        result = await runForChannel(config, channel, maxRetries)
+        result = await runWithChannelProcessingTimeout(
+          (abortSignal) =>
+            runForChannel(config, channel, maxRetries, abortSignal),
+          channel,
+          maxRetries,
+          channelProcessingTimeout,
+        )
       } catch (error: any) {
         logger.error("Unexpected error for channel", {
           channelId: channel.id,

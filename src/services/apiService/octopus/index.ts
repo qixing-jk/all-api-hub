@@ -166,6 +166,7 @@ export async function createChannel(
 export async function updateChannel(
   config: OctopusConfig,
   data: OctopusUpdateChannelRequest,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<OctopusApiResponse<OctopusChannel>> {
   try {
     const result = await fetchOctopusApi<OctopusChannel>(
@@ -174,6 +175,7 @@ export async function updateChannel(
       {
         method: "POST",
         body: JSON.stringify(data),
+        signal: options?.signal,
       },
     )
     logger.info("Channel updated", { id: data.id })
@@ -213,6 +215,7 @@ export async function deleteChannel(
 export async function fetchRemoteModels(
   config: OctopusConfig,
   channelData: OctopusFetchModelRequest,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
   try {
     const result = await fetchOctopusApi<string[]>(
@@ -221,6 +224,7 @@ export async function fetchRemoteModels(
       {
         method: "POST",
         body: JSON.stringify(channelData),
+        signal: options?.signal,
       },
     )
     return result.data || []

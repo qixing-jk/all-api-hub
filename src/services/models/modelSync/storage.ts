@@ -92,6 +92,9 @@ class ManagedSiteModelSyncStorage {
         intervalMs: config.interval,
         concurrency: config.concurrency,
         maxRetries: config.maxRetries,
+        channelProcessingTimeout:
+          config.channelProcessingTimeout ??
+          DEFAULT_PREFERENCES.managedSiteModelSync!.channelProcessingTimeout,
         rateLimit: { ...config.rateLimit },
         allowedModels: [...(config.allowedModels ?? [])],
         globalChannelModelFilters: sanitizeChannelFiltersForStorage(
@@ -133,6 +136,12 @@ class ManagedSiteModelSyncStorage {
           preferences.maxRetries !== undefined
             ? preferences.maxRetries
             : current.maxRetries,
+        channelProcessingTimeout:
+          preferences.channelProcessingTimeout !== undefined
+            ? preferences.channelProcessingTimeout
+            : current.channelProcessingTimeout ??
+              DEFAULT_PREFERENCES.managedSiteModelSync!
+                .channelProcessingTimeout,
         rateLimit: preferences.rateLimit
           ? { ...current.rateLimit, ...preferences.rateLimit }
           : { ...current.rateLimit },
@@ -158,6 +167,7 @@ class ManagedSiteModelSyncStorage {
         intervalMs: updated.interval,
         concurrency: updated.concurrency,
         maxRetries: updated.maxRetries,
+        channelProcessingTimeout: updated.channelProcessingTimeout,
         allowedModelsCount: updated.allowedModels?.length ?? 0,
         globalChannelModelFiltersCount:
           updated.globalChannelModelFilters?.length ?? 0,
@@ -273,6 +283,7 @@ class ManagedSiteModelSyncStorage {
       intervalMs: defaultConfig.interval,
       concurrency: defaultConfig.concurrency,
       maxRetries: defaultConfig.maxRetries,
+      channelProcessingTimeout: defaultConfig.channelProcessingTimeout,
       rateLimit: { ...defaultConfig.rateLimit },
       allowedModels: [...(defaultConfig.allowedModels ?? [])],
       globalChannelModelFilters: sanitizeChannelFiltersForStorage(

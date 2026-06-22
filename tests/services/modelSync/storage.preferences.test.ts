@@ -26,6 +26,7 @@ const { mockUserPreferences, storageMocks, defaultManagedSiteModelSync } =
         requestsPerMinute: 20,
         burst: 5,
       },
+      channelProcessingTimeout: 0,
       allowedModels: [],
       globalChannelModelFilters: [],
     },
@@ -90,6 +91,7 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
         requestsPerMinute: 90,
         burst: 8,
       },
+      channelProcessingTimeout: 300,
       allowedModels: ["gpt-4o"],
       globalChannelModelFilters: [storedRule],
     }
@@ -108,6 +110,7 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
         requestsPerMinute: 90,
         burst: 8,
       },
+      channelProcessingTimeout: 300,
       allowedModels: ["gpt-4o"],
       globalChannelModelFilters: [storedRule],
     })
@@ -143,6 +146,7 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
           requestsPerMinute: 20,
           burst: 5,
         },
+        channelProcessingTimeout: 0,
         allowedModels: [],
         globalChannelModelFilters: [],
       },
@@ -162,6 +166,7 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
           requestsPerMinute: 20,
           burst: 5,
         },
+        channelProcessingTimeout: 0,
         allowedModels: [],
         globalChannelModelFilters: [],
       },
@@ -192,6 +197,7 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
           requestsPerMinute: 45,
           burst: 7,
         },
+        channelProcessingTimeout: 0,
         allowedModels: [],
         globalChannelModelFilters: [],
       },
@@ -208,11 +214,13 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
         requestsPerMinute: 60,
         burst: 6,
       },
+      channelProcessingTimeout: 120,
       allowedModels: ["gpt-4o"],
       globalChannelModelFilters: [buildFilterRule()],
     }
     const input = {
       enableSync: true,
+      channelProcessingTimeout: 600,
       rateLimit: {
         requestsPerMinute: currentConfig.rateLimit.requestsPerMinute,
         burst: 9,
@@ -244,6 +252,7 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
           requestsPerMinute: 60,
           burst: 9,
         },
+        channelProcessingTimeout: 600,
         allowedModels: ["claude-3", "gpt-4.1"],
         globalChannelModelFilters: [
           buildFilterRule({
@@ -300,6 +309,7 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
           requestsPerMinute: 99,
           burst: 5,
         },
+        channelProcessingTimeout: 0,
         allowedModels: [],
         globalChannelModelFilters: [],
       },
@@ -324,6 +334,7 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
       managedSiteModelSyncStorage.savePreferences({
         intervalMs: 0,
         maxRetries: 0,
+        channelProcessingTimeout: 0,
       }),
     ).resolves.toBe(true)
 
@@ -337,6 +348,7 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
           requestsPerMinute: 55,
           burst: 9,
         },
+        channelProcessingTimeout: 0,
         allowedModels: [],
         globalChannelModelFilters: [],
       },

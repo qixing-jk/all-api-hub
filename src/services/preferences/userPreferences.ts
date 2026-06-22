@@ -343,6 +343,8 @@ export interface UserPreferences {
     concurrency: number
     // 最大重试次数
     maxRetries: number
+    // 单个渠道最大处理时长（秒），0 表示不限制
+    channelProcessingTimeout: number
     rateLimit: {
       // 每分钟请求次数限制
       requestsPerMinute: number
@@ -424,6 +426,7 @@ export interface UserPreferences {
     interval: number
     concurrency: number
     maxRetries: number
+    channelProcessingTimeout?: number
     rateLimit: {
       requestsPerMinute: number
       burst: number
@@ -531,6 +534,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     interval: 24 * 60 * 60 * 1000, // 24小时
     concurrency: 2, // 降低并发数，避免触发速率限制
     maxRetries: 2,
+    channelProcessingTimeout: 0,
     rateLimit: {
       requestsPerMinute: 20, // 每分钟20个请求
       burst: 5, // 允许5个突发请求

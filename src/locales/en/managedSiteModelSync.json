@@ -13,6 +13,10 @@
       "noResults": "No matching results",
       "noResultsDesc": "Try adjusting your filters or search query"
     },
+    "errors": {
+      "channelTimeout_one": "Channel processing exceeded {{count}} second",
+      "channelTimeout_other": "Channel processing exceeded {{count}} seconds"
+    },
     "filters": {
       "all": "All",
       "failed": "Failed",
@@ -102,6 +106,9 @@
     "allowedModelsPlaceholder": "Search and select models, or type to add custom",
     "burst": "Burst Capacity",
     "burstDesc": "Token bucket size: allowed burst requests before throttling",
+    "channelProcessingTimeout": "Per-Channel Timeout",
+    "channelProcessingTimeoutDesc": "Mark a channel as failed and continue when processing exceeds this duration. Use 0 for no limit.",
+    "channelProcessingTimeoutUnit": "seconds",
     "concurrency": "Concurrency",
     "concurrencyDesc": "Number of channels to process in parallel (recommend 1-3 to avoid rate limits)",
     "enable": "Enable Auto-Sync",

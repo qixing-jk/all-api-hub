@@ -1064,6 +1064,7 @@ export type ProductAnalyticsEventPayloadMap = {
     concurrency?: number
     rate_limit_rpm?: number
     rate_limit_burst?: number
+    channel_timeout_seconds?: number
     allowed_models_configured?: boolean
     global_filters_configured?: boolean
     standard_models_configured?: boolean
@@ -1152,6 +1153,7 @@ export type ProductAnalyticsEventPayloadMap = {
     managed_site_model_sync_interval_minutes?: number
     managed_site_model_sync_concurrency?: number
     managed_site_model_sync_retry_max_attempts?: number
+    managed_site_model_sync_channel_timeout_seconds?: number
     managed_site_model_sync_rate_limit_rpm?: number
     managed_site_model_sync_rate_limit_burst?: number
     managed_site_model_sync_allowed_models_configured?: boolean

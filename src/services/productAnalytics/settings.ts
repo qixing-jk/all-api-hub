@@ -423,6 +423,9 @@ function buildManagedSiteModelSyncSnapshot(
     ),
     concurrency: normalizeNonNegativeInteger(config.concurrency),
     retry_max_attempts: normalizeNonNegativeInteger(config.maxRetries),
+    channel_timeout_seconds: normalizeNonNegativeInteger(
+      config.channelProcessingTimeout,
+    ),
     rate_limit_rpm: normalizeNonNegativeInteger(
       config.rateLimit.requestsPerMinute,
     ),
@@ -811,6 +814,8 @@ export function buildAggregateSettingsSnapshotEvent(
     managed_site_model_sync_concurrency: managedSiteModelSync.concurrency,
     managed_site_model_sync_retry_max_attempts:
       managedSiteModelSync.retry_max_attempts,
+    managed_site_model_sync_channel_timeout_seconds:
+      managedSiteModelSync.channel_timeout_seconds,
     managed_site_model_sync_rate_limit_rpm: managedSiteModelSync.rate_limit_rpm,
     managed_site_model_sync_rate_limit_burst:
       managedSiteModelSync.rate_limit_burst,

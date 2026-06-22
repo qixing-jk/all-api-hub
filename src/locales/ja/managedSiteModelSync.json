@@ -13,6 +13,9 @@
       "noResults": "一致する結果がありません",
       "noResultsDesc": "フィルターまたは検索条件を調整してください"
     },
+    "errors": {
+      "channelTimeout_other": "チャネルの処理が {{count}} 秒を超えました"
+    },
     "filters": {
       "all": "すべて",
       "failed": "失敗",
@@ -100,6 +103,9 @@
     "allowedModelsPlaceholder": "モデルを検索・選択するか、入力してカスタム追加",
     "burst": "バースト容量",
     "burstDesc": "トークンバケットのサイズ: 制限がかかる前に許可するバースト要求数",
+    "channelProcessingTimeout": "チャネルごとのタイムアウト",
+    "channelProcessingTimeoutDesc": "処理がこの時間を超えたチャネルは失敗として記録し、後続タスクを続行します。0 で無制限です。",
+    "channelProcessingTimeoutUnit": "秒",
     "concurrency": "並列数",
     "concurrencyDesc": "並列処理するチャネル数（レート制限回避のため 1〜3 を推奨）",
     "enable": "自動同期を有効化",

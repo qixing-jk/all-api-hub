@@ -1221,6 +1221,64 @@ describe("ModelSyncService - batching and mapping", () => {
     ])
   })
 
+  it("marks a channel failed when per-channel processing exceeds the configured timeout", async () => {
+    vi.useFakeTimers()
+    try {
+      const service = new ModelSyncService(makeExampleRuntimeConfig())
+      const runForChannelSpy = vi
+        .spyOn(service, "runForChannel")
+        .mockImplementation(
+          () => new Promise<ExecutionItemResult>(() => undefined),
+        )
+
+      const onProgress = vi.fn()
+      const resultPromise = service.runBatch(
+        [makeChannel({ id: 10, name: "Slow Channel", models: "gpt-4o" })],
+        {
+          concurrency: 1,
+          maxRetries: 2,
+          channelProcessingTimeout: 1,
+          onProgress,
+        },
+      )
+
+      await vi.advanceTimersByTimeAsync(1_000)
+      const result = await resultPromise
+
+      expect(runForChannelSpy).toHaveBeenCalledTimes(1)
+      expect(runForChannelSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 10 }),
+        2,
+        expect.any(AbortSignal),
+      )
+      expect(result.statistics).toMatchObject({
+        total: 1,
+        successCount: 0,
+        failureCount: 1,
+      })
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          channelId: 10,
+          channelName: "Slow Channel",
+          ok: false,
+          attempts: 3,
+          message: "managedSiteModelSync:execution.errors.channelTimeout",
+        }),
+      ])
+      expect(onProgress).toHaveBeenCalledWith({
+        completed: 1,
+        total: 1,
+        lastResult: expect.objectContaining({
+          channelId: 10,
+          ok: false,
+          message: "managedSiteModelSync:execution.errors.channelTimeout",
+        }),
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("marks managed-site API requests as already rate-limited by model sync", async () => {
     const service = new ModelSyncService(makeExampleRuntimeConfig(), {
       requestsPerMinute: 120,

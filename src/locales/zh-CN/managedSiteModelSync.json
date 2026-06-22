@@ -13,6 +13,9 @@
       "noResults": "没有匹配的结果",
       "noResultsDesc": "尝试修改筛选条件或搜索关键字"
     },
+    "errors": {
+      "channelTimeout": "单个渠道处理超过 {{count}} 秒"
+    },
     "filters": {
       "all": "全部",
       "failed": "失败",
@@ -100,6 +103,9 @@
     "allowedModelsPlaceholder": "搜索并选择模型，也可直接输入添加",
     "burst": "突发请求上限",
     "burstDesc": "令牌桶容量：允许短时间内的突发请求数",
+    "channelProcessingTimeout": "单渠道最大处理时长",
+    "channelProcessingTimeoutDesc": "单个渠道处理超过该时长后标记为失败并继续后续任务。填 0 表示不限制。",
+    "channelProcessingTimeoutUnit": "秒",
     "concurrency": "并发数量",
     "concurrencyDesc": "同时处理的渠道任务数（建议1-3，避免触发速率限制）",
     "enable": "启用自动同步",

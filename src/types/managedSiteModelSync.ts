@@ -52,6 +52,11 @@ export interface ManagedSiteModelSyncPreferences {
   intervalMs: number
   concurrency: number
   maxRetries: number
+  /**
+   * Maximum duration allowed for a single channel execution.
+   * 0 = unlimited.
+   */
+  channelProcessingTimeout: number
   rateLimit: {
     requestsPerMinute: number
     burst: number
@@ -70,6 +75,11 @@ export interface ManagedSiteModelSyncPreferences {
 export interface BatchExecutionOptions {
   concurrency: number
   maxRetries: number
+  /**
+   * Maximum duration allowed for a single channel execution.
+   * 0 or undefined = unlimited.
+   */
+  channelProcessingTimeout?: number
   onProgress?: (payload: {
     completed: number
     total: number

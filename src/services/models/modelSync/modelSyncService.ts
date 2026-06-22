@@ -28,6 +28,7 @@ import {
   ProbeFilterUnavailableError,
   type ProbeFilterContext,
 } from "./channelModelFilterEvaluator"
+import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
 import { RateLimiter } from "./rateLimiter"
 
 const PROBE_FILTER_TIMEOUT_MS = 30_000
@@ -36,6 +37,15 @@ const PROBE_FILTER_TIMEOUT_MS = 30_000
  * Unified logger scoped to managed-site model synchronization.
  */
 const logger = createLogger("ManagedSiteModelSync")
+
+/**
+ * Stop channel work before writeback when its timeout cancellation has fired.
+ */
+function throwIfAborted(abortSignal?: AbortSignal) {
+  if (abortSignal?.aborted) {
+    throw abortSignal.reason ?? new Error("Channel processing aborted")
+  }
+}
 
 /**
  * New API Model Sync Service
@@ -190,13 +200,21 @@ export class ModelSyncService {
    * @param channelId Target channel id.
    * @returns Model identifiers returned by upstream.
    */
-  async fetchChannelModels(channelId: number): Promise<string[]> {
+  async fetchChannelModels(
+    channelId: number,
+    abortSignal?: AbortSignal,
+  ): Promise<string[]> {
     try {
       await this.throttle()
+      throwIfAborted(abortSignal)
 
-      return await getApiService(
-        this.managedSiteConfig.siteType,
-      ).fetchChannelModels(this.createApiServiceRequest(), channelId)
+      const service = getApiService(this.managedSiteConfig.siteType)
+      const request = this.createApiServiceRequest()
+      return abortSignal
+        ? await service.fetchChannelModels(request, channelId, {
+            signal: abortSignal,
+          })
+        : await service.fetchChannelModels(request, channelId)
     } catch (error: any) {
       logger.error("Failed to fetch models", { channelId, error })
       throw error
@@ -211,15 +229,26 @@ export class ModelSyncService {
   async updateChannelModels(
     channel: ManagedSiteChannel,
     models: string[],
+    abortSignal?: AbortSignal,
   ): Promise<void> {
     try {
       await this.throttle()
+      throwIfAborted(abortSignal)
 
-      await getApiService(this.managedSiteConfig.siteType).updateChannelModels(
-        this.createApiServiceRequest(),
-        channel.id,
-        models.join(","),
-      )
+      const service = getApiService(this.managedSiteConfig.siteType)
+      const request = this.createApiServiceRequest()
+      if (abortSignal) {
+        await service.updateChannelModels(
+          request,
+          channel.id,
+          models.join(","),
+          {
+            signal: abortSignal,
+          },
+        )
+      } else {
+        await service.updateChannelModels(request, channel.id, models.join(","))
+      }
     } catch (error: any) {
       logger.error("Failed to update channel", { channelId: channel.id, error })
       throw error
@@ -234,6 +263,7 @@ export class ModelSyncService {
   async updateChannelModelMapping(
     channel: ManagedSiteChannel,
     modelMapping: Record<string, string>,
+    abortSignal?: AbortSignal,
   ): Promise<void> {
     try {
       const updateModels = union(
@@ -241,15 +271,26 @@ export class ModelSyncService {
         Object.keys(modelMapping),
       ).join(",")
       await this.throttle()
+      throwIfAborted(abortSignal)
 
-      await getApiService(
-        this.managedSiteConfig.siteType,
-      ).updateChannelModelMapping(
-        this.createApiServiceRequest(),
-        channel.id,
-        updateModels,
-        JSON.stringify(modelMapping),
-      )
+      const service = getApiService(this.managedSiteConfig.siteType)
+      const request = this.createApiServiceRequest()
+      if (abortSignal) {
+        await service.updateChannelModelMapping(
+          request,
+          channel.id,
+          updateModels,
+          JSON.stringify(modelMapping),
+          { signal: abortSignal },
+        )
+      } else {
+        await service.updateChannelModelMapping(
+          request,
+          channel.id,
+          updateModels,
+          JSON.stringify(modelMapping),
+        )
+      }
     } catch (error) {
       logger.error("Failed to update channel mapping", {
         channelId: channel.id,
@@ -268,6 +309,7 @@ export class ModelSyncService {
   async runForChannel(
     channel: ManagedSiteChannel,
     maxRetries: number = 2,
+    abortSignal?: AbortSignal,
   ): Promise<ExecutionItemResult> {
     let attempts = 0
     let lastError: any = null
@@ -281,7 +323,12 @@ export class ModelSyncService {
 
     while (attempts <= maxRetries) {
       try {
-        const fetchedModels = await this.fetchChannelModels(channel.id)
+        throwIfAborted(abortSignal)
+        const fetchedModels = await this.fetchChannelModels(
+          channel.id,
+          abortSignal,
+        )
+        throwIfAborted(abortSignal)
         const allowListedModels = this.filterAllowedModels(fetchedModels)
         const probeFilterCache = new Map<string, boolean>()
         const probeFilterAbort = this.createProbeFilterAbortSignal()
@@ -302,10 +349,15 @@ export class ModelSyncService {
             globallyScopedModels,
             probeContext,
           )
+          throwIfAborted(abortSignal)
 
           if (this.haveModelsChanged(oldModels, channelScopedModels)) {
             // Only push an update when model sets differ to avoid unnecessary writes
-            await this.updateChannelModels(channel, channelScopedModels)
+            await this.updateChannelModels(
+              channel,
+              channelScopedModels,
+              abortSignal,
+            )
             channel.models = channelScopedModels.join(",")
           }
 
@@ -323,6 +375,10 @@ export class ModelSyncService {
           probeFilterAbort.cleanup()
         }
       } catch (error: any) {
+        if (abortSignal?.aborted) {
+          throw error
+        }
+
         if (error instanceof ProbeFilterUnavailableError) {
           logger.warn("Probe-backed channel filter skipped model update", {
             channelId: channel.id,
@@ -378,7 +434,8 @@ export class ModelSyncService {
     channels: ManagedSiteChannel[],
     options: BatchExecutionOptions,
   ): Promise<ExecutionResult> {
-    const { concurrency, maxRetries, onProgress } = options
+    const { concurrency, maxRetries, channelProcessingTimeout, onProgress } =
+      options
     const startedAt = Date.now()
     const total = channels.length
     const results: (ExecutionItemResult | undefined)[] = new Array(total)
@@ -398,7 +455,13 @@ export class ModelSyncService {
         let result: ExecutionItemResult
 
         try {
-          result = await this.runForChannel(channel, maxRetries)
+          result = await runWithChannelProcessingTimeout(
+            (abortSignal) =>
+              this.runForChannel(channel, maxRetries, abortSignal),
+            channel,
+            maxRetries,
+            channelProcessingTimeout,
+          )
         } catch (error: any) {
           logger.error("Unexpected error for channel", {
             channelId: channel.id,

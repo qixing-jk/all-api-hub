@@ -162,11 +162,35 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:managed-site-model-sync-channel-processing-timeout",
+    "managedSite",
+    "managed-site-model-sync-channel-processing-timeout",
+    "managedSiteModelSync:settings.channelProcessingTimeout",
+    653,
+    {
+      descriptionKey:
+        "managedSiteModelSync:settings.channelProcessingTimeoutDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.managedSite",
+        "managedSiteModelSync:settings.title",
+      ],
+      keywords: [
+        ...SHARED_MODEL_SYNC_KEYWORDS,
+        "timeout",
+        "duration",
+        "per channel",
+        "skip",
+      ],
+      isVisible: isStandardManagedSiteContext,
+    },
+  ),
+  buildControlDefinition(
     "control:managed-site-model-sync-requests-per-minute",
     "managedSite",
     "managed-site-model-sync-requests-per-minute",
     "managedSiteModelSync:settings.requestsPerMinute",
-    653,
+    654,
     {
       descriptionKey: "managedSiteModelSync:settings.requestsPerMinuteDesc",
       breadcrumbsKeys: [
@@ -183,7 +207,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     "managed-site-model-sync-burst",
     "managedSiteModelSync:settings.burst",
-    654,
+    655,
     {
       descriptionKey: "managedSiteModelSync:settings.burstDesc",
       breadcrumbsKeys: [
@@ -200,7 +224,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     "managed-site-model-sync-allowed-models",
     "managedSiteModelSync:settings.allowedModels",
-    655,
+    656,
     {
       descriptionKey: "managedSiteModelSync:settings.allowedModelsDesc",
       breadcrumbsKeys: [
@@ -217,7 +241,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     "managed-site-model-sync-global-channel-model-filters",
     "managedSiteModelSync:settings.globalChannelModelFilters",
-    656,
+    657,
     {
       descriptionKey:
         "managedSiteModelSync:settings.globalChannelModelFiltersDesc",
@@ -235,7 +259,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     "managed-site-model-sync-view-execution",
     "managedSiteModelSync:settings.viewExecution",
-    657,
+    658,
     {
       descriptionKey: "managedSiteModelSync:settings.viewExecutionDesc",
       breadcrumbsKeys: [
@@ -252,7 +276,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     "managed-site-model-redirect-enable",
     "modelRedirect:enable",
-    658,
+    659,
     {
       descriptionKey: "modelRedirect:enableDesc",
       breadcrumbsKeys: [
@@ -269,7 +293,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     "managed-site-model-redirect-standard-models",
     "modelRedirect:standardModels",
-    659,
+    660,
     {
       descriptionKey: "modelRedirect:standardModelsDesc",
       breadcrumbsKeys: [
@@ -286,7 +310,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     "managed-site-model-redirect-prune-missing-targets",
     "modelRedirect:pruneMissingTargetsOnModelSync",
-    660,
+    661,
     {
       descriptionKey: "modelRedirect:pruneMissingTargetsOnModelSyncDesc",
       breadcrumbsKeys: [
@@ -303,7 +327,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     "managed-site-model-redirect-regenerate",
     "modelRedirect:regenerateButton",
-    661,
+    662,
     {
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
@@ -319,7 +343,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     "managed-site-model-redirect-bulk-clear",
     "modelRedirect:bulkClear.action",
-    662,
+    663,
     {
       descriptionKey: "modelRedirect:bulkClear.actionDesc",
       breadcrumbsKeys: [

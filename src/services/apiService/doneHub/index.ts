@@ -385,10 +385,12 @@ export async function listAllChannels(
 export async function fetchChannel(
   request: ApiServiceRequest,
   channelId: number,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<ManagedSiteChannel> {
   const endpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
   const result = await fetchApiData<unknown>(request, {
     endpoint,
+    options,
   })
 
   return normalizeChannel(result as DoneHubChannelRaw)
@@ -404,8 +406,9 @@ export async function fetchChannel(
 export async function fetchChannelModels(
   request: ApiServiceRequest,
   channelId: number,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
-  const channel = await fetchChannel(request, channelId)
+  const channel = await fetchChannel(request, channelId, options)
 
   const requestData = {
     ...channel,
@@ -420,6 +423,7 @@ export async function fetchChannelModels(
     options: {
       method: "POST",
       body: JSON.stringify(requestData),
+      signal: options?.signal,
     },
   })
 
@@ -448,10 +452,12 @@ export async function updateChannelModels(
   request: ApiServiceRequest,
   channelId: number,
   models: string,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<void> {
   const channelEndpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
   const channel = await fetchApiData<Record<string, unknown>>(request, {
     endpoint: channelEndpoint,
+    options,
   })
 
   const payload = {
@@ -466,6 +472,7 @@ export async function updateChannelModels(
       options: {
         method: "PUT",
         body: JSON.stringify(payload),
+        signal: options?.signal,
       },
     },
     false,
@@ -491,10 +498,12 @@ export async function updateChannelModelMapping(
   channelId: number,
   models: string,
   modelMappingJson: string,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<void> {
   const channelEndpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
   const channel = await fetchApiData<Record<string, unknown>>(request, {
     endpoint: channelEndpoint,
+    options,
   })
 
   const payload = {
@@ -510,6 +519,7 @@ export async function updateChannelModelMapping(
       options: {
         method: "PUT",
         body: JSON.stringify(payload),
+        signal: options?.signal,
       },
     },
     false,

@@ -52,6 +52,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
       concurrency: 2,
       maxRetries: 1,
       rateLimit: { requestsPerMinute: 10, burst: 2 },
+      channelProcessingTimeout: 0,
       allowedModels: [],
       globalChannelModelFilters: [],
     },
@@ -364,6 +365,7 @@ describe("ManagedSiteModelSync.updateSettings and setupAlarm", () => {
           requestsPerMinute: 10,
           burst: 2,
         },
+        channelProcessingTimeout: 120,
         allowedModels: ["existing-model"],
         globalChannelModelFilters: [],
       },
@@ -379,6 +381,7 @@ describe("ManagedSiteModelSync.updateSettings and setupAlarm", () => {
 
     await modelSyncScheduler.updateSettings({
       intervalMs: 120_000,
+      channelProcessingTimeout: 300,
       rateLimit: { burst: 4 },
       allowedModels: ["gpt-4o"],
       globalChannelModelFilters: [
@@ -405,6 +408,7 @@ describe("ManagedSiteModelSync.updateSettings and setupAlarm", () => {
           requestsPerMinute: 10,
           burst: 4,
         },
+        channelProcessingTimeout: 300,
         allowedModels: ["gpt-4o"],
         globalChannelModelFilters: [
           {

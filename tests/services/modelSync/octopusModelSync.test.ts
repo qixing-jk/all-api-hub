@@ -270,4 +270,54 @@ describe("runOctopusBatch", () => {
     expect(onProgress).toHaveBeenCalledTimes(2)
     expect(loggerErrorMock).toHaveBeenCalled()
   })
+
+  it("marks a channel failed when per-channel processing exceeds the configured timeout", async () => {
+    vi.useFakeTimers()
+    try {
+      fetchRemoteModelsMock.mockReturnValue(
+        new Promise<string[]>(() => undefined),
+      )
+
+      const onProgress = vi.fn()
+      const resultPromise = runOctopusBatch(config as any, [createChannel()], {
+        concurrency: 1,
+        maxRetries: 2,
+        channelProcessingTimeout: 1,
+        onProgress,
+      })
+
+      await vi.advanceTimersByTimeAsync(1_000)
+      const result = await resultPromise
+
+      expect(fetchRemoteModelsMock).toHaveBeenCalledTimes(1)
+      expect(fetchRemoteModelsMock).toHaveBeenCalledWith(
+        config,
+        expect.anything(),
+        expect.objectContaining({
+          signal: expect.any(AbortSignal),
+        }),
+      )
+      expect(updateChannelMock).not.toHaveBeenCalled()
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          channelId: 1,
+          channelName: "Alpha",
+          ok: false,
+          attempts: 3,
+          oldModels: ["model-a"],
+          message: "managedSiteModelSync:execution.errors.channelTimeout",
+        }),
+      ])
+      expect(onProgress).toHaveBeenCalledWith({
+        completed: 1,
+        total: 1,
+        lastResult: expect.objectContaining({
+          channelId: 1,
+          ok: false,
+        }),
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

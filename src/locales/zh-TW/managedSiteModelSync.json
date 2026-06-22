@@ -13,6 +13,9 @@
       "noResults": "沒有匹配的結果",
       "noResultsDesc": "嘗試修改篩選條件或搜尋關鍵字"
     },
+    "errors": {
+      "channelTimeout_other": "單個渠道處理超過 {{count}} 秒"
+    },
     "filters": {
       "all": "全部",
       "failed": "失敗",
@@ -100,6 +103,9 @@
     "allowedModelsPlaceholder": "搜尋並選擇模型，也可直接輸入新增",
     "burst": "突發請求上限",
     "burstDesc": "令牌桶容量：允許短時間內的突發請求數",
+    "channelProcessingTimeout": "單渠道最大處理時長",
+    "channelProcessingTimeoutDesc": "單個渠道處理超過該時長後標記為失敗並繼續後續任務。填 0 表示不限制。",
+    "channelProcessingTimeoutUnit": "秒",
     "concurrency": "併發數量",
     "concurrencyDesc": "同時處理的渠道任務數（建議1-3，避免觸發速率限制）",
     "enable": "啟用自動同步",

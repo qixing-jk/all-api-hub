@@ -21,6 +21,7 @@ export interface ModelSyncUpdateSettingsRequest {
     intervalMs?: number
     concurrency?: number
     maxRetries?: number
+    channelProcessingTimeout?: number
     rateLimit?: {
       requestsPerMinute?: number
       burst?: number

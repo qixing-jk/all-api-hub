@@ -13,6 +13,9 @@
       "noResults": "Không có kết quả khớp",
       "noResultsDesc": "Thử sửa đổi điều kiện lọc hoặc từ khóa tìm kiếm"
     },
+    "errors": {
+      "channelTimeout_other": "Xử lý kênh đã vượt quá {{count}} giây"
+    },
     "filters": {
       "all": "Tất cả",
       "failed": "Thất bại",
@@ -100,6 +103,9 @@
     "allowedModelsPlaceholder": "Tìm kiếm và chọn mô hình, hoặc nhập trực tiếp để thêm",
     "burst": "Giới hạn yêu cầu đột biến",
     "burstDesc": "Dung lượng Token Bucket: cho phép số lượng yêu cầu đột biến trong thời gian ngắn",
+    "channelProcessingTimeout": "Thời gian tối đa mỗi kênh",
+    "channelProcessingTimeoutDesc": "Đánh dấu kênh là thất bại và tiếp tục tác vụ sau nếu xử lý vượt quá thời gian này. Nhập 0 để không giới hạn.",
+    "channelProcessingTimeoutUnit": "giây",
     "concurrency": "Số lượng đồng thời",
     "concurrencyDesc": "Số lượng tác vụ kênh được xử lý đồng thời (khuyến nghị 1-3 để tránh kích hoạt giới hạn tốc độ)",
     "enable": "Bật tự động đồng bộ hóa",

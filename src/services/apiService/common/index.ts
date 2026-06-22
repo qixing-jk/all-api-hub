@@ -281,10 +281,14 @@ export async function listAllChannels(
 export async function fetchChannelModels(
   request: ApiServiceRequest,
   channelId: number,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
   const response = await fetchApi<string[]>(
     request,
-    { endpoint: `${CHANNEL_API_BASE}fetch_models/${channelId}` },
+    {
+      endpoint: `${CHANNEL_API_BASE}fetch_models/${channelId}`,
+      options,
+    },
     false,
   )
 
@@ -309,6 +313,7 @@ export async function updateChannelModels(
   request: ApiServiceRequest,
   channelId: number,
   models: string,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<void> {
   const payload: UpdateChannelPayload = {
     id: channelId,
@@ -322,6 +327,7 @@ export async function updateChannelModels(
       options: {
         method: "PUT",
         body: JSON.stringify(payload),
+        signal: options?.signal,
       },
     },
     false,
@@ -347,6 +353,7 @@ export async function updateChannelModelMapping(
   channelId: number,
   models: string,
   modelMappingJson: string,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<void> {
   const payload: UpdateChannelPayload = {
     id: channelId,
@@ -361,6 +368,7 @@ export async function updateChannelModelMapping(
       options: {
         method: "PUT",
         body: JSON.stringify(payload),
+        signal: options?.signal,
       },
     },
     false,

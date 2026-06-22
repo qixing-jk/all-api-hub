@@ -65,6 +65,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "../../preferences/userPreferences"
+import { normalizeChannelProcessingTimeout } from "./channelProcessingTimeout"
 import {
   onModelSyncMessage,
   type ModelSyncUpdateSettingsRequest,
@@ -438,6 +439,9 @@ class ModelSyncScheduler {
       prefs.managedSiteModelSync ?? DEFAULT_PREFERENCES.managedSiteModelSync!
     const concurrency = Math.max(1, config.concurrency)
     const { maxRetries } = config
+    const channelProcessingTimeout = normalizeChannelProcessingTimeout(
+      config.channelProcessingTimeout,
+    )
 
     // Octopus 使用独立的模型同步逻辑
     if (siteType === SITE_TYPES.OCTOPUS) {
@@ -447,6 +451,7 @@ class ModelSyncScheduler {
         messagesKey,
         concurrency,
         maxRetries,
+        channelProcessingTimeout,
       )
     }
 
@@ -500,6 +505,7 @@ class ModelSyncScheduler {
       result = await service.runBatch(channels, {
         concurrency,
         maxRetries,
+        channelProcessingTimeout,
         onProgress: async (payload) => {
           if (!payload.lastResult.ok) {
             failureCount += 1
@@ -645,6 +651,7 @@ class ModelSyncScheduler {
     messagesKey: ManagedSiteMessagesKey,
     concurrency: number,
     maxRetries: number,
+    channelProcessingTimeout: number,
   ): Promise<ExecutionResult> {
     const octopusRuntimeConfig = resolveCurrentManagedSiteRuntimeConfig(prefs)
 
@@ -694,6 +701,7 @@ class ModelSyncScheduler {
       result = await runOctopusBatch(octopusRuntimeConfig.config, channels, {
         concurrency,
         maxRetries,
+        channelProcessingTimeout,
         onProgress: async (payload) => {
           if (!payload.lastResult.ok) {
             failureCount += 1
@@ -772,6 +780,7 @@ class ModelSyncScheduler {
    * @param settings.intervalMs Interval in milliseconds between scheduled sync runs.
    * @param settings.concurrency Maximum number of channels processed in parallel.
    * @param settings.maxRetries Maximum retry attempts per channel.
+   * @param settings.channelProcessingTimeout Maximum duration per channel, 0 for unlimited.
    * @param settings.rateLimit Optional rate limit overrides.
    * @param settings.rateLimit.requestsPerMinute Allowed upstream requests per minute.
    * @param settings.rateLimit.burst Allowed burst size before throttling.
@@ -783,6 +792,7 @@ class ModelSyncScheduler {
     intervalMs?: number
     concurrency?: number
     maxRetries?: number
+    channelProcessingTimeout?: number
     rateLimit?: {
       requestsPerMinute?: number
       burst?: number
@@ -812,6 +822,11 @@ class ModelSyncScheduler {
         settings.maxRetries !== undefined
           ? settings.maxRetries
           : current.maxRetries,
+      channelProcessingTimeout:
+        settings.channelProcessingTimeout !== undefined
+          ? normalizeChannelProcessingTimeout(settings.channelProcessingTimeout)
+          : current.channelProcessingTimeout ??
+            DEFAULT_PREFERENCES.managedSiteModelSync!.channelProcessingTimeout,
       rateLimit: settings.rateLimit
         ? { ...current.rateLimit, ...settings.rateLimit }
         : { ...current.rateLimit },

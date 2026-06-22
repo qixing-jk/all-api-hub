@@ -328,6 +328,7 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
       interval: 24 * 60 * 60 * 1000,
       concurrency: 2,
       maxRetries: 2,
+      channelProcessingTimeout: 0,
       rateLimit: { requestsPerMinute: 20, burst: 5 },
       allowedModels: ["existing-model"],
       globalChannelModelFilters: [],
@@ -469,6 +470,7 @@ describe("ManagedSiteModelSyncSettings", () => {
             interval: 6 * 60 * 60 * 1000,
             concurrency: 4,
             maxRetries: 1,
+            channelProcessingTimeout: 600,
             rateLimit: { requestsPerMinute: 35, burst: 9 },
             allowedModels: ["legacy-model"],
             globalChannelModelFilters: [
@@ -500,6 +502,7 @@ describe("ManagedSiteModelSyncSettings", () => {
     expect(screen.getByDisplayValue("6")).toBeInTheDocument()
     expect(screen.getByDisplayValue("4")).toBeInTheDocument()
     expect(screen.getByDisplayValue("1")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("600")).toBeInTheDocument()
     expect(screen.getByDisplayValue("35")).toBeInTheDocument()
     expect(screen.getByDisplayValue("9")).toBeInTheDocument()
     expect(screen.getByTestId(TEST_IDS.allowedModelSelected)).toHaveTextContent(
@@ -565,6 +568,7 @@ describe("ManagedSiteModelSyncSettings", () => {
       intervalInput,
       concurrencyInput,
       retriesInput,
+      channelTimeoutInput,
       rpmInput,
       burstInput,
     ] = inputs
@@ -572,13 +576,14 @@ describe("ManagedSiteModelSyncSettings", () => {
     fireEvent.change(intervalInput, { target: { value: "0" } })
     fireEvent.change(concurrencyInput, { target: { value: "11" } })
     fireEvent.change(retriesInput, { target: { value: "6" } })
+    fireEvent.change(channelTimeoutInput, { target: { value: "-1" } })
     fireEvent.change(rpmInput, { target: { value: "4" } })
     fireEvent.change(burstInput, { target: { value: "21" } })
 
     expect(mockUpdateNewApiModelSync).not.toHaveBeenCalled()
   })
 
-  it("persists valid numeric updates for concurrency, retries, and rate limits", async () => {
+  it("persists valid numeric updates for concurrency, retries, timeout, and rate limits", async () => {
     render(<ManagedSiteModelSyncSettings />)
 
     await waitFor(() => {
@@ -588,10 +593,18 @@ describe("ManagedSiteModelSyncSettings", () => {
     vi.clearAllMocks()
 
     const inputs = screen.getAllByRole("spinbutton")
-    const [, concurrencyInput, retriesInput, rpmInput, burstInput] = inputs
+    const [
+      ,
+      concurrencyInput,
+      retriesInput,
+      channelTimeoutInput,
+      rpmInput,
+      burstInput,
+    ] = inputs
 
     fireEvent.change(concurrencyInput, { target: { value: "4" } })
     fireEvent.change(retriesInput, { target: { value: "3" } })
+    fireEvent.change(channelTimeoutInput, { target: { value: "15" } })
     fireEvent.change(rpmInput, { target: { value: "30" } })
     fireEvent.change(burstInput, { target: { value: "8" } })
 
@@ -601,6 +614,9 @@ describe("ManagedSiteModelSyncSettings", () => {
       })
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         maxRetries: 3,
+      })
+      expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
+        channelProcessingTimeout: 15,
       })
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         rateLimit: {

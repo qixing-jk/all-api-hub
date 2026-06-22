@@ -126,6 +126,7 @@ describe("settings product analytics snapshots", () => {
         interval: 2 * 60 * 60 * 1000,
         concurrency: 6,
         maxRetries: 4,
+        channelProcessingTimeout: 600,
         rateLimit: {
           requestsPerMinute: 90,
           burst: 12,
@@ -339,6 +340,7 @@ describe("settings product analytics snapshots", () => {
         sync_interval_minutes: 120,
         concurrency: 6,
         retry_max_attempts: 4,
+        channel_timeout_seconds: 600,
         rate_limit_rpm: 90,
         rate_limit_burst: 12,
         allowed_models_configured: true,
@@ -610,6 +612,7 @@ describe("settings product analytics snapshots", () => {
           interval: 15 * 60 * 1000,
           concurrency: 0,
           maxRetries: 1,
+          channelProcessingTimeout: 0,
           rateLimit: {
             requestsPerMinute: 10,
             burst: 0,
@@ -654,6 +657,7 @@ describe("settings product analytics snapshots", () => {
         sync_interval_minutes: 15,
         concurrency: 0,
         retry_max_attempts: 1,
+        channel_timeout_seconds: 0,
         rate_limit_rpm: 10,
         rate_limit_burst: 0,
         allowed_models_configured: false,
@@ -732,6 +736,7 @@ describe("settings product analytics snapshots", () => {
         interval: 3 * 60 * 60 * 1000,
         concurrency: 12,
         maxRetries: Number.NaN,
+        channelProcessingTimeout: 5_700,
         rateLimit: {
           requestsPerMinute: 60,
           burst: 0,
@@ -832,6 +837,7 @@ describe("settings product analytics snapshots", () => {
         sync_interval_minutes: 180,
         concurrency: 12,
         retry_max_attempts: 0,
+        channel_timeout_seconds: 5_700,
         rate_limit_rpm: 60,
       }),
     )
