@@ -128,3 +128,16 @@ export type AccountSiteProductProfile = {
   tokenForm: AccountSiteTokenFormProfile
   urls: AccountSiteUrlProfile
 }
+
+type AccountSiteProductProfileOverrideSource = Omit<
+  AccountSiteProductProfile,
+  "siteType"
+>
+
+export type AccountSiteProductProfileOverride = {
+  [Key in keyof AccountSiteProductProfileOverrideSource]?: AccountSiteProductProfileOverrideSource[Key] extends readonly (infer Item)[]
+    ? readonly Item[]
+    : AccountSiteProductProfileOverrideSource[Key] extends object
+      ? Partial<AccountSiteProductProfileOverrideSource[Key]>
+      : AccountSiteProductProfileOverrideSource[Key]
+}

@@ -1,10 +1,11 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { getAccountSiteProductProfileOverride } from "~/services/accountSiteDefinitions"
 
-import type { AccountSiteProductProfile } from "./contracts"
-import {
-  ACCOUNT_SITE_PRODUCT_PROFILE_OVERRIDES,
-  DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE,
-} from "./profiles"
+import type {
+  AccountSiteProductProfile,
+  AccountSiteProductProfileOverride,
+} from "./contracts"
+import { DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE } from "./profiles"
 
 type DeepMutable<T> = {
   -readonly [P in keyof T]: T[P] extends readonly (infer U)[]
@@ -45,7 +46,7 @@ const mergeReadonlyArray = <T>(
 
 const mergeAccountSiteProductProfile = (
   siteType: AccountSiteType,
-  override: Partial<AccountSiteProductProfile> | undefined,
+  override: AccountSiteProductProfileOverride | undefined,
 ): AccountSiteProductProfile => {
   const merged: DeepMutable<AccountSiteProductProfile> = {
     siteType,
@@ -111,7 +112,7 @@ export function getAccountSiteProductProfile(
   return cloneAccountSiteProductProfile(
     mergeAccountSiteProductProfile(
       siteType,
-      ACCOUNT_SITE_PRODUCT_PROFILE_OVERRIDES[siteType],
+      getAccountSiteProductProfileOverride(siteType),
     ),
   )
 }

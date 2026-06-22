@@ -96,6 +96,29 @@ describe("accountSiteProfile", () => {
     )
   })
 
+  it("resolves site-specific overrides from account-site definitions", async () => {
+    const { getAccountSiteProductProfileOverride } = await import(
+      "~/services/accountSiteDefinitions"
+    )
+
+    expect(
+      getAccountSiteProductProfileOverride(SITE_TYPES.SUB2API),
+    ).toMatchObject({
+      supplementalAuth: {
+        kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
+      },
+    })
+    expect(getAccountSiteProductProfile(SITE_TYPES.SUB2API)).toMatchObject({
+      supplementalAuth: {
+        kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
+      },
+      modelList: {
+        tokenScopedCatalogFallback:
+          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
+      },
+    })
+  })
+
   it("resolves Model List source-account policy", () => {
     expect(
       shouldUseAccountSiteRuntimeKeyCatalogFallback({

@@ -112,6 +112,26 @@ describe("account site onboarding registry", () => {
     ).toBe(AIHUBMIX_LOGIN_PATH)
   })
 
+  it("projects onboarding definitions from the account-site definition registry", async () => {
+    const { getAccountSiteDefinition } = await import(
+      "~/services/accountSiteDefinitions"
+    )
+
+    const aihubmixDefinition = getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)
+    const onboardingDefinition = getAccountSiteOnboardingDefinition(
+      SITE_TYPES.AIHUBMIX,
+    )
+
+    expect(onboardingDefinition).toMatchObject({
+      siteType: SITE_TYPES.AIHUBMIX,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
+      routes: aihubmixDefinition?.onboarding?.routes,
+    })
+    expect(onboardingDefinition?.detection?.hostnames).toEqual([
+      ...AIHUBMIX_HOSTNAMES,
+    ])
+  })
+
   it("returns domain rule hostname array copies", () => {
     const firstRule = getAccountSiteDomainRules().find(
       (rule) => rule.name === SITE_TYPES.AIHUBMIX,

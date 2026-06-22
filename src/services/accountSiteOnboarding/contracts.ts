@@ -1,29 +1,17 @@
+import type {
+  AccountSiteAdapterFamily,
+  AccountSiteDetectionMetadata,
+  AccountSiteRouteConfig,
+} from "~/services/accountSiteDefinitions/contracts"
+
 import type { AccountSiteType } from "./siteTypes"
 
-export type AccountSiteRouteConfig = {
-  loginPath?: string
-  usagePath?: string
-  checkInPath?: string
-  adminCredentialsPath?: string
-  redeemPath?: string
-  siteAnnouncementsPath?: string
-}
-
-export type AccountSiteDetectionMetadata = {
-  titlePatterns?: readonly RegExp[]
-  hostnames?: readonly string[]
-  compatUserIdHeaderNames?: readonly string[]
-}
-
-export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
-  NewApiFamily: "newApiFamily",
-  Sub2Api: "sub2api",
-  Aihubmix: "aihubmix",
-  Unsupported: "unsupported",
-} as const
-
-export type AccountSiteAdapterFamily =
-  (typeof ACCOUNT_SITE_ADAPTER_FAMILIES)[keyof typeof ACCOUNT_SITE_ADAPTER_FAMILIES]
+export {
+  ACCOUNT_SITE_ADAPTER_FAMILIES,
+  type AccountSiteAdapterFamily,
+  type AccountSiteDetectionMetadata,
+  type AccountSiteRouteConfig,
+} from "~/services/accountSiteDefinitions/contracts"
 
 export type ContentSessionExtractionContext = {
   url?: string
