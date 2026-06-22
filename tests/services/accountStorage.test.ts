@@ -134,6 +134,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     created_at: overrides.created_at ?? Date.now(),
     notes: overrides.notes ?? "",
     manualBalanceUsd: overrides.manualBalanceUsd,
+    cookieAuth: overrides.cookieAuth,
     sub2apiAuth: overrides.sub2apiAuth,
     tagIds: overrides.tagIds ?? [],
     tags: overrides.tags,
@@ -306,6 +307,30 @@ describe("accountStorage core behaviors", () => {
     expect(display.todayTokens.upload).toBe(600)
     expect(display.todayTokens.download).toBe(400)
     expect(display.created_at).toBe(1_700_000_000_000)
+  })
+
+  it("convertToDisplayData should preserve cookie auth session cookies", () => {
+    const account = createAccount({
+      authType: AuthTypeEnum.Cookie,
+      account_info: {
+        id: "201",
+        access_token: "",
+        username: "cookie-user",
+        quota: 1_000_000,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      cookieAuth: {
+        sessionCookie: "session=user-a",
+      },
+    })
+
+    const display = accountStorage.convertToDisplayData(account)
+
+    expect(display.cookieAuthSessionCookie).toBe("session=user-a")
   })
 
   it("convertToDisplayData should handle arrays", () => {

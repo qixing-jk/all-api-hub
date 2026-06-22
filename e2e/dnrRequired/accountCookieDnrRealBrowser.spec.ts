@@ -2,7 +2,9 @@ import http from "node:http"
 import type { AddressInfo, Socket } from "node:net"
 import type { BrowserContext, Page } from "@playwright/test"
 
+import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
+import { getKeyManagementTokenRowTestId } from "~/features/KeyManagement/testIds"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -30,6 +32,7 @@ import {
   getServiceWorker,
   requestAndExpectOptionalPermissions,
 } from "~~/e2e/utils/extensionState"
+import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { openAccountManagementPage } from "~~/e2e/utils/realSite/accountAdd"
 
 const BROWSER_CURRENT_SESSION_COOKIE = "session=browser-current"
@@ -286,6 +289,92 @@ test("isolates same-site cookie and access-token accounts through account refres
     for (const request of authenticatedSelfRequests) {
       expect(request.cookieHeader).not.toContain(BROWSER_CURRENT_SESSION_COOKIE)
     }
+
+    await test.step("load each cookie account token list from Key Management", async () => {
+      localSite.clearTokenRequests()
+
+      await openKeyManagementForAccount({
+        page,
+        extensionId,
+        accountId: savedAccounts[0].id,
+      })
+      await expect(
+        page.getByTestId(
+          getKeyManagementTokenRowTestId(
+            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenId,
+          ),
+        ),
+      ).toBeVisible()
+      await expect(
+        page.getByTestId(
+          getKeyManagementTokenRowTestId(
+            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenId,
+          ),
+        ),
+      ).toHaveCount(0)
+
+      await openKeyManagementForAccount({
+        page,
+        extensionId,
+        accountId: savedAccounts[1].id,
+      })
+      await expect(
+        page.getByTestId(
+          getKeyManagementTokenRowTestId(
+            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenId,
+          ),
+        ),
+      ).toBeVisible()
+      await expect(
+        page.getByTestId(
+          getKeyManagementTokenRowTestId(
+            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenId,
+          ),
+        ),
+      ).toHaveCount(0)
+
+      expectTokenDnrFallbackSequence(
+        localSite.tokenRequests,
+        ACCOUNT_A_SESSION_COOKIE,
+      )
+      expectTokenDnrFallbackSequence(
+        localSite.tokenRequests,
+        ACCOUNT_B_SESSION_COOKIE,
+      )
+    })
+
+    await test.step("load all same-site cookie account token lists from Key Management", async () => {
+      localSite.clearTokenRequests()
+
+      await openKeyManagementForAllAccounts({
+        page,
+        extensionId,
+      })
+      await page.getByRole("button", { name: "Expand all" }).click()
+      await expect(
+        page.getByTestId(
+          getKeyManagementTokenRowTestId(
+            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenId,
+          ),
+        ),
+      ).toBeVisible()
+      await expect(
+        page.getByTestId(
+          getKeyManagementTokenRowTestId(
+            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenId,
+          ),
+        ),
+      ).toBeVisible()
+
+      expectTokenDnrFallbackSequence(
+        localSite.tokenRequests,
+        ACCOUNT_A_SESSION_COOKIE,
+      )
+      expectTokenDnrFallbackSequence(
+        localSite.tokenRequests,
+        ACCOUNT_B_SESSION_COOKIE,
+      )
+    })
   } finally {
     await closeOtherPages(context, page)
     await localSite.close()
@@ -354,10 +443,17 @@ type CapturedSelfRequest = {
   responseStatus: number
 }
 
+type CapturedTokenRequest = CapturedSelfRequest & {
+  userIdHeader: string | null
+  mismatch: boolean
+}
+
 type DnrCaptureNewApiServer = {
   origin: string
   selfRequests: CapturedSelfRequest[]
+  tokenRequests: CapturedTokenRequest[]
   clearSelfRequests: () => void
+  clearTokenRequests: () => void
   waitForAuthenticatedSessionRequest: (
     sessionCookie: string,
   ) => Promise<CapturedSelfRequest>
@@ -369,6 +465,7 @@ type DnrCaptureNewApiServer = {
 
 async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
   const selfRequests: CapturedSelfRequest[] = []
+  const tokenRequests: CapturedTokenRequest[] = []
   const sockets = new Set<Socket>()
   const waiters: Array<{
     matches: (request: CapturedSelfRequest) => boolean
@@ -470,6 +567,74 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
       return
     }
 
+    if (method === "GET" && url.pathname === "/api/token/") {
+      const cookieHeader = request.headers.cookie ?? ""
+      const authorizationHeader = request.headers.authorization ?? ""
+      const matchedSessionCookie = matchAccountSessionCookie(cookieHeader)
+      const matchedAccessToken = matchAccessToken(authorizationHeader)
+      const account =
+        (matchedSessionCookie
+          ? ACCOUNT_BY_SESSION_COOKIE[matchedSessionCookie]
+          : null) ??
+        (matchedAccessToken
+          ? ACCOUNT_BY_ACCESS_TOKEN[matchedAccessToken]
+          : null)
+      const userIdHeader = extractCompatUserIdHeader(request.headers)
+      const mismatch = Boolean(
+        account && userIdHeader && userIdHeader !== account.id,
+      )
+      const captured: CapturedTokenRequest = {
+        cookieHeader,
+        matchedSessionCookie,
+        matchedAccessToken,
+        userIdHeader,
+        mismatch,
+        responseStatus: account && !mismatch ? 200 : 401,
+      }
+      tokenRequests.push(captured)
+
+      if (!account) {
+        sendJson(401, {
+          success: false,
+          message: "missing account session cookie",
+        })
+        return
+      }
+
+      if (mismatch) {
+        sendJson(401, {
+          success: false,
+          message: `cookie and userid mismatch: cookie=${account.id} header=${userIdHeader}`,
+        })
+        return
+      }
+
+      sendJson(200, {
+        success: true,
+        message: "ok",
+        data: [
+          {
+            id: account.tokenId,
+            user_id: Number(account.id),
+            key: account.tokenKey,
+            status: 1,
+            name: account.tokenName,
+            created_time: 1_700_000_000,
+            accessed_time: 1_700_000_000,
+            expired_time: -1,
+            remain_quota: -1,
+            unlimited_quota: true,
+            model_limits_enabled: false,
+            model_limits: "",
+            allow_ips: "",
+            used_quota: 0,
+            group: "default",
+          },
+        ],
+      })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/log/self/stat") {
       sendJson(200, {
         success: true,
@@ -567,8 +732,12 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
   return {
     origin,
     selfRequests,
+    tokenRequests,
     clearSelfRequests: () => {
       selfRequests.splice(0)
+    },
+    clearTokenRequests: () => {
+      tokenRequests.splice(0)
     },
     waitForAuthenticatedSessionRequest: (sessionCookie) =>
       waitForAuthenticatedRequest(
@@ -586,33 +755,59 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
 
 const ACCOUNT_BY_SESSION_COOKIE: Record<
   string,
-  { id: string; username: string; quota: number }
+  {
+    id: string
+    username: string
+    quota: number
+    tokenId: number
+    tokenName: string
+    tokenKey: string
+  }
 > = {
   [ACCOUNT_A_SESSION_COOKIE]: {
     id: "201",
     username: "cookie-user-a",
     quota: 33_000,
+    tokenId: 2011,
+    tokenName: "Cookie User A Key",
+    tokenKey: "sk-cookie-user-a",
   },
   [ACCOUNT_B_SESSION_COOKIE]: {
     id: "202",
     username: "cookie-user-b",
     quota: 44_000,
+    tokenId: 2021,
+    tokenName: "Cookie User B Key",
+    tokenKey: "sk-cookie-user-b",
   },
 }
 
 const ACCOUNT_BY_ACCESS_TOKEN: Record<
   string,
-  { id: string; username: string; quota: number }
+  {
+    id: string
+    username: string
+    quota: number
+    tokenId: number
+    tokenName: string
+    tokenKey: string
+  }
 > = {
   [ACCESS_TOKEN_A]: {
     id: "301",
     username: "token-user-a",
     quota: 55_000,
+    tokenId: 3011,
+    tokenName: "Token User A Key",
+    tokenKey: "sk-token-user-a",
   },
   [ACCESS_TOKEN_B]: {
     id: "302",
     username: "token-user-b",
     quota: 66_000,
+    tokenId: 3021,
+    tokenName: "Token User B Key",
+    tokenKey: "sk-token-user-b",
   },
 }
 
@@ -667,6 +862,48 @@ function expectCookieDnrFallbackSequence(
   }
 }
 
+function expectTokenDnrFallbackSequence(
+  requests: CapturedTokenRequest[],
+  targetSessionCookie: string,
+) {
+  const account = ACCOUNT_BY_SESSION_COOKIE[targetSessionCookie]
+  const success = requests.find(
+    (request) =>
+      request.responseStatus === 200 &&
+      request.matchedSessionCookie === targetSessionCookie &&
+      request.userIdHeader === account.id,
+  )
+
+  expect(
+    success,
+    `${targetSessionCookie} token list request with matching cookie/user id`,
+  ).toEqual(
+    expect.objectContaining({
+      cookieHeader: expect.stringContaining(targetSessionCookie),
+      mismatch: false,
+      userIdHeader: account.id,
+    }),
+  )
+
+  expect(
+    requests.filter((request) => request.mismatch),
+    `${targetSessionCookie} token list cookie/user-id mismatches`,
+  ).toHaveLength(0)
+}
+
+function extractCompatUserIdHeader(headers: http.IncomingHttpHeaders) {
+  const rawValue =
+    headers["new-api-user"] ??
+    headers["user-id"] ??
+    headers["x-api-user"] ??
+    headers["veloera-user"] ??
+    headers["voapi-user"]
+  if (Array.isArray(rawValue)) {
+    return rawValue[0] ?? null
+  }
+  return rawValue ?? null
+}
+
 function matchAccessToken(authorizationHeader: string) {
   const match = /^Bearer\s+(.+)$/iu.exec(authorizationHeader.trim())
   const token = match?.[1] ?? authorizationHeader.trim()
@@ -696,4 +933,29 @@ async function seedBrowserCurrentLoginCookie(
       expires: Math.floor(Date.now() / 1000) + 3600,
     },
   ])
+}
+
+async function openKeyManagementForAccount(params: {
+  page: Page
+  extensionId: string
+  accountId: string
+}) {
+  await params.page.goto(
+    `chrome-extension://${params.extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=${params.accountId}`,
+  )
+  await waitForExtensionRoot(params.page)
+  await expectPermissionOnboardingHidden(params.page)
+}
+
+async function openKeyManagementForAllAccounts(params: {
+  page: Page
+  extensionId: string
+}) {
+  await params.page.goto(
+    `chrome-extension://${params.extensionId}/${OPTIONS_PAGE_PATH}#keys`,
+  )
+  await waitForExtensionRoot(params.page)
+  await expectPermissionOnboardingHidden(params.page)
+  await params.page.getByRole("combobox").click()
+  await params.page.getByRole("option", { name: "All accounts" }).click()
 }

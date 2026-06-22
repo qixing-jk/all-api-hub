@@ -1547,6 +1547,7 @@ class AccountStorageService {
         can_check_in: normalized.can_check_in,
         supports_check_in: normalized.supports_check_in,
         authType: normalized.authType,
+        cookieAuthSessionCookie: normalized.cookieAuth?.sessionCookie,
       }
     }
 
