@@ -46,6 +46,12 @@
     "hints": {
       "saveWithoutTest": "提示：只要填写 Base URL 与 API Key 就能保存到 API 凭据库（无需先测试或获取模型列表）。测试仅用于验证可用性。"
     },
+    "history": {
+      "empty": "暂无 Base URL 历史",
+      "label": "最近使用的 Base URL",
+      "remove": "从 Base URL 历史中移除",
+      "trigger": "从 Base URL 历史中选择"
+    },
     "messages": {
       "savedToProfiles": "已保存 {{name}} 到 API 凭据库",
       "stoppingTest": "正在停止测试，当前请求会尽快中断。",

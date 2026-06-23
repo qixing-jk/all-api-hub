@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
 import {
+  API_CHECK_MODAL_CLOSE_REASONS,
   API_CHECK_MODAL_CLOSED_EVENT,
   API_CHECK_MODAL_HOST_READY_EVENT,
   dispatchOpenApiCheckModal,
@@ -35,6 +36,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
+import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
@@ -139,6 +141,13 @@ describe("ApiCheckModalHost", () => {
     expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(type, data)
   }
 
+  const getApiCheckMessageCalls = (
+    type: (typeof WebAiApiCheckMessageTypes)[keyof typeof WebAiApiCheckMessageTypes],
+  ) =>
+    vi
+      .mocked(sendWebAiApiCheckMessage)
+      .mock.calls.filter((call) => call[0] === type)
+
   beforeEach(() => {
     ;(toast.success as any).mockReset()
     ;(toast.error as any).mockReset()
@@ -227,6 +236,220 @@ describe("ApiCheckModalHost", () => {
 
     expect(baseUrlInput.value).toBe("")
     expect(apiKeyInput.value).toBe("")
+    expect(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.history.trigger",
+      }),
+    ).toBeDisabled()
+  })
+
+  it("prefills the base URL from current-source history and lets users choose another history entry", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions) {
+          return {
+            success: true,
+            suggestions: [
+              {
+                baseUrl: "https://source-match.example.com/api",
+                lastUsedAt: 2,
+                useCount: 3,
+                matchedSourceOrigin: "https://github.com",
+              },
+              {
+                baseUrl: "https://global-recent.example.com/api",
+                lastUsedAt: 3,
+                useCount: 1,
+              },
+            ],
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal({
+      sourceText: "API Key: sk-test-history-prefill-fixture",
+      pageUrl: "https://github.com/qixing-jk/all-api-hub/issues/1025",
+    })
+
+    const baseUrlInput = (await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )) as HTMLInputElement
+    const apiKeyInput = screen.getByPlaceholderText(
+      "sk-...",
+    ) as HTMLInputElement
+
+    await waitFor(() => {
+      expect(baseUrlInput.value).toBe("https://source-match.example.com/api")
+    })
+    expect(apiKeyInput.value).toBe("sk-test-history-prefill-fixture")
+    expect(
+      screen.queryByRole("button", {
+        name: "https://global-recent.example.com/api",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.history.trigger",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "https://global-recent.example.com/api",
+      }),
+    )
+
+    expect(baseUrlInput.value).toBe("https://global-recent.example.com/api")
+    expectTypedApiCheckMessage(
+      WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions,
+      {
+        pageUrl: "https://github.com/qixing-jk/all-api-hub/issues/1025",
+        limit: WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT,
+      },
+    )
+  })
+
+  it("reconciles the current history picker with the record response", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions) {
+          return { success: true, suggestions: [] }
+        }
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
+          return {
+            success: true,
+            suggestions: [],
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const historyButton = screen.getByRole("button", {
+      name: "webAiApiCheck:modal.history.trigger",
+    })
+    expect(historyButton).toBeDisabled()
+
+    await user.type(baseUrlInput, "https://fresh.example.com/api")
+    await user.type(screen.getByPlaceholderText("sk-..."), "sk-test-fixture")
+
+    await waitFor(() => {
+      expectTypedApiCheckMessage(
+        WebAiApiCheckMessageTypes.RecordBaseUrlHistory,
+        {
+          baseUrl: "https://fresh.example.com/api",
+          pageUrl: "https://example.com",
+        },
+      )
+    })
+    expect(baseUrlInput).toHaveValue("https://fresh.example.com/api")
+    await waitFor(() => {
+      expect(historyButton).toBeDisabled()
+    })
+    expect(historyButton).toHaveAttribute(
+      "title",
+      "webAiApiCheck:modal.history.empty",
+    )
+  })
+
+  it("removes a base URL from the current history picker", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions) {
+          return {
+            success: true,
+            suggestions: [
+              {
+                baseUrl: "https://remove.example.com/api",
+                lastUsedAt: 3,
+                useCount: 2,
+              },
+              {
+                baseUrl: "https://keep.example.com/api",
+                lastUsedAt: 2,
+                useCount: 1,
+              },
+            ],
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.RemoveBaseUrlHistory) {
+          return {
+            success: true,
+            suggestions: [
+              {
+                baseUrl: "https://canonical.example.com/api",
+                lastUsedAt: 4,
+                useCount: 3,
+              },
+            ],
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal({
+      sourceText: "API Key: sk-test-history-remove-fixture",
+      pageUrl: "https://github.com/qixing-jk/all-api-hub/issues/1025",
+    })
+
+    const baseUrlInput = (await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )) as HTMLInputElement
+
+    await waitFor(() => {
+      expect(baseUrlInput.value).toBe("https://remove.example.com/api")
+    })
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.history.trigger",
+      }),
+    )
+    const removeItem = await screen.findByRole("menuitem", {
+      name: "https://remove.example.com/api",
+    })
+    await user.click(
+      within(removeItem.parentElement as HTMLElement).getByRole("button", {
+        name: "webAiApiCheck:modal.history.remove",
+      }),
+    )
+
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "https://remove.example.com/api",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole("menuitem", {
+        name: "https://canonical.example.com/api",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "https://keep.example.com/api",
+      }),
+    ).not.toBeInTheDocument()
+    expect(baseUrlInput.value).toBe("https://remove.example.com/api")
+    expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.RemoveBaseUrlHistory, {
+      baseUrl: "https://remove.example.com/api",
+      pageUrl: "https://github.com/qixing-jk/all-api-hub/issues/1025",
+    })
   })
 
   it("shows the extracted API key by default", async () => {
@@ -446,7 +669,7 @@ describe("ApiCheckModalHost", () => {
     await expect(closedDetailPromise).resolves.toEqual({
       pageUrl: "https://example.com",
       trigger: "contextMenu",
-      reason: "dismissed",
+      reason: API_CHECK_MODAL_CLOSE_REASONS.Dismissed,
     })
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
@@ -999,6 +1222,63 @@ describe("ApiCheckModalHost", () => {
     ])
   })
 
+  it("records Base URL history after a successful automatic model fetch", async () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["m1"] }
+        }
+        if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
+          return { success: true }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal({
+      sourceText:
+        "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-auto-history-success-fixture",
+      pageUrl: "https://docs.example.invalid/setup",
+      trigger: "autoDetect",
+    })
+
+    await waitFor(() => {
+      expectTypedApiCheckMessage(
+        WebAiApiCheckMessageTypes.RecordBaseUrlHistory,
+        {
+          baseUrl: "https://proxy.example.com/api",
+          pageUrl: "https://docs.example.invalid/setup",
+        },
+      )
+    })
+  })
+
+  it("does not record Base URL history after a failed automatic model fetch", async () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: false, error: "Unauthorized" }
+        }
+        if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
+          return { success: true }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal({
+      sourceText:
+        "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-auto-history-failure-fixture",
+      pageUrl: "https://docs.example.invalid/setup",
+      trigger: "autoDetect",
+    })
+
+    await screen.findByText("Unauthorized")
+    expect(
+      getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RecordBaseUrlHistory),
+    ).toHaveLength(0)
+  })
+
   it("tracks manual model fetch completion with model-count insights", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
@@ -1082,13 +1362,17 @@ describe("ApiCheckModalHost", () => {
     )
 
     await waitFor(() => {
-      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
+      ).toHaveLength(1)
     })
 
     await act(async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 0))
     })
-    expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
+    expect(
+      getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
+    ).toHaveLength(1)
 
     await act(async () => {
       resolveFetch({ success: true, modelIds: ["m1"] })
@@ -1113,7 +1397,9 @@ describe("ApiCheckModalHost", () => {
         apiKey: "sk-test-secret-fixture",
       })
     })
-    expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
+    expect(
+      getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
+    ).toHaveLength(1)
 
     const baseUrlInput = screen.getByPlaceholderText(
       "https://example.com/api",
@@ -1122,7 +1408,9 @@ describe("ApiCheckModalHost", () => {
     await user.type(baseUrlInput, "  ")
 
     await waitFor(() => {
-      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
+      ).toHaveLength(1)
     })
 
     await user.click(
@@ -1134,7 +1422,9 @@ describe("ApiCheckModalHost", () => {
     })
 
     await waitFor(() => {
-      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(2)
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
+      ).toHaveLength(2)
     })
   })
 
@@ -2797,7 +3087,9 @@ describe("ApiCheckModalHost", () => {
     expect(
       await screen.findByText("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
     ).toBeInTheDocument()
-    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
+    expect(
+      getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
+    ).toHaveLength(0)
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       expect.objectContaining({
@@ -2838,7 +3130,9 @@ describe("ApiCheckModalHost", () => {
     expect(
       await screen.findByText("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
     ).toBeInTheDocument()
-    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
+    expect(
+      getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
+    ).toHaveLength(0)
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       expect.objectContaining({
@@ -3124,7 +3418,7 @@ describe("ApiCheckModalHost", () => {
     await expect(closedDetailPromise).resolves.toEqual({
       pageUrl: "https://example.com",
       trigger: "contextMenu",
-      reason: "completed",
+      reason: API_CHECK_MODAL_CLOSE_REASONS.Completed,
     })
   })
 
@@ -3172,7 +3466,7 @@ describe("ApiCheckModalHost", () => {
     await expect(closedDetailPromise).resolves.toEqual({
       pageUrl: "https://example.com",
       trigger: "contextMenu",
-      reason: "completed",
+      reason: API_CHECK_MODAL_CLOSE_REASONS.Completed,
     })
   })
 })

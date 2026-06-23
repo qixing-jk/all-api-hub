@@ -5,6 +5,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
 import { setupWebAiApiCheckContent } from "~/entrypoints/content/webAiApiCheck"
 import {
+  API_CHECK_MODAL_CLOSE_REASONS,
   API_CHECK_MODAL_CLOSED_EVENT,
   dispatchOpenApiCheckModal,
   waitForApiCheckModalHostReady,
@@ -902,7 +903,7 @@ describe("setupWebAiApiCheckContent", () => {
         detail: {
           pageUrl: window.location.href,
           trigger: "autoDetect",
-          reason: "dismissed",
+          reason: API_CHECK_MODAL_CLOSE_REASONS.Dismissed,
         },
       }),
     )

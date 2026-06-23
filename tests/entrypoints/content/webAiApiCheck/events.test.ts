@@ -9,6 +9,7 @@ describe("webAiApiCheck events", () => {
 
   it("dispatches the open and closed modal custom events with the provided detail", async () => {
     const {
+      API_CHECK_MODAL_CLOSE_REASONS,
       API_CHECK_MODAL_CLOSED_EVENT,
       API_CHECK_OPEN_MODAL_EVENT,
       dispatchApiCheckModalClosed,
@@ -37,7 +38,7 @@ describe("webAiApiCheck events", () => {
     dispatchApiCheckModalClosed({
       pageUrl: "https://example.com",
       trigger: "contextMenu",
-      reason: "completed",
+      reason: API_CHECK_MODAL_CLOSE_REASONS.Completed,
     })
 
     expect(openListener).toHaveBeenCalledTimes(1)
@@ -51,7 +52,7 @@ describe("webAiApiCheck events", () => {
     expect((closedListener.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({
       pageUrl: "https://example.com",
       trigger: "contextMenu",
-      reason: "completed",
+      reason: API_CHECK_MODAL_CLOSE_REASONS.Completed,
     })
   })
 

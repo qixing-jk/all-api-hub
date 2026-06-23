@@ -46,6 +46,12 @@
     "hints": {
       "saveWithoutTest": "ヒント: Base URL と API キーが入力されていれば、その時点で保存できます（先にテストやモデル取得を行う必要はありません）。テストは任意で、可用性確認の補助にすぎません。"
     },
+    "history": {
+      "empty": "Base URL の履歴はまだありません",
+      "label": "最近使用した Base URL",
+      "remove": "Base URL 履歴から削除",
+      "trigger": "Base URL 履歴から選択"
+    },
     "messages": {
       "savedToProfiles": "{{name}} を API 認証情報庫に保存しました。",
       "stoppingTest": "テストを停止しています。現在のリクエストは可能な限り早く中断されます。",

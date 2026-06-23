@@ -1,4 +1,4 @@
-import { XMarkIcon } from "@heroicons/react/24/outline"
+import { ClockIcon, TrashIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import {
   useCallback,
   useEffect,
@@ -20,6 +20,11 @@ import {
   Textarea,
 } from "~/components/ui"
 import { inputVariants } from "~/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { cn } from "~/lib/utils"
 import {
@@ -54,7 +59,12 @@ import {
   getApiVerificationProbeLabel,
   translateApiVerificationSummary,
 } from "~/services/verification/aiApiVerification/i18n"
-import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
+import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
+import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
+import {
+  extractApiCheckCredentialsFromText,
+  normalizeOpenAiFamilyBaseUrl,
+} from "~/services/verification/webAiApiCheck/extractCredentials"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
@@ -64,6 +74,7 @@ import { isTestMode } from "~/utils/core/environment"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
 import {
+  API_CHECK_MODAL_CLOSE_REASONS,
   API_CHECK_OPEN_MODAL_EVENT,
   dispatchApiCheckModalClosed,
   dispatchApiCheckModalHostReady,
@@ -92,7 +103,15 @@ type ApiCheckExtractionMetadata = NonNullable<
 
 // Preserve the real debounce in dev/prod to avoid bursty background requests
 // while typing, but skip the wall-clock delay in Vitest.
-const MODEL_AUTO_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 300
+const MODEL_AUTO_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 800
+
+const MODEL_FETCH_ORIGINS = {
+  Auto: "auto",
+  Manual: "manual",
+} as const
+
+type ModelFetchOrigin =
+  (typeof MODEL_FETCH_ORIGINS)[keyof typeof MODEL_FETCH_ORIGINS]
 
 const contentApiCheckAnalyticsScope = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
@@ -199,6 +218,11 @@ export function ApiCheckModalHost() {
 
   const [sourceText, setSourceText] = useState("")
   const [baseUrl, setBaseUrl] = useState("")
+  const [baseUrlHistorySuggestions, setBaseUrlHistorySuggestions] = useState<
+    WebAiApiCheckBaseUrlSuggestion[]
+  >([])
+  const [isBaseUrlHistoryPickerOpen, setIsBaseUrlHistoryPickerOpen] =
+    useState(false)
   const [apiKey, setApiKey] = useState("")
   const [extractionMetadata, setExtractionMetadata] =
     useState<ApiCheckOpenModalDetail["extraction"]>(undefined)
@@ -264,6 +288,7 @@ export function ApiCheckModalHost() {
   )
   const cancelledProbeRunIdsRef = useRef(new Set<string>())
   const activeRunAllProbeIdRef = useRef<ApiVerificationProbeId | null>(null)
+  const historySuggestionsRequestIdRef = useRef(0)
 
   const probeDefinitions = useMemo(
     () => getApiVerificationProbeDefinitions(apiType),
@@ -277,6 +302,7 @@ export function ApiCheckModalHost() {
 
   const hasFetchedModels = modelIds.length > 0
   const isAnyProbeRunning = probes.some((probe) => probe.isRunning)
+  const hasBaseUrlHistorySuggestions = baseUrlHistorySuggestions.length > 0
 
   const modelListSupported =
     apiType === API_TYPES.OPENAI_COMPATIBLE ||
@@ -386,6 +412,7 @@ export function ApiCheckModalHost() {
       const nextApiKey =
         extraction.candidates.apiKeys[0]?.value ?? extracted.apiKey ?? ""
       setExtractionMetadata(extraction)
+      setBaseUrlHistorySuggestions([])
       setBaseUrl(nextBaseUrl)
       setApiKey(nextApiKey)
 
@@ -411,6 +438,27 @@ export function ApiCheckModalHost() {
           blockedCount: hasUsableCredentials ? 0 : 1,
         },
       })
+
+      const historyRequestId = ++historySuggestionsRequestIdRef.current
+      void sendWebAiApiCheckMessage(
+        WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions,
+        {
+          pageUrl: detail.pageUrl || window.location.href,
+          limit: WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT,
+        },
+      )
+        .then((response) => {
+          if (historyRequestId !== historySuggestionsRequestIdRef.current) {
+            return
+          }
+          if (!response?.success) return
+          const suggestions = response.suggestions ?? []
+          setBaseUrlHistorySuggestions(suggestions)
+          if (!nextBaseUrl && suggestions[0]?.baseUrl) {
+            setBaseUrl(suggestions[0].baseUrl)
+          }
+        })
+        .catch(() => {})
     }
 
     window.addEventListener(API_CHECK_OPEN_MODAL_EVENT, handleOpen as any)
@@ -424,8 +472,11 @@ export function ApiCheckModalHost() {
   }, [apiType])
 
   const close = () => {
-    const reason = hasAnyResult || hasFetchedModels ? "completed" : "dismissed"
-    if (reason === "dismissed") {
+    const reason =
+      hasAnyResult || hasFetchedModels
+        ? API_CHECK_MODAL_CLOSE_REASONS.Completed
+        : API_CHECK_MODAL_CLOSE_REASONS.Dismissed
+    if (reason === API_CHECK_MODAL_CLOSE_REASONS.Dismissed) {
       const tracker = startProductAnalyticsAction({
         ...contentApiCheckAnalyticsScope,
         actionId:
@@ -464,6 +515,66 @@ export function ApiCheckModalHost() {
     if (extracted.baseUrl) setBaseUrl(extracted.baseUrl)
     if (extracted.apiKey) setApiKey(extracted.apiKey)
   }, [isOpen, sourceText])
+
+  const recordBaseUrlHistory = useCallback(
+    (value: string) => {
+      const trimmed = value.trim()
+      if (!trimmed) return
+      const normalized = normalizeOpenAiFamilyBaseUrl(trimmed)
+      if (normalized) {
+        setBaseUrlHistorySuggestions((current) =>
+          [
+            {
+              baseUrl: normalized,
+              lastUsedAt: Date.now(),
+              useCount:
+                (current.find((item) => item.baseUrl === normalized)
+                  ?.useCount ?? 0) + 1,
+            },
+            ...current.filter((item) => item.baseUrl !== normalized),
+          ].slice(0, WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT),
+        )
+      }
+      void sendWebAiApiCheckMessage(
+        WebAiApiCheckMessageTypes.RecordBaseUrlHistory,
+        {
+          baseUrl: trimmed,
+          pageUrl: pageUrl || window.location.href,
+        },
+      )
+        .then((response) => {
+          if (response?.success && Array.isArray(response.suggestions)) {
+            setBaseUrlHistorySuggestions(response.suggestions)
+          }
+        })
+        .catch(() => {})
+    },
+    [pageUrl],
+  )
+
+  const removeBaseUrlHistory = useCallback(
+    (value: string) => {
+      const normalized = normalizeOpenAiFamilyBaseUrl(value.trim())
+      if (!normalized) return
+      setBaseUrlHistorySuggestions((current) =>
+        current.filter((item) => item.baseUrl !== normalized),
+      )
+      void sendWebAiApiCheckMessage(
+        WebAiApiCheckMessageTypes.RemoveBaseUrlHistory,
+        {
+          baseUrl: normalized,
+          pageUrl: pageUrl || window.location.href,
+        },
+      )
+        .then((response) => {
+          if (response?.success && Array.isArray(response.suggestions)) {
+            setBaseUrlHistorySuggestions(response.suggestions)
+          }
+        })
+        .catch(() => {})
+    },
+    [pageUrl],
+  )
 
   const renderCandidateButtons = useCallback(
     (
@@ -521,29 +632,104 @@ export function ApiCheckModalHost() {
     [t],
   )
 
+  const renderBaseUrlHistoryPicker = () => {
+    const triggerLabel = hasBaseUrlHistorySuggestions
+      ? t("webAiApiCheck:modal.history.trigger")
+      : t("webAiApiCheck:modal.history.empty")
+
+    return (
+      <Popover
+        open={isBaseUrlHistoryPickerOpen}
+        onOpenChange={setIsBaseUrlHistoryPickerOpen}
+      >
+        <PopoverTrigger asChild disabled={!hasBaseUrlHistorySuggestions}>
+          <IconButton
+            type="button"
+            aria-label={t("webAiApiCheck:modal.history.trigger")}
+            title={triggerLabel}
+            variant="ghost"
+            size="sm"
+            onMouseDown={(event) => event.preventDefault()}
+            disabled={!hasBaseUrlHistorySuggestions}
+          >
+            <ClockIcon className="h-4 w-4" />
+          </IconButton>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          aria-label={t("webAiApiCheck:modal.history.label")}
+          container={popoverPortalContainer ?? undefined}
+          role="menu"
+          className="w-72 p-1"
+        >
+          <div className="text-muted-foreground px-2 py-1.5 text-xs">
+            {t("webAiApiCheck:modal.history.label")}
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            {baseUrlHistorySuggestions.map((suggestion) => (
+              <div
+                key={suggestion.baseUrl}
+                className="group flex min-w-0 items-center gap-1 rounded-sm"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={cn(
+                    "focus:bg-accent focus:text-accent-foreground flex min-w-0 flex-1 rounded-sm px-2 py-1.5 text-left text-sm outline-none",
+                    suggestion.baseUrl === baseUrl
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground",
+                  )}
+                  title={suggestion.baseUrl}
+                  onClick={() => {
+                    setBaseUrl(suggestion.baseUrl)
+                    setIsBaseUrlHistoryPickerOpen(false)
+                  }}
+                >
+                  <span className="truncate">{suggestion.baseUrl}</span>
+                </button>
+                <IconButton
+                  type="button"
+                  aria-label={t("webAiApiCheck:modal.history.remove")}
+                  title={t("webAiApiCheck:modal.history.remove")}
+                  variant="ghost"
+                  size="xs"
+                  className="text-muted-foreground hover:text-destructive shrink-0 opacity-70 group-hover:opacity-100"
+                  onClick={() => removeBaseUrlHistory(suggestion.baseUrl)}
+                >
+                  <TrashIcon className="h-3.5 w-3.5" />
+                </IconButton>
+              </div>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
   const fetchModels = useCallback(
-    async (origin: "auto" | "manual") => {
+    async (origin: ModelFetchOrigin) => {
       setFetchModelsError(null)
-      if (origin === "manual") setValidationError(null)
+      if (origin === MODEL_FETCH_ORIGINS.Manual) setValidationError(null)
 
       if (!modelListSupported) return
 
       const tracker = startProductAnalyticsAction({
         ...contentApiCheckAnalyticsScope,
         actionId:
-          origin === "auto"
+          origin === MODEL_FETCH_ORIGINS.Auto
             ? PRODUCT_ANALYTICS_ACTION_IDS.AutoFetchApiCredentialModelList
             : PRODUCT_ANALYTICS_ACTION_IDS.FetchApiCredentialModelList,
       })
       const sourceKind =
-        origin === "auto"
+        origin === MODEL_FETCH_ORIGINS.Auto
           ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
           : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual
 
       const trimmedBaseUrl = baseUrl.trim()
       const trimmedApiKey = apiKey.trim()
       if (!trimmedBaseUrl || !trimmedApiKey) {
-        if (origin === "manual") {
+        if (origin === MODEL_FETCH_ORIGINS.Manual) {
           setValidationError(
             t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
           )
@@ -559,10 +745,13 @@ export function ApiCheckModalHost() {
         })
         return
       }
+      if (origin === MODEL_FETCH_ORIGINS.Manual) {
+        recordBaseUrlHistory(trimmedBaseUrl)
+      }
 
       const requestId = (fetchModelsRequestIdRef.current += 1)
       const fetchKey = `${apiType}::${trimmedBaseUrl}::${trimmedApiKey}`
-      if (origin === "manual") {
+      if (origin === MODEL_FETCH_ORIGINS.Manual) {
         lastAutoFetchKeyRef.current = fetchKey
       }
       setIsFetchingModels(true)
@@ -595,6 +784,9 @@ export function ApiCheckModalHost() {
           if (!modelId.trim() && ids.length > 0) {
             // Provide a helpful default to reduce friction.
             setModelId(ids[0] ?? "")
+          }
+          if (origin === MODEL_FETCH_ORIGINS.Auto) {
+            recordBaseUrlHistory(trimmedBaseUrl)
           }
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             diagnostics: buildModelListDiagnostics({
@@ -652,11 +844,19 @@ export function ApiCheckModalHost() {
         }
       }
     },
-    [apiKey, apiType, baseUrl, modelId, modelListSupported, t],
+    [
+      apiKey,
+      apiType,
+      baseUrl,
+      modelId,
+      modelListSupported,
+      recordBaseUrlHistory,
+      t,
+    ],
   )
 
   const handleFetchModels = async () => {
-    await fetchModels("manual")
+    await fetchModels(MODEL_FETCH_ORIGINS.Manual)
   }
 
   const modelIdsOptions = useMemo(
@@ -704,7 +904,7 @@ export function ApiCheckModalHost() {
       if (lastAutoFetchKeyRef.current === fetchKey) return
       if (isFetchingModels) return
       lastAutoFetchKeyRef.current = fetchKey
-      void fetchModels("auto")
+      void fetchModels(MODEL_FETCH_ORIGINS.Auto)
     }, MODEL_AUTO_FETCH_DEBOUNCE_MS)
 
     return () => {
@@ -751,6 +951,7 @@ export function ApiCheckModalHost() {
       })
       return null
     }
+    recordBaseUrlHistory(trimmedBaseUrl)
 
     setProbes((prev) =>
       prev.map((probe) =>
@@ -976,6 +1177,7 @@ export function ApiCheckModalHost() {
       })
       return
     }
+    recordBaseUrlHistory(trimmedBaseUrl)
 
     shouldStopRunAllRef.current = false
     setIsStoppingRunAll(false)
@@ -1092,6 +1294,7 @@ export function ApiCheckModalHost() {
       })
       return
     }
+    recordBaseUrlHistory(trimmedBaseUrl)
 
     setIsSavingProfile(true)
     try {
@@ -1250,6 +1453,7 @@ export function ApiCheckModalHost() {
                     value={baseUrl}
                     onChange={(e) => setBaseUrl(e.target.value)}
                     placeholder="https://example.com/api"
+                    rightIcon={renderBaseUrlHistoryPicker()}
                   />
                   {renderCandidateButtons(
                     "baseUrl",

@@ -46,6 +46,12 @@
     "hints": {
       "saveWithoutTest": "Tip: you can save once base URL + API key are provided (no need to test or fetch models first). Testing is optional and only helps verify availability."
     },
+    "history": {
+      "empty": "No Base URL history yet",
+      "label": "Recent Base URLs",
+      "remove": "Remove from Base URL history",
+      "trigger": "Choose from Base URL history"
+    },
     "messages": {
       "savedToProfiles": "Saved {{name}} to API credential library.",
       "stoppingTest": "Stopping the test. The current request will be interrupted as soon as possible.",

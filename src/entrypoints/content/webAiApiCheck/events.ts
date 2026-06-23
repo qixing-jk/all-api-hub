@@ -16,6 +16,15 @@ export const API_CHECK_MODAL_CLOSED_EVENT = "all-api-hub:api-check:closed-modal"
 export const API_CHECK_MODAL_HOST_READY_EVENT =
   "all-api-hub:api-check:modal-host-ready"
 
+export const API_CHECK_MODAL_CLOSE_REASONS = {
+  Completed: "completed",
+  Dismissed: "dismissed",
+  Closed: "closed",
+} as const
+
+export type ApiCheckModalCloseReason =
+  (typeof API_CHECK_MODAL_CLOSE_REASONS)[keyof typeof API_CHECK_MODAL_CLOSE_REASONS]
+
 let isModalHostReady = false
 
 export type ApiCheckOpenModalDetail = {
@@ -34,7 +43,7 @@ export type ApiCheckOpenModalDetail = {
 export type ApiCheckModalClosedDetail = {
   pageUrl: string
   trigger: ApiCheckOpenModalDetail["trigger"]
-  reason: "dismissed" | "completed" | "closed"
+  reason: ApiCheckModalCloseReason
 }
 
 /**

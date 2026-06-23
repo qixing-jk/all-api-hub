@@ -46,6 +46,12 @@
     "hints": {
       "saveWithoutTest": "Mẹo: Chỉ cần điền Base URL và API Key là có thể lưu vào API Profiles (không cần kiểm tra hoặc lấy danh sách mô hình trước). Kiểm tra chỉ được sử dụng để xác minh khả năng khả dụng."
     },
+    "history": {
+      "empty": "Chưa có lịch sử Base URL",
+      "label": "Base URL đã dùng gần đây",
+      "remove": "Xóa khỏi lịch sử Base URL",
+      "trigger": "Chọn từ lịch sử Base URL"
+    },
     "messages": {
       "savedToProfiles": "Đã lưu {{name}} vào API Profiles",
       "stoppingTest": "Đang dừng kiểm tra. Yêu cầu hiện tại sẽ được ngắt sớm nhất có thể.",
