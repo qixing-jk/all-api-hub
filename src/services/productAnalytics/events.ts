@@ -458,6 +458,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenPopupSettingsPage: "open_popup_settings_page",
   OpenProductAnnouncementCta: "open_product_announcement_cta",
   OpenProductAnnouncements: "open_product_announcements",
+  PrefillApiCredentialBaseUrlFromHistory:
+    "prefill_api_credential_base_url_from_history",
   OpenSidepanelFromPopup: "open_sidepanel_from_popup",
   OpenSidepanelFromToolbarAction: "open_sidepanel_from_toolbar_action",
   ClearApiCredentialProfileFilters: "clear_api_credential_profile_filters",
@@ -489,6 +491,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   RefreshBalanceHistorySnapshots: "refresh_balance_history_snapshots",
   RefreshUsageAnalyticsData: "refresh_usage_analytics_data",
   ReloadManagedSiteModelSyncChannels: "reload_managed_site_model_sync_channels",
+  RemoveApiCredentialBaseUrlHistory: "remove_api_credential_base_url_history",
   RepairMissingAccountKeys: "repair_missing_account_keys",
   ReorderAccounts: "reorder_accounts",
   RevealAccountTokenKey: "reveal_account_token_key",
@@ -519,6 +522,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   FilterModelList: "filter_model_list",
   SelectApiCredentialProfileExportDestination:
     "select_api_credential_profile_export_destination",
+  SelectApiCredentialBaseUrlHistory: "select_api_credential_base_url_history",
   SnapshotApiCredentialProfiles: "snapshot_api_credential_profiles",
   ToggleModelDetails: "toggle_model_details",
   SelectApiCredentialProfilesView: "select_api_credential_profiles_view",

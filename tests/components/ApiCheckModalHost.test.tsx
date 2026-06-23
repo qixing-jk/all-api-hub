@@ -288,6 +288,22 @@ describe("ApiCheckModalHost", () => {
       expect(baseUrlInput.value).toBe("https://source-match.example.com/api")
     })
     expect(apiKeyInput.value).toBe("sk-test-history-prefill-fixture")
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.PrefillApiCredentialBaseUrlFromHistory,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
+          apiType: "openai-compatible",
+        },
+      },
+    )
     expect(
       screen.queryByRole("button", {
         name: "https://global-recent.example.com/api",
@@ -306,6 +322,12 @@ describe("ApiCheckModalHost", () => {
     )
 
     expect(baseUrlInput.value).toBe("https://global-recent.example.com/api")
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectApiCredentialBaseUrlHistory,
+    })
     expectTypedApiCheckMessage(
       WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions,
       {
@@ -313,6 +335,81 @@ describe("ApiCheckModalHost", () => {
         limit: WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT,
       },
     )
+  })
+
+  it("does not let delayed history suggestions overwrite a user-entered base URL", async () => {
+    const user = userEvent.setup()
+    const historyDeferred = createDeferred<{
+      success: true
+      suggestions: Array<{
+        baseUrl: string
+        lastUsedAt: number
+        useCount: number
+        matchedSourceOrigin?: string
+      }>
+    }>()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions) {
+          return historyDeferred.promise
+        }
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["typed-model"] }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal({
+      sourceText: "API Key: sk-test-delayed-history-fixture",
+      pageUrl: "https://github.com/qixing-jk/all-api-hub/issues/1025",
+    })
+
+    const baseUrlInput = (await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )) as HTMLInputElement
+
+    await user.type(baseUrlInput, "https://typed.example.com/api")
+
+    await act(async () => {
+      historyDeferred.resolve({
+        success: true,
+        suggestions: [
+          {
+            baseUrl: "https://history.example.com/api",
+            lastUsedAt: 2,
+            useCount: 3,
+            matchedSourceOrigin: "https://github.com",
+          },
+        ],
+      })
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "webAiApiCheck:modal.history.trigger",
+        }),
+      ).toBeEnabled()
+    })
+    expect(baseUrlInput.value).toBe("https://typed.example.com/api")
+    expect(
+      getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels).some(
+        (call) =>
+          (
+            call[1] as {
+              baseUrl?: string
+            }
+          ).baseUrl === "https://history.example.com/api",
+      ),
+    ).toBe(false)
+    expect(
+      startProductAnalyticsActionMock.mock.calls.some(
+        ([input]) =>
+          input.actionId ===
+          PRODUCT_ANALYTICS_ACTION_IDS.PrefillApiCredentialBaseUrlFromHistory,
+      ),
+    ).toBe(false)
   })
 
   it("waits for explicit confirmation before auto-fetching models from a history-prefilled base URL", async () => {
@@ -511,6 +608,12 @@ describe("ApiCheckModalHost", () => {
       }),
     ).not.toBeInTheDocument()
     expect(baseUrlInput.value).toBe("https://remove.example.com/api")
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RemoveApiCredentialBaseUrlHistory,
+    })
     expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.RemoveBaseUrlHistory, {
       baseUrl: "https://remove.example.com/api",
       pageUrl: "https://github.com/qixing-jk/all-api-hub/issues/1025",

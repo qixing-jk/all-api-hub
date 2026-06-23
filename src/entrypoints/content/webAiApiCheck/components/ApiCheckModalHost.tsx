@@ -236,6 +236,7 @@ export function ApiCheckModalHost() {
   const [modelIds, setModelIds] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
+  const baseUrlValueRef = useRef("")
 
   /**
    * Auto model-fetch bookkeeping.
@@ -316,6 +317,32 @@ export function ApiCheckModalHost() {
     setProbes(buildProbeState(nextApiType))
     setTestStoppedMessage(null)
   }
+
+  const updateBaseUrl = useCallback((value: string) => {
+    baseUrlValueRef.current = value
+    setBaseUrl(value)
+  }, [])
+
+  const trackBaseUrlHistoryAction = useCallback(
+    (
+      actionId:
+        | typeof PRODUCT_ANALYTICS_ACTION_IDS.PrefillApiCredentialBaseUrlFromHistory
+        | typeof PRODUCT_ANALYTICS_ACTION_IDS.SelectApiCredentialBaseUrlHistory
+        | typeof PRODUCT_ANALYTICS_ACTION_IDS.RemoveApiCredentialBaseUrlHistory,
+    ) => {
+      const tracker = startProductAnalyticsAction({
+        ...contentApiCheckAnalyticsScope,
+        actionId,
+      })
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
+          apiType,
+        },
+      })
+    },
+    [apiType],
+  )
 
   useEffect(() => {
     if (!hasInitializedApiTypeRef.current) {
@@ -416,7 +443,7 @@ export function ApiCheckModalHost() {
       setExtractionMetadata(extraction)
       setBaseUrlHistorySuggestions([])
       historyPrefilledFetchKeyRef.current = null
-      setBaseUrl(nextBaseUrl)
+      updateBaseUrl(nextBaseUrl)
       setApiKey(nextApiKey)
 
       setApiKeyVisible(true)
@@ -457,12 +484,15 @@ export function ApiCheckModalHost() {
           if (!response?.success) return
           const suggestions = response.suggestions ?? []
           setBaseUrlHistorySuggestions(suggestions)
-          if (!nextBaseUrl && suggestions[0]?.baseUrl) {
+          if (!baseUrlValueRef.current.trim() && suggestions[0]?.baseUrl) {
             const historyBaseUrl = suggestions[0].baseUrl
-            setBaseUrl(historyBaseUrl)
+            updateBaseUrl(historyBaseUrl)
             historyPrefilledFetchKeyRef.current = nextApiKey.trim()
               ? `${apiType}::${historyBaseUrl.trim()}::${nextApiKey.trim()}`
               : null
+            trackBaseUrlHistoryAction(
+              PRODUCT_ANALYTICS_ACTION_IDS.PrefillApiCredentialBaseUrlFromHistory,
+            )
           }
         })
         .catch(() => {})
@@ -476,7 +506,7 @@ export function ApiCheckModalHost() {
     return () => {
       window.removeEventListener(API_CHECK_OPEN_MODAL_EVENT, handleOpen as any)
     }
-  }, [apiType])
+  }, [apiType, trackBaseUrlHistoryAction, updateBaseUrl])
 
   const close = () => {
     const reason =
@@ -520,9 +550,9 @@ export function ApiCheckModalHost() {
       candidates: extracted.candidates,
       summary: extracted.summary,
     })
-    if (extracted.baseUrl) setBaseUrl(extracted.baseUrl)
+    if (extracted.baseUrl) updateBaseUrl(extracted.baseUrl)
     if (extracted.apiKey) setApiKey(extracted.apiKey)
-  }, [isOpen, sourceText])
+  }, [isOpen, sourceText, updateBaseUrl])
 
   const recordBaseUrlHistory = useCallback(
     (value: string) => {
@@ -564,6 +594,9 @@ export function ApiCheckModalHost() {
     (value: string) => {
       const normalized = normalizeOpenAiFamilyBaseUrl(value.trim())
       if (!normalized) return
+      trackBaseUrlHistoryAction(
+        PRODUCT_ANALYTICS_ACTION_IDS.RemoveApiCredentialBaseUrlHistory,
+      )
       setBaseUrlHistorySuggestions((current) =>
         current.filter((item) => item.baseUrl !== normalized),
       )
@@ -581,7 +614,7 @@ export function ApiCheckModalHost() {
         })
         .catch(() => {})
     },
-    [pageUrl],
+    [pageUrl, trackBaseUrlHistoryAction],
   )
 
   const renderCandidateButtons = useCallback(
@@ -695,7 +728,10 @@ export function ApiCheckModalHost() {
                   onClick={() => {
                     historyPrefilledFetchKeyRef.current = null
                     setHistoryConfirmationCount((count) => count + 1)
-                    setBaseUrl(suggestion.baseUrl)
+                    updateBaseUrl(suggestion.baseUrl)
+                    trackBaseUrlHistoryAction(
+                      PRODUCT_ANALYTICS_ACTION_IDS.SelectApiCredentialBaseUrlHistory,
+                    )
                     setIsBaseUrlHistoryPickerOpen(false)
                   }}
                 >
@@ -1476,7 +1512,7 @@ export function ApiCheckModalHost() {
                   </div>
                   <Input
                     value={baseUrl}
-                    onChange={(e) => setBaseUrl(e.target.value)}
+                    onChange={(e) => updateBaseUrl(e.target.value)}
                     placeholder="https://example.com/api"
                     rightIcon={renderBaseUrlHistoryPicker()}
                   />
@@ -1484,7 +1520,7 @@ export function ApiCheckModalHost() {
                     "baseUrl",
                     extractionMetadata?.candidates.baseUrls ?? [],
                     baseUrl,
-                    setBaseUrl,
+                    updateBaseUrl,
                   )}
                 </div>
 
