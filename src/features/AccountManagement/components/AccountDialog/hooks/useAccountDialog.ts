@@ -302,6 +302,7 @@ interface AihubmixPostSaveKeyPromptState {
  * @param props.prefill Optional add-mode sponsor prefill.
  * @param props.isOpen Whether the dialog is currently open.
  * @param props.onClose Handler invoked when dialog closes.
+ * @param props.onPostSaveAccountRefresh Optional handler invoked after deferred account refresh completes.
  * @param props.onSuccess Optional handler invoked after successful save.
  * @returns Aggregated state, setters, and handlers powering the dialog UI.
  */

@@ -905,14 +905,26 @@ export const AccountDataProvider = ({
         setAccounts(mergedAccounts)
         const balanceHistoryStore = await dailyBalanceHistoryStorage.getStore()
         const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+        const latestActiveReloadedAccounts = activeReloadedAccounts.filter(
+          (account) =>
+            targetedReloadGenerationByAccountIdRef.current[account.id] ===
+            reloadGeneration,
+        )
+        if (latestActiveReloadedAccounts.length === 0) {
+          return
+        }
+
+        const latestReloadedById = Object.fromEntries(
+          latestActiveReloadedAccounts.map((account) => [account.id, account]),
+        )
         const latestAccounts = accountsRef.current
         const latestKnownIds = new Set(
           latestAccounts.map((account) => account.id),
         )
         const latestMergedAccounts = latestAccounts.map(
-          (account) => reloadedById[account.id] ?? account,
+          (account) => latestReloadedById[account.id] ?? account,
         )
-        for (const account of activeReloadedAccounts) {
+        for (const account of latestActiveReloadedAccounts) {
           if (!latestKnownIds.has(account.id)) {
             latestMergedAccounts.push(account)
           }
@@ -941,7 +953,7 @@ export const AccountDataProvider = ({
             currentDayKey: todayKey,
           }),
         )
-        for (const account of activeReloadedAccounts) {
+        for (const account of latestActiveReloadedAccounts) {
           if (
             targetedReloadGenerationByAccountIdRef.current[account.id] ===
             reloadGeneration
