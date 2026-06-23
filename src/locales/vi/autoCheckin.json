@@ -115,6 +115,11 @@
     "checkinFailed": "Điểm danh thất bại",
     "checkinSuccessful": "Điểm danh thành công",
     "endpointNotSupported": "Giao diện điểm danh này không được hỗ trợ, vui lòng kiểm tra xem loại trang web của tài khoản có giống với trang web thực tế hay không",
+    "nativePageIdentityMismatch": "Trang điểm danh tạm thời đang đăng nhập bằng tài khoản khác. Hãy mở trang điểm danh bằng tài khoản mục tiêu rồi thử lại: {{checkInUrl}}",
+    "nativePageIdentityMissing": "Không thể xác nhận tài khoản đăng nhập trên trang điểm danh tạm thời. Hãy mở trang điểm danh, đăng nhập bằng tài khoản mục tiêu rồi thử lại: {{checkInUrl}}",
+    "nativePageStatusUnconfirmed": "Đã bấm thao tác điểm danh trên trang, nhưng chưa xác nhận được trạng thái của tài khoản mục tiêu. Vui lòng mở trang điểm danh để kiểm tra thủ công: {{checkInUrl}}",
+    "nativePageTargetNotFound": "Không tìm thấy nút điểm danh trên trang. Vui lòng mở trang điểm danh và hoàn tất thủ công: {{checkInUrl}}",
+    "nativePageTriggerFailed": "Không thể kích hoạt thao tác điểm danh trên trang. Vui lòng mở trang điểm danh và hoàn tất thủ công: {{checkInUrl}}",
     "turnstileIncognitoAccessRequired": "Cần cho phép tiện ích mở rộng chạy ở chế độ ẩn danh để nhận Turnstile Token trên trang ẩn danh (kịch bản nhiều tài khoản). Vui lòng bật \"Cho phép chạy ở chế độ ẩn danh\" trong trang quản lý tiện ích mở rộng và thử lại; hoặc mở trang điểm danh theo cách thủ công để hoàn tất xác minh: {{checkInUrl}}",
     "turnstileManualRequired": "Cần hoàn tất xác minh Cloudflare Turnstile, vui lòng mở trang điểm danh để hoàn tất xác minh: {{checkInUrl}}",
     "unknownError": "Đã xảy ra lỗi không xác định"

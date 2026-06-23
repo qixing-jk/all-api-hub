@@ -115,6 +115,11 @@
     "checkinFailed": "チェックインに失敗しました",
     "checkinSuccessful": "チェックインに成功しました",
     "endpointNotSupported": "このチェックインエンドポイントはサポートされていません。アカウントのサイト種別が実際のサイトと一致しているか確認してください。",
+    "nativePageIdentityMismatch": "一時チェックインページは別のアカウントでログインしています。対象アカウントでチェックインページを開いてから再試行してください: {{checkInUrl}}",
+    "nativePageIdentityMissing": "一時チェックインページのログインアカウントを確認できませんでした。チェックインページを開き、対象アカウントでログインしてから再試行してください: {{checkInUrl}}",
+    "nativePageStatusUnconfirmed": "ページ上のチェックイン操作はクリックされましたが、対象アカウントの状態を確認できませんでした。チェックインページを開いて手動で確認してください: {{checkInUrl}}",
+    "nativePageTargetNotFound": "ページ上でチェックインボタンが見つかりませんでした。チェックインページを開いて手動で完了してください: {{checkInUrl}}",
+    "nativePageTriggerFailed": "ページ上のチェックイン操作を実行できませんでした。チェックインページを開いて手動で完了してください: {{checkInUrl}}",
     "turnstileIncognitoAccessRequired": "プライベート一時ウィンドウで Turnstile トークンを取得するには、拡張機能のシークレット / プライベートウィンドウ実行を許可する必要があります（複数アカウントの場面）。この拡張機能の「シークレットモードでの実行を許可」を有効にして再試行するか、チェックインページを開いて認証を完了してください: {{checkInUrl}}",
     "turnstileManualRequired": "Cloudflare Turnstile 認証が必要です。チェックインページを開いて認証を完了してください: {{checkInUrl}}",
     "unknownError": "不明なエラーが発生しました"

@@ -12,6 +12,7 @@ vi.mock("~/services/apiService/common/utils", () => ({
 }))
 
 vi.mock("~/utils/browser/tempWindowFetch", () => ({
+  tempWindowTriggerCheckinPageAction: vi.fn(),
   tempWindowTurnstileFetch: vi.fn(),
 }))
 
@@ -114,6 +115,409 @@ describe("newApiProvider", () => {
   })
 
   describe("checkIn", () => {
+    it("uses native page check-in for narrow dynamic signature failures", async () => {
+      const { fetchApi, fetchApiData } = await import(
+        "~/services/apiService/common/utils"
+      )
+      const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
+        await import("~/utils/browser/tempWindowFetch")
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "missing check-in signature header",
+        data: null,
+      })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: true,
+        reason: "clicked",
+        identity: { userId: "123", user: { id: "123" } },
+        trigger: {
+          status: "clicked",
+          clicked: true,
+          reason: "clicked",
+          detection: {
+            hasTurnstile: false,
+            reasons: [],
+            score: 0,
+            title: "Check in",
+            url: "https://test.com/console/personal",
+          },
+        },
+      })
+      vi.mocked(fetchApiData).mockResolvedValueOnce({
+        stats: { checked_in_today: true },
+      } as any)
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result).toEqual({
+        status: "already_checked",
+        messageKey: "autoCheckin:providerFallback.alreadyCheckedToday",
+        data: expect.objectContaining({
+          reason: "clicked",
+        }),
+      })
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          originUrl: "https://test.com",
+          pageUrl: "https://test.com/console/personal",
+          siteType: SITE_TYPES.NEW_API,
+          expectedUserId: "123",
+          accountId: "test-id",
+          authType: AuthTypeEnum.AccessToken,
+          trigger: { kind: "checkinButton" },
+        }),
+      )
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+    })
+
+    it("uses native page check-in for generic check-in API failures", async () => {
+      const { fetchApi, fetchApiData } = await import(
+        "~/services/apiService/common/utils"
+      )
+      const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
+        await import("~/utils/browser/tempWindowFetch")
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "server rejected the check-in request",
+        data: null,
+      })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: true,
+        reason: "clicked",
+        identity: { userId: "123", user: { id: "123" } },
+      })
+      vi.mocked(fetchApiData).mockResolvedValueOnce({
+        stats: { checked_in_today: true },
+      } as any)
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result.status).toBe("already_checked")
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      "check-in endpoint unsupported",
+      "unauthorized check-in request",
+      "permission denied for check-in",
+      "rate limit exceeded for check-in",
+      "too many requests for check-in",
+    ])(
+      "does not use native page check-in for blocked failure message: %s",
+      async (message) => {
+        const { fetchApi } = await import("~/services/apiService/common/utils")
+        const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
+          await import("~/utils/browser/tempWindowFetch")
+
+        vi.mocked(fetchApi).mockResolvedValueOnce({
+          success: false,
+          message,
+          data: null,
+        })
+
+        const result = await newApiProvider.checkIn(mockAccount)
+
+        expect(result).toEqual({
+          status: "failed",
+          rawMessage: message,
+          messageKey: undefined,
+          data: {
+            success: false,
+            message,
+            data: null,
+          },
+        })
+        expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+        expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+      },
+    )
+
+    it("refuses native page check-in when temp page identity is missing", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { tempWindowTriggerCheckinPageAction } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "missing check-in signature header",
+        data: null,
+      })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: false,
+        reason: "identity_missing",
+        identity: null,
+      })
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result).toEqual({
+        status: "failed",
+        messageKey: "autoCheckin:providerFallback.nativePageIdentityMissing",
+        messageParams: { checkInUrl: "https://test.com/console/personal" },
+        data: { success: false, reason: "identity_missing", identity: null },
+      })
+    })
+
+    it("refuses native page check-in when temp page identity does not match", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { tempWindowTriggerCheckinPageAction } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "missing check-in signature header",
+        data: null,
+      })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: false,
+        reason: "identity_mismatch",
+        identity: { userId: "456", user: { id: "456" } },
+        expectedUserId: "123",
+      })
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result).toEqual({
+        status: "failed",
+        messageKey: "autoCheckin:providerFallback.nativePageIdentityMismatch",
+        messageParams: { checkInUrl: "https://test.com/console/personal" },
+        data: expect.objectContaining({
+          reason: "identity_mismatch",
+          expectedUserId: "123",
+        }),
+      })
+    })
+
+    it("returns manual-required messaging when native page trigger target is missing", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { tempWindowTriggerCheckinPageAction } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "missing check-in signature header",
+        data: null,
+      })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: false,
+        reason: "target_not_found",
+        identity: { userId: "123", user: { id: "123" } },
+        trigger: {
+          status: "target_not_found",
+          clicked: false,
+          reason: "noTarget",
+          detection: {
+            hasTurnstile: false,
+            reasons: [],
+            score: 0,
+            title: "Check in",
+            url: "https://test.com/console/personal",
+          },
+        },
+      })
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result.status).toBe("failed")
+      expect(result.messageKey).toBe(
+        "autoCheckin:providerFallback.nativePageTargetNotFound",
+      )
+      expect(result.messageParams).toEqual({
+        checkInUrl: "https://test.com/console/personal",
+      })
+      expect(result.rawMessage).toBeUndefined()
+    })
+
+    it("maps throttled native page actions to trigger failure messaging", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { tempWindowTriggerCheckinPageAction } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "missing check-in signature header",
+        data: null,
+      })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: false,
+        reason: "throttled",
+        error: "native action recently attempted",
+        identity: { userId: "123", user: { id: "123" } },
+      })
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result.status).toBe("failed")
+      expect(result.messageKey).toBe(
+        "autoCheckin:providerFallback.nativePageTriggerFailed",
+      )
+      expect(result.messageParams).toEqual({
+        checkInUrl: "https://test.com/console/personal",
+      })
+      expect(result.rawMessage).toBe("native action recently attempted")
+      expect(result.rawMessage).not.toBe("missing check-in signature header")
+    })
+
+    it("returns native trigger failure messaging when native page action rejects after response signature failure", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { tempWindowTriggerCheckinPageAction } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "missing check-in signature header",
+        data: null,
+      })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockRejectedValueOnce(
+        new Error("temp window closed"),
+      )
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result).toEqual({
+        status: "failed",
+        messageKey: "autoCheckin:providerFallback.nativePageTriggerFailed",
+        messageParams: { checkInUrl: "https://test.com/console/personal" },
+        rawMessage: "temp window closed",
+      })
+    })
+
+    it("returns manual-required messaging when native click is not confirmed by status polling", async () => {
+      vi.useFakeTimers()
+
+      try {
+        const { fetchApi, fetchApiData } = await import(
+          "~/services/apiService/common/utils"
+        )
+        const { tempWindowTriggerCheckinPageAction } = await import(
+          "~/utils/browser/tempWindowFetch"
+        )
+
+        vi.mocked(fetchApi).mockResolvedValueOnce({
+          success: false,
+          message: "missing check-in signature header",
+          data: null,
+        })
+        vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+          success: true,
+          reason: "clicked",
+          identity: { userId: "123", user: { id: "123" } },
+          trigger: {
+            status: "clicked",
+            clicked: true,
+            reason: "clicked",
+            detection: {
+              hasTurnstile: false,
+              reasons: [],
+              score: 0,
+              title: "Check in",
+              url: "https://test.com/console/personal",
+            },
+          },
+        })
+        vi.mocked(fetchApiData).mockResolvedValue({
+          stats: { checked_in_today: false },
+        } as any)
+
+        const resultPromise = newApiProvider.checkIn(mockAccount)
+        await vi.advanceTimersByTimeAsync(9_000)
+        const result = await resultPromise
+
+        expect(result.status).toBe("failed")
+        expect(result.messageKey).toBe(
+          "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
+        )
+        expect(result.messageParams).toEqual({
+          checkInUrl: "https://test.com/console/personal",
+        })
+        expect(result.rawMessage).toBeUndefined()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("does not add native page identity matching to Turnstile replay failures", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
+        await import("~/utils/browser/tempWindowFetch")
+      const { isAllowedIncognitoAccess } = await import(
+        "~/utils/browser/browserApi"
+      )
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(false)
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: false,
+        error: "Turnstile token not available",
+        turnstile: { status: "timeout", hasTurnstile: true },
+      })
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result.status).toBe("failed")
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    })
+
+    it("uses native page check-in for thrown dynamic signature errors", async () => {
+      const { fetchApi, fetchApiData } = await import(
+        "~/services/apiService/common/utils"
+      )
+      const { tempWindowTriggerCheckinPageAction } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+
+      vi.mocked(fetchApi).mockRejectedValueOnce(
+        new Error("missing check-in signature header"),
+      )
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: true,
+        reason: "clicked",
+        identity: { userId: "123", user: { id: "123" } },
+      })
+      vi.mocked(fetchApiData).mockResolvedValueOnce({
+        stats: { checked_in_today: true },
+      } as any)
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result.status).toBe("already_checked")
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
+    })
+
+    it("returns native trigger failure messaging when native page action rejects after thrown signature error", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { tempWindowTriggerCheckinPageAction } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+
+      vi.mocked(fetchApi).mockRejectedValueOnce(
+        new Error("missing check-in signature header"),
+      )
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockRejectedValueOnce(
+        new Error("native page unavailable"),
+      )
+
+      await expect(newApiProvider.checkIn(mockAccount)).resolves.toEqual({
+        status: "failed",
+        messageKey: "autoCheckin:providerFallback.nativePageTriggerFailed",
+        messageParams: { checkInUrl: "https://test.com/console/personal" },
+        rawMessage: "native page unavailable",
+      })
+    })
+
     it("returns the default success message key when the upstream check-in succeeds without a message", async () => {
       const { fetchApi } = await import("~/services/apiService/common/utils")
 
@@ -822,19 +1226,24 @@ describe("newApiProvider", () => {
 
     it("does not trigger Turnstile flow for non-Turnstile failures", async () => {
       const { fetchApi } = await import("~/services/apiService/common/utils")
-      const { tempWindowTurnstileFetch } = await import(
-        "~/utils/browser/tempWindowFetch"
-      )
+      const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
+        await import("~/utils/browser/tempWindowFetch")
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: false,
         message: "Something went wrong",
         data: null,
       })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: false,
+        reason: "target_not_found",
+        identity: { userId: "123", user: { id: "123" } },
+      })
 
       const result = await newApiProvider.checkIn(mockAccount)
 
       expect(result.status).toBe("failed")
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
     })
 

@@ -1,4 +1,5 @@
 import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/constants/turnstile"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
@@ -25,10 +26,16 @@ import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/p
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import type { TempWindowTurnstileFetch } from "~/types/tempWindowFetch"
+import type {
+  TempWindowCheckinPageAction,
+  TempWindowTurnstileFetch,
+} from "~/types/tempWindowFetch"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 import { isAllowedIncognitoAccess } from "~/utils/browser/browserApi"
-import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
+import {
+  tempWindowTriggerCheckinPageAction,
+  tempWindowTurnstileFetch,
+} from "~/utils/browser/tempWindowFetch"
 import { joinUrl } from "~/utils/core/url"
 
 const NEW_API_MESSAGE_KEYS = {
@@ -36,6 +43,16 @@ const NEW_API_MESSAGE_KEYS = {
     "autoCheckin:providerFallback.turnstileManualRequired",
   turnstileIncognitoAccessRequired:
     "autoCheckin:providerFallback.turnstileIncognitoAccessRequired",
+  nativePageIdentityMissing:
+    "autoCheckin:providerFallback.nativePageIdentityMissing",
+  nativePageIdentityMismatch:
+    "autoCheckin:providerFallback.nativePageIdentityMismatch",
+  nativePageTargetNotFound:
+    "autoCheckin:providerFallback.nativePageTargetNotFound",
+  nativePageTriggerFailed:
+    "autoCheckin:providerFallback.nativePageTriggerFailed",
+  nativePageStatusUnconfirmed:
+    "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
 } as const
 
 /**
@@ -54,6 +71,8 @@ type CheckinResult = AutoCheckinProviderResult
  */
 const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
 const TURNSTILE_ASSIST_TIMEOUT_MS = TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS
+const NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS = 8_000
+const NATIVE_PAGE_STATUS_POLL_INTERVAL_MS = 1_000
 const CHECKIN_STATUS_MONTH_FORMAT_LENGTH = 7
 
 /**
@@ -71,6 +90,106 @@ function isTurnstileRequiredMessage(message: string): boolean {
     message.includes("校验") ||
     message.includes("为空") ||
     message.includes("失败")
+  )
+}
+
+/**
+ * Detect messages that belong to the Turnstile/manual-verification path.
+ */
+function isTurnstileRelatedMessage(message: string): boolean {
+  return message.toLowerCase().includes("turnstile")
+}
+
+/**
+ * Extract a numeric HTTP status code from provider errors when present.
+ */
+function getErrorStatusCode(error: unknown): number | null {
+  if (!error || typeof error !== "object") return null
+  const record = error as Record<string, unknown>
+  return typeof record.statusCode === "number" ? record.statusCode : null
+}
+
+/**
+ * Detect failures where the check-in endpoint itself is unavailable.
+ */
+function isEndpointUnsupportedFailure(params: {
+  message: string
+  error?: unknown
+}): boolean {
+  if (getErrorStatusCode(params.error) === 404) return true
+
+  const normalized = params.message.toLowerCase()
+  return (
+    normalized.includes("404") ||
+    normalized.includes("not found") ||
+    normalized.includes("unsupported") ||
+    normalized.includes("not supported") ||
+    params.message.includes("不支持")
+  )
+}
+
+/**
+ * Detect authentication and permission failures that page clicking should not mask.
+ */
+function isAuthOrPermissionFailureMessage(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes("unauthorized") ||
+    normalized.includes("forbidden") ||
+    normalized.includes("permission") ||
+    normalized.includes("auth") ||
+    normalized.includes("not logged") ||
+    normalized.includes("login required") ||
+    message.includes("未登录") ||
+    message.includes("无权限") ||
+    message.includes("权限")
+  )
+}
+
+/**
+ * Detect rate-limit failures where retrying through a page would add noise.
+ */
+function isRateLimitedMessage(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes("429") ||
+    normalized.includes("rate limit") ||
+    normalized.includes("too many requests") ||
+    normalized.includes("throttle") ||
+    message.includes("频率") ||
+    message.includes("限流") ||
+    message.includes("请求过于频繁")
+  )
+}
+
+/**
+ * Detect direct check-in failures that should keep their original API result.
+ */
+function isNativePageFallbackBlockedFailure(params: {
+  message: string
+  error?: unknown
+}): boolean {
+  return (
+    isAlreadyCheckedMessage(params.message) ||
+    isTurnstileRelatedMessage(params.message) ||
+    isEndpointUnsupportedFailure(params) ||
+    isAuthOrPermissionFailureMessage(params.message) ||
+    isRateLimitedMessage(params.message)
+  )
+}
+
+/**
+ * Decide whether a failed direct check-in should retry through the native page.
+ */
+function shouldAttemptNativePageCheckinFallback(params: {
+  success: boolean
+  message: string
+  error?: unknown
+}): boolean {
+  return (
+    !params.success &&
+    !!params.message &&
+    !isNativePageFallbackBlockedFailure(params)
   )
 }
 
@@ -162,6 +281,33 @@ async function fetchCheckedInTodayStatus(
 
     return undefined
   }
+}
+
+/**
+ * Poll the server-side check-in status after a native page click.
+ */
+async function pollCheckedInTodayStatus(
+  account: SiteAccount,
+): Promise<boolean | undefined> {
+  const deadline = Date.now() + NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS
+  let lastStatus: boolean | undefined
+
+  while (Date.now() <= deadline) {
+    lastStatus = await fetchCheckedInTodayStatus(account)
+    if (lastStatus === true) return true
+
+    const remainingMs = deadline - Date.now()
+    if (remainingMs <= 0) break
+
+    await new Promise((resolve) =>
+      setTimeout(
+        resolve,
+        Math.min(NATIVE_PAGE_STATUS_POLL_INTERVAL_MS, remainingMs),
+      ),
+    )
+  }
+
+  return lastStatus
 }
 
 /**
@@ -272,6 +418,123 @@ type TurnstileAssistedAttempt = {
   assisted: TempWindowTurnstileFetch | null
   usedIncognito: boolean
   incognitoAllowed: boolean | null
+}
+
+/**
+ * Map native page trigger failures to provider-facing fallback keys.
+ */
+function resolveNativePageFailureResult(params: {
+  action: TempWindowCheckinPageAction
+  checkInUrl: string
+}): CheckinResult {
+  const base = {
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    messageParams: { checkInUrl: params.checkInUrl },
+    rawMessage: params.action.error || undefined,
+    data: params.action,
+  } satisfies Partial<CheckinResult>
+
+  if (params.action.reason === "identity_missing") {
+    return {
+      ...base,
+      messageKey: NEW_API_MESSAGE_KEYS.nativePageIdentityMissing,
+    } as CheckinResult
+  }
+
+  if (params.action.reason === "identity_mismatch") {
+    return {
+      ...base,
+      messageKey: NEW_API_MESSAGE_KEYS.nativePageIdentityMismatch,
+    } as CheckinResult
+  }
+
+  if (params.action.reason === "target_not_found") {
+    return {
+      ...base,
+      messageKey: NEW_API_MESSAGE_KEYS.nativePageTargetNotFound,
+    } as CheckinResult
+  }
+
+  if (params.action.reason === "throttled") {
+    return {
+      ...base,
+      messageKey: NEW_API_MESSAGE_KEYS.nativePageTriggerFailed,
+    } as CheckinResult
+  }
+
+  return {
+    ...base,
+    messageKey: NEW_API_MESSAGE_KEYS.nativePageTriggerFailed,
+  } as CheckinResult
+}
+
+/**
+ * Execute the site page's native check-in action and confirm it server-side.
+ */
+async function resolveNativePageCheckinResult(params: {
+  account: SiteAccount
+  responseMessage: string
+}): Promise<CheckinResult> {
+  const checkInUrl = await resolveCheckInUrl(params.account)
+  const expectedUserId = normalizeAccountIdentity(
+    params.account.account_info?.id,
+  )
+
+  if (!expectedUserId) {
+    return {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      messageKey: NEW_API_MESSAGE_KEYS.nativePageIdentityMissing,
+      messageParams: { checkInUrl },
+    }
+  }
+
+  let action: TempWindowCheckinPageAction
+  try {
+    action = await tempWindowTriggerCheckinPageAction({
+      originUrl: params.account.site_url,
+      pageUrl: checkInUrl,
+      requestId: `native-checkin-${params.account.id}-${Date.now()}`,
+      accountId: params.account.id,
+      authType: getEffectiveAuthType(params.account),
+      cookieAuthSessionCookie: params.account.cookieAuth?.sessionCookie,
+      siteType: params.account.site_type,
+      expectedUserId,
+      trigger: resolveTurnstilePreTrigger(params.account),
+    })
+  } catch (error: unknown) {
+    const errorMessage = getProviderErrorMessage(error)
+    return {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      messageKey: NEW_API_MESSAGE_KEYS.nativePageTriggerFailed,
+      messageParams: { checkInUrl },
+      rawMessage: errorMessage || undefined,
+    }
+  }
+
+  if (!action.success || action.reason !== "clicked") {
+    return resolveNativePageFailureResult({
+      action,
+      checkInUrl,
+    })
+  }
+
+  const checkedInToday = await pollCheckedInTodayStatus(params.account)
+  if (checkedInToday === true) {
+    return {
+      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+      messageKey:
+        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+      data: action,
+    }
+  }
+
+  return {
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    messageKey: NEW_API_MESSAGE_KEYS.nativePageStatusUnconfirmed,
+    messageParams: { checkInUrl },
+    rawMessage: action.error || undefined,
+    data: action,
+  }
 }
 
 /**
@@ -523,6 +786,19 @@ async function performCheckin(
 }
 
 /**
+ * Extract a provider error message without assuming the thrown value shape.
+ */
+function getProviderErrorMessage(error: unknown): string {
+  if (typeof error === "string") return error
+  if (error instanceof Error) return error.message
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>
+    if (typeof record.message === "string") return record.message
+  }
+  return ""
+}
+
+/**
  * Provider entry: execute check-in directly and normalize the response.
  */
 async function checkinNewApi(account: SiteAccount): Promise<CheckinResult> {
@@ -549,6 +825,18 @@ async function checkinNewApi(account: SiteAccount): Promise<CheckinResult> {
       })
     }
 
+    if (
+      shouldAttemptNativePageCheckinFallback({
+        success: checkinResponse.success,
+        message: responseMessage,
+      })
+    ) {
+      return await resolveNativePageCheckinResult({
+        account,
+        responseMessage,
+      })
+    }
+
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       rawMessage: responseMessage || undefined,
@@ -558,6 +846,20 @@ async function checkinNewApi(account: SiteAccount): Promise<CheckinResult> {
       data: checkinResponse ?? undefined,
     }
   } catch (error: unknown) {
+    const errorMessage = getProviderErrorMessage(error)
+    if (
+      shouldAttemptNativePageCheckinFallback({
+        success: false,
+        message: errorMessage,
+        error,
+      })
+    ) {
+      return await resolveNativePageCheckinResult({
+        account,
+        responseMessage: errorMessage,
+      })
+    }
+
     return resolveProviderErrorResult({ error })
   }
 }

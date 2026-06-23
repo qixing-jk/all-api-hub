@@ -115,6 +115,11 @@
     "checkinFailed": "簽到失敗",
     "checkinSuccessful": "簽到成功",
     "endpointNotSupported": "不支援該簽到介面，請檢查帳號的站點型別與實際站點是否相同",
+    "nativePageIdentityMismatch": "臨時簽到頁面登入的是另一個帳號。請用目標帳號開啟簽到頁面後重試：{{checkInUrl}}",
+    "nativePageIdentityMissing": "無法確認臨時簽到頁面的登入帳號。請開啟簽到頁面並使用目標帳號登入後重試：{{checkInUrl}}",
+    "nativePageStatusUnconfirmed": "已點擊頁面簽到操作，但未確認目標帳號完成簽到。請開啟簽到頁面手動確認：{{checkInUrl}}",
+    "nativePageTargetNotFound": "未在頁面上找到簽到按鈕。請開啟簽到頁面手動完成簽到：{{checkInUrl}}",
+    "nativePageTriggerFailed": "無法觸發頁面簽到操作。請開啟簽到頁面手動完成簽到：{{checkInUrl}}",
     "turnstileIncognitoAccessRequired": "需要允許擴充套件在無痕模式執行，才能在無痕頁面獲取 Turnstile Token（多帳號場景）。請在擴充套件管理頁開啟“允許在無痕模式執行”後重試；或手動開啟簽到頁面完成驗證：{{checkInUrl}}",
     "turnstileManualRequired": "需要完成 Cloudflare Turnstile 驗證，請開啟簽到頁面完成驗證：{{checkInUrl}}",
     "unknownError": "發生未知錯誤"

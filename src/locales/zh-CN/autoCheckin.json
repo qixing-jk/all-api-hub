@@ -115,6 +115,11 @@
     "checkinFailed": "签到失败",
     "checkinSuccessful": "签到成功",
     "endpointNotSupported": "不支持该签到接口，请检查账号的站点类型与实际站点是否相同",
+    "nativePageIdentityMismatch": "临时签到页面登录的是另一个账号。请用目标账号打开签到页面后重试：{{checkInUrl}}",
+    "nativePageIdentityMissing": "无法确认临时签到页面的登录账号。请打开签到页面并使用目标账号登录后重试：{{checkInUrl}}",
+    "nativePageStatusUnconfirmed": "已点击页面签到操作，但未确认目标账号完成签到。请打开签到页面手动确认：{{checkInUrl}}",
+    "nativePageTargetNotFound": "未在页面上找到签到按钮。请打开签到页面手动完成签到：{{checkInUrl}}",
+    "nativePageTriggerFailed": "无法触发页面签到操作。请打开签到页面手动完成签到：{{checkInUrl}}",
     "turnstileIncognitoAccessRequired": "需要允许扩展在无痕模式运行，才能在无痕页面获取 Turnstile Token（多账号场景）。请在扩展管理页开启“允许在无痕模式运行”后重试；或手动打开签到页面完成验证：{{checkInUrl}}",
     "turnstileManualRequired": "需要完成 Cloudflare Turnstile 验证，请打开签到页面完成验证：{{checkInUrl}}",
     "unknownError": "发生未知错误"

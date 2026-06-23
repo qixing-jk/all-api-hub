@@ -26,6 +26,31 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.endpointNotSupported",
         messageParams,
       )
+    case "autoCheckin:providerFallback.nativePageIdentityMismatch":
+      return t(
+        "autoCheckin:providerFallback.nativePageIdentityMismatch",
+        messageParams,
+      )
+    case "autoCheckin:providerFallback.nativePageIdentityMissing":
+      return t(
+        "autoCheckin:providerFallback.nativePageIdentityMissing",
+        messageParams,
+      )
+    case "autoCheckin:providerFallback.nativePageStatusUnconfirmed":
+      return t(
+        "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
+        messageParams,
+      )
+    case "autoCheckin:providerFallback.nativePageTargetNotFound":
+      return t(
+        "autoCheckin:providerFallback.nativePageTargetNotFound",
+        messageParams,
+      )
+    case "autoCheckin:providerFallback.nativePageTriggerFailed":
+      return t(
+        "autoCheckin:providerFallback.nativePageTriggerFailed",
+        messageParams,
+      )
     case "autoCheckin:providerFallback.unknownError":
       return t("autoCheckin:providerFallback.unknownError", messageParams)
     case "autoCheckin:providerFallback.turnstileManualRequired":

@@ -117,6 +117,11 @@
     "checkinFailed": "Check-in failed",
     "checkinSuccessful": "Check-in successful",
     "endpointNotSupported": "This check-in endpoint is not supported. Please check if your account's site type is the same as the actual site.",
+    "nativePageIdentityMismatch": "The temporary check-in page is logged in as a different account. Open the check-in page with the target account, then retry: {{checkInUrl}}",
+    "nativePageIdentityMissing": "The temporary check-in page login could not be confirmed. Open the check-in page, sign in with the target account, then retry: {{checkInUrl}}",
+    "nativePageStatusUnconfirmed": "The page check-in action was clicked, but the target account status was not confirmed. Please open the check-in page and check manually: {{checkInUrl}}",
+    "nativePageTargetNotFound": "The check-in button could not be found on the page. Please open the check-in page and complete check-in manually: {{checkInUrl}}",
+    "nativePageTriggerFailed": "The page check-in action could not be triggered. Please open the check-in page and complete check-in manually: {{checkInUrl}}",
     "turnstileIncognitoAccessRequired": "The extension must be allowed to run in Incognito/Private windows to fetch the Turnstile token in a private temporary window (multi-account scenario). Please enable \"Allow in incognito\" for this extension and retry, or open the check-in page to complete verification: {{checkInUrl}}",
     "turnstileManualRequired": "Cloudflare Turnstile verification is required. Please open the check-in page to complete verification: {{checkInUrl}}",
     "unknownError": "Unknown error occurred"
