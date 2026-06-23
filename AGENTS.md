@@ -193,6 +193,11 @@ Treat telemetry and settings discoverability as related release-readiness checks
 - Before deleting an old path, verify inbound references, impacted site types or adapters, and the relevant validation coverage.
 - For scout-style cleanup in this repo, anchor the scope to the current task or current branch diff. Prefer small behavior-preserving improvements in touched files, such as extracting a tiny repeated helper, clarifying local naming, or replacing duplicated runtime literals with an existing or task-scoped constant. Validate the affected path with the same gate as the main change.
 
+### Maintainability Gate
+
+- Before handoff for non-trivial code changes, inspect the task-scoped diff for repeated logic, duplicated runtime literals, weak fallback propagation, oversized components or functions, and missed reuse of existing helpers or components. Fix low-risk issues inside the touched scope; if cleanup would broaden scope or change behavior, report it as follow-up instead of silently leaving it.
+- For non-trivial implementation work, include a maintainability decision in the final handoff: what was reused, what was extracted or centralized, and what was intentionally left because it would exceed task scope.
+
 ### Comments and User Feedback
 
 - Add brief inline comments or short code-block comments when non-obvious intent, invariants, edge cases, or protocol/browser constraints need clarification; do not narrate obvious code.
