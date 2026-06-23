@@ -55,10 +55,12 @@ const {
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
-  const promise = new Promise<T>((promiseResolve) => {
+  let reject!: (error: unknown) => void
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
     resolve = promiseResolve
+    reject = promiseReject
   })
-  return { promise, resolve }
+  return { promise, resolve, reject }
 }
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -1665,6 +1667,137 @@ describe("ApiCheckModalHost", () => {
     expect(await within(probeCard).findByText("Retry OK")).toBeInTheDocument()
   })
 
+  it("ignores a stopped probe failure response and cancel transport errors", async () => {
+    const user = userEvent.setup()
+    const probeDeferred = createDeferred<ApiCheckRunProbeResponse>()
+
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+
+        if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
+          throw new Error("cancel transport failed")
+        }
+
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return await probeDeferred.promise
+        }
+
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-secret-fixture")
+
+    const probeCard = await screen.findByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+    await user.click(
+      await within(probeCard).findByRole("button", {
+        name: "webAiApiCheck:modal.actions.stopTest",
+      }),
+    )
+
+    await act(async () => {
+      probeDeferred.resolve({
+        success: false,
+        error: "Should not show",
+      })
+    })
+
+    expect(
+      within(probeCard).queryByText("Should not show"),
+    ).not.toBeInTheDocument()
+    expect(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.retry",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("ignores a stopped probe rejected request", async () => {
+    const user = userEvent.setup()
+    const probeDeferred = createDeferred<ApiCheckRunProbeResponse>()
+
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+
+        if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
+          return { success: true, cancelled: true }
+        }
+
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return await probeDeferred.promise
+        }
+
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-secret-fixture")
+
+    const probeCard = await screen.findByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+    await user.click(
+      await within(probeCard).findByRole("button", {
+        name: "webAiApiCheck:modal.actions.stopTest",
+      }),
+    )
+
+    await act(async () => {
+      probeDeferred.reject(new Error("probe transport failed"))
+    })
+
+    expect(
+      within(probeCard).queryByText(
+        "webAiApiCheck:modal.errors.runProbeFailed",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.retry",
+      }),
+    ).toBeInTheDocument()
+  })
+
   it("maps structured probe HTTP status to an auth analytics failure", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
@@ -2134,6 +2267,18 @@ describe("ApiCheckModalHost", () => {
         screen.getByText("webAiApiCheck:modal.actions.test"),
       ).toBeInTheDocument()
     })
+  })
+
+  it("closes the modal when the backdrop is clicked while probes are idle", async () => {
+    await openModal()
+
+    fireEvent.click(
+      await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.backdrop),
+    )
+
+    expect(
+      screen.queryByTestId(WEB_AI_API_CHECK_TEST_IDS.modal),
+    ).not.toBeInTheDocument()
   })
 
   it("falls back to the local probe error when the background probe call throws", async () => {
