@@ -202,7 +202,7 @@ export function ApiCheckModalHost() {
   const [apiKey, setApiKey] = useState("")
   const [extractionMetadata, setExtractionMetadata] =
     useState<ApiCheckOpenModalDetail["extraction"]>(undefined)
-  const [apiKeyVisible, setApiKeyVisible] = useState(false)
+  const [apiKeyVisible, setApiKeyVisible] = useState(true)
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     API_TYPES.OPENAI_COMPATIBLE,
   )
@@ -389,7 +389,7 @@ export function ApiCheckModalHost() {
       setBaseUrl(nextBaseUrl)
       setApiKey(nextApiKey)
 
-      setApiKeyVisible(false)
+      setApiKeyVisible(true)
       setModelId("")
       setModelIds([])
       setFetchModelsError(null)

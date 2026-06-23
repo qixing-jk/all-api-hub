@@ -227,6 +227,25 @@ describe("ApiCheckModalHost", () => {
     expect(apiKeyInput.value).toBe("")
   })
 
+  it("shows the extracted API key by default", async () => {
+    await openModal({
+      sourceText:
+        "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-visible-fixture",
+    })
+
+    const apiKeyInput = (await screen.findByPlaceholderText(
+      "sk-...",
+    )) as HTMLInputElement
+
+    expect(apiKeyInput.value).toBe("sk-test-visible-fixture")
+    expect(apiKeyInput).toHaveAttribute("type", "text")
+    expect(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.hideKey",
+      }),
+    ).toBeInTheDocument()
+  })
+
   it("tracks modal open with safe credential presence insights", async () => {
     const sourceText =
       "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-open-fixture"
