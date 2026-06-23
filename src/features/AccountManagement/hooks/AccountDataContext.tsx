@@ -180,6 +180,7 @@ interface AccountDataContextType {
   unpinAccount: (id: string) => Promise<boolean>
   togglePinAccount: (id: string) => Promise<boolean>
   loadAccountData: () => Promise<void>
+  reloadAccountsById: (accountIds: string[]) => Promise<void>
   handleRefresh: (force?: boolean) => Promise<{
     success: number
     failed: number
@@ -846,9 +847,8 @@ export const AccountDataProvider = ({
     void checkCurrentTab()
   }, [accounts, checkCurrentTab, hasLoadedAccountData])
 
-  // 监听后台自动刷新的更新通知
-  useEffect(() => {
-    const reloadAccountsById = async (accountIds: string[]) => {
+  const reloadAccountsById = useCallback(
+    async (accountIds: string[]) => {
       const uniqueIds = Array.from(
         new Set(
           accountIds.filter(
@@ -959,8 +959,17 @@ export const AccountDataProvider = ({
         )
         await loadAccountData()
       }
-    }
+    },
+    [
+      buildDisplayDataWithBalanceHistory,
+      estimatedTodayIncomeEnabled,
+      loadAccountData,
+      tagStore,
+    ],
+  )
 
+  // 监听后台自动刷新的更新通知
+  useEffect(() => {
     return onRuntimeMessage((message: any) => {
       if (
         message.type === "AUTO_REFRESH_UPDATE" &&
@@ -974,19 +983,17 @@ export const AccountDataProvider = ({
         loadAccountData()
       }
 
-      if (message?.action === RuntimeActionIds.AutoCheckinRunCompleted) {
+      if (
+        message?.action === RuntimeActionIds.AutoCheckinRunCompleted ||
+        message?.action === RuntimeActionIds.AccountRefreshCompleted
+      ) {
         const updatedAccountIds = Array.isArray(message.updatedAccountIds)
           ? message.updatedAccountIds
           : []
         void reloadAccountsById(updatedAccountIds)
       }
     })
-  }, [
-    buildDisplayDataWithBalanceHistory,
-    estimatedTodayIncomeEnabled,
-    loadAccountData,
-    tagStore,
-  ])
+  }, [loadAccountData, reloadAccountsById])
 
   const handleSort = useCallback(
     (field: SortField) => {
@@ -1373,6 +1380,7 @@ export const AccountDataProvider = ({
       unpinAccount,
       togglePinAccount,
       loadAccountData,
+      reloadAccountsById,
       handleRefresh,
       handleRefreshDisabledAccounts,
       handleSort,
@@ -1413,6 +1421,7 @@ export const AccountDataProvider = ({
       unpinAccount,
       togglePinAccount,
       loadAccountData,
+      reloadAccountsById,
       handleRefresh,
       handleRefreshDisabledAccounts,
       handleSort,

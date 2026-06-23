@@ -1958,6 +1958,52 @@ describe("AccountDataContext refresh orchestration", () => {
 
     expect(initialLoadCalls).toBeGreaterThan(0)
   })
+
+  it("reloads a saved account into display data after a post-save refresh notification", async () => {
+    mockGetAllAccounts.mockResolvedValue([
+      { id: "saved-account-id", name: "before", last_sync_time: 0 },
+    ])
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().displayData).toEqual([
+        expect.objectContaining({
+          id: "saved-account-id",
+          name: "before",
+          last_sync_time: 0,
+        }),
+      ])
+    })
+
+    mockGetAccountById.mockResolvedValueOnce({
+      id: "saved-account-id",
+      name: "after",
+      last_sync_time: 1_710_123_456_789,
+    })
+
+    const listener = (globalThis as any).__accountDataContextRuntimeListener as
+      | ((message: any) => void)
+      | undefined
+    expect(listener).toBeTypeOf("function")
+
+    await act(async () => {
+      listener!({
+        action: RuntimeActionIds.AccountRefreshCompleted,
+        updatedAccountIds: ["saved-account-id"],
+      })
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().displayData).toEqual([
+        expect.objectContaining({
+          id: "saved-account-id",
+          name: "after",
+          last_sync_time: 1_710_123_456_789,
+        }),
+      ])
+    })
+  })
 })
 
 describe("AccountDataContext sorting behavior", () => {

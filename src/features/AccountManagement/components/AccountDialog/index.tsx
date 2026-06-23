@@ -83,6 +83,7 @@ export default function AccountDialog({
     createTag,
     renameTag,
     deleteTag,
+    reloadAccountsById,
   } = useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
 
@@ -94,6 +95,7 @@ export default function AccountDialog({
     mode,
     account,
     prefill,
+    onPostSaveAccountRefresh: reloadAccountsById,
     onSuccess,
   })
 

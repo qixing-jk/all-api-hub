@@ -3,6 +3,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import {
@@ -47,6 +48,7 @@ const {
   mockOpenDefaultTokenQuickCreateDialogForAccount,
   mockGetManagedSiteConfig,
   mockOpenSettingsTab,
+  mockSendRuntimeMessage,
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
 } = vi.hoisted(() => ({
@@ -59,6 +61,7 @@ const {
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
   mockGetManagedSiteConfig: vi.fn(),
   mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
+  mockSendRuntimeMessage: vi.fn().mockResolvedValue(undefined),
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
 }))
@@ -144,7 +147,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     getAllTabs: vi.fn(async () => []),
     onTabActivated: vi.fn(() => () => {}),
     onTabUpdated: vi.fn(() => () => {}),
-    sendRuntimeMessage: vi.fn(),
+    sendRuntimeMessage: mockSendRuntimeMessage,
   }
 })
 
@@ -196,12 +199,16 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
   })
 
-  const renderAddHook = (options?: { onSuccess?: ReturnType<typeof vi.fn> }) =>
+  const renderAddHook = (options?: {
+    onPostSaveAccountRefresh?: ReturnType<typeof vi.fn>
+    onSuccess?: ReturnType<typeof vi.fn>
+  }) =>
     renderHook(() =>
       useAccountDialog({
         mode: DIALOG_MODES.ADD,
         isOpen: true,
         onClose: vi.fn(),
+        onPostSaveAccountRefresh: options?.onPostSaveAccountRefresh,
         onSuccess: options?.onSuccess ?? vi.fn(),
       }),
     )
@@ -456,6 +463,39 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
     await waitFor(() => {
       expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true)
+    })
+  })
+
+  it("notifies open account-management surfaces after a deferred post-save refresh updates data", async () => {
+    const onPostSaveAccountRefresh = vi.fn().mockResolvedValue(undefined)
+    vi.spyOn(accountStorage, "refreshAccount").mockResolvedValue({
+      account: buildSiteAccount({ id: "saved-account-id" }),
+      refreshed: true,
+    })
+
+    const { result } = renderAddHook({ onPostSaveAccountRefresh })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(onPostSaveAccountRefresh).toHaveBeenCalledWith([
+        "saved-account-id",
+      ])
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+        {
+          action: RuntimeActionIds.AccountRefreshCompleted,
+          updatedAccountIds: ["saved-account-id"],
+        },
+        { maxAttempts: 1 },
+      )
     })
   })
 

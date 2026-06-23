@@ -78,6 +78,9 @@ describe("runtimeActions registry and helpers", () => {
     expect(RuntimeActionIds.OpenFeedbackBugReport).toBe(
       "feedback:openBugReport",
     )
+    expect(RuntimeActionIds.AccountRefreshCompleted).toBe(
+      "accountRefresh:completed",
+    )
     expect(RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots).toBe(
       "balanceHistory:debugSeedEstimateSnapshots",
     )
