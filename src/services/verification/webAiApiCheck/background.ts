@@ -339,19 +339,26 @@ export async function resolveWebAiApiCheckRunProbeMessage(
 export async function resolveWebAiApiCheckCancelRunProbeMessage(
   request: ApiCheckCancelRunProbeRequest,
 ): Promise<ApiCheckCancelRunProbeResponse> {
-  const runId = request.runId.trim()
-  if (!runId) {
+  try {
+    const runId = typeof request.runId === "string" ? request.runId.trim() : ""
+    if (!runId) {
+      return { success: true, cancelled: false }
+    }
+
+    const abortController = activeProbeAbortControllers.get(runId)
+    if (!abortController) {
+      return { success: true, cancelled: false }
+    }
+
+    abortController.abort()
+    activeProbeAbortControllers.delete(runId)
+    return { success: true, cancelled: true }
+  } catch (error) {
+    logger.error("ApiCheck cancel message handling failed", {
+      message: toSanitizedErrorSummary(error, []),
+    })
     return { success: true, cancelled: false }
   }
-
-  const abortController = activeProbeAbortControllers.get(runId)
-  if (!abortController) {
-    return { success: true, cancelled: false }
-  }
-
-  abortController.abort()
-  activeProbeAbortControllers.delete(runId)
-  return { success: true, cancelled: true }
 }
 
 /**

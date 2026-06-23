@@ -789,7 +789,11 @@ export function ApiCheckModalHost() {
           cancelledProbeRunIdsRef.current.has(runId) ||
           options.shouldIgnoreResult?.()
         ) {
-          setProbes((prev) => markProbeNotRunning(prev, probeId))
+          setProbes((prev) =>
+            activeProbeRunIdsRef.current.get(probeId) === runId
+              ? markProbeNotRunning(prev, probeId)
+              : prev,
+          )
           return null
         }
         setProbes((prev) =>
@@ -834,7 +838,11 @@ export function ApiCheckModalHost() {
         cancelledProbeRunIdsRef.current.has(runId) ||
         options.shouldIgnoreResult?.()
       ) {
-        setProbes((prev) => markProbeNotRunning(prev, probeId))
+        setProbes((prev) =>
+          activeProbeRunIdsRef.current.get(probeId) === runId
+            ? markProbeNotRunning(prev, probeId)
+            : prev,
+        )
         return null
       }
 
@@ -871,7 +879,11 @@ export function ApiCheckModalHost() {
         cancelledProbeRunIdsRef.current.has(runId) ||
         options.shouldIgnoreResult?.()
       ) {
-        setProbes((prev) => markProbeNotRunning(prev, probeId))
+        setProbes((prev) =>
+          activeProbeRunIdsRef.current.get(probeId) === runId
+            ? markProbeNotRunning(prev, probeId)
+            : prev,
+        )
         return null
       }
       setProbes((prev) =>
@@ -993,7 +1005,7 @@ export function ApiCheckModalHost() {
           (result) => result.status === "fail",
         ).length
         const skippedCount = Math.max(
-          probeDefinitions.length - results.length,
+          probeDefinitions.length - successCount - failureCount,
           0,
         )
 

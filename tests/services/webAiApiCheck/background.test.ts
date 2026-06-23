@@ -4,6 +4,12 @@ import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/events"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
 
+const { onWebAiApiCheckMessageMock } = vi.hoisted(() => ({
+  onWebAiApiCheckMessageMock: vi.fn(
+    (_type: string, _handler: (...args: any[]) => unknown) => vi.fn(),
+  ),
+}))
+
 function createDeferred<T>() {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((promiseResolve) => {
@@ -22,6 +28,16 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
     userPreferences: {
       getPreferences: vi.fn(),
     },
+  }
+})
+
+vi.mock("~/services/verification/webAiApiCheck/messaging", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/services/verification/webAiApiCheck/messaging")
+  >("~/services/verification/webAiApiCheck/messaging")
+  return {
+    ...actual,
+    onWebAiApiCheckMessage: onWebAiApiCheckMessageMock,
   }
 })
 
@@ -557,6 +573,20 @@ describe("webAiApiCheck background handlers", () => {
     expect(secondCancelResponse).toEqual({ success: true, cancelled: false })
   })
 
+  it("cancelRunProbe rejects malformed run ids without throwing", async () => {
+    vi.resetModules()
+
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+
+    await expect(
+      background.resolveWebAiApiCheckCancelRunProbeMessage({
+        runId: undefined,
+      } as any),
+    ).resolves.toEqual({ success: true, cancelled: false })
+  })
+
   it("runProbe sanitizes apiKey when probe execution throws", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } = await import(
@@ -825,5 +855,31 @@ describe("webAiApiCheck background handlers", () => {
       success: false,
       error: "Failed to handle request",
     })
+  })
+
+  it("registers the cancel-run-probe background message handler", async () => {
+    vi.resetModules()
+    onWebAiApiCheckMessageMock.mockClear()
+
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+
+    background.setupWebAiApiCheckMessagingListeners()
+    background.setupWebAiApiCheckMessagingListeners()
+
+    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(5)
+    expect(
+      onWebAiApiCheckMessageMock.mock.calls.map((call) => call[0]),
+    ).toEqual([
+      WebAiApiCheckMessageTypes.ShouldPrompt,
+      WebAiApiCheckMessageTypes.FetchModels,
+      WebAiApiCheckMessageTypes.RunProbe,
+      WebAiApiCheckMessageTypes.CancelRunProbe,
+      WebAiApiCheckMessageTypes.SaveProfile,
+    ])
   })
 })
