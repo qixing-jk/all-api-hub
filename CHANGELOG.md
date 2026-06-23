@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.48.0](https://github.com/qixing-jk/all-api-hub/compare/v3.47.0...v3.48.0) (2026-06-23)
+
+
+### Features
+
+* **key-management:** batch save keys to api credentials ([#989](https://github.com/qixing-jk/all-api-hub/issues/989)) ([520249d](https://github.com/qixing-jk/all-api-hub/commit/520249df9ac50f4aff0fa0218de97c36d6027318))
+* **model-list:** filter and sort by verification results ([#1027](https://github.com/qixing-jk/all-api-hub/issues/1027)) ([cce8914](https://github.com/qixing-jk/all-api-hub/commit/cce89140ef023a89ce7da318de84a3b4b392a82f))
+* **model-sync:** add per-channel timeout ([#1022](https://github.com/qixing-jk/all-api-hub/issues/1022)) ([78b027c](https://github.com/qixing-jk/all-api-hub/commit/78b027cd9bbff2adaaf7b2277e2fbfb03de5cecc))
+* **updates:** support browser store update checks ([#1010](https://github.com/qixing-jk/all-api-hub/issues/1010)) ([f63db80](https://github.com/qixing-jk/all-api-hub/commit/f63db809f9c5dc09d7893034dd26eb32b09a5634))
+* **web-ai-api-check:** allow cancelling availability tests and show API keys by default ([#1031](https://github.com/qixing-jk/all-api-hub/issues/1031)) ([6d771f5](https://github.com/qixing-jk/all-api-hub/commit/6d771f58e7ebad7bc39187f1786650d672a20349))
+
+
+### Bug Fixes
+
+* **account:** add failure diagnostics analytics ([#1020](https://github.com/qixing-jk/all-api-hub/issues/1020)) ([4a7fba5](https://github.com/qixing-jk/all-api-hub/commit/4a7fba510a9d3da5d2c3b464f07cfacaef26b26b))
+* **account:** reflect post-save refresh updates ([#1033](https://github.com/qixing-jk/all-api-hub/issues/1033)) ([e24b5e8](https://github.com/qixing-jk/all-api-hub/commit/e24b5e8cb1208ecc93a113878762656c66989cba))
+* **accounts:** preserve cookie session for key management ([#1023](https://github.com/qixing-jk/all-api-hub/issues/1023)) ([d80e7f4](https://github.com/qixing-jk/all-api-hub/commit/d80e7f414725fed25d3aa15ac1d266b17f792427))
+* **analytics:** capture background events directly ([#1028](https://github.com/qixing-jk/all-api-hub/issues/1028)) ([85c06fd](https://github.com/qixing-jk/all-api-hub/commit/85c06fd91cf7401a097965c6eac5d84cbfbc062e))
+* **analytics:** summarize sponsor recommendation impressions ([#1026](https://github.com/qixing-jk/all-api-hub/issues/1026)) ([d385645](https://github.com/qixing-jk/all-api-hub/commit/d385645c048b756755e3ece114a8c1636d861a73))
+* **api-profiles:** clarify credential library guidance ([#986](https://github.com/qixing-jk/all-api-hub/issues/986)) ([2f122a1](https://github.com/qixing-jk/all-api-hub/commit/2f122a1ed172a056e4dfc6d8eae715bafacf9560))
+* **model-sync:** avoid duplicate throttling and poll progress ([#1018](https://github.com/qixing-jk/all-api-hub/issues/1018)) ([a4a1d2c](https://github.com/qixing-jk/all-api-hub/commit/a4a1d2cec06a5b0d050f9e8618fe8380285936fe))
+* **model-sync:** guide disabled auto sync setup ([#1029](https://github.com/qixing-jk/all-api-hub/issues/1029)) ([3faf4f6](https://github.com/qixing-jk/all-api-hub/commit/3faf4f6ca03b35380fdcfaac9a6190f377e88ebd))
+* **runtime:** translate model sync runtime errors ([#1016](https://github.com/qixing-jk/all-api-hub/issues/1016)) ([8e4990a](https://github.com/qixing-jk/all-api-hub/commit/8e4990acd5e19c820c54524bc0afcbc0dc5374b1))
+* **webdav:** probe collection connections with propfind ([#982](https://github.com/qixing-jk/all-api-hub/issues/982)) ([b3bb4cd](https://github.com/qixing-jk/all-api-hub/commit/b3bb4cd34c85fee34ff7e2edc6d306502008afd4))
+
 ## [3.47.0](https://github.com/qixing-jk/all-api-hub/compare/v3.46.0...v3.47.0) (2026-06-16)
 
 
