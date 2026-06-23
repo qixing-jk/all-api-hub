@@ -19,6 +19,7 @@ const {
   performTempFetchHandlerMock,
   sendRuntimeMessageMock,
   shieldBypassHandlerMock,
+  triggerCheckinHandlerMock,
   turnstileHandlerMock,
   waitUserInfoHandlerMock,
 } = vi.hoisted(() => ({
@@ -37,6 +38,7 @@ const {
   performTempFetchHandlerMock: vi.fn(() => "temp-fetch"),
   sendRuntimeMessageMock: vi.fn(),
   shieldBypassHandlerMock: vi.fn(() => "shield"),
+  triggerCheckinHandlerMock: vi.fn(() => "trigger-checkin"),
   turnstileHandlerMock: vi.fn(() => "turnstile"),
   waitUserInfoHandlerMock: vi.fn(() => "wait-user"),
 }))
@@ -63,6 +65,7 @@ vi.mock("~/entrypoints/content/messageHandlers/handlers", () => ({
   handleGetUserFromLocalStorage: getUserHandlerMock,
   handlePerformTempWindowFetch: performTempFetchHandlerMock,
   handleShowShieldBypassUi: shieldBypassHandlerMock,
+  handleTriggerCheckinPageAction: triggerCheckinHandlerMock,
   handleWaitAndGetUserInfo: waitUserInfoHandlerMock,
   handleWaitForTurnstileToken: turnstileHandlerMock,
 }))
@@ -327,6 +330,13 @@ describe("cloudflare guard utilities and handlers", () => {
         sendResponse,
       ),
     ).toBe("turnstile")
+    expect(
+      listener(
+        { action: RuntimeActionIds.ContentTriggerCheckinPageAction },
+        null,
+        sendResponse,
+      ),
+    ).toBe("trigger-checkin")
     expect(
       listener(
         { action: RuntimeActionIds.ContentWaitAndGetUserInfo },

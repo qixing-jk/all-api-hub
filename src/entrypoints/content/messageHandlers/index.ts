@@ -7,6 +7,7 @@ import {
   handleGetUserFromLocalStorage,
   handlePerformTempWindowFetch,
   handleShowShieldBypassUi,
+  handleTriggerCheckinPageAction,
   handleWaitAndGetUserInfo,
   handleWaitForTurnstileToken,
 } from "~/entrypoints/content/messageHandlers/handlers"
@@ -37,6 +38,10 @@ export function setupContentMessageHandlers() {
 
     if (request.action === RuntimeActionIds.ContentWaitForTurnstileToken) {
       return handleWaitForTurnstileToken(request, sendResponse)
+    }
+
+    if (request.action === RuntimeActionIds.ContentTriggerCheckinPageAction) {
+      return handleTriggerCheckinPageAction(request, sendResponse)
     }
 
     if (request.action === RuntimeActionIds.ContentWaitAndGetUserInfo) {

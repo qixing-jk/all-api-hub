@@ -1,5 +1,9 @@
-import { waitForTurnstileToken } from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
+import {
+  triggerCheckinPageAction,
+  waitForTurnstileToken,
+} from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
 import type {
+  CheckinPageActionTriggerResult,
   TurnstilePreTrigger,
   TurnstileTokenWaitResult,
 } from "~/types/turnstile"
@@ -14,6 +18,15 @@ type WaitForTurnstileTokenRequest = {
 
 type WaitForTurnstileTokenResponse =
   | ({ success: true } & TurnstileTokenWaitResult)
+  | { success: false; error: string }
+
+type TriggerCheckinPageActionRequest = {
+  requestId?: string
+  trigger?: TurnstilePreTrigger
+}
+
+type TriggerCheckinPageActionResponse =
+  | ({ success: true } & CheckinPageActionTriggerResult)
   | { success: false; error: string }
 
 /**
@@ -58,5 +71,40 @@ export function handleWaitForTurnstileToken(
   }
 
   void perform()
+  return true
+}
+
+/**
+ * Handle native page check-in action trigger requests.
+ *
+ * This only clicks the page action. It deliberately does not decide whether the
+ * account is checked in.
+ */
+export function handleTriggerCheckinPageAction(
+  request: TriggerCheckinPageActionRequest,
+  sendResponse: (res: TriggerCheckinPageActionResponse) => void,
+) {
+  try {
+    const result = triggerCheckinPageAction({
+      requestId: request.requestId,
+      trigger: request.trigger,
+    })
+
+    logger.debug("Check-in page action trigger completed", {
+      requestId: request.requestId ?? null,
+      status: result.status,
+      reason: result.reason,
+      clicked: result.clicked,
+    })
+
+    sendResponse({ success: true, ...result })
+  } catch (error) {
+    logger.warn("Check-in page action trigger failed", {
+      requestId: request.requestId ?? null,
+      error: getErrorMessage(error),
+    })
+    sendResponse({ success: false, error: getErrorMessage(error) })
+  }
+
   return true
 }

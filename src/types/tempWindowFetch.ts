@@ -1,6 +1,10 @@
+import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiErrorCode } from "~/services/apiTransport/errors"
 import type { AuthTypeEnum } from "~/types/index"
-import type { TurnstilePreTrigger } from "~/types/turnstile"
+import type {
+  CheckinPageActionTriggerResult,
+  TurnstilePreTrigger,
+} from "~/types/turnstile"
 
 export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
 
@@ -53,6 +57,35 @@ export interface TempWindowTurnstileFetchParams extends TempWindowFetchParams {
   turnstilePreTrigger?: TurnstilePreTrigger
 }
 
+export type TempWindowCheckinPageActionFailureReason =
+  | "clicked"
+  | "identity_missing"
+  | "identity_mismatch"
+  | "invalid_request"
+  | "target_not_found"
+  | "throttled"
+  | "trigger_failed"
+
+export interface TempWindowPageAccountIdentity {
+  userId: string
+  user: unknown
+  siteTypeHint?: AccountSiteType
+}
+
+export interface TempWindowCheckinPageActionParams {
+  originUrl: string
+  pageUrl: string
+  requestId?: string
+  suppressMinimize?: boolean
+  siteType: AccountSiteType
+  expectedUserId: string
+  trigger?: TurnstilePreTrigger
+  accountId?: string
+  authType?: AuthTypeEnum
+  cookieAuthSessionCookie?: string
+  cookieStoreId?: string
+}
+
 export interface TempWindowFetch {
   success: boolean
   status?: number
@@ -64,6 +97,15 @@ export interface TempWindowFetch {
 
 export interface TempWindowTurnstileFetch extends TempWindowFetch {
   turnstile: TempWindowTurnstileMeta
+}
+
+export interface TempWindowCheckinPageAction {
+  success: boolean
+  reason: TempWindowCheckinPageActionFailureReason
+  identity?: TempWindowPageAccountIdentity | null
+  expectedUserId?: string
+  trigger?: CheckinPageActionTriggerResult
+  error?: string
 }
 
 export interface TempWindowRenderedTitleResponse {

@@ -4,17 +4,20 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   tempWindowFetch,
   tempWindowGetRenderedTitle,
+  tempWindowTriggerCheckinPageAction,
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
 
 const {
   sendRuntimeMessageMock,
   handleTempWindowFetchMock,
+  handleTempWindowCheckinPageActionMock,
   handleTempWindowTurnstileFetchMock,
   handleTempWindowGetRenderedTitleMock,
 } = vi.hoisted(() => ({
   sendRuntimeMessageMock: vi.fn(),
   handleTempWindowFetchMock: vi.fn(),
+  handleTempWindowCheckinPageActionMock: vi.fn(),
   handleTempWindowTurnstileFetchMock: vi.fn(),
   handleTempWindowGetRenderedTitleMock: vi.fn(),
 }))
@@ -38,6 +41,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 
 vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   handleTempWindowFetch: handleTempWindowFetchMock,
+  handleTempWindowCheckinPageAction: handleTempWindowCheckinPageActionMock,
   handleTempWindowTurnstileFetch: handleTempWindowTurnstileFetchMock,
   handleTempWindowGetRenderedTitle: handleTempWindowGetRenderedTitleMock,
 }))
@@ -123,6 +127,45 @@ describe("tempWindowFetch helpers (background context)", () => {
       success: true,
       data: "https://example.com/api/checkin",
       turnstile: { status: "token_obtained", hasTurnstile: true },
+    })
+  })
+
+  it("delegates tempWindowTriggerCheckinPageAction to the background handler", async () => {
+    handleTempWindowCheckinPageActionMock.mockImplementation(
+      (_request, sendResponse) => {
+        sendResponse({
+          success: true,
+          reason: "clicked",
+          identity: { userId: "target-user", user: { id: "target-user" } },
+          trigger: {
+            status: "clicked",
+            clicked: true,
+            reason: "clicked",
+            detection: {
+              hasTurnstile: false,
+              reasons: [],
+              score: 0,
+              title: "Check in",
+              url: "https://example.invalid/console/personal",
+            },
+          },
+        })
+      },
+    )
+
+    const response = await tempWindowTriggerCheckinPageAction({
+      originUrl: "https://example.invalid",
+      pageUrl: "https://example.invalid/console/personal",
+      siteType: "new-api",
+      expectedUserId: "target-user",
+      requestId: "req-native-wrapper",
+    })
+
+    expect(handleTempWindowCheckinPageActionMock).toHaveBeenCalledTimes(1)
+    expect(response).toMatchObject({
+      success: true,
+      reason: "clicked",
+      identity: { userId: "target-user" },
     })
   })
 

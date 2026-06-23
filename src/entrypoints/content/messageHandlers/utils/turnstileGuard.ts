@@ -6,6 +6,7 @@ import {
   TURNSTILE_SCRIPT_SELECTOR,
 } from "~/constants/turnstile"
 import type {
+  CheckinPageActionTriggerResult,
   TurnstilePreTrigger,
   TurnstileTokenWaitResult,
   TurnstileWidgetDetection,
@@ -444,101 +445,155 @@ function resolvePreTriggerThrottle(preTrigger: TurnstilePreTrigger): {
 }
 
 /**
- * Best-effort: attempt to trigger Turnstile widget rendering.
- *
- * Some UIs only insert the Turnstile widget after a user action (for example a
- * check-in button click). This helper provides a safe, throttled pre-trigger so
- * token waits can succeed without hard-coding site-specific flows.
+ * Convert DOM click details into a runtime-message-safe action result.
  */
-function maybePreTriggerTurnstileWidget(params: {
+function toActionTriggerResult(params: {
+  status: CheckinPageActionTriggerResult["status"]
+  clicked: boolean
+  reason: CheckinPageActionTriggerResult["reason"]
+  detection: TurnstileWidgetDetection
+  target?: HTMLElement
+  error?: string
+}): CheckinPageActionTriggerResult {
+  return {
+    status: params.status,
+    clicked: params.clicked,
+    reason: params.reason,
+    detection: params.detection,
+    ...(params.target
+      ? {
+          target: {
+            tagName: params.target.tagName.toLowerCase(),
+            text: String(params.target.textContent ?? "")
+              .trim()
+              .slice(0, 80),
+          },
+        }
+      : {}),
+    ...(params.error ? { error: params.error } : {}),
+  }
+}
+
+/**
+ * Resolve the configured check-in action target without clicking it.
+ */
+function resolveCheckinPageActionTarget(
+  trigger: TurnstilePreTrigger,
+): HTMLElement | null {
+  if (trigger.kind === "clickSelector") {
+    const selector = String(trigger.selector ?? "").trim()
+    if (!selector) return null
+    try {
+      const el = document.querySelector(selector)
+      return el instanceof HTMLElement ? el : null
+    } catch {
+      return null
+    }
+  }
+
+  if (trigger.kind === "clickText") {
+    const positive = compileCaseInsensitiveRegex(trigger.positivePattern, /$^/)
+    const negative = compileOptionalCaseInsensitiveRegex(
+      trigger.negativePattern,
+    )
+    const candidateSelector =
+      typeof trigger.candidateSelector === "string" &&
+      trigger.candidateSelector.trim()
+        ? trigger.candidateSelector.trim()
+        : DEFAULT_CHECKIN_TRIGGER_CANDIDATE_SELECTOR
+
+    return findClickableByText({ candidateSelector, positive, negative })
+  }
+
+  if (trigger.kind === "checkinButton") {
+    const positive = compileCaseInsensitiveRegex(
+      trigger.positivePattern,
+      new RegExp(DEFAULT_CHECKIN_TRIGGER_POSITIVE_PATTERN, "i"),
+    )
+    const negative = compileCaseInsensitiveRegex(
+      trigger.negativePattern,
+      new RegExp(DEFAULT_CHECKIN_TRIGGER_NEGATIVE_PATTERN, "i"),
+    )
+    const candidateSelector =
+      typeof trigger.candidateSelector === "string" &&
+      trigger.candidateSelector.trim()
+        ? trigger.candidateSelector.trim()
+        : DEFAULT_CHECKIN_TRIGGER_CANDIDATE_SELECTOR
+
+    return findClickableByText({ candidateSelector, positive, negative })
+  }
+
+  return null
+}
+
+/**
+ * Trigger the page's own check-in action using the same safe target selection
+ * used by Turnstile pre-trigger waits. This helper never decides whether
+ * check-in succeeded; callers must verify server-side account status.
+ */
+export function triggerCheckinPageAction(params: {
   requestId?: string | null
-  preTrigger?: TurnstilePreTrigger
+  trigger?: TurnstilePreTrigger
   detection?: TurnstileWidgetDetection
-}): TurnstileAutoStartAttempt {
+}): CheckinPageActionTriggerResult {
+  const detection = params.detection ?? detectTurnstileWidget()
   const requestId = (params.requestId || "").trim()
   if (!requestId) {
-    return { attempted: false, method: "none", reason: "missingRequestId" }
+    return toActionTriggerResult({
+      status: "error",
+      clicked: false,
+      reason: "missingRequestId",
+      detection,
+    })
   }
 
-  const preTrigger = params.preTrigger
-  if (!preTrigger || preTrigger.kind === "none") {
-    return { attempted: false, method: "none", reason: "disabled" }
+  const trigger = params.trigger
+  if (!trigger || trigger.kind === "none") {
+    return toActionTriggerResult({
+      status: "target_not_found",
+      clicked: false,
+      reason: "disabled",
+      detection,
+    })
   }
 
-  const { maxAttempts, minIntervalMs } = resolvePreTriggerThrottle(preTrigger)
-
+  const { maxAttempts, minIntervalMs } = resolvePreTriggerThrottle(trigger)
   const stateMap = getTurnstilePreTriggerStateMap()
   const now = Date.now()
   const current = stateMap.get(requestId) ?? { attempts: 0, lastAttemptAt: 0 }
 
   if (current.attempts >= maxAttempts) {
-    return { attempted: false, method: "none", reason: "maxAttempts" }
+    return toActionTriggerResult({
+      status: "throttled",
+      clicked: false,
+      reason: "maxAttempts",
+      detection,
+    })
   }
 
   if (now - current.lastAttemptAt < minIntervalMs) {
-    return { attempted: false, method: "none", reason: "throttled" }
+    return toActionTriggerResult({
+      status: "throttled",
+      clicked: false,
+      reason: "throttled",
+      detection,
+    })
   }
 
-  const target = (() => {
-    if (preTrigger.kind === "clickSelector") {
-      const selector = String(preTrigger.selector ?? "").trim()
-      if (!selector) return null
-      try {
-        const el = document.querySelector(selector)
-        return el instanceof HTMLElement ? el : null
-      } catch {
-        return null
-      }
-    }
-
-    if (preTrigger.kind === "clickText") {
-      const positive = compileCaseInsensitiveRegex(
-        preTrigger.positivePattern,
-        /$^/,
-      )
-      const negative = compileOptionalCaseInsensitiveRegex(
-        preTrigger.negativePattern,
-      )
-      const candidateSelector =
-        typeof preTrigger.candidateSelector === "string" &&
-        preTrigger.candidateSelector.trim()
-          ? preTrigger.candidateSelector.trim()
-          : DEFAULT_CHECKIN_TRIGGER_CANDIDATE_SELECTOR
-
-      return findClickableByText({ candidateSelector, positive, negative })
-    }
-
-    if (preTrigger.kind === "checkinButton") {
-      const positive = compileCaseInsensitiveRegex(
-        preTrigger.positivePattern,
-        new RegExp(DEFAULT_CHECKIN_TRIGGER_POSITIVE_PATTERN, "i"),
-      )
-      const negative = compileCaseInsensitiveRegex(
-        preTrigger.negativePattern,
-        new RegExp(DEFAULT_CHECKIN_TRIGGER_NEGATIVE_PATTERN, "i"),
-      )
-      const candidateSelector =
-        typeof preTrigger.candidateSelector === "string" &&
-        preTrigger.candidateSelector.trim()
-          ? preTrigger.candidateSelector.trim()
-          : DEFAULT_CHECKIN_TRIGGER_CANDIDATE_SELECTOR
-
-      return findClickableByText({ candidateSelector, positive, negative })
-    }
-
-    return null
-  })()
-
+  const target = resolveCheckinPageActionTarget(trigger)
   if (!target) {
-    logger.debug("Turnstile pre-trigger skipped: no target found", {
+    logger.debug("Check-in page action skipped: no target found", {
       requestId,
-      kind: preTrigger.kind,
-      label: getPreTriggerLabel(preTrigger),
-      url: params.detection?.url
-        ? sanitizeUrlForLog(params.detection.url)
-        : null,
+      kind: trigger.kind,
+      label: getPreTriggerLabel(trigger),
+      url: detection.url ? sanitizeUrlForLog(detection.url) : null,
     })
-    return { attempted: false, method: "none", reason: "noTarget" }
+    return toActionTriggerResult({
+      status: "target_not_found",
+      clicked: false,
+      reason: "noTarget",
+      detection,
+    })
   }
 
   stateMap.set(requestId, {
@@ -548,20 +603,30 @@ function maybePreTriggerTurnstileWidget(params: {
 
   try {
     simulateClick(target)
-    logger.debug("Turnstile pre-trigger via click()", {
+    logger.debug("Check-in page action via click()", {
       requestId,
-      kind: preTrigger.kind,
-      label: getPreTriggerLabel(preTrigger),
+      kind: trigger.kind,
+      label: getPreTriggerLabel(trigger),
       targetText: String(target.textContent ?? "")
         .trim()
         .slice(0, 80),
-      url: params.detection?.url
-        ? sanitizeUrlForLog(params.detection.url)
-        : null,
+      url: detection.url ? sanitizeUrlForLog(detection.url) : null,
     })
-    return { attempted: true, method: "click", reason: "clicked" }
-  } catch {
-    return { attempted: false, method: "none", reason: "unexpectedError" }
+    return toActionTriggerResult({
+      status: "clicked",
+      clicked: true,
+      reason: "clicked",
+      detection,
+      target,
+    })
+  } catch (error) {
+    return toActionTriggerResult({
+      status: "error",
+      clicked: false,
+      reason: "unexpectedError",
+      detection,
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 
@@ -674,13 +739,13 @@ export async function waitForTurnstileToken(params: {
       sawTurnstile = true
       maybeAutoStartTurnstile({ requestId: params.requestId, detection })
     } else if (preTriggerEnabled) {
-      const attempt = maybePreTriggerTurnstileWidget({
+      const attempt = triggerCheckinPageAction({
         requestId: params.requestId,
-        preTrigger: params.preTrigger,
+        trigger: params.preTrigger,
         detection,
       })
 
-      if (attempt.attempted) {
+      if (attempt.clicked) {
         await new Promise((resolve) =>
           setTimeout(resolve, PRETRIGGER_SETTLE_DELAY_MS),
         )

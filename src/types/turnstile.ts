@@ -57,6 +57,33 @@ export type TurnstilePreTrigger =
       throttle?: TurnstilePreTriggerThrottle
     }
 
+export type CheckinPageActionTriggerStatus =
+  | "clicked"
+  | "target_not_found"
+  | "throttled"
+  | "error"
+
+export type CheckinPageActionTriggerReason =
+  | "clicked"
+  | "disabled"
+  | "maxAttempts"
+  | "missingRequestId"
+  | "noTarget"
+  | "throttled"
+  | "unexpectedError"
+
+export type CheckinPageActionTriggerResult = {
+  status: CheckinPageActionTriggerStatus
+  clicked: boolean
+  reason: CheckinPageActionTriggerReason
+  detection: TurnstileWidgetDetection
+  target?: {
+    tagName: string
+    text: string
+  }
+  error?: string
+}
+
 /**
  * Serializable detection information produced by the content script when it
  * scans the current DOM for Cloudflare Turnstile markers.

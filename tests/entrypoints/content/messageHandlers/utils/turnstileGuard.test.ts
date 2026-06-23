@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   detectTurnstileWidget,
   maybeAutoStartTurnstile,
+  triggerCheckinPageAction,
   waitForTurnstileToken,
 } from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
 
@@ -147,6 +148,98 @@ describe("turnstileGuard", () => {
       expect(fourth.attempted).toBe(false)
       expect(fourth.reason).toBe("maxAttempts")
       expect(container.click).toHaveBeenCalledTimes(3)
+    })
+  })
+
+  describe("triggerCheckinPageAction", () => {
+    it("clicks the default check-in button and returns a serializable clicked result", async () => {
+      const button = createMockElement("button", (el) => {
+        el.textContent = "签到"
+        el.click = vi.fn()
+      })
+      document.body.appendChild(button)
+
+      const result = triggerCheckinPageAction({
+        requestId: "req-native-click",
+        trigger: { kind: "checkinButton" },
+      })
+
+      expect(result).toMatchObject({
+        status: "clicked",
+        clicked: true,
+        reason: "clicked",
+      })
+      expect(result.target?.text).toBe("签到")
+      expect(result.detection.hasTurnstile).toBe(false)
+      expect(button.click).toHaveBeenCalledTimes(1)
+    })
+
+    it("returns target_not_found when no configured trigger exists", async () => {
+      const result = triggerCheckinPageAction({
+        requestId: "req-native-missing",
+        trigger: {
+          kind: "clickSelector",
+          selector: ".missing-checkin-button",
+        },
+      })
+
+      expect(result).toMatchObject({
+        status: "target_not_found",
+        clicked: false,
+        reason: "noTarget",
+      })
+    })
+
+    it("returns throttled when the same request clicks too frequently", async () => {
+      const button = createMockElement("button", (el) => {
+        el.textContent = "Check in"
+        el.click = vi.fn()
+      })
+      document.body.appendChild(button)
+
+      const trigger = {
+        kind: "checkinButton",
+        throttle: { maxAttempts: 2, minIntervalMs: 1200 },
+      } as const
+
+      const first = triggerCheckinPageAction({
+        requestId: "req-native-throttle",
+        trigger,
+      })
+      const second = triggerCheckinPageAction({
+        requestId: "req-native-throttle",
+        trigger,
+      })
+
+      expect(first.status).toBe("clicked")
+      expect(second).toMatchObject({
+        status: "throttled",
+        clicked: false,
+        reason: "throttled",
+      })
+      expect(button.click).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps the default negative label filter for completed buttons", async () => {
+      const completed = createMockElement("button", (el) => {
+        el.textContent = "已签到"
+        el.click = vi.fn()
+      })
+      const actionable = createMockElement("button", (el) => {
+        el.textContent = "签到"
+        el.click = vi.fn()
+      })
+      document.body.appendChild(completed)
+      document.body.appendChild(actionable)
+
+      const result = triggerCheckinPageAction({
+        requestId: "req-native-negative-filter",
+        trigger: { kind: "checkinButton" },
+      })
+
+      expect(result.status).toBe("clicked")
+      expect(completed.click).not.toHaveBeenCalled()
+      expect(actionable.click).toHaveBeenCalledTimes(1)
     })
   })
 

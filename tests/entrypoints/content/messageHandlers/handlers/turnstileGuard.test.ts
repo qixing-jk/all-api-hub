@@ -1,22 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { handleWaitForTurnstileToken } from "~/entrypoints/content/messageHandlers/handlers/turnstileGuard"
+import {
+  handleTriggerCheckinPageAction,
+  handleWaitForTurnstileToken,
+} from "~/entrypoints/content/messageHandlers/handlers/turnstileGuard"
 
-const { loggerMocks, waitForTurnstileTokenMock } = vi.hoisted(() => ({
-  loggerMocks: {
-    debug: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-  },
-  waitForTurnstileTokenMock: vi.fn(),
-}))
+const { loggerMocks, triggerCheckinPageActionMock, waitForTurnstileTokenMock } =
+  vi.hoisted(() => ({
+    loggerMocks: {
+      debug: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+    },
+    triggerCheckinPageActionMock: vi.fn(),
+    waitForTurnstileTokenMock: vi.fn(),
+  }))
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => loggerMocks,
 }))
 
 vi.mock("~/entrypoints/content/messageHandlers/utils/turnstileGuard", () => ({
+  triggerCheckinPageAction: triggerCheckinPageActionMock,
   waitForTurnstileToken: waitForTurnstileTokenMock,
 }))
 
@@ -130,6 +136,60 @@ describe("content turnstile guard handler", () => {
     expect(response).toEqual({
       success: true,
       ...result,
+    })
+  })
+
+  it("handles native page action trigger requests", async () => {
+    const trigger = { kind: "checkinButton" } as const
+    const triggerResult = {
+      status: "clicked",
+      clicked: true,
+      reason: "clicked",
+      detection: {
+        hasTurnstile: false,
+        reasons: [],
+        score: 0,
+        title: "Check in",
+        url: "https://example.invalid/console/personal",
+      },
+    }
+
+    triggerCheckinPageActionMock.mockReturnValueOnce(triggerResult)
+
+    const response = await new Promise<any>((resolve) => {
+      expect(
+        handleTriggerCheckinPageAction(
+          {
+            requestId: "req-native-action",
+            trigger,
+          },
+          resolve,
+        ),
+      ).toBe(true)
+    })
+
+    expect(triggerCheckinPageActionMock).toHaveBeenCalledWith({
+      requestId: "req-native-action",
+      trigger,
+    })
+    expect(response).toEqual({
+      success: true,
+      ...triggerResult,
+    })
+  })
+
+  it("returns an error response when native page action triggering throws", async () => {
+    triggerCheckinPageActionMock.mockImplementationOnce(() => {
+      throw new Error("click failed")
+    })
+
+    const response = await new Promise<any>((resolve) => {
+      expect(handleTriggerCheckinPageAction({}, resolve)).toBe(true)
+    })
+
+    expect(response).toEqual({
+      success: false,
+      error: "click failed",
     })
   })
 })

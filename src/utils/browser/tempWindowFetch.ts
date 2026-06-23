@@ -1,5 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
+  handleTempWindowCheckinPageAction,
   handleTempWindowFetch,
   handleTempWindowGetRenderedTitle,
   handleTempWindowTurnstileFetch,
@@ -29,6 +30,8 @@ import {
   type TempWindowHealthStatusCode,
 } from "~/types/tempWindow"
 import type {
+  TempWindowCheckinPageAction,
+  TempWindowCheckinPageActionParams,
   TempWindowFallbackAllowlist,
   TempWindowFallbackContext,
   TempWindowFetch,
@@ -38,12 +41,12 @@ import type {
   TempWindowTurnstileFetchParams,
 } from "~/types/tempWindowFetch"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
 import {
   isExtensionBackground,
   isExtensionPopup,
   isExtensionSidePanel,
 } from "~/utils/browser/index"
+import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -320,6 +323,54 @@ export async function tempWindowTurnstileFetch(
 
   return await sendRuntimeMessage({
     action: RuntimeActionIds.TempWindowTurnstileFetch,
+    ...payload,
+  })
+}
+
+/**
+ * Triggers the site page's native check-in action in a temporary browser context.
+ * @param params Native page action trigger configuration forwarded to the background handler.
+ */
+export async function tempWindowTriggerCheckinPageAction(
+  params: TempWindowCheckinPageActionParams,
+): Promise<TempWindowCheckinPageAction> {
+  const suppressMinimize = params.suppressMinimize ?? isExtensionPopup()
+
+  const payload: TempWindowCheckinPageActionParams = {
+    ...params,
+    suppressMinimize,
+  }
+
+  if (isExtensionBackground()) {
+    return await new Promise<TempWindowCheckinPageAction>((resolve) => {
+      let responded = false
+
+      const finalize = (response?: TempWindowCheckinPageAction) => {
+        if (responded) return
+        responded = true
+        resolve(
+          response ?? {
+            success: false,
+            reason: "trigger_failed",
+            error: "Empty tempWindowCheckinPageAction response",
+          },
+        )
+      }
+
+      void (async () => {
+        try {
+          await handleTempWindowCheckinPageAction(payload, (response) => {
+            finalize(response as TempWindowCheckinPageAction)
+          })
+        } finally {
+          finalize()
+        }
+      })()
+    })
+  }
+
+  return await sendRuntimeMessage({
+    action: RuntimeActionIds.TempWindowCheckinPageAction,
     ...payload,
   })
 }

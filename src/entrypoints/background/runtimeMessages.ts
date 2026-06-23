@@ -46,6 +46,7 @@ import {
   handleAutoDetectSite,
   handleCloseTempWindow,
   handleOpenTempWindow,
+  handleTempWindowCheckinPageAction,
   handleTempWindowFetch,
   handleTempWindowGetRenderedTitle,
   handleTempWindowTurnstileFetch,
@@ -174,6 +175,11 @@ export function setupRuntimeMessageListeners() {
 
       if (request.action === RuntimeActionIds.TempWindowTurnstileFetch) {
         void handleTempWindowTurnstileFetch(request, sendResponse)
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.TempWindowCheckinPageAction) {
+        void handleTempWindowCheckinPageAction(request, sendResponse)
         return true
       }
 

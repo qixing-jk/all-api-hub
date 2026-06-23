@@ -45,6 +45,7 @@ const mocks = vi.hoisted(() => ({
   handleCloseTempWindow: vi.fn(),
   handleAutoDetectSite: vi.fn(),
   handleTempWindowFetch: vi.fn(),
+  handleTempWindowCheckinPageAction: vi.fn(),
   handleTempWindowTurnstileFetch: vi.fn(),
   handleTempWindowGetRenderedTitle: vi.fn(),
   openBugReportPage: vi.fn(),
@@ -82,6 +83,7 @@ vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   handleCloseTempWindow: mocks.handleCloseTempWindow,
   handleAutoDetectSite: mocks.handleAutoDetectSite,
   handleTempWindowFetch: mocks.handleTempWindowFetch,
+  handleTempWindowCheckinPageAction: mocks.handleTempWindowCheckinPageAction,
   handleTempWindowTurnstileFetch: mocks.handleTempWindowTurnstileFetch,
   handleTempWindowGetRenderedTitle: mocks.handleTempWindowGetRenderedTitle,
 }))
@@ -425,6 +427,16 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     const listener = await loadListener()
 
     const cases = [
+      {
+        request: {
+          action: RuntimeActionIds.TempWindowCheckinPageAction,
+          originUrl: "https://example.invalid",
+          pageUrl: "https://example.invalid/console/personal",
+          siteType: "new-api",
+          expectedUserId: "target-user",
+        },
+        expected: mocks.handleTempWindowCheckinPageAction,
+      },
       {
         request: {
           action: RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots,

@@ -10,6 +10,7 @@ import {
   getTempWindowFallbackBlockStatus,
   tempWindowFetch,
   tempWindowGetRenderedTitle,
+  tempWindowTriggerCheckinPageAction,
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
 
@@ -278,6 +279,35 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       fetchOptions: { method: "POST" },
       suppressMinimize: false,
     })
+  })
+
+  it("routes tempWindowTriggerCheckinPageAction through runtime messaging", async () => {
+    mocks.sendRuntimeMessageMock.mockResolvedValueOnce({
+      success: false,
+      reason: "identity_mismatch",
+      identity: { userId: "other-user", user: { id: "other-user" } },
+      expectedUserId: "target-user",
+    })
+
+    const response = await tempWindowTriggerCheckinPageAction({
+      originUrl: "https://example.invalid",
+      pageUrl: "https://example.invalid/console/personal",
+      siteType: "new-api",
+      expectedUserId: "target-user",
+      requestId: "req-native-runtime",
+      suppressMinimize: true,
+    })
+
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
+      action: RuntimeActionIds.TempWindowCheckinPageAction,
+      originUrl: "https://example.invalid",
+      pageUrl: "https://example.invalid/console/personal",
+      siteType: "new-api",
+      expectedUserId: "target-user",
+      requestId: "req-native-runtime",
+      suppressMinimize: true,
+    })
+    expect(response.reason).toBe("identity_mismatch")
   })
 
   it("routes rendered-title requests through runtime messaging in popup contexts", async () => {
