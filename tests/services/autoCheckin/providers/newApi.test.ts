@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { safeRandomUUID } from "~/utils/core/identifier"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/apiService/common/utils", () => ({
@@ -21,6 +22,10 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return { ...actual, isAllowedIncognitoAccess: vi.fn() }
 })
+
+vi.mock("~/utils/core/identifier", () => ({
+  safeRandomUUID: vi.fn(),
+}))
 
 vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({
   SITE_ROUTE_KINDS: {
@@ -58,6 +63,9 @@ const mockAccount = buildSiteAccount({
 describe("newApiProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(safeRandomUUID).mockImplementation((prefix?: string) =>
+      prefix ? `${prefix}-mock-uuid` : "mock-uuid",
+    )
   })
 
   describe("canCheckIn", () => {
@@ -199,9 +207,78 @@ describe("newApiProvider", () => {
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
     })
 
+    it("does not treat unrelated authority errors as auth blocks for native fallback", async () => {
+      const { fetchApi, fetchApiData } = await import(
+        "~/services/apiService/common/utils"
+      )
+      const { tempWindowTriggerCheckinPageAction } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "upstream authority rejected the dynamic signature",
+        data: null,
+      })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: true,
+        reason: "clicked",
+        identity: { userId: "123", user: { id: "123" } },
+      })
+      vi.mocked(fetchApiData).mockResolvedValueOnce({
+        stats: { checked_in_today: true },
+      } as any)
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result.status).toBe("already_checked")
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps native page action request ids scoped to each provider attempt", async () => {
+      const { fetchApi, fetchApiData } = await import(
+        "~/services/apiService/common/utils"
+      )
+      const { tempWindowTriggerCheckinPageAction } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+
+      vi.mocked(safeRandomUUID)
+        .mockReturnValueOnce("native-checkin-test-id-first")
+        .mockReturnValueOnce("native-checkin-test-id-second")
+      vi.mocked(fetchApi).mockResolvedValue({
+        success: false,
+        message: "missing check-in signature header",
+        data: null,
+      })
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue({
+        success: true,
+        reason: "clicked",
+        identity: { userId: "123", user: { id: "123" } },
+      })
+      vi.mocked(fetchApiData).mockResolvedValue({
+        stats: { checked_in_today: true },
+      } as any)
+
+      await newApiProvider.checkIn(mockAccount)
+      await newApiProvider.checkIn(mockAccount)
+
+      const requestIds = vi
+        .mocked(tempWindowTriggerCheckinPageAction)
+        .mock.calls.map(([params]) => params.requestId)
+
+      expect(safeRandomUUID).toHaveBeenCalledWith("native-checkin-test-id")
+      expect(requestIds).toEqual([
+        "native-checkin-test-id-first",
+        "native-checkin-test-id-second",
+      ])
+    })
+
     it.each([
       "check-in endpoint unsupported",
       "unauthorized check-in request",
+      "authentication required for check-in",
+      "authenticate before check-in",
       "permission denied for check-in",
       "rate limit exceeded for check-in",
       "too many requests for check-in",

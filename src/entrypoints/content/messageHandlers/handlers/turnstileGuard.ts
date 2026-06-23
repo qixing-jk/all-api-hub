@@ -10,24 +10,44 @@ import type {
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-type WaitForTurnstileTokenRequest = {
+interface WaitForTurnstileTokenRequest {
   requestId?: string
   timeoutMs?: number
   preTrigger?: TurnstilePreTrigger
 }
 
-type WaitForTurnstileTokenResponse =
-  | ({ success: true } & TurnstileTokenWaitResult)
-  | { success: false; error: string }
+interface WaitForTurnstileTokenSuccessResponse
+  extends TurnstileTokenWaitResult {
+  success: true
+}
 
-type TriggerCheckinPageActionRequest = {
+interface WaitForTurnstileTokenErrorResponse {
+  success: false
+  error: string
+}
+
+type WaitForTurnstileTokenResponse =
+  | WaitForTurnstileTokenSuccessResponse
+  | WaitForTurnstileTokenErrorResponse
+
+interface TriggerCheckinPageActionRequest {
   requestId?: string
   trigger?: TurnstilePreTrigger
 }
 
+interface TriggerCheckinPageActionSuccessResponse
+  extends CheckinPageActionTriggerResult {
+  success: true
+}
+
+interface TriggerCheckinPageActionErrorResponse {
+  success: false
+  error: string
+}
+
 type TriggerCheckinPageActionResponse =
-  | ({ success: true } & CheckinPageActionTriggerResult)
-  | { success: false; error: string }
+  | TriggerCheckinPageActionSuccessResponse
+  | TriggerCheckinPageActionErrorResponse
 
 /**
  * Unified logger scoped to Turnstile token waits in the content script.

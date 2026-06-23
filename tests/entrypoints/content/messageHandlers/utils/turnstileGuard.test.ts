@@ -152,6 +152,19 @@ describe("turnstileGuard", () => {
   })
 
   describe("triggerCheckinPageAction", () => {
+    it("returns error when requestId is missing", async () => {
+      const result = triggerCheckinPageAction({
+        requestId: "   ",
+        trigger: { kind: "checkinButton" },
+      })
+
+      expect(result).toMatchObject({
+        status: "error",
+        clicked: false,
+        reason: "missingRequestId",
+      })
+    })
+
     it("clicks the default check-in button and returns a serializable clicked result", async () => {
       const button = createMockElement("button", (el) => {
         el.textContent = "签到"
@@ -172,6 +185,19 @@ describe("turnstileGuard", () => {
       expect(result.target?.text).toBe("签到")
       expect(result.detection.hasTurnstile).toBe(false)
       expect(button.click).toHaveBeenCalledTimes(1)
+    })
+
+    it("returns target_not_found when the trigger is disabled", async () => {
+      const result = triggerCheckinPageAction({
+        requestId: "req-native-disabled",
+        trigger: { kind: "none" },
+      })
+
+      expect(result).toMatchObject({
+        status: "target_not_found",
+        clicked: false,
+        reason: "disabled",
+      })
     })
 
     it("returns target_not_found when no configured trigger exists", async () => {
@@ -216,6 +242,36 @@ describe("turnstileGuard", () => {
         status: "throttled",
         clicked: false,
         reason: "throttled",
+      })
+      expect(button.click).toHaveBeenCalledTimes(1)
+    })
+
+    it("returns throttled when the attempt limit is reached", async () => {
+      const button = createMockElement("button", (el) => {
+        el.textContent = "Check in"
+        el.click = vi.fn()
+      })
+      document.body.appendChild(button)
+
+      const trigger = {
+        kind: "checkinButton",
+        throttle: { maxAttempts: 1, minIntervalMs: 0 },
+      } as const
+
+      const first = triggerCheckinPageAction({
+        requestId: "req-native-max-attempts",
+        trigger,
+      })
+      const second = triggerCheckinPageAction({
+        requestId: "req-native-max-attempts",
+        trigger,
+      })
+
+      expect(first.status).toBe("clicked")
+      expect(second).toMatchObject({
+        status: "throttled",
+        clicked: false,
+        reason: "maxAttempts",
       })
       expect(button.click).toHaveBeenCalledTimes(1)
     })

@@ -178,6 +178,32 @@ describe("content turnstile guard handler", () => {
     })
   })
 
+  it("passes through non-click trigger outcomes as successful payloads", async () => {
+    const triggerResult = {
+      status: "target_not_found",
+      clicked: false,
+      reason: "noTarget",
+      detection: {
+        hasTurnstile: false,
+        reasons: [],
+        score: 0,
+        title: "Check in",
+        url: "https://example.invalid/console/personal",
+      },
+    }
+
+    triggerCheckinPageActionMock.mockReturnValueOnce(triggerResult)
+
+    const response = await new Promise<any>((resolve) => {
+      expect(handleTriggerCheckinPageAction({}, resolve)).toBe(true)
+    })
+
+    expect(response).toEqual({
+      success: true,
+      ...triggerResult,
+    })
+  })
+
   it("returns an error response when native page action triggering throws", async () => {
     triggerCheckinPageActionMock.mockImplementationOnce(() => {
       throw new Error("click failed")

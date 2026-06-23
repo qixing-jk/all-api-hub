@@ -57,7 +57,7 @@ export interface TempWindowTurnstileFetchParams extends TempWindowFetchParams {
   turnstilePreTrigger?: TurnstilePreTrigger
 }
 
-export type TempWindowCheckinPageActionFailureReason =
+export type TempWindowCheckinPageActionReason =
   | "clicked"
   | "identity_missing"
   | "identity_mismatch"
@@ -101,7 +101,7 @@ export interface TempWindowTurnstileFetch extends TempWindowFetch {
 
 export interface TempWindowCheckinPageAction {
   success: boolean
-  reason: TempWindowCheckinPageActionFailureReason
+  reason: TempWindowCheckinPageActionReason
   identity?: TempWindowPageAccountIdentity | null
   expectedUserId?: string
   trigger?: CheckinPageActionTriggerResult

@@ -22,6 +22,13 @@ function findLastCallIndex<T>(
   return -1
 }
 
+async function settleTempContextReadiness() {
+  await Promise.resolve()
+  await vi.advanceTimersByTimeAsync(500)
+  await Promise.resolve()
+  await vi.advanceTimersByTimeAsync(500)
+}
+
 describe("tempWindowPool native check-in page action", () => {
   let createTabMock: ReturnType<typeof vi.fn>
   let createWindowMock: ReturnType<typeof vi.fn>
@@ -174,7 +181,7 @@ describe("tempWindowPool native check-in page action", () => {
       sendResponse,
     )
 
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await request
 
     expect(sendMessageMock).toHaveBeenCalledWith(
@@ -243,7 +250,7 @@ describe("tempWindowPool native check-in page action", () => {
       sendResponse,
     )
 
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await request
 
     expect(sendMessageMock).not.toHaveBeenCalledWith(
@@ -292,7 +299,7 @@ describe("tempWindowPool native check-in page action", () => {
       sendResponse,
     )
 
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await request
 
     expect(sendMessageMock).not.toHaveBeenCalledWith(
@@ -347,7 +354,7 @@ describe("tempWindowPool native check-in page action", () => {
       sendResponse,
     )
 
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await request
 
     expect(sendResponse).toHaveBeenCalledWith({
@@ -414,7 +421,7 @@ describe("tempWindowPool native check-in page action", () => {
       sendResponse,
     )
 
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await request
 
     expect(sendResponse).toHaveBeenCalledWith(
@@ -445,7 +452,7 @@ describe("tempWindowPool native check-in page action", () => {
       },
       vi.fn(),
     )
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await firstRequest
 
     sendMessageMock.mockImplementation(
@@ -510,7 +517,7 @@ describe("tempWindowPool native check-in page action", () => {
       },
       turnstileResponse,
     )
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await turnstileRequest
 
     const secondResponse = vi.fn()
@@ -524,7 +531,7 @@ describe("tempWindowPool native check-in page action", () => {
       },
       secondResponse,
     )
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await secondRequest
 
     expect((globalThis as any).browser.tabs.update).toHaveBeenCalledWith(701, {
@@ -553,6 +560,51 @@ describe("tempWindowPool native check-in page action", () => {
     expect(personalNavigationIndex).toBeGreaterThan(-1)
     expect(identityLookupIndex).toBeGreaterThan(-1)
     expect(personalNavigationIndex).toBeLessThan(identityLookupIndex)
+    expect(secondResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        reason: "clicked",
+      }),
+    )
+  })
+
+  it("verifies the live tab url before reusing a cached temp context page", async () => {
+    const { handleTempWindowCheckinPageAction } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstRequest = handleTempWindowCheckinPageAction(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/console/personal",
+        expectedUserId: "target-user",
+        siteType: SITE_TYPES.NEW_API,
+        requestId: "req-native-live-url-first",
+      },
+      vi.fn(),
+    )
+    await settleTempContextReadiness()
+    await firstRequest
+
+    tabsGetMock.mockResolvedValue({ status: "complete", url: "about:blank" })
+
+    const secondResponse = vi.fn()
+    const secondRequest = handleTempWindowCheckinPageAction(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/console/personal",
+        expectedUserId: "target-user",
+        siteType: SITE_TYPES.NEW_API,
+        requestId: "req-native-live-url-second",
+      },
+      secondResponse,
+    )
+    await settleTempContextReadiness()
+    await secondRequest
+
+    expect((globalThis as any).browser.tabs.update).toHaveBeenCalledWith(701, {
+      url: "https://example.invalid/console/personal",
+    })
     expect(secondResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
@@ -614,7 +666,7 @@ describe("tempWindowPool native check-in page action", () => {
       sendResponse,
     )
 
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await request
 
     expect(sendResponse).toHaveBeenCalledWith(
@@ -672,7 +724,7 @@ describe("tempWindowPool native check-in page action", () => {
       noResponse,
     )
 
-    await vi.advanceTimersByTimeAsync(500)
+    await settleTempContextReadiness()
     await noResponseRequest
 
     const failedResponse = vi.fn()
@@ -687,6 +739,7 @@ describe("tempWindowPool native check-in page action", () => {
       failedResponse,
     )
 
+    await settleTempContextReadiness()
     await failedRequest
 
     expect(noResponse).toHaveBeenCalledWith(

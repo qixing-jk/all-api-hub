@@ -36,6 +36,7 @@ import {
   tempWindowTriggerCheckinPageAction,
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
+import { safeRandomUUID } from "~/utils/core/identifier"
 import { joinUrl } from "~/utils/core/url"
 
 const NEW_API_MESSAGE_KEYS = {
@@ -135,9 +136,13 @@ function isAuthOrPermissionFailureMessage(message: string): boolean {
   const normalized = message.toLowerCase()
   return (
     normalized.includes("unauthorized") ||
+    normalized.includes("unauthenticated") ||
+    normalized.includes("authentication") ||
+    normalized.includes("authenticate") ||
     normalized.includes("forbidden") ||
     normalized.includes("permission") ||
-    normalized.includes("auth") ||
+    normalized.includes("auth required") ||
+    normalized.includes("invalid auth") ||
     normalized.includes("not logged") ||
     normalized.includes("login required") ||
     message.includes("未登录") ||
@@ -493,7 +498,7 @@ async function resolveNativePageCheckinResult(params: {
     action = await tempWindowTriggerCheckinPageAction({
       originUrl: params.account.site_url,
       pageUrl: checkInUrl,
-      requestId: `native-checkin-${params.account.id}-${Date.now()}`,
+      requestId: safeRandomUUID(`native-checkin-${params.account.id}`),
       accountId: params.account.id,
       authType: getEffectiveAuthType(params.account),
       cookieAuthSessionCookie: params.account.cookieAuth?.sessionCookie,

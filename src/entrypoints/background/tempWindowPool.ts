@@ -103,7 +103,7 @@ const TEMP_WINDOW_ANALYTICS_FAILURE_REASONS = {
 type TempWindowAnalyticsFailureReason =
   (typeof TEMP_WINDOW_ANALYTICS_FAILURE_REASONS)[keyof typeof TEMP_WINDOW_ANALYTICS_FAILURE_REASONS]
 
-type TempPageAccountIdentityContentResponse = {
+interface TempPageAccountIdentityContentResponse {
   success?: boolean
   error?: string
   data?: {
@@ -111,6 +111,11 @@ type TempPageAccountIdentityContentResponse = {
     user?: unknown
     siteTypeHint?: unknown
   }
+}
+
+interface TempContextTabSnapshot {
+  url?: string
+  status?: string
 }
 
 /** Retry delay when the content script is not ready to receive messages. */
@@ -315,11 +320,20 @@ async function navigateTempContextToPage(
   url: string,
   meta: { requestId: string; origin: string },
 ) {
-  if (context.currentUrl === url) return
+  const currentTab = await getTempContextTabSnapshot(context.tabId)
+  if (currentTab?.url === url && currentTab.status === "complete") {
+    context.currentUrl = currentTab.url
+    return
+  }
 
-  await updateTab(context.tabId, { url })
-  context.currentUrl = url
+  if (context.currentUrl !== url || currentTab?.url !== url) {
+    await updateTab(context.tabId, { url })
+    context.currentUrl = url
+  }
+
   await waitForTabComplete(context.tabId, meta)
+  context.currentUrl =
+    (await getTempContextTabSnapshot(context.tabId))?.url ?? url
 }
 
 /**
@@ -2208,6 +2222,7 @@ async function createTempContextInstance(
     void showShieldBypassUiInTab({ tabId, origin, requestId })
 
     await waitForTabComplete(tabId, { requestId, origin })
+    const readyTab = await getTempContextTabSnapshot(tabId)
 
     logTempWindow("createTempContextInstanceReady", {
       requestId,
@@ -2224,7 +2239,7 @@ async function createTempContextInstance(
       tabId,
       origin,
       type,
-      currentUrl: url,
+      currentUrl: readyTab?.url ?? url,
       activeRequestIds: new Set<string>(),
       lastUsed: Date.now(),
     }
@@ -2270,6 +2285,27 @@ function buildTempContextOriginKey(
   }
 
   return origin
+}
+
+/**
+ * Reads the live URL/load state for a reusable temp-context tab.
+ */
+async function getTempContextTabSnapshot(
+  tabId: number,
+): Promise<TempContextTabSnapshot | null> {
+  try {
+    const tab = await getTab(tabId)
+    return {
+      url: tab.url,
+      status: tab.status,
+    }
+  } catch (error) {
+    logger.debug("Unable to inspect temp context tab state", {
+      tabId,
+      error: getErrorMessage(error),
+    })
+    return null
+  }
 }
 
 /**
