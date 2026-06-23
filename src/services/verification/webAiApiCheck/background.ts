@@ -21,6 +21,8 @@ import {
   inferStructuredHttpStatus,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
+import { webAiApiCheckBaseUrlHistoryStorage } from "~/services/verification/webAiApiCheck/baseUrlHistory"
+import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
 import {
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
@@ -35,6 +37,12 @@ import type {
   ApiCheckCancelRunProbeResponse,
   ApiCheckFetchModelsRequest,
   ApiCheckFetchModelsResponse,
+  ApiCheckGetBaseUrlHistorySuggestionsRequest,
+  ApiCheckGetBaseUrlHistorySuggestionsResponse,
+  ApiCheckRecordBaseUrlHistoryRequest,
+  ApiCheckRecordBaseUrlHistoryResponse,
+  ApiCheckRemoveBaseUrlHistoryRequest,
+  ApiCheckRemoveBaseUrlHistoryResponse,
   ApiCheckRunProbeRequest,
   ApiCheckRunProbeResponse,
   ApiCheckSaveProfileRequest,
@@ -167,6 +175,83 @@ export async function resolveWebAiApiCheckShouldPromptMessage(
       message: toSanitizedErrorSummary(error, []),
     })
     return toGenericFailureResponse()
+  }
+}
+
+/**
+ * Resolve Base URL suggestions ranked for the current page origin.
+ */
+async function resolveWebAiApiCheckGetBaseUrlHistorySuggestionsMessage(
+  request: ApiCheckGetBaseUrlHistorySuggestionsRequest,
+): Promise<ApiCheckGetBaseUrlHistorySuggestionsResponse> {
+  try {
+    const suggestions = await webAiApiCheckBaseUrlHistoryStorage.getSuggestions(
+      {
+        pageUrl: request.pageUrl,
+        limit: request.limit,
+      },
+    )
+    return { success: true, suggestions }
+  } catch (error) {
+    logger.error("Failed to read Base URL history suggestions", {
+      message: toSanitizedErrorSummary(error, []),
+    })
+    return { success: false, error: "Failed to read Base URL history" }
+  }
+}
+
+/**
+ * Best-effort record of a user-confirmed Base URL usage.
+ */
+export async function resolveWebAiApiCheckRecordBaseUrlHistoryMessage(
+  request: ApiCheckRecordBaseUrlHistoryRequest,
+): Promise<ApiCheckRecordBaseUrlHistoryResponse> {
+  try {
+    if (request.baseUrl?.trim()) {
+      await webAiApiCheckBaseUrlHistoryStorage.recordUse({
+        baseUrl: request.baseUrl,
+        pageUrl: request.pageUrl,
+      })
+    }
+    const suggestions = await webAiApiCheckBaseUrlHistoryStorage.getSuggestions(
+      {
+        pageUrl: request.pageUrl,
+        limit: WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT,
+      },
+    )
+    return { success: true, suggestions }
+  } catch (error) {
+    logger.error("Failed to record Base URL history", {
+      message: toSanitizedErrorSummary(error, []),
+    })
+    return { success: true }
+  }
+}
+
+/**
+ * Best-effort removal of a user-discarded Base URL history entry.
+ */
+export async function resolveWebAiApiCheckRemoveBaseUrlHistoryMessage(
+  request: ApiCheckRemoveBaseUrlHistoryRequest,
+): Promise<ApiCheckRemoveBaseUrlHistoryResponse> {
+  try {
+    if (request.baseUrl?.trim()) {
+      await webAiApiCheckBaseUrlHistoryStorage.removeBaseUrl({
+        baseUrl: request.baseUrl,
+      })
+    }
+    const suggestions = await webAiApiCheckBaseUrlHistoryStorage.getSuggestions(
+      {
+        pageUrl: request.pageUrl,
+        limit: WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT,
+      },
+    )
+    return { success: true, suggestions }
+  } catch (error) {
+    logger.error("Failed to remove Base URL history", {
+      message: toSanitizedErrorSummary(error, []),
+    })
+    return { success: true }
   }
 }
 
@@ -448,6 +533,19 @@ export function setupWebAiApiCheckMessagingListeners() {
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.FetchModels,
       async ({ data }) => resolveWebAiApiCheckFetchModelsMessage(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions,
+      async ({ data }) =>
+        resolveWebAiApiCheckGetBaseUrlHistorySuggestionsMessage(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.RecordBaseUrlHistory,
+      async ({ data }) => resolveWebAiApiCheckRecordBaseUrlHistoryMessage(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.RemoveBaseUrlHistory,
+      async ({ data }) => resolveWebAiApiCheckRemoveBaseUrlHistoryMessage(data),
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.RunProbe,

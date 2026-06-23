@@ -4,6 +4,7 @@ import type {
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
+import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
 
 /**
  * Runtime data from content → background to decide whether auto-detect can prompt.
@@ -27,6 +28,41 @@ export type ApiCheckShouldPromptResponse =
       success: false
       error?: string
     }
+
+export type ApiCheckGetBaseUrlHistorySuggestionsRequest = {
+  pageUrl?: string
+  limit?: number
+}
+
+export type ApiCheckGetBaseUrlHistorySuggestionsResponse =
+  | {
+      success: true
+      suggestions: WebAiApiCheckBaseUrlSuggestion[]
+    }
+  | {
+      success: false
+      error?: string
+    }
+
+export type ApiCheckRecordBaseUrlHistoryRequest = {
+  baseUrl: string
+  pageUrl?: string
+}
+
+export type ApiCheckRecordBaseUrlHistoryResponse = {
+  success: true
+  suggestions?: WebAiApiCheckBaseUrlSuggestion[]
+}
+
+export type ApiCheckRemoveBaseUrlHistoryRequest = {
+  baseUrl: string
+  pageUrl?: string
+}
+
+export type ApiCheckRemoveBaseUrlHistoryResponse = {
+  success: true
+  suggestions?: WebAiApiCheckBaseUrlSuggestion[]
+}
 
 /**
  * Runtime data from content → background to fetch upstream model ids.

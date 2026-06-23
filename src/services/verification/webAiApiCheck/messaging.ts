@@ -9,6 +9,12 @@ import type {
   ApiCheckCancelRunProbeResponse,
   ApiCheckFetchModelsRequest,
   ApiCheckFetchModelsResponse,
+  ApiCheckGetBaseUrlHistorySuggestionsRequest,
+  ApiCheckGetBaseUrlHistorySuggestionsResponse,
+  ApiCheckRecordBaseUrlHistoryRequest,
+  ApiCheckRecordBaseUrlHistoryResponse,
+  ApiCheckRemoveBaseUrlHistoryRequest,
+  ApiCheckRemoveBaseUrlHistoryResponse,
   ApiCheckRunProbeRequest,
   ApiCheckRunProbeResponse,
   ApiCheckSaveProfileRequest,
@@ -20,6 +26,9 @@ import type {
 export const WebAiApiCheckMessageTypes = {
   ShouldPrompt: "webAiApiCheck:shouldPrompt",
   FetchModels: "webAiApiCheck:fetchModels",
+  GetBaseUrlHistorySuggestions: "webAiApiCheck:getBaseUrlHistorySuggestions",
+  RecordBaseUrlHistory: "webAiApiCheck:recordBaseUrlHistory",
+  RemoveBaseUrlHistory: "webAiApiCheck:removeBaseUrlHistory",
   RunProbe: "webAiApiCheck:runProbe",
   CancelRunProbe: "webAiApiCheck:cancelRunProbe",
   SaveProfile: "webAiApiCheck:saveProfile",
@@ -49,6 +58,15 @@ interface WebAiApiCheckProtocolMap {
   [WebAiApiCheckMessageTypes.FetchModels](
     data: ApiCheckFetchModelsRequest,
   ): ApiCheckFetchModelsResponse
+  [WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions](
+    data: ApiCheckGetBaseUrlHistorySuggestionsRequest,
+  ): ApiCheckGetBaseUrlHistorySuggestionsResponse
+  [WebAiApiCheckMessageTypes.RecordBaseUrlHistory](
+    data: ApiCheckRecordBaseUrlHistoryRequest,
+  ): ApiCheckRecordBaseUrlHistoryResponse
+  [WebAiApiCheckMessageTypes.RemoveBaseUrlHistory](
+    data: ApiCheckRemoveBaseUrlHistoryRequest,
+  ): ApiCheckRemoveBaseUrlHistoryResponse
   [WebAiApiCheckMessageTypes.RunProbe](
     data: ApiCheckRunProbeRequest,
   ): ApiCheckRunProbeResponse

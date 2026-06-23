@@ -32,6 +32,11 @@ export const STORAGE_LOCKS = {
    */
   API_VERIFICATION_HISTORY: "all-api-hub:api-verification-history",
   /**
+   * Exclusive lock used for read-modify-write sequences touching Web AI API
+   * Check input-assist history.
+   */
+  WEB_AI_API_CHECK: "all-api-hub:web-ai-api-check",
+  /**
    * Exclusive lock used for read-modify-write sequences touching user
    * preferences storage.
    */
@@ -108,6 +113,10 @@ export const API_VERIFICATION_HISTORY_STORAGE_KEYS = {
   VERIFICATION_RESULT_HISTORY: "api_verification_result_history",
 } as const
 
+export const WEB_AI_API_CHECK_STORAGE_KEYS = {
+  BASE_URL_HISTORY: "webAiApiCheck_baseUrlHistory_v1",
+} as const
+
 export const LDOH_SITE_LOOKUP_STORAGE_KEYS = {
   SITE_LIST_CACHE: "ldohSiteLookup_siteListCache_v1",
 } as const
@@ -160,6 +169,7 @@ export const STORAGE_KEYS = {
   ...TAG_STORAGE_KEYS,
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   ...API_VERIFICATION_HISTORY_STORAGE_KEYS,
+  ...WEB_AI_API_CHECK_STORAGE_KEYS,
   ...LDOH_SITE_LOOKUP_STORAGE_KEYS,
   ...ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS,
   ...OPTIONS_SEARCH_STORAGE_KEYS,
