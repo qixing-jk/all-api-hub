@@ -347,7 +347,9 @@ class WebAiApiCheckBaseUrlHistoryStorageService {
   }
 
   async clearAllData(): Promise<void> {
-    await this.storage.remove(WEB_AI_API_CHECK_STORAGE_KEYS.BASE_URL_HISTORY)
+    await this.withStorageWriteLock(async () => {
+      await this.storage.remove(WEB_AI_API_CHECK_STORAGE_KEYS.BASE_URL_HISTORY)
+    })
   }
 }
 

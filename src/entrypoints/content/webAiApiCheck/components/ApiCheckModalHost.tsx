@@ -223,6 +223,7 @@ export function ApiCheckModalHost() {
   >([])
   const [isBaseUrlHistoryPickerOpen, setIsBaseUrlHistoryPickerOpen] =
     useState(false)
+  const [historyConfirmationCount, setHistoryConfirmationCount] = useState(0)
   const [apiKey, setApiKey] = useState("")
   const [extractionMetadata, setExtractionMetadata] =
     useState<ApiCheckOpenModalDetail["extraction"]>(undefined)
@@ -245,6 +246,7 @@ export function ApiCheckModalHost() {
    */
   const lastAutoFetchKeyRef = useRef<string | null>(null)
   const lastObservedModelFetchKeyRef = useRef<string | null>(null)
+  const historyPrefilledFetchKeyRef = useRef<string | null>(null)
   const fetchModelsRequestIdRef = useRef(0)
   const hasSignaledHostReadyRef = useRef(false)
   const skipNextSourceTextExtractionRef = useRef<string | null>(null)
@@ -413,6 +415,7 @@ export function ApiCheckModalHost() {
         extraction.candidates.apiKeys[0]?.value ?? extracted.apiKey ?? ""
       setExtractionMetadata(extraction)
       setBaseUrlHistorySuggestions([])
+      historyPrefilledFetchKeyRef.current = null
       setBaseUrl(nextBaseUrl)
       setApiKey(nextApiKey)
 
@@ -455,7 +458,11 @@ export function ApiCheckModalHost() {
           const suggestions = response.suggestions ?? []
           setBaseUrlHistorySuggestions(suggestions)
           if (!nextBaseUrl && suggestions[0]?.baseUrl) {
-            setBaseUrl(suggestions[0].baseUrl)
+            const historyBaseUrl = suggestions[0].baseUrl
+            setBaseUrl(historyBaseUrl)
+            historyPrefilledFetchKeyRef.current = nextApiKey.trim()
+              ? `${apiType}::${historyBaseUrl.trim()}::${nextApiKey.trim()}`
+              : null
           }
         })
         .catch(() => {})
@@ -494,6 +501,7 @@ export function ApiCheckModalHost() {
       reason,
     })
     fetchModelsRequestIdRef.current += 1
+    historyPrefilledFetchKeyRef.current = null
     lastAutoFetchKeyRef.current = null
     setExtractionMetadata(undefined)
     setIsOpen(false)
@@ -659,21 +667,24 @@ export function ApiCheckModalHost() {
           align="end"
           aria-label={t("webAiApiCheck:modal.history.label")}
           container={popoverPortalContainer ?? undefined}
-          role="menu"
           className="w-72 p-1"
         >
           <div className="text-muted-foreground px-2 py-1.5 text-xs">
             {t("webAiApiCheck:modal.history.label")}
           </div>
-          <div className="max-h-52 overflow-y-auto">
+          <div
+            aria-label={t("webAiApiCheck:modal.history.label")}
+            className="max-h-52 overflow-y-auto"
+            role="list"
+          >
             {baseUrlHistorySuggestions.map((suggestion) => (
               <div
                 key={suggestion.baseUrl}
+                role="listitem"
                 className="group flex min-w-0 items-center gap-1 rounded-sm"
               >
                 <button
                   type="button"
-                  role="menuitem"
                   className={cn(
                     "focus:bg-accent focus:text-accent-foreground flex min-w-0 flex-1 rounded-sm px-2 py-1.5 text-left text-sm outline-none",
                     suggestion.baseUrl === baseUrl
@@ -682,6 +693,8 @@ export function ApiCheckModalHost() {
                   )}
                   title={suggestion.baseUrl}
                   onClick={() => {
+                    historyPrefilledFetchKeyRef.current = null
+                    setHistoryConfirmationCount((count) => count + 1)
                     setBaseUrl(suggestion.baseUrl)
                     setIsBaseUrlHistoryPickerOpen(false)
                   }}
@@ -690,8 +703,12 @@ export function ApiCheckModalHost() {
                 </button>
                 <IconButton
                   type="button"
-                  aria-label={t("webAiApiCheck:modal.history.remove")}
-                  title={t("webAiApiCheck:modal.history.remove")}
+                  aria-label={`${t("webAiApiCheck:modal.history.remove")}: ${
+                    suggestion.baseUrl
+                  }`}
+                  title={`${t("webAiApiCheck:modal.history.remove")}: ${
+                    suggestion.baseUrl
+                  }`}
                   variant="ghost"
                   size="xs"
                   className="text-muted-foreground hover:text-destructive shrink-0 opacity-70 group-hover:opacity-100"
@@ -752,6 +769,7 @@ export function ApiCheckModalHost() {
       const requestId = (fetchModelsRequestIdRef.current += 1)
       const fetchKey = `${apiType}::${trimmedBaseUrl}::${trimmedApiKey}`
       if (origin === MODEL_FETCH_ORIGINS.Manual) {
+        historyPrefilledFetchKeyRef.current = null
         lastAutoFetchKeyRef.current = fetchKey
       }
       setIsFetchingModels(true)
@@ -895,12 +913,14 @@ export function ApiCheckModalHost() {
     if (!trimmedBaseUrl || !trimmedApiKey) return
 
     const fetchKey = `${apiType}::${trimmedBaseUrl}::${trimmedApiKey}`
+    if (historyPrefilledFetchKeyRef.current === fetchKey) return
     if (lastAutoFetchKeyRef.current === fetchKey) return
     if (isFetchingModels) return
 
     const timeoutId = window.setTimeout(() => {
       // Double-check inside timer to avoid firing after state has moved on.
       if (!isOpen) return
+      if (historyPrefilledFetchKeyRef.current === fetchKey) return
       if (lastAutoFetchKeyRef.current === fetchKey) return
       if (isFetchingModels) return
       lastAutoFetchKeyRef.current = fetchKey
@@ -915,6 +935,7 @@ export function ApiCheckModalHost() {
     apiType,
     baseUrl,
     fetchModels,
+    historyConfirmationCount,
     isFetchingModels,
     isOpen,
     modelListSupported,
@@ -924,6 +945,7 @@ export function ApiCheckModalHost() {
     probeId: ApiVerificationProbeId,
     options: {
       trackIndividual?: boolean
+      recordHistory?: boolean
       runId?: string
       shouldIgnoreResult?: () => boolean
     } = {},
@@ -951,7 +973,9 @@ export function ApiCheckModalHost() {
       })
       return null
     }
-    recordBaseUrlHistory(trimmedBaseUrl)
+    if (options.recordHistory !== false) {
+      recordBaseUrlHistory(trimmedBaseUrl)
+    }
 
     setProbes((prev) =>
       prev.map((probe) =>
@@ -1192,6 +1216,7 @@ export function ApiCheckModalHost() {
         activeRunAllProbeIdRef.current = def.id
         const result = await runProbe(def.id, {
           trackIndividual: false,
+          recordHistory: false,
           runId,
           shouldIgnoreResult: () => shouldStopRunAllRef.current,
         })

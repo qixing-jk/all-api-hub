@@ -300,7 +300,7 @@ describe("ApiCheckModalHost", () => {
       }),
     )
     await user.click(
-      await screen.findByRole("menuitem", {
+      await screen.findByRole("button", {
         name: "https://global-recent.example.com/api",
       }),
     )
@@ -313,6 +313,66 @@ describe("ApiCheckModalHost", () => {
         limit: WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT,
       },
     )
+  })
+
+  it("waits for explicit confirmation before auto-fetching models from a history-prefilled base URL", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions) {
+          return {
+            success: true,
+            suggestions: [
+              {
+                baseUrl: "https://source-match.example.com/api",
+                lastUsedAt: 2,
+                useCount: 3,
+                matchedSourceOrigin: "https://github.com",
+              },
+            ],
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["m1"] }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal({
+      sourceText: "API Key: sk-test-history-confirm-fixture",
+      pageUrl: "https://github.com/qixing-jk/all-api-hub/issues/1025",
+    })
+
+    const baseUrlInput = (await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )) as HTMLInputElement
+
+    await waitFor(() => {
+      expect(baseUrlInput.value).toBe("https://source-match.example.com/api")
+    })
+    expect(
+      getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
+    ).toHaveLength(0)
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.history.trigger",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "https://source-match.example.com/api",
+      }),
+    )
+
+    await waitFor(() => {
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.FetchModels, {
+        apiType: "openai-compatible",
+        baseUrl: "https://source-match.example.com/api",
+        apiKey: "sk-test-history-confirm-fixture",
+      })
+    })
   })
 
   it("reconciles the current history picker with the record response", async () => {
@@ -421,27 +481,32 @@ describe("ApiCheckModalHost", () => {
         name: "webAiApiCheck:modal.history.trigger",
       }),
     )
-    const removeItem = await screen.findByRole("menuitem", {
+    const historyList = await screen.findByRole("list", {
+      name: "webAiApiCheck:modal.history.label",
+    })
+    expect(within(historyList).getAllByRole("listitem")).toHaveLength(2)
+
+    const removeItem = await screen.findByRole("button", {
       name: "https://remove.example.com/api",
     })
     await user.click(
       within(removeItem.parentElement as HTMLElement).getByRole("button", {
-        name: "webAiApiCheck:modal.history.remove",
+        name: "webAiApiCheck:modal.history.remove: https://remove.example.com/api",
       }),
     )
 
     expect(
-      screen.queryByRole("menuitem", {
+      screen.queryByRole("button", {
         name: "https://remove.example.com/api",
       }),
     ).not.toBeInTheDocument()
     expect(
-      await screen.findByRole("menuitem", {
+      await screen.findByRole("button", {
         name: "https://canonical.example.com/api",
       }),
     ).toBeVisible()
     expect(
-      screen.queryByRole("menuitem", {
+      screen.queryByRole("button", {
         name: "https://keep.example.com/api",
       }),
     ).not.toBeInTheDocument()
@@ -1277,6 +1342,51 @@ describe("ApiCheckModalHost", () => {
     expect(
       getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RecordBaseUrlHistory),
     ).toHaveLength(0)
+  })
+
+  it("records Base URL history once for a full probe suite run", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, data: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: false, error: "Unavailable" }
+        }
+        if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
+          return { success: true }
+        }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: data.probeId,
+              status: "pass",
+              latencyMs: 1,
+              summary: "ok",
+              input: {
+                apiType: data.apiType,
+                baseUrl: data.baseUrl,
+              },
+            },
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    await startManualProbeSuite(user)
+
+    await waitFor(() => {
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe).length,
+      ).toBeGreaterThan(1)
+    })
+    expect(
+      getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RecordBaseUrlHistory),
+    ).toHaveLength(1)
+    expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.RecordBaseUrlHistory, {
+      baseUrl: "https://proxy.example.com/api",
+      pageUrl: "https://example.com",
+    })
   })
 
   it("tracks manual model fetch completion with model-count insights", async () => {
