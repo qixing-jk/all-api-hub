@@ -155,6 +155,8 @@ describe("product analytics event enums", () => {
       SelectApiCredentialProfileExportDestination:
         "select_api_credential_profile_export_destination",
       SnapshotApiCredentialProfiles: "snapshot_api_credential_profiles",
+      RunApiCredentialProbe: "run_api_credential_probe",
+      RunApiCredentialProbeSuite: "run_api_credential_probe_suite",
     })
   })
 

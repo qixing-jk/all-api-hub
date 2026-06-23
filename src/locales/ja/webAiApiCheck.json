@@ -24,8 +24,9 @@
       "saveToProfiles": "API 認証情報庫に保存",
       "saving": "保存中…",
       "showKey": "キーを表示",
-      "test": "テスト",
-      "testing": "テスト中…"
+      "stopping": "停止中…",
+      "stopTest": "テストを停止",
+      "test": "テスト"
     },
     "candidates": {
       "apiKey": "候補 Key {{index}}"
@@ -46,7 +47,9 @@
       "saveWithoutTest": "ヒント: Base URL と API キーが入力されていれば、その時点で保存できます（先にテストやモデル取得を行う必要はありません）。テストは任意で、可用性確認の補助にすぎません。"
     },
     "messages": {
-      "savedToProfiles": "{{name}} を API 認証情報庫に保存しました。"
+      "savedToProfiles": "{{name}} を API 認証情報庫に保存しました。",
+      "stoppingTest": "テストを停止しています。現在のリクエストは可能な限り早く中断されます。",
+      "testStopped": "テストを停止しました。完了済みの結果は保持され、未開始の項目は続行されません。"
     },
     "privacyHint": "API キーは機密情報として扱われます。既定では非表示で、API 認証情報庫に保存する操作を行わない限り、何も保存されません。",
     "probes": {

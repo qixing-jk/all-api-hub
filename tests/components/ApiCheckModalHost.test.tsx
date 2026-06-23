@@ -34,10 +34,12 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
+import type { ApiCheckRunProbeResponse } from "~/services/verification/webAiApiCheck/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { render } from "~~/tests/test-utils/render"
 
@@ -50,6 +52,14 @@ const {
   completeProductAnalyticsActionMock: vi.fn(),
   updateWebAiApiCheckMock: vi.fn(),
 }))
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
@@ -92,15 +102,19 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/verification/webAiApiCheck/messaging", () => ({
-  WebAiApiCheckMessageTypes: {
-    ShouldPrompt: "webAiApiCheck:shouldPrompt",
-    FetchModels: "webAiApiCheck:fetchModels",
-    RunProbe: "webAiApiCheck:runProbe",
-    SaveProfile: "webAiApiCheck:saveProfile",
+vi.mock(
+  "~/services/verification/webAiApiCheck/messaging",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/verification/webAiApiCheck/messaging")
+      >()
+    return {
+      ...actual,
+      sendWebAiApiCheckMessage: vi.fn(),
+    }
   },
-  sendWebAiApiCheckMessage: vi.fn(),
-}))
+)
 
 describe("ApiCheckModalHost", () => {
   const expectAnalyticsCallsToExcludeSensitiveValues = (
@@ -175,6 +189,25 @@ describe("ApiCheckModalHost", () => {
     await act(async () => {
       dispatchOpenApiCheckModal({ ...defaultDetail, ...detailOverrides })
     })
+  }
+
+  const startManualProbeSuite = async (
+    user: ReturnType<typeof userEvent.setup>,
+  ) => {
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-secret-fixture")
+    await user.click(
+      await screen.findByText("webAiApiCheck:modal.actions.test"),
+    )
   }
 
   it("opens with empty inputs for manual trigger without selection", async () => {
@@ -1398,6 +1431,112 @@ describe("ApiCheckModalHost", () => {
     )
   })
 
+  it("stops an individual running API probe and ignores its late result", async () => {
+    const user = userEvent.setup()
+    const probeDeferred = createDeferred<ApiCheckRunProbeResponse>()
+    const runProbeMessages: Array<Record<string, unknown>> = []
+
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+
+        if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
+          return { success: true, cancelled: true }
+        }
+
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          runProbeMessages.push(message)
+          return await probeDeferred.promise
+        }
+
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-secret-fixture")
+
+    const probeCard = await screen.findByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+
+    const activeRunId = await waitFor(() => {
+      expect(runProbeMessages).toEqual([
+        expect.objectContaining({
+          probeId: "text-generation",
+          runId: expect.any(String),
+        }),
+      ])
+      return runProbeMessages[0].runId as string
+    })
+
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.stopTest",
+      }),
+    )
+
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+      WebAiApiCheckMessageTypes.CancelRunProbe,
+      { runId: activeRunId },
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbe,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      {
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          apiType: "openai-compatible",
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
+        },
+      },
+    )
+
+    await act(async () => {
+      probeDeferred.resolve({
+        success: true,
+        result: {
+          id: "text-generation",
+          status: "fail",
+          latencyMs: 0,
+          summary: "Cancelled by user",
+        },
+      })
+    })
+
+    expect(
+      within(probeCard).queryByText("Cancelled by user"),
+    ).not.toBeInTheDocument()
+    expect(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.retry",
+      }),
+    ).toBeInTheDocument()
+  })
+
   it("maps structured probe HTTP status to an auth analytics failure", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
@@ -1606,6 +1745,171 @@ describe("ApiCheckModalHost", () => {
         },
       },
     )
+  })
+
+  it("stops the running API probe suite, cancels the active background run, and keeps queued probes idle", async () => {
+    const user = userEvent.setup()
+    const firstProbeDeferred = createDeferred<ApiCheckRunProbeResponse>()
+    const runProbeMessages: Array<Record<string, unknown>> = []
+
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+
+        if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
+          return { success: true, cancelled: true }
+        }
+
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          runProbeMessages.push(message)
+          const probeId = message.probeId as ApiVerificationProbeId
+          if (message.probeId === "text-generation") {
+            return await firstProbeDeferred.promise
+          }
+
+          return {
+            success: true,
+            result: {
+              id: probeId,
+              status: "pass",
+              latencyMs: 1,
+              summary: "Should not run",
+            },
+          }
+        }
+
+        return { success: false }
+      },
+    )
+
+    await startManualProbeSuite(user)
+
+    const activeRunId = await waitFor(() => {
+      const activeProbeMessage = runProbeMessages.find(
+        (message) => message.probeId === "text-generation",
+      )
+      expect(activeProbeMessage).toEqual(
+        expect.objectContaining({
+          probeId: "text-generation",
+          runId: expect.any(String),
+        }),
+      )
+      return activeProbeMessage!.runId as string
+    })
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "webAiApiCheck:modal.actions.stopTest",
+      }),
+    )
+
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+      WebAiApiCheckMessageTypes.CancelRunProbe,
+      { runId: activeRunId },
+    )
+    firstProbeDeferred.resolve({
+      success: true,
+      result: {
+        id: "text-generation",
+        status: "fail",
+        latencyMs: 0,
+        summary: "Cancelled by user",
+      },
+    })
+
+    expect(
+      await screen.findByText("webAiApiCheck:modal.messages.testStopped"),
+    ).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(runProbeMessages).toHaveLength(2)
+    })
+    expect(
+      await screen.findByText("webAiApiCheck:modal.actions.test"),
+    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+        {
+          insights: {
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            apiType: "openai-compatible",
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+            itemCount: 5,
+            successCount: 1,
+            failureCount: 0,
+            skippedCount: 4,
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
+          },
+        },
+      )
+    })
+  })
+
+  it("keeps the modal open when the backdrop is clicked while the API probe suite is running", async () => {
+    const user = userEvent.setup()
+    const firstProbeDeferred = createDeferred<ApiCheckRunProbeResponse>()
+
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          if (message.probeId === "text-generation") {
+            return await firstProbeDeferred.promise
+          }
+
+          return {
+            success: true,
+            result: {
+              id: message.probeId as ApiVerificationProbeId,
+              status: "pass",
+              latencyMs: 1,
+              summary: "Probe OK",
+            },
+          }
+        }
+
+        return { success: false }
+      },
+    )
+
+    await startManualProbeSuite(user)
+    await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.actions.stopTest",
+    })
+
+    fireEvent.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.backdrop))
+
+    expect(
+      screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal),
+    ).toBeInTheDocument()
+    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalledWith(
+      WebAiApiCheckMessageTypes.CancelRunProbe,
+      expect.anything(),
+    )
+
+    await act(async () => {
+      firstProbeDeferred.resolve({
+        success: true,
+        result: {
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 1,
+          summary: "Probe OK",
+        },
+      })
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("webAiApiCheck:modal.actions.test"),
+      ).toBeInTheDocument()
+    })
   })
 
   it("falls back to the local probe error when the background probe call throws", async () => {

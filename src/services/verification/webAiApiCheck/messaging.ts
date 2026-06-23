@@ -5,6 +5,8 @@ import {
 import { createLogger } from "~/utils/core/logger"
 
 import type {
+  ApiCheckCancelRunProbeRequest,
+  ApiCheckCancelRunProbeResponse,
   ApiCheckFetchModelsRequest,
   ApiCheckFetchModelsResponse,
   ApiCheckRunProbeRequest,
@@ -19,6 +21,7 @@ export const WebAiApiCheckMessageTypes = {
   ShouldPrompt: "webAiApiCheck:shouldPrompt",
   FetchModels: "webAiApiCheck:fetchModels",
   RunProbe: "webAiApiCheck:runProbe",
+  CancelRunProbe: "webAiApiCheck:cancelRunProbe",
   SaveProfile: "webAiApiCheck:saveProfile",
 } as const
 
@@ -49,6 +52,9 @@ interface WebAiApiCheckProtocolMap {
   [WebAiApiCheckMessageTypes.RunProbe](
     data: ApiCheckRunProbeRequest,
   ): ApiCheckRunProbeResponse
+  [WebAiApiCheckMessageTypes.CancelRunProbe](
+    data: ApiCheckCancelRunProbeRequest,
+  ): ApiCheckCancelRunProbeResponse
   [WebAiApiCheckMessageTypes.SaveProfile](
     data: ApiCheckSaveProfileRequest,
   ): ApiCheckSaveProfileResponse

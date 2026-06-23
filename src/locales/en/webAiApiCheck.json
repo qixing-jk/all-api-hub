@@ -24,8 +24,9 @@
       "saveToProfiles": "Save to API credential library",
       "saving": "Saving…",
       "showKey": "Show key",
-      "test": "Test",
-      "testing": "Testing…"
+      "stopping": "Stopping…",
+      "stopTest": "Stop test",
+      "test": "Test"
     },
     "candidates": {
       "apiKey": "Candidate key {{index}}"
@@ -46,7 +47,9 @@
       "saveWithoutTest": "Tip: you can save once base URL + API key are provided (no need to test or fetch models first). Testing is optional and only helps verify availability."
     },
     "messages": {
-      "savedToProfiles": "Saved {{name}} to API credential library."
+      "savedToProfiles": "Saved {{name}} to API credential library.",
+      "stoppingTest": "Stopping the test. The current request will be interrupted as soon as possible.",
+      "testStopped": "Test stopped. Completed results were kept, and items that had not started will not continue."
     },
     "privacyHint": "API Keys will be considered sensitive information: hidden by default, and nothing is stored unless you choose to save to API credential library.",
     "probes": {

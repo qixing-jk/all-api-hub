@@ -15,6 +15,7 @@ import {
   Button,
   IconButton,
   Input,
+  Notice,
   SearchableSelect,
   Textarea,
 } from "~/components/ui"
@@ -30,6 +31,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -59,6 +61,7 @@ import {
 } from "~/services/verification/webAiApiCheck/messaging"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { isTestMode } from "~/utils/core/environment"
+import { safeRandomUUID } from "~/utils/core/identifier"
 
 import {
   API_CHECK_OPEN_MODAL_EVENT,
@@ -169,6 +172,18 @@ function buildProbeState(apiType: ApiVerificationApiType): ProbeItemState[] {
 }
 
 /**
+ * Clear the running flag when a late probe result should no longer update UI data.
+ */
+function markProbeNotRunning(
+  probes: ProbeItemState[],
+  probeId: ApiVerificationProbeId,
+): ProbeItemState[] {
+  return probes.map((probe) =>
+    probe.id === probeId ? { ...probe, isRunning: false } : probe,
+  )
+}
+
+/**
  * Always-mounted modal host rendered inside the content-script Shadow DOM root.
  *
  * The host listens for CustomEvents to open/close, so the rest of the content
@@ -232,9 +247,23 @@ export function ApiCheckModalHost() {
     buildProbeState(API_TYPES.OPENAI_COMPATIBLE),
   )
   const [isRunningAll, setIsRunningAll] = useState(false)
+  const [isStoppingRunAll, setIsStoppingRunAll] = useState(false)
+  const [testStoppedMessage, setTestStoppedMessage] = useState<string | null>(
+    null,
+  )
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
   const hasInitializedApiTypeRef = useRef(false)
+  const shouldStopRunAllRef = useRef(false)
+  const activeProbeRunIdsRef = useRef(new Map<ApiVerificationProbeId, string>())
+  const activeProbeTrackersRef = useRef(
+    new Map<
+      ApiVerificationProbeId,
+      ReturnType<typeof startProductAnalyticsAction>
+    >(),
+  )
+  const cancelledProbeRunIdsRef = useRef(new Set<string>())
+  const activeRunAllProbeIdRef = useRef<ApiVerificationProbeId | null>(null)
 
   const probeDefinitions = useMemo(
     () => getApiVerificationProbeDefinitions(apiType),
@@ -257,6 +286,7 @@ export function ApiCheckModalHost() {
 
   const resetProbeState = (nextApiType: ApiVerificationApiType) => {
     setProbes(buildProbeState(nextApiType))
+    setTestStoppedMessage(null)
   }
 
   useEffect(() => {
@@ -692,7 +722,11 @@ export function ApiCheckModalHost() {
 
   const runProbe = async (
     probeId: ApiVerificationProbeId,
-    options: { trackIndividual?: boolean } = {},
+    options: {
+      trackIndividual?: boolean
+      runId?: string
+      shouldIgnoreResult?: () => boolean
+    } = {},
   ): Promise<ApiCheckProbeResultWithAnalyticsCategory | null> => {
     const shouldTrack = options.trackIndividual !== false
     const tracker = shouldTrack
@@ -730,10 +764,16 @@ export function ApiCheckModalHost() {
       ),
     )
 
+    const runId = options.runId ?? safeRandomUUID(`web-ai-api-check-${probeId}`)
     try {
+      activeProbeRunIdsRef.current.set(probeId, runId)
+      if (tracker) {
+        activeProbeTrackersRef.current.set(probeId, tracker)
+      }
       const response = await sendWebAiApiCheckMessage(
         WebAiApiCheckMessageTypes.RunProbe,
         {
+          runId,
           apiType,
           baseUrl: trimmedBaseUrl,
           apiKey: trimmedApiKey,
@@ -745,6 +785,13 @@ export function ApiCheckModalHost() {
       if (response.success && response.result) {
         const result =
           response.result as ApiCheckProbeResultWithAnalyticsCategory
+        if (
+          cancelledProbeRunIdsRef.current.has(runId) ||
+          options.shouldIgnoreResult?.()
+        ) {
+          setProbes((prev) => markProbeNotRunning(prev, probeId))
+          return null
+        }
         setProbes((prev) =>
           prev.map((probe) =>
             probe.id === probeId
@@ -783,6 +830,14 @@ export function ApiCheckModalHost() {
         },
       }
 
+      if (
+        cancelledProbeRunIdsRef.current.has(runId) ||
+        options.shouldIgnoreResult?.()
+      ) {
+        setProbes((prev) => markProbeNotRunning(prev, probeId))
+        return null
+      }
+
       setProbes((prev) =>
         prev.map((probe) =>
           probe.id === probeId
@@ -812,6 +867,13 @@ export function ApiCheckModalHost() {
           baseUrl: trimmedBaseUrl,
         },
       }
+      if (
+        cancelledProbeRunIdsRef.current.has(runId) ||
+        options.shouldIgnoreResult?.()
+      ) {
+        setProbes((prev) => markProbeNotRunning(prev, probeId))
+        return null
+      }
       setProbes((prev) =>
         prev.map((probe) =>
           probe.id === probeId
@@ -830,6 +892,53 @@ export function ApiCheckModalHost() {
         }),
       })
       return fallback
+    } finally {
+      if (activeProbeRunIdsRef.current.get(probeId) === runId) {
+        activeProbeRunIdsRef.current.delete(probeId)
+      }
+      if (activeProbeTrackersRef.current.get(probeId) === tracker) {
+        activeProbeTrackersRef.current.delete(probeId)
+      }
+      cancelledProbeRunIdsRef.current.delete(runId)
+    }
+  }
+
+  const stopProbe = (probeId: ApiVerificationProbeId) => {
+    const activeRunId = activeProbeRunIdsRef.current.get(probeId)
+    if (!activeRunId) return
+
+    void sendWebAiApiCheckMessage(WebAiApiCheckMessageTypes.CancelRunProbe, {
+      runId: activeRunId,
+    }).catch(() => {})
+    cancelledProbeRunIdsRef.current.add(activeRunId)
+
+    activeProbeTrackersRef.current
+      .get(probeId)
+      ?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+        insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
+        }),
+      })
+    activeProbeTrackersRef.current.delete(probeId)
+
+    setProbes((prev) => markProbeNotRunning(prev, probeId))
+  }
+
+  const stopRunAll = () => {
+    if (shouldStopRunAllRef.current) return
+    shouldStopRunAllRef.current = true
+    setIsStoppingRunAll(true)
+    setTestStoppedMessage(t("webAiApiCheck:modal.messages.stoppingTest"))
+
+    const activeRunAllProbeId = activeRunAllProbeIdRef.current
+    const activeRunId = activeRunAllProbeId
+      ? activeProbeRunIdsRef.current.get(activeRunAllProbeId)
+      : undefined
+    if (activeRunId) {
+      void sendWebAiApiCheckMessage(WebAiApiCheckMessageTypes.CancelRunProbe, {
+        runId: activeRunId,
+      }).catch(() => {})
     }
   }
 
@@ -856,14 +965,57 @@ export function ApiCheckModalHost() {
       return
     }
 
+    shouldStopRunAllRef.current = false
+    setIsStoppingRunAll(false)
+    setTestStoppedMessage(null)
     setIsRunningAll(true)
     const results: ApiCheckProbeResultWithAnalyticsCategory[] = []
     try {
       for (const def of probeDefinitions) {
+        if (shouldStopRunAllRef.current) break
         // Run sequentially so the UI updates progressively and we avoid bursty network traffic.
-        const result = await runProbe(def.id, { trackIndividual: false })
-        if (result) results.push(result)
+        const runId = safeRandomUUID(`web-ai-api-check-${def.id}`)
+        activeRunAllProbeIdRef.current = def.id
+        const result = await runProbe(def.id, {
+          trackIndividual: false,
+          runId,
+          shouldIgnoreResult: () => shouldStopRunAllRef.current,
+        })
+        if (!shouldStopRunAllRef.current && result) results.push(result)
+        if (shouldStopRunAllRef.current) break
       }
+
+      if (shouldStopRunAllRef.current) {
+        const successCount = results.filter(
+          (result) => result.status === "pass",
+        ).length
+        const failureCount = results.filter(
+          (result) => result.status === "fail",
+        ).length
+        const skippedCount = Math.max(
+          probeDefinitions.length - results.length,
+          0,
+        )
+
+        setProbes((prev) =>
+          prev.map((probe) =>
+            probe.isRunning ? { ...probe, isRunning: false } : probe,
+          ),
+        )
+        setTestStoppedMessage(t("webAiApiCheck:modal.messages.testStopped"))
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+          insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+            itemCount: probeDefinitions.length,
+            successCount,
+            failureCount,
+            skippedCount,
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
+          }),
+        })
+        return
+      }
+
       const successCount = results.filter(
         (result) => result.status === "pass",
       ).length
@@ -901,10 +1053,12 @@ export function ApiCheckModalHost() {
       })
     } finally {
       setIsRunningAll(false)
+      setIsStoppingRunAll(false)
+      shouldStopRunAllRef.current = false
+      activeRunAllProbeIdRef.current = null
     }
   }
 
-  // Users may want to persist credentials first, then verify later.
   const canSaveProfile = !!baseUrl.trim() && !!apiKey.trim() && !isSavingProfile
 
   const handleSaveProfile = async () => {
@@ -992,7 +1146,6 @@ export function ApiCheckModalHost() {
       setIsSavingProfile(false)
     }
   }
-
   const apiTypeOptions = useMemo(
     () => [
       { value: API_TYPES.OPENAI_COMPATIBLE, label: "OpenAI-compatible" },
@@ -1017,8 +1170,12 @@ export function ApiCheckModalHost() {
       />
       <div
         ref={backdropRef}
+        data-testid={WEB_AI_API_CHECK_TEST_IDS.backdrop}
         className="pointer-events-auto absolute inset-0 bg-black/40"
-        onClick={close}
+        onClick={() => {
+          if (isRunningAll || isAnyProbeRunning) return
+          close()
+        }}
       />
 
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-3">
@@ -1185,13 +1342,17 @@ export function ApiCheckModalHost() {
 
                 <Button
                   type="button"
-                  onClick={runAll}
+                  variant={isRunningAll ? "outline" : "default"}
+                  onClick={isRunningAll ? stopRunAll : runAll}
                   disabled={
-                    isRunningAll || isFetchingModels || isAnyProbeRunning
+                    isStoppingRunAll ||
+                    (!isRunningAll && (isFetchingModels || isAnyProbeRunning))
                   }
                 >
                   {isRunningAll
-                    ? t("webAiApiCheck:modal.actions.testing")
+                    ? isStoppingRunAll
+                      ? t("webAiApiCheck:modal.actions.stopping")
+                      : t("webAiApiCheck:modal.actions.stopTest")
                     : t("webAiApiCheck:modal.actions.test")}
                 </Button>
 
@@ -1212,6 +1373,10 @@ export function ApiCheckModalHost() {
                 <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-200">
                   {fetchModelsError}
                 </div>
+              ) : null}
+
+              {testStoppedMessage ? (
+                <Notice tone="warning" description={testStoppedMessage} />
               ) : null}
 
               <div className="space-y-2">
@@ -1258,13 +1423,20 @@ export function ApiCheckModalHost() {
                           type="button"
                           size="sm"
                           variant="secondary"
-                          onClick={() => runProbe(probe.id)}
+                          onClick={() =>
+                            probe.isRunning
+                              ? stopProbe(probe.id)
+                              : runProbe(probe.id)
+                          }
                           disabled={
-                            isRunningAll || isFetchingModels || probe.isRunning
+                            isRunningAll ||
+                            (!probe.isRunning && isFetchingModels)
                           }
                         >
                           {probe.isRunning
-                            ? t("webAiApiCheck:modal.actions.running")
+                            ? isRunningAll
+                              ? t("webAiApiCheck:modal.actions.running")
+                              : t("webAiApiCheck:modal.actions.stopTest")
                             : probe.attempts > 0
                               ? t("webAiApiCheck:modal.actions.retry")
                               : t("webAiApiCheck:modal.actions.runOne")}

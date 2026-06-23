@@ -24,8 +24,9 @@
       "saveToProfiles": "保存到 API 凭据库",
       "saving": "保存中…",
       "showKey": "显示 Key",
-      "test": "测试",
-      "testing": "测试中…"
+      "stopping": "正在停止…",
+      "stopTest": "停止测试",
+      "test": "测试"
     },
     "candidates": {
       "apiKey": "候选 Key {{index}}"
@@ -46,7 +47,9 @@
       "saveWithoutTest": "提示：只要填写 Base URL 与 API Key 就能保存到 API 凭据库（无需先测试或获取模型列表）。测试仅用于验证可用性。"
     },
     "messages": {
-      "savedToProfiles": "已保存 {{name}} 到 API 凭据库"
+      "savedToProfiles": "已保存 {{name}} 到 API 凭据库",
+      "stoppingTest": "正在停止测试，当前请求会尽快中断。",
+      "testStopped": "测试已停止，已完成的结果已保留，未开始的项目不会继续运行。"
     },
     "privacyHint": "API Key 会被视为敏感信息：默认隐藏，且除非你主动保存到 API 凭据库，否则不会持久化保存任何数据。",
     "probes": {

@@ -2,6 +2,15 @@ import { describe, expect, it, vi } from "vitest"
 
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/events"
+import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -465,6 +474,7 @@ describe("webAiApiCheck background handlers", () => {
       baseUrl: "https://proxy.example.com/api",
       modelId: undefined,
       probeId: "text-generation",
+      abortSignal: undefined,
     })
     expect(response).toEqual({
       success: true,
@@ -479,6 +489,72 @@ describe("webAiApiCheck background handlers", () => {
         },
       },
     })
+  })
+
+  it("runProbe can be cancelled by run id while the probe is in flight", async () => {
+    vi.resetModules()
+    let receivedSignal: AbortSignal | undefined
+    const probeDeferred = createDeferred<ApiVerificationProbeResult>()
+
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    vi.mocked(runApiVerificationProbe).mockImplementation(
+      async ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return await probeDeferred.promise
+      },
+    )
+
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+
+    const probePromise = background.resolveWebAiApiCheckRunProbeMessage({
+      runId: "web-ai-api-check-run-1",
+      apiType: "openai-compatible",
+      baseUrl: "https://proxy.example.com/api/v1",
+      apiKey: "sk-test-secret-fixture",
+      modelId: "gpt-4o-mini",
+      probeId: "text-generation",
+    })
+
+    await vi.waitFor(() => {
+      expect(receivedSignal).toBeInstanceOf(AbortSignal)
+    })
+
+    const cancelResponse =
+      await background.resolveWebAiApiCheckCancelRunProbeMessage({
+        runId: "web-ai-api-check-run-1",
+      })
+
+    expect(cancelResponse).toEqual({ success: true, cancelled: true })
+    expect(receivedSignal?.aborted).toBe(true)
+
+    probeDeferred.resolve({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 0,
+      summary: "Cancelled by user",
+      input: {
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api",
+      },
+    })
+    await expect(probePromise).resolves.toMatchObject({
+      success: true,
+      result: {
+        id: "text-generation",
+        status: "fail",
+        summary: "Cancelled by user",
+      },
+    })
+
+    const secondCancelResponse =
+      await background.resolveWebAiApiCheckCancelRunProbeMessage({
+        runId: "web-ai-api-check-run-1",
+      })
+    expect(secondCancelResponse).toEqual({ success: true, cancelled: false })
   })
 
   it("runProbe sanitizes apiKey when probe execution throws", async () => {

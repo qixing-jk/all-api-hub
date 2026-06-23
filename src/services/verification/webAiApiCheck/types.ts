@@ -62,6 +62,7 @@ export type ApiCheckFetchModelsResponse =
  * The returned result must never include secrets (apiKey), and error summaries must be sanitized.
  */
 export type ApiCheckRunProbeRequest = {
+  runId?: string
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
@@ -82,6 +83,22 @@ export type ApiCheckRunProbeResponse =
       error?: string
       errorCategory?: ProductAnalyticsErrorCategory
     }
+
+/**
+ * Runtime data from content -> background to abort one in-flight probe.
+ */
+export type ApiCheckCancelRunProbeRequest = {
+  runId: string
+}
+
+/**
+ * Runtime response for {@link ApiCheckCancelRunProbeRequest}.
+ */
+export type ApiCheckCancelRunProbeResponse = {
+  success: true
+  cancelled: boolean
+}
+
 /**
  * Runtime data from content → background to persist the current credentials
  * as an API credential profile.

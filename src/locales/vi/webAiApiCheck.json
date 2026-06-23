@@ -24,8 +24,9 @@
       "saveToProfiles": "Lưu vào API Profiles",
       "saving": "Đang lưu...",
       "showKey": "Hiện Key",
-      "test": "Kiểm tra",
-      "testing": "Đang kiểm tra..."
+      "stopping": "Đang dừng...",
+      "stopTest": "Dừng kiểm tra",
+      "test": "Kiểm tra"
     },
     "candidates": {
       "apiKey": "Key ứng viên {{index}}"
@@ -46,7 +47,9 @@
       "saveWithoutTest": "Mẹo: Chỉ cần điền Base URL và API Key là có thể lưu vào API Profiles (không cần kiểm tra hoặc lấy danh sách mô hình trước). Kiểm tra chỉ được sử dụng để xác minh khả năng khả dụng."
     },
     "messages": {
-      "savedToProfiles": "Đã lưu {{name}} vào API Profiles"
+      "savedToProfiles": "Đã lưu {{name}} vào API Profiles",
+      "stoppingTest": "Đang dừng kiểm tra. Yêu cầu hiện tại sẽ được ngắt sớm nhất có thể.",
+      "testStopped": "Đã dừng kiểm tra. Các kết quả đã hoàn tất được giữ lại, và các mục chưa bắt đầu sẽ không chạy tiếp."
     },
     "privacyHint": "API Key được coi là thông tin nhạy cảm: mặc định bị ẩn và trừ khi bạn chủ động lưu vào API Profiles, sẽ không có bất kỳ dữ liệu nào được lưu trữ liên tục.",
     "probes": {

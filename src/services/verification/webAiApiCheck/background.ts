@@ -17,9 +17,8 @@ import {
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
 import {
-  inferHttpStatus,
+  buildSafeProbeFailureDiagnostics,
   inferStructuredHttpStatus,
-  summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
 import {
@@ -32,6 +31,8 @@ import { isUrlAllowedByRegexList } from "~/utils/core/urlWhitelist"
 
 import { onWebAiApiCheckMessage, WebAiApiCheckMessageTypes } from "./messaging"
 import type {
+  ApiCheckCancelRunProbeRequest,
+  ApiCheckCancelRunProbeResponse,
   ApiCheckFetchModelsRequest,
   ApiCheckFetchModelsResponse,
   ApiCheckRunProbeRequest,
@@ -46,6 +47,8 @@ import type {
  * Unified logger scoped to Web AI API Check background handlers.
  */
 const logger = createLogger("WebAiApiCheck")
+
+const activeProbeAbortControllers = new Map<string, AbortController>()
 
 /**
  * Read Web AI API Check preferences with safe defaults.
@@ -257,7 +260,7 @@ export async function resolveWebAiApiCheckRunProbeMessage(
   request: ApiCheckRunProbeRequest,
 ): Promise<ApiCheckRunProbeResponse> {
   try {
-    const { apiType, baseUrl, apiKey, modelId, probeId } = request
+    const { runId, apiType, baseUrl, apiKey, modelId, probeId } = request
 
     if (!apiType || !baseUrl?.trim() || !apiKey?.trim() || !probeId) {
       return {
@@ -277,27 +280,31 @@ export async function resolveWebAiApiCheckRunProbeMessage(
     }
 
     try {
+      const abortController = runId ? new AbortController() : undefined
+      if (runId && abortController) {
+        activeProbeAbortControllers.set(runId, abortController)
+      }
+
       const result = await runApiVerificationProbe({
         baseUrl: normalizedBaseUrl,
         apiKey,
         apiType,
         modelId: modelId?.trim() || undefined,
         probeId: probeId as ApiVerificationProbeId,
+        abortSignal: abortController?.signal,
       })
 
       return { success: true, result }
     } catch (error) {
       const message = toSanitizedErrorSummary(error, [apiKey])
-      const status = inferHttpStatus(error, message)
-      const analyticsStatus = inferStructuredHttpStatus(error)
-      const summaryKey = summaryKeyFromHttpStatus(status)
+      const diagnostics = buildSafeProbeFailureDiagnostics(error, message)
 
       logger.error("Probe execution failed", {
         apiType,
         probeId,
         baseUrl: normalizedBaseUrl,
         message,
-        status,
+        status: diagnostics.summaryParams?.status,
       })
 
       const result: ApiVerificationProbeResult = {
@@ -305,19 +312,18 @@ export async function resolveWebAiApiCheckRunProbeMessage(
         status: "fail",
         latencyMs: 0,
         summary: message,
-        summaryKey,
-        summaryParams: summaryKey ? { status } : undefined,
+        ...diagnostics,
         input: {
           apiType,
           baseUrl: normalizedBaseUrl,
         },
-        output:
-          typeof analyticsStatus === "number"
-            ? { inferredHttpStatus: analyticsStatus }
-            : undefined,
       }
 
       return { success: true, result }
+    } finally {
+      if (runId) {
+        activeProbeAbortControllers.delete(runId)
+      }
     }
   } catch (error) {
     logger.error("ApiCheck message handling failed", {
@@ -325,6 +331,27 @@ export async function resolveWebAiApiCheckRunProbeMessage(
     })
     return toGenericFailureResponse()
   }
+}
+
+/**
+ * Abort a single in-flight API verification probe.
+ */
+export async function resolveWebAiApiCheckCancelRunProbeMessage(
+  request: ApiCheckCancelRunProbeRequest,
+): Promise<ApiCheckCancelRunProbeResponse> {
+  const runId = request.runId.trim()
+  if (!runId) {
+    return { success: true, cancelled: false }
+  }
+
+  const abortController = activeProbeAbortControllers.get(runId)
+  if (!abortController) {
+    return { success: true, cancelled: false }
+  }
+
+  abortController.abort()
+  activeProbeAbortControllers.delete(runId)
+  return { success: true, cancelled: true }
 }
 
 /**
@@ -418,6 +445,10 @@ export function setupWebAiApiCheckMessagingListeners() {
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.RunProbe,
       async ({ data }) => resolveWebAiApiCheckRunProbeMessage(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.CancelRunProbe,
+      async ({ data }) => resolveWebAiApiCheckCancelRunProbeMessage(data),
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.SaveProfile,
