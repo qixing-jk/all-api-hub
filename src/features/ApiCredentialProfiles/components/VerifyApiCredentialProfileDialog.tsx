@@ -198,6 +198,7 @@ export function VerifyApiCredentialProfileDialog({
 
   const apiTypeRef = useRef(apiType)
   const fetchModelsRequestIdRef = useRef(0)
+  const fetchModelsAbortControllerRef = useRef<AbortController | null>(null)
   const pendingHistoryContextKeyRef = useRef<string | null>(null)
   const lastLoadedHistoryContextKeyRef = useRef<string | null>(null)
   const trimmedModelId = modelId.trim()
@@ -289,6 +290,9 @@ export function VerifyApiCredentialProfileDialog({
       if (!profile) return
 
       const requestId = (fetchModelsRequestIdRef.current += 1)
+      fetchModelsAbortControllerRef.current?.abort()
+      const abortController = new AbortController()
+      fetchModelsAbortControllerRef.current = abortController
       setFetchModelsError(null)
       setIsFetchingModels(true)
 
@@ -298,6 +302,7 @@ export function VerifyApiCredentialProfileDialog({
             apiType: nextApiType,
             baseUrl: profile.baseUrl,
             apiKey: profile.apiKey,
+            abortSignal: abortController.signal,
           }),
         )
 
@@ -320,6 +325,13 @@ export function VerifyApiCredentialProfileDialog({
           })
         }
       } catch (error) {
+        if (
+          abortController.signal.aborted ||
+          fetchModelsRequestIdRef.current !== requestId
+        ) {
+          return
+        }
+
         const message =
           toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
           t("apiCredentialProfiles:verify.modelsFetchFailed")
@@ -330,6 +342,9 @@ export function VerifyApiCredentialProfileDialog({
 
         setFetchModelsError(message)
       } finally {
+        if (fetchModelsAbortControllerRef.current === abortController) {
+          fetchModelsAbortControllerRef.current = null
+        }
         if (fetchModelsRequestIdRef.current === requestId) {
           setIsFetchingModels(false)
         }
@@ -340,6 +355,8 @@ export function VerifyApiCredentialProfileDialog({
 
   useEffect(() => {
     if (!isOpen || !profile) {
+      fetchModelsAbortControllerRef.current?.abort()
+      fetchModelsAbortControllerRef.current = null
       pendingHistoryContextKeyRef.current = null
       lastLoadedHistoryContextKeyRef.current = null
       return

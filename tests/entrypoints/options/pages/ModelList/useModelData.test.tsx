@@ -737,10 +737,13 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
 
-    expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith({
-      account,
-      token: tokens[0],
-    })
+    expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account,
+        token: tokens[0],
+        abortSignal: expect.any(AbortSignal),
+      }),
+    )
     expect(fetchPricing).not.toHaveBeenCalled()
     expect(result.current.loadErrorMessage).toBeNull()
     expect(result.current.pricingContexts).toEqual([
@@ -1626,6 +1629,53 @@ describe("useModelData all-accounts loading", () => {
     })
   })
 
+  it("passes React Query abort signals to profile catalog model fetches", async () => {
+    let receivedSignal: AbortSignal | undefined
+    mockFetchApiCredentialModelIds.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise<string[]>((resolve) => {
+          abortSignal?.addEventListener("abort", () => resolve([]), {
+            once: true,
+          })
+        })
+      },
+    )
+
+    const profileSource = createProfileSource({
+      id: "profile-cancel",
+      name: "Cancelable Profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://profile.example.com",
+      apiKey: "sk-secret",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 2,
+    })
+
+    const initialProps: { source: ModelManagementSource | null } = {
+      source: profileSource,
+    }
+    const { rerender } = renderHook(
+      ({ source }: { source: ModelManagementSource | null }) =>
+        useModelData({
+          selectedSource: source,
+          accounts: [],
+        }),
+      {
+        initialProps,
+        wrapper: createWrapper(),
+      },
+    )
+
+    await waitFor(() => expect(receivedSignal).toBeDefined())
+
+    rerender({ source: null })
+
+    expect(receivedSignal?.aborted).toBe(true)
+  })
+
   it("tracks fallback catalog success and failure with sanitized source kind", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
@@ -2033,13 +2083,16 @@ describe("useModelData all-accounts loading", () => {
       ).toBe("runtime-model")
     })
     expect(fetchPricing).not.toHaveBeenCalled()
-    expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith({
-      account,
-      token: expect.objectContaining({
-        id: 10,
-        name: "Runtime Key",
+    expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account,
+        token: expect.objectContaining({
+          id: 10,
+          name: "Runtime Key",
+        }),
+        abortSignal: expect.any(AbortSignal),
       }),
-    })
+    )
   })
 
   it("loads Sub2API selected-key fallback runtime models without enabling common pricing", async () => {
@@ -2161,10 +2214,13 @@ describe("useModelData all-accounts loading", () => {
     })
 
     await waitFor(() => {
-      expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith({
-        account,
-        token: fallbackTokens[1],
-      })
+      expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account,
+          token: fallbackTokens[1],
+          abortSignal: expect.any(AbortSignal),
+        }),
+      )
       expect(result.current.accountFallback?.isActive).toBe(true)
     })
     expect(result.current.pricingData).toEqual(
@@ -2336,10 +2392,13 @@ describe("useModelData all-accounts loading", () => {
       () => {
         expect(
           mockLoadAccountTokenFallbackPricingResponse,
-        ).toHaveBeenCalledWith({
-          account,
-          token: fallbackToken,
-        })
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            account,
+            token: fallbackToken,
+            abortSignal: expect.any(AbortSignal),
+          }),
+        )
       },
       { timeout: 3000 },
     )
@@ -2449,10 +2508,13 @@ describe("useModelData all-accounts loading", () => {
     })
     expect(
       mockLoadAccountTokenFallbackPricingResponse,
-    ).toHaveBeenLastCalledWith({
-      account,
-      token: fallbackToken,
-    })
+    ).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        account,
+        token: fallbackToken,
+        abortSignal: expect.any(AbortSignal),
+      }),
+    )
     expect(fetchPricing).not.toHaveBeenCalled()
   })
 
@@ -2589,11 +2651,14 @@ describe("useModelData all-accounts loading", () => {
     )
 
     await waitFor(() =>
-      expect(mockFetchApiCredentialModelIds).toHaveBeenCalledWith({
-        apiType: API_TYPES.OPENAI_COMPATIBLE,
-        baseUrl: "https://profile.example.com",
-        apiKey: "sk-secret",
-      }),
+      expect(mockFetchApiCredentialModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://profile.example.com",
+          apiKey: "sk-secret",
+          abortSignal: expect.any(AbortSignal),
+        }),
+      ),
     )
 
     await waitFor(() =>
@@ -2755,10 +2820,13 @@ describe("useModelData all-accounts loading", () => {
     })
 
     await waitFor(() => {
-      expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith({
-        account,
-        token: fallbackTokens[1],
-      })
+      expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account,
+          token: fallbackTokens[1],
+          abortSignal: expect.any(AbortSignal),
+        }),
+      )
     })
 
     await waitFor(() => {

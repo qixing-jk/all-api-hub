@@ -876,7 +876,7 @@ test("loads managed-site channels, deep-links into manual model sync, and runs a
     page.getByRole("tab", { name: "Execution History" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Manage channel: Production OpenAI" }),
+    page.getByRole("cell", { name: "Production OpenAI" }),
   ).toBeVisible()
   await expect(page.getByText("Successful")).toBeVisible()
 
@@ -946,7 +946,7 @@ test("applies model redirect mapping during selected managed-site model sync thr
     page.getByRole("tab", { name: "Execution History" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Manage channel: Redirect OpenAI" }),
+    page.getByRole("cell", { name: "Redirect OpenAI" }),
   ).toBeVisible()
   await expect(page.getByText("Successful")).toBeVisible()
 

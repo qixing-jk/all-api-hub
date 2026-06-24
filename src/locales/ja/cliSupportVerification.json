@@ -4,8 +4,9 @@
       "close": "閉じる",
       "retry": "再試行",
       "run": "シミュレーションを実行",
-      "running": "実行中...",
-      "runOne": "実行"
+      "runOne": "実行",
+      "stop": "停止",
+      "stopTool": "{{tool}} を停止"
     },
     "details": {
       "input": "入力",
@@ -40,6 +41,7 @@
       "networkError": "ネットワークエラー / リクエストがブロックされました",
       "noModelIdProvided": "利用可能なモデル ID がありません",
       "noToolCallDetected": "ツール呼び出しが検出されませんでした（ツール呼び出し未対応の可能性があります）",
+      "stopped": "ユーザーが停止しました。",
       "supported": "対応",
       "supportedStreaming": "対応（ストリーミング）",
       "toolCallSucceeded": "ツール呼び出しに成功しました。",

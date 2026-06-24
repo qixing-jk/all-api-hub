@@ -1447,6 +1447,7 @@ export async function fetchSub2ApiRuntimeModels(
     const response = await fetch(endpointUrl, {
       method: "GET",
       cache: "no-store",
+      signal: request.abortSignal,
       headers: {
         Authorization: `Bearer ${apiKey}`,
       },

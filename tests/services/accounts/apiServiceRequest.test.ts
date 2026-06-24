@@ -225,6 +225,24 @@ describe("fetchDisplayAccountTokens", () => {
     })
   })
 
+  it("passes abort signals to token secret resolution requests", async () => {
+    const token = { id: 1, key: "sk-masked", status: 1, name: "Masked" }
+    const abortController = new AbortController()
+    resolveTokenKey.mockResolvedValue("sk-real")
+
+    await resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
+      abortSignal: abortController.signal,
+    })
+
+    expect(resolveTokenKey).toHaveBeenCalledWith({
+      request: expect.objectContaining({
+        ...REQUEST,
+        abortSignal: abortController.signal,
+      }),
+      token,
+    })
+  })
+
   it("returns a transient sk-prefixed secret for optional-prefix compatible account types", async () => {
     const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
     resolveTokenKey.mockResolvedValue("plain-secret")

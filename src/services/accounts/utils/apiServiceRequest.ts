@@ -132,6 +132,10 @@ export const createDisplayAccountApiContext = (
   }
 }
 
+export interface ResolveDisplayAccountTokenForSecretOptions {
+  abortSignal?: AbortSignal
+}
+
 /**
  * Fetches the current token inventory for a display account.
  */
@@ -190,12 +194,16 @@ export async function resolveDisplayAccountTokenForSecret<
     | "cookieAuthSessionCookie"
   >,
   token: TToken,
+  options: ResolveDisplayAccountTokenForSecretOptions = {},
 ): Promise<TToken> {
   const { keyManagement, request } = createDisplayAccountApiContext(account)
+  const resolutionRequest = options.abortSignal
+    ? { ...request, abortSignal: options.abortSignal }
+    : request
   const resolvedKey = await requireDisplayAccountKeyManagement(
     account,
     keyManagement,
-  ).resolveTokenKey({ request, token })
+  ).resolveTokenKey({ request: resolutionRequest, token })
   return formatOptionalSkPrefixSiteToken(
     resolvedKey === token.key ? token : { ...token, key: resolvedKey },
     account.siteType,

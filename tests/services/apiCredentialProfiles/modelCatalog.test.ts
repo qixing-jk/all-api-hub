@@ -74,6 +74,42 @@ describe("modelCatalog", () => {
     ).resolves.toEqual(["gemini-2.5-pro"])
   })
 
+  it("passes abort signals to provider-specific model-id fetchers", async () => {
+    const abortController = new AbortController()
+    fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce(["gpt-4o"])
+    fetchAnthropicModelIdsMock.mockResolvedValueOnce(["claude-3-7-sonnet"])
+    fetchGoogleModelIdsMock.mockResolvedValueOnce(["gemini-2.5-pro"])
+
+    await fetchApiCredentialModelIds({
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://proxy.example.com",
+      apiKey: "proxy-key",
+      abortSignal: abortController.signal,
+    })
+    await fetchApiCredentialModelIds({
+      apiType: API_TYPES.ANTHROPIC,
+      baseUrl: "https://anthropic.example.com",
+      apiKey: "anthropic-key",
+      abortSignal: abortController.signal,
+    })
+    await fetchApiCredentialModelIds({
+      apiType: API_TYPES.GOOGLE,
+      baseUrl: "https://google.example.com",
+      apiKey: "google-key",
+      abortSignal: abortController.signal,
+    })
+
+    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: abortController.signal }),
+    )
+    expect(fetchAnthropicModelIdsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: abortController.signal }),
+    )
+    expect(fetchGoogleModelIdsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: abortController.signal }),
+    )
+  })
+
   it("throws for unsupported profile api types", async () => {
     await expect(
       fetchApiCredentialModelIds({

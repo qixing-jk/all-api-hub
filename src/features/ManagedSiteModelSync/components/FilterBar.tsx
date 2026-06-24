@@ -7,7 +7,7 @@ import {
 import { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, Input } from "~/components/ui"
+import { Input } from "~/components/ui"
 import { ExecutionStatistics } from "~/types/managedSiteModelSync"
 
 export type FilterStatus = "all" | "success" | "failed"
@@ -46,10 +46,7 @@ export default function FilterBar({
     icon: ReactNode,
     count?: number,
   ) => (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
+    <button
       onClick={() => onStatusChange(value)}
       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
         status === value
@@ -70,7 +67,7 @@ export default function FilterBar({
           {count}
         </span>
       )}
-    </Button>
+    </button>
   )
 
   return (

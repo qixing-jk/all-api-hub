@@ -1,7 +1,7 @@
 import { ClockIcon, TrashIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 
-import { Button, IconButton } from "~/components/ui"
+import { IconButton } from "~/components/ui"
 import {
   Popover,
   PopoverContent,
@@ -74,10 +74,8 @@ export function ApiCheckBaseUrlHistoryPicker({
               role="listitem"
               className="group flex min-w-0 items-center gap-1 rounded-sm"
             >
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
                 className={cn(
                   "focus:bg-accent focus:text-accent-foreground flex min-w-0 flex-1 rounded-sm px-2 py-1.5 text-left text-sm outline-none",
                   suggestion.baseUrl === selectedBaseUrl
@@ -88,7 +86,7 @@ export function ApiCheckBaseUrlHistoryPicker({
                 onClick={() => onSelect(suggestion.baseUrl)}
               >
                 <span className="truncate">{suggestion.baseUrl}</span>
-              </Button>
+              </button>
               <IconButton
                 type="button"
                 aria-label={`${t("webAiApiCheck:modal.history.remove")}: ${

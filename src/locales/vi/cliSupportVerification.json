@@ -4,8 +4,9 @@
       "close": "Đóng",
       "retry": "Thử lại",
       "run": "Bắt đầu xác thực",
-      "running": "Đang chạy...",
-      "runOne": "Chạy"
+      "runOne": "Chạy",
+      "stop": "Dừng",
+      "stopTool": "Dừng {{tool}}"
     },
     "details": {
       "input": "Đầu vào",
@@ -40,6 +41,7 @@
       "networkError": "Lỗi mạng / Yêu cầu bị chặn",
       "noModelIdProvided": "Không có ID mô hình khả dụng",
       "noToolCallDetected": "Không phát hiện gọi công cụ (có thể không hỗ trợ tool/function calling)",
+      "stopped": "Đã dừng bởi người dùng.",
       "supported": "Hỗ trợ",
       "supportedStreaming": "Hỗ trợ (truyền phát)",
       "toolCallSucceeded": "Gọi công cụ thành công.",

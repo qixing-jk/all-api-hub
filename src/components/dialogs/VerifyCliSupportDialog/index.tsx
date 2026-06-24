@@ -62,6 +62,17 @@ import { formatLatency, safeJsonStringify } from "./utils"
 const logger = createLogger("VerifyCliSupportDialog")
 
 /**
+ * Detects user-initiated cancellation across DOM and service-layer aborts.
+ */
+function isAbortError(error: unknown, abortSignal?: AbortSignal) {
+  return (
+    abortSignal?.aborted ||
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError")
+  )
+}
+
+/**
  * Build the initial UI state for all tool rows.
  */
 function buildInitialToolState(): ToolItemState[] {
@@ -71,6 +82,20 @@ function buildInitialToolState(): ToolItemState[] {
     attempts: 0,
     result: null,
   }))
+}
+
+/**
+ * Builds a synthetic result so interrupted tool checks render as stopped, not failed.
+ */
+function buildStoppedToolResult(toolId: (typeof CLI_TOOL_IDS)[number]) {
+  return {
+    id: toolId,
+    probeId: "tool-calling" as const,
+    status: "unsupported" as const,
+    latencyMs: 0,
+    summary: "Stopped",
+    summaryKey: "verifyDialog.summaries.stopped",
+  }
 }
 
 /**
@@ -115,6 +140,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
   const [tools, setTools] = useState<ToolItemState[]>([])
+  const shouldStopRef = useRef(false)
+  const activeAbortControllerRef = useRef<AbortController | null>(null)
+  const toolAbortControllersRef = useRef(
+    new Map<(typeof CLI_TOOL_IDS)[number], AbortController>(),
+  )
+  const fetchModelsAbortControllerRef = useRef<AbortController | null>(null)
   const fetchModelsRequestIdRef = useRef(0)
 
   const selectedToken = tokens.find(
@@ -213,6 +244,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     }
 
     const requestId = (fetchModelsRequestIdRef.current += 1)
+    fetchModelsAbortControllerRef.current?.abort()
+    const abortController = new AbortController()
+    fetchModelsAbortControllerRef.current = abortController
     setFetchModelsError(null)
     setIsLoadingModels(true)
 
@@ -222,12 +256,20 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           apiType: profile.apiType,
           baseUrl: profile.baseUrl,
           apiKey: profile.apiKey,
+          abortSignal: abortController.signal,
         }),
       )
 
       if (fetchModelsRequestIdRef.current !== requestId) return
       setProfileModelOptions(normalized)
     } catch (error) {
+      if (
+        abortController.signal.aborted ||
+        fetchModelsRequestIdRef.current !== requestId
+      ) {
+        return
+      }
+
       const message =
         toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
         t("verifyDialog.modelsFetchFailed")
@@ -238,6 +280,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       setProfileModelOptions([])
       setFetchModelsError(message)
     } finally {
+      if (fetchModelsAbortControllerRef.current === abortController) {
+        fetchModelsAbortControllerRef.current = null
+      }
       if (fetchModelsRequestIdRef.current === requestId) {
         setIsLoadingModels(false)
       }
@@ -246,7 +291,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
   const runTool = async (
     toolId: (typeof CLI_TOOL_IDS)[number],
+    abortSignal?: AbortSignal,
   ): Promise<CliSupportResult | null> => {
+    if (abortSignal?.aborted || shouldStopRef.current) return null
     if (isProfileSource && !activeApiKey) return null
     const sourceAccount = account
     const accountToken = selectedToken
@@ -273,7 +320,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         const resolvedToken = await resolveDisplayAccountTokenForSecret(
           sourceAccount,
           accountToken,
+          { abortSignal },
         )
+        if (abortSignal?.aborted || shouldStopRef.current) return null
         resolvedApiKey = resolvedToken.key
         if (accountToken.key) {
           secretsToRedact.add(accountToken.key)
@@ -290,7 +339,23 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         baseUrl: sourceBaseUrl,
         apiKey: resolvedApiKey,
         modelId: resolvedModelId,
+        abortSignal,
       })
+
+      if (abortSignal?.aborted || shouldStopRef.current) {
+        setTools((prev) =>
+          prev.map((t) =>
+            t.toolId === toolId
+              ? {
+                  ...t,
+                  isRunning: false,
+                  result: buildStoppedToolResult(toolId),
+                }
+              : t,
+          ),
+        )
+        return null
+      }
 
       setTools((prev) =>
         prev.map((t) =>
@@ -299,6 +364,21 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       )
       return result
     } catch (error) {
+      if (isAbortError(error, abortSignal) || shouldStopRef.current) {
+        setTools((prev) =>
+          prev.map((t) =>
+            t.toolId === toolId
+              ? {
+                  ...t,
+                  isRunning: false,
+                  result: buildStoppedToolResult(toolId),
+                }
+              : t,
+          ),
+        )
+        return null
+      }
+
       const finishedAt = Date.now()
       const sanitizedMessage = toSanitizedErrorSummary(
         error,
@@ -372,6 +452,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
   const runAll = async () => {
     if (!hasRunnableSource) return
+    shouldStopRef.current = false
+    const abortController = new AbortController()
+    activeAbortControllerRef.current = abortController
     const tracker = startProductAnalyticsAction(analyticsContext)
     let successCount = 0
     let failureCount = 0
@@ -383,7 +466,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     try {
       // Run sequentially so each tool updates independently (and can be retried individually).
       for (const toolId of CLI_TOOL_IDS) {
-        const result = await runTool(toolId)
+        if (shouldStopRef.current || abortController.signal.aborted) break
+        const result = await runTool(toolId, abortController.signal)
         if (!result) continue
         if (result.status === "pass") {
           hasExecutedTool = true
@@ -394,6 +478,27 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           failedToolResult ??= result
         }
       }
+      if (shouldStopRef.current || abortController.signal.aborted) {
+        setTools((prev) =>
+          prev.map((tool) =>
+            tool.result
+              ? { ...tool, isRunning: false }
+              : {
+                  ...tool,
+                  isRunning: false,
+                  result: buildStoppedToolResult(tool.toolId),
+                },
+          ),
+        )
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+          insights: {
+            successCount,
+            failureCount,
+          },
+        })
+        return
+      }
+
       const completionResult =
         failureCount > 0
           ? PRODUCT_ANALYTICS_RESULTS.Failure
@@ -430,11 +535,26 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         },
       })
     } finally {
+      if (activeAbortControllerRef.current === abortController) {
+        activeAbortControllerRef.current = null
+      }
       setIsRunning(false)
     }
   }
 
+  const stopRun = () => {
+    shouldStopRef.current = true
+    activeAbortControllerRef.current?.abort()
+  }
+
   useEffect(() => {
+    shouldStopRef.current = false
+    activeAbortControllerRef.current?.abort()
+    activeAbortControllerRef.current = null
+    toolAbortControllersRef.current.forEach((controller) => controller.abort())
+    toolAbortControllersRef.current.clear()
+    fetchModelsAbortControllerRef.current?.abort()
+    fetchModelsAbortControllerRef.current = null
     if (!isOpen) return
     setTools(buildInitialToolState())
     setProfileModelOptions([])
@@ -459,12 +579,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         {t("verifyDialog.actions.close")}
       </Button>
       <Button
-        variant="success"
-        onClick={runAll}
-        disabled={isRunning || isLoadingTokens || !canRunAll}
+        variant={isRunning ? "destructive" : "success"}
+        onClick={isRunning ? stopRun : runAll}
+        disabled={!isRunning && (isLoadingTokens || !canRunAll)}
       >
         {isRunning
-          ? t("verifyDialog.actions.running")
+          ? t("verifyDialog.actions.stop")
           : t("verifyDialog.actions.run")}
       </Button>
     </div>
@@ -573,6 +693,22 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           {tools.map((tool) => {
             const result = tool.result
             const isDisabledForModel = !resolvedModelId.trim()
+            const stopTool = () => {
+              toolAbortControllersRef.current.get(tool.toolId)?.abort()
+            }
+            const runSingleTool = () => {
+              const abortController = new AbortController()
+              toolAbortControllersRef.current.set(tool.toolId, abortController)
+              shouldStopRef.current = false
+              void runTool(tool.toolId, abortController.signal).finally(() => {
+                if (
+                  toolAbortControllersRef.current.get(tool.toolId) ===
+                  abortController
+                ) {
+                  toolAbortControllersRef.current.delete(tool.toolId)
+                }
+              })
+            }
 
             const resultSummary = isDisabledForModel
               ? t("verifyDialog.requiresModelId")
@@ -620,18 +756,24 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
                   <Button
                     size="sm"
-                    variant="secondary"
-                    onClick={() => runTool(tool.toolId)}
+                    variant={tool.isRunning ? "destructive" : "secondary"}
+                    onClick={tool.isRunning ? stopTool : runSingleTool}
+                    aria-label={
+                      tool.isRunning
+                        ? t("verifyDialog.actions.stopTool", {
+                            tool: getCliSupportToolLabel(t, tool.toolId),
+                          })
+                        : undefined
+                    }
                     disabled={
                       isRunning ||
                       isLoadingTokens ||
-                      tool.isRunning ||
-                      !hasRunnableSource ||
-                      isDisabledForModel
+                      (!tool.isRunning &&
+                        (!hasRunnableSource || isDisabledForModel))
                     }
                   >
                     {tool.isRunning
-                      ? t("verifyDialog.actions.running")
+                      ? t("verifyDialog.actions.stop")
                       : tool.attempts > 0
                         ? t("verifyDialog.actions.retry")
                         : t("verifyDialog.actions.runOne")}

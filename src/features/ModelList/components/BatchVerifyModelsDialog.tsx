@@ -455,7 +455,17 @@ export function BatchVerifyModelsDialog({
   )
 
   const getResolvedToken = useCallback(
-    (item: AccountBatchVerifyModelItem, token: ApiToken): Promise<ApiToken> => {
+    (
+      item: AccountBatchVerifyModelItem,
+      token: ApiToken,
+      abortSignal?: AbortSignal,
+    ): Promise<ApiToken> => {
+      if (abortSignal) {
+        return resolveDisplayAccountTokenForSecret(item.source.account, token, {
+          abortSignal,
+        })
+      }
+
       const cacheKey = `${item.source.account.id}:${token.id}`
       const cached = resolvedTokenCacheRef.current.get(cacheKey)
       if (cached) return cached
@@ -548,7 +558,11 @@ export function BatchVerifyModelsDialog({
                   return null
                 }
 
-                const resolvedToken = await getResolvedToken(item, token)
+                const resolvedToken = await getResolvedToken(
+                  item,
+                  token,
+                  abortSignal,
+                )
                 if (isStopped()) return null
 
                 return {

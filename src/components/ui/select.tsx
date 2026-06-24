@@ -64,25 +64,17 @@ SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & {
-    container?: React.ComponentProps<typeof SelectPrimitive.Portal>["container"]
     position?: "item-aligned" | "popper"
   }
 >(
   (
-    {
-      className,
-      children,
-      container,
-      position = "popper",
-      align = "center",
-      ...props
-    },
+    { className, children, position = "popper", align = "center", ...props },
     ref,
   ) => {
     const floatingLayerClass = useFloatingLayerClass()
 
     return (
-      <SelectPrimitive.Portal container={container}>
+      <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           ref={ref}
           data-slot="select-content"

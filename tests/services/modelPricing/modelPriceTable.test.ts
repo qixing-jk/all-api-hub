@@ -99,4 +99,31 @@ describe("loadModelPriceTable", () => {
     expect(abortSignal?.aborted).toBe(true)
     await loadingExpectation
   })
+
+  it("aborts LiteLLM price-table requests when the caller signal aborts", async () => {
+    const abortController = new AbortController()
+    let abortSignal: AbortSignal | undefined
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) => {
+        abortSignal = init?.signal ?? undefined
+
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("The operation was aborted", "AbortError"))
+          })
+        })
+      }),
+    )
+
+    const loading = loadModelPriceTable(abortController.signal)
+    const loadingExpectation = expect(loading).rejects.toThrow(
+      "Failed to load LiteLLM price table",
+    )
+
+    abortController.abort()
+
+    expect(abortSignal?.aborted).toBe(true)
+    await loadingExpectation
+  })
 })

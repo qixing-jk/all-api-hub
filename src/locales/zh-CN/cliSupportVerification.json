@@ -4,8 +4,9 @@
       "close": "关闭",
       "retry": "重试",
       "run": "开始验证",
-      "running": "运行中...",
-      "runOne": "运行"
+      "runOne": "运行",
+      "stop": "停止",
+      "stopTool": "停止 {{tool}}"
     },
     "details": {
       "input": "输入",
@@ -40,6 +41,7 @@
       "networkError": "网络错误 / 请求被阻止",
       "noModelIdProvided": "没有可用的模型 ID",
       "noToolCallDetected": "未检测到工具调用（可能不支持 tool/function calling）",
+      "stopped": "已停止。",
       "supported": "支持",
       "supportedStreaming": "支持（流式）",
       "toolCallSucceeded": "工具调用成功。",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
@@ -71,6 +71,32 @@ import { formatLatency, safeJsonStringify } from "./utils"
 const logger = createLogger("VerifyApiDialog")
 
 /**
+ * Detects user-initiated cancellation across DOM and service-layer aborts.
+ */
+function isAbortError(error: unknown, abortSignal?: AbortSignal) {
+  return (
+    abortSignal?.aborted ||
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError")
+  )
+}
+
+/**
+ * Builds a synthetic result so interrupted probes render as stopped, not failed.
+ */
+function buildStoppedProbeResult(
+  probeId: ApiVerificationProbeId,
+): ApiVerificationProbeResult {
+  return {
+    id: probeId,
+    status: "unsupported",
+    latencyMs: 0,
+    summary: "Stopped",
+    summaryKey: "verifyDialog.summaries.stopped",
+  }
+}
+
+/**
  * Modal dialog that runs API verification for a selected account token + model.
  */
 export function VerifyApiDialog(props: VerifyApiDialogProps) {
@@ -92,6 +118,11 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     API_TYPES.OPENAI_COMPATIBLE,
   )
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
+  const shouldStopRef = useRef(false)
+  const suiteAbortControllerRef = useRef<AbortController | null>(null)
+  const probeAbortControllersRef = useRef(
+    new Map<ApiVerificationProbeId, AbortController>(),
+  )
   const historyTarget = useMemo(() => {
     const trimmedModelId = initialModelId?.trim()
     return trimmedModelId
@@ -223,7 +254,11 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     }
   }
 
-  const runProbe = async (probeId: ApiVerificationProbeId) => {
+  const runProbe = async (
+    probeId: ApiVerificationProbeId,
+    abortSignal?: AbortSignal,
+  ) => {
+    if (abortSignal?.aborted || shouldStopRef.current) return null
     if (!selectedToken || !selectedTokenIsCompatible) return null
     let resolvedToken = selectedToken
 
@@ -238,7 +273,9 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       resolvedToken = await resolveDisplayAccountTokenForSecret(
         account,
         selectedToken,
+        { abortSignal },
       )
+      if (abortSignal?.aborted || shouldStopRef.current) return null
       const result = await runApiVerificationProbe({
         baseUrl: account.baseUrl,
         apiKey: resolvedToken.key,
@@ -251,7 +288,23 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           models: resolvedToken.models,
         },
         probeId,
+        abortSignal,
       })
+
+      if (abortSignal?.aborted || shouldStopRef.current) {
+        replaceProbes(
+          probesRef.current.map((probe) =>
+            probe.definition.id === probeId
+              ? {
+                  ...probe,
+                  isRunning: false,
+                  result: buildStoppedProbeResult(probeId),
+                }
+              : probe,
+          ),
+        )
+        return null
+      }
 
       const nextProbes = probesRef.current.map((probe) =>
         probe.definition.id === probeId
@@ -266,6 +319,21 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       )
       return result
     } catch (error) {
+      if (isAbortError(error, abortSignal) || shouldStopRef.current) {
+        replaceProbes(
+          probesRef.current.map((probe) =>
+            probe.definition.id === probeId
+              ? {
+                  ...probe,
+                  isRunning: false,
+                  result: buildStoppedProbeResult(probeId),
+                }
+              : probe,
+          ),
+        )
+        return null
+      }
+
       const sanitizedMessage = toSanitizedErrorSummary(
         error,
         [
@@ -319,6 +387,9 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const runAll = async () => {
     if (!canRunAll) return
 
+    shouldStopRef.current = false
+    const abortController = new AbortController()
+    suiteAbortControllerRef.current = abortController
     const tracker = startProductAnalyticsAction(analyticsContext)
     let successCount = 0
     let failureCount = 0
@@ -330,10 +401,11 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       // Run sequentially so each probe updates independently (and can be retried individually).
       const ordered = getApiVerificationProbeDefinitions(apiType)
       for (const probe of ordered) {
+        if (shouldStopRef.current || abortController.signal.aborted) break
         if (probe.requiresModelId && !modelId.trim() && !tokenModelHint)
           continue
 
-        const result = await runProbe(probe.id)
+        const result = await runProbe(probe.id, abortController.signal)
         if (!result) continue
         if (result.status === "pass") {
           hasExecutedProbe = true
@@ -344,6 +416,27 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           failedProbeResult ??= result
         }
       }
+      if (shouldStopRef.current || abortController.signal.aborted) {
+        replaceProbes(
+          probesRef.current.map((probe) =>
+            probe.result
+              ? { ...probe, isRunning: false }
+              : {
+                  ...probe,
+                  isRunning: false,
+                  result: buildStoppedProbeResult(probe.definition.id),
+                },
+          ),
+        )
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+          insights: {
+            successCount,
+            failureCount,
+          },
+        })
+        return
+      }
+
       const completionResult =
         failureCount > 0
           ? PRODUCT_ANALYTICS_RESULTS.Failure
@@ -380,8 +473,16 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         },
       })
     } finally {
+      if (suiteAbortControllerRef.current === abortController) {
+        suiteAbortControllerRef.current = null
+      }
       setIsRunning(false)
     }
+  }
+
+  const stopRun = () => {
+    shouldStopRef.current = true
+    suiteAbortControllerRef.current?.abort()
   }
 
   useEffect(() => {
@@ -389,6 +490,11 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
     let cancelled = false
     const trimmedModelId = initialModelId?.trim() ?? ""
+    shouldStopRef.current = false
+    suiteAbortControllerRef.current?.abort()
+    suiteAbortControllerRef.current = null
+    probeAbortControllersRef.current.forEach((controller) => controller.abort())
+    probeAbortControllersRef.current.clear()
     setTokens([])
     setSelectedTokenId("")
     setModelId(trimmedModelId)
@@ -452,12 +558,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           {t("verifyDialog.actions.close")}
         </Button>
         <Button
-          variant="success"
-          onClick={runAll}
-          disabled={isRunning || isLoadingTokens || !canRunAll}
+          variant={isRunning ? "destructive" : "success"}
+          onClick={isRunning ? stopRun : runAll}
+          disabled={!isRunning && (isLoadingTokens || !canRunAll)}
         >
           {isRunning
-            ? t("verifyDialog.actions.running")
+            ? t("verifyDialog.actions.stop")
             : t("verifyDialog.actions.run")}
         </Button>
       </div>
@@ -595,6 +701,28 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               probe.definition.requiresModelId &&
               !modelId.trim() &&
               !tokenModelHint
+            const stopProbe = () => {
+              probeAbortControllersRef.current.get(probe.definition.id)?.abort()
+            }
+            const runSingleProbe = () => {
+              const abortController = new AbortController()
+              probeAbortControllersRef.current.set(
+                probe.definition.id,
+                abortController,
+              )
+              shouldStopRef.current = false
+              void runProbe(
+                probe.definition.id,
+                abortController.signal,
+              ).finally(() => {
+                if (
+                  probeAbortControllersRef.current.get(probe.definition.id) ===
+                  abortController
+                ) {
+                  probeAbortControllersRef.current.delete(probe.definition.id)
+                }
+              })
+            }
 
             const resultSummary = isDisabledForModel
               ? t("verifyDialog.requiresModelId")
@@ -648,19 +776,29 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
                   <Button
                     size="sm"
-                    variant="secondary"
-                    onClick={() => runProbe(probe.definition.id)}
+                    variant={probe.isRunning ? "destructive" : "secondary"}
+                    onClick={probe.isRunning ? stopProbe : runSingleProbe}
+                    aria-label={
+                      probe.isRunning
+                        ? t("verifyDialog.actions.stopProbe", {
+                            probe: getApiVerificationProbeLabel(
+                              t,
+                              probe.definition.id,
+                            ),
+                          })
+                        : undefined
+                    }
                     disabled={
                       isRunning ||
                       isLoadingTokens ||
-                      probe.isRunning ||
-                      !selectedToken ||
-                      !selectedTokenIsCompatible ||
-                      isDisabledForModel
+                      (!probe.isRunning &&
+                        (!selectedToken ||
+                          !selectedTokenIsCompatible ||
+                          isDisabledForModel))
                     }
                   >
                     {probe.isRunning
-                      ? t("verifyDialog.actions.running")
+                      ? t("verifyDialog.actions.stop")
                       : probe.attempts > 0
                         ? t("verifyDialog.actions.retry")
                         : t("verifyDialog.actions.runOne")}

@@ -64,6 +64,7 @@ interface LoadSub2ApiEstimatedPricingResponseParams {
   resolvedKey: string
   runtimeModelIds: string[]
   fallbackResponse: PricingResponse
+  abortSignal?: AbortSignal
 }
 
 const toTrimmedString = (value: unknown): string =>
@@ -347,9 +348,11 @@ const hasSub2ApiDashboardAuth = (account: Sub2ApiEstimateAccount): boolean => {
 
 const createSub2ApiDashboardRequest = (
   account: Sub2ApiEstimateAccount,
+  abortSignal?: AbortSignal,
 ): ApiServiceRequest => ({
   baseUrl: account.baseUrl,
   accountId: account.id,
+  abortSignal,
   auth: {
     authType: AuthTypeEnum.AccessToken,
     userId: account.userId,
@@ -366,10 +369,13 @@ export const loadSub2ApiEstimatedPricingResponse = async (
   }
 
   try {
-    const dashboardRequest = createSub2ApiDashboardRequest(params.account)
+    const dashboardRequest = createSub2ApiDashboardRequest(
+      params.account,
+      params.abortSignal,
+    )
     const [dashboardEstimateData, priceTable] = await Promise.all([
       loadSub2ApiDashboardEstimateData(dashboardRequest),
-      loadModelPriceTable(),
+      loadModelPriceTable(params.abortSignal),
     ])
     const { groups, groupRates, accountTokens } = dashboardEstimateData
     const group = resolveSub2ApiKeyGroupForPriceEstimation({

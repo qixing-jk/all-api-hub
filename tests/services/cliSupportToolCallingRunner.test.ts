@@ -96,4 +96,37 @@ describe("cliSupport tool-calling runner", () => {
       output: undefined,
     })
   })
+
+  it("passes abort signals through to the shared API verification probe", async () => {
+    mocks.runApiVerificationProbe.mockResolvedValueOnce({
+      id: "tool-calling",
+      status: "pass",
+      latencyMs: 4,
+      summary: "Supported",
+      input: {},
+      output: {},
+    })
+
+    const { runCliToolCallingSimulation } = await import(
+      "~/services/verification/cliSupportVerification/runners/toolCalling"
+    )
+    const abortController = new AbortController()
+
+    await runCliToolCallingSimulation({
+      toolId: "claude",
+      apiType: "anthropic",
+      baseUrl: "https://example.com",
+      apiKey: "sk-secret",
+      modelId: "claude-test",
+      endpointPath: "/v1/messages",
+      abortSignal: abortController.signal,
+    })
+
+    expect(mocks.runApiVerificationProbe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        probeId: "tool-calling",
+        abortSignal: abortController.signal,
+      }),
+    )
+  })
 })

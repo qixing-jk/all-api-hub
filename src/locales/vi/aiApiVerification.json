@@ -6,7 +6,9 @@
       "retry": "Thử lại",
       "run": "Bắt đầu xác minh",
       "running": "Đang chạy...",
-      "runOne": "Chạy"
+      "runOne": "Chạy",
+      "stop": "Dừng",
+      "stopProbe": "Dừng {{probe}}"
     },
     "apiTypes": {
       "anthropic": "Anthropic",
@@ -66,6 +68,7 @@
       "noModelIdProvidedToRunProbes": "Chưa cung cấp ID mô hình, không thể chạy thăm dò.",
       "noModelsReturned": "Không trả về mô hình nào.",
       "noToolCallDetected": "Không phát hiện thấy lệnh gọi công cụ (mô hình có thể không hỗ trợ công cụ).",
+      "stopped": "Đã dừng bởi người dùng.",
       "structuredOutputInvalid": "Nội dung đầu ra không hợp lệ.",
       "structuredOutputSucceeded": "Đầu ra có cấu trúc thành công.",
       "textGenerationSucceeded": "Tạo văn bản thành công.",

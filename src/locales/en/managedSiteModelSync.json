@@ -73,8 +73,6 @@
       "finishedAt": "Finished At",
       "manageChannel": "Manage channel",
       "message": "Message",
-      "selectAll": "Select all channels",
-      "selectChannel": "Select channel {{channelName}}",
       "status": "Status",
       "syncChannel": "Sync"
     },

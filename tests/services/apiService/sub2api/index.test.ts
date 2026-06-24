@@ -1802,6 +1802,7 @@ describe("apiService sub2api exported operations", () => {
       }) as ApiServiceAccountRequest
 
     it("fetches OpenAI-style runtime models with bearer API-key auth", async () => {
+      const abortController = new AbortController()
       const fetchMock = vi.fn().mockResolvedValue(
         new Response(
           JSON.stringify({
@@ -1821,7 +1822,9 @@ describe("apiService sub2api exported operations", () => {
       vi.stubGlobal("fetch", fetchMock as any)
 
       await expect(
-        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+        fetchSub2ApiRuntimeModels(
+          createRuntimeRequest({ abortSignal: abortController.signal }),
+        ),
       ).resolves.toEqual(["example-runtime-model"])
 
       expect(fetchMock).toHaveBeenCalledWith(
@@ -1829,6 +1832,7 @@ describe("apiService sub2api exported operations", () => {
         expect.objectContaining({
           method: "GET",
           cache: "no-store",
+          signal: abortController.signal,
           headers: expect.objectContaining({
             Authorization: "Bearer runtime-api-key",
           }),

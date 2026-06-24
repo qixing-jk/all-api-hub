@@ -6,7 +6,9 @@
       "retry": "重试",
       "run": "开始验证",
       "running": "运行中...",
-      "runOne": "运行"
+      "runOne": "运行",
+      "stop": "停止",
+      "stopProbe": "停止 {{probe}}"
     },
     "apiTypes": {
       "anthropic": "Anthropic",
@@ -66,6 +68,7 @@
       "noModelIdProvidedToRunProbes": "未提供模型 ID，无法运行探测。",
       "noModelsReturned": "未返回任何模型。",
       "noToolCallDetected": "未检测到工具调用（模型可能不支持工具）。",
+      "stopped": "已停止。",
       "structuredOutputInvalid": "输出内容无效。",
       "structuredOutputSucceeded": "结构化输出成功。",
       "textGenerationSucceeded": "文本生成成功。",

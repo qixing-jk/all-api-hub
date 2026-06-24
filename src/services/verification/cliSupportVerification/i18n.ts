@@ -47,6 +47,11 @@ export function translateCliSupportSummary(
         "cliSupportVerification:verifyDialog.summaries.noToolCallDetected",
         summaryParams,
       )
+    case "verifyDialog.summaries.stopped":
+      return t(
+        "cliSupportVerification:verifyDialog.summaries.stopped",
+        summaryParams,
+      )
     case "verifyDialog.summaries.toolCallSucceeded":
       return t(
         "cliSupportVerification:verifyDialog.summaries.toolCallSucceeded",

@@ -6,7 +6,9 @@
       "retry": "Retry",
       "run": "Run",
       "running": "Running...",
-      "runOne": "Run"
+      "runOne": "Run",
+      "stop": "Stop",
+      "stopProbe": "Stop {{probe}}"
     },
     "apiTypes": {
       "anthropic": "Anthropic",
@@ -68,6 +70,7 @@
       "noModelIdProvidedToRunProbes": "No model id provided to run probes.",
       "noModelsReturned": "No models returned.",
       "noToolCallDetected": "No tool call detected (model may not support tools).",
+      "stopped": "Stopped by user.",
       "structuredOutputInvalid": "Invalid output.",
       "structuredOutputSucceeded": "Structured output succeeded.",
       "textGenerationSucceeded": "Text generation succeeded.",

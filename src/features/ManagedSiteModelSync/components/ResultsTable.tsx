@@ -4,10 +4,11 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline"
 import dayjs from "dayjs"
+import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
-import { Badge, Button, Card, Checkbox } from "~/components/ui"
+import { Badge, Button, Card } from "~/components/ui"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 
 interface ResultsTableProps {
@@ -53,12 +54,20 @@ export default function ResultsTable({
 
   const allSelected = items.length > 0 && selectedIds.size === items.length
   const someSelected = selectedIds.size > 0 && !allSelected
+  const selectAllRef = useRef<HTMLInputElement | null>(null)
   const columns = {
     status: visibleColumns?.status ?? true,
     message: visibleColumns?.message ?? true,
     attempts: visibleColumns?.attempts ?? true,
     finishedAt: visibleColumns?.finishedAt ?? true,
   }
+
+  useEffect(() => {
+    const element = selectAllRef.current
+    if (!element) return
+
+    element.indeterminate = someSelected
+  }, [someSelected])
 
   return (
     <Card padding="none">
@@ -67,10 +76,12 @@ export default function ResultsTable({
           <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
             <tr>
               <th className="px-4 py-3 text-left">
-                <Checkbox
-                  checked={someSelected ? "indeterminate" : allSelected}
-                  onCheckedChange={(checked) => onSelectAll(checked === true)}
-                  aria-label={t("execution.table.selectAll")}
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={(e) => onSelectAll(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
               </th>
               {columns.status && (
@@ -114,14 +125,13 @@ export default function ResultsTable({
                   className="group hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   <td className="px-4 py-3">
-                    <Checkbox
+                    <input
+                      type="checkbox"
                       checked={selectedIds.has(item.channelId)}
-                      onCheckedChange={(checked) =>
-                        onSelectItem(item.channelId, checked === true)
+                      onChange={(e) =>
+                        onSelectItem(item.channelId, e.target.checked)
                       }
-                      aria-label={t("execution.table.selectChannel", {
-                        channelName: item.channelName,
-                      })}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
                   {columns.status && (

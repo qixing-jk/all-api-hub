@@ -6,7 +6,9 @@
       "retry": "再試行",
       "run": "実行",
       "running": "実行中...",
-      "runOne": "実行"
+      "runOne": "実行",
+      "stop": "停止",
+      "stopProbe": "{{probe}} を停止"
     },
     "apiTypes": {
       "anthropic": "Anthropic",
@@ -67,6 +69,7 @@
       "noModelIdProvidedToRunProbes": "プローブを実行するためのモデル ID が指定されていません。",
       "noModelsReturned": "モデルが返されませんでした。",
       "noToolCallDetected": "ツール呼び出しが検出されませんでした（モデルがツールに対応していない可能性があります）。",
+      "stopped": "ユーザーが停止しました。",
       "structuredOutputInvalid": "出力が不正です。",
       "structuredOutputSucceeded": "構造化出力に成功しました。",
       "textGenerationSucceeded": "テキスト生成に成功しました。",

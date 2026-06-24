@@ -94,6 +94,11 @@ export function translateApiVerificationSummary(
         "aiApiVerification:verifyDialog.summaries.noToolCallDetected",
         summaryParams,
       )
+    case "verifyDialog.summaries.stopped":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.stopped",
+        summaryParams,
+      )
     case "verifyDialog.summaries.toolCallSucceeded":
       return t(
         "aiApiVerification:verifyDialog.summaries.toolCallSucceeded",

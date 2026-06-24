@@ -281,17 +281,15 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               </Tooltip>
             </div>
 
-            <Button
+            <button
               type="button"
-              variant="link"
-              size="sm"
               onClick={onUseCurrentTab}
-              className="h-auto p-0 text-blue-800 disabled:cursor-not-allowed disabled:text-gray-400 dark:text-blue-200 dark:disabled:text-gray-600"
+              className="flex items-center font-medium text-blue-800 disabled:cursor-not-allowed disabled:text-gray-400 dark:text-blue-200 dark:disabled:text-gray-600"
               disabled={!currentTabUrl}
-              leftIcon={<GlobeAltIcon className="h-3 w-3" />}
             >
+              <GlobeAltIcon className="mr-1 h-3 w-3" />
               <span>{t("siteInfo.useCurrent")}</span>
-            </Button>
+            </button>
           </div>
         )}
       </div>

@@ -10,6 +10,7 @@ type CliToolRunnerParams = {
   baseUrl: string
   apiKey: string
   modelId?: string
+  abortSignal?: AbortSignal
 }
 
 type CliToolRegistryEntry = {
@@ -62,6 +63,7 @@ const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
         apiKey: params.apiKey,
         apiType: CLI_TOOL_CONFIG.claude.apiType,
         modelId: params.modelId,
+        abortSignal: params.abortSignal,
         endpointPath: CLI_TOOL_CONFIG.claude.endpointPath,
       })
     },
@@ -74,6 +76,7 @@ const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
         apiKey: params.apiKey,
         apiType: CLI_TOOL_CONFIG.codex.apiType,
         modelId: params.modelId,
+        abortSignal: params.abortSignal,
         endpointPath: CLI_TOOL_CONFIG.codex.endpointPath,
       })
     },
@@ -86,6 +89,7 @@ const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
         apiKey: params.apiKey,
         apiType: CLI_TOOL_CONFIG.gemini.apiType,
         modelId: params.modelId,
+        abortSignal: params.abortSignal,
         endpointPath: CLI_TOOL_CONFIG.gemini.endpointPath,
       })
     },

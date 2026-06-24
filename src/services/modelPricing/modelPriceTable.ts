@@ -82,14 +82,50 @@ const normalizeLiteLlmPriceTable = (payload: unknown): ModelPriceTable => {
   }
 }
 
+const composeAbortSignals = (
+  timeoutController: AbortController,
+  abortSignal?: AbortSignal,
+) => {
+  if (!abortSignal) {
+    return {
+      signal: timeoutController.signal,
+      cleanup: () => {},
+    }
+  }
+
+  if (typeof AbortSignal.any === "function") {
+    return {
+      signal: AbortSignal.any([abortSignal, timeoutController.signal]),
+      cleanup: () => {},
+    }
+  }
+
+  const relayAbort = () => {
+    timeoutController.abort(abortSignal.reason)
+  }
+  if (abortSignal.aborted) {
+    relayAbort()
+  } else {
+    abortSignal.addEventListener("abort", relayAbort, { once: true })
+  }
+
+  return {
+    signal: timeoutController.signal,
+    cleanup: () => abortSignal.removeEventListener("abort", relayAbort),
+  }
+}
+
 /**
  * Loads the official-price snapshot used by optional catalog estimation.
  *
  * Source: LiteLLM model_prices_and_context_window.json. Values are USD per
  * token and are normalized to this app's USD-per-1M-token display units.
  */
-export async function loadModelPriceTable(): Promise<ModelPriceTable> {
+export async function loadModelPriceTable(
+  abortSignal?: AbortSignal,
+): Promise<ModelPriceTable> {
   const controller = new AbortController()
+  const composedSignal = composeAbortSignals(controller, abortSignal)
   const timeoutId = setTimeout(
     () => controller.abort(),
     MODEL_PRICE_TABLE_FETCH_TIMEOUT_MS,
@@ -98,7 +134,7 @@ export async function loadModelPriceTable(): Promise<ModelPriceTable> {
 
   try {
     response = await fetch(LITELLM_MODEL_PRICE_TABLE_URL, {
-      signal: controller.signal,
+      signal: composedSignal.signal,
     })
   } catch (error) {
     if (controller.signal.aborted) {
@@ -109,6 +145,7 @@ export async function loadModelPriceTable(): Promise<ModelPriceTable> {
 
     throw new Error("Failed to load LiteLLM price table", { cause: error })
   } finally {
+    composedSignal.cleanup()
     clearTimeout(timeoutId)
   }
 

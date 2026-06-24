@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next"
 
-import { Button } from "~/components/ui"
 import { cn } from "~/lib/utils"
 import type { ApiCheckCandidate } from "~/services/verification/webAiApiCheck/extractCredentials"
 
@@ -46,11 +45,9 @@ export function ApiCheckCandidateButtons({
             : candidate.value
 
         return (
-          <Button
+          <button
             key={`${kind}-${candidate.value}`}
             type="button"
-            variant="ghost"
-            size="sm"
             data-testid={`${
               kind === "apiKey"
                 ? WEB_AI_API_CHECK_TEST_IDS.apiKeyCandidatePrefix
@@ -66,7 +63,7 @@ export function ApiCheckCandidateButtons({
             onClick={() => onSelect(candidate.value)}
           >
             {label}
-          </Button>
+          </button>
         )
       })}
     </div>

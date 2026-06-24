@@ -36,6 +36,7 @@ interface LoadAccountTokenFallbackPricingParams {
     | "cookieAuthSessionCookie"
   >
   token: ApiToken
+  abortSignal?: AbortSignal
 }
 
 export const ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED =
@@ -63,9 +64,11 @@ const createAccountModelPricingRequest = (
 const createRuntimeCatalogRequest = (
   account: LoadAccountTokenFallbackPricingParams["account"],
   apiKey: string,
+  abortSignal?: AbortSignal,
 ): ModelCatalogRequest => ({
   baseUrl: account.baseUrl,
   accountId: account.id,
+  abortSignal,
   auth: {
     authType: AuthTypeEnum.AccessToken,
     apiKey,
@@ -104,10 +107,15 @@ export async function loadAccountTokenFallbackPricingResponse(
       throw createMissingModelPricingCapabilityError(params.account.siteType)
     }
 
-    const resolvedToken = await resolveDisplayAccountTokenForSecret(
-      params.account,
-      params.token,
-    )
+    const resolvedToken = params.abortSignal
+      ? await resolveDisplayAccountTokenForSecret(
+          params.account,
+          params.token,
+          {
+            abortSignal: params.abortSignal,
+          },
+        )
+      : await resolveDisplayAccountTokenForSecret(params.account, params.token)
     resolvedTokenKey = resolvedToken.key
 
     if (
@@ -115,7 +123,11 @@ export async function loadAccountTokenFallbackPricingResponse(
       MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
     ) {
       const runtimeModelIds = await readiness.modelCatalog.fetchModels(
-        createRuntimeCatalogRequest(params.account, resolvedToken.key),
+        createRuntimeCatalogRequest(
+          params.account,
+          resolvedToken.key,
+          params.abortSignal,
+        ),
       )
       const modelOnlyResponse =
         buildSub2ApiRuntimePricingResponse(runtimeModelIds)
@@ -130,6 +142,7 @@ export async function loadAccountTokenFallbackPricingResponse(
           resolvedKey: resolvedToken.key,
           runtimeModelIds,
           fallbackResponse: modelOnlyResponse,
+          abortSignal: params.abortSignal,
         })
       }
 
@@ -150,6 +163,7 @@ export async function loadAccountTokenFallbackPricingResponse(
         apiType: API_TYPES.OPENAI_COMPATIBLE,
         baseUrl: params.account.baseUrl,
         apiKey: resolvedToken.key,
+        abortSignal: params.abortSignal,
       })
     } catch (error) {
       if (declaredModelIds.length === 0) {

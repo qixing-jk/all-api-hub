@@ -218,9 +218,6 @@ describe("RepairMissingKeysResultsPanel", () => {
       name: "keyManagement:repairMissingKeys.searchLabel",
     })
     expect(searchInput).toHaveValue("Example")
-    expect(
-      screen.getByRole("button", { name: "common:actions.clear" }),
-    ).toBeInTheDocument()
 
     await user.type(searchInput, " 1")
     expect(onSearchTermChange).toHaveBeenLastCalledWith("Example 1")
@@ -230,9 +227,6 @@ describe("RepairMissingKeysResultsPanel", () => {
     )
     expect(onSearchTermChange).toHaveBeenLastCalledWith("")
     expect(searchInput).toHaveValue("")
-    expect(
-      screen.queryByRole("button", { name: "common:actions.clear" }),
-    ).not.toBeInTheDocument()
   })
 
   it("routes invalid-key view selection and delete actions", async () => {

@@ -17,6 +17,7 @@ type RunCliSupportSimulationParams = {
    * Callers (UI/CLI) should pass an explicit `modelId` to keep verification deterministic.
    */
   modelId?: string
+  abortSignal?: AbortSignal
 }
 
 /**
@@ -38,6 +39,7 @@ export async function runCliSupportTool(
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
     modelId: params.modelId,
+    abortSignal: params.abortSignal,
   })
 }
 
@@ -59,6 +61,7 @@ export async function runCliSupportSimulation(
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
         modelId: params.modelId,
+        abortSignal: params.abortSignal,
       }),
     )
   }

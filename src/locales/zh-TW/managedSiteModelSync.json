@@ -70,8 +70,6 @@
       "finishedAt": "完成時間",
       "manageChannel": "管理渠道",
       "message": "錯誤資訊",
-      "selectAll": "選擇全部渠道",
-      "selectChannel": "選擇渠道 {{channelName}}",
       "status": "狀態",
       "syncChannel": "同步此渠道"
     },

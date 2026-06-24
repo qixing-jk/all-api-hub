@@ -4,8 +4,9 @@
       "close": "關閉",
       "retry": "重試",
       "run": "開始驗證",
-      "running": "執行中...",
-      "runOne": "執行"
+      "runOne": "執行",
+      "stop": "停止",
+      "stopTool": "停止 {{tool}}"
     },
     "details": {
       "input": "輸入",
@@ -40,6 +41,7 @@
       "networkError": "網路錯誤 / 請求被阻止",
       "noModelIdProvided": "沒有可用的模型 ID",
       "noToolCallDetected": "未檢測到工具呼叫（可能不支援 tool/function calling）",
+      "stopped": "已停止。",
       "supported": "支援",
       "supportedStreaming": "支援（流式）",
       "toolCallSucceeded": "工具呼叫成功。",

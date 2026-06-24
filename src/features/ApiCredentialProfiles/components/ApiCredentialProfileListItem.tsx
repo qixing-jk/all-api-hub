@@ -20,14 +20,7 @@ import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  Heading6,
-  IconButton,
-} from "~/components/ui"
+import { Badge, Card, CardContent, Heading6, IconButton } from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -342,11 +335,9 @@ export function ApiCredentialProfileListItem({
                         </Badge>
                       ) : null}
                     </div>
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="dark:text-dark-text-tertiary dark:hover:text-dark-text-primary h-auto shrink-0 gap-1 px-1 py-0 text-[11px] text-gray-500 transition-colors hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="dark:text-dark-text-tertiary dark:hover:text-dark-text-primary inline-flex shrink-0 items-center gap-1 text-[11px] text-gray-500 transition-colors hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={handleRefreshTelemetry}
                       disabled={isTelemetryRefreshing}
                       aria-label={t(
@@ -361,7 +352,7 @@ export function ApiCredentialProfileListItem({
                       {isTelemetryRefreshing
                         ? t("apiCredentialProfiles:telemetry.refreshing")
                         : t("apiCredentialProfiles:telemetry.actions.refresh")}
-                    </Button>
+                    </button>
                   </div>
 
                   <div className="grid flex-1 auto-rows-max grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] content-evenly gap-2 text-xs sm:grid-cols-4">

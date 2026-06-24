@@ -145,11 +145,9 @@ function Header({
 
             {/* 插件图标和名称 */}
             <div className="tap-highlight-transparent flex min-w-0 touch-manipulation items-center space-x-2 sm:space-x-3">
-              <IconButton
+              <button
                 type="button"
                 onClick={onTitleClick}
-                variant="ghost"
-                size="none"
                 className="tap-highlight-transparent touch-manipulation rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none"
                 aria-label={t("app.name")}
               >
@@ -158,7 +156,7 @@ function Header({
                   alt={t("app.name")}
                   className="h-7.5 w-7.5 rounded-lg shadow-sm sm:h-8.5 sm:w-8.5"
                 />
-              </IconButton>
+              </button>
               {!showMobileExpandedSearch ? (
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-col gap-0.5">

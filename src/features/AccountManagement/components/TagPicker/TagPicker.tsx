@@ -515,16 +515,14 @@ export function TagPicker({
             >
               <span className="max-w-40 truncate">{tag.name}</span>
               {!disabled && (
-                <IconButton
+                <button
                   type="button"
-                  variant="ghost"
-                  size="none"
                   className="ml-1 rounded-sm opacity-70 hover:opacity-100"
                   onClick={() => removeTag(tag.id)}
                   aria-label={t("form.tagsRemove", { name: tag.name })}
                 >
                   <XMarkIcon className="h-3 w-3" />
-                </IconButton>
+                </button>
               )}
             </Badge>
           ))}

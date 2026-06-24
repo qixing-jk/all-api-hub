@@ -442,15 +442,13 @@ export default function SiteAnnouncementsPage({
                 </span>{" "}
               </>
             )}
-            <Button
+            <button
               type="button"
-              variant="link"
-              size="sm"
               className={textLinkClassName}
               onClick={handleOpenPollingSettings}
             >
               {t("description.pollingSettingsLink")}
-            </Button>
+            </button>
           </>
         }
         className="mb-5"
@@ -552,15 +550,13 @@ export default function SiteAnnouncementsPage({
                 isPollingDisabled ? (
                   <>
                     <span>{t("empty.descriptionWhenPollingDisabled")}</span>{" "}
-                    <Button
+                    <button
                       type="button"
-                      variant="link"
-                      size="sm"
                       className={textLinkClassName}
                       onClick={handleOpenPollingSettings}
                     >
                       {t("empty.pollingSettingsLink")}
-                    </Button>
+                    </button>
                   </>
                 ) : (
                   t("empty.description")

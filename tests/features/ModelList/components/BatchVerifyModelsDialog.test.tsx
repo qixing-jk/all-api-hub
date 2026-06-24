@@ -600,6 +600,70 @@ describe("BatchVerifyModelsDialog", () => {
     expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
   })
 
+  it("aborts token secret resolution when the batch is stopped before probes start", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+
+    let receivedSignal: AbortSignal | undefined
+    mockResolveDisplayAccountTokenForSecret.mockImplementationOnce(
+      (_account, _token, options?: { abortSignal?: AbortSignal }) => {
+        receivedSignal = options?.abortSignal
+        if (!receivedSignal) {
+          return Promise.reject(new Error("missing abort signal"))
+        }
+
+        return new Promise((_resolve, reject) => {
+          receivedSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockResolveDisplayAccountTokenForSecret).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.stop",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(receivedSignal?.aborted).toBe(true)
+    })
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+    expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+  })
+
   it("completes batch verification analytics as success when selected probes pass", async () => {
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([
       {

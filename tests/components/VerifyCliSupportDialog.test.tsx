@@ -12,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -159,12 +160,14 @@ describe("VerifyCliSupportDialog", () => {
     fireEvent.click(runButton)
 
     await waitFor(() => {
-      expect(mockRunCliSupportTool).toHaveBeenCalledWith({
-        toolId: "claude",
-        baseUrl: "https://example.com",
-        apiKey: "profile-secret",
-        modelId: "gpt-test",
-      })
+      expect(mockRunCliSupportTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolId: "claude",
+          baseUrl: "https://example.com",
+          apiKey: "profile-secret",
+          modelId: "gpt-test",
+        }),
+      )
     })
 
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
@@ -196,11 +199,14 @@ describe("VerifyCliSupportDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockFetchApiCredentialModelIds).toHaveBeenCalledWith({
-        apiType: "openai-compatible",
-        baseUrl: "https://example.com",
-        apiKey: "profile-secret",
-      })
+      expect(mockFetchApiCredentialModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiType: "openai-compatible",
+          baseUrl: "https://example.com",
+          apiKey: "profile-secret",
+          abortSignal: expect.any(AbortSignal),
+        }),
+      )
     })
 
     const modelPicker = screen.getByRole("combobox", {
@@ -210,6 +216,66 @@ describe("VerifyCliSupportDialog", () => {
     fireEvent.click(await screen.findByRole("option", { name: "gpt-4o-mini" }))
 
     expect(modelPicker).toHaveTextContent("gpt-4o-mini")
+  })
+
+  it("aborts an in-flight profile model fetch when the dialog closes", async () => {
+    let receivedSignal: AbortSignal | undefined
+    mockFetchApiCredentialModelIds.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise<string[]>((resolve) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () => resolve(["late-model"]),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    const { rerender } = render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p1",
+          name: "Profile",
+          apiType: "openai-compatible" as any,
+          baseUrl: "https://example.com",
+          apiKey: "profile-secret",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId=""
+      />,
+    )
+
+    await waitFor(() => expect(receivedSignal).toBeDefined())
+
+    await act(async () => {
+      rerender(
+        <VerifyCliSupportDialog
+          isOpen={false}
+          onClose={() => {}}
+          profile={{
+            id: "p1",
+            name: "Profile",
+            apiType: "openai-compatible" as any,
+            baseUrl: "https://example.com",
+            apiKey: "profile-secret",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          }}
+          initialModelId=""
+        />,
+      )
+    })
+
+    expect(receivedSignal?.aborted).toBe(true)
   })
 
   it("renders tool items and a single model input before running", async () => {
@@ -367,12 +433,14 @@ describe("VerifyCliSupportDialog", () => {
 
     await waitFor(() => {
       expect(mockRunCliSupportTool).toHaveBeenCalledTimes(1)
-      expect(mockRunCliSupportTool).toHaveBeenCalledWith({
-        toolId: "claude",
-        baseUrl: "https://example.com",
-        apiKey: "secret",
-        modelId: "gpt-test",
-      })
+      expect(mockRunCliSupportTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolId: "claude",
+          baseUrl: "https://example.com",
+          apiKey: "secret",
+          modelId: "gpt-test",
+        }),
+      )
     })
 
     expect(
@@ -593,12 +661,14 @@ describe("VerifyCliSupportDialog", () => {
     fireEvent.click(runButton)
 
     await waitFor(() => {
-      expect(mockRunCliSupportTool).toHaveBeenCalledWith({
-        toolId: "codex",
-        baseUrl: "https://example.com",
-        apiKey: "disabled-secret",
-        modelId: "claude-3-5-sonnet",
-      })
+      expect(mockRunCliSupportTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolId: "codex",
+          baseUrl: "https://example.com",
+          apiKey: "disabled-secret",
+          modelId: "claude-3-5-sonnet",
+        }),
+      )
     })
   })
 
@@ -729,13 +799,98 @@ describe("VerifyCliSupportDialog", () => {
 
     await waitFor(() => {
       expect(mockResolveDisplayAccountTokenForSecret).toHaveBeenCalledTimes(1)
-      expect(mockRunCliSupportTool).toHaveBeenCalledWith({
-        toolId: "claude",
-        baseUrl: "https://example.com",
-        apiKey: "resolved-secret",
-        modelId: "gpt-test",
-      })
+      expect(mockRunCliSupportTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolId: "claude",
+          baseUrl: "https://example.com",
+          apiKey: "resolved-secret",
+          modelId: "gpt-test",
+        }),
+      )
     })
+  })
+
+  it("stops account-mode verification while resolving the full token key", async () => {
+    let receivedSignal: AbortSignal | undefined
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "",
+        status: 1,
+        name: "token-1",
+        models: "",
+        model_limits: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockImplementationOnce(
+      (_account, _token, options?: { abortSignal?: AbortSignal }) => {
+        receivedSignal = options?.abortSignal
+        if (!receivedSignal) {
+          return Promise.reject(new Error("missing abort signal"))
+        }
+
+        return new Promise((_resolve, reject) => {
+          receivedSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: "1",
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
+    const runButton = within(toolCard).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
+    })
+
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
+
+    await waitFor(() =>
+      expect(mockResolveDisplayAccountTokenForSecret).toHaveBeenCalledTimes(1),
+    )
+
+    const stopButton = within(toolCard).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.stopTool",
+    })
+    fireEvent.click(stopButton)
+
+    await waitFor(() => {
+      expect(receivedSignal?.aborted).toBe(true)
+    })
+    expect(mockRunCliSupportTool).not.toHaveBeenCalled()
   })
 
   it("shows the profile model fetch error when loading stored profile models fails", async () => {
@@ -1113,6 +1268,81 @@ describe("VerifyCliSupportDialog", () => {
         mockRunCliSupportTool.mock.calls.map((call) => call[0].toolId),
       ).toEqual(["claude", "codex", "gemini"])
     })
+  })
+
+  it("stops a running CLI support simulation and aborts the active request", async () => {
+    let receivedSignal: AbortSignal | undefined
+    mockRunCliSupportTool.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise((resolve) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                id: "claude",
+                probeId: "tool-calling",
+                status: "fail",
+                latencyMs: 1,
+                summary: "Stopped late",
+              }),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p1",
+          name: "Profile",
+          apiType: "openai-compatible" as any,
+          baseUrl: "https://example.com",
+          apiKey: "profile-secret",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "cliSupportVerification:verifyDialog.actions.run",
+      }),
+    )
+
+    const stopButton = await screen.findByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.stop",
+    })
+    fireEvent.click(stopButton)
+
+    await waitFor(() => {
+      expect(receivedSignal?.aborted).toBe(true)
+    })
+    await waitFor(() => {
+      expect(mockRunCliSupportTool).toHaveBeenCalledTimes(1)
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+        {
+          insights: {
+            successCount: 0,
+            failureCount: 0,
+          },
+        },
+      )
+    })
+
+    expect(
+      await screen.findAllByText(
+        "cliSupportVerification:verifyDialog.summaries.stopped",
+      ),
+    ).toHaveLength(3)
   })
 
   it("completes run-all analytics as success when all CLI tools pass", async () => {

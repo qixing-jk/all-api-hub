@@ -183,11 +183,13 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
       },
     })
 
-    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith({
-      apiType: "openai-compatible",
-      baseUrl: "https://example.com",
-      apiKey: "sk-real-secret",
-    })
+    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiType: "openai-compatible",
+        baseUrl: "https://example.com",
+        apiKey: "sk-real-secret",
+      }),
+    )
     expect(getSiteAdapterMock).toHaveBeenCalledWith("new-api")
     expect(result.data.map((item) => item.model_name)).toEqual([
       "gpt-4o-mini",
@@ -231,11 +233,13 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
       expect.objectContaining({ siteType: SITE_TYPES.NEW_API }),
       expect.objectContaining({ key: "sk-compatible-masked" }),
     )
-    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith({
-      apiType: "openai-compatible",
-      baseUrl: "https://example.com",
-      apiKey: "sk-selected-token-secret",
-    })
+    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiType: "openai-compatible",
+        baseUrl: "https://example.com",
+        apiKey: "sk-selected-token-secret",
+      }),
+    )
     expect(result.data.map((item) => item.model_name)).toEqual([
       "selected-token-model",
     ])
@@ -371,11 +375,13 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     })
 
     expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenCalled()
-    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith({
-      apiType: "openai-compatible",
-      baseUrl: "https://compatible.example.invalid",
-      apiKey: "sk-real-secret",
-    })
+    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiType: "openai-compatible",
+        baseUrl: "https://compatible.example.invalid",
+        apiKey: "sk-real-secret",
+      }),
+    )
     expect(fetchSub2ApiRuntimeModelsMock).not.toHaveBeenCalled()
     expect(result.data.map((item) => item.model_name)).toEqual([
       "gpt-compatible",
@@ -417,25 +423,29 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
       }),
     )
     expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
-    expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith({
-      baseUrl: "https://sub2api.example.invalid",
-      accountId: "account-1",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        apiKey: "sk-real-sub2api-secret",
-      },
-    })
+    expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://sub2api.example.invalid",
+        accountId: "account-1",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          apiKey: "sk-real-sub2api-secret",
+        },
+      }),
+    )
     expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
-    expect(fetchSub2ApiAvailableGroupsMock).toHaveBeenCalledWith({
-      baseUrl: "https://sub2api.example.invalid",
-      accountId: "account-1",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        userId: "1",
-        accessToken: "account-token",
-        cookie: undefined,
-      },
-    })
+    expect(fetchSub2ApiAvailableGroupsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://sub2api.example.invalid",
+        accountId: "account-1",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "1",
+          accessToken: "account-token",
+          cookie: undefined,
+        },
+      }),
+    )
     expect(result.model_list_source).toEqual({
       kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
       provider: SITE_TYPES.SUB2API,
@@ -453,6 +463,68 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
         },
       }),
     ])
+  })
+
+  it("passes abort signals through token-scoped catalog fallback requests", async () => {
+    const abortController = new AbortController()
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
+      ...TOKEN,
+      key: "sk-real-secret",
+      models: "",
+    })
+    fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce(["gpt-compatible"])
+
+    await loadAccountTokenFallbackPricingResponse({
+      account: ACCOUNT,
+      token: TOKEN,
+      abortSignal: abortController.signal,
+    })
+
+    expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenLastCalledWith(
+      ACCOUNT,
+      TOKEN,
+      { abortSignal: abortController.signal },
+    )
+    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: abortController.signal }),
+    )
+
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
+      ...TOKEN,
+      key: "sk-real-sub2api-secret",
+    })
+    fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
+      "example-runtime-model",
+    ])
+    fetchSub2ApiAvailableGroupsMock.mockResolvedValueOnce([])
+    fetchSub2ApiGroupRatesMock.mockResolvedValueOnce({})
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+
+    await loadAccountTokenFallbackPricingResponse({
+      account: {
+        ...ACCOUNT,
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: "https://sub2api.example.invalid",
+      },
+      token: TOKEN,
+      abortSignal: abortController.signal,
+    })
+
+    expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: "https://sub2api.example.invalid",
+      }),
+      TOKEN,
+      { abortSignal: abortController.signal },
+    )
+    expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: abortController.signal }),
+    )
+    expect(fetchSub2ApiAvailableGroupsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: abortController.signal }),
+    )
+    expect(loadModelPriceTableMock).toHaveBeenCalledWith(abortController.signal)
   })
 
   it("adds estimated Sub2API prices when dashboard group and price-table data are available", async () => {

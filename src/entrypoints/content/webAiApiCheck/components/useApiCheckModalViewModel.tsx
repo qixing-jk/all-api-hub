@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -403,14 +402,12 @@ export function useApiCheckModalViewModel() {
                   name: typeof response.name === "string" ? response.name : "",
                 })}
               </span>
-              <Button
+              <button
                 type="button"
-                variant="default"
-                size="sm"
                 data-testid={
                   WEB_AI_API_CHECK_TEST_IDS.openApiProfilesToastButton
                 }
-                className="h-auto shrink-0 rounded-md px-2 py-1 text-xs"
+                className="shrink-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                 onClick={() => {
                   void sendRuntimeMessage({
                     action: RuntimeActionIds.OpenSettingsApiCredentialProfiles,
@@ -419,7 +416,7 @@ export function useApiCheckModalViewModel() {
                 }}
               >
                 {t("webAiApiCheck:modal.actions.openApiProfiles")}
-              </Button>
+              </button>
             </div>
           ),
           { duration: 8000 },

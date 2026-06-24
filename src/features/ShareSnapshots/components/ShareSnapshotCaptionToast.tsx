@@ -5,7 +5,6 @@
  */
 import { useEffect, useRef, useState } from "react"
 
-import { Button, Textarea } from "~/components/ui"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -64,10 +63,10 @@ export const ShareSnapshotCaptionToast = ({
       <div className="dark:text-dark-text-secondary mb-2 text-xs text-gray-500">
         {hint}
       </div>
-      <Textarea
+      <textarea
         readOnly
         value={caption}
-        className="mb-3 h-28 resize-none text-xs"
+        className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary dark:text-dark-text-primary mb-3 h-28 w-full resize-none rounded-md border border-gray-200 bg-gray-50 p-2 text-xs text-gray-900 focus:outline-none"
       />
       {copyError ? (
         <div className="mb-2 text-xs text-red-600 dark:text-red-400">
@@ -75,17 +74,21 @@ export const ShareSnapshotCaptionToast = ({
         </div>
       ) : null}
       <div className="flex items-center justify-end gap-2">
-        <Button
+        <button
           type="button"
-          size="sm"
+          className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
           onClick={handleCopy}
           disabled={isCopying}
         >
           {copyLabel}
-        </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+        </button>
+        <button
+          type="button"
+          className="dark:text-dark-text-secondary rounded-md px-3 py-1.5 text-xs text-gray-600"
+          onClick={onClose}
+        >
           {closeLabel}
-        </Button>
+        </button>
       </div>
     </div>
   )

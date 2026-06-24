@@ -296,10 +296,13 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
 
     await waitFor(() =>
-      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
-        baseUrl: "https://example.com",
-        apiKey: "sk-test",
-      }),
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          abortSignal: expect.any(AbortSignal),
+        }),
+      ),
     )
     expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(1)
 
@@ -307,6 +310,51 @@ describe("VerifyApiCredentialProfileDialog", () => {
       expect(
         screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
       ).toHaveTextContent("gpt-4o-mini")
+    })
+  })
+
+  it("aborts the in-flight model fetch when switching API types", async () => {
+    const user = userEvent.setup()
+    let receivedSignal: AbortSignal | undefined
+    mockFetchOpenAICompatibleModelIds.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise<string[]>((resolve) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () => resolve(["late-model"]),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    await waitFor(() => expect(receivedSignal).toBeDefined())
+    await selectApiTypeOption(user)
+
+    expect(receivedSignal?.aborted).toBe(true)
+    await waitFor(() => {
+      expect(mockFetchAnthropicModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
+      )
     })
   })
 
@@ -558,10 +606,13 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
 
     await waitFor(() =>
-      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
-        baseUrl: "https://example.com",
-        apiKey: "sk-test",
-      }),
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          abortSignal: expect.any(AbortSignal),
+        }),
+      ),
     )
 
     await selectApiTypeOption(user)
@@ -580,10 +631,13 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).toBeInTheDocument()
 
     await waitFor(() =>
-      expect(mockFetchAnthropicModelIds).toHaveBeenCalledWith({
-        baseUrl: "https://example.com",
-        apiKey: "sk-test",
-      }),
+      expect(mockFetchAnthropicModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          abortSignal: expect.any(AbortSignal),
+        }),
+      ),
     )
 
     const modelsProbeCard = await screen.findByTestId(
@@ -1196,10 +1250,13 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
 
     await waitFor(() =>
-      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
-        baseUrl: "https://example.com",
-        apiKey: "sk-test",
-      }),
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          abortSignal: expect.any(AbortSignal),
+        }),
+      ),
     )
 
     await user.click(
