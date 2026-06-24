@@ -14,12 +14,12 @@ import { getServiceWorker } from "~~/e2e/utils/extensionState"
 const MODEL_KEY_BASE_URL = "https://model-key.example.com"
 const MODEL_KEY_ACCOUNT_ID = "model-key-account"
 const MODEL_ID = "gpt-model-key-mini"
-const CREATED_KEY_NAME = `model ${MODEL_ID}`
+const CREATED_KEY_NAME = "vip group (auto)"
 
 const MODEL_KEY_PRICING: ModelPricing[] = [
   {
     model_name: MODEL_ID,
-    model_description: "E2E model that should produce a scoped key",
+    model_description: "E2E model that should produce a group default key",
     quota_type: 0,
     model_ratio: 1,
     model_price: 0,
@@ -36,7 +36,7 @@ test.beforeEach(async ({ context, page }) => {
   await stubLlmMetadataIndex(context)
 })
 
-test("creates a model-scoped key from Model List and continues in Key Management", async ({
+test("creates a group default key from Model List and continues in Key Management", async ({
   context,
   extensionId,
   page,

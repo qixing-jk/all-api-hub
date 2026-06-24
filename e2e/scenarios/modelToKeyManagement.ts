@@ -164,8 +164,6 @@ export async function runModelToKeyManagementScenario(
   }
 
   await expect(addKeyDialog.locator("#tokenName")).toHaveValue(createdKeyName)
-  await expect(addKeyDialog.getByText("Model Limits")).toBeVisible()
-  await expect(addKeyDialog.getByText(modelId)).toBeVisible()
 
   for (const label of params.expectedAddKeyDialogLabels ?? []) {
     await expect(addKeyDialog.getByText(label)).toBeVisible()
