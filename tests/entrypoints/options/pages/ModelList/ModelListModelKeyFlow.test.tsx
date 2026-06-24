@@ -175,7 +175,7 @@ describe("Model List → ModelKeyDialog", () => {
     toastErrorMock.mockReset()
   })
 
-  it("opens dialog and creates a custom key with model limits prefilled", async () => {
+  it("opens dialog and creates a custom group key without model limits prefilled", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([TOKEN])
@@ -201,7 +201,7 @@ describe("Model List → ModelKeyDialog", () => {
 
     expect(
       await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
-    ).toHaveValue("model gpt-4")
+    ).toHaveValue("vip group (auto)")
 
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
@@ -212,8 +212,9 @@ describe("Model List → ModelKeyDialog", () => {
     })
 
     expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
-      model_limits_enabled: true,
-      model_limits: "gpt-4",
+      name: "vip group (auto)",
+      model_limits_enabled: false,
+      model_limits: "",
       group: "vip",
     })
   })

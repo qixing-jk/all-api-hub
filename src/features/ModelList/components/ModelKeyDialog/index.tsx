@@ -19,6 +19,10 @@ import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
+import {
+  buildGroupDefaultTokenRequest,
+  resolvePreferredDefaultUserGroup,
+} from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -49,6 +53,19 @@ const logger = createLogger("ModelKeyDialog")
 function getCompatibleTokenLabel(token: Pick<ApiToken, "name" | "group">) {
   const group = typeof token.group === "string" ? token.group.trim() : ""
   return `${token.name} · ${group || DEFAULT_MODEL_GROUP}`
+}
+
+/**
+ * Resolves the group used when the custom create flow opens its default-key form.
+ */
+function resolveCustomCreateGroup(
+  selectedGroup: string,
+  groupOptions: readonly string[],
+) {
+  const normalizedSelectedGroup = selectedGroup.trim()
+  return (
+    normalizedSelectedGroup || resolvePreferredDefaultUserGroup(groupOptions)
+  )
 }
 
 /**
@@ -163,6 +180,12 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   const handleOpenKeysPage = () => {
     void openKeysPage(account.id)
   }
+  const customCreateGroup = resolveCustomCreateGroup(
+    createGroup,
+    createGroupOptions,
+  )
+  const customCreateTokenRequest =
+    buildGroupDefaultTokenRequest(customCreateGroup)
   const handleRetryFetchTokens = async () => {
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
@@ -479,12 +502,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         availableAccounts={[account]}
         preSelectedAccountId={account.id}
         createPrefill={{
-          modelId,
-          group: createGroup
-            ? createGroup
-            : createGroupOptions.includes(DEFAULT_MODEL_GROUP)
-              ? DEFAULT_MODEL_GROUP
-              : createGroupOptions[0] ?? DEFAULT_MODEL_GROUP,
+          modelId: "",
+          defaultName: customCreateTokenRequest.name,
+          group: customCreateTokenRequest.group,
           allowedGroups: createGroupOptions,
         }}
         onSuccess={handleTokenCreated}
