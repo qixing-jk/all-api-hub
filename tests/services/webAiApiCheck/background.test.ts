@@ -1310,4 +1310,52 @@ describe("webAiApiCheck background handlers", () => {
     expect(tagStorage.createTag).toHaveBeenCalledWith("Created")
     expect(tagStorage.renameTag).toHaveBeenCalledWith("tag-work", "Renamed")
   })
+
+  it("tag message handlers return sanitized errors when tag storage rejects", async () => {
+    vi.resetModules()
+    onWebAiApiCheckMessageMock.mockClear()
+
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    const { tagStorage } = await import("~/services/tags/tagStorage")
+
+    vi.mocked(tagStorage.listTags).mockRejectedValue(new Error("list failed"))
+    vi.mocked(tagStorage.createTag).mockRejectedValue(
+      new Error("create failed"),
+    )
+    vi.mocked(tagStorage.renameTag).mockRejectedValue(
+      new Error("rename failed"),
+    )
+
+    background.setupWebAiApiCheckMessagingListeners()
+
+    await expect(
+      webAiApiCheckMessageHandlers.get(WebAiApiCheckMessageTypes.ListTags)?.({
+        data: {},
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Failed to list tags",
+    })
+    await expect(
+      webAiApiCheckMessageHandlers.get(WebAiApiCheckMessageTypes.CreateTag)?.({
+        data: { name: "Created" },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "create failed",
+    })
+    await expect(
+      webAiApiCheckMessageHandlers.get(WebAiApiCheckMessageTypes.RenameTag)?.({
+        data: { tagId: "tag-work", name: "Renamed" },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "rename failed",
+    })
+  })
 })

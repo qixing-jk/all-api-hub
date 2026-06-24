@@ -49,7 +49,7 @@ import { useApiCheckProbeRunner } from "./useApiCheckProbeRunner"
 /**
  * Converts an HTML date input value into a local day-level timestamp.
  */
-function parseDateInputValue(value: string): number | null {
+export function parseDateInputValue(value: string): number | null {
   const trimmed = value.trim()
   if (!trimmed) return null
 
@@ -259,6 +259,7 @@ export function useApiCheckModalViewModel() {
     selectedTagIds.length > 0 || !!notes.trim() || !!expiresAtInput.trim()
 
   const loadTags = useCallback(async () => {
+    setTags([])
     const response = await sendWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.ListTags,
       {},
