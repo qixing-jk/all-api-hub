@@ -132,6 +132,14 @@ export function useRepairMissingKeysJob({
 
   isDialogOpenRef.current = isOpen
 
+  const invalidatePendingStart = useCallback(() => {
+    startRequestIdRef.current += 1
+    startInFlightRef.current = false
+    if (isDialogOpenRef.current) {
+      setIsStarting(false)
+    }
+  }, [])
+
   const handleStartAudit = useCallback(async () => {
     if (startInFlightRef.current) {
       return
@@ -202,6 +210,7 @@ export function useRepairMissingKeysJob({
     }
 
     cancelInFlightRef.current = true
+    invalidatePendingStart()
     setIsCancelling(true)
     setError("")
     try {
@@ -237,7 +246,7 @@ export function useRepairMissingKeysJob({
         setIsCancelling(false)
       }
     }
-  }, [t])
+  }, [invalidatePendingStart, t])
 
   useEffect(() => {
     isDialogOpenRef.current = isOpen
@@ -252,10 +261,9 @@ export function useRepairMissingKeysJob({
   useEffect(() => {
     return () => {
       isDialogOpenRef.current = false
-      startRequestIdRef.current += 1
-      startInFlightRef.current = false
+      invalidatePendingStart()
     }
-  }, [])
+  }, [invalidatePendingStart])
 
   useEffect(() => {
     if (!isOpen) {

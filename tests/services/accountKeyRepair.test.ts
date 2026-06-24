@@ -18,6 +18,8 @@ import {
 
 const mocks = vi.hoisted(() => {
   const storageMap = new Map<string, unknown>()
+  const pendingStorageSets: Array<() => void> = []
+  let shouldBlockNextStorageSet = false
 
   class StorageMock {
     async get(key: string) {
@@ -26,11 +28,24 @@ const mocks = vi.hoisted(() => {
 
     async set(key: string, value: unknown) {
       storageMap.set(key, value)
+      if (shouldBlockNextStorageSet) {
+        shouldBlockNextStorageSet = false
+        await new Promise<void>((resolve) => {
+          pendingStorageSets.push(resolve)
+        })
+      }
     }
   }
 
   return {
     storageMap,
+    pendingStorageSets,
+    blockNextStorageSet: () => {
+      shouldBlockNextStorageSet = true
+    },
+    resolveNextStorageSet: () => {
+      pendingStorageSets.shift()?.()
+    },
     StorageMock,
     getAllAccounts: vi.fn(),
     convertToDisplayData: vi.fn(),
@@ -107,6 +122,14 @@ describe("accountKeyRepair", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
+    mocks.pendingStorageSets.splice(0)
+    mocks.getAllAccounts.mockReset()
+    mocks.convertToDisplayData.mockReset()
+    mocks.ensureAccountKeysForAvailableGroups.mockReset()
+    mocks.deleteInvalidAccountToken.mockReset()
+    mocks.sendRuntimeMessage.mockReset()
+    mocks.safeRandomUUID.mockReset()
+    mocks.safeRandomUUID.mockImplementation(() => "job-123")
     mocks.storageMap.clear()
   })
 
@@ -1378,7 +1401,154 @@ describe("accountKeyRepair", () => {
     )
   })
 
-  it("keeps a restarted run active while the cancelled run unwinds", async () => {
+  it("keeps the cancelled run reserved until it unwinds", async () => {
+    const firstAccount = buildSiteAccount({
+      id: "first-run",
+      site_type: "new-api",
+      site_url: "https://first.example.com",
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      account_info: {
+        id: "301",
+        access_token: "first-token",
+        username: "first-run",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const firstRunDisplay = buildDisplaySiteData({
+      id: firstAccount.id,
+      name: "First Run",
+      baseUrl: firstAccount.site_url,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      userId: "301",
+      token: "first-token",
+    })
+    let firstAbortSignal: AbortSignal | undefined
+
+    mocks.safeRandomUUID.mockReturnValueOnce("job-first")
+    mocks.getAllAccounts.mockResolvedValueOnce([firstAccount])
+    mocks.convertToDisplayData.mockReturnValueOnce([firstRunDisplay])
+    mocks.ensureAccountKeysForAvailableGroups.mockImplementationOnce(
+      async ({ abortSignal }) => {
+        firstAbortSignal = abortSignal
+        await vi.waitFor(() => {
+          expect(abortSignal?.aborted).toBe(true)
+        })
+        return {
+          created: false,
+          availableGroups: [],
+          coveredGroups: [],
+          createdGroups: [],
+          missingGroups: [],
+          invalidTokens: [],
+        }
+      },
+    )
+
+    const { accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    await accountKeyRepairRunner.start()
+    await vi.waitFor(() => {
+      expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledTimes(1)
+    })
+
+    await accountKeyRepairRunner.cancel()
+    expect(firstAbortSignal?.aborted).toBe(true)
+
+    await expect(accountKeyRepairRunner.start()).resolves.toMatchObject({
+      jobId: "job-first",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+    })
+    expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledTimes(1)
+
+    await vi.waitFor(async () => {
+      const progress = await accountKeyRepairRunner.getProgress()
+      expect(progress).toMatchObject({
+        jobId: "job-first",
+        state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+      })
+    })
+  })
+
+  it("reserves a starting run before its first progress persistence finishes", async () => {
+    const account = buildSiteAccount({
+      id: "reserved-run",
+      site_type: "new-api",
+      site_url: "https://reserved.example.com",
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      account_info: {
+        id: "301",
+        access_token: "reserved-token",
+        username: "reserved-run",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const displayAccount = buildDisplaySiteData({
+      id: account.id,
+      name: "Reserved Run",
+      baseUrl: account.site_url,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      userId: "301",
+      token: "reserved-token",
+    })
+
+    mocks.blockNextStorageSet()
+    mocks.getAllAccounts.mockResolvedValue([account])
+    mocks.convertToDisplayData.mockReturnValue([displayAccount])
+    mocks.ensureAccountKeysForAvailableGroups.mockResolvedValue({
+      created: false,
+      availableGroups: [],
+      coveredGroups: [],
+      createdGroups: [],
+      missingGroups: [],
+      invalidTokens: [],
+    })
+
+    const { accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    const firstStart = accountKeyRepairRunner.start()
+
+    await vi.waitFor(() => {
+      expect(mocks.pendingStorageSets).toHaveLength(1)
+    })
+    await expect(accountKeyRepairRunner.start()).resolves.toMatchObject({
+      jobId: "job-123",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+    })
+    expect(mocks.getAllAccounts).not.toHaveBeenCalled()
+
+    mocks.resolveNextStorageSet()
+
+    await expect(firstStart).resolves.toMatchObject({
+      jobId: "job-123",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+    })
+
+    await vi.waitFor(async () => {
+      const progress = await accountKeyRepairRunner.getProgress()
+      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
+    })
+    expect(mocks.getAllAccounts).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not let a cancelled run update a restarted job", async () => {
     const firstAccount = buildSiteAccount({
       id: "first-run",
       site_type: "new-api",
@@ -1433,7 +1603,16 @@ describe("accountKeyRepair", () => {
       userId: "302",
       token: "second-token",
     })
-    let firstAbortSignal: AbortSignal | undefined
+    let resolveFirstRun:
+      | ((value: {
+          created: boolean
+          availableGroups: string[]
+          coveredGroups: string[]
+          createdGroups: string[]
+          missingGroups: string[]
+          invalidTokens: []
+        }) => void)
+      | undefined
     let resolveSecondRun:
       | ((value: {
           created: boolean
@@ -1455,20 +1634,12 @@ describe("accountKeyRepair", () => {
       .mockReturnValueOnce([firstRunDisplay])
       .mockReturnValueOnce([secondRunDisplay])
     mocks.ensureAccountKeysForAvailableGroups
-      .mockImplementationOnce(async ({ abortSignal }) => {
-        firstAbortSignal = abortSignal
-        await vi.waitFor(() => {
-          expect(abortSignal?.aborted).toBe(true)
-        })
-        return {
-          created: false,
-          availableGroups: [],
-          coveredGroups: [],
-          createdGroups: [],
-          missingGroups: [],
-          invalidTokens: [],
-        }
-      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirstRun = resolve
+          }),
+      )
       .mockImplementationOnce(
         () =>
           new Promise((resolve) => {
@@ -1486,22 +1657,31 @@ describe("accountKeyRepair", () => {
     })
 
     await accountKeyRepairRunner.cancel()
-    expect(firstAbortSignal?.aborted).toBe(true)
 
-    await expect(accountKeyRepairRunner.start()).resolves.toMatchObject({
-      jobId: "job-second",
-      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+    resolveFirstRun?.({
+      created: false,
+      availableGroups: [],
+      coveredGroups: [],
+      createdGroups: [],
+      missingGroups: [],
+      invalidTokens: [],
+    })
+
+    await vi.waitFor(async () => {
+      const progress = await accountKeyRepairRunner.getProgress()
+      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
+    })
+
+    await vi.waitFor(async () => {
+      await expect(accountKeyRepairRunner.start()).resolves.toMatchObject({
+        jobId: "job-second",
+        state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+      })
     })
 
     await vi.waitFor(() => {
       expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledTimes(2)
     })
-
-    await expect(accountKeyRepairRunner.start()).resolves.toMatchObject({
-      jobId: "job-second",
-      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
-    })
-    expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledTimes(2)
 
     resolveSecondRun?.({
       created: false,
@@ -1517,6 +1697,9 @@ describe("accountKeyRepair", () => {
       expect(progress).toMatchObject({
         jobId: "job-second",
         state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+        summary: expect.objectContaining({
+          alreadyHad: 1,
+        }),
       })
     })
   })

@@ -161,19 +161,19 @@ class AccountKeyRepairRunner {
 
     this.currentProgress = progress
     this.currentAbortController = abortController
-    await this.persistAndNotify()
-
-    const runPromise = this.run(progress.jobId, abortController.signal).finally(
-      () => {
+    const initialPersist = this.persistAndNotify()
+    const runPromise = initialPersist
+      .then(() => this.run(progress.jobId, abortController.signal))
+      .finally(() => {
         if (this.currentAbortController === abortController) {
           this.currentAbortController = null
         }
         if (this.currentRun === runPromise) {
           this.currentRun = null
         }
-      },
-    )
+      })
     this.currentRun = runPromise
+    await initialPersist
 
     return progress
   }
@@ -190,7 +190,6 @@ class AccountKeyRepairRunner {
 
     this.currentAbortController?.abort()
     this.currentAbortController = null
-    this.currentRun = null
     await this.queueProgressUpdate((prev) =>
       prev.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running
         ? {

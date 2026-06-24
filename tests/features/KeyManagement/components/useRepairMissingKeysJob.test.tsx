@@ -351,6 +351,142 @@ describe("useRepairMissingKeysJob", () => {
     )
   })
 
+  it("keeps cancelled progress when an older start response settles after cancel", async () => {
+    let resolveStart:
+      | ((value: { success: true; data: AccountKeyRepairProgress }) => void)
+      | undefined
+    const runningProgress = buildProgress({ jobId: "running-job" })
+    const startedProgress = buildProgress({ jobId: "started-job" })
+    const cancelledProgress = buildProgress({
+      jobId: "running-job",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+      finishedAt: 123,
+    })
+    sendAccountKeyRepairMessageMock.mockImplementation((type) => {
+      if (type === AccountKeyRepairMessageTypes.Start) {
+        return new Promise((resolve) => {
+          resolveStart = resolve
+        })
+      }
+
+      if (type === AccountKeyRepairMessageTypes.Cancel) {
+        return Promise.resolve({
+          success: true,
+          data: cancelledProgress,
+        })
+      }
+
+      return Promise.resolve({
+        success: true,
+        data: runningProgress,
+      })
+    })
+
+    const { result } = renderHook(() =>
+      useRepairMissingKeysJob({
+        accounts: [buildAccount()],
+        isOpen: true,
+        startOnOpen: false,
+        t: testI18n.t,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.progress).toEqual(runningProgress)
+    })
+
+    await act(async () => {
+      const startPromise = result.current.handleStartAudit()
+      await result.current.handleCancelAudit()
+
+      resolveStart?.({
+        success: true,
+        data: startedProgress,
+      })
+
+      await startPromise
+    })
+
+    expect(result.current.progress).toEqual(cancelledProgress)
+    expect(result.current.isStarting).toBe(false)
+    expect(result.current.isCancelling).toBe(false)
+  })
+
+  it("shows the cancel failure message when cancelling returns an unsuccessful response", async () => {
+    const runningProgress = buildProgress({ jobId: "running-job" })
+    sendAccountKeyRepairMessageMock.mockImplementation((type) => {
+      if (type === AccountKeyRepairMessageTypes.Cancel) {
+        return Promise.resolve({
+          success: false,
+          error: "cancel failed",
+        })
+      }
+
+      return Promise.resolve({
+        success: true,
+        data: runningProgress,
+      })
+    })
+
+    const { result } = renderHook(() =>
+      useRepairMissingKeysJob({
+        accounts: [buildAccount()],
+        isOpen: true,
+        startOnOpen: false,
+        t: testI18n.t,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.progress).toEqual(runningProgress)
+    })
+
+    await act(async () => {
+      await result.current.handleCancelAudit()
+    })
+
+    expect(result.current.error).toBe(
+      "keyManagement:repairMissingKeys.messages.cancelFailed",
+    )
+    expect(result.current.isCancelling).toBe(false)
+  })
+
+  it("shows the cancel failure message when cancelling rejects", async () => {
+    const runningProgress = buildProgress({ jobId: "running-job" })
+    sendAccountKeyRepairMessageMock.mockImplementation((type) => {
+      if (type === AccountKeyRepairMessageTypes.Cancel) {
+        return Promise.reject(new Error("network down"))
+      }
+
+      return Promise.resolve({
+        success: true,
+        data: runningProgress,
+      })
+    })
+
+    const { result } = renderHook(() =>
+      useRepairMissingKeysJob({
+        accounts: [buildAccount()],
+        isOpen: true,
+        startOnOpen: false,
+        t: testI18n.t,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.progress).toEqual(runningProgress)
+    })
+
+    await act(async () => {
+      await result.current.handleCancelAudit()
+    })
+
+    expect(result.current.error).toBe(
+      "keyManagement:repairMissingKeys.messages.cancelFailed",
+    )
+    expect(result.current.isCancelling).toBe(false)
+  })
+
   it("deduplicates concurrent cancel requests", async () => {
     let resolveCancel:
       | ((value: { success: true; data: AccountKeyRepairProgress }) => void)
