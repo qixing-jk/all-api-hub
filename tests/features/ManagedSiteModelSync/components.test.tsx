@@ -328,12 +328,11 @@ describe("ManagedSiteModelSync components", () => {
       />,
     )
 
-    const [selectAllCheckbox, firstRowCheckbox] = screen.getAllByRole(
-      "checkbox",
-    ) as HTMLInputElement[]
+    const [selectAllCheckbox, firstRowCheckbox] =
+      screen.getAllByRole("checkbox")
 
     expect(selectAllCheckbox).not.toBeChecked()
-    expect(selectAllCheckbox.indeterminate).toBe(true)
+    expect(selectAllCheckbox).toHaveAttribute("aria-checked", "mixed")
 
     fireEvent.click(selectAllCheckbox)
     fireEvent.click(firstRowCheckbox)

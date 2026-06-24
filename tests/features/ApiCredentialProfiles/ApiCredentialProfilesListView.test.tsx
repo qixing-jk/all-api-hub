@@ -33,6 +33,13 @@ vi.mock("~/hooks/useMediaQuery", () => ({
 }))
 
 vi.mock("~/components/ui", () => ({
+  Button: ({ children, leftIcon, rightIcon, ...props }: any) => (
+    <button {...props}>
+      {leftIcon}
+      {children}
+      {rightIcon}
+    </button>
+  ),
   Input: ({
     clearButtonLabel,
     leftIcon: _leftIcon,

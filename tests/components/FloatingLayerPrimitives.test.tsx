@@ -53,6 +53,29 @@ function ModalSelectHarness() {
 }
 
 /**
+ * Minimal select host for custom portal container assertions.
+ */
+function SelectWithContainerHarness({
+  portalContainer,
+}: {
+  portalContainer: HTMLElement
+}) {
+  return (
+    <div>
+      <Select defaultValue="alpha">
+        <SelectTrigger aria-label="Select with container" className="w-48">
+          <SelectValue placeholder="Choose a value" />
+        </SelectTrigger>
+        <SelectContent container={portalContainer}>
+          <SelectItem value="alpha">Alpha</SelectItem>
+          <SelectItem value="beta">Beta</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+/**
  * Minimal Radix dialog host for dropdown-layer assertions.
  */
 function DialogDropdownHarness() {
@@ -133,6 +156,26 @@ describe("floating layer primitives inside dialogs", () => {
     expect(content).toBeInTheDocument()
     expect(content).toHaveClass(Z_INDEX.modalFloating)
     expect(content).not.toHaveClass(Z_INDEX.floating)
+  })
+
+  it("renders select content inside a custom portal container", async () => {
+    const user = userEvent.setup()
+    const portalContainer = document.createElement("div")
+    document.body.append(portalContainer)
+
+    try {
+      render(<SelectWithContainerHarness portalContainer={portalContainer} />)
+
+      await user.click(
+        await screen.findByRole("combobox", { name: "Select with container" }),
+      )
+
+      const option = await screen.findByRole("option", { name: "Beta" })
+
+      expect(portalContainer).toContainElement(option)
+    } finally {
+      portalContainer.remove()
+    }
   })
 
   it("uses the modal-contained layer for dropdown menus inside DialogContent", async () => {

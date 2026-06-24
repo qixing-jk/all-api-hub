@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -8,6 +8,7 @@ import {
   Card,
   CardContent,
   CardHeader,
+  Checkbox,
   Heading3,
   Link,
 } from "~/components/ui"
@@ -69,14 +70,6 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
     },
   })
-
-  const selectAllRef = useRef<HTMLInputElement | null>(null)
-
-  useEffect(() => {
-    const el = selectAllRef.current
-    if (!el) return
-    el.indeterminate = someSelected
-  }, [someSelected])
 
   const handleCancel = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -151,12 +144,10 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
           <Body>{message}</Body>
           {codes.length > 1 && (
             <div className="mt-2 flex items-center gap-2">
-              <input
-                ref={selectAllRef}
-                type="checkbox"
-                className="h-3 w-3"
-                checked={allSelected}
-                onChange={handleToggleAll}
+              <Checkbox
+                aria-label={t("redemptionAssist:messages.selectAll")}
+                checked={someSelected ? "indeterminate" : allSelected}
+                onCheckedChange={handleToggleAll}
               />
               <span className="text-foreground text-xs">
                 {t("redemptionAssist:messages.selectAll")}
@@ -166,18 +157,19 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
           {codes.length > 0 && (
             <div className="mt-2 max-h-44 space-y-1 overflow-y-auto pr-1">
               {codes.map(({ code, preview }) => (
-                <label
+                <div
                   key={code}
                   className="border-border/60 hover:bg-muted/70 flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs"
+                  onClick={() => toggleCode(code)}
                 >
-                  <input
-                    type="checkbox"
-                    className="h-3 w-3"
+                  <Checkbox
+                    aria-label={preview}
                     checked={selected.has(code)}
-                    onChange={() => toggleCode(code)}
+                    onCheckedChange={() => toggleCode(code)}
+                    onClick={(event) => event.stopPropagation()}
                   />
                   <code className="text-foreground font-mono">{preview}</code>
-                </label>
+                </div>
               ))}
             </div>
           )}

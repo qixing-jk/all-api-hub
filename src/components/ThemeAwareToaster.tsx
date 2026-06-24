@@ -5,6 +5,7 @@ import toast, { ToastBar, Toaster } from "react-hot-toast"
 
 import { getThemeAwareToastStyles } from "~/components/toast/themeAwareToastStyles"
 import { useToasterPortalHost } from "~/components/toast/ToasterPortal"
+import { IconButton } from "~/components/ui"
 import { useTheme } from "~/contexts/ThemeContext"
 
 interface ThemeAwareToasterProps {
@@ -70,9 +71,15 @@ export const ThemeAwareToaster = ({
                 {icon}
                 {message}
                 {t.type !== "loading" && (
-                  <button onClick={() => toast.dismiss(t.id)}>
+                  <IconButton
+                    type="button"
+                    aria-label="Close notification"
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => toast.dismiss(t.id)}
+                  >
                     <XMarkIcon className="h-4 w-4" />
-                  </button>
+                  </IconButton>
                 )}
               </>
             )

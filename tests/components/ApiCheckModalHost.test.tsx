@@ -1867,10 +1867,12 @@ describe("ApiCheckModalHost", () => {
 
     expect(await within(probeCard).findByText("OpenAI result")).toBeVisible()
 
-    await user.selectOptions(
-      screen.getByDisplayValue("OpenAI-compatible"),
-      "anthropic",
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "webAiApiCheck:modal.fields.apiType",
+      }),
     )
+    await user.click(await screen.findByRole("option", { name: "Anthropic" }))
 
     await waitFor(() => {
       expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.FetchModels, {

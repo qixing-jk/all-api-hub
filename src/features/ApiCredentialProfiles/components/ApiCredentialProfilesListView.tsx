@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import {
+  Button,
   EmptyState,
   Input,
   Notice,
@@ -399,13 +400,15 @@ export function ApiCredentialProfilesListView({
               description={
                 <span>
                   {t("apiCredentialProfiles:empty.keyManagementImportHint")}{" "}
-                  <button
+                  <Button
                     type="button"
-                    className="font-medium text-blue-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:text-blue-200"
+                    variant="link"
+                    size="sm"
+                    className="inline h-auto p-0 align-baseline text-blue-700 dark:text-blue-200"
                     onClick={handleOpenKeyManagement}
                   >
                     {t("apiCredentialProfiles:empty.keyManagementLink")}
-                  </button>
+                  </Button>
                 </span>
               }
             />

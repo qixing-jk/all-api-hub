@@ -71,6 +71,26 @@ vi.mock("~/components/ui", () => ({
   Caption: ({ children }: { children: React.ReactNode }) => (
     <span>{children}</span>
   ),
+  Checkbox: ({
+    "aria-label": ariaLabel,
+    checked,
+    onClick,
+    onCheckedChange,
+  }: {
+    "aria-label"?: string
+    checked?: boolean | "indeterminate"
+    onClick?: (event: React.MouseEvent<HTMLInputElement>) => void
+    onCheckedChange?: (checked: boolean | "indeterminate") => void
+  }) => (
+    <input
+      type="checkbox"
+      aria-label={ariaLabel}
+      checked={checked === true}
+      data-indeterminate={checked === "indeterminate" ? "true" : undefined}
+      onClick={onClick}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
+  ),
   Card: ({ children }: { children: React.ReactNode }) => (
     <section>{children}</section>
   ),
@@ -143,7 +163,7 @@ describe("RedemptionPromptToast", () => {
 
     await waitFor(() => {
       expect(selectAllCheckbox).not.toBeChecked()
-      expect((selectAllCheckbox as HTMLInputElement).indeterminate).toBe(true)
+      expect(selectAllCheckbox).toHaveAttribute("data-indeterminate", "true")
     })
 
     fireEvent.click(codeTwoCheckbox)

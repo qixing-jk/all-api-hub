@@ -70,6 +70,8 @@
       "finishedAt": "Thời gian hoàn thành",
       "manageChannel": "Quản lý kênh",
       "message": "Thông báo lỗi",
+      "selectAll": "Chọn tất cả kênh",
+      "selectChannel": "Chọn kênh {{channelName}}",
       "status": "Trạng thái",
       "syncChannel": "Đồng bộ hóa kênh này"
     },

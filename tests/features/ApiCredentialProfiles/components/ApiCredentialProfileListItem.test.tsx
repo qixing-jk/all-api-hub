@@ -84,6 +84,13 @@ vi.mock("~/components/ui", async () => {
 
   return {
     Badge: ({ children }: any) => <span>{children}</span>,
+    Button: ({ children, leftIcon, rightIcon, ...props }: any) => (
+      <button type="button" {...props}>
+        {leftIcon}
+        {children}
+        {rightIcon}
+      </button>
+    ),
     Card: ({ children }: any) => <div>{children}</div>,
     CardContent: ({ children }: any) => <div>{children}</div>,
     Heading6: ({ children }: any) => <h6>{children}</h6>,

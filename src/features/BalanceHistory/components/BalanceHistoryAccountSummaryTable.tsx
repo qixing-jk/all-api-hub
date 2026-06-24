@@ -12,6 +12,7 @@ import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import AccountLinkButton from "~/components/AccountLinkButton"
+import { Button } from "~/components/ui"
 import {
   Table,
   TableBody,
@@ -209,9 +210,11 @@ export default function BalanceHistoryAccountSummaryTable({
               {headerGroup.headers.map((header) => (
                 <TableHead key={header.id} style={{ width: header.getSize() }}>
                   {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                    <button
+                    <Button
                       type="button"
-                      className="flex w-full items-center gap-2"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto w-full justify-start gap-2 p-0"
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       {flexRender(
@@ -224,7 +227,7 @@ export default function BalanceHistoryAccountSummaryTable({
                       {header.column.getIsSorted() === "desc" && (
                         <ChevronDown className="h-3.5 w-3.5 opacity-60" />
                       )}
-                    </button>
+                    </Button>
                   ) : (
                     flexRender(
                       header.column.columnDef.header,

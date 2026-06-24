@@ -1348,9 +1348,11 @@ export default function BalanceHistory() {
                       <div className="min-w-0 space-y-1">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button
+                            <Button
                               type="button"
-                              className={`${ANIMATIONS.transition.base} dark:hover:bg-dark-bg-tertiary inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none`}
+                              variant="ghost"
+                              size="sm"
+                              className={`${ANIMATIONS.transition.base} h-auto min-w-0 gap-1 px-1 py-0.5 text-sm font-medium`}
                             >
                               <span className="min-w-0 truncate">
                                 {t("breakdown.title")}:{" "}
@@ -1360,7 +1362,7 @@ export default function BalanceHistory() {
                                 )}
                               </span>
                               <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
-                            </button>
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start" className="w-44">
                             <DropdownMenuRadioGroup
@@ -1473,9 +1475,11 @@ export default function BalanceHistory() {
                         <div className="flex min-w-0 items-center gap-2">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button
+                              <Button
                                 type="button"
-                                className={`${ANIMATIONS.transition.base} dark:hover:bg-dark-bg-tertiary inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none`}
+                                variant="ghost"
+                                size="sm"
+                                className={`${ANIMATIONS.transition.base} h-auto min-w-0 gap-1 px-1 py-0.5 text-sm font-medium`}
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.title")}:{" "}
@@ -1485,7 +1489,7 @@ export default function BalanceHistory() {
                                   )}
                                 </span>
                                 <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
-                              </button>
+                              </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-44">
                               <DropdownMenuRadioGroup
@@ -1519,9 +1523,11 @@ export default function BalanceHistory() {
 
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button
+                              <Button
                                 type="button"
-                                className={`${ANIMATIONS.transition.base} dark:hover:bg-dark-bg-tertiary inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none`}
+                                variant="ghost"
+                                size="sm"
+                                className={`${ANIMATIONS.transition.base} h-auto min-w-0 gap-1 px-1 py-0.5 text-sm font-medium`}
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.controls.scope")}:{" "}
@@ -1531,7 +1537,7 @@ export default function BalanceHistory() {
                                   )}
                                 </span>
                                 <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
-                              </button>
+                              </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-40">
                               <DropdownMenuRadioGroup

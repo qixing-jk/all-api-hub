@@ -12,10 +12,13 @@ import {
   Input,
   Notice,
   SearchableSelect,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from "~/components/ui"
-import { inputVariants } from "~/components/ui/input"
-import { cn } from "~/lib/utils"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 
 import { WEB_AI_API_CHECK_TEST_IDS } from "../testIds"
@@ -202,23 +205,26 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   >
                     {t("webAiApiCheck:modal.fields.apiType")}
                   </label>
-                  <select
-                    id="api-check-api-type"
-                    className={cn(inputVariants({}), "dark:bg-input/30 h-9")}
+                  <Select
                     value={view.apiType}
-                    onChange={(e) =>
-                      actions.setApiType(
-                        e.target.value as ApiVerificationApiType,
-                      )
+                    onValueChange={(value) =>
+                      actions.setApiType(value as ApiVerificationApiType)
                     }
                     disabled={view.isRunningAll}
                   >
-                    {view.apiTypeOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="api-check-api-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent
+                      container={view.popoverPortalContainer ?? undefined}
+                    >
+                      {view.apiTypeOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1.5">

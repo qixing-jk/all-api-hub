@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import { ShieldCheck, TriangleAlert } from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
@@ -170,18 +170,8 @@ export function RepairMissingKeysResultsPanel({
               value={searchTerm}
               onChange={(event) => onSearchTermChange(event.target.value)}
               leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
-              rightIcon={
-                searchTerm ? (
-                  <button
-                    type="button"
-                    onClick={() => onSearchTermChange("")}
-                    className="dark:hover:bg-dark-bg-tertiary rounded p-1 hover:bg-gray-100"
-                    aria-label={t("common:actions.clear")}
-                  >
-                    <XMarkIcon className="h-4 w-4" />
-                  </button>
-                ) : null
-              }
+              onClear={() => onSearchTermChange("")}
+              clearButtonLabel={t("common:actions.clear")}
               containerClassName="w-full"
             />
           </div>

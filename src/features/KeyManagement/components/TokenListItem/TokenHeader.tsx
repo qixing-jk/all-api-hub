@@ -444,17 +444,18 @@ function TokenActionButtons({
                 name: profile.name,
               })}
             </span>
-            <button
+            <Button
               type="button"
               data-testid={KEY_MANAGEMENT_TEST_IDS.openApiProfilesToastButton}
-              className="shrink-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+              size="sm"
+              className="h-7 shrink-0 px-2 text-xs"
               onClick={() => {
                 openApiCredentialProfilesPage()
                 toast.dismiss(toastInstance.id)
               }}
             >
               {t("keyManagement:actions.openApiProfiles")}
-            </button>
+            </Button>
           </div>
         ),
         { duration: 8000 },

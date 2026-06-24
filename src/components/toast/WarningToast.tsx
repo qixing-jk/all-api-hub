@@ -2,6 +2,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline"
 import { useState } from "react"
 import toast, { ToastBar, type Toast } from "react-hot-toast"
 
+import { Button, IconButton } from "~/components/ui"
 import { useTheme } from "~/contexts/ThemeContext"
 
 import { getThemeAwareToastStyles } from "./themeAwareToastStyles"
@@ -61,23 +62,27 @@ export function WarningToast({
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="min-w-0">{renderedMessage}</div>
             {action ? (
-              <button
+              <Button
                 type="button"
                 onClick={handleActionClick}
                 disabled={isActionPending}
-                className="w-fit text-sm font-medium text-blue-600 transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60 dark:text-blue-400"
+                variant="link"
+                size="sm"
+                className="h-auto w-fit p-0"
               >
                 {action.label}
-              </button>
+              </Button>
             ) : null}
           </div>
-          <button
+          <IconButton
             type="button"
             aria-label="Close notification"
+            variant="ghost"
+            size="xs"
             onClick={() => toast.dismiss(toastInstance.id)}
           >
             <XMarkIcon className="h-4 w-4" />
-          </button>
+          </IconButton>
         </>
       )}
     </ToastBar>

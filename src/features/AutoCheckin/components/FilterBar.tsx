@@ -7,7 +7,7 @@ import {
 import { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Input } from "~/components/ui"
+import { Button, Input } from "~/components/ui"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -147,7 +147,10 @@ export default function FilterBar({
     icon: ReactNode,
     count?: number,
   ) => (
-    <button
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
       onClick={() => {
         onStatusChange(value)
         trackFilterSelection(PRODUCT_ANALYTICS_MODE_IDS.StatusFilter, value)
@@ -171,7 +174,7 @@ export default function FilterBar({
           {count}
         </span>
       )}
-    </button>
+    </Button>
   )
 
   return (
