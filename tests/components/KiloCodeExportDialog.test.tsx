@@ -5,6 +5,7 @@ import {
   buildKiloCodeCreateTokenToastId,
   KiloCodeExportDialog,
 } from "~/components/KiloCodeExportDialog"
+import { pickNewestKiloCodeToken } from "~/components/kiloCodeTokenSelection"
 import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
@@ -19,6 +20,7 @@ import {
 import {
   AuthTypeEnum,
   SiteHealthStatus,
+  type ApiToken,
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
@@ -158,6 +160,27 @@ const createSiteAccount = (site: DisplaySiteData): SiteAccount => ({
   updated_at: 0,
   user_updated_at: 0,
 })
+
+const createApiToken = (
+  overrides: Partial<ApiToken> & {
+    id: number
+    key: string
+    name: string
+    createdAt?: number | string
+    created_at?: number | string
+  },
+): ApiToken =>
+  ({
+    user_id: 1,
+    status: 1,
+    created_time: 0,
+    accessed_time: 0,
+    expired_time: -1,
+    remain_quota: 0,
+    unlimited_quota: true,
+    used_quota: 0,
+    ...overrides,
+  }) as ApiToken
 
 const expectKiloAccountExportActionStarted = (
   actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
@@ -328,8 +351,6 @@ describe("KiloCodeExportDialog", () => {
   })
 
   it("disables export actions when selected keys are missing a model id", async () => {
-    const user = userEvent.setup()
-
     mockUseAccountData.mockReturnValue({
       enabledAccounts: [],
       enabledDisplayData: [
@@ -347,7 +368,13 @@ describe("KiloCodeExportDialog", () => {
       { id: 1, name: "Default", key: "sk-test" },
     ])
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
+    )
 
     const copyButton = await screen.findByRole("button", {
       name: "ui:dialog.kiloCode.actions.copyApiConfigs",
@@ -355,15 +382,6 @@ describe("KiloCodeExportDialog", () => {
     const downloadButton = await screen.findByRole("button", {
       name: "ui:dialog.kiloCode.actions.downloadSettings",
     })
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
-    )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     await waitFor(() => {
       expect(mockFetchAccountTokens).toHaveBeenCalledWith(
@@ -381,8 +399,6 @@ describe("KiloCodeExportDialog", () => {
   })
 
   it("keeps token-load failures isolated per site", async () => {
-    const user = userEvent.setup()
-
     mockUseAccountData.mockReturnValue({
       enabledAccounts: [],
       enabledDisplayData: [
@@ -408,7 +424,13 @@ describe("KiloCodeExportDialog", () => {
       },
     )
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["a", "b"]}
+      />,
+    )
 
     const copyButton = await screen.findByRole("button", {
       name: "ui:dialog.kiloCode.actions.copyApiConfigs",
@@ -416,23 +438,6 @@ describe("KiloCodeExportDialog", () => {
     const downloadButton = await screen.findByRole("button", {
       name: "ui:dialog.kiloCode.actions.downloadSettings",
     })
-
-    expect(copyButton).toBeDisabled()
-    expect(downloadButton).toBeDisabled()
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
-    )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site A")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site A" }))
-
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     await waitFor(() => {
       expect(mockFetchAccountTokens).toHaveBeenCalled()
@@ -466,16 +471,13 @@ describe("KiloCodeExportDialog", () => {
       .mockResolvedValueOnce({ items: [] })
       .mockResolvedValueOnce([{ id: 1, name: "Recovered", key: "sk-test" }])
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     expect(
       await screen.findByText("ui:dialog.kiloCode.messages.loadTokensFailed"),
@@ -519,16 +521,13 @@ describe("KiloCodeExportDialog", () => {
       .mockRejectedValueOnce(new Error("model load failed"))
       .mockResolvedValueOnce(["gpt-4o-mini"])
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     const errorText = await screen.findByText(
       "ui:dialog.kiloCode.messages.loadModelsFailed",
@@ -800,16 +799,13 @@ describe("KiloCodeExportDialog", () => {
       key: "sk-test",
     })
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     await waitFor(() => {
       expect(mockFetchAccountTokens).toHaveBeenCalledWith(
@@ -862,16 +858,13 @@ describe("KiloCodeExportDialog", () => {
       vip: { desc: "VIP", ratio: 2 },
     })
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     await waitFor(() => {
       expect(mockFetchAccountTokens).toHaveBeenCalledWith(
@@ -911,9 +904,6 @@ describe("KiloCodeExportDialog", () => {
 
   it("uses the newest created token after constrained Sub2API creation regardless of fetch order", async () => {
     const user = userEvent.setup()
-    const writeText = vi
-      .spyOn(navigator.clipboard, "writeText")
-      .mockResolvedValue(undefined)
     const site = createDisplayAccount({
       id: "b",
       name: "Site B",
@@ -945,16 +935,13 @@ describe("KiloCodeExportDialog", () => {
       allowedGroups: ["default", "vip"],
     })
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     await user.click(
       await screen.findByRole("button", {
@@ -966,181 +953,69 @@ describe("KiloCodeExportDialog", () => {
       await screen.findByRole("button", { name: "mock-add-token-success" }),
     )
 
-    const copyButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
-    })
-
     await waitFor(() => {
-      expect(copyButton).toBeEnabled()
+      expect(
+        screen.getByTitle("ui:dialog.kiloCode.labels.selectedTokens"),
+      ).toHaveTextContent("1/2")
     })
-
-    await user.click(copyButton)
-
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledTimes(1)
-    })
-
-    const copiedPayload = String(writeText.mock.calls[0]?.[0] ?? "")
-    expect(copiedPayload).toContain("sk-newest")
-    expect(copiedPayload).not.toContain("sk-older")
+    expect(screen.getAllByText("Newest").length).toBeGreaterThan(0)
+    expect(screen.queryByText("Older")).not.toBeInTheDocument()
   })
 
   it("selects the newest refreshed token when upstream creation timestamps arrive as strings or ISO dates", async () => {
-    const user = userEvent.setup()
-    const writeText = vi
-      .spyOn(navigator.clipboard, "writeText")
-      .mockResolvedValue(undefined)
-    const site = createDisplayAccount({
-      id: "b",
-      name: "Site B",
-      baseUrl: "https://b.test",
-      siteType: "sub2api",
-    })
-
-    mockUseAccountData.mockReturnValue({
-      enabledAccounts: [createSiteAccount(site)],
-      enabledDisplayData: [site],
-    })
-
-    mockFetchAccountTokens.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        id: 11,
-        name: "Numeric String",
-        key: "sk-older",
-        createdAt: "1711929600000",
-      },
-      {
+    expect(
+      pickNewestKiloCodeToken([
+        createApiToken({
+          id: 11,
+          name: "Numeric String",
+          key: "sk-older",
+          createdAt: "1711929600000",
+        }),
+        createApiToken({
+          id: 22,
+          name: "ISO Newest",
+          key: "sk-newest",
+          created_at: "2024-04-02T00:00:00.000Z",
+        }),
+        createApiToken({
+          id: 15,
+          name: "ISO Older",
+          key: "sk-oldest",
+          created_at: "2024-04-01T00:00:00.000Z",
+        }),
+      ]),
+    ).toEqual(
+      createApiToken({
         id: 22,
         name: "ISO Newest",
         key: "sk-newest",
         created_at: "2024-04-02T00:00:00.000Z",
-      },
-      {
-        id: 15,
-        name: "ISO Older",
-        key: "sk-oldest",
-        created_at: "2024-04-01T00:00:00.000Z",
-      },
-    ])
-    mockResolveDefaultTokenQuickCreateResolution.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
-
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
-    )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "ui:dialog.kiloCode.actions.createDefaultToken",
       }),
     )
-
-    await user.click(
-      await screen.findByRole("button", { name: "mock-add-token-success" }),
-    )
-
-    const copyButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
-    })
-
-    await waitFor(() => {
-      expect(copyButton).toBeEnabled()
-    })
-
-    await user.click(copyButton)
-
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledTimes(1)
-    })
-
-    const copiedPayload = String(writeText.mock.calls[0]?.[0] ?? "")
-    expect(copiedPayload).toContain("sk-newest")
-    expect(copiedPayload).not.toContain("sk-older")
-    expect(copiedPayload).not.toContain("sk-oldest")
   })
 
   it("falls back to the highest token id when refreshed tokens have unusable creation timestamps", async () => {
-    const user = userEvent.setup()
-    const writeText = vi
-      .spyOn(navigator.clipboard, "writeText")
-      .mockResolvedValue(undefined)
-    const site = createDisplayAccount({
-      id: "b",
-      name: "Site B",
-      baseUrl: "https://b.test",
-      siteType: "sub2api",
-    })
-
-    mockUseAccountData.mockReturnValue({
-      enabledAccounts: [createSiteAccount(site)],
-      enabledDisplayData: [site],
-    })
-
-    mockFetchAccountTokens.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        id: 11,
-        name: "Invalid Timestamp",
-        key: "sk-older",
-        createdAt: "not-a-timestamp",
-      },
-      {
+    expect(
+      pickNewestKiloCodeToken([
+        createApiToken({
+          id: 11,
+          name: "Invalid Timestamp",
+          key: "sk-older",
+          createdAt: "not-a-timestamp",
+        }),
+        createApiToken({
+          id: 22,
+          name: "Higher Id",
+          key: "sk-newest",
+        }),
+      ]),
+    ).toEqual(
+      createApiToken({
         id: 22,
         name: "Higher Id",
         key: "sk-newest",
-      },
-    ])
-    mockResolveDefaultTokenQuickCreateResolution.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
-
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
-    )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "ui:dialog.kiloCode.actions.createDefaultToken",
       }),
     )
-
-    await user.click(
-      await screen.findByRole("button", { name: "mock-add-token-success" }),
-    )
-
-    const copyButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
-    })
-
-    await waitFor(() => {
-      expect(copyButton).toBeEnabled()
-    })
-
-    await user.click(copyButton)
-
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledTimes(1)
-    })
-
-    const copiedPayload = String(writeText.mock.calls[0]?.[0] ?? "")
-    expect(copiedPayload).toContain("sk-newest")
-    expect(copiedPayload).not.toContain("sk-older")
   })
 
   it("falls back to a user-friendly blocked Sub2API create message when the resolution message is blank", async () => {
@@ -1163,16 +1038,13 @@ describe("KiloCodeExportDialog", () => {
       message: "   ",
     })
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     await user.click(
       await screen.findByRole("button", {
@@ -1211,16 +1083,13 @@ describe("KiloCodeExportDialog", () => {
       message: "Policy blocked",
     })
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     await user.click(
       await screen.findByRole("button", {
@@ -1252,16 +1121,13 @@ describe("KiloCodeExportDialog", () => {
 
     mockFetchAccountTokens.mockResolvedValueOnce([])
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     await user.click(
       await screen.findByRole("button", {
@@ -1299,16 +1165,13 @@ describe("KiloCodeExportDialog", () => {
     ])
     mockResolveApiTokenKey.mockResolvedValue("sk-full-secret")
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     const copyButton = await screen.findByRole("button", {
       name: "ui:dialog.kiloCode.actions.copyApiConfigs",
@@ -1367,16 +1230,13 @@ describe("KiloCodeExportDialog", () => {
       },
     )
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     const copyButton = await screen.findByRole("button", {
       name: "ui:dialog.kiloCode.actions.copyApiConfigs",
@@ -1429,16 +1289,13 @@ describe("KiloCodeExportDialog", () => {
     ])
     mockResolveApiTokenKey.mockResolvedValue("sk-full-secret")
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     const downloadButton = await screen.findByRole("button", {
       name: "ui:dialog.kiloCode.actions.downloadSettings",
@@ -1501,16 +1358,13 @@ describe("KiloCodeExportDialog", () => {
       .mockResolvedValueOnce("sk-full-secret")
       .mockRejectedValueOnce(new Error("resolve failed"))
 
-    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
-
-    const sitePicker = await screen.findByPlaceholderText(
-      "ui:dialog.kiloCode.placeholders.selectSites",
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
     )
-    await user.click(sitePicker)
-    await user.clear(sitePicker)
-    await user.type(sitePicker, "Site B")
-    await user.keyboard("{ArrowDown}")
-    await user.click(await screen.findByRole("option", { name: "Site B" }))
 
     const downloadButton = await screen.findByRole("button", {
       name: "ui:dialog.kiloCode.actions.downloadSettings",

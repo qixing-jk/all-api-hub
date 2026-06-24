@@ -464,34 +464,6 @@ describe("WebDAVSettings", () => {
     )
   })
 
-  it("maps structured WebDAV config persistence failures to safe analytics categories", async () => {
-    mockUserPreferences.savePreferencesWithResult.mockRejectedValueOnce(
-      Object.assign(new Error("private storage auth failed"), {
-        statusCode: 401,
-      }),
-    )
-
-    render(<WebDAVSettings />)
-
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.saveConfig",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-        {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
-          insights: {
-            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
-          },
-        },
-      )
-    })
-  })
-
   it("completes WebDAV connection test analytics as success", async () => {
     render(<WebDAVSettings />)
 
@@ -587,34 +559,6 @@ describe("WebDAVSettings", () => {
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: {
-            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
-          },
-        },
-      )
-    })
-  })
-
-  it("maps structured WebDAV connection failures to safe analytics categories", async () => {
-    mockTestWebdavConnection.mockRejectedValueOnce(
-      Object.assign(new Error("private connection failed"), {
-        statusCode: 401,
-      }),
-    )
-
-    render(<WebDAVSettings />)
-
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.testConnection",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-        {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
           },

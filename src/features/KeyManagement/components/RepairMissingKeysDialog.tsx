@@ -19,6 +19,9 @@ import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisionin
 
 import { RepairInvalidKeysDeleteConfirm } from "./RepairInvalidKeysDeleteConfirm"
 import {
+  filterRepairInvalidTokens,
+  filterRepairResults,
+  getRepairOutcomeCounts,
   REPAIR_RESULT_VIEWS,
   type RepairResultView,
 } from "./repairMissingKeysDialogHelpers"
@@ -84,55 +87,16 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     return visibleResults.flatMap((result) => result.invalidTokens ?? [])
   }, [visibleResults])
 
-  /**
-   * Filters visible repair results by free-text search and an optional outcome filter.
-   * Search matches account name, site origin, site type, and group coverage
-   * details (case-insensitive).
-   */
   const filteredResults = useMemo(() => {
-    let results = visibleResults
-
-    if (outcomeFilter) {
-      results = results.filter((result) => result.outcome === outcomeFilter)
-    }
-
-    const keyword = searchTerm.trim().toLowerCase()
-    if (!keyword) {
-      return results
-    }
-
-    return results.filter((result) => {
-      const groupNames = [
-        ...(result.availableGroups ?? []),
-        ...(result.coveredGroups ?? []),
-        ...(result.createdGroups ?? []),
-        ...(result.missingGroups ?? []),
-      ]
-
-      return (
-        result.accountName.toLowerCase().includes(keyword) ||
-        result.siteUrlOrigin.toLowerCase().includes(keyword) ||
-        result.siteType.toLowerCase().includes(keyword) ||
-        groupNames.some((group) => group.toLowerCase().includes(keyword))
-      )
+    return filterRepairResults({
+      outcomeFilter,
+      results: visibleResults,
+      searchTerm,
     })
   }, [outcomeFilter, searchTerm, visibleResults])
 
   const filteredInvalidTokens = useMemo(() => {
-    const keyword = searchTerm.trim().toLowerCase()
-    if (!keyword) {
-      return invalidTokens
-    }
-
-    return invalidTokens.filter((token) => {
-      return (
-        token.accountName.toLowerCase().includes(keyword) ||
-        token.siteUrlOrigin.toLowerCase().includes(keyword) ||
-        token.siteType.toLowerCase().includes(keyword) ||
-        token.tokenName.toLowerCase().includes(keyword) ||
-        token.group.toLowerCase().includes(keyword)
-      )
-    })
+    return filterRepairInvalidTokens(invalidTokens, searchTerm)
   }, [invalidTokens, searchTerm])
 
   const {
@@ -165,22 +129,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     }
   }
 
-  /**
-   * Builds filter option counts based on currently visible (enabled) accounts.
-   */
   const outcomeCounts = useMemo(() => {
-    const counts: Record<AccountKeyRepairOutcome, number> = {
-      created: 0,
-      alreadyHad: 0,
-      skipped: 0,
-      failed: 0,
-    }
-
-    for (const result of visibleResults) {
-      counts[result.outcome] += 1
-    }
-
-    return counts
+    return getRepairOutcomeCounts(visibleResults)
   }, [visibleResults])
 
   useEffect(() => {

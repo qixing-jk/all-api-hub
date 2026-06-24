@@ -51,6 +51,8 @@ import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
+import { pickNewestKiloCodeToken } from "./kiloCodeTokenSelection"
+
 const kiloCodeAccountExportAnalyticsContext = {
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
@@ -116,66 +118,6 @@ function getTokenLabel(token: ApiToken, fallbackPrefix: string) {
   const trimmedName = (token.name ?? "").trim()
   if (trimmedName) return trimmedName
   return `${fallbackPrefix} #${token.id}`
-}
-
-/**
- * Normalizes the creation timestamp used when choosing the newest token after refresh.
- */
-function resolveTokenCreatedAt(token: ApiToken): number | null {
-  const candidate = token as ApiToken & {
-    createdAt?: number | string
-    created_at?: number | string
-  }
-  const rawCreatedAt =
-    candidate.createdAt ?? candidate.created_at ?? token.created_time
-
-  if (typeof rawCreatedAt === "number" && Number.isFinite(rawCreatedAt)) {
-    return rawCreatedAt
-  }
-
-  if (typeof rawCreatedAt === "string") {
-    const numeric = Number(rawCreatedAt)
-    if (Number.isFinite(numeric)) {
-      return numeric
-    }
-
-    const parsed = Date.parse(rawCreatedAt)
-    if (Number.isFinite(parsed)) {
-      return parsed
-    }
-  }
-
-  return null
-}
-
-/**
- * Selects the newest token deterministically even when upstream fetch order is unstable.
- */
-function pickNewestToken(tokens: ApiToken[]): ApiToken {
-  return tokens.reduce((selectedToken, candidateToken) => {
-    const selectedCreatedAt = resolveTokenCreatedAt(selectedToken)
-    const candidateCreatedAt = resolveTokenCreatedAt(candidateToken)
-
-    if (
-      selectedCreatedAt !== null &&
-      candidateCreatedAt !== null &&
-      selectedCreatedAt !== candidateCreatedAt
-    ) {
-      return candidateCreatedAt > selectedCreatedAt
-        ? candidateToken
-        : selectedToken
-    }
-
-    if (selectedCreatedAt === null && candidateCreatedAt !== null) {
-      return candidateToken
-    }
-
-    if (selectedCreatedAt !== null && candidateCreatedAt === null) {
-      return selectedToken
-    }
-
-    return candidateToken.id > selectedToken.id ? candidateToken : selectedToken
-  })
 }
 
 /**
@@ -361,7 +303,7 @@ export function KiloCodeExportDialog({
         // and keep previous selections if they still exist after refresh.
         setSelectedTokenIdsBySite((prev) => {
           if (options?.preferNewest && tokens.length > 0) {
-            const newestToken = pickNewestToken(tokens)
+            const newestToken = pickNewestKiloCodeToken(tokens)
             return { ...prev, [siteId]: [`${newestToken.id}`] }
           }
 

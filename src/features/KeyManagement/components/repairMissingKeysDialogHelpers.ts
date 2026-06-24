@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import type {
+  AccountKeyRepairAccountResult,
   AccountKeyRepairInvalidToken,
   AccountKeyRepairOutcome,
   AccountKeyRepairProgress,
@@ -39,6 +40,99 @@ export const OUTCOME_BADGE_VARIANTS: Record<
   [ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad]: "info",
   [ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped]: "warning",
   [ACCOUNT_KEY_REPAIR_OUTCOMES.Failed]: "danger",
+}
+
+export const EMPTY_REPAIR_OUTCOME_COUNTS: Record<
+  AccountKeyRepairOutcome,
+  number
+> = {
+  [ACCOUNT_KEY_REPAIR_OUTCOMES.Created]: 0,
+  [ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad]: 0,
+  [ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped]: 0,
+  [ACCOUNT_KEY_REPAIR_OUTCOMES.Failed]: 0,
+}
+
+/**
+ * Filters enabled repair results by free-text search and an optional outcome.
+ */
+export function filterRepairResults({
+  outcomeFilter,
+  results,
+  searchTerm,
+}: {
+  outcomeFilter: AccountKeyRepairOutcome | null
+  results: AccountKeyRepairAccountResult[]
+  searchTerm: string
+}) {
+  const keyword = normalizeRepairSearchKeyword(searchTerm)
+  const outcomeMatchedResults = outcomeFilter
+    ? results.filter((result) => result.outcome === outcomeFilter)
+    : results
+
+  if (!keyword) {
+    return outcomeMatchedResults
+  }
+
+  return outcomeMatchedResults.filter((result) => {
+    const groupNames = [
+      ...(result.availableGroups ?? []),
+      ...(result.coveredGroups ?? []),
+      ...(result.createdGroups ?? []),
+      ...(result.missingGroups ?? []),
+    ]
+
+    return (
+      result.accountName.toLowerCase().includes(keyword) ||
+      result.siteUrlOrigin.toLowerCase().includes(keyword) ||
+      result.siteType.toLowerCase().includes(keyword) ||
+      groupNames.some((group) => group.toLowerCase().includes(keyword))
+    )
+  })
+}
+
+/**
+ * Filters invalid-key rows by free-text search.
+ */
+export function filterRepairInvalidTokens(
+  tokens: AccountKeyRepairInvalidToken[],
+  searchTerm: string,
+) {
+  const keyword = normalizeRepairSearchKeyword(searchTerm)
+  if (!keyword) {
+    return tokens
+  }
+
+  return tokens.filter((token) => {
+    return (
+      token.accountName.toLowerCase().includes(keyword) ||
+      token.siteUrlOrigin.toLowerCase().includes(keyword) ||
+      token.siteType.toLowerCase().includes(keyword) ||
+      token.tokenName.toLowerCase().includes(keyword) ||
+      token.group.toLowerCase().includes(keyword)
+    )
+  })
+}
+
+/**
+ * Counts visible repair outcomes for the result filter bar.
+ */
+export function getRepairOutcomeCounts(
+  results: AccountKeyRepairAccountResult[],
+) {
+  const counts = { ...EMPTY_REPAIR_OUTCOME_COUNTS }
+
+  for (const result of results) {
+    counts[result.outcome] += 1
+  }
+
+  return counts
+}
+
+/**
+ * Normalizes repair dialog search input for case-insensitive matching.
+ */
+function normalizeRepairSearchKeyword(searchTerm: string) {
+  return searchTerm.trim().toLowerCase()
 }
 
 /**

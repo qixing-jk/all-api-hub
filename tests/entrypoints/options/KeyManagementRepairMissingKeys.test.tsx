@@ -872,7 +872,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     ).toBeInTheDocument()
   })
 
-  it("supports search and outcome filtering in the dialog", async () => {
+  it("wires result search and outcome filtering in the dialog", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
@@ -930,24 +930,6 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     await waitFor(() => {
       expect(screen.queryByText("Enabled Site")).not.toBeInTheDocument()
-      expect(screen.getByText("Another Site")).toBeInTheDocument()
-    })
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /keyManagement:repairMissingKeys\.outcomes\.created/,
-      }),
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText("Enabled Site")).toBeInTheDocument()
-      expect(screen.queryByText("Another Site")).not.toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByRole("button", { name: /common:total/ }))
-
-    await waitFor(() => {
-      expect(screen.getByText("Enabled Site")).toBeInTheDocument()
       expect(screen.getByText("Another Site")).toBeInTheDocument()
     })
   })

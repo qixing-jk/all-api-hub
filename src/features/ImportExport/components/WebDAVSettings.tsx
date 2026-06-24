@@ -28,11 +28,7 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import {
-  resolveProductAnalyticsErrorCategoryFromError,
-  startProductAnalyticsAction,
-  type ProductAnalyticsActionContext,
-} from "~/services/productAnalytics/actions"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -84,43 +80,26 @@ import {
   importFromBackupObject,
   type BackupFullV2,
 } from "../utils"
+import {
+  getWebdavAnalyticsErrorCategory,
+  getWebdavAnalyticsFailureStage,
+  PersistWebdavConfigError,
+  webDavAnalyticsContext,
+  webDavSettingsSurface,
+} from "./webDavAnalytics"
 import { WebDAVDecryptPasswordModal } from "./WebDAVDecryptPasswordModal"
 
 /**
  * Unified logger scoped to WebDAV settings and backup import/export actions.
  */
 const logger = createLogger("WebDAVSettings")
-const webDavSettingsSurface =
-  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavSettings
 const WebdavSyncIcon = OPTIONS_CAPABILITY_ICONS.webdavSync
-const webDavAnalyticsContext = (
-  actionId:
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.DecryptImportWebDavBackup
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.DownloadImportWebDavBackup
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.UpdateWebDavConfig
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.UploadWebDavBackup
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.VerifyWebDavConnection,
-  surfaceId: ProductAnalyticsActionContext["surfaceId"] = webDavSettingsSurface,
-): ProductAnalyticsActionContext => ({
-  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync,
-  actionId,
-  surfaceId,
-  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-})
 
 const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {
   accounts: WEBDAV_TARGET_IDS.syncDataAccounts,
   bookmarks: WEBDAV_TARGET_IDS.syncDataBookmarks,
   apiCredentialProfiles: WEBDAV_TARGET_IDS.syncDataApiCredentialProfiles,
   preferences: WEBDAV_TARGET_IDS.syncDataPreferences,
-}
-
-class PersistWebdavConfigError extends Error {
-  constructor(cause?: unknown) {
-    super("Failed to persist WebDAV settings", { cause })
-    this.name = "PersistWebdavConfigError"
-    ;(this as Error & { cause?: unknown }).cause = cause
-  }
 }
 
 class ExistingWebdavBackupMalformedError extends Error {
@@ -136,26 +115,6 @@ class WebdavRebuildConfirmationRequired extends Error {
     super("WebDAV backup rebuild confirmation is required")
     this.name = "WebdavRebuildConfirmationRequired"
   }
-}
-
-/** Classify WebDAV validation failures without exposing raw error details. */
-function getWebdavAnalyticsErrorCategory(error: unknown) {
-  if (error instanceof PersistWebdavConfigError) {
-    return error.cause
-      ? resolveProductAnalyticsErrorCategoryFromError(error.cause)
-      : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
-  }
-
-  return resolveProductAnalyticsErrorCategoryFromError(error)
-}
-
-/** Classify which WebDAV phase failed without exposing raw connection details. */
-function getWebdavAnalyticsFailureStage(error: unknown) {
-  if (error instanceof PersistWebdavConfigError) {
-    return PRODUCT_ANALYTICS_FAILURE_STAGES.Persist
-  }
-
-  return PRODUCT_ANALYTICS_FAILURE_STAGES.Execute
 }
 
 /** Detects the stable malformed-backup error emitted by WebDAV backup parsing. */
