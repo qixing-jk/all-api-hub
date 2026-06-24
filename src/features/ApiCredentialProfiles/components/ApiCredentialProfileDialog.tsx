@@ -68,6 +68,7 @@ type SaveProfileInput = {
   apiKey: string
   tagIds: string[]
   notes: string
+  expiresAt?: number | null
   telemetryConfig?: ApiCredentialTelemetryConfig
 }
 
@@ -110,6 +111,46 @@ function normalizeTelemetryMode(
 }
 
 /**
+ * Converts a timestamp into the value shape expected by an HTML date input.
+ */
+function formatDateInputValue(timestamp: number | undefined): string {
+  if (!timestamp || timestamp <= 0) return ""
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return ""
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Converts a date input value into a local day-level timestamp.
+ */
+function parseDateInputValue(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const [yearRaw, monthRaw, dayRaw] = trimmed.split("-")
+  const year = Number(yearRaw)
+  const month = Number(monthRaw)
+  const day = Number(dayRaw)
+  if (!year || !month || !day) return null
+
+  const date = new Date(year, month - 1, day)
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null
+  }
+
+  return date.getTime()
+}
+
+/**
  * Add/edit modal for API credential profiles.
  */
 export function ApiCredentialProfileDialog({
@@ -140,6 +181,7 @@ export function ApiCredentialProfileDialog({
   const [apiKey, setApiKey] = useState("")
   const [tagIds, setTagIds] = useState<string[]>([])
   const [notes, setNotes] = useState("")
+  const [expiresAtInput, setExpiresAtInput] = useState("")
   const [telemetryMode, setTelemetryMode] =
     useState<ApiCredentialTelemetryCapabilityMode>(
       DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode,
@@ -162,6 +204,7 @@ export function ApiCredentialProfileDialog({
   const baseUrlInputId = "api-credential-profile-baseUrl"
   const apiKeyInputId = "api-credential-profile-apiKey"
   const notesInputId = "api-credential-profile-notes"
+  const expiresAtInputId = "api-credential-profile-expiresAt"
   const telemetryModeInputId = "api-credential-profile-telemetry-mode"
   const customEndpointInputId =
     "api-credential-profile-telemetry-custom-endpoint"
@@ -178,6 +221,7 @@ export function ApiCredentialProfileDialog({
       setApiKey(profile.apiKey ?? "")
       setTagIds(profile.tagIds ?? [])
       setNotes(profile.notes ?? "")
+      setExpiresAtInput(formatDateInputValue(profile.expiresAt))
       setTelemetryMode(normalizeTelemetryMode(profile.telemetryConfig?.mode))
       setCustomEndpoint(profile.telemetryConfig?.customEndpoint?.endpoint ?? "")
       setCustomJsonPaths(
@@ -192,6 +236,7 @@ export function ApiCredentialProfileDialog({
     setApiKey("")
     setTagIds([])
     setNotes("")
+    setExpiresAtInput("")
     setTelemetryMode(DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode)
     setCustomEndpoint("")
     setCustomJsonPaths({})
@@ -373,6 +418,7 @@ export function ApiCredentialProfileDialog({
         apiKey: apiKey.trim(),
         tagIds,
         notes: notes.trim(),
+        expiresAt: parseDateInputValue(expiresAtInput),
         telemetryConfig: buildTelemetryConfig(),
       })
 
@@ -583,6 +629,20 @@ export function ApiCredentialProfileDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t("apiCredentialProfiles:dialog.placeholders.notes")}
+              disabled={isSaving}
+            />
+          </FormField>
+
+          <FormField
+            label={t("apiCredentialProfiles:dialog.fields.expiresAt")}
+            description={t("apiCredentialProfiles:dialog.hints.expiresAt")}
+            htmlFor={expiresAtInputId}
+          >
+            <Input
+              id={expiresAtInputId}
+              type="date"
+              value={expiresAtInput}
+              onChange={(e) => setExpiresAtInput(e.target.value)}
               disabled={isSaving}
             />
           </FormField>

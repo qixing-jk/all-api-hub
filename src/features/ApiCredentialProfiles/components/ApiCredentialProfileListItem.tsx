@@ -150,6 +150,32 @@ function getHealthStatusLabel(
   return t("account:healthStatus.unknown")
 }
 
+/**
+ * Formats the optional profile expiration as a calendar date.
+ */
+function formatProfileExpiration(
+  timestamp: number | undefined,
+  fallback: string,
+): string {
+  if (!timestamp || timestamp <= 0) return fallback
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return fallback
+
+  try {
+    return date.toLocaleDateString()
+  } catch {
+    return fallback
+  }
+}
+
+/**
+ * Converts a timestamp to the start of its local calendar day for expiry checks.
+ */
+function getStartOfLocalDay(timestamp: number): number {
+  const date = new Date(timestamp)
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+}
+
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const rowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions
@@ -200,6 +226,26 @@ export function ApiCredentialProfileListItem({
   ]
     .filter(Boolean)
     .join(": ")
+  const notAvailableLabel = t("common:labels.notAvailable")
+  const expiresAt = profile.expiresAt
+  const expirationDate = formatProfileExpiration(expiresAt, notAvailableLabel)
+  const hasExpiration =
+    expiresAt !== undefined &&
+    expiresAt > 0 &&
+    expirationDate !== notAvailableLabel
+  const isExpired =
+    expiresAt !== undefined &&
+    hasExpiration &&
+    getStartOfLocalDay(expiresAt) < getStartOfLocalDay(Date.now())
+  const expirationStatusLabel = hasExpiration
+    ? isExpired
+      ? t("apiCredentialProfiles:list.expirationStatus.expired", {
+          date: expirationDate,
+        })
+      : t("apiCredentialProfiles:list.expirationStatus.active", {
+          date: expirationDate,
+        })
+    : t("apiCredentialProfiles:list.expirationStatus.none")
 
   return (
     <ProductAnalyticsScope
@@ -221,6 +267,13 @@ export function ApiCredentialProfileListItem({
                   className="max-w-full truncate"
                 >
                   {getApiVerificationApiTypeLabel(t, profile.apiType)}
+                </Badge>
+                <Badge
+                  variant={isExpired ? "danger" : "outline"}
+                  size="sm"
+                  className="max-w-full truncate"
+                >
+                  {expirationStatusLabel}
                 </Badge>
                 {tagNames.map((tag) => (
                   <Badge
@@ -316,6 +369,17 @@ export function ApiCredentialProfileListItem({
                     summary={verificationSummary}
                     className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2"
                   />
+                </div>
+
+                <div className="dark:text-dark-text-tertiary flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                  <span>
+                    {t("apiCredentialProfiles:list.createdAt")}:{" "}
+                    {formatLocaleDateTime(profile.createdAt, notAvailableLabel)}
+                  </span>
+                  <span>
+                    {t("apiCredentialProfiles:list.updatedAt")}:{" "}
+                    {formatLocaleDateTime(profile.updatedAt, notAvailableLabel)}
+                  </span>
                 </div>
 
                 <div className="dark:bg-dark-bg-tertiary/60 flex flex-1 flex-col rounded-lg border border-gray-100 bg-gray-50 p-2 sm:p-3 dark:border-gray-800">

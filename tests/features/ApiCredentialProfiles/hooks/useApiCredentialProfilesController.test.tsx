@@ -221,6 +221,7 @@ describe("useApiCredentialProfilesController", () => {
         apiKey: "sk-custom",
         tagIds: [],
         notes: "",
+        expiresAt: 1796083200000,
         telemetryConfig: {
           mode: "customReadOnlyEndpoint",
           customEndpoint: {
@@ -235,6 +236,7 @@ describe("useApiCredentialProfilesController", () => {
 
     expect(createProfileMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        expiresAt: 1796083200000,
         telemetryConfig: {
           mode: "customReadOnlyEndpoint",
           customEndpoint: {

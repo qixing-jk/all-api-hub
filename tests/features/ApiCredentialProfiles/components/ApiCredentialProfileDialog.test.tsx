@@ -189,6 +189,12 @@ describe("ApiCredentialProfileDialog", () => {
         target: { value: "sk-auto" },
       },
     )
+    fireEvent.change(
+      screen.getByLabelText("apiCredentialProfiles:dialog.fields.expiresAt"),
+      {
+        target: { value: "2026-07-31" },
+      },
+    )
 
     fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
 
@@ -206,6 +212,7 @@ describe("ApiCredentialProfileDialog", () => {
         apiKey: "sk-auto",
         tagIds: [],
         notes: "",
+        expiresAt: new Date(2026, 6, 31).getTime(),
         telemetryConfig: {
           mode: "auto",
         },
@@ -338,6 +345,7 @@ describe("ApiCredentialProfileDialog", () => {
   it("replays stored telemetry config when editing an existing profile", () => {
     renderDialog({
       profile: buildProfile({
+        expiresAt: new Date(2026, 6, 31).getTime(),
         telemetryConfig: {
           mode: "customReadOnlyEndpoint",
           customEndpoint: {
@@ -352,6 +360,9 @@ describe("ApiCredentialProfileDialog", () => {
     })
 
     expect(screen.getByDisplayValue("Profile")).toHaveValue("Profile")
+    expect(
+      screen.getByLabelText("apiCredentialProfiles:dialog.fields.expiresAt"),
+    ).toHaveValue("2026-07-31")
     expect(
       screen.getByLabelText(
         "apiCredentialProfiles:dialog.fields.telemetryPreset",

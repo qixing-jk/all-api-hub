@@ -115,6 +115,11 @@ export type ApiCredentialProfile = {
    */
   tagIds: string[]
   notes: string
+  /**
+   * Optional user-maintained credential expiration date, stored as a local
+   * day-level timestamp from the API credential library form.
+   */
+  expiresAt?: number
   telemetryConfig?: ApiCredentialTelemetryConfig
   telemetrySnapshot?: ApiCredentialTelemetrySnapshot
   createdAt: number

@@ -43,6 +43,7 @@ type ApiCredentialProfileCreateInput = {
   apiKey: string
   tagIds?: string[]
   notes?: string
+  expiresAt?: number | null
   telemetryConfig?: Partial<ApiCredentialTelemetryConfig>
 }
 
@@ -119,6 +120,15 @@ function coerceFiniteNumber(raw: unknown): number | undefined {
     if (Number.isFinite(parsed)) return parsed
   }
   return undefined
+}
+
+/**
+ * Coerces an optional user-maintained expiration timestamp.
+ */
+function coerceOptionalTimestamp(raw: unknown): number | undefined {
+  const value = coerceFiniteNumber(raw)
+  if (value === undefined || value <= 0) return undefined
+  return Math.round(value)
 }
 
 /**
@@ -477,6 +487,7 @@ export function coerceApiCredentialProfilesConfig(
       typeof candidate.updatedAt === "number" ? candidate.updatedAt : createdAt
     const notes = typeof candidate.notes === "string" ? candidate.notes : ""
     const tagIds = normalizeTagIdList(candidate.tagIds)
+    const expiresAt = coerceOptionalTimestamp(candidate.expiresAt)
 
     if (!apiKey || !baseUrl) {
       // Skip obviously invalid rows; they are not actionable in UI.
@@ -491,6 +502,7 @@ export function coerceApiCredentialProfilesConfig(
       apiKey,
       tagIds,
       notes: notes.trim(),
+      ...(expiresAt !== undefined ? { expiresAt } : {}),
       telemetryConfig: coerceApiCredentialTelemetryConfig(
         candidate.telemetryConfig,
         { baseUrl },
@@ -661,6 +673,7 @@ class ApiCredentialProfilesStorageService {
     }
 
     const now = Date.now()
+    const expiresAt = coerceOptionalTimestamp(input.expiresAt)
     const nextProfile: ApiCredentialProfile = {
       id: safeRandomUUID("api-profile"),
       name: normalizedName,
@@ -669,6 +682,7 @@ class ApiCredentialProfilesStorageService {
       apiKey: normalizedKey,
       tagIds: normalizeTagIdList(input.tagIds),
       notes: typeof input.notes === "string" ? input.notes.trim() : "",
+      ...(expiresAt !== undefined ? { expiresAt } : {}),
       telemetryConfig: coerceApiCredentialTelemetryConfig(
         input.telemetryConfig,
         { baseUrl: normalizedBaseUrl },
@@ -752,9 +766,15 @@ class ApiCredentialProfilesStorageService {
         updates.telemetryConfig !== undefined ||
         nextApiType !== current.apiType ||
         nextBaseUrl !== current.baseUrl
+      const nextExpiresAt =
+        updates.expiresAt !== undefined
+          ? coerceOptionalTimestamp(updates.expiresAt)
+          : current.expiresAt
+      const { expiresAt: _currentExpiresAt, ...currentWithoutExpiresAt } =
+        current
 
       const next: ApiCredentialProfile = {
-        ...current,
+        ...currentWithoutExpiresAt,
         name: nextName,
         apiType: nextApiType,
         baseUrl: nextBaseUrl,
@@ -767,6 +787,7 @@ class ApiCredentialProfilesStorageService {
           typeof updates.notes === "string"
             ? updates.notes.trim()
             : current.notes,
+        ...(nextExpiresAt !== undefined ? { expiresAt: nextExpiresAt } : {}),
         telemetryConfig: shouldReCoerceTelemetryConfig
           ? coerceApiCredentialTelemetryConfig(
               updates.telemetryConfig !== undefined

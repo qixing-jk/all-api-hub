@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiCredentialProfileListItem } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileListItem"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
@@ -18,7 +18,7 @@ vi.mock("react-i18next", async (importOriginal) => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, options?: { count?: number }) => {
+      t: (key: string, options?: { count?: number; date?: string }) => {
         if (key === "common:quota.unlimited") return "Unlimited"
         if (key === "apiCredentialProfiles:telemetry.notProvided") {
           return "Not provided"
@@ -34,6 +34,12 @@ vi.mock("react-i18next", async (importOriginal) => {
         }
         if (key === "apiCredentialProfiles:telemetry.refreshing") {
           return "Refreshing telemetry"
+        }
+        if (key === "apiCredentialProfiles:list.expirationStatus.active") {
+          return `apiCredentialProfiles:list.expirationStatus.active ${options?.date}`
+        }
+        if (key === "apiCredentialProfiles:list.expirationStatus.expired") {
+          return `apiCredentialProfiles:list.expirationStatus.expired ${options?.date}`
         }
         return key
       },
@@ -198,6 +204,10 @@ function renderListItem(
 }
 
 describe("ApiCredentialProfileListItem", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -283,6 +293,84 @@ describe("ApiCredentialProfileListItem", () => {
         API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests,
       ),
     ).toHaveTextContent("Not provided")
+  })
+
+  it("shows expiration as a status badge and keeps audit timestamps separate", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 6, 30, 12).getTime())
+
+    const expiresAt = new Date(2026, 6, 31).getTime()
+    const createdAt = new Date(2026, 5, 1, 8, 30).getTime()
+    const updatedAt = new Date(2026, 5, 15, 9, 45).getTime()
+
+    renderListItem(
+      buildProfile({
+        expiresAt,
+        createdAt,
+        updatedAt,
+      }),
+    )
+
+    expect(
+      screen.getByText(
+        `apiCredentialProfiles:list.expirationStatus.active ${new Date(
+          expiresAt,
+        ).toLocaleDateString()}`,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/apiCredentialProfiles:list.expiresAt:/),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/apiCredentialProfiles:list.createdAt:/),
+    ).toHaveTextContent(new Date(createdAt).toLocaleDateString())
+    expect(
+      screen.getByText(/apiCredentialProfiles:list.updatedAt:/),
+    ).toHaveTextContent(new Date(updatedAt).toLocaleDateString())
+  })
+
+  it("distinguishes expired credentials from credentials without an expiration date", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 6, 30, 12).getTime())
+
+    const expiredAt = new Date(2026, 6, 29).getTime()
+
+    const { rerender } = renderListItem(buildProfile({ expiresAt: expiredAt }))
+
+    expect(
+      screen.getByText(
+        `apiCredentialProfiles:list.expirationStatus.expired ${new Date(
+          expiredAt,
+        ).toLocaleDateString()}`,
+      ),
+    ).toBeInTheDocument()
+
+    rerender(
+      <ApiCredentialProfileListItem
+        profile={buildProfile({ expiresAt: undefined })}
+        verificationSummary={null}
+        tagNames={[]}
+        visibleKeys={new Set()}
+        toggleKeyVisibility={vi.fn()}
+        onCopyBaseUrl={vi.fn()}
+        onCopyApiKey={vi.fn()}
+        onCopyBundle={vi.fn()}
+        onOpenModelManagement={vi.fn()}
+        onVerify={vi.fn()}
+        onVerifyCliSupport={vi.fn()}
+        onRefreshTelemetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onExport={vi.fn()}
+        isTelemetryRefreshing={false}
+        managedSiteType="new-api"
+        managedSiteLabel="New API"
+      />,
+    )
+
+    expect(
+      screen.getByText("apiCredentialProfiles:list.expirationStatus.none"),
+    ).toBeInTheDocument()
   })
 
   it("explicitly marks missing balance from a successful usage source as not provided", () => {

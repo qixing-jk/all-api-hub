@@ -271,6 +271,7 @@ export function buildApiCredentialProfile(
     apiKey: buildApiKey(),
     tagIds: [],
     notes: "",
+    expiresAt: undefined,
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
   }

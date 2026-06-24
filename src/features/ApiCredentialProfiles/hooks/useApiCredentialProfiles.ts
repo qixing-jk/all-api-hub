@@ -23,6 +23,7 @@ type CreateProfileInput = {
   apiKey: string
   tagIds?: string[]
   notes?: string
+  expiresAt?: number | null
   telemetryConfig?: ApiCredentialTelemetryConfig
 }
 

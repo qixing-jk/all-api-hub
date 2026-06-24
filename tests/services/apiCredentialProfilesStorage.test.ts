@@ -37,6 +37,7 @@ describe("apiCredentialProfilesStorage", () => {
   })
 
   it("normalizes baseUrl, trims apiKey, and sanitizes tag ids", async () => {
+    const expiresAt = new Date(2026, 6, 31).getTime()
     const created = await apiCredentialProfilesStorage.createProfile({
       name: "Test Profile",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -44,12 +45,14 @@ describe("apiCredentialProfilesStorage", () => {
       apiKey: "  sk-test  ",
       tagIds: [" t1 ", "t1", "", "t2"],
       notes: "  hello  ",
+      expiresAt,
     })
 
     expect(created.baseUrl).toBe("https://example.com/api")
     expect(created.apiKey).toBe("sk-test")
     expect(created.tagIds).toEqual(["t1", "t2"])
     expect(created.notes).toBe("hello")
+    expect(created.expiresAt).toBe(expiresAt)
   })
 
   it("de-dupes identical profiles on create (identity: apiType+baseUrl+apiKey)", async () => {

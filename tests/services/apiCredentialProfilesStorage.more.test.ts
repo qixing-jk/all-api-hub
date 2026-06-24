@@ -110,6 +110,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
             name: " ",
             tagIds: [" t1 ", "t1", ""],
             notes: " note ",
+            expiresAt: "1796083200000",
             createdAt: 100,
             updatedAt: 200,
           },
@@ -134,6 +135,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
         name: "https://example.com",
         tagIds: ["t1"],
         notes: "note",
+        expiresAt: 1796083200000,
         createdAt: 100,
         updatedAt: 200,
       }),
@@ -155,6 +157,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
             apiKey: " sk-anthropic ",
             name: 42,
             notes: null,
+            expiresAt: "not-a-date",
             createdAt: "bad",
             updatedAt: "bad",
             tagIds: [" team-a ", 7, "team-a", "team-b"],
@@ -179,6 +182,11 @@ describe("apiCredentialProfilesStorage additional flows", () => {
         tagIds: ["team-a", "team-b"],
       }),
     ])
+    expect(coerced.profiles[0]).toEqual(
+      expect.not.objectContaining({
+        expiresAt: expect.anything(),
+      }),
+    )
   })
 
   it("merges incoming configs using identity de-dupe and refreshes lastUpdated", () => {
@@ -739,6 +747,46 @@ describe("apiCredentialProfilesStorage additional flows", () => {
         telemetryConfig: {
           mode: "customReadOnlyEndpoint",
         },
+      }),
+    )
+  })
+
+  it("updates and clears profile expiration without changing createdAt", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Expiring profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://expiring.example.com",
+      apiKey: "sk-expiring",
+      expiresAt: new Date(2026, 5, 30).getTime(),
+    })
+
+    vi.setSystemTime(new Date("2026-04-01T00:00:00.000Z"))
+
+    const updated = await apiCredentialProfilesStorage.updateProfile(
+      profile.id,
+      {
+        expiresAt: new Date(2026, 6, 31).getTime(),
+      },
+    )
+
+    expect(updated).toEqual(
+      expect.objectContaining({
+        createdAt: profile.createdAt,
+        expiresAt: new Date(2026, 6, 31).getTime(),
+        updatedAt: Date.now(),
+      }),
+    )
+
+    const cleared = await apiCredentialProfilesStorage.updateProfile(
+      profile.id,
+      {
+        expiresAt: null,
+      },
+    )
+
+    expect(cleared).toEqual(
+      expect.not.objectContaining({
+        expiresAt: expect.anything(),
       }),
     )
   })
