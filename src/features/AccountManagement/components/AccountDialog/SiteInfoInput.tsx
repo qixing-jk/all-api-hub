@@ -5,7 +5,7 @@ import {
   KeyIcon,
   PencilIcon,
 } from "@heroicons/react/24/outline"
-import { Cookie } from "lucide-react"
+import { CircleHelp, Cookie } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -103,6 +103,9 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
     canUseCookieAuth &&
     props.showAuthTypeSelector === true &&
     props.authType === AuthTypeEnum.Cookie
+  const authTypeHelpText = isAuthTypeLocked
+    ? t("siteInfo.sub2apiAuthOnly")
+    : t("siteInfo.cookieWarning")
 
   const handleEditClick = () => {
     if (detectedAccount && onEditAccount) {
@@ -125,52 +128,57 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               data-layout="auth-type-field"
               className="order-1 max-w-full [@container(min-width:28rem)]:order-2"
             >
-              <label className="dark:text-dark-text-secondary mb-1 block text-sm font-medium text-gray-700">
-                {t("siteInfo.authMethod")}
-              </label>
-              <Tooltip
-                wrapperClassName="w-full [@container(min-width:28rem)]:w-auto"
-                content={
-                  isAuthTypeLocked
-                    ? t("siteInfo.sub2apiAuthOnly")
-                    : t("siteInfo.cookieWarning")
-                }
-              >
-                <Select
-                  value={props.authType}
-                  onValueChange={(value) =>
-                    props.onAuthTypeChange(value as AuthTypeEnum)
-                  }
-                  disabled={isAuthTypeLocked}
+              <div className="mb-1 flex items-center gap-1.5">
+                <label className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+                  {t("siteInfo.authMethod")}
+                </label>
+                <Tooltip
+                  content={authTypeHelpText}
+                  wrapperClassName="inline-flex"
                 >
-                  <SelectTrigger
-                    className="w-full max-w-full [@container(min-width:28rem)]:w-auto"
-                    aria-label={t("siteInfo.authMethod")}
-                    data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
-                    data-auth-type={props.authType}
+                  <button
+                    type="button"
+                    aria-label={authTypeHelpText}
+                    className="dark:text-dark-text-tertiary inline-flex h-4 w-4 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none dark:hover:text-gray-300"
                   >
-                    <SelectValue
-                      placeholder={t("siteInfo.authMethodPlaceholder")}
-                    />
-                  </SelectTrigger>
-                  <SelectContent align="end" className="min-w-48">
-                    <SelectItem value={AuthTypeEnum.AccessToken}>
+                    <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </Tooltip>
+              </div>
+              <Select
+                value={props.authType}
+                onValueChange={(value) =>
+                  props.onAuthTypeChange(value as AuthTypeEnum)
+                }
+                disabled={isAuthTypeLocked}
+              >
+                <SelectTrigger
+                  className="w-full max-w-full [@container(min-width:28rem)]:w-auto"
+                  aria-label={t("siteInfo.authMethod")}
+                  data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
+                  data-auth-type={props.authType}
+                >
+                  <SelectValue
+                    placeholder={t("siteInfo.authMethodPlaceholder")}
+                  />
+                </SelectTrigger>
+                <SelectContent align="end" className="min-w-48">
+                  <SelectItem value={AuthTypeEnum.AccessToken}>
+                    <div className="flex items-center gap-2">
+                      <KeyIcon className="h-4 w-4" />
+                      <span>{t("siteInfo.authType.accessToken")}</span>
+                    </div>
+                  </SelectItem>
+                  {canUseCookieAuth && (
+                    <SelectItem value={AuthTypeEnum.Cookie}>
                       <div className="flex items-center gap-2">
-                        <KeyIcon className="h-4 w-4" />
-                        <span>{t("siteInfo.authType.accessToken")}</span>
+                        <Cookie className="h-4 w-4" />
+                        <span>{t("siteInfo.authType.cookieAuth")}</span>
                       </div>
                     </SelectItem>
-                    {canUseCookieAuth && (
-                      <SelectItem value={AuthTypeEnum.Cookie}>
-                        <div className="flex items-center gap-2">
-                          <Cookie className="h-4 w-4" />
-                          <span>{t("siteInfo.authType.cookieAuth")}</span>
-                        </div>
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </Tooltip>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div
               data-layout="site-url-field"

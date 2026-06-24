@@ -92,6 +92,11 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(
       await screen.findByLabelText("accountDialog:siteInfo.authMethod"),
     ).toBeEnabled()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:siteInfo.cookieWarning",
+      }),
+    ).toBeInTheDocument()
 
     await user.click(
       await screen.findByTestId("account-management-auth-type-trigger"),
@@ -249,6 +254,11 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(
       screen.getByLabelText("accountDialog:siteInfo.authMethod"),
     ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:siteInfo.sub2apiAuthOnly",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("shows the current-login warning and forwards edit requests for the detected account", async () => {
