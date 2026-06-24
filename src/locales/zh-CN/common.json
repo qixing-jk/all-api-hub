@@ -40,6 +40,7 @@
     "translationDescription": "如果你正在使用浏览器自动翻译，请关闭此页面的自动翻译，或在扩展设置中切换到需要的语言。"
   },
   "status": {
+    "cancelled": "已取消",
     "configurationRequired": "缺少配置",
     "creating": "创建中...",
     "disabled": "已禁用",

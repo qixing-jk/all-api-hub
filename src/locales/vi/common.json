@@ -40,6 +40,7 @@
     "translationDescription": "Nếu bạn đang dùng tính năng tự động dịch của trình duyệt, hãy tắt tự động dịch cho trang này hoặc chuyển sang ngôn ngữ bạn cần trong cài đặt tiện ích."
   },
   "status": {
+    "cancelled": "Đã hủy",
     "configurationRequired": "Yêu cầu cấu hình",
     "creating": "Đang tạo...",
     "disabled": "Đã vô hiệu hóa",

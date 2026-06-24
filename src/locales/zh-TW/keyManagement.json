@@ -278,6 +278,7 @@
   "repairMissingKeys": {
     "action": "金鑰檢查",
     "actions": {
+      "cancel": "取消檢查",
       "rerun": "重新檢查",
       "start": "開始檢查並補齊"
     },
@@ -307,6 +308,7 @@
       "selectedCount_other": "已選擇 {{count}} 個異常金鑰"
     },
     "messages": {
+      "cancelFailed": "取消檢查任務失敗",
       "loadFailed": "載入修復進度失敗",
       "startFailed": "啟動修復任務失敗"
     },
@@ -320,7 +322,7 @@
     "progressLabel": "進度",
     "remoteWriteNotice": "此操作可能會在對應網站建立新金鑰；不會自動刪除任何金鑰。",
     "resultsTitle": "結果",
-    "runningNote": "任務在後臺執行，關閉此對話方塊不會取消任務。",
+    "runningNote": "任務在後台執行；可關閉此對話框稍後查看，或在進度卡片中取消任務。",
     "searchLabel": "搜尋",
     "searchPlaceholder": "搜尋帳號、域名或站點型別...",
     "skipReasons": {

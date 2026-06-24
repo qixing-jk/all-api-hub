@@ -38,8 +38,10 @@ function renderCard(
   return render(
     <RepairMissingKeysProgressCard
       progress={buildProgress()}
+      isCancelling={false}
       isStarting={false}
       onStartAudit={vi.fn()}
+      onCancelAudit={vi.fn()}
       t={t}
       {...props}
     />,
@@ -77,8 +79,10 @@ describe("RepairMissingKeysProgressCard", () => {
         progress={buildProgress({
           state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
         })}
+        isCancelling={false}
         isStarting={false}
         onStartAudit={onStartAudit}
+        onCancelAudit={vi.fn()}
         t={t}
       />,
     )
@@ -96,8 +100,10 @@ describe("RepairMissingKeysProgressCard", () => {
         progress={buildProgress({
           state: ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
         })}
+        isCancelling={false}
         isStarting={true}
         onStartAudit={onStartAudit}
+        onCancelAudit={vi.fn()}
         t={t}
       />,
     )
@@ -107,6 +113,21 @@ describe("RepairMissingKeysProgressCard", () => {
         name: /keyManagement:repairMissingKeys\.actions\.rerun/,
       }),
     ).toBeDisabled()
+  })
+
+  it("shows a cancel action while running", async () => {
+    const user = userEvent.setup()
+    const onCancelAudit = vi.fn()
+
+    renderCard({ onCancelAudit })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.cancel",
+      }),
+    )
+
+    expect(onCancelAudit).toHaveBeenCalledTimes(1)
   })
 
   it("renders state-derived processed totals and outcome counts", () => {

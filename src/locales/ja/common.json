@@ -40,6 +40,7 @@
     "translationDescription": "ブラウザーの自動翻訳を使用している場合は、このページの自動翻訳をオフにするか、拡張機能の設定で必要な言語に切り替えてください。"
   },
   "status": {
+    "cancelled": "キャンセル済み",
     "configurationRequired": "設定が必要です",
     "creating": "作成中...",
     "disabled": "無効",

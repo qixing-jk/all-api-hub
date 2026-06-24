@@ -350,6 +350,7 @@ describe("typed runtime messaging setup", () => {
       () => ({
         AccountKeyRepairMessageTypes: {
           Start: "accountKeyRepair:start",
+          Cancel: "accountKeyRepair:cancel",
           GetProgress: "accountKeyRepair:getProgress",
           DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
         },
@@ -376,12 +377,21 @@ describe("typed runtime messaging setup", () => {
     repair.setupAccountKeyRepairMessagingListeners()
     repair.setupAccountKeyRepairMessagingListeners()
 
-    expect(onAccountKeyRepairMessage).toHaveBeenCalledTimes(3)
+    expect(onAccountKeyRepairMessage).toHaveBeenCalledTimes(4)
     const getProgressHandler = onAccountKeyRepairMessage.mock.calls.find(
       ([type]) => type === "accountKeyRepair:getProgress",
     )?.[1]
     expect(getProgressHandler).toBeTypeOf("function")
     await expect(getProgressHandler!()).resolves.toEqual({
+      success: false,
+      error: "repair failed",
+    })
+
+    const cancelHandler = getRegisteredHandler(
+      onAccountKeyRepairMessage,
+      "accountKeyRepair:cancel",
+    )
+    await expect(cancelHandler()).resolves.toEqual({
       success: false,
       error: "repair failed",
     })

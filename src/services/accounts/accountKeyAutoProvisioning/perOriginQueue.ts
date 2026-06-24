@@ -8,9 +8,10 @@
 export async function runPerKeySequential<T>(params: {
   items: T[]
   getKey: (item: T) => string
+  shouldContinue?: () => boolean
   worker: (item: T) => Promise<void>
 }): Promise<void> {
-  const { items, getKey, worker } = params
+  const { items, getKey, shouldContinue, worker } = params
 
   const groups = new Map<string, T[]>()
   for (const item of items) {
@@ -26,6 +27,9 @@ export async function runPerKeySequential<T>(params: {
   await Promise.all(
     Array.from(groups.values()).map(async (group) => {
       for (const item of group) {
+        if (shouldContinue && !shouldContinue()) {
+          return
+        }
         await worker(item)
       }
     }),

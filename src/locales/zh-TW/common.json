@@ -40,6 +40,7 @@
     "translationDescription": "如果你正在使用瀏覽器自動翻譯，請關閉此頁面的自動翻譯，或在擴充功能設定中切換到需要的語言。"
   },
   "status": {
+    "cancelled": "已取消",
     "configurationRequired": "缺少配置",
     "creating": "建立中...",
     "disabled": "已禁用",

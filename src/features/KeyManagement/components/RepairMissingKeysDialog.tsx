@@ -51,13 +51,20 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   const [openingSub2ApiAccountId, setOpeningSub2ApiAccountId] = useState<
     string | null
   >(null)
-  const { error, handleStartAudit, isStarting, progress, setProgress } =
-    useRepairMissingKeysJob({
-      accounts,
-      isOpen,
-      startOnOpen,
-      t,
-    })
+  const {
+    error,
+    handleCancelAudit,
+    handleStartAudit,
+    isCancelling,
+    isStarting,
+    progress,
+    setProgress,
+  } = useRepairMissingKeysJob({
+    accounts,
+    isOpen,
+    startOnOpen,
+    t,
+  })
 
   const disabledAccountIds = useMemo(() => {
     return new Set(
@@ -220,6 +227,14 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
               >
                 {t("common:status.failed")}
               </Badge>
+            ) : progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled ? (
+              <Badge
+                variant="warning"
+                size="sm"
+                className="shrink-0 border-transparent"
+              >
+                {t("common:status.cancelled")}
+              </Badge>
             ) : progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed ? (
               <Badge
                 variant={progress.summary.failed > 0 ? "warning" : "success"}
@@ -283,7 +298,9 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
         <div className="space-y-4">
           <RepairMissingKeysProgressCard
             progress={progress}
+            isCancelling={isCancelling}
             isStarting={isStarting}
+            onCancelAudit={() => void handleCancelAudit()}
             onStartAudit={() => void handleStartAudit()}
             t={t}
           />

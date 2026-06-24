@@ -3,6 +3,7 @@ import type { AccountSiteType } from "~/constants/siteType"
 export const ACCOUNT_KEY_REPAIR_JOB_STATES = {
   Idle: "idle",
   Running: "running",
+  Cancelled: "cancelled",
   Completed: "completed",
   Failed: "failed",
 } as const

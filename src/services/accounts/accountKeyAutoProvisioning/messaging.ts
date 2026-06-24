@@ -9,12 +9,14 @@ import type {
 
 export const AccountKeyRepairMessageTypes = {
   Start: "accountKeyRepair:start",
+  Cancel: "accountKeyRepair:cancel",
   GetProgress: "accountKeyRepair:getProgress",
   DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
 } as const
 
 interface AccountKeyRepairProtocolMap {
   [AccountKeyRepairMessageTypes.Start](): RuntimeMessageResponse<AccountKeyRepairProgress>
+  [AccountKeyRepairMessageTypes.Cancel](): RuntimeMessageResponse<AccountKeyRepairProgress>
   [AccountKeyRepairMessageTypes.GetProgress](): RuntimeMessageResponse<AccountKeyRepairProgress>
   [AccountKeyRepairMessageTypes.DeleteInvalidTokens](
     request: AccountKeyRepairDeleteInvalidTokensRequest,

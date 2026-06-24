@@ -5,6 +5,7 @@ export {
 } from "./ensureDefaultToken"
 export {
   accountKeyRepairRunner,
+  cancelAccountKeyRepair,
   getAccountKeyRepairProgress,
   setupAccountKeyRepairMessagingListeners,
   startAccountKeyRepair,

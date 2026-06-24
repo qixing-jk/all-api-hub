@@ -532,7 +532,10 @@ const _fetchApi = async <T>(
     cookie: request.auth?.cookie,
   }
 
-  const fetchOptions = await createAuthRequest(resolvedAuth, options.options)
+  const fetchOptions = await createAuthRequest(resolvedAuth, {
+    ...options.options,
+    signal: options.options?.signal ?? request.abortSignal,
+  })
 
   await enforceLogRequestRateLimit({ baseUrl, endpoint: options.endpoint })
 

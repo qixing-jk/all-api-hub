@@ -284,6 +284,7 @@
   "repairMissingKeys": {
     "action": "Key check",
     "actions": {
+      "cancel": "Cancel check",
       "rerun": "Check again",
       "start": "Start check and fill gaps"
     },
@@ -317,6 +318,7 @@
       "selectedCount_other": "{{count}} invalid keys selected"
     },
     "messages": {
+      "cancelFailed": "Failed to cancel repair job",
       "loadFailed": "Failed to load repair progress",
       "startFailed": "Failed to start repair job"
     },
@@ -330,7 +332,7 @@
     "progressLabel": "Progress",
     "remoteWriteNotice": "This action may create new keys on the corresponding sites. It will not automatically delete any keys.",
     "resultsTitle": "Results",
-    "runningNote": "This job runs in the background. Closing this dialog will not cancel it.",
+    "runningNote": "This job runs in the background. You can close this dialog and check later, or cancel it from the progress card.",
     "searchLabel": "Search",
     "searchPlaceholder": "Search account, origin, or site type...",
     "skipReasons": {

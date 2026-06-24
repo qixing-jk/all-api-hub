@@ -11,7 +11,9 @@ import {
 
 interface RepairMissingKeysProgressCardProps {
   progress: AccountKeyRepairProgress
+  isCancelling: boolean
   isStarting: boolean
+  onCancelAudit: () => void
   onStartAudit: () => void
   t: TFunction
 }
@@ -21,7 +23,9 @@ interface RepairMissingKeysProgressCardProps {
  */
 export function RepairMissingKeysProgressCard({
   progress,
+  isCancelling,
   isStarting,
+  onCancelAudit,
   onStartAudit,
   t,
 }: RepairMissingKeysProgressCardProps) {
@@ -47,7 +51,18 @@ export function RepairMissingKeysProgressCard({
               <span>
                 {processedTotal}/{eligibleTotal} ({progressPercent}%)
               </span>
-              {progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running ? (
+              {progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onCancelAudit}
+                  disabled={isCancelling}
+                  loading={isCancelling}
+                >
+                  {t("keyManagement:repairMissingKeys.actions.cancel")}
+                </Button>
+              ) : (
                 <Button
                   type="button"
                   variant="outline"
@@ -58,7 +73,7 @@ export function RepairMissingKeysProgressCard({
                 >
                   {t("keyManagement:repairMissingKeys.actions.rerun")}
                 </Button>
-              ) : null}
+              )}
             </div>
           </div>
           <div

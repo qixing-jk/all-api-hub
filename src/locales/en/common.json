@@ -40,6 +40,7 @@
     "translationDescription": "If you are using automatic translation, turn it off for this page or switch to the language you need in extension settings."
   },
   "status": {
+    "cancelled": "Cancelled",
     "configurationRequired": "Configuration required",
     "creating": "Creating...",
     "disabled": "Disabled",

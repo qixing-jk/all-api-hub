@@ -278,6 +278,7 @@
   "repairMissingKeys": {
     "action": "キーをチェック",
     "actions": {
+      "cancel": "チェックをキャンセル",
       "rerun": "再チェック",
       "start": "チェックして不足分を補完"
     },
@@ -307,6 +308,7 @@
       "selectedCount_other": "{{count}} 件の例外キーを選択中"
     },
     "messages": {
+      "cancelFailed": "修復ジョブをキャンセルできませんでした",
       "loadFailed": "修復進捗の読み込みに失敗しました",
       "startFailed": "修復ジョブの開始に失敗しました"
     },
@@ -320,7 +322,7 @@
     "progressLabel": "進捗",
     "remoteWriteNotice": "この操作により、対応するサイトで新しいキーが作成される場合があります。キーが自動的に削除されることはありません。",
     "resultsTitle": "結果",
-    "runningNote": "このジョブはバックグラウンドで実行されます。このダイアログを閉じてもキャンセルされません。",
+    "runningNote": "このジョブはバックグラウンドで実行されます。このダイアログを閉じて後で確認するか、進捗カードからキャンセルできます。",
     "searchLabel": "検索",
     "searchPlaceholder": "アカウント、origin、またはサイト種別で検索...",
     "skipReasons": {

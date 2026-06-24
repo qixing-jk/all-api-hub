@@ -90,12 +90,13 @@ const displaySiteData = buildDisplaySiteData({
   token: "access-token",
 })
 
-const runCoverage = () =>
+const runCoverage = (abortSignal?: AbortSignal) =>
   ensureAccountKeysForAvailableGroups({
     account,
     displaySiteData,
     accountName: "Relay Account",
     siteUrlOrigin: "https://relay.example.com",
+    abortSignal,
   })
 
 describe("ensureAccountKeysForAvailableGroups", () => {
@@ -170,6 +171,34 @@ describe("ensureAccountKeysForAvailableGroups", () => {
         }),
       }),
       buildGroupDefaultTokenRequest("vip"),
+    )
+  })
+
+  it("passes the abort signal into token, group, and creation requests", async () => {
+    const abortController = new AbortController()
+    mocks.fetchAccountTokens.mockResolvedValue([])
+    mocks.fetchUserGroups.mockResolvedValue({
+      default: { desc: "Default", ratio: 1 },
+    })
+    mocks.createApiToken.mockResolvedValue(true)
+
+    await runCoverage(abortController.signal)
+
+    expect(mocks.fetchAccountTokens).toHaveBeenCalledWith(
+      expect.objectContaining({
+        abortSignal: abortController.signal,
+      }),
+    )
+    expect(mocks.fetchUserGroups).toHaveBeenCalledWith(
+      expect.objectContaining({
+        abortSignal: abortController.signal,
+      }),
+    )
+    expect(mocks.createApiToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        abortSignal: abortController.signal,
+      }),
+      buildGroupDefaultTokenRequest("default"),
     )
   })
 

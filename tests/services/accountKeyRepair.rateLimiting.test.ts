@@ -65,4 +65,32 @@ describe("accountKeyRepair rate limiting", () => {
 
     await runPromise
   })
+
+  it("does not start later queued items once continuation is cancelled", async () => {
+    const started: string[] = []
+    const first = createDeferred()
+    let shouldContinue = true
+
+    const runPromise = runPerKeySequential({
+      items: [
+        { id: "a1", origin: "https://a.example.com" },
+        { id: "a2", origin: "https://a.example.com" },
+      ],
+      getKey: (item) => item.origin,
+      shouldContinue: () => shouldContinue,
+      worker: async (item) => {
+        started.push(item.id)
+        await first.promise
+      },
+    })
+
+    await flushPromises()
+    expect(started).toEqual(["a1"])
+
+    shouldContinue = false
+    first.resolve()
+
+    await runPromise
+    expect(started).toEqual(["a1"])
+  })
 })

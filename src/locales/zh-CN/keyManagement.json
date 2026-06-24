@@ -278,6 +278,7 @@
   "repairMissingKeys": {
     "action": "密钥检查",
     "actions": {
+      "cancel": "取消检查",
       "rerun": "重新检查",
       "start": "开始检查并补齐"
     },
@@ -307,6 +308,7 @@
       "selectedCount": "已选择 {{count}} 个异常密钥"
     },
     "messages": {
+      "cancelFailed": "取消检查任务失败",
       "loadFailed": "加载修复进度失败",
       "startFailed": "启动修复任务失败"
     },
@@ -320,7 +322,7 @@
     "progressLabel": "进度",
     "remoteWriteNotice": "此操作可能会在对应网站创建新密钥；不会自动删除任何密钥。",
     "resultsTitle": "结果",
-    "runningNote": "任务在后台运行，关闭此对话框不会取消任务。",
+    "runningNote": "任务在后台运行；可关闭此对话框稍后查看，或在进度卡片中取消任务。",
     "searchLabel": "搜索",
     "searchPlaceholder": "搜索账号、域名或站点类型...",
     "skipReasons": {

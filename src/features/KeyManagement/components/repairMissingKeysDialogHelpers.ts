@@ -168,6 +168,9 @@ export function getRepairProgressBarColor(progress: AccountKeyRepairProgress) {
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
     return "bg-red-600 dark:bg-red-500"
   }
+  if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled) {
+    return "bg-amber-600 dark:bg-amber-500"
+  }
   if (
     progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed &&
     progress.summary.failed > 0

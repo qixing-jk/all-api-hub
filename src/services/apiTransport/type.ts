@@ -84,6 +84,7 @@ export interface ApiTransportRequest {
   baseUrl: string
   data?: Record<string, any>
   accountId?: string
+  abortSignal?: AbortSignal
   cookieAuthSessionCookie?: string
   fetchContext?: ApiTransportFetchContext
   /** Skip the generic per-site limiter when the caller already applies a narrower limiter. */

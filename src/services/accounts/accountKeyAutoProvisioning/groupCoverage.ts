@@ -68,12 +68,14 @@ export function buildGroupDefaultTokenRequest(
 function createAccountApiRequest(
   account: SiteAccount,
   displaySiteData: DisplaySiteData,
+  abortSignal?: AbortSignal,
 ): ApiServiceRequest {
   const accountId = displaySiteData.id || account.id
 
   return {
     baseUrl: displaySiteData.baseUrl || account.site_url,
     accountId,
+    abortSignal,
     auth: {
       authType: displaySiteData.authType,
       userId: displaySiteData.userId,
@@ -91,8 +93,10 @@ export async function ensureAccountKeysForAvailableGroups(params: {
   displaySiteData: DisplaySiteData
   accountName: string
   siteUrlOrigin: string
+  abortSignal?: AbortSignal
 }): Promise<AccountKeyCoverageResult> {
-  const { account, displaySiteData, accountName, siteUrlOrigin } = params
+  const { account, displaySiteData, accountName, siteUrlOrigin, abortSignal } =
+    params
   const adapter = getSiteAdapter(displaySiteData.siteType)
   const keyManagement = requireDisplayAccountKeyManagement(
     displaySiteData,
@@ -102,7 +106,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     displaySiteData,
     adapter.tokenProvisioning,
   )
-  const request = createAccountApiRequest(account, displaySiteData)
+  const request = createAccountApiRequest(account, displaySiteData, abortSignal)
   const accountId = displaySiteData.id || account.id
 
   const tokens = await keyManagement.fetchTokens(request)

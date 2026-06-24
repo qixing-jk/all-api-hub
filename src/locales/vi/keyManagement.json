@@ -278,6 +278,7 @@
   "repairMissingKeys": {
     "action": "Kiểm tra khóa",
     "actions": {
+      "cancel": "Hủy kiểm tra",
       "rerun": "Kiểm tra lại",
       "start": "Bắt đầu kiểm tra và bổ sung"
     },
@@ -307,6 +308,7 @@
       "selectedCount_other": "Đã chọn {{count}} khóa bất thường"
     },
     "messages": {
+      "cancelFailed": "Hủy tác vụ sửa chữa thất bại",
       "loadFailed": "Tải tiến trình sửa chữa thất bại",
       "startFailed": "Bắt đầu tác vụ sửa chữa thất bại"
     },
@@ -320,7 +322,7 @@
     "progressLabel": "Tiến trình",
     "remoteWriteNotice": "Thao tác này có thể tạo khóa mới trên các trang web tương ứng; sẽ không tự động xóa bất kỳ khóa nào.",
     "resultsTitle": "Kết quả",
-    "runningNote": "Tác vụ đang chạy trong nền, việc đóng hộp thoại này sẽ không hủy tác vụ.",
+    "runningNote": "Tác vụ đang chạy trong nền. Bạn có thể đóng hộp thoại này để kiểm tra sau hoặc hủy trong thẻ tiến trình.",
     "searchLabel": "Tìm kiếm",
     "searchPlaceholder": "Tìm kiếm tài khoản, tên miền hoặc loại trang web...",
     "skipReasons": {
