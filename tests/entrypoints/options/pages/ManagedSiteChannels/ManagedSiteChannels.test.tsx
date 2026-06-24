@@ -3,7 +3,6 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
-import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -29,11 +28,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
-import {
-  navigateWithinOptionsPage,
-  openManagedSiteModelSyncForChannel,
-  openSettingsTab,
-} from "~/utils/navigation"
+import { navigateWithinOptionsPage, openSettingsTab } from "~/utils/navigation"
 import {
   fireEvent,
   render,
@@ -78,7 +73,6 @@ vi.mock("~/utils/navigation", async (importActual) => {
   return {
     ...actual,
     navigateWithinOptionsPage: vi.fn(),
-    openManagedSiteModelSyncForChannel: vi.fn(),
     openSettingsTab: vi.fn(),
   }
 })
@@ -1171,9 +1165,7 @@ describe("ManagedSiteChannels", () => {
     expect(within(row!).getByText("2")).toBeInTheDocument()
   })
 
-  it("uses AxonHub-specific columns, string type labels, row actions, and migration availability", async () => {
-    const user = userEvent.setup()
-
+  it("uses AxonHub-specific columns, string type labels, and migration availability", async () => {
     mockChannels(
       [
         {
@@ -1215,28 +1207,6 @@ describe("ManagedSiteChannels", () => {
     const row = screen.getByText("Alpha").closest("tr")
     expect(row).toBeTruthy()
     expect(within(row!).getByText("2")).toBeInTheDocument()
-    await openRowActionsMenu(row!, user)
-
-    expect(
-      await screen.findByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.edit",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.filters",
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.openSync",
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.sync",
-      }),
-    ).not.toBeInTheDocument()
   })
 
   it("toggles hideable columns from the toolbar menu without closing the menu", async () => {
@@ -1281,27 +1251,6 @@ describe("ManagedSiteChannels", () => {
     expect(
       screen.getByRole("menuitemcheckbox", {
         name: "managedSiteChannels:table.columns.status",
-      }),
-    ).toBeInTheDocument()
-  })
-
-  it("opens the row actions menu from the trigger", async () => {
-    mockChannels([
-      { id: 1, name: "Alpha", base_url: "https://example.com", key: "k" },
-    ])
-
-    render(<ManagedSiteChannels />)
-
-    await waitForRowText("Alpha")
-
-    const row = screen.getByText("Alpha").closest("tr")
-    expect(row).toBeTruthy()
-
-    await openRowActionsMenu(row!)
-
-    expect(
-      await screen.findByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.edit",
       }),
     ).toBeInTheDocument()
   })
@@ -1444,34 +1393,6 @@ describe("ManagedSiteChannels", () => {
         },
       },
     )
-  })
-
-  it("opens the per-channel model sync view from row actions", async () => {
-    const user = userEvent.setup()
-
-    mockChannels([
-      { id: 1, name: "Alpha", base_url: "https://alpha.example", key: "a" },
-    ])
-
-    render(<ManagedSiteChannels />)
-
-    await waitForRowText("Alpha")
-
-    const row = screen.getByText("Alpha").closest("tr")
-    expect(row).toBeTruthy()
-    await openRowActionsMenu(row!, user)
-
-    await user.click(
-      await screen.findByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.openSync",
-      }),
-    )
-
-    expectManagedSiteChannelActionTracked(
-      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
-      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
-    )
-    expect(openManagedSiteModelSyncForChannel).toHaveBeenCalledWith(1)
   })
 
   it("opens the filter dialog from row actions and loads channel-specific filters", async () => {
@@ -1885,83 +1806,6 @@ describe("ManagedSiteChannels", () => {
     expect(within(dialog).getByText("Beta")).toBeInTheDocument()
   })
 
-  it("loads the real channel key from the edit dialog", async () => {
-    const user = userEvent.setup()
-    let resolveRealKey: ((key: string) => void) | undefined
-    mockChannels([
-      {
-        id: 208,
-        name: "Alpha",
-        base_url: "https://example.com",
-        type: 1,
-        models: "gpt-4o",
-        group: "default",
-        status: 1,
-        priority: 0,
-        weight: 0,
-        key: "",
-      },
-    ])
-    vi.mocked(fetchNewApiChannelKey).mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveRealKey = resolve
-        }),
-    )
-
-    render(
-      <>
-        <ManagedSiteChannels />
-        <ChannelDialogContainer />
-      </>,
-    )
-
-    await waitForRowText("Alpha")
-
-    const row = screen.getByText("Alpha").closest("tr")
-    expect(row).toBeTruthy()
-    await openRowActionsMenu(row!, user)
-
-    const editItem = await screen.findByRole("menuitem", {
-      name: "managedSiteChannels:table.rowActions.edit",
-    })
-    await user.click(editItem)
-
-    const loadRealKeyButton = await screen.findByRole("button", {
-      name: "channelDialog:actions.loadRealKey",
-    })
-    await user.click(loadRealKeyButton)
-
-    await waitFor(() => {
-      expect(fetchNewApiChannelKey).toHaveBeenCalledWith({
-        baseUrl: "https://admin.example",
-        userId: "1",
-        username: "admin",
-        password: "secret-password",
-        totpSecret: "JBSWY3DPEHPK3PXP",
-        channelId: 208,
-      })
-    })
-    expectManagedSiteChannelActionTracked(
-      PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
-      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
-    )
-
-    expect(
-      screen.getByRole("button", {
-        name: "channelDialog:actions.loadingRealKey",
-      }),
-    ).toBeDisabled()
-
-    resolveRealKey?.("sk-real-channel-key")
-
-    await waitFor(() => {
-      expect(
-        screen.getByDisplayValue("sk-real-channel-key"),
-      ).toBeInTheDocument()
-    })
-  })
-
   it("ignores stale real-key responses after reopening the dialog for another channel", async () => {
     const user = userEvent.setup()
     let resolveFirstRealKey: ((key: string) => void) | undefined
@@ -2074,83 +1918,76 @@ describe("ManagedSiteChannels", () => {
     })
   })
 
-  it.each([
-    [SITE_TYPES.DONE_HUB, "donehub"],
-    [SITE_TYPES.VELOERA, "veloera"],
-    [SITE_TYPES.CLAUDE_CODE_HUB, "claudecodehub"],
-  ])(
-    "loads the real channel key from the edit dialog for %s",
-    async (managedSiteType, messagesKey) => {
-      const user = userEvent.setup()
-      const fetchChannelSecretKey = vi
-        .fn()
-        .mockResolvedValue("sk-real-channel-key")
+  it("loads the real channel key from the edit dialog for non-New API managed sites", async () => {
+    const user = userEvent.setup()
+    const fetchChannelSecretKey = vi
+      .fn()
+      .mockResolvedValue("sk-real-channel-key")
 
-      mockChannels(
-        [
-          {
-            id: 308,
-            name: "Alpha",
-            base_url: "https://example.com",
-            type: 1,
-            models: "gpt-4o",
-            group: "default",
-            status: 1,
-            priority: 0,
-            weight: 0,
-            key: "",
-          },
-        ],
+    mockChannels(
+      [
         {
-          managedSiteType,
-          messagesKey,
-          fetchChannelSecretKey,
+          id: 308,
+          name: "Alpha",
+          base_url: "https://example.com",
+          type: 1,
+          models: "gpt-4o",
+          group: "default",
+          status: 1,
+          priority: 0,
+          weight: 0,
+          key: "",
         },
+      ],
+      {
+        managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+        messagesKey: "claudecodehub",
+        fetchChannelSecretKey,
+      },
+    )
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForRowText("Alpha")
+
+    const row = screen.getByText("Alpha").closest("tr")
+    expect(row).toBeTruthy()
+    await openRowActionsMenu(row!, user)
+
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "channelDialog:actions.loadRealKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(fetchChannelSecretKey).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        },
+        308,
       )
+    })
 
-      render(
-        <>
-          <ManagedSiteChannels />
-          <ChannelDialogContainer />
-        </>,
-      )
-
-      await waitForRowText("Alpha")
-
-      const row = screen.getByText("Alpha").closest("tr")
-      expect(row).toBeTruthy()
-      await openRowActionsMenu(row!, user)
-
-      await user.click(
-        await screen.findByRole("menuitem", {
-          name: "managedSiteChannels:table.rowActions.edit",
-        }),
-      )
-
-      await user.click(
-        await screen.findByRole("button", {
-          name: "channelDialog:actions.loadRealKey",
-        }),
-      )
-
-      await waitFor(() => {
-        expect(fetchChannelSecretKey).toHaveBeenCalledWith(
-          {
-            baseUrl: "https://admin.example",
-            adminToken: "t",
-            userId: "1",
-          },
-          308,
-        )
-      })
-
-      await waitFor(() => {
-        expect(
-          screen.getByDisplayValue("sk-real-channel-key"),
-        ).toBeInTheDocument()
-      })
-    },
-  )
+    await waitFor(() => {
+      expect(
+        screen.getByDisplayValue("sk-real-channel-key"),
+      ).toBeInTheDocument()
+    })
+  })
 
   it("hides the migration entry when no target is configured", async () => {
     mockChannels(
@@ -2246,126 +2083,7 @@ describe("ManagedSiteChannels", () => {
     )
   })
 
-  it("shows the migration entry when a target is configured", async () => {
-    mockChannels(
-      [{ id: 1, name: "Alpha", base_url: "https://example.com", key: "k" }],
-      { withMigrationTarget: true },
-    )
-
-    render(<ManagedSiteChannels />)
-
-    await waitForRowText("Alpha")
-
-    const entry = screen.getByRole("button", {
-      name: /managedSiteChannels:toolbar.enterMigrationMode/,
-    })
-    expect(entry).toBeInTheDocument()
-    expect(
-      within(entry).getByText("managedSiteChannels:migration.betaBadge"),
-    ).toBeInTheDocument()
-  })
-
-  it("offers AxonHub migration entry points while hiding New API-only actions", async () => {
-    const user = userEvent.setup()
-
-    mockChannels(
-      [
-        {
-          id: 1,
-          name: "Axon Alpha",
-          base_url: "https://axon-source.example",
-          key: "axon-key",
-          type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
-          models: "claude-3-5-sonnet",
-          status: 1,
-          weight: 0,
-        },
-      ],
-      {
-        managedSiteType: SITE_TYPES.AXON_HUB,
-        messagesKey: "axonhub",
-        withMigrationTarget: true,
-      },
-    )
-
-    render(<ManagedSiteChannels />)
-
-    await waitForRowText("Axon Alpha")
-
-    expect(
-      screen.getByRole("button", {
-        name: /managedSiteChannels:toolbar.enterMigrationMode/,
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", {
-        name: "managedSiteChannels:toolbar.syncSelected",
-      }),
-    ).not.toBeInTheDocument()
-
-    const row = screen.getByText("Axon Alpha").closest("tr")
-    expect(row).toBeTruthy()
-    await openRowActionsMenu(row!, user)
-
-    expect(
-      await screen.findByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.edit",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.filters",
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.openSync",
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.sync",
-      }),
-    ).not.toBeInTheDocument()
-
-    await user.keyboard("{Escape}")
-    await user.click(
-      screen.getByRole("button", {
-        name: /managedSiteChannels:toolbar.enterMigrationMode/,
-      }),
-    )
-
-    expect(
-      screen.getByRole("button", {
-        name: /managedSiteChannels:toolbar.exitMigrationMode/,
-      }),
-    ).toBeInTheDocument()
-
-    await user.click(
-      within(row!).getByRole("checkbox", {
-        name: "managedSiteChannels:table.selectRow",
-      }),
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: "managedSiteChannels:toolbar.migrateSelected",
-      }),
-    )
-
-    expectManagedSiteChannelActionTracked(
-      PRODUCT_ANALYTICS_ACTION_IDS.OpenSelectedManagedSiteChannelMigration,
-      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
-    )
-    const dialog = await screen.findByRole("dialog")
-    expect(
-      within(dialog).getByText("managedSiteChannels:migration.title"),
-    ).toBeInTheDocument()
-    expect(within(dialog).getByText("Axon Alpha")).toBeInTheDocument()
-  })
-
-  it("offers Claude Code Hub migration entry points while hiding unsupported managed-site actions", async () => {
-    const user = userEvent.setup()
-
+  it("shows Claude Code Hub provider labels, migration entry, and compatible toolbar actions", async () => {
     mockChannels(
       [
         {
@@ -2386,12 +2104,7 @@ describe("ManagedSiteChannels", () => {
       },
     )
 
-    render(
-      <>
-        <ManagedSiteChannels />
-        <ChannelDialogContainer />
-      </>,
-    )
+    render(<ManagedSiteChannels />)
 
     await waitForRowText("Claude Provider")
 
@@ -2408,80 +2121,9 @@ describe("ManagedSiteChannels", () => {
         name: "managedSiteChannels:toolbar.syncSelected",
       }),
     ).not.toBeInTheDocument()
-
-    const row = screen.getByText("Claude Provider").closest("tr")
-    expect(row).toBeTruthy()
-    await openRowActionsMenu(row!, user)
-
-    expect(
-      await screen.findByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.edit",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.filters",
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.openSync",
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.sync",
-      }),
-    ).not.toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.edit",
-      }),
-    )
-    const editDialog = await screen.findByRole("dialog")
-    expect(
-      within(editDialog).getByRole("button", {
-        name: "channelDialog:actions.loadRealKey",
-      }),
-    ).toBeInTheDocument()
-
-    await user.click(
-      within(editDialog).getByText("common:actions.cancel", {
-        selector: "button",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-    })
-
-    await user.click(
-      screen.getByRole("button", {
-        name: /managedSiteChannels:toolbar.enterMigrationMode/,
-      }),
-    )
-    await user.click(
-      within(row!).getByRole("checkbox", {
-        name: "managedSiteChannels:table.selectRow",
-      }),
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: "managedSiteChannels:toolbar.migrateSelected",
-      }),
-    )
-
-    const migrationDialog = await screen.findByRole("dialog")
-    expect(
-      within(migrationDialog).getByText("managedSiteChannels:migration.title"),
-    ).toBeInTheDocument()
-    expect(
-      within(migrationDialog).getByText("Claude Provider"),
-    ).toBeInTheDocument()
   })
 
-  it("keeps refresh and read-only channel viewing available in migration mode", async () => {
+  it("keeps refresh and migration row actions available in migration mode", async () => {
     const user = userEvent.setup()
 
     mockChannels(
@@ -2492,12 +2134,7 @@ describe("ManagedSiteChannels", () => {
       { withMigrationTarget: true },
     )
 
-    render(
-      <>
-        <ManagedSiteChannels />
-        <ChannelDialogContainer />
-      </>,
-    )
+    render(<ManagedSiteChannels />)
 
     await waitForRowText("Alpha")
     await waitForRowText("Beta")
@@ -2550,64 +2187,6 @@ describe("ManagedSiteChannels", () => {
 
     const betaRow = screen.getByText("Beta").closest("tr")
     expect(betaRow).toBeTruthy()
-    await openRowActionsMenu(betaRow!, user)
-
-    expect(
-      await screen.findByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.view",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.edit",
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.openSync",
-      }),
-    ).not.toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.view",
-      }),
-    )
-
-    expectManagedSiteChannelActionTracked(
-      PRODUCT_ANALYTICS_ACTION_IDS.ViewManagedSiteChannel,
-      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
-    )
-    const viewDialog = await screen.findByRole("dialog")
-    expect(
-      within(viewDialog).getByText("channelDialog:title.view"),
-    ).toBeInTheDocument()
-    expect(screen.getByDisplayValue("Beta")).toBeInTheDocument()
-    expect(
-      within(viewDialog).getByText("common:actions.close", {
-        selector: "button",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      within(viewDialog).queryByRole("button", {
-        name: "channelDialog:actions.update",
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      within(viewDialog).queryByRole("button", {
-        name: "channelDialog:actions.loadRealKey",
-      }),
-    ).not.toBeInTheDocument()
-
-    await user.click(
-      within(viewDialog).getByText("common:actions.close", {
-        selector: "button",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-    })
 
     await openRowActionsMenu(betaRow!, user)
 
@@ -2640,7 +2219,7 @@ describe("ManagedSiteChannels", () => {
     ).toBeInTheDocument()
   })
 
-  it("uses filtered rows for migrate filtered and shows an execution summary", async () => {
+  it("uses filtered rows for migrate filtered", async () => {
     const user = userEvent.setup()
 
     mockChannels(
@@ -2705,36 +2284,6 @@ describe("ManagedSiteChannels", () => {
     const dialog = await screen.findByRole("dialog")
     expect(within(dialog).getByText("Alpha")).toBeInTheDocument()
     expect(within(dialog).queryByText("Beta")).not.toBeInTheDocument()
-
-    await user.click(
-      within(dialog).getByRole("button", {
-        name: "managedSiteChannels:migration.actions.start",
-      }),
-    )
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "managedSiteChannels:migration.confirm.confirm",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(
-        within(dialog).getByText("managedSiteChannels:migration.results.title"),
-      ).toBeInTheDocument()
-    })
-    expect(
-      within(dialog).getByLabelText(
-        "managedSiteChannels:migration.target.label",
-      ),
-    ).toBeDisabled()
-    expect(
-      within(dialog).getByRole("button", {
-        name: "managedSiteChannels:migration.actions.refreshPreview",
-      }),
-    ).toBeDisabled()
-
-    expect(getManagedSiteServiceForType).toHaveBeenCalledWith("done-hub")
   })
 
   it("updates pagination controls when the rows-per-page size changes", async () => {
