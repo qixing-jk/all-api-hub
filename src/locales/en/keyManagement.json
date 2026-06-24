@@ -302,6 +302,7 @@
       "title_other": "Delete {{count}} invalid keys?"
     },
     "description": "Check each account's available groups, create default keys for groups without keys, and list unusual keys whose groups are unavailable.",
+    "historyNote": "This shows the previous check result. No job is currently running, and you can rerun the check.",
     "initialNotice": "After starting, saved accounts will be checked for available groups, and default keys will be created for groups without keys.",
     "invalidKeys": {
       "badge": "Invalid",

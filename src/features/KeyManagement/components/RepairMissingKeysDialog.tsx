@@ -203,9 +203,13 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
         </div>
       }
       footer={
-        <p className="dark:text-dark-text-secondary text-xs text-gray-500">
-          {t("repairMissingKeys.runningNote")}
-        </p>
+        progress && progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Idle ? (
+          <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+            {progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running
+              ? t("repairMissingKeys.runningNote")
+              : t("repairMissingKeys.historyNote")}
+          </p>
+        ) : null
       }
     >
       {error ? <Alert variant="destructive" description={error} /> : null}

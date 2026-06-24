@@ -128,8 +128,7 @@ class AccountKeyRepairRunner {
       return createIdleProgress()
     }
 
-    this.currentProgress = stored
-    return stored
+    return await this.terminalizeInactiveRunningProgress(stored)
   }
 
   async start(): Promise<AccountKeyRepairProgress> {
@@ -215,6 +214,29 @@ class AccountKeyRepairRunner {
       (this.currentProgress?.jobId === jobId &&
         this.currentProgress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
     )
+  }
+
+  private async terminalizeInactiveRunningProgress(
+    progress: AccountKeyRepairProgress,
+  ): Promise<AccountKeyRepairProgress> {
+    if (
+      progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running ||
+      this.currentRun
+    ) {
+      this.currentProgress = progress
+      return progress
+    }
+
+    const now = Date.now()
+    const cancelledProgress = {
+      ...progress,
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+      finishedAt: now,
+      updatedAt: now,
+    }
+    this.currentProgress = cancelledProgress
+    await this.persistAndNotify()
+    return cancelledProgress
   }
 
   private async run(jobId: string, abortSignal: AbortSignal): Promise<void> {

@@ -1624,6 +1624,63 @@ describe("accountKeyRepair", () => {
     )
   })
 
+  it("terminalizes stored running progress when no in-memory run exists", async () => {
+    mocks.storageMap.set("accountKeyRepair_progress", {
+      jobId: "stale-running",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+      startedAt: 100,
+      updatedAt: 100,
+      totals: {
+        enabledAccounts: 220,
+        eligibleAccounts: 220,
+        processedAccounts: 219,
+        processedEligibleAccounts: 219,
+      },
+      summary: {
+        created: 0,
+        alreadyHad: 219,
+        skipped: 0,
+        failed: 0,
+      },
+      results: [],
+    })
+
+    const { accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    await expect(accountKeyRepairRunner.getProgress()).resolves.toEqual(
+      expect.objectContaining({
+        jobId: "stale-running",
+        state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+        finishedAt: expect.any(Number),
+        totals: {
+          enabledAccounts: 220,
+          eligibleAccounts: 220,
+          processedAccounts: 219,
+          processedEligibleAccounts: 219,
+        },
+      }),
+    )
+    expect(mocks.storageMap.get("accountKeyRepair_progress")).toEqual(
+      expect.objectContaining({
+        jobId: "stale-running",
+        state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+        finishedAt: expect.any(Number),
+      }),
+    )
+    expect(mocks.sendRuntimeMessage).toHaveBeenLastCalledWith(
+      {
+        type: RuntimeMessageTypes.AccountKeyRepairProgress,
+        payload: expect.objectContaining({
+          jobId: "stale-running",
+          state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+        }),
+      },
+      { maxAttempts: 1 },
+    )
+  })
+
   it("does not rewrite stored progress when cancelling a non-running job", async () => {
     const completedProgress = {
       jobId: "finished-run",

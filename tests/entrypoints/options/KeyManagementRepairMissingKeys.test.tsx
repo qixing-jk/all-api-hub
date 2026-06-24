@@ -787,6 +787,35 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect(screen.getByText("Another Site")).toBeInTheDocument()
   })
 
+  it("shows history copy instead of running copy for terminal repair progress", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: completedProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.rerun",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:repairMissingKeys.historyNote"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("keyManagement:repairMissingKeys.runningNote"),
+    ).not.toBeInTheDocument()
+  })
+
   it("uses processed eligible totals for progress UI", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {

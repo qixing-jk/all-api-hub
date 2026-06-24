@@ -294,6 +294,7 @@
       "title_other": "Xóa {{count}} khóa bất thường?"
     },
     "description": "Kiểm tra các nhóm khả dụng của từng tài khoản, tạo khóa mặc định cho nhóm còn thiếu khóa và liệt kê các khóa bất thường có nhóm không khả dụng.",
+    "historyNote": "Đây là kết quả kiểm tra trước đó. Hiện không có tác vụ nào đang chạy và bạn có thể kiểm tra lại.",
     "initialNotice": "Sau khi bắt đầu, các nhóm khả dụng của tài khoản đã lưu sẽ được kiểm tra và khóa mặc định sẽ được tạo cho các nhóm còn thiếu khóa.",
     "invalidKeys": {
       "badge": "Bất thường",
