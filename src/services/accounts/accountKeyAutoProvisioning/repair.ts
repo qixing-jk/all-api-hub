@@ -164,6 +164,9 @@ class AccountKeyRepairRunner {
     const initialPersist = this.persistAndNotify()
     const runPromise = initialPersist
       .then(() => this.run(progress.jobId, abortController.signal))
+      .catch((error) => {
+        logger.error("Repair run failed to start", error)
+      })
       .finally(() => {
         if (this.currentAbortController === abortController) {
           this.currentAbortController = null
