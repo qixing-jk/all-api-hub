@@ -218,12 +218,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
     if (options?.waitForModelId) {
-      const expectedModelId = options.waitForModelId
-      await waitFor(() => {
-        expect(
-          screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
-        ).toHaveTextContent(expectedModelId)
-      })
+      await waitForSelectedModelId(options.waitForModelId)
     }
     await user.click(
       await screen.findByText("webAiApiCheck:modal.actions.test"),
