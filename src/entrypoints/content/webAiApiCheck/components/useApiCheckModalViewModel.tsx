@@ -45,7 +45,7 @@ import { useApiCheckModalShell } from "./useApiCheckModalShell"
 import { useApiCheckModelDiscovery } from "./useApiCheckModelDiscovery"
 import { useApiCheckProbeRunner } from "./useApiCheckProbeRunner"
 
-export type ApiCheckModalViewModel = {
+export interface ApiCheckModalViewModel {
   isOpen: boolean
   sourceText: string
   baseUrl: string
@@ -76,7 +76,7 @@ export type ApiCheckModalViewModel = {
   apiTypeOptions: Array<{ value: ApiVerificationApiType; label: string }>
 }
 
-export type ApiCheckModalActions = {
+export interface ApiCheckModalActions {
   close: () => void
   setSourceText: (value: string) => void
   updateBaseUrl: (value: string) => void
@@ -346,8 +346,8 @@ export function useApiCheckModalViewModel() {
       candidates: extracted.candidates,
       summary: extracted.summary,
     })
-    if (extracted.baseUrl) updateBaseUrl(extracted.baseUrl)
-    if (extracted.apiKey) setApiKey(extracted.apiKey)
+    updateBaseUrl(extracted.baseUrl ?? "")
+    setApiKey(extracted.apiKey ?? "")
   }, [isOpen, sourceText, updateBaseUrl])
 
   const handleSelectBaseUrlHistory = useCallback(

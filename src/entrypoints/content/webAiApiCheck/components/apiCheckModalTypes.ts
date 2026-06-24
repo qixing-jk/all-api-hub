@@ -3,7 +3,7 @@ import type {
   ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
 
-export type ProbeItemState = {
+export interface ProbeItemState {
   id: ApiVerificationProbeId
   requiresModelId: boolean
   isRunning: boolean

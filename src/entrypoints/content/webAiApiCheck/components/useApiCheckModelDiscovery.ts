@@ -285,6 +285,7 @@ export function useApiCheckModelDiscovery({
     if (lastObservedModelFetchKeyRef.current !== currentFetchKey) {
       lastAutoFetchKeyRef.current = null
       lastObservedModelFetchKeyRef.current = currentFetchKey
+      setModelId("")
     }
     setIsFetchingModels(false)
     setModelIds([])

@@ -15,7 +15,6 @@ import {
 } from "~/services/productAnalytics/events"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
-  API_TYPES,
   getApiVerificationProbeDefinitions,
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
@@ -85,6 +84,28 @@ function markProbeNotRunning(
 }
 
 /**
+ * Build the local validation result for probes that cannot run without a model.
+ */
+function buildMissingModelResult(
+  apiType: ApiVerificationApiType,
+  baseUrl: string,
+  probeId: ApiVerificationProbeId,
+): ApiCheckProbeResultWithAnalyticsCategory {
+  return {
+    id: probeId,
+    status: "fail",
+    latencyMs: 0,
+    summary: "No model id provided",
+    summaryKey: "verifyDialog.requiresModelId",
+    analyticsErrorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+    input: {
+      apiType,
+      baseUrl,
+    },
+  }
+}
+
+/**
  * Owns the API verification probe state machine, cancellation, and probe analytics.
  */
 export function useApiCheckProbeRunner({
@@ -98,7 +119,7 @@ export function useApiCheckProbeRunner({
   recordBaseUrlHistory,
 }: UseApiCheckProbeRunnerOptions) {
   const [probes, setProbes] = useState<ProbeItemState[]>(() =>
-    buildProbeState(API_TYPES.OPENAI_COMPATIBLE),
+    buildProbeState(apiType),
   )
   const [isRunningAll, setIsRunningAll] = useState(false)
   const [isStoppingRunAll, setIsStoppingRunAll] = useState(false)
@@ -163,6 +184,36 @@ export function useApiCheckProbeRunner({
       }
       if (options.recordHistory !== false) {
         recordBaseUrlHistory(trimmedBaseUrl)
+      }
+
+      const probeDefinition = probeDefinitions.find(
+        (definition) => definition.id === probeId,
+      )
+      if (probeDefinition?.requiresModelId && !modelId.trim()) {
+        const fallback = buildMissingModelResult(
+          apiType,
+          trimmedBaseUrl,
+          probeId,
+        )
+        setValidationError(t("aiApiVerification:verifyDialog.requiresModelId"))
+        setProbes((prev) =>
+          prev.map((probe) =>
+            probe.id === probeId
+              ? {
+                  ...probe,
+                  attempts: probe.attempts + 1,
+                  result: fallback,
+                }
+              : probe,
+          ),
+        )
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          }),
+        })
+        return fallback
       }
 
       setProbes((prev) =>
@@ -335,6 +386,7 @@ export function useApiCheckProbeRunner({
       apiType,
       baseUrl,
       modelId,
+      probeDefinitions,
       recordBaseUrlHistory,
       setValidationError,
       t,
@@ -416,6 +468,29 @@ export function useApiCheckProbeRunner({
     try {
       for (const def of probeDefinitions) {
         if (shouldStopRunAllRef.current) break
+        if (def.requiresModelId && !modelId.trim()) {
+          const fallback = buildMissingModelResult(
+            apiType,
+            trimmedBaseUrl,
+            def.id,
+          )
+          setValidationError(
+            t("aiApiVerification:verifyDialog.requiresModelId"),
+          )
+          setProbes((prev) =>
+            prev.map((probe) =>
+              probe.id === def.id
+                ? {
+                    ...probe,
+                    attempts: probe.attempts + 1,
+                    result: fallback,
+                  }
+                : probe,
+            ),
+          )
+          results.push(fallback)
+          continue
+        }
         // Run sequentially so the UI updates progressively and we avoid bursty network traffic.
         const runId = safeRandomUUID(`web-ai-api-check-${def.id}`)
         activeRunAllProbeIdRef.current = def.id
@@ -505,6 +580,7 @@ export function useApiCheckProbeRunner({
     apiKey,
     apiType,
     baseUrl,
+    modelId,
     probeDefinitions,
     recordBaseUrlHistory,
     runProbe,

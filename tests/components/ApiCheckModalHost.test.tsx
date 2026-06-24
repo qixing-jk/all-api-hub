@@ -204,6 +204,7 @@ describe("ApiCheckModalHost", () => {
 
   const startManualProbeSuite = async (
     user: ReturnType<typeof userEvent.setup>,
+    options?: { waitForModelId?: string },
   ) => {
     await openModal()
 
@@ -216,9 +217,25 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    if (options?.waitForModelId) {
+      const expectedModelId = options.waitForModelId
+      await waitFor(() => {
+        expect(
+          screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+        ).toHaveTextContent(expectedModelId)
+      })
+    }
     await user.click(
       await screen.findByText("webAiApiCheck:modal.actions.test"),
     )
+  }
+
+  const waitForSelectedModelId = async (modelId: string) => {
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+      ).toHaveTextContent(modelId)
+    })
   }
 
   it("opens with empty inputs for manual trigger without selection", async () => {
@@ -241,6 +258,26 @@ describe("ApiCheckModalHost", () => {
         name: "webAiApiCheck:modal.history.trigger",
       }),
     ).toBeDisabled()
+  })
+
+  it("associates visible field labels with modal controls", async () => {
+    await openModal()
+
+    expect(
+      await screen.findByLabelText("webAiApiCheck:modal.sourceText.label"),
+    ).toBeVisible()
+    expect(
+      screen.getByLabelText("webAiApiCheck:modal.fields.baseUrl"),
+    ).toBeVisible()
+    expect(
+      screen.getByLabelText("webAiApiCheck:modal.fields.apiKey"),
+    ).toBeVisible()
+    expect(
+      screen.getByLabelText("webAiApiCheck:modal.fields.apiType"),
+    ).toBeVisible()
+    expect(
+      screen.getByLabelText("webAiApiCheck:modal.fields.modelId"),
+    ).toBeVisible()
   })
 
   it("prefills the base URL from current-source history and lets users choose another history entry", async () => {
@@ -620,6 +657,98 @@ describe("ApiCheckModalHost", () => {
     })
   })
 
+  it("does not let stale history loads overwrite a recorded suggestion", async () => {
+    const user = userEvent.setup()
+    const historyDeferred = createDeferred<{
+      success: true
+      suggestions: Array<{
+        baseUrl: string
+        lastUsedAt: number
+        useCount: number
+      }>
+    }>()
+
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions) {
+          return historyDeferred.promise
+        }
+        if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
+          return {
+            success: true,
+            suggestions: [
+              {
+                baseUrl: message.baseUrl,
+                lastUsedAt: 2,
+                useCount: 1,
+              },
+            ],
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return { success: true, name: "Saved profile" }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal({
+      sourceText: "API Key: sk-test-history-stale-fixture",
+      pageUrl: "https://github.com/qixing-jk/all-api-hub/issues/1025",
+    })
+
+    const baseUrlInput = await screen.findByLabelText(
+      "webAiApiCheck:modal.fields.baseUrl",
+    )
+    const apiKeyInput = screen.getByLabelText(
+      "webAiApiCheck:modal.fields.apiKey",
+    )
+
+    await user.type(baseUrlInput, "https://new.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-history-record-fixture")
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.saveToProfiles",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RecordBaseUrlHistory),
+      ).toHaveLength(1)
+    })
+
+    await act(async () => {
+      historyDeferred.resolve({
+        success: true,
+        suggestions: [
+          {
+            baseUrl: "https://stale.example.com/api",
+            lastUsedAt: 3,
+            useCount: 2,
+          },
+        ],
+      })
+    })
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "webAiApiCheck:modal.history.trigger",
+      }),
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "https://new.example.com/api",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "https://stale.example.com/api",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows the extracted API key by default", async () => {
     await openModal({
       sourceText:
@@ -637,6 +766,49 @@ describe("ApiCheckModalHost", () => {
         name: "webAiApiCheck:modal.actions.hideKey",
       }),
     ).toBeInTheDocument()
+  })
+
+  it("clears active credentials when edited source text no longer contains credentials", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["gpt-4o-mini"] }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal({
+      sourceText:
+        "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-source-clear-fixture",
+    })
+
+    const baseUrlInput = (await screen.findByLabelText(
+      "webAiApiCheck:modal.fields.baseUrl",
+    )) as HTMLInputElement
+    const apiKeyInput = screen.getByLabelText(
+      "webAiApiCheck:modal.fields.apiKey",
+    ) as HTMLInputElement
+    const sourceTextInput = screen.getByLabelText(
+      "webAiApiCheck:modal.sourceText.label",
+    )
+
+    expect(baseUrlInput.value).toBe("https://proxy.example.com/api")
+    expect(apiKeyInput.value).toBe("sk-test-source-clear-fixture")
+
+    await user.clear(sourceTextInput)
+    await user.type(sourceTextInput, "No credentials here")
+
+    await waitFor(() => {
+      expect(baseUrlInput.value).toBe("")
+      expect(apiKeyInput.value).toBe("")
+    })
+    expect(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.saveToProfiles",
+      }),
+    ).toBeDisabled()
   })
 
   it("tracks modal open with safe credential presence insights", async () => {
@@ -1447,12 +1619,12 @@ describe("ApiCheckModalHost", () => {
     ).toHaveLength(0)
   })
 
-  it("records Base URL history once for a full probe suite run", async () => {
+  it("records Base URL history for model fetch and full probe suite run", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, data: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: false, error: "Unavailable" }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
         if (type === WebAiApiCheckMessageTypes.RecordBaseUrlHistory) {
           return { success: true }
@@ -1476,7 +1648,7 @@ describe("ApiCheckModalHost", () => {
       },
     )
 
-    await startManualProbeSuite(user)
+    await startManualProbeSuite(user, { waitForModelId: "gpt-test-model" })
 
     await waitFor(() => {
       expect(
@@ -1485,7 +1657,7 @@ describe("ApiCheckModalHost", () => {
     })
     expect(
       getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RecordBaseUrlHistory),
-    ).toHaveLength(1)
+    ).toHaveLength(2)
     expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.RecordBaseUrlHistory, {
       baseUrl: "https://proxy.example.com/api",
       pageUrl: "https://example.com",
@@ -1721,6 +1893,75 @@ describe("ApiCheckModalHost", () => {
     expect(screen.queryByText("OpenAI result")).not.toBeInTheDocument()
   })
 
+  it("clears the selected model when credentials change before the next model list loads", async () => {
+    const user = userEvent.setup()
+    let secondFetchDeferred:
+      | ReturnType<
+          typeof createDeferred<{
+            success: true
+            modelIds: string[]
+          }>
+        >
+      | undefined
+
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          if (message.apiKey === "sk-test-first-fixture") {
+            return { success: true, modelIds: ["first-model"] }
+          }
+          secondFetchDeferred = createDeferred<{
+            success: true
+            modelIds: string[]
+          }>()
+          return secondFetchDeferred.promise
+        }
+
+        return { success: false }
+      },
+    )
+
+    await openModal({
+      sourceText:
+        "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-first-fixture",
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+      ).toHaveTextContent("first-model")
+    })
+
+    const apiKeyInput = screen.getByLabelText(
+      "webAiApiCheck:modal.fields.apiKey",
+    )
+    await user.clear(apiKeyInput)
+    await user.type(apiKeyInput, "sk-test-second-fixture")
+
+    await waitFor(() => {
+      expect(secondFetchDeferred).toBeDefined()
+    })
+    expect(
+      screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+    ).toHaveTextContent("webAiApiCheck:modal.actions.fetchingModels")
+    expect(
+      screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+    ).not.toHaveTextContent("first-model")
+
+    await act(async () => {
+      secondFetchDeferred?.resolve({
+        success: true,
+        modelIds: ["second-model"],
+      })
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+      ).toHaveTextContent("second-model")
+    })
+  })
+
   it("tracks stale model fetch responses as skipped diagnostics", async () => {
     const user = userEvent.setup()
     let resolveFirstFetch!: (value: {
@@ -1893,7 +2134,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
 
         if (type === WebAiApiCheckMessageTypes.RunProbe) {
@@ -1923,6 +2164,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -1963,7 +2205,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
 
         if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
@@ -1990,6 +2232,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -2070,7 +2313,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
 
         if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
@@ -2099,6 +2342,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -2177,7 +2421,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
 
         if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
@@ -2203,6 +2447,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -2243,7 +2488,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
 
         if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
@@ -2269,6 +2514,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -2306,7 +2552,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
 
         if (type === WebAiApiCheckMessageTypes.RunProbe) {
@@ -2337,6 +2583,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -2448,7 +2695,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
         if (type === WebAiApiCheckMessageTypes.RunProbe) {
           return {
@@ -2476,6 +2723,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -2519,7 +2767,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
 
         if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
@@ -2548,7 +2796,7 @@ describe("ApiCheckModalHost", () => {
       },
     )
 
-    await startManualProbeSuite(user)
+    await startManualProbeSuite(user, { waitForModelId: "gpt-test-model" })
 
     const activeRunId = await waitFor(() => {
       const activeProbeMessage = runProbeMessages.find(
@@ -2620,7 +2868,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
 
         if (type === WebAiApiCheckMessageTypes.CancelRunProbe) {
@@ -2659,7 +2907,7 @@ describe("ApiCheckModalHost", () => {
       },
     )
 
-    await startManualProbeSuite(user)
+    await startManualProbeSuite(user, { waitForModelId: "gpt-test-model" })
 
     await waitFor(() => {
       expect(runProbeMessages.map((message) => message.probeId)).toEqual([
@@ -2715,7 +2963,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
 
         if (type === WebAiApiCheckMessageTypes.RunProbe) {
@@ -2738,7 +2986,7 @@ describe("ApiCheckModalHost", () => {
       },
     )
 
-    await startManualProbeSuite(user)
+    await startManualProbeSuite(user, { waitForModelId: "gpt-test-model" })
     await screen.findByRole("button", {
       name: "webAiApiCheck:modal.actions.stopTest",
     })
@@ -2789,7 +3037,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
         if (type === WebAiApiCheckMessageTypes.RunProbe) {
           throw new Error("probe transport failed")
@@ -2809,6 +3057,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -2830,7 +3079,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
         if (type === WebAiApiCheckMessageTypes.RunProbe) {
           return {
@@ -2854,6 +3103,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     await user.click(
       await screen.findByText("webAiApiCheck:modal.actions.test"),
@@ -2879,7 +3129,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
         if (type === WebAiApiCheckMessageTypes.RunProbe) {
           return {
@@ -3032,7 +3282,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
         if (type === WebAiApiCheckMessageTypes.SaveProfile) {
           return {
@@ -3105,7 +3355,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
         if (type === WebAiApiCheckMessageTypes.SaveProfile) {
           throw new Error("save exploded")
@@ -3250,7 +3500,7 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
         if (type === WebAiApiCheckMessageTypes.RunProbe) {
           return { success: false }
@@ -3270,6 +3520,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("gpt-test-model")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -3357,6 +3608,99 @@ describe("ApiCheckModalHost", () => {
         }),
       }),
     )
+  })
+
+  it("shows validation error instead of running a model-required probe without a model", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    await user.type(
+      await screen.findByLabelText("webAiApiCheck:modal.fields.baseUrl"),
+      "https://proxy.example.com/api",
+    )
+    await user.type(
+      screen.getByLabelText("webAiApiCheck:modal.fields.apiKey"),
+      "sk-test-missing-model-fixture",
+    )
+
+    const probeCard = await screen.findByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+
+    expect(
+      await screen.findAllByText(
+        "aiApiVerification:verifyDialog.requiresModelId",
+      ),
+    ).toHaveLength(2)
+    expect(
+      getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
+    ).toHaveLength(0)
+  })
+
+  it("skips model-required probes during run-all until a model is selected", async () => {
+    const user = userEvent.setup()
+    const runProbeMessages: Array<Record<string, unknown>> = []
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          runProbeMessages.push(message)
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 5,
+              summary: "Probe OK",
+            },
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    await user.type(
+      await screen.findByLabelText("webAiApiCheck:modal.fields.baseUrl"),
+      "https://proxy.example.com/api",
+    )
+    await user.type(
+      screen.getByLabelText("webAiApiCheck:modal.fields.apiKey"),
+      "sk-test-run-all-missing-model-fixture",
+    )
+    await user.click(
+      await screen.findByText("webAiApiCheck:modal.actions.test"),
+    )
+
+    await waitFor(() => {
+      expect(runProbeMessages).toEqual([
+        expect.objectContaining({ probeId: "models" }),
+      ])
+    })
+    await waitFor(() => {
+      expect(
+        screen.getAllByText("aiApiVerification:verifyDialog.requiresModelId")
+          .length,
+      ).toBeGreaterThanOrEqual(4)
+    })
   })
 
   it("falls back to local fetch-models error when background returns no message", async () => {
@@ -3570,12 +3914,12 @@ describe("ApiCheckModalHost", () => {
     })
   })
 
-  it("dispatches a completed close event after a probe result succeeds without fetched models", async () => {
+  it("dispatches a completed close event after a probe result succeeds", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
-          return { success: true, modelIds: [] }
+          return { success: true, modelIds: ["gpt-test-model"] }
         }
         if (type === WebAiApiCheckMessageTypes.RunProbe) {
           return {
@@ -3611,6 +3955,11 @@ describe("ApiCheckModalHost", () => {
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+      ).toHaveTextContent("gpt-test-model")
+    })
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),

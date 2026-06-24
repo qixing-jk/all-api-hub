@@ -76,6 +76,7 @@ export function useApiCheckBaseUrlHistory({
     (value: string) => {
       const trimmed = value.trim()
       if (!trimmed) return
+      const historyRequestId = ++historySuggestionsRequestIdRef.current
       const normalized = normalizeOpenAiFamilyBaseUrl(trimmed)
       if (normalized) {
         setBaseUrlHistorySuggestions((current) =>
@@ -99,6 +100,9 @@ export function useApiCheckBaseUrlHistory({
         },
       )
         .then((response) => {
+          if (historyRequestId !== historySuggestionsRequestIdRef.current) {
+            return
+          }
           if (response?.success && Array.isArray(response.suggestions)) {
             setBaseUrlHistorySuggestions(response.suggestions)
           }
@@ -149,6 +153,7 @@ export function useApiCheckBaseUrlHistory({
     (value: string) => {
       const normalized = normalizeOpenAiFamilyBaseUrl(value.trim())
       if (!normalized) return
+      const historyRequestId = ++historySuggestionsRequestIdRef.current
       trackBaseUrlHistoryAction(
         PRODUCT_ANALYTICS_ACTION_IDS.RemoveApiCredentialBaseUrlHistory,
       )
@@ -163,6 +168,9 @@ export function useApiCheckBaseUrlHistory({
         },
       )
         .then((response) => {
+          if (historyRequestId !== historySuggestionsRequestIdRef.current) {
+            return
+          }
           if (response?.success && Array.isArray(response.suggestions)) {
             setBaseUrlHistorySuggestions(response.suggestions)
           }

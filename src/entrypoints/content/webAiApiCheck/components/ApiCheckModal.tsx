@@ -27,7 +27,7 @@ import type {
   ApiCheckModalViewModel,
 } from "./useApiCheckModalViewModel"
 
-type ApiCheckModalProps = {
+interface ApiCheckModalProps {
   t: TFunction<["webAiApiCheck", "common", "aiApiVerification"]>
   view: ApiCheckModalViewModel
   actions: ApiCheckModalActions
@@ -111,10 +111,14 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
           >
             <div className="space-y-4">
               <div className="space-y-2">
-                <div className="text-foreground text-sm font-medium">
+                <label
+                  htmlFor="api-check-source-text"
+                  className="text-foreground block text-sm font-medium"
+                >
                   {t("webAiApiCheck:modal.sourceText.label")}
-                </div>
+                </label>
                 <Textarea
+                  id="api-check-source-text"
                   value={view.sourceText}
                   onChange={(e) => actions.setSourceText(e.target.value)}
                   rows={4}
@@ -124,10 +128,14 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <div className="text-muted-foreground text-xs">
+                  <label
+                    htmlFor="api-check-base-url"
+                    className="text-muted-foreground block text-xs"
+                  >
                     {t("webAiApiCheck:modal.fields.baseUrl")}
-                  </div>
+                  </label>
                   <Input
+                    id="api-check-base-url"
                     value={view.baseUrl}
                     onChange={(e) => actions.updateBaseUrl(e.target.value)}
                     placeholder="https://example.com/api"
@@ -156,10 +164,14 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <div className="text-muted-foreground text-xs">
+                  <label
+                    htmlFor="api-check-api-key"
+                    className="text-muted-foreground block text-xs"
+                  >
                     {t("webAiApiCheck:modal.fields.apiKey")}
-                  </div>
+                  </label>
                   <Input
+                    id="api-check-api-key"
                     type="password"
                     revealable
                     revealed={view.apiKeyVisible}
@@ -184,10 +196,14 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <div className="text-muted-foreground text-xs">
+                  <label
+                    htmlFor="api-check-api-type"
+                    className="text-muted-foreground block text-xs"
+                  >
                     {t("webAiApiCheck:modal.fields.apiType")}
-                  </div>
+                  </label>
                   <select
+                    id="api-check-api-type"
                     className={cn(inputVariants({}), "dark:bg-input/30 h-9")}
                     value={view.apiType}
                     onChange={(e) =>
@@ -206,11 +222,15 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <div className="text-muted-foreground text-xs">
+                  <label
+                    htmlFor="api-check-model-id"
+                    className="text-muted-foreground block text-xs"
+                  >
                     {t("webAiApiCheck:modal.fields.modelId")}
-                  </div>
+                  </label>
 
                   <SearchableSelect
+                    id="api-check-model-id"
                     aria-label={t("webAiApiCheck:modal.fields.modelId")}
                     data-testid={WEB_AI_API_CHECK_TEST_IDS.modelId}
                     options={view.modelIdsOptions}
