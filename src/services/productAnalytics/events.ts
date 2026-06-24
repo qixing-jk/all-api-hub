@@ -566,6 +566,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   ViewManagedSiteChannel: "view_managed_site_channel",
   VerifyApiCredential: "verify_api_credential",
   VerifyApiCredentialCliSupport: "verify_api_credential_cli_support",
+  VerifyAccountTokenApi: "verify_account_token_api",
+  VerifyAccountTokenCliSupport: "verify_account_token_cli_support",
   VerifyWebDavConnection: "verify_webdav_connection",
   VerifyModelApi: "verify_model_api",
   VerifyModelCliSupport: "verify_model_cli_support",

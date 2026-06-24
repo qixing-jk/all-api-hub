@@ -23,7 +23,9 @@
     "saveToApiProfiles": "保存到 API 凭据库",
     "saveToApiProfilesHint": "将此密钥保存到 API 凭据库，用于快速复制、验证和导出。",
     "showKey": "显示密钥",
-    "useInCherry": "在 Cherry Studio 中使用"
+    "useInCherry": "在 Cherry Studio 中使用",
+    "verifyApi": "验证接口",
+    "verifyCliSupport": "验证 CLI 兼容性"
   },
   "allAccounts": "所有账号",
   "allAccountsFailed": "{{count}} 个失败",

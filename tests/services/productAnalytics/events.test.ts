@@ -130,6 +130,8 @@ describe("product analytics event enums", () => {
         "save_account_token_to_api_credential_profile",
       SaveAccountTokensToApiCredentialProfiles:
         "save_account_tokens_to_api_credential_profiles",
+      VerifyAccountTokenApi: "verify_account_token_api",
+      VerifyAccountTokenCliSupport: "verify_account_token_cli_support",
       RefreshManagedSiteTokenStatus: "refresh_managed_site_token_status",
       RetryManagedSiteTokenVerification:
         "retry_managed_site_token_verification",

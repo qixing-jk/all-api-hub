@@ -23,7 +23,9 @@
     "saveToApiProfiles": "Lưu vào Hồ sơ API",
     "saveToApiProfilesHint": "Lưu khóa này vào thư viện thông tin xác thực API để sao chép, xác minh và xuất nhanh.",
     "showKey": "Hiển thị khóa",
-    "useInCherry": "Sử dụng trong Cherry Studio"
+    "useInCherry": "Sử dụng trong Cherry Studio",
+    "verifyApi": "Xác minh API",
+    "verifyCliSupport": "Xác minh tính tương thích CLI"
   },
   "allAccounts": "Tất cả tài khoản",
   "allAccountsFailed_other": "{{count}} thất bại",

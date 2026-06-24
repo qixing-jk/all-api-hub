@@ -2,6 +2,11 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  AIHUBMIX_API_ORIGIN,
+  AIHUBMIX_WEB_ORIGIN,
+  SITE_TYPES,
+} from "~/constants/siteType"
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import {
@@ -31,6 +36,8 @@ const {
   resolveDisplayAccountTokenForSecretMock,
   showResultToastMock,
   startProductAnalyticsActionMock,
+  verifyCliDialogRenderMock,
+  verifyDialogRenderMock,
 } = vi.hoisted(() => ({
   completeProductAnalyticsActionMock: vi.fn(),
   createProfileMock: vi.fn(),
@@ -39,6 +46,8 @@ const {
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
   showResultToastMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
+  verifyCliDialogRenderMock: vi.fn(),
+  verifyDialogRenderMock: vi.fn(),
 }))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
@@ -67,6 +76,23 @@ vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
 vi.mock("~/components/CliProxyExportDialog", () => ({
   CliProxyExportDialog: () => null,
 }))
+
+vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
+  VerifyCliSupportDialog: (props: unknown) => {
+    verifyCliDialogRenderMock(props)
+    return null
+  },
+}))
+
+vi.mock(
+  "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog",
+  () => ({
+    VerifyApiCredentialProfileDialog: (props: unknown) => {
+      verifyDialogRenderMock(props)
+      return null
+    },
+  }),
+)
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
   resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
@@ -146,6 +172,8 @@ describe("TokenHeader analytics", () => {
     resolveDisplayAccountTokenForSecretMock.mockReset()
     showResultToastMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
+    verifyCliDialogRenderMock.mockReset()
+    verifyDialogRenderMock.mockReset()
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
@@ -235,6 +263,220 @@ describe("TokenHeader analytics", () => {
     expect(
       JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
     ).not.toContain("secret resolution exposed")
+  })
+
+  it("tracks opening token API verification without exposing the resolved secret", async () => {
+    const resolvedSecret = "sk-sensitive-verify"
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
+      createToken({ id: 1, key: resolvedSecret }),
+    )
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.verifyApi",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenCalledTimes(1)
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenApi,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+    })
+    expect(
+      JSON.stringify(startProductAnalyticsActionMock.mock.calls),
+    ).not.toContain("sk-sensitive")
+    expect(
+      JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
+    ).not.toContain(resolvedSecret)
+  })
+
+  it("opens token API verification with a transient normalized profile", async () => {
+    const resolvedSecret = "sk-aihubmix-resolved"
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
+      createToken({ id: 8, key: resolvedSecret }),
+    )
+
+    const user = userEvent.setup()
+    renderTokenHeader({
+      account: createAccount({
+        id: "aihubmix-account",
+        name: "AIHubMix Account",
+        siteType: SITE_TYPES.AIHUBMIX,
+        baseUrl: AIHUBMIX_WEB_ORIGIN,
+        tagIds: ["tag-a"],
+      }),
+      token: createToken({
+        id: 8,
+        name: "Model Key",
+        accountId: "aihubmix-account",
+        accountName: "AIHubMix Account",
+        key: "masked-key",
+      }),
+    })
+
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
+    )
+
+    await waitFor(() => {
+      expect(verifyDialogRenderMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          profile: expect.objectContaining({
+            id: "account-token:aihubmix-account:8",
+            name: "AIHubMix Account - Model Key",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: AIHUBMIX_API_ORIGIN,
+            apiKey: resolvedSecret,
+            tagIds: ["tag-a"],
+            notes: "",
+          }),
+        }),
+      )
+    })
+  })
+
+  it("tracks token API verification open as sanitized unknown failure when secret resolution fails", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+      new Error("verification exposed sk-sensitive-verify"),
+    )
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.verifyApi",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(verifyDialogRenderMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+        }),
+      )
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:errors.operation.failed",
+      })
+    })
+    expect(
+      JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
+    ).not.toContain("sk-sensitive")
+    expect(
+      JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
+    ).not.toContain("verification exposed")
+  })
+
+  it("opens token CLI support verification with a transient normalized profile", async () => {
+    const resolvedSecret = "sk-cli-resolved"
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
+      createToken({ id: 9, key: resolvedSecret }),
+    )
+
+    const user = userEvent.setup()
+    renderTokenHeader({
+      account: createAccount({
+        id: "cli-account",
+        name: "CLI Account",
+        baseUrl: "https://cli.example/v1",
+        tagIds: ["tag-cli"],
+      }),
+      token: createToken({
+        id: 9,
+        name: "CLI Key",
+        accountId: "cli-account",
+        accountName: "CLI Account",
+        key: "masked-key",
+      }),
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.verifyCliSupport",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(verifyCliDialogRenderMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          profile: expect.objectContaining({
+            id: "account-token:cli-account:9",
+            name: "CLI Account - CLI Key",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://cli.example/v1",
+            apiKey: resolvedSecret,
+            tagIds: ["tag-cli"],
+            notes: "",
+          }),
+        }),
+      )
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenCliSupport,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+    })
+    expect(
+      JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
+    ).not.toContain(resolvedSecret)
+  })
+
+  it("tracks token CLI support verification open as sanitized unknown failure when secret resolution fails", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+      new Error("cli verification exposed sk-sensitive-cli"),
+    )
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.verifyCliSupport",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(verifyCliDialogRenderMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+        }),
+      )
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:errors.operation.failed",
+      })
+    })
+    expect(
+      JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
+    ).not.toContain("sk-sensitive-cli")
+    expect(
+      JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
+    ).not.toContain("cli verification exposed")
   })
 
   it("tracks managed-site token verification retry as sanitized success after callback completion", async () => {

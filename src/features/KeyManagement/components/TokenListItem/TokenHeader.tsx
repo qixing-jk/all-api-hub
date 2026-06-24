@@ -1,7 +1,9 @@
 import {
   ArrowPathIcon,
+  CommandLineIcon,
   PencilIcon,
   TrashIcon,
+  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import { Copy } from "lucide-react"
@@ -12,6 +14,7 @@ import { useTranslation } from "react-i18next"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
@@ -40,6 +43,7 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { buildApiCredentialProfileName } from "~/features/KeyManagement/utils/apiCredentialProfileName"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
@@ -70,6 +74,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, DisplaySiteData } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
@@ -271,8 +276,35 @@ function TokenActionButtons({
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
+  const [verifyingProfile, setVerifyingProfile] =
+    useState<ApiCredentialProfile | null>(null)
+  const [cliVerifyingProfile, setCliVerifyingProfile] =
+    useState<ApiCredentialProfile | null>(null)
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
+  const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
+
+  const buildTransientProfile = (resolvedToken: AccountToken) => {
+    const now = Date.now()
+    return {
+      id: `account-token:${account.id}:${token.id}`,
+      name: buildApiCredentialProfileName({
+        accountName: account.name,
+        fallbackAccountName: token.accountName,
+        tokenName: token.name,
+      }),
+      apiType,
+      baseUrl: normalizeAccountSiteUrlForManagedChannel({
+        siteType: account.siteType,
+        url: account.baseUrl,
+      }),
+      apiKey: resolvedToken.key,
+      tagIds: account.tagIds ?? [],
+      notes: "",
+      createdAt: now,
+      updatedAt: now,
+    } satisfies ApiCredentialProfile
+  }
 
   const handleImportToManagedSite = async () => {
     const tracker = startProductAnalyticsAction({
@@ -385,7 +417,6 @@ function TokenActionButtons({
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
     const profileName = buildApiCredentialProfileName({
       accountName: account.name,
       fallbackAccountName: token.accountName,
@@ -448,6 +479,80 @@ function TokenActionButtons({
     }
   }
 
+  const handleVerifyApi = async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenApi,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    let resolvedToken = token
+
+    try {
+      resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
+      setVerifyingProfile(buildTransientProfile(resolvedToken))
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+    } catch (error) {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+      logger.error("Failed to open token API verification", {
+        message: toSanitizedErrorSummary(
+          error,
+          [
+            token.key,
+            resolvedToken.key,
+            account.token,
+            account.cookieAuthSessionCookie,
+          ].filter(Boolean) as string[],
+        ),
+      })
+      showResultToast({
+        success: false,
+        message: t("messages:errors.operation.failed", {
+          error: getErrorMessage(error),
+        }),
+      })
+    }
+  }
+
+  const handleVerifyCliSupport = async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenCliSupport,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    let resolvedToken = token
+
+    try {
+      resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
+      setCliVerifyingProfile(buildTransientProfile(resolvedToken))
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+    } catch (error) {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+      logger.error("Failed to open token CLI support verification", {
+        message: toSanitizedErrorSummary(
+          error,
+          [
+            token.key,
+            resolvedToken.key,
+            account.token,
+            account.cookieAuthSessionCookie,
+          ].filter(Boolean) as string[],
+        ),
+      })
+      showResultToast({
+        success: false,
+        message: t("messages:errors.operation.failed", {
+          error: getErrorMessage(error),
+        }),
+      })
+    }
+  }
+
   return (
     <div
       data-testid={KEY_MANAGEMENT_TEST_IDS.tokenRowActions}
@@ -473,6 +578,18 @@ function TokenActionButtons({
         account={account}
         token={token}
       />
+      <VerifyApiCredentialProfileDialog
+        isOpen={Boolean(verifyingProfile)}
+        onClose={() => setVerifyingProfile(null)}
+        profile={verifyingProfile}
+      />
+      {cliVerifyingProfile ? (
+        <VerifyCliSupportDialog
+          isOpen={true}
+          onClose={() => setCliVerifyingProfile(null)}
+          profile={cliVerifyingProfile}
+        />
+      ) : null}
       <IconButton
         aria-label={t("common:actions.copyKey")}
         size="sm"
@@ -493,6 +610,24 @@ function TokenActionButtons({
           <ApiCredentialLibraryIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
         </IconButton>
       </Tooltip>
+      <IconButton
+        aria-label={t("keyManagement:actions.verifyApi")}
+        size="sm"
+        variant="ghost"
+        data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton}
+        onClick={() => void handleVerifyApi()}
+      >
+        <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+      </IconButton>
+      <IconButton
+        aria-label={t("keyManagement:actions.verifyCliSupport")}
+        size="sm"
+        variant="ghost"
+        data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton}
+        onClick={() => void handleVerifyCliSupport()}
+      >
+        <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+      </IconButton>
       <IconButton
         aria-label={t("actions.useInCherry")}
         size="sm"

@@ -23,7 +23,9 @@
     "saveToApiProfiles": "API 認証情報庫に保存",
     "saveToApiProfilesHint": "このキーを API 認証情報庫に保存し、コピー、検証、エクスポートに再利用できます。",
     "showKey": "キーを表示",
-    "useInCherry": "Cherry Studio で使う"
+    "useInCherry": "Cherry Studio で使う",
+    "verifyApi": "API を検証",
+    "verifyCliSupport": "CLI 対応を検証"
   },
   "allAccounts": "すべてのアカウント",
   "allAccountsFailed_other": "{{count}} 件失敗",
