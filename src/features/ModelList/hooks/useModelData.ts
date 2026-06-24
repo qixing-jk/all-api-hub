@@ -897,10 +897,6 @@ function useSingleAccountModelData(params: {
         return
       }
 
-      if (!isActiveFallbackCatalogRequest(requestScopeKey, requestId)) {
-        return
-      }
-
       const errorMessage = getErrorMessage(error)
       const sanitizedMessage =
         errorMessage && errorMessage !== ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED

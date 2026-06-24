@@ -266,6 +266,31 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     expect(result.data.map((item) => item.model_name)).toEqual(["gpt-4o-mini"])
   })
 
+  it("preserves caller aborts from upstream model lookup even when declared models exist", async () => {
+    const abortController = new AbortController()
+    const abortError = new DOMException("Aborted", "AbortError")
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
+      ...TOKEN,
+      key: "sk-real-secret",
+      models: "gpt-4o-mini",
+    })
+    fetchOpenAICompatibleModelIdsMock.mockImplementationOnce(() => {
+      abortController.abort(abortError)
+      return Promise.reject(abortError)
+    })
+
+    await expect(
+      loadAccountTokenFallbackPricingResponse({
+        account: ACCOUNT,
+        token: {
+          ...TOKEN,
+          models: "gpt-4o-mini",
+        },
+        abortSignal: abortController.signal,
+      }),
+    ).rejects.toBe(abortError)
+  })
+
   it("loads AIHubMix account-key fallback models without revealing masked keys", async () => {
     const aihubmixPricing: PricingResponse = {
       success: true,

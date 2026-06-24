@@ -150,7 +150,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
         <CardContent padding="sm">
           <Body>{message}</Body>
           {codes.length > 1 && (
-            <div className="mt-2 flex items-center gap-2">
+            <label className="mt-2 flex items-center gap-2">
               <input
                 ref={selectAllRef}
                 type="checkbox"
@@ -161,7 +161,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
               <span className="text-foreground text-xs">
                 {t("redemptionAssist:messages.selectAll")}
               </span>
-            </div>
+            </label>
           )}
           {codes.length > 0 && (
             <div className="mt-2 max-h-44 space-y-1 overflow-y-auto pr-1">

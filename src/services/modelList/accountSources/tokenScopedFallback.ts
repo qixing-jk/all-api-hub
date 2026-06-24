@@ -171,6 +171,10 @@ export async function loadAccountTokenFallbackPricingResponse(
         abortSignal: params.abortSignal,
       })
     } catch (error) {
+      if (isAbortError(error, params.abortSignal)) {
+        throw error
+      }
+
       if (declaredModelIds.length === 0) {
         throw error
       }
