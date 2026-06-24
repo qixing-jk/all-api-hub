@@ -6,8 +6,10 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   clearHighlightSearchParam,
   highlightSearchTarget,
+  navigateFromSearchItem,
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
 } from "~/entrypoints/options/search/navigation"
+import type { OptionsSearchItem } from "~/entrypoints/options/search/types"
 import { replaceWithinOptionsPage } from "~/utils/navigation"
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
@@ -60,6 +62,29 @@ describe("options search navigation helpers", () => {
         anchor: "x",
       },
     )
+  })
+
+  it("navigates non-basic control results with anchor and highlight params", () => {
+    const onPageNavigate = vi.fn()
+    const item: OptionsSearchItem = {
+      id: "control:import-export-webdav-url",
+      kind: "control",
+      pageId: MENU_ITEM_IDS.IMPORT_EXPORT,
+      targetId: "webdav-url",
+      title: "importExport:webdav.webdavUrl",
+      titleKey: "importExport:webdav.webdavUrl",
+      breadcrumbs: [],
+      breadcrumbsKeys: [],
+      keywords: [],
+      order: 1,
+    }
+
+    navigateFromSearchItem(item, onPageNavigate)
+
+    expect(onPageNavigate).toHaveBeenCalledWith(MENU_ITEM_IDS.IMPORT_EXPORT, {
+      anchor: "webdav-url",
+      highlight: "webdav-url",
+    })
   })
 
   it("returns false when the highlight target does not exist", () => {

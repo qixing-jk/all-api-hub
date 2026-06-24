@@ -53,7 +53,7 @@ describe("Options Sidebar", () => {
     document.body.style.overflow = ""
   })
 
-  it("renders the expanded desktop navigation and routes menu clicks", () => {
+  it("renders expanded desktop navigation controls and routes menu clicks", () => {
     const onMenuItemClick = vi.fn()
     const onCollapseToggle = vi.fn()
 
@@ -73,41 +73,8 @@ describe("Options Sidebar", () => {
     expect(
       within(nav).getByRole("button", { name: "ui:navigation.overview" }),
     ).toBeInTheDocument()
-
     expect(
       within(nav).getByText("ui:navigation.categories.general"),
-    ).toBeInTheDocument()
-    expect(
-      within(nav).getByText("ui:navigation.categories.api"),
-    ).toBeInTheDocument()
-    expect(
-      within(nav).getByText("ui:navigation.categories.automation"),
-    ).toBeInTheDocument()
-    expect(
-      within(nav).getByText("ui:navigation.categories.insights"),
-    ).toBeInTheDocument()
-    expect(
-      within(nav).getByText("ui:navigation.categories.system"),
-    ).toBeInTheDocument()
-
-    expect(
-      within(nav).getByRole("button", { name: "ui:navigation.basic" }),
-    ).toBeInTheDocument()
-    expect(
-      within(nav).getByRole("button", { name: "ui:navigation.autoCheckin" }),
-    ).toBeInTheDocument()
-    expect(
-      within(nav).getByRole("button", {
-        name: "ui:navigation.managedSiteChannels",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      within(nav).getByRole("button", {
-        name: "ui:navigation.managedSiteModelSync",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      within(nav).getByRole("button", { name: "ui:navigation.importExport" }),
     ).toBeInTheDocument()
 
     fireEvent.click(

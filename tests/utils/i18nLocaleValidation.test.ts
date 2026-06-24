@@ -262,6 +262,22 @@ function jsxElementUsesPluralCount(
   return false
 }
 
+/**
+ * Avoids building a TypeScript AST for files that cannot contain a static
+ * translation reference recognized by this validator.
+ */
+function mayContainStaticTranslationReference(sourceText: string) {
+  return (
+    sourceText.includes("useTranslation") ||
+    sourceText.includes("react-i18next") ||
+    sourceText.includes("~/utils/i18n/core") ||
+    sourceText.includes('from "i18next"') ||
+    sourceText.includes("from 'i18next'") ||
+    sourceText.includes(".t(") ||
+    sourceText.includes("i18nKey")
+  )
+}
+
 describe("i18n locale validation", () => {
   it("keeps locale namespaces and normalized key families aligned", async () => {
     const [baseLanguage, ...otherLanguages] = SUPPORTED_UI_LANGUAGES
@@ -297,6 +313,8 @@ describe("i18n locale validation", () => {
 
     for (const file of sourceFiles) {
       const sourceText = await fs.readFile(file, "utf8")
+      if (!mayContainStaticTranslationReference(sourceText)) continue
+
       const sourceFile = ts.createSourceFile(
         file,
         sourceText,

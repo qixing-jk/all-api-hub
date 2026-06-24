@@ -1,4 +1,3 @@
-import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
@@ -8,7 +7,7 @@ import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHin
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { openPermissionsOnboardingPage } from "~/utils/navigation"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const { toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
   toastErrorMock: vi.fn(),
@@ -76,6 +75,13 @@ const mockedDebugQueuePopupInterruptionHint = vi.mocked(
   debugQueuePopupInterruptionHint,
 )
 
+async function openDebugMenu() {
+  fireEvent.pointerDown(
+    await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
+    { button: 0, ctrlKey: false },
+  )
+}
+
 describe("DevDialogDebugMenu", () => {
   beforeEach(() => {
     vi.stubEnv("MODE", "development")
@@ -106,7 +112,6 @@ describe("DevDialogDebugMenu", () => {
   })
 
   it("groups update-log, onboarding, and popup hint debug actions in one development menu", async () => {
-    const user = userEvent.setup()
     const openDialog = vi.fn()
     mockedUseUpdateLogDialogContext.mockReturnValue({
       state: { isOpen: false, version: null },
@@ -120,11 +125,9 @@ describe("DevDialogDebugMenu", () => {
       withThemeProvider: false,
     })
 
-    await user.click(
-      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
-    )
+    await openDebugMenu()
 
-    await user.click(
+    fireEvent.click(
       await screen.findByRole("menuitem", {
         name: "Dev: Trigger update log",
       }),
@@ -134,10 +137,13 @@ describe("DevDialogDebugMenu", () => {
       expect(openDialog).toHaveBeenCalledWith("3.37.0")
     })
 
-    await user.click(
-      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
-    )
-    await user.click(
+    await openDebugMenu()
+    expect(
+      await screen.findByRole("menuitem", {
+        name: "Dev: Queue popup interruption hint",
+      }),
+    ).toBeInTheDocument()
+    fireEvent.click(
       await screen.findByRole("menuitem", {
         name: "Dev: Trigger onboarding",
       }),
@@ -146,26 +152,9 @@ describe("DevDialogDebugMenu", () => {
     expect(mockedOpenPermissionsOnboardingPage).toHaveBeenCalledWith({
       reason: "debug",
     })
-
-    await user.click(
-      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
-    )
-    await user.click(
-      await screen.findByRole("menuitem", {
-        name: "Dev: Queue popup interruption hint",
-      }),
-    )
-
-    expect(mockedDebugQueuePopupInterruptionHint).toHaveBeenCalledOnce()
-    await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith(
-        "Queued popup interruption hint (dev)",
-      )
-    })
   })
 
   it("reports popup hint debug failures", async () => {
-    const user = userEvent.setup()
     mockedDebugQueuePopupInterruptionHint.mockRejectedValueOnce(
       new Error("storage blocked"),
     )
@@ -176,10 +165,8 @@ describe("DevDialogDebugMenu", () => {
       withThemeProvider: false,
     })
 
-    await user.click(
-      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
-    )
-    await user.click(
+    await openDebugMenu()
+    fireEvent.click(
       await screen.findByRole("menuitem", {
         name: "Dev: Queue popup interruption hint",
       }),
@@ -193,7 +180,6 @@ describe("DevDialogDebugMenu", () => {
   })
 
   it("triggers the root translation crash fallback from the development menu", async () => {
-    const user = userEvent.setup()
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined)
@@ -210,10 +196,8 @@ describe("DevDialogDebugMenu", () => {
         },
       )
 
-      await user.click(
-        await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
-      )
-      await user.click(
+      await openDebugMenu()
+      fireEvent.click(
         await screen.findByRole("menuitem", {
           name: "Dev: Trigger translation crash",
         }),

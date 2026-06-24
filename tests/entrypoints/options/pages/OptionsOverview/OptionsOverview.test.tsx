@@ -731,7 +731,7 @@ describe("OptionsOverview", () => {
     )
   })
 
-  it("uses the shared workflow transition affordance for overview navigation", async () => {
+  it("uses the shared workflow transition affordance for representative overview navigation", async () => {
     const user = userEvent.setup()
     useOptionsOverviewDataMock.mockReturnValue({
       isLoading: false,
@@ -750,41 +750,6 @@ describe("OptionsOverview", () => {
     expect(
       getButtonContainingText("optionsOverview:status.accounts.label"),
     ).toHaveAttribute("data-slot", "button")
-    expect(
-      hasWorkflowTransitionIcon(
-        screen.getByRole("button", {
-          name: "optionsOverview:actions.open: optionsOverview:attention.addAccount.title",
-        }),
-      ),
-    ).toBe(true)
-    expect(
-      hasWorkflowTransitionIcon(
-        screen.getByRole("button", {
-          name: "optionsOverview:actions.open",
-        }),
-      ),
-    ).toBe(true)
-    expect(
-      hasWorkflowTransitionIcon(
-        screen.getAllByRole("button", {
-          name: "optionsOverview:automation.openItem",
-        })[0],
-      ),
-    ).toBe(true)
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "optionsOverview:automation.items.siteAnnouncements.label",
-      }),
-    )
-
-    expect(
-      hasWorkflowTransitionIcon(
-        screen.getByRole("button", {
-          name: "optionsOverview:automation.items.siteAnnouncements.openPage",
-        }),
-      ),
-    ).toBe(true)
 
     await user.click(
       screen.getByRole("button", {

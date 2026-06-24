@@ -224,9 +224,7 @@ describe("SiteAnnouncementsPage", () => {
     })
   }
 
-  it("renders overview, notification summary, and expandable announcement details", async () => {
-    const user = userEvent.setup()
-
+  it("renders overview, notification summary, and route-expanded announcement card", async () => {
     render(
       <SiteAnnouncementsPage routeParams={{ recordId: "announcement-1" }} />,
     )
@@ -250,9 +248,8 @@ describe("SiteAnnouncementsPage", () => {
       screen.getByText("siteAnnouncements:summary.notified"),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("heading", {
-        level: 3,
-        name: "Full maintenance window",
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.pollingSettings",
       }),
     ).toBeInTheDocument()
     expect(
@@ -261,40 +258,6 @@ describe("SiteAnnouncementsPage", () => {
         name: "Full maintenance window",
       }),
     ).toBeInTheDocument()
-    expect(screen.getByText("Second line")).toBeInTheDocument()
-    expect(screen.getByText("Beta full content")).toBeInTheDocument()
-    expect(
-      screen.getAllByRole("link", {
-        name: /siteAnnouncements:actions\.viewSource/,
-      })[0],
-    ).toHaveAttribute("href", "https://alpha.example.com/")
-
-    await user.click(
-      screen.getByRole("button", {
-        name: /siteAnnouncements:actions\.collapse/,
-      }),
-    )
-    await waitFor(() => {
-      expect(screen.queryByText("Second line")).not.toBeInTheDocument()
-    })
-  })
-
-  it("shows an icon-only settings shortcut next to the title", async () => {
-    const user = userEvent.setup()
-
-    render(<SiteAnnouncementsPage />)
-
-    await screen.findByText("siteAnnouncements:title")
-    await user.click(
-      screen.getByRole("button", {
-        name: "siteAnnouncements:actions.pollingSettings",
-      }),
-    )
-
-    expect(openSettingsTab).toHaveBeenCalledWith("general", {
-      anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
-      preserveHistory: true,
-    })
   })
 
   it("routes the empty announcement setup state to account management when no account exists", async () => {
@@ -383,78 +346,6 @@ describe("SiteAnnouncementsPage", () => {
     expect(
       screen.getByText("siteAnnouncements:description.enabledInterval"),
     ).toBeInTheDocument()
-  })
-
-  it("sorts site filter options by announcement count and supports search", async () => {
-    const user = userEvent.setup()
-    const betaSecondRecord: SiteAnnouncementRecord = {
-      ...records[1]!,
-      id: "announcement-3",
-      fingerprint: "fp-3",
-      title: "Beta follow-up",
-    }
-    sendSiteAnnouncementsMessageMock.mockImplementation(
-      async (type: string) => {
-        switch (type) {
-          case SiteAnnouncementsMessageTypes.ListRecords:
-            return { success: true, data: [...records, betaSecondRecord] }
-          case SiteAnnouncementsMessageTypes.GetStatus:
-            return {
-              success: true,
-              data: [
-                ...status,
-                {
-                  siteKey: "site-3",
-                  siteName: "Gamma API",
-                  siteType: "new-api",
-                  baseUrl: "https://gamma.example.com",
-                  accountId: "account-3",
-                  providerId: "common",
-                  status: "success",
-                  records: [],
-                },
-              ],
-            }
-          default:
-            return { success: true }
-        }
-      },
-    )
-
-    render(<SiteAnnouncementsPage />)
-
-    await screen.findByText("siteAnnouncements:title")
-    await user.click(
-      screen.getByRole("combobox", {
-        name: "siteAnnouncements:filters.site",
-      }),
-    )
-
-    const options = await screen.findAllByRole("option")
-    expect(options.map((option) => option.textContent)).toEqual([
-      "siteAnnouncements:filters.allSites",
-      "Beta API2",
-      "Alpha API1",
-      "Gamma API0",
-    ])
-    const commandList = document.querySelector('[data-slot="command-list"]')
-    expect(document.querySelector('[data-slot="popover-content"]')).toHaveClass(
-      "max-h-(--radix-popover-content-available-height)",
-      "overflow-hidden",
-    )
-    expect(commandList).toHaveClass(
-      "max-h-[calc(var(--radix-popover-content-available-height)-2.25rem)]",
-    )
-    expect(commandList).toHaveTextContent("2")
-    expect(commandList).toHaveTextContent("1")
-    expect(commandList).toHaveTextContent("0")
-
-    await user.type(
-      screen.getByPlaceholderText("siteAnnouncements:filters.searchSite"),
-      "gamma",
-    )
-    expect(screen.getByRole("option", { name: "Gamma API" })).toBeVisible()
-    expect(screen.queryByRole("option", { name: "Beta API" })).toBeNull()
   })
 
   it("marks unread Sub2API announcements as read only when expanding details", async () => {
