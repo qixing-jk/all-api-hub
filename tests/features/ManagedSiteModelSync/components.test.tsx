@@ -3,6 +3,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
@@ -294,6 +295,36 @@ describe("ManagedSiteModelSync components", () => {
     expect(onKeywordChange).toHaveBeenCalledWith("")
   })
 
+  it("exposes status filter pressed state", () => {
+    render(
+      <FilterBar
+        status="failed"
+        statistics={{
+          total: 3,
+          successCount: 2,
+          failureCount: 1,
+          durationMs: 1000,
+          startedAt: 0,
+          endedAt: 1000,
+        }}
+        keyword=""
+        onStatusChange={vi.fn()}
+        onKeywordChange={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: /managedSiteModelSync:execution.filters.all/,
+      }),
+    ).toHaveAttribute("aria-pressed", "false")
+    expect(
+      screen.getByRole("button", {
+        name: /managedSiteModelSync:execution.filters.failed/,
+      }),
+    ).toHaveAttribute("aria-pressed", "true")
+  })
+
   it("renders results and empty states across branches", async () => {
     const onSelectAll = vi.fn()
     const onSelectItem = vi.fn()
@@ -328,9 +359,13 @@ describe("ManagedSiteModelSync components", () => {
       />,
     )
 
-    const [selectAllCheckbox, firstRowCheckbox] = screen.getAllByRole(
-      "checkbox",
-    ) as HTMLInputElement[]
+    const selectAllCheckbox = screen.getByRole("checkbox", {
+      name: "managedSiteModelSync:execution.table.selectAllChannels",
+    }) as HTMLInputElement
+    const alphaRow = screen.getByRole("row", { name: /Alpha#11/ })
+    const firstRowCheckbox = within(alphaRow).getByRole("checkbox", {
+      name: "managedSiteModelSync:execution.table.selectChannel",
+    }) as HTMLInputElement
 
     expect(selectAllCheckbox).not.toBeChecked()
     expect(selectAllCheckbox.indeterminate).toBe(true)

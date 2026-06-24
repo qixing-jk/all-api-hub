@@ -227,6 +227,7 @@ describe("RepairMissingKeysResultsPanel", () => {
     )
     expect(onSearchTermChange).toHaveBeenLastCalledWith("")
     expect(searchInput).toHaveValue("")
+    expect(searchInput).toHaveFocus()
   })
 
   it("routes invalid-key view selection and delete actions", async () => {

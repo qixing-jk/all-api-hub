@@ -38,6 +38,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 import toast from "react-hot-toast"
@@ -271,6 +272,7 @@ export default function ManagedSiteChannels({
   const [migrationChannels, setMigrationChannels] = useState<ChannelRow[]>([])
   const [isMigrationDialogOpen, setIsMigrationDialogOpen] = useState(false)
   const [isMigrationMode, setIsMigrationMode] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const verification = useNewApiManagedVerification()
   const { openNewApiManagedVerification } = verification
 
@@ -1279,6 +1281,7 @@ export default function ManagedSiteChannels({
           <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
             <div className="relative w-full md:max-w-sm">
               <Input
+                ref={searchInputRef}
                 value={searchValue}
                 onChange={(event) => handleSearchChange(event.target.value)}
                 placeholder={t("toolbar.searchPlaceholder")}
@@ -1290,7 +1293,10 @@ export default function ManagedSiteChannels({
                   type="button"
                   aria-label={t("toolbar.clearSearch")}
                   className="text-muted-foreground/80 absolute top-1/2 right-2 -translate-y-1/2"
-                  onClick={() => handleSearchChange("")}
+                  onClick={() => {
+                    handleSearchChange("")
+                    searchInputRef.current?.focus()
+                  }}
                 >
                   <CircleX className="h-4 w-4" />
                 </button>

@@ -921,10 +921,10 @@ describe("VerifyApiDialog", () => {
         receivedSignal = request.abortSignal
         if (!request.abortSignal) return Promise.resolve(token.key)
 
-        return new Promise<string>((_resolve, reject) => {
+        return new Promise<string>((resolve) => {
           request.abortSignal?.addEventListener(
             "abort",
-            () => reject(new DOMException("Aborted", "AbortError")),
+            () => resolve(token.key),
             { once: true },
           )
         })
@@ -986,6 +986,13 @@ describe("VerifyApiDialog", () => {
 
     await waitFor(() => {
       expect(receivedSignal?.aborted).toBe(true)
+    })
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("verify-probe-models")).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.actions.retry",
+        }),
+      ).toBeInTheDocument()
     })
     expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
   })

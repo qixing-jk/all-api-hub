@@ -322,7 +322,20 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           accountToken,
           { abortSignal },
         )
-        if (abortSignal?.aborted || shouldStopRef.current) return null
+        if (abortSignal?.aborted || shouldStopRef.current) {
+          setTools((prev) =>
+            prev.map((t) =>
+              t.toolId === toolId
+                ? {
+                    ...t,
+                    isRunning: false,
+                    result: buildStoppedToolResult(toolId),
+                  }
+                : t,
+            ),
+          )
+          return null
+        }
         resolvedApiKey = resolvedToken.key
         if (accountToken.key) {
           secretsToRedact.add(accountToken.key)

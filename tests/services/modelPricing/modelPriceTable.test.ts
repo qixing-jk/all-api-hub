@@ -117,9 +117,9 @@ describe("loadModelPriceTable", () => {
     )
 
     const loading = loadModelPriceTable(abortController.signal)
-    const loadingExpectation = expect(loading).rejects.toThrow(
-      "Failed to load LiteLLM price table",
-    )
+    const loadingExpectation = expect(loading).rejects.toMatchObject({
+      name: "AbortError",
+    })
 
     abortController.abort()
 

@@ -740,6 +740,65 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     expect(message.length).toBeGreaterThan(0)
   })
 
+  it("passes abort signals through direct pricing fallback requests", async () => {
+    const abortController = new AbortController()
+    const fetchPricingMock = vi.fn().mockResolvedValue({
+      data: [],
+      group_ratio: {},
+      success: true,
+      usable_group: {},
+    })
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.AIHUBMIX,
+      modelPricing: {
+        fetchPricing: fetchPricingMock,
+      },
+    })
+
+    await loadAccountTokenFallbackPricingResponse({
+      account: {
+        ...ACCOUNT,
+        siteType: SITE_TYPES.AIHUBMIX,
+      },
+      token: {
+        ...TOKEN,
+        models: "",
+      },
+      abortSignal: abortController.signal,
+    })
+
+    expect(fetchPricingMock).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: abortController.signal }),
+    )
+  })
+
+  it("preserves caller aborts from direct pricing fallback requests", async () => {
+    const abortController = new AbortController()
+    abortController.abort(new DOMException("Aborted", "AbortError"))
+    const abortError = new DOMException("Aborted", "AbortError")
+    const fetchPricingMock = vi.fn().mockRejectedValueOnce(abortError)
+    getSiteAdapterMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.AIHUBMIX,
+      modelPricing: {
+        fetchPricing: fetchPricingMock,
+      },
+    })
+
+    await expect(
+      loadAccountTokenFallbackPricingResponse({
+        account: {
+          ...ACCOUNT,
+          siteType: SITE_TYPES.AIHUBMIX,
+        },
+        token: {
+          ...TOKEN,
+          models: "",
+        },
+        abortSignal: abortController.signal,
+      }),
+    ).rejects.toBe(abortError)
+  })
+
   it("preserves structured fallback load failure metadata for analytics", async () => {
     resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
       ...TOKEN,
@@ -803,5 +862,37 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
       message: "API Key 所属分组已删除",
       cause: groupDeletedError,
     })
+  })
+
+  it("preserves caller aborts during Sub2API dashboard price estimation", async () => {
+    const abortController = new AbortController()
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
+      ...TOKEN,
+      key: "sk-real-sub2api-secret",
+    })
+    fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
+      "example-runtime-model",
+    ])
+    const abortError = new DOMException("Aborted", "AbortError")
+    fetchSub2ApiAvailableGroupsMock.mockImplementationOnce(() => {
+      abortController.abort(abortError)
+      return Promise.reject(abortError)
+    })
+    loadModelPriceTableMock.mockRejectedValueOnce(abortError)
+
+    await expect(
+      loadAccountTokenFallbackPricingResponse({
+        account: {
+          ...ACCOUNT,
+          siteType: SITE_TYPES.SUB2API,
+          baseUrl: "https://sub2api.example.invalid",
+        },
+        token: {
+          ...TOKEN,
+          key: "sk-masked-sub2api",
+        },
+        abortSignal: abortController.signal,
+      }),
+    ).rejects.toBe(abortError)
   })
 })

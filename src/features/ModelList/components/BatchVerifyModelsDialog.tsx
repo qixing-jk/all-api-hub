@@ -460,22 +460,42 @@ export function BatchVerifyModelsDialog({
       token: ApiToken,
       abortSignal?: AbortSignal,
     ): Promise<ApiToken> => {
-      if (abortSignal) {
-        return resolveDisplayAccountTokenForSecret(item.source.account, token, {
-          abortSignal,
-        })
-      }
-
       const cacheKey = `${item.source.account.id}:${token.id}`
       const cached = resolvedTokenCacheRef.current.get(cacheKey)
-      if (cached) return cached
+      const promise =
+        cached ??
+        resolveDisplayAccountTokenForSecret(item.source.account, token, {
+          abortSignal,
+        })
+      if (!cached) {
+        const cachedPromise = promise.catch((error) => {
+          resolvedTokenCacheRef.current.delete(cacheKey)
+          throw error
+        })
+        cachedPromise.catch(() => {})
+        resolvedTokenCacheRef.current.set(cacheKey, cachedPromise)
+      }
 
-      const promise = resolveDisplayAccountTokenForSecret(
-        item.source.account,
-        token,
-      )
-      resolvedTokenCacheRef.current.set(cacheKey, promise)
-      return promise
+      if (!abortSignal || !cached) return promise
+      if (abortSignal.aborted) {
+        return Promise.reject(
+          abortSignal.reason ?? new DOMException("Aborted", "AbortError"),
+        )
+      }
+
+      return Promise.race([
+        promise,
+        new Promise<ApiToken>((_resolve, reject) => {
+          abortSignal.addEventListener(
+            "abort",
+            () =>
+              reject(
+                abortSignal.reason ?? new DOMException("Aborted", "AbortError"),
+              ),
+            { once: true },
+          )
+        }),
+      ])
     },
     [],
   )

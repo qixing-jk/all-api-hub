@@ -2,6 +2,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline"
 import type { CSSProperties } from "react"
 import { createPortal } from "react-dom"
 import toast, { ToastBar, Toaster } from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 
 import { getThemeAwareToastStyles } from "~/components/toast/themeAwareToastStyles"
 import { useToasterPortalHost } from "~/components/toast/ToasterPortal"
@@ -28,6 +29,7 @@ export const ThemeAwareToaster = ({
 }: ThemeAwareToasterProps) => {
   const { resolvedTheme } = useTheme()
   const portalHost = useToasterPortalHost()
+  const { t: translate } = useTranslation("common")
 
   const toaster = (
     <Toaster
@@ -62,15 +64,19 @@ export const ThemeAwareToaster = ({
         },
       }}
     >
-      {(t) => (
-        <ToastBar toast={t}>
+      {(toastInstance) => (
+        <ToastBar toast={toastInstance}>
           {({ icon, message }) => {
             return (
               <>
                 {icon}
                 {message}
-                {t.type !== "loading" && (
-                  <button onClick={() => toast.dismiss(t.id)}>
+                {toastInstance.type !== "loading" && (
+                  <button
+                    type="button"
+                    aria-label={translate("actions.close")}
+                    onClick={() => toast.dismiss(toastInstance.id)}
+                  >
                     <XMarkIcon className="h-4 w-4" />
                   </button>
                 )}

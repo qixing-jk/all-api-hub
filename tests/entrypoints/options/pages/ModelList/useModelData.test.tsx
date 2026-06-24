@@ -3045,6 +3045,74 @@ describe("useModelData all-accounts loading", () => {
     })
   })
 
+  it("aborts manual fallback catalog loading when the hook unmounts", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getSiteAdapter).mockReturnValue(
+      createMockSiteAdapter(fetchPricing),
+    )
+
+    const fallbackToken = {
+      id: 42,
+      user_id: 31,
+      key: "sk-fallback",
+      status: 1,
+      name: "Fallback key",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: -1,
+      remain_quota: 0,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+    let receivedSignal: AbortSignal | undefined
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([fallbackToken])
+    mockLoadAccountTokenFallbackPricingResponse.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise(() => {})
+      },
+    )
+
+    const account = createDisplayAccount({
+      id: "unmount-fallback-account",
+      baseUrl: "https://unmount-fallback.example.com",
+      userId: "31",
+    })
+
+    const { result, unmount } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(result.current.accountFallback?.isAvailable).toBe(true)
+    })
+
+    await act(async () => {
+      await result.current.accountFallback?.loadTokens()
+    })
+
+    await waitFor(() => {
+      expect(result.current.accountFallback?.tokens).toHaveLength(1)
+    })
+
+    act(() => {
+      void result.current.accountFallback?.loadCatalog()
+    })
+
+    await waitFor(() => expect(receivedSignal).toBeDefined())
+    unmount()
+
+    expect(receivedSignal?.aborted).toBe(true)
+  })
+
   it("shows the fallback key-load error when token payload normalization fails", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()

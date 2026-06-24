@@ -19,6 +19,7 @@ import {
   loadModelPriceTable,
   type ModelPriceTable,
 } from "~/services/modelPricing/modelPriceTable"
+import { isAbortError } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 
 interface Sub2ApiGroupLike {
@@ -391,7 +392,11 @@ export const loadSub2ApiEstimatedPricingResponse = async (
       groupRates,
       priceTable,
     })
-  } catch {
+  } catch (error) {
+    if (isAbortError(error, params.abortSignal)) {
+      throw error
+    }
+
     return buildSub2ApiRuntimePricingResponse(
       params.runtimeModelIds,
       MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,

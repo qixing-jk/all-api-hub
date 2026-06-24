@@ -109,6 +109,31 @@ describe("AutoCheckin FilterBar", () => {
     })
   })
 
+  it("exposes status filter pressed state", () => {
+    rtlRender(
+      <I18nextProvider i18n={testI18n}>
+        <FilterBar
+          accountResults={[]}
+          status={FILTER_STATUS.SKIPPED}
+          keyword=""
+          onStatusChange={vi.fn()}
+          onKeywordChange={vi.fn()}
+        />
+      </I18nextProvider>,
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.all/i,
+      }),
+    ).toHaveAttribute("aria-pressed", "false")
+    expect(
+      screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.skipped/i,
+      }),
+    ).toHaveAttribute("aria-pressed", "true")
+  })
+
   it("tracks keyword clearing without exposing the raw keyword", () => {
     const onKeywordChange = vi.fn()
 

@@ -520,6 +520,7 @@ export function TagPicker({
                   className="ml-1 rounded-sm opacity-70 hover:opacity-100"
                   onClick={() => removeTag(tag.id)}
                   aria-label={t("form.tagsRemove", { name: tag.name })}
+                  disabled={isWorking}
                 >
                   <XMarkIcon className="h-3 w-3" />
                 </button>

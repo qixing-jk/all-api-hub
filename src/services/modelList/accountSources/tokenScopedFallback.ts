@@ -20,7 +20,10 @@ import {
   loadSub2ApiEstimatedPricingResponse,
 } from "~/services/modelList/accountSources/sub2apiEstimates"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import {
+  isAbortError,
+  toSanitizedErrorSummary,
+} from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { parseDelimitedList } from "~/utils/core/string"
 
@@ -50,9 +53,11 @@ const createMissingModelPricingCapabilityError = (siteType: string) =>
 
 const createAccountModelPricingRequest = (
   account: LoadAccountTokenFallbackPricingParams["account"],
+  abortSignal?: AbortSignal,
 ): ModelPricingRequest => ({
   baseUrl: account.baseUrl,
   accountId: account.id,
+  abortSignal,
   auth: {
     authType: account.authType,
     userId: account.userId,
@@ -93,7 +98,7 @@ export async function loadAccountTokenFallbackPricingResponse(
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile
     ) {
       return await readiness.modelPricing.fetchPricing(
-        createAccountModelPricingRequest(params.account),
+        createAccountModelPricingRequest(params.account, params.abortSignal),
       )
     }
 
@@ -176,6 +181,10 @@ export async function loadAccountTokenFallbackPricingResponse(
       ...upstreamModelIds,
     ])
   } catch (error) {
+    if (isAbortError(error, params.abortSignal)) {
+      throw error
+    }
+
     const sanitizedMessage = toSanitizedErrorSummary(error, [
       params.account.baseUrl,
       params.account.token,

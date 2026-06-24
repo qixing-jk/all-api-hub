@@ -11,7 +11,7 @@ import {
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
 
-type FetchApiCredentialModelCatalogParams = {
+interface FetchApiCredentialModelCatalogParams {
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string

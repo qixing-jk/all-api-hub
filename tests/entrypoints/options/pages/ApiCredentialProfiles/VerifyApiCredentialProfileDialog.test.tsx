@@ -356,6 +356,9 @@ describe("VerifyApiCredentialProfileDialog", () => {
         expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
       )
     })
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
+    ).not.toHaveTextContent("late-model")
   })
 
   it("redacts secrets when the initial model fetch fails", async () => {

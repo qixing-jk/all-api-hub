@@ -60,7 +60,10 @@ import {
   type ProductAnalyticsSourceKind,
 } from "~/services/productAnalytics/events"
 import { buildModelListDiagnostics } from "~/services/productAnalytics/modelListDiagnostics"
-import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import {
+  isAbortError,
+  toSanitizedErrorSummary,
+} from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -433,6 +436,7 @@ async function mapWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
   mapper: (item: T) => Promise<R>,
+  abortSignal?: AbortSignal,
 ) {
   const results = new Array<R>(items.length)
   let nextIndex = 0
@@ -441,6 +445,9 @@ async function mapWithConcurrency<T, R>(
   await Promise.all(
     Array.from({ length: workerCount }, async () => {
       while (nextIndex < items.length) {
+        if (abortSignal?.aborted) {
+          throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
+        }
         const currentIndex = nextIndex
         nextIndex += 1
         results[currentIndex] = await mapper(items[currentIndex])
@@ -475,6 +482,10 @@ async function loadTokenScopedCatalogPricingContext(params: {
       },
     }
   } catch (error) {
+    if (isAbortError(error, params.abortSignal)) {
+      throw error
+    }
+
     return { error }
   }
 }
@@ -484,9 +495,16 @@ async function fetchTokenScopedCatalogPricingContexts(
   account: DisplaySiteData,
   abortSignal?: AbortSignal,
 ): Promise<AccountPricingQueryResult> {
+  if (abortSignal?.aborted) {
+    throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
+  }
+
   const tokens = (await fetchDisplayAccountTokens(account)).filter(
     (token) => token.status === 1,
   )
+  if (abortSignal?.aborted) {
+    throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
+  }
   if (tokens.length === 0) {
     throw createUnsupportedModelPricingError()
   }
@@ -496,6 +514,7 @@ async function fetchTokenScopedCatalogPricingContexts(
     TOKEN_SCOPED_CATALOG_CONCURRENCY,
     (token) =>
       loadTokenScopedCatalogPricingContext({ account, token, abortSignal }),
+    abortSignal,
   )
   const contexts = settledResults.flatMap((result) =>
     result.context ? [result.context] : [],
@@ -915,6 +934,13 @@ function useSingleAccountModelData(params: {
     selectedFallbackToken,
     t,
   ])
+
+  useEffect(() => {
+    return () => {
+      fallbackCatalogAbortControllerRef.current?.abort()
+      fallbackCatalogAbortControllerRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (

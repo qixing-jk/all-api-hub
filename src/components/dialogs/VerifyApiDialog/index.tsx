@@ -275,7 +275,20 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         selectedToken,
         { abortSignal },
       )
-      if (abortSignal?.aborted || shouldStopRef.current) return null
+      if (abortSignal?.aborted || shouldStopRef.current) {
+        replaceProbes(
+          probesRef.current.map((probe) =>
+            probe.definition.id === probeId
+              ? {
+                  ...probe,
+                  isRunning: false,
+                  result: buildStoppedProbeResult(probeId),
+                }
+              : probe,
+          ),
+        )
+        return null
+      }
       const result = await runApiVerificationProbe({
         baseUrl: account.baseUrl,
         apiKey: resolvedToken.key,

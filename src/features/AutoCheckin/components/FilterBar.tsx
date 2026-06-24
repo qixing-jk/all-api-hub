@@ -148,6 +148,8 @@ export default function FilterBar({
     count?: number,
   ) => (
     <button
+      type="button"
+      aria-pressed={status === value}
       onClick={() => {
         onStatusChange(value)
         trackFilterSelection(PRODUCT_ANALYTICS_MODE_IDS.StatusFilter, value)

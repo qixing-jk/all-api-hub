@@ -1,3 +1,5 @@
+import { isAbortError as isSharedAbortError } from "~/services/verification/aiApiVerification/utils"
+
 export type ModelPriceTableEntry = {
   input?: number | string | null
   output?: number | string | null
@@ -115,6 +117,9 @@ const composeAbortSignals = (
   }
 }
 
+const isCallerAbortError = (error: unknown, abortSignal?: AbortSignal) =>
+  Boolean(abortSignal?.aborted && isSharedAbortError(error, abortSignal))
+
 /**
  * Loads the official-price snapshot used by optional catalog estimation.
  *
@@ -137,6 +142,10 @@ export async function loadModelPriceTable(
       signal: composedSignal.signal,
     })
   } catch (error) {
+    if (isCallerAbortError(error, abortSignal)) {
+      throw error
+    }
+
     if (controller.signal.aborted) {
       throw new Error("Timed out loading LiteLLM price table", {
         cause: error,

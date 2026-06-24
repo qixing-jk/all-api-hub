@@ -47,6 +47,8 @@ export default function FilterBar({
     count?: number,
   ) => (
     <button
+      type="button"
+      aria-pressed={status === value}
       onClick={() => onStatusChange(value)}
       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
         status === value

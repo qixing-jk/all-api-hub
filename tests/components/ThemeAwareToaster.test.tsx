@@ -115,7 +115,12 @@ describe("ThemeAwareToaster", () => {
     expect(screen.getByTestId("toast-icon")).toBeInTheDocument()
     expect(screen.getByTestId("toast-message")).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole("button"))
+    const dismissButton = screen.getByRole("button", {
+      name: "common:actions.close",
+    })
+    expect(dismissButton).toHaveAttribute("type", "button")
+
+    fireEvent.click(dismissButton)
 
     expect(dismissMock).toHaveBeenCalledWith("toast-1")
   })

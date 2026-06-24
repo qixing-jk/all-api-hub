@@ -70,6 +70,8 @@
       "finishedAt": "完了時刻",
       "manageChannel": "チャネルを管理",
       "message": "メッセージ",
+      "selectAllChannels": "すべてのチャネルを選択",
+      "selectChannel": "チャネル {{name}} を選択",
       "status": "状態",
       "syncChannel": "同期"
     },

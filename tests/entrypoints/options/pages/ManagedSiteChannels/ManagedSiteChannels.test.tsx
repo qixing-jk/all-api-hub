@@ -527,6 +527,19 @@ describe("ManagedSiteChannels", () => {
     )
 
     expect(names).toEqual(["Gamma", "Beta", "Alpha"])
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:table.columns.id",
+      }),
+    )
+
+    const ascendingRows = Array.from(container.querySelectorAll("tbody tr"))
+    const ascendingNames = ascendingRows.map((row) =>
+      row.querySelector("td:nth-child(3) .font-medium")?.textContent?.trim(),
+    )
+
+    expect(ascendingNames).toEqual(["Alpha", "Beta", "Gamma"])
   })
 
   it("reloads the channel list when the managed site type changes", async () => {

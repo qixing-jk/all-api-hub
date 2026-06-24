@@ -257,6 +257,45 @@ describe("TagPicker", () => {
     })
   })
 
+  it("disables selected tag removal while a tag action is pending", async () => {
+    const user = userEvent.setup()
+    const onCreateTag = vi.fn(() => new Promise<Tag>(() => {}))
+
+    render(
+      <TagPicker
+        tags={[{ id: "t1", name: "Work", createdAt: 1, updatedAt: 1 }]}
+        selectedTagIds={["t1"]}
+        onSelectedTagIdsChange={vi.fn()}
+        onCreateTag={onCreateTag}
+        onRenameTag={vi.fn()}
+        onDeleteTag={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsSelectedCount",
+      }),
+    )
+    await user.type(
+      await screen.findByPlaceholderText(
+        "accountDialog:form.tagsSearchPlaceholder",
+      ),
+      "NewTag",
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsCreate",
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:form.tagsRemove",
+      }),
+    ).toBeDisabled()
+  })
+
   it("wraps ArrowUp to the last filtered tag when create is available", async () => {
     const user = userEvent.setup()
 

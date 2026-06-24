@@ -836,10 +836,25 @@ describe("VerifyCliSupportDialog", () => {
           return Promise.reject(new Error("missing abort signal"))
         }
 
-        return new Promise((_resolve, reject) => {
+        return new Promise((resolve) => {
           receivedSignal?.addEventListener(
             "abort",
-            () => reject(new DOMException("Aborted", "AbortError")),
+            () =>
+              resolve({
+                id: 1,
+                user_id: 1,
+                key: "resolved-secret",
+                status: 1,
+                name: "token-1",
+                models: "",
+                model_limits: "",
+                created_time: 0,
+                accessed_time: 0,
+                expired_time: 0,
+                remain_quota: 0,
+                unlimited_quota: true,
+                used_quota: 0,
+              }),
             { once: true },
           )
         })
@@ -889,6 +904,13 @@ describe("VerifyCliSupportDialog", () => {
 
     await waitFor(() => {
       expect(receivedSignal?.aborted).toBe(true)
+    })
+    await waitFor(() => {
+      expect(
+        within(toolCard).getByRole("button", {
+          name: "cliSupportVerification:verifyDialog.actions.retry",
+        }),
+      ).toBeInTheDocument()
     })
     expect(mockRunCliSupportTool).not.toHaveBeenCalled()
   })

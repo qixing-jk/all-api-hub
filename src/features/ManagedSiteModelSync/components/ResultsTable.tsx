@@ -79,6 +79,7 @@ export default function ResultsTable({
                 <input
                   ref={selectAllRef}
                   type="checkbox"
+                  aria-label={t("execution.table.selectAllChannels")}
                   checked={allSelected}
                   onChange={(e) => onSelectAll(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -127,6 +128,9 @@ export default function ResultsTable({
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
+                      aria-label={t("execution.table.selectChannel", {
+                        name: item.channelName,
+                      })}
                       checked={selectedIds.has(item.channelId)}
                       onChange={(e) =>
                         onSelectItem(item.channelId, e.target.checked)
