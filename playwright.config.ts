@@ -5,12 +5,13 @@ import { loadPlaywrightEnvFiles } from "./e2e/utils/playwrightEnv"
 loadPlaywrightEnvFiles()
 
 const isCI = !!process.env.CI
-const localWorkerCount = Number(process.env.AAH_E2E_WORKERS ?? 4)
-const workers = isCI
-  ? 1
-  : Number.isFinite(localWorkerCount)
-    ? localWorkerCount
-    : 4
+const configuredWorkerCount = Number(process.env.AAH_E2E_WORKERS)
+const workers =
+  Number.isInteger(configuredWorkerCount) && configuredWorkerCount > 0
+    ? configuredWorkerCount
+    : isCI
+      ? 1
+      : 4
 
 export default defineConfig({
   testDir: "./e2e",

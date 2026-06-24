@@ -1,4 +1,4 @@
-name: E2E Smoke
+name: E2E
 
 on:
   push:
@@ -40,7 +40,7 @@ concurrency:
 
 jobs:
   e2e-smoke:
-    name: E2E smoke (${{ matrix.name }})
+    name: E2E (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e') }}
@@ -103,6 +103,7 @@ jobs:
         timeout-minutes: ${{ matrix.timeout_minutes }}
         env:
           AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
+          AAH_E2E_WORKERS: "2"
           AAH_SKIP_E2E_BUILD: "1"
         run: pnpm run e2e:${{ matrix.e2e_type }}
 
