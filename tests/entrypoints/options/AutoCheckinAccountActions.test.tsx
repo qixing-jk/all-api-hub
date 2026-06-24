@@ -619,6 +619,9 @@ describe("AutoCheckin account actions", () => {
       expect(openButton).toBeDisabled()
     })
 
+    await waitFor(() => {
+      expect(rejectOpen).toBeDefined()
+    })
     rejectOpen?.(new Error("popup blocked"))
 
     await waitFor(() => {

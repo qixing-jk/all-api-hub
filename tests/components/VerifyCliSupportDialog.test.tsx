@@ -1468,6 +1468,9 @@ describe("VerifyCliSupportDialog", () => {
     const stopButton = await screen.findByRole("button", {
       name: "cliSupportVerification:verifyDialog.actions.stop",
     })
+    await waitFor(() => {
+      expect(receivedSignal).toBeDefined()
+    })
     fireEvent.click(stopButton)
 
     await waitFor(() => {
