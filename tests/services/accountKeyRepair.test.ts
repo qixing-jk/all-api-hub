@@ -10,6 +10,7 @@ import {
   ACCOUNT_KEY_REPAIR_JOB_STATES,
   ACCOUNT_KEY_REPAIR_OUTCOMES,
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
+  type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
 import {
   buildDisplaySiteData,
@@ -28,7 +29,6 @@ const mocks = vi.hoisted(() => {
     }
 
     async set(key: string, value: unknown) {
-      storageMap.set(key, value)
       if (shouldBlockNextStorageSet) {
         shouldBlockNextStorageSet = false
         await new Promise<void>((resolve) => {
@@ -39,6 +39,7 @@ const mocks = vi.hoisted(() => {
         shouldRejectNextStorageSet = false
         throw new Error("storage write failed")
       }
+      storageMap.set(key, value)
     }
   }
 
@@ -1657,6 +1658,78 @@ describe("accountKeyRepair", () => {
     expect(mocks.sendRuntimeMessage).not.toHaveBeenCalled()
   })
 
+  it("does not mark completed progress as cancelled when the queued cancel update sees a non-running state", async () => {
+    let releaseQueue: (() => void) | undefined
+    const blockedQueue = new Promise<void>((resolve) => {
+      releaseQueue = resolve
+    })
+    const runningProgress = {
+      jobId: "queued-cancel",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+      startedAt: 100,
+      updatedAt: 100,
+      totals: {
+        enabledAccounts: 1,
+        eligibleAccounts: 1,
+        processedAccounts: 0,
+        processedEligibleAccounts: 0,
+      },
+      summary: {
+        created: 0,
+        alreadyHad: 0,
+        skipped: 0,
+        failed: 0,
+      },
+      results: [],
+    }
+    const completedProgress = {
+      ...runningProgress,
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      finishedAt: 200,
+      updatedAt: 200,
+      totals: {
+        ...runningProgress.totals,
+        processedAccounts: 1,
+        processedEligibleAccounts: 1,
+      },
+      summary: {
+        ...runningProgress.summary,
+        alreadyHad: 1,
+      },
+    }
+
+    const { accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    const controlledRunner = accountKeyRepairRunner as unknown as {
+      currentProgress: AccountKeyRepairProgress
+      progressQueue: Promise<void>
+    }
+
+    controlledRunner.currentProgress = runningProgress
+    controlledRunner.progressQueue = blockedQueue
+
+    const cancelPromise = accountKeyRepairRunner.cancel()
+    await vi.waitFor(() => {
+      expect(controlledRunner.progressQueue).not.toBe(blockedQueue)
+    })
+
+    controlledRunner.currentProgress = completedProgress
+    releaseQueue?.()
+
+    await expect(cancelPromise).resolves.toEqual({
+      success: true,
+      data: {
+        ...completedProgress,
+        updatedAt: expect.any(Number),
+      },
+    })
+    await expect(accountKeyRepairRunner.getProgress()).resolves.toEqual({
+      ...completedProgress,
+      updatedAt: expect.any(Number),
+    })
+  })
+
   it("keeps the cancelled run reserved until it unwinds", async () => {
     const firstAccount = buildSiteAccount({
       id: "first-run",
@@ -1824,6 +1897,9 @@ describe("accountKeyRepair", () => {
       },
     })
 
+    mocks.safeRandomUUID
+      .mockReturnValueOnce("job-failed-start")
+      .mockReturnValueOnce("job-restarted")
     mocks.rejectNextStorageSet()
     mocks.getAllAccounts.mockResolvedValue([account])
 
@@ -1833,13 +1909,13 @@ describe("accountKeyRepair", () => {
 
     const failedStart = accountKeyRepairRunner.start()
     await expect(accountKeyRepairRunner.start()).resolves.toMatchObject({
-      jobId: "job-123",
+      jobId: "job-failed-start",
       state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
     })
 
     await expect(failedStart).rejects.toThrow("storage write failed")
     await expect(accountKeyRepairRunner.start()).resolves.toMatchObject({
-      jobId: "job-123",
+      jobId: "job-restarted",
       state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
     })
     expect(mocks.getAllAccounts).toHaveBeenCalledTimes(1)
