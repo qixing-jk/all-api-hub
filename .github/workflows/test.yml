@@ -117,6 +117,14 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           report_type: test_results
 
+      - name: Upload test report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-report
+          path: test-report.junit.xml
+          retention-days: 7
+
       - name: Upload coverage reports
         uses: actions/upload-artifact@v7
         if: always()
