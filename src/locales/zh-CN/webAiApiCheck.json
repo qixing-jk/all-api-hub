@@ -41,10 +41,15 @@
       "apiKey": "API Key",
       "apiType": "API 类型",
       "baseUrl": "Base URL",
-      "modelId": "模型 ID"
+      "expiresAt": "到期日",
+      "modelId": "模型 ID",
+      "notes": "备注",
+      "tags": "标签"
     },
     "hints": {
-      "saveWithoutTest": "提示：只要填写 Base URL 与 API Key 就能保存到 API 凭据库（无需先测试或获取模型列表）。测试仅用于验证可用性。"
+      "expiresAt": "可选。用于记录这枚密钥预计失效的日期。",
+      "saveWithoutTest": "提示：只要填写 Base URL 与 API Key 就能保存到 API 凭据库（无需先测试或获取模型列表）。测试仅用于验证可用性。",
+      "tags": "可选。与账号/书签共用全局标签。"
     },
     "history": {
       "empty": "暂无 Base URL 历史",
@@ -56,6 +61,15 @@
       "savedToProfiles": "已保存 {{name}} 到 API 凭据库",
       "stoppingTest": "正在停止测试，当前请求会尽快中断。",
       "testStopped": "测试已停止，已完成的结果已保留，未开始的项目不会继续运行。"
+    },
+    "optionalProfileFields": {
+      "hasInput": "已填写可选保存信息",
+      "hint": "标签、备注和到期日不会影响测试结果。",
+      "title": "保存选项（可选）"
+    },
+    "placeholders": {
+      "notes": "可选备注",
+      "tags": "选择标签"
     },
     "privacyHint": "API Key 会被视为敏感信息：默认隐藏，且除非你主动保存到 API 凭据库，否则不会持久化保存任何数据。",
     "probes": {

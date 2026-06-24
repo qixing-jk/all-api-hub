@@ -163,6 +163,42 @@ describe("ApiCheckModalHost", () => {
     vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: false })
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.ListTags) {
+          return {
+            success: true,
+            tags: [
+              { id: "tag-work", name: "Work", createdAt: 1, updatedAt: 1 },
+              {
+                id: "tag-expiring",
+                name: "Expiring",
+                createdAt: 2,
+                updatedAt: 2,
+              },
+            ],
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.CreateTag) {
+          return {
+            success: true,
+            tag: {
+              id: "tag-created",
+              name: "Created",
+              createdAt: 3,
+              updatedAt: 3,
+            },
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.RenameTag) {
+          return {
+            success: true,
+            tag: {
+              id: "tag-work",
+              name: "Renamed",
+              createdAt: 1,
+              updatedAt: 4,
+            },
+          }
+        }
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
           return { success: true, modelIds: [] }
         }
@@ -3203,6 +3239,137 @@ describe("ApiCheckModalHost", () => {
         },
       },
     )
+  })
+
+  it("saves profile metadata entered in the API check modal", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.ListTags) {
+          return {
+            success: true,
+            tags: [
+              { id: "tag-work", name: "Work", createdAt: 1, updatedAt: 1 },
+              {
+                id: "tag-expiring",
+                name: "Expiring",
+                createdAt: 2,
+                updatedAt: 2,
+              },
+            ],
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return {
+            success: true,
+            profileId: "p-1",
+            name: "proxy.example.com",
+            apiType: message.apiType,
+            baseUrl: "https://proxy.example.com/api",
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    await user.click(
+      await screen.findByPlaceholderText("https://example.com/api"),
+    )
+    await user.paste("https://proxy.example.com/api")
+    await user.click(await screen.findByPlaceholderText("sk-..."))
+    await user.paste("sk-test-secret-fixture")
+
+    expect(
+      screen.queryByRole("button", {
+        name: "webAiApiCheck:modal.optionalProfileFields.title",
+      }),
+    ).not.toBeNull()
+    expect(
+      screen.queryByRole("button", {
+        name: "webAiApiCheck:modal.placeholders.tags",
+      }),
+    ).toBeNull()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "webAiApiCheck:modal.optionalProfileFields.title",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "webAiApiCheck:modal.placeholders.tags",
+      }),
+    )
+    expect(screen.queryByLabelText("accountDialog:form.tagsDelete")).toBeNull()
+    await user.click(await screen.findByText("Work"))
+    await user.click(await screen.findByText("Expiring"))
+
+    await user.click(
+      await screen.findByPlaceholderText(
+        "webAiApiCheck:modal.placeholders.notes",
+      ),
+    )
+    await user.paste("Shared by Alice")
+    fireEvent.change(
+      await screen.findByLabelText("webAiApiCheck:modal.fields.expiresAt"),
+      { target: { value: "2026-10-31" } },
+    )
+
+    const saveButton = await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.actions.saveToProfiles",
+    })
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled()
+    })
+
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.SaveProfile, {
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api",
+        apiKey: "sk-test-secret-fixture",
+        pageUrl: "https://example.com",
+        tagIds: ["tag-work", "tag-expiring"],
+        notes: "Shared by Alice",
+        expiresAt: new Date(2026, 9, 31).getTime(),
+      })
+    })
+  })
+
+  it("lets users collapse optional save fields after entering metadata", async () => {
+    const user = userEvent.setup()
+
+    await openModal()
+
+    const optionalSaveFieldsTrigger = await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.optionalProfileFields.title",
+    })
+    await user.click(optionalSaveFieldsTrigger)
+
+    await user.click(
+      await screen.findByPlaceholderText(
+        "webAiApiCheck:modal.placeholders.notes",
+      ),
+    )
+    await user.paste("Shared by Alice")
+
+    expect(
+      screen.getByText("webAiApiCheck:modal.optionalProfileFields.hasInput"),
+    ).toBeInTheDocument()
+
+    await user.click(optionalSaveFieldsTrigger)
+
+    expect(
+      screen.queryByPlaceholderText("webAiApiCheck:modal.placeholders.notes"),
+    ).toBeNull()
+    expect(optionalSaveFieldsTrigger).toHaveAttribute("aria-expanded", "false")
   })
 
   it("shows a quick-open button after saving to profiles", async () => {

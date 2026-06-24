@@ -5,6 +5,7 @@ import type {
   ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
 import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
+import type { Tag } from "~/types"
 
 /**
  * Runtime data from content → background to decide whether auto-detect can prompt.
@@ -63,6 +64,47 @@ export type ApiCheckRemoveBaseUrlHistoryResponse = {
   success: true
   suggestions?: WebAiApiCheckBaseUrlSuggestion[]
 }
+
+export type ApiCheckListTagsRequest = Record<string, never>
+
+export type ApiCheckListTagsResponse =
+  | {
+      success: true
+      tags: Tag[]
+    }
+  | {
+      success: false
+      error?: string
+    }
+
+export type ApiCheckCreateTagRequest = {
+  name: string
+}
+
+export type ApiCheckCreateTagResponse =
+  | {
+      success: true
+      tag: Tag
+    }
+  | {
+      success: false
+      error?: string
+    }
+
+export type ApiCheckRenameTagRequest = {
+  tagId: string
+  name: string
+}
+
+export type ApiCheckRenameTagResponse =
+  | {
+      success: true
+      tag: Tag
+    }
+  | {
+      success: false
+      error?: string
+    }
 
 /**
  * Runtime data from content → background to fetch upstream model ids.
@@ -147,6 +189,9 @@ export type ApiCheckSaveProfileRequest = {
   apiKey: string
   pageUrl?: string
   name?: string
+  tagIds?: string[]
+  notes?: string
+  expiresAt?: number | null
 }
 
 /**

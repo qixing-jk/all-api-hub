@@ -41,10 +41,15 @@
       "apiKey": "API キー",
       "apiType": "API 種別",
       "baseUrl": "Base URL",
-      "modelId": "モデル ID"
+      "expiresAt": "有効期限",
+      "modelId": "モデル ID",
+      "notes": "メモ",
+      "tags": "タグ"
     },
     "hints": {
-      "saveWithoutTest": "ヒント: Base URL と API キーが入力されていれば、その時点で保存できます（先にテストやモデル取得を行う必要はありません）。テストは任意で、可用性確認の補助にすぎません。"
+      "expiresAt": "任意。このキーの想定失効日を記録します。",
+      "saveWithoutTest": "ヒント: Base URL と API キーが入力されていれば、その時点で保存できます（先にテストやモデル取得を行う必要はありません）。テストは任意で、可用性確認の補助にすぎません。",
+      "tags": "任意。アカウントやブックマークと同じグローバルタグを使用します。"
     },
     "history": {
       "empty": "Base URL の履歴はまだありません",
@@ -56,6 +61,15 @@
       "savedToProfiles": "{{name}} を API 認証情報庫に保存しました。",
       "stoppingTest": "テストを停止しています。現在のリクエストは可能な限り早く中断されます。",
       "testStopped": "テストを停止しました。完了済みの結果は保持され、未開始の項目は続行されません。"
+    },
+    "optionalProfileFields": {
+      "hasInput": "任意の保存情報が入力されています",
+      "hint": "タグ、メモ、有効期限はテスト結果に影響しません。",
+      "title": "保存オプション（任意）"
+    },
+    "placeholders": {
+      "notes": "任意のメモ",
+      "tags": "タグを選択"
     },
     "privacyHint": "API キーは機密情報として扱われます。既定では非表示で、API 認証情報庫に保存する操作を行わない限り、何も保存されません。",
     "probes": {

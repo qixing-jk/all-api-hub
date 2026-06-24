@@ -72,6 +72,14 @@ vi.mock(
   }),
 )
 
+vi.mock("~/services/tags/tagStorage", () => ({
+  tagStorage: {
+    listTags: vi.fn(),
+    createTag: vi.fn(),
+    renameTag: vi.fn(),
+  },
+}))
+
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const actual =
     await importOriginal<
@@ -805,6 +813,9 @@ describe("webAiApiCheck background handlers", () => {
       baseUrl: "https://proxy.example.com/api/v1/chat/completions",
       apiKey: "sk-test-secret-fixture",
       pageUrl: "https://example.com/docs",
+      tagIds: ["tag-work", " tag-work ", "", "tag-expiring"],
+      notes: "  shared by Alice  ",
+      expiresAt: 1790812800000,
     })
 
     expect(apiCredentialProfilesStorage.createProfile).toHaveBeenCalledWith({
@@ -812,8 +823,9 @@ describe("webAiApiCheck background handlers", () => {
       apiType: "openai-compatible",
       baseUrl: "https://proxy.example.com/api",
       apiKey: "sk-test-secret-fixture",
-      tagIds: [],
-      notes: "",
+      tagIds: ["tag-work", " tag-work ", "", "tag-expiring"],
+      notes: "  shared by Alice  ",
+      expiresAt: 1790812800000,
     })
 
     const responsePayload = response as any
@@ -892,8 +904,6 @@ describe("webAiApiCheck background handlers", () => {
       apiType: "openai-compatible",
       baseUrl: "https://proxy.example.com/api",
       apiKey: "sk-test-secret-fixture",
-      tagIds: [],
-      notes: "",
     })
     expect(response).toEqual({
       success: false,
@@ -1228,11 +1238,27 @@ describe("webAiApiCheck background handlers", () => {
     const { WebAiApiCheckMessageTypes } = await import(
       "~/services/verification/webAiApiCheck/messaging"
     )
+    const { tagStorage } = await import("~/services/tags/tagStorage")
 
+    vi.mocked(tagStorage.listTags).mockResolvedValue([
+      { id: "tag-work", name: "Work", createdAt: 1, updatedAt: 1 },
+    ])
+    vi.mocked(tagStorage.createTag).mockResolvedValue({
+      id: "tag-created",
+      name: "Created",
+      createdAt: 2,
+      updatedAt: 2,
+    })
+    vi.mocked(tagStorage.renameTag).mockResolvedValue({
+      id: "tag-work",
+      name: "Renamed",
+      createdAt: 1,
+      updatedAt: 3,
+    })
     background.setupWebAiApiCheckMessagingListeners()
     background.setupWebAiApiCheckMessagingListeners()
 
-    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(8)
+    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(11)
     expect(
       onWebAiApiCheckMessageMock.mock.calls.map((call) => call[0]),
     ).toEqual([
@@ -1241,6 +1267,9 @@ describe("webAiApiCheck background handlers", () => {
       WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions,
       WebAiApiCheckMessageTypes.RecordBaseUrlHistory,
       WebAiApiCheckMessageTypes.RemoveBaseUrlHistory,
+      WebAiApiCheckMessageTypes.ListTags,
+      WebAiApiCheckMessageTypes.CreateTag,
+      WebAiApiCheckMessageTypes.RenameTag,
       WebAiApiCheckMessageTypes.RunProbe,
       WebAiApiCheckMessageTypes.CancelRunProbe,
       WebAiApiCheckMessageTypes.SaveProfile,
@@ -1253,5 +1282,32 @@ describe("webAiApiCheck background handlers", () => {
     await expect(
       cancelHandler?.({ data: { runId: "missing-run" } }),
     ).resolves.toEqual({ success: true, cancelled: false })
+
+    await expect(
+      webAiApiCheckMessageHandlers.get(WebAiApiCheckMessageTypes.ListTags)?.({
+        data: {},
+      }),
+    ).resolves.toEqual({
+      success: true,
+      tags: [{ id: "tag-work", name: "Work", createdAt: 1, updatedAt: 1 }],
+    })
+    await expect(
+      webAiApiCheckMessageHandlers.get(WebAiApiCheckMessageTypes.CreateTag)?.({
+        data: { name: "Created" },
+      }),
+    ).resolves.toEqual({
+      success: true,
+      tag: { id: "tag-created", name: "Created", createdAt: 2, updatedAt: 2 },
+    })
+    await expect(
+      webAiApiCheckMessageHandlers.get(WebAiApiCheckMessageTypes.RenameTag)?.({
+        data: { tagId: "tag-work", name: "Renamed" },
+      }),
+    ).resolves.toEqual({
+      success: true,
+      tag: { id: "tag-work", name: "Renamed", createdAt: 1, updatedAt: 3 },
+    })
+    expect(tagStorage.createTag).toHaveBeenCalledWith("Created")
+    expect(tagStorage.renameTag).toHaveBeenCalledWith("tag-work", "Renamed")
   })
 })

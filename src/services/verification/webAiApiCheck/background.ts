@@ -9,6 +9,7 @@ import {
 } from "~/services/preferences/userPreferences"
 import { resolveProductAnalyticsErrorCategoryFromError } from "~/services/productAnalytics/actions"
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/events"
+import { tagStorage } from "~/services/tags/tagStorage"
 import {
   API_TYPES,
   runApiVerificationProbe,
@@ -35,14 +36,20 @@ import { onWebAiApiCheckMessage, WebAiApiCheckMessageTypes } from "./messaging"
 import type {
   ApiCheckCancelRunProbeRequest,
   ApiCheckCancelRunProbeResponse,
+  ApiCheckCreateTagRequest,
+  ApiCheckCreateTagResponse,
   ApiCheckFetchModelsRequest,
   ApiCheckFetchModelsResponse,
   ApiCheckGetBaseUrlHistorySuggestionsRequest,
   ApiCheckGetBaseUrlHistorySuggestionsResponse,
+  ApiCheckListTagsRequest,
+  ApiCheckListTagsResponse,
   ApiCheckRecordBaseUrlHistoryRequest,
   ApiCheckRecordBaseUrlHistoryResponse,
   ApiCheckRemoveBaseUrlHistoryRequest,
   ApiCheckRemoveBaseUrlHistoryResponse,
+  ApiCheckRenameTagRequest,
+  ApiCheckRenameTagResponse,
   ApiCheckRunProbeRequest,
   ApiCheckRunProbeResponse,
   ApiCheckSaveProfileRequest,
@@ -252,6 +259,57 @@ export async function resolveWebAiApiCheckRemoveBaseUrlHistoryMessage(
       message: toSanitizedErrorSummary(error, []),
     })
     return { success: true }
+  }
+}
+
+/**
+ * List global tags for the API-check save metadata picker.
+ */
+async function resolveWebAiApiCheckListTagsMessage(
+  _request: ApiCheckListTagsRequest,
+): Promise<ApiCheckListTagsResponse> {
+  try {
+    const tags = await tagStorage.listTags()
+    return { success: true, tags }
+  } catch (error) {
+    logger.error("Failed to list tags for ApiCheck metadata", {
+      message: toSanitizedErrorSummary(error, []),
+    })
+    return { success: false, error: "Failed to list tags" }
+  }
+}
+
+/**
+ * Create a global tag from the API-check save metadata picker.
+ */
+async function resolveWebAiApiCheckCreateTagMessage(
+  request: ApiCheckCreateTagRequest,
+): Promise<ApiCheckCreateTagResponse> {
+  try {
+    const tag = await tagStorage.createTag(request.name)
+    return { success: true, tag }
+  } catch (error) {
+    logger.error("Failed to create tag from ApiCheck metadata", {
+      message: toSanitizedErrorSummary(error, []),
+    })
+    return { success: false, error: toSanitizedErrorSummary(error, []) }
+  }
+}
+
+/**
+ * Rename a global tag from the API-check save metadata picker.
+ */
+async function resolveWebAiApiCheckRenameTagMessage(
+  request: ApiCheckRenameTagRequest,
+): Promise<ApiCheckRenameTagResponse> {
+  try {
+    const tag = await tagStorage.renameTag(request.tagId, request.name)
+    return { success: true, tag }
+  } catch (error) {
+    logger.error("Failed to rename tag from ApiCheck metadata", {
+      message: toSanitizedErrorSummary(error, []),
+    })
+    return { success: false, error: toSanitizedErrorSummary(error, []) }
   }
 }
 
@@ -482,8 +540,11 @@ export async function resolveWebAiApiCheckSaveProfileMessage(
         apiType,
         baseUrl: normalizedBaseUrl,
         apiKey,
-        tagIds: [],
-        notes: "",
+        ...(request.tagIds !== undefined ? { tagIds: request.tagIds } : {}),
+        ...(request.notes !== undefined ? { notes: request.notes } : {}),
+        ...(request.expiresAt !== undefined
+          ? { expiresAt: request.expiresAt }
+          : {}),
       })
 
       return {
@@ -546,6 +607,18 @@ export function setupWebAiApiCheckMessagingListeners() {
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.RemoveBaseUrlHistory,
       async ({ data }) => resolveWebAiApiCheckRemoveBaseUrlHistoryMessage(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.ListTags,
+      async ({ data }) => resolveWebAiApiCheckListTagsMessage(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.CreateTag,
+      async ({ data }) => resolveWebAiApiCheckCreateTagMessage(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.RenameTag,
+      async ({ data }) => resolveWebAiApiCheckRenameTagMessage(data),
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.RunProbe,

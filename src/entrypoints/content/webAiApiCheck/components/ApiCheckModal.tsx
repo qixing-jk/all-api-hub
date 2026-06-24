@@ -1,4 +1,4 @@
-import { XMarkIcon } from "@heroicons/react/24/outline"
+import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import type {
   KeyboardEvent as ReactKeyboardEvent,
@@ -8,6 +8,7 @@ import type {
 
 import {
   Button,
+  FormField,
   IconButton,
   Input,
   Notice,
@@ -15,6 +16,12 @@ import {
   Textarea,
 } from "~/components/ui"
 import { inputVariants } from "~/components/ui/input"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible"
+import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { cn } from "~/lib/utils"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 
@@ -246,6 +253,92 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   />
                 </div>
               </div>
+
+              <Collapsible
+                open={view.isProfileOptionsOpen}
+                onOpenChange={actions.setIsProfileOptionsOpen}
+                className="border-border/70 bg-muted/20 rounded-md border"
+              >
+                <CollapsibleTrigger
+                  type="button"
+                  aria-label={t(
+                    "webAiApiCheck:modal.optionalProfileFields.title",
+                  )}
+                  className="hover:bg-muted/40 flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="text-foreground text-sm font-medium">
+                      {t("webAiApiCheck:modal.optionalProfileFields.title")}
+                    </div>
+                    <div className="text-muted-foreground truncate text-xs">
+                      {t(
+                        view.hasProfileMetadataInput
+                          ? "webAiApiCheck:modal.optionalProfileFields.hasInput"
+                          : "webAiApiCheck:modal.optionalProfileFields.hint",
+                      )}
+                    </div>
+                  </div>
+                  <ChevronDownIcon
+                    className={cn(
+                      "text-muted-foreground h-4 w-4 shrink-0 transition-transform",
+                      view.isProfileOptionsOpen ? "rotate-180" : "rotate-0",
+                    )}
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="border-border/60 border-t px-3 py-3">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FormField
+                      label={t("webAiApiCheck:modal.fields.tags")}
+                      description={t("webAiApiCheck:modal.hints.tags")}
+                    >
+                      <TagPicker
+                        tags={view.tags}
+                        selectedTagIds={view.selectedTagIds}
+                        onSelectedTagIdsChange={actions.setSelectedTagIds}
+                        onCreateTag={actions.createTag}
+                        onRenameTag={actions.renameTag}
+                        allowDelete={false}
+                        placeholder={t("webAiApiCheck:modal.placeholders.tags")}
+                        disabled={view.isSavingProfile}
+                        portalContainer={view.popoverPortalContainer}
+                      />
+                    </FormField>
+
+                    <FormField
+                      label={t("webAiApiCheck:modal.fields.expiresAt")}
+                      description={t("webAiApiCheck:modal.hints.expiresAt")}
+                      htmlFor="api-check-expires-at"
+                    >
+                      <Input
+                        id="api-check-expires-at"
+                        type="date"
+                        value={view.expiresAtInput}
+                        onChange={(e) =>
+                          actions.setExpiresAtInput(e.target.value)
+                        }
+                        disabled={view.isSavingProfile}
+                      />
+                    </FormField>
+
+                    <FormField
+                      className="md:col-span-2"
+                      label={t("webAiApiCheck:modal.fields.notes")}
+                      htmlFor="api-check-notes"
+                    >
+                      <Textarea
+                        id="api-check-notes"
+                        value={view.notes}
+                        onChange={(e) => actions.setNotes(e.target.value)}
+                        rows={2}
+                        placeholder={t(
+                          "webAiApiCheck:modal.placeholders.notes",
+                        )}
+                        disabled={view.isSavingProfile}
+                      />
+                    </FormField>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
 
               {view.validationError ? (
                 <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-200">

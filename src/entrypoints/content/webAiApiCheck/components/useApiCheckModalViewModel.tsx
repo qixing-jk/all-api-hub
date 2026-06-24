@@ -23,6 +23,7 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
+import type { Tag } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
 import {
@@ -45,6 +46,32 @@ import { useApiCheckModalShell } from "./useApiCheckModalShell"
 import { useApiCheckModelDiscovery } from "./useApiCheckModelDiscovery"
 import { useApiCheckProbeRunner } from "./useApiCheckProbeRunner"
 
+/**
+ * Converts an HTML date input value into a local day-level timestamp.
+ */
+function parseDateInputValue(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const [yearRaw, monthRaw, dayRaw] = trimmed.split("-")
+  const year = Number(yearRaw)
+  const month = Number(monthRaw)
+  const day = Number(dayRaw)
+  if (!year || !month || !day) return null
+
+  const date = new Date(year, month - 1, day)
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null
+  }
+
+  return date.getTime()
+}
+
 export interface ApiCheckModalViewModel {
   isOpen: boolean
   sourceText: string
@@ -57,6 +84,12 @@ export interface ApiCheckModalViewModel {
   apiType: ApiVerificationApiType
   modelId: string
   modelIdsOptions: Array<{ value: string; label: string }>
+  tags: Tag[]
+  selectedTagIds: string[]
+  notes: string
+  expiresAtInput: string
+  isProfileOptionsOpen: boolean
+  hasProfileMetadataInput: boolean
   isFetchingModels: boolean
   fetchModelsError: string | null
   popoverPortalContainer: HTMLElement | null
@@ -87,6 +120,12 @@ export interface ApiCheckModalActions {
   setApiKeyVisible: (isVisible: boolean) => void
   setApiType: (apiType: ApiVerificationApiType) => void
   setModelId: (modelId: string) => void
+  setSelectedTagIds: (tagIds: string[]) => void
+  setNotes: (notes: string) => void
+  setExpiresAtInput: (value: string) => void
+  setIsProfileOptionsOpen: (isOpen: boolean) => void
+  createTag: (name: string) => Promise<Tag>
+  renameTag: (tagId: string, name: string) => Promise<Tag>
   fetchModels: () => void
   runProbe: (probeId: ApiVerificationProbeId) => void
   stopProbe: (probeId: ApiVerificationProbeId) => void
@@ -115,6 +154,11 @@ export function useApiCheckModalViewModel() {
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     API_TYPES.OPENAI_COMPATIBLE,
   )
+  const [tags, setTags] = useState<Tag[]>([])
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [notes, setNotes] = useState("")
+  const [expiresAtInput, setExpiresAtInput] = useState("")
+  const [isProfileOptionsOpen, setIsProfileOptionsOpen] = useState(false)
 
   const baseUrlValueRef = useRef("")
 
@@ -211,6 +255,47 @@ export function useApiCheckModalViewModel() {
   const isRunAllActionDisabled =
     isStoppingRunAll ||
     (!isRunningAll && (isFetchingModels || isAnyProbeRunning))
+  const hasProfileMetadataInput =
+    selectedTagIds.length > 0 || !!notes.trim() || !!expiresAtInput.trim()
+
+  const loadTags = useCallback(async () => {
+    const response = await sendWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.ListTags,
+      {},
+    )
+    if (response?.success) {
+      setTags(response.tags)
+    }
+  }, [])
+
+  const createTag = useCallback(async (name: string) => {
+    const response = await sendWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.CreateTag,
+      { name },
+    )
+    if (!response?.success) {
+      throw new Error(response?.error || "Failed to create tag")
+    }
+    setTags((current) => [
+      ...current.filter((tag) => tag.id !== response.tag.id),
+      response.tag,
+    ])
+    return response.tag
+  }, [])
+
+  const renameTag = useCallback(async (tagId: string, name: string) => {
+    const response = await sendWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.RenameTag,
+      { tagId, name },
+    )
+    if (!response?.success) {
+      throw new Error(response?.error || "Failed to rename tag")
+    }
+    setTags((current) =>
+      current.map((tag) => (tag.id === response.tag.id ? response.tag : tag)),
+    )
+    return response.tag
+  }, [])
 
   useEffect(() => {
     if (!hasInitializedApiTypeRef.current) {
@@ -253,6 +338,10 @@ export function useApiCheckModalViewModel() {
       clearHistoryPrefilledFetchKey()
       updateBaseUrl(nextBaseUrl)
       setApiKey(nextApiKey)
+      setSelectedTagIds([])
+      setNotes("")
+      setExpiresAtInput("")
+      setIsProfileOptionsOpen(false)
 
       setApiKeyVisible(true)
       resetModelList({ clearSelection: true })
@@ -284,6 +373,8 @@ export function useApiCheckModalViewModel() {
           )
         },
       })
+
+      void loadTags()
     }
 
     window.addEventListener(API_CHECK_OPEN_MODAL_EVENT, handleOpen as any)
@@ -304,6 +395,7 @@ export function useApiCheckModalViewModel() {
     resetProbeState,
     setHistoryPrefilledFetchKey,
     updateBaseUrl,
+    loadTags,
   ])
 
   const close = () => {
@@ -381,6 +473,9 @@ export function useApiCheckModalViewModel() {
     }
     recordBaseUrlHistory(trimmedBaseUrl)
 
+    const trimmedNotes = notes.trim()
+    const expiresAt = parseDateInputValue(expiresAtInput)
+
     setIsSavingProfile(true)
     try {
       const response = await sendWebAiApiCheckMessage(
@@ -390,6 +485,9 @@ export function useApiCheckModalViewModel() {
           baseUrl: trimmedBaseUrl,
           apiKey: trimmedApiKey,
           pageUrl: pageUrl || window.location.href,
+          ...(selectedTagIds.length > 0 ? { tagIds: selectedTagIds } : {}),
+          ...(trimmedNotes ? { notes: trimmedNotes } : {}),
+          ...(expiresAt !== null ? { expiresAt } : {}),
         },
       )
 
@@ -469,6 +567,12 @@ export function useApiCheckModalViewModel() {
       apiType,
       modelId,
       modelIdsOptions,
+      tags,
+      selectedTagIds,
+      notes,
+      expiresAtInput,
+      isProfileOptionsOpen,
+      hasProfileMetadataInput,
       isFetchingModels,
       fetchModelsError,
       popoverPortalContainer,
@@ -498,6 +602,12 @@ export function useApiCheckModalViewModel() {
       setApiKeyVisible,
       setApiType,
       setModelId,
+      setSelectedTagIds,
+      setNotes,
+      setExpiresAtInput,
+      setIsProfileOptionsOpen,
+      createTag,
+      renameTag,
       fetchModels: fetchModelsManually,
       runProbe: (probeId: ApiVerificationProbeId) => {
         void runProbe(probeId)

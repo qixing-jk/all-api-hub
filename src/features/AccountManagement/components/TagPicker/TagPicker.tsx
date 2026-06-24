@@ -60,15 +60,23 @@ export interface TagPickerProps {
   /**
    * Delete an existing global tag (also removes it from accounts).
    */
-  onDeleteTag: (tagId: string) => Promise<{ updatedAccounts: number }>
+  onDeleteTag?: (tagId: string) => Promise<{ updatedAccounts: number }>
   /**
    * Disable all interactions.
    */
   disabled?: boolean
   /**
+   * Whether to expose global tag deletion from this picker.
+   */
+  allowDelete?: boolean
+  /**
    * Placeholder shown when there are no selected tags.
    */
   placeholder?: string
+  /**
+   * Optional portal container for the tag popover.
+   */
+  portalContainer?: HTMLElement | null
 }
 
 /**
@@ -89,7 +97,9 @@ export function TagPicker({
   onRenameTag,
   onDeleteTag,
   disabled = false,
+  allowDelete = true,
   placeholder,
+  portalContainer,
 }: TagPickerProps) {
   const { t } = useTranslation(["accountDialog", "ui"])
   const pickerId = useId()
@@ -299,7 +309,7 @@ export function TagPicker({
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget || disabled || isWorking) return
+    if (!deleteTarget || !onDeleteTag || disabled || isWorking) return
     setIsWorking(true)
     setTagActionError(null)
     try {
@@ -340,7 +350,11 @@ export function TagPicker({
             <ChevronDownIcon className="h-4 w-4 opacity-70" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-3" align="start">
+        <PopoverContent
+          className="p-3"
+          align="start"
+          container={portalContainer ?? undefined}
+        >
           <div className="space-y-3">
             <Input
               value={query}
@@ -481,19 +495,21 @@ export function TagPicker({
                           >
                             <PencilSquareIcon className="h-4 w-4" />
                           </IconButton>
-                          <IconButton
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setIsOpen(false)
-                              setDeleteTarget(tag)
-                            }}
-                            aria-label={t("form.tagsDelete")}
-                            disabled={disabled || isWorking}
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </IconButton>
+                          {allowDelete && onDeleteTag ? (
+                            <IconButton
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setIsOpen(false)
+                                setDeleteTarget(tag)
+                              }}
+                              aria-label={t("form.tagsDelete")}
+                              disabled={disabled || isWorking}
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </IconButton>
+                          ) : null}
                         </span>
                       )}
                     </div>

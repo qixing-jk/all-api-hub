@@ -41,10 +41,15 @@
       "apiKey": "API Key",
       "apiType": "Loại API",
       "baseUrl": "Base URL",
-      "modelId": "Model ID"
+      "expiresAt": "Ngày hết hạn",
+      "modelId": "Model ID",
+      "notes": "Ghi chú",
+      "tags": "Thẻ"
     },
     "hints": {
-      "saveWithoutTest": "Mẹo: Chỉ cần điền Base URL và API Key là có thể lưu vào API Profiles (không cần kiểm tra hoặc lấy danh sách mô hình trước). Kiểm tra chỉ được sử dụng để xác minh khả năng khả dụng."
+      "expiresAt": "Tùy chọn. Ghi lại ngày dự kiến khóa này hết hạn.",
+      "saveWithoutTest": "Mẹo: Chỉ cần điền Base URL và API Key là có thể lưu vào API Profiles (không cần kiểm tra hoặc lấy danh sách mô hình trước). Kiểm tra chỉ được sử dụng để xác minh khả năng khả dụng.",
+      "tags": "Tùy chọn. Dùng chung với thẻ toàn cục của tài khoản và dấu trang."
     },
     "history": {
       "empty": "Chưa có lịch sử Base URL",
@@ -56,6 +61,15 @@
       "savedToProfiles": "Đã lưu {{name}} vào API Profiles",
       "stoppingTest": "Đang dừng kiểm tra. Yêu cầu hiện tại sẽ được ngắt sớm nhất có thể.",
       "testStopped": "Đã dừng kiểm tra. Các kết quả đã hoàn tất được giữ lại, và các mục chưa bắt đầu sẽ không chạy tiếp."
+    },
+    "optionalProfileFields": {
+      "hasInput": "Đã thêm thông tin lưu tùy chọn",
+      "hint": "Thẻ, ghi chú và ngày hết hạn không ảnh hưởng đến kết quả kiểm tra.",
+      "title": "Tùy chọn lưu (không bắt buộc)"
+    },
+    "placeholders": {
+      "notes": "Ghi chú tùy chọn",
+      "tags": "Chọn thẻ"
     },
     "privacyHint": "API Key được coi là thông tin nhạy cảm: mặc định bị ẩn và trừ khi bạn chủ động lưu vào API Profiles, sẽ không có bất kỳ dữ liệu nào được lưu trữ liên tục.",
     "probes": {

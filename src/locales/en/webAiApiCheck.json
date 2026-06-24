@@ -41,10 +41,15 @@
       "apiKey": "API key",
       "apiType": "API type",
       "baseUrl": "Base URL",
-      "modelId": "Model ID"
+      "expiresAt": "Expiration date",
+      "modelId": "Model ID",
+      "notes": "Notes",
+      "tags": "Tags"
     },
     "hints": {
-      "saveWithoutTest": "Tip: you can save once base URL + API key are provided (no need to test or fetch models first). Testing is optional and only helps verify availability."
+      "expiresAt": "Optional. Record when this key is expected to expire.",
+      "saveWithoutTest": "Tip: you can save once base URL + API key are provided (no need to test or fetch models first). Testing is optional and only helps verify availability.",
+      "tags": "Optional. Shared with the global account and bookmark tags."
     },
     "history": {
       "empty": "No Base URL history yet",
@@ -56,6 +61,15 @@
       "savedToProfiles": "Saved {{name}} to API credential library.",
       "stoppingTest": "Stopping the test. The current request will be interrupted as soon as possible.",
       "testStopped": "Test stopped. Completed results were kept, and items that had not started will not continue."
+    },
+    "optionalProfileFields": {
+      "hasInput": "Optional save details added",
+      "hint": "Tags, notes, and expiration date do not affect test results.",
+      "title": "Save options (optional)"
+    },
+    "placeholders": {
+      "notes": "Optional notes",
+      "tags": "Select tags"
     },
     "privacyHint": "API Keys will be considered sensitive information: hidden by default, and nothing is stored unless you choose to save to API credential library.",
     "probes": {

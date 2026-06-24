@@ -7,14 +7,20 @@ import { createLogger } from "~/utils/core/logger"
 import type {
   ApiCheckCancelRunProbeRequest,
   ApiCheckCancelRunProbeResponse,
+  ApiCheckCreateTagRequest,
+  ApiCheckCreateTagResponse,
   ApiCheckFetchModelsRequest,
   ApiCheckFetchModelsResponse,
   ApiCheckGetBaseUrlHistorySuggestionsRequest,
   ApiCheckGetBaseUrlHistorySuggestionsResponse,
+  ApiCheckListTagsRequest,
+  ApiCheckListTagsResponse,
   ApiCheckRecordBaseUrlHistoryRequest,
   ApiCheckRecordBaseUrlHistoryResponse,
   ApiCheckRemoveBaseUrlHistoryRequest,
   ApiCheckRemoveBaseUrlHistoryResponse,
+  ApiCheckRenameTagRequest,
+  ApiCheckRenameTagResponse,
   ApiCheckRunProbeRequest,
   ApiCheckRunProbeResponse,
   ApiCheckSaveProfileRequest,
@@ -29,6 +35,9 @@ export const WebAiApiCheckMessageTypes = {
   GetBaseUrlHistorySuggestions: "webAiApiCheck:getBaseUrlHistorySuggestions",
   RecordBaseUrlHistory: "webAiApiCheck:recordBaseUrlHistory",
   RemoveBaseUrlHistory: "webAiApiCheck:removeBaseUrlHistory",
+  ListTags: "webAiApiCheck:listTags",
+  CreateTag: "webAiApiCheck:createTag",
+  RenameTag: "webAiApiCheck:renameTag",
   RunProbe: "webAiApiCheck:runProbe",
   CancelRunProbe: "webAiApiCheck:cancelRunProbe",
   SaveProfile: "webAiApiCheck:saveProfile",
@@ -67,6 +76,15 @@ interface WebAiApiCheckProtocolMap {
   [WebAiApiCheckMessageTypes.RemoveBaseUrlHistory](
     data: ApiCheckRemoveBaseUrlHistoryRequest,
   ): ApiCheckRemoveBaseUrlHistoryResponse
+  [WebAiApiCheckMessageTypes.ListTags](
+    data: ApiCheckListTagsRequest,
+  ): ApiCheckListTagsResponse
+  [WebAiApiCheckMessageTypes.CreateTag](
+    data: ApiCheckCreateTagRequest,
+  ): ApiCheckCreateTagResponse
+  [WebAiApiCheckMessageTypes.RenameTag](
+    data: ApiCheckRenameTagRequest,
+  ): ApiCheckRenameTagResponse
   [WebAiApiCheckMessageTypes.RunProbe](
     data: ApiCheckRunProbeRequest,
   ): ApiCheckRunProbeResponse
