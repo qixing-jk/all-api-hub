@@ -223,6 +223,13 @@ describe("BalanceHistoryAccountSummaryTable", () => {
     )
 
     expect(getAccountOrder()).toEqual(["Zulu", "Alpha", "Mike"])
+    expect(
+      screen
+        .getByRole("button", {
+          name: "balanceHistory:table.columns.startBalance",
+        })
+        .querySelector("svg"),
+    ).toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", {

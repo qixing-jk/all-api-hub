@@ -510,7 +510,9 @@ describe("ManagedSiteChannels", () => {
     })
   })
 
-  it("sorts channels by id descending by default", async () => {
+  it("sorts channels by id descending by default and toggles direction from the shared header button", async () => {
+    const user = userEvent.setup()
+
     mockChannels([
       { id: 1, name: "Alpha", base_url: "https://alpha.example" },
       { id: 3, name: "Gamma", base_url: "https://gamma.example" },
@@ -527,6 +529,26 @@ describe("ManagedSiteChannels", () => {
     )
 
     expect(names).toEqual(["Gamma", "Beta", "Alpha"])
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:table.columns.id",
+      }),
+    )
+
+    const ascendingRows = Array.from(container.querySelectorAll("tbody tr"))
+    const ascendingNames = ascendingRows.map((row) =>
+      row.querySelector("td:nth-child(3) .font-medium")?.textContent?.trim(),
+    )
+
+    expect(ascendingNames).toEqual(["Alpha", "Beta", "Gamma"])
+    expect(
+      screen
+        .getByRole("button", {
+          name: "managedSiteChannels:table.columns.id",
+        })
+        .querySelector("svg"),
+    ).toBeInTheDocument()
   })
 
   it("reloads the channel list when the managed site type changes", async () => {
@@ -1031,14 +1053,23 @@ describe("ManagedSiteChannels", () => {
   it("clears the search input from the dedicated clear button", async () => {
     const user = userEvent.setup()
 
-    mockChannels([{ id: 1, name: "Alpha", base_url: "https://example.com" }])
+    mockChannels([
+      { id: 1, name: "Alpha", base_url: "https://alpha.example" },
+      { id: 2, name: "Beta", base_url: "https://beta.example" },
+    ])
 
     render(<ManagedSiteChannels routeParams={{ search: "Alpha" }} />)
 
     await waitForRowText("Alpha")
+    expect(screen.queryByText("Beta")).not.toBeInTheDocument()
 
     const input = screen.getByRole("textbox") as HTMLInputElement
     expect(input.value).toBe("Alpha")
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.clearSearch",
+      }),
+    ).toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", {
@@ -1053,6 +1084,12 @@ describe("ManagedSiteChannels", () => {
         {},
       )
     })
+    expect(screen.getByText("Alpha")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "managedSiteChannels:toolbar.clearSearch",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("filters rows by status from the toolbar and shows the active filter count", async () => {

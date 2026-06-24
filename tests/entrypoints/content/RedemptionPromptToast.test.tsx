@@ -166,6 +166,19 @@ describe("RedemptionPromptToast", () => {
       expect(selectAllCheckbox).toHaveAttribute("data-indeterminate", "true")
     })
 
+    fireEvent.click(screen.getByText("ABCD***1"))
+
+    await waitFor(() => {
+      expect(selectAllCheckbox).toBeChecked()
+    })
+
+    fireEvent.click(screen.getByText("ABCD***1"))
+
+    await waitFor(() => {
+      expect(selectAllCheckbox).not.toBeChecked()
+      expect(selectAllCheckbox).toHaveAttribute("data-indeterminate", "true")
+    })
+
     fireEvent.click(codeTwoCheckbox)
 
     expect(autoRedeemButton).toBeDisabled()
