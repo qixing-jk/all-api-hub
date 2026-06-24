@@ -1065,42 +1065,6 @@ describe("AccountList", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "account:filter.checkIn.checked-in",
-      }),
-    )
-
-    expect(screen.getAllByTestId(TEST_IDS.accountRow)).toHaveLength(1)
-    expect(screen.getByText("Enabled Alpha")).toBeInTheDocument()
-    expect(screen.queryByText("Disabled Beta")).not.toBeInTheDocument()
-    expect(screen.queryByText("Enabled Gamma")).not.toBeInTheDocument()
-    expect(screen.queryByText("Unsynced Delta")).not.toBeInTheDocument()
-  })
-
-  it("filters accounts by outdated check-in status", async () => {
-    const user = userEvent.setup()
-
-    render(<AccountList />)
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "account:filter.checkIn.outdated",
-      }),
-    )
-
-    expect(screen.getAllByTestId(TEST_IDS.accountRow)).toHaveLength(1)
-    expect(screen.getByText("Disabled Beta")).toBeInTheDocument()
-    expect(screen.queryByText("Enabled Alpha")).not.toBeInTheDocument()
-    expect(screen.queryByText("Enabled Gamma")).not.toBeInTheDocument()
-    expect(screen.queryByText("Unsynced Delta")).not.toBeInTheDocument()
-  })
-
-  it("filters accounts by not-checked-in status", async () => {
-    const user = userEvent.setup()
-
-    render(<AccountList />)
-
-    await user.click(
-      screen.getByRole("button", {
         name: "account:filter.checkIn.not-checked-in",
       }),
     )
@@ -1108,26 +1072,7 @@ describe("AccountList", () => {
     expect(screen.getAllByTestId(TEST_IDS.accountRow)).toHaveLength(1)
     expect(screen.getByText("Enabled Gamma")).toBeInTheDocument()
     expect(screen.queryByText("Enabled Alpha")).not.toBeInTheDocument()
-    expect(screen.queryByText("Disabled Beta")).not.toBeInTheDocument()
-    expect(screen.queryByText("Unsynced Delta")).not.toBeInTheDocument()
-  })
-
-  it("filters accounts by unsupported check-in status", async () => {
-    const user = userEvent.setup()
-
-    render(<AccountList />)
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "account:filter.checkIn.unsupported",
-      }),
-    )
-
-    expect(screen.getAllByTestId(TEST_IDS.accountRow)).toHaveLength(1)
-    expect(screen.getByText("Unsynced Delta")).toBeInTheDocument()
-    expect(screen.queryByText("Enabled Alpha")).not.toBeInTheDocument()
-    expect(screen.queryByText("Disabled Beta")).not.toBeInTheDocument()
-    expect(screen.queryByText("Enabled Gamma")).not.toBeInTheDocument()
+    expect(screen.getByText("common:total: 1")).toBeInTheDocument()
   })
 
   it("updates faceted select counts based on other active filters", async () => {

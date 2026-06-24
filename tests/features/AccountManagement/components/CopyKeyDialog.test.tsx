@@ -359,47 +359,10 @@ describe("CopyKeyDialog", () => {
     expect(
       await screen.findByText("keyManagement:oneTimeKey.title"),
     ).toBeInTheDocument()
+    expect(screen.getByText("aihubmix-default")).toBeInTheDocument()
     expect(
       screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
     ).toHaveValue("sk-created-full-secret")
-
-    await waitFor(() => {
-      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
-      expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
-    })
-  })
-
-  it("shows the AIHubMix created one-time token without refetching inventory", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([])
-    createApiTokenMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-created-full-secret",
-      name: "aihubmix-default",
-    })
-
-    const user = userEvent.setup()
-    const writeText = vi
-      .spyOn(navigator.clipboard, "writeText")
-      .mockResolvedValue(undefined)
-
-    render(
-      <CopyKeyDialog
-        isOpen={true}
-        onClose={() => {}}
-        account={AIHUBMIX_ACCOUNT}
-      />,
-    )
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "ui:dialog.copyKey.createKey",
-      }),
-    )
-
-    expect(
-      await screen.findByText("keyManagement:oneTimeKey.title"),
-    ).toBeInTheDocument()
-    expect(screen.getByText("aihubmix-default")).toBeInTheDocument()
 
     await waitFor(() => {
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)

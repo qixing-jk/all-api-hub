@@ -38,7 +38,6 @@ import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healt
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
-import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionStarted,
@@ -67,6 +66,11 @@ import AccountFilterBar from "./AccountFilterBar"
 import { NonSortableAccountListItem } from "./AccountListBaseItem"
 import { AccountListInitialLoadingState } from "./AccountListLoadingState"
 import AccountSearchInput from "./AccountSearchInput"
+import {
+  ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER,
+  getAccountCheckInFilterValue,
+  type AccountCheckInFilterValue,
+} from "./checkInFilter"
 
 interface AccountListProps {
   initialSearchQuery?: string
@@ -84,11 +88,6 @@ type AccountRefreshFilterValue =
   | "warning"
   | "error"
   | "unknown"
-type AccountCheckInFilterValue =
-  | "checked-in"
-  | "not-checked-in"
-  | "outdated"
-  | "unsupported"
 
 /**
  * Moves an account id within the manual ordering array.
@@ -153,26 +152,6 @@ const ACCOUNT_REFRESH_FILTER_OPTION_ORDER: AccountRefreshFilterValue[] = [
 const ACCOUNT_REFRESH_FILTER_OPTION_VALUE_SET =
   new Set<AccountRefreshFilterValue>(ACCOUNT_REFRESH_FILTER_OPTION_ORDER)
 
-const ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER: AccountCheckInFilterValue[] = [
-  "checked-in",
-  "not-checked-in",
-  "outdated",
-  "unsupported",
-]
-
-/**
- * Checks whether a persisted site check-in detection timestamp belongs to today.
- */
-function isCheckInStatusDetectedToday(detectedAt?: number): boolean {
-  if (typeof detectedAt !== "number" || !Number.isFinite(detectedAt)) {
-    return false
-  }
-
-  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-  const detectedKey = getDayKeyFromUnixSeconds(Math.floor(detectedAt / 1000))
-  return detectedKey === todayKey
-}
-
 /**
  * Guards runtime values coming back from Select so only known refresh buckets
  * flow into AccountRefreshFilterValue state.
@@ -211,49 +190,6 @@ function getAccountRefreshFilterValue(
     default:
       return "unknown"
   }
-}
-
-/**
- * Maps combined site/custom check-in state into one stable filter bucket.
- */
-function getAccountCheckInFilterValue(
-  account: DisplaySiteData,
-): AccountCheckInFilterValue {
-  const hasCustomCheckIn =
-    typeof account.checkIn?.customCheckIn?.url === "string" &&
-    account.checkIn.customCheckIn.url.trim() !== ""
-  const siteCheckInEnabled = account.checkIn?.enableDetection === true
-  const siteCheckedInToday = account.checkIn?.siteStatus?.isCheckedInToday
-  const siteStatusKnown = typeof siteCheckedInToday === "boolean"
-  const siteStatusOutdated =
-    siteCheckInEnabled &&
-    siteStatusKnown &&
-    !isCheckInStatusDetectedToday(account.checkIn?.siteStatus?.lastDetectedAt)
-  const customCheckedIn =
-    account.checkIn?.customCheckIn?.isCheckedInToday === true
-
-  if (siteStatusOutdated) {
-    return "outdated"
-  }
-
-  // `siteCheckInEnabled`, `siteStatusKnown`, and `hasCustomCheckIn` can all be
-  // false in two different ways:
-  // 1) detection is off and there is no custom check-in configured
-  // 2) detection is on but no device status has ever been detected, and there is
-  //    still no custom check-in configured
-  // Both cases should resolve to "unsupported", but for different reasons.
-  if (!siteCheckInEnabled && !hasCustomCheckIn) {
-    return "unsupported"
-  }
-
-  if (!siteStatusKnown && !hasCustomCheckIn) {
-    return "unsupported"
-  }
-
-  const siteFlowChecked = !siteStatusKnown || siteCheckedInToday === true
-  const customFlowChecked = !hasCustomCheckIn || customCheckedIn
-
-  return siteFlowChecked && customFlowChecked ? "checked-in" : "not-checked-in"
 }
 
 /**

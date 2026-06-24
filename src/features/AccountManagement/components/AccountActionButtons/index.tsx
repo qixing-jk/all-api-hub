@@ -39,7 +39,6 @@ import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging
 import {
   getManagedSiteChannelExactMatch,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
-  type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
@@ -88,6 +87,7 @@ import {
 } from "~/utils/navigation"
 
 import { AccountActionMenuItem } from "./AccountActionMenuItem"
+import { resolveLocateManagedSiteChannelToastMessage } from "./locateManagedSiteChannelToast"
 
 /**
  * Derives a user-facing toast message from the latest auto check-in result for one account.
@@ -209,41 +209,6 @@ const getQuickCheckinFailureAnalyticsCategory = (result: {
   }
 
   return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
-}
-
-const getLocateManagedSiteChannelToastMessage = (
-  t: TFunction,
-  inspection: ManagedSiteChannelMatchInspection,
-) => {
-  if (inspection.key.matched && inspection.models.matched) {
-    if (
-      inspection.key.channel?.id != null &&
-      inspection.key.channel.id === inspection.models.channel?.id
-    ) {
-      return t("account:actions.channelLocateKeyMatchedModelsDrifted")
-    }
-
-    return t("account:actions.channelLocateSignalsConflict")
-  }
-
-  if (inspection.key.matched) {
-    return t("account:actions.channelLocateKeyMatchOnly")
-  }
-
-  switch (inspection.models.reason) {
-    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT:
-      return t("account:actions.channelLocateSecondaryExactModels")
-    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED:
-      return t("account:actions.channelLocateSecondaryModelsContained")
-    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR:
-      return t("account:actions.channelLocateSecondaryModelsSimilar")
-  }
-
-  if (inspection.url.matched) {
-    return t("account:actions.channelLocateFuzzyUrlOnly")
-  }
-
-  return t("account:actions.channelLocateUnresolved")
 }
 
 /**
@@ -553,7 +518,7 @@ export default function AccountActionButtons({
         return
       }
 
-      toast.success(getLocateManagedSiteChannelToastMessage(t, resolution))
+      toast.success(resolveLocateManagedSiteChannelToastMessage(t, resolution))
     } catch (error) {
       logger.error("Failed to locate managed site channel", {
         diagnostic: toSanitizedErrorSummary(error, Array.from(secretsToRedact)),

@@ -1037,7 +1037,7 @@ describe("AutoCheckin account actions", () => {
     )
   })
 
-  it("filters already-checked results as success, searches translated message keys, and renders snapshots", async () => {
+  it("filters already-checked results as success and searches translated message keys", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
 
@@ -1067,28 +1067,13 @@ describe("AutoCheckin account actions", () => {
             message: "failed",
           },
         },
-        accountsSnapshot: [
-          {
-            accountId: "snapshot-1",
-            accountName: "Snapshot Account",
-            detectionEnabled: true,
-            autoCheckinEnabled: false,
-            providerAvailable: true,
-            skipReason: "auto_checkin_disabled",
-          },
-        ],
       },
     } as any)
 
     render(<AutoCheckin routeParams={{}} />)
 
-    expect(
-      await screen.findByText("autoCheckin:snapshot.title"),
-    ).toBeInTheDocument()
-    expect(screen.getByText("Snapshot Account")).toBeInTheDocument()
-
     await user.click(
-      screen.getByRole("button", {
+      await screen.findByRole("button", {
         name: /autoCheckin:execution\.filters\.success/i,
       }),
     )
@@ -1123,6 +1108,34 @@ describe("AutoCheckin account actions", () => {
         screen.getByText("autoCheckin:execution.empty.noResults"),
       ).toBeInTheDocument()
     })
+  })
+
+  it("renders account snapshots from status data", async () => {
+    const browserApi = await import("~/utils/browser/browserApi")
+
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
+      success: true,
+      data: {
+        perAccount: {},
+        accountsSnapshot: [
+          {
+            accountId: "snapshot-1",
+            accountName: "Snapshot Account",
+            detectionEnabled: true,
+            autoCheckinEnabled: false,
+            providerAvailable: true,
+            skipReason: "auto_checkin_disabled",
+          },
+        ],
+      },
+    } as any)
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    expect(
+      await screen.findByText("autoCheckin:snapshot.title"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Snapshot Account")).toBeInTheDocument()
   })
 
   it("keeps existing results rendered while a manual refresh is loading", async () => {
