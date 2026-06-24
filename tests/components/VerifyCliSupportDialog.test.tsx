@@ -278,6 +278,71 @@ describe("VerifyCliSupportDialog", () => {
     expect(receivedSignal?.aborted).toBe(true)
   })
 
+  it("ignores aborted profile model-fetch rejections when the dialog closes", async () => {
+    let receivedSignal: AbortSignal | undefined
+    mockFetchApiCredentialModelIds.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise<string[]>((_resolve, reject) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    const { rerender } = render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p1",
+          name: "Profile",
+          apiType: "openai-compatible" as any,
+          baseUrl: "https://example.com",
+          apiKey: "profile-secret",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId=""
+      />,
+    )
+
+    await waitFor(() => expect(receivedSignal).toBeDefined())
+
+    await act(async () => {
+      rerender(
+        <VerifyCliSupportDialog
+          isOpen={false}
+          onClose={() => {}}
+          profile={{
+            id: "p1",
+            name: "Profile",
+            apiType: "openai-compatible" as any,
+            baseUrl: "https://example.com",
+            apiKey: "profile-secret",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          }}
+          initialModelId=""
+        />,
+      )
+    })
+
+    expect(receivedSignal?.aborted).toBe(true)
+    expect(
+      screen.queryByText(
+        "cliSupportVerification:verifyDialog.modelsFetchFailed",
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it("renders tool items and a single model input before running", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
@@ -913,6 +978,67 @@ describe("VerifyCliSupportDialog", () => {
       ).toBeInTheDocument()
     })
     expect(mockRunCliSupportTool).not.toHaveBeenCalled()
+  })
+
+  it("marks a single CLI tool stopped when its request rejects after cancellation", async () => {
+    let receivedSignal: AbortSignal | undefined
+    mockRunCliSupportTool.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise((_resolve, reject) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p1",
+          name: "Profile",
+          apiType: "openai-compatible" as any,
+          baseUrl: "https://example.com",
+          apiKey: "profile-secret",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
+    const runButton = within(toolCard).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
+    })
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
+
+    const stopButton = await within(toolCard).findByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.stopTool",
+    })
+    fireEvent.click(stopButton)
+
+    await waitFor(() => {
+      expect(receivedSignal?.aborted).toBe(true)
+    })
+    expect(
+      await within(toolCard).findByText(
+        "cliSupportVerification:verifyDialog.summaries.stopped",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(toolCard).getByRole("button", {
+        name: "cliSupportVerification:verifyDialog.actions.retry",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("shows the profile model fetch error when loading stored profile models fails", async () => {

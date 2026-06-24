@@ -997,6 +997,87 @@ describe("VerifyApiDialog", () => {
     expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
   })
 
+  it("marks a single probe stopped when its request rejects after cancellation", async () => {
+    let receivedSignal: AbortSignal | undefined
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "secret",
+        status: 1,
+        name: "token-1",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockRunApiVerificationProbe.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise((_resolve, reject) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: "1",
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const probeCard = await screen.findByTestId("verify-probe-text-generation")
+    const runButton = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
+
+    const stopButton = await within(probeCard).findByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.stopProbe",
+    })
+    fireEvent.click(stopButton)
+
+    await waitFor(() => {
+      expect(receivedSignal?.aborted).toBe(true)
+    })
+    expect(
+      await within(probeCard).findByText(
+        "aiApiVerification:verifyDialog.summaries.stopped",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(probeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.retry",
+      }),
+    ).toBeInTheDocument()
+  })
+
   it("completes run-all analytics as failure when any probe fails", async () => {
     mockGetApiVerificationProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },

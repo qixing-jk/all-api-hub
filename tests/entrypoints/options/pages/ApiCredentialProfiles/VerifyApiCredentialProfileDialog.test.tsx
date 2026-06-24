@@ -361,6 +361,52 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).not.toHaveTextContent("late-model")
   })
 
+  it("ignores aborted model-fetch rejections when switching API types", async () => {
+    const user = userEvent.setup()
+    let receivedSignal: AbortSignal | undefined
+    mockFetchOpenAICompatibleModelIds.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise<string[]>((_resolve, reject) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    await waitFor(() => expect(receivedSignal).toBeDefined())
+    await selectApiTypeOption(user)
+
+    expect(receivedSignal?.aborted).toBe(true)
+    await waitFor(() => {
+      expect(mockFetchAnthropicModelIds).toHaveBeenCalled()
+    })
+    expect(
+      screen.queryByText("apiCredentialProfiles:verify.modelsFetchFailed"),
+    ).not.toBeInTheDocument()
+  })
+
   it("redacts secrets when the initial model fetch fails", async () => {
     mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
       new Error("401 https://example.com sk-test invalid"),
