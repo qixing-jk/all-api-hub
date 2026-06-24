@@ -257,7 +257,9 @@
     "loadFailed": "キー一覧の読み込みに失敗しました",
     "revealFailed": "キーの表示に失敗しました",
     "savedToApiProfiles": "{{name}} を API 認証情報庫に保存しました",
-    "saveToApiProfilesFailed": "API 認証情報庫への保存に失敗しました"
+    "saveToApiProfilesFailed": "API 認証情報庫への保存に失敗しました",
+    "verifyApiFailed": "API 検証を開けませんでした",
+    "verifyCliSupportFailed": "CLI 互換性検証を開けませんでした"
   },
   "noKeys": "まだキーデータがありません",
   "noMatchingKeys": "一致するキーが見つかりません",

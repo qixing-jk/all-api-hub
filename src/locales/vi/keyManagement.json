@@ -257,7 +257,9 @@
     "loadFailed": "Tải danh sách khóa thất bại",
     "revealFailed": "Hiển thị khóa thất bại",
     "savedToApiProfiles": "Đã lưu {{name}} vào Hồ sơ API",
-    "saveToApiProfilesFailed": "Lưu vào Hồ sơ API thất bại"
+    "saveToApiProfilesFailed": "Lưu vào Hồ sơ API thất bại",
+    "verifyApiFailed": "Không thể mở xác minh API",
+    "verifyCliSupportFailed": "Không thể mở xác minh tính tương thích CLI"
   },
   "noKeys": "Chưa có dữ liệu khóa",
   "noMatchingKeys": "Không tìm thấy khóa khớp",

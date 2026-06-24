@@ -257,7 +257,9 @@
     "loadFailed": "加载密钥列表失败",
     "revealFailed": "显示密钥失败",
     "savedToApiProfiles": "已保存 {{name}} 到 API 凭据库",
-    "saveToApiProfilesFailed": "保存到 API 凭据库失败"
+    "saveToApiProfilesFailed": "保存到 API 凭据库失败",
+    "verifyApiFailed": "打开接口验证失败",
+    "verifyCliSupportFailed": "打开 CLI 兼容性验证失败"
   },
   "noKeys": "暂无密钥数据",
   "noMatchingKeys": "没有找到匹配的密钥",

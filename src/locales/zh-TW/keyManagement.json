@@ -257,7 +257,9 @@
     "loadFailed": "載入金鑰列表失敗",
     "revealFailed": "顯示金鑰失敗",
     "savedToApiProfiles": "已儲存 {{name}} 到 API 憑據庫",
-    "saveToApiProfilesFailed": "儲存到 API 憑據庫失敗"
+    "saveToApiProfilesFailed": "儲存到 API 憑據庫失敗",
+    "verifyApiFailed": "開啟介面驗證失敗",
+    "verifyCliSupportFailed": "開啟 CLI 相容性驗證失敗"
   },
   "noKeys": "暫無金鑰資料",
   "noMatchingKeys": "沒有找到匹配的金鑰",

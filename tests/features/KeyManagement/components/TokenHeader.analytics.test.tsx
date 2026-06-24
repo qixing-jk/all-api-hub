@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import { act, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -344,6 +344,21 @@ describe("TokenHeader analytics", () => {
         }),
       )
     })
+    const openedDialogProps = verifyDialogRenderMock.mock.calls.find(
+      ([props]) => (props as { isOpen?: boolean }).isOpen === true,
+    )?.[0] as { onClose: () => void }
+
+    act(() => {
+      openedDialogProps.onClose()
+    })
+
+    await waitFor(() => {
+      expect(verifyDialogRenderMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          isOpen: false,
+        }),
+      )
+    })
   })
 
   it("tracks token API verification open as sanitized unknown failure when secret resolution fails", async () => {
@@ -372,9 +387,15 @@ describe("TokenHeader analytics", () => {
       )
       expect(showResultToastMock).toHaveBeenCalledWith({
         success: false,
-        message: "messages:errors.operation.failed",
+        message: "keyManagement:messages.verifyApiFailed",
       })
     })
+    expect(JSON.stringify(showResultToastMock.mock.calls)).not.toContain(
+      "sk-sensitive",
+    )
+    expect(JSON.stringify(showResultToastMock.mock.calls)).not.toContain(
+      "verification exposed",
+    )
     expect(
       JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
     ).not.toContain("sk-sensitive")
@@ -437,6 +458,13 @@ describe("TokenHeader analytics", () => {
         PRODUCT_ANALYTICS_RESULTS.Success,
       )
     })
+    const openedDialogProps = verifyCliDialogRenderMock.mock.calls.find(
+      ([props]) => (props as { isOpen?: boolean }).isOpen === true,
+    )?.[0] as { onClose: () => void }
+
+    act(() => {
+      openedDialogProps.onClose()
+    })
     expect(
       JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
     ).not.toContain(resolvedSecret)
@@ -468,9 +496,15 @@ describe("TokenHeader analytics", () => {
       )
       expect(showResultToastMock).toHaveBeenCalledWith({
         success: false,
-        message: "messages:errors.operation.failed",
+        message: "keyManagement:messages.verifyCliSupportFailed",
       })
     })
+    expect(JSON.stringify(showResultToastMock.mock.calls)).not.toContain(
+      "sk-sensitive-cli",
+    )
+    expect(JSON.stringify(showResultToastMock.mock.calls)).not.toContain(
+      "cli verification exposed",
+    )
     expect(
       JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
     ).not.toContain("sk-sensitive-cli")

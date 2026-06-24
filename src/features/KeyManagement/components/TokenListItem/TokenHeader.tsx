@@ -509,9 +509,7 @@ function TokenActionButtons({
       })
       showResultToast({
         success: false,
-        message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error),
-        }),
+        message: t("keyManagement:messages.verifyApiFailed"),
       })
     }
   }
@@ -546,9 +544,7 @@ function TokenActionButtons({
       })
       showResultToast({
         success: false,
-        message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error),
-        }),
+        message: t("keyManagement:messages.verifyCliSupportFailed"),
       })
     }
   }
