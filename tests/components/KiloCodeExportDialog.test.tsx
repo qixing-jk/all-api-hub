@@ -1018,6 +1018,12 @@ describe("KiloCodeExportDialog", () => {
     )
   })
 
+  it("throws a clear invariant error when selecting from an empty refreshed token list", () => {
+    expect(() => pickNewestKiloCodeToken([])).toThrow(
+      "Expected at least one Kilo Code token to select",
+    )
+  })
+
   it("falls back to a user-friendly blocked Sub2API create message when the resolution message is blank", async () => {
     const user = userEvent.setup()
     const site = createDisplayAccount({

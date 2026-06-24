@@ -34,6 +34,10 @@ function resolveTokenCreatedAt(token: ApiToken): number | null {
  * Selects the newest token deterministically even when upstream fetch order is unstable.
  */
 export function pickNewestKiloCodeToken(tokens: ApiToken[]): ApiToken {
+  if (tokens.length === 0) {
+    throw new Error("Expected at least one Kilo Code token to select")
+  }
+
   return tokens.reduce((selectedToken, candidateToken) => {
     const selectedCreatedAt = resolveTokenCreatedAt(selectedToken)
     const candidateCreatedAt = resolveTokenCreatedAt(candidateToken)
