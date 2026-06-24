@@ -890,9 +890,9 @@ describe("KiloCodeExportDialog", () => {
     expect(latestDialogProps?.createPrefill).toMatchObject({
       modelId: "",
       defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+      group: "default",
       allowedGroups: ["default", "vip"],
     })
-    expect(latestDialogProps?.createPrefill).not.toHaveProperty("group")
 
     await user.click(
       await screen.findByRole("button", { name: "mock-add-token-close" }),

@@ -1,9 +1,6 @@
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
-import {
-  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-  resolvePreferredDefaultUserGroup,
-} from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { buildDefaultTokenCreatePrefill } from "~/features/KeyManagement/components/AddTokenDialog/defaultTokenCreatePrefill"
 
 import { ChannelDialog } from "./ChannelDialog"
 
@@ -20,18 +17,11 @@ export function ChannelDialogContainer() {
     handleDefaultTokenQuickCreateSuccess,
   } = useChannelDialogContext()
 
-  const defaultTokenQuickCreatePrefill =
-    defaultTokenQuickCreateDialog.account &&
-    defaultTokenQuickCreateDialog.allowedGroups.length > 0
-      ? {
-          modelId: "",
-          defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-          group: resolvePreferredDefaultUserGroup(
-            defaultTokenQuickCreateDialog.allowedGroups,
-          ),
-          allowedGroups: defaultTokenQuickCreateDialog.allowedGroups,
-        }
-      : undefined
+  const defaultTokenQuickCreatePrefill = defaultTokenQuickCreateDialog.account
+    ? buildDefaultTokenCreatePrefill(
+        defaultTokenQuickCreateDialog.allowedGroups,
+      )
+    : undefined
 
   return (
     <>

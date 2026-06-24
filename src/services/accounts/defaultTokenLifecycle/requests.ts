@@ -39,6 +39,43 @@ export function generateDefaultTokenRequest(): CreateTokenRequest {
 }
 
 /**
+ * Builds the default auto-provision token payload for one user group.
+ */
+export function buildGroupDefaultTokenRequest(
+  group: string,
+): CreateTokenRequest {
+  const normalizedGroup = group.trim()
+
+  return {
+    ...generateDefaultTokenRequest(),
+    name:
+      normalizedGroup && normalizedGroup !== DEFAULT_USER_GROUP_NAME
+        ? `${normalizedGroup} group (auto)`
+        : DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+    group: normalizedGroup,
+  }
+}
+
+/**
+ * Applies the group-aware default name only to auto-generated default-token names.
+ */
+export function normalizeDefaultTokenRequestName(
+  tokenData: CreateTokenRequest,
+): CreateTokenRequest {
+  const normalizedGroup = tokenData.group.trim()
+  const groupDefaultTokenData = buildGroupDefaultTokenRequest(normalizedGroup)
+
+  return {
+    ...tokenData,
+    name:
+      tokenData.name === DEFAULT_AUTO_PROVISION_TOKEN_NAME
+        ? groupDefaultTokenData.name
+        : tokenData.name,
+    group: normalizedGroup,
+  }
+}
+
+/**
  * Creates an adapter request DTO from a stored account record.
  */
 export function createStoredAccountTokenRequest(

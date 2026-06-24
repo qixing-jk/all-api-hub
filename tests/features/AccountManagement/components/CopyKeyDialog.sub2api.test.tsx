@@ -186,7 +186,10 @@ describe("CopyKeyDialog sub2api support", () => {
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
       expect(createApiTokenMock).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ group: "vip" }),
+        expect.objectContaining({
+          name: "vip group (auto)",
+          group: "vip",
+        }),
       )
     })
   })
@@ -303,19 +306,11 @@ describe("CopyKeyDialog sub2api support", () => {
       name: "keyManagement:dialog.createToken",
     })
 
-    const groupTrigger = screen
-      .getAllByRole("combobox")
-      .find((element) =>
-        element.textContent?.includes("keyManagement:dialog.groupLabel"),
-      )
-    expect(groupTrigger).toBeTruthy()
-
-    await user.click(groupTrigger as HTMLElement)
-    await user.click(
-      await screen.findByText(
-        "default - Default (keyManagement:dialog.groupRate 1)",
-      ),
-    )
+    expect(
+      screen.getByRole("textbox", {
+        name: "keyManagement:dialog.tokenName *",
+      }),
+    ).toHaveValue("user group (auto)")
 
     await user.click(
       await screen.findByRole("button", {

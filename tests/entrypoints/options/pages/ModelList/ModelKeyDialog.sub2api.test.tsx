@@ -65,7 +65,7 @@ describe("ModelKeyDialog sub2api support", () => {
   it("allows creating a compatible key for sub2api accounts", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([TOKEN])
+      .mockResolvedValueOnce([buildSub2ApiToken({ group: "vip" })])
     adapterCreateTokenMock.mockResolvedValueOnce(true)
 
     const user = userEvent.setup()
@@ -76,7 +76,7 @@ describe("ModelKeyDialog sub2api support", () => {
         onClose={() => {}}
         account={ACCOUNT}
         modelId="gpt-4"
-        modelEnableGroups={["default"]}
+        modelEnableGroups={["vip"]}
       />,
     )
 
@@ -89,7 +89,8 @@ describe("ModelKeyDialog sub2api support", () => {
     await waitFor(() => {
       expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
       expect(adapterCreateTokenMock.mock.calls[0]?.[1]).toMatchObject({
-        group: "default",
+        name: "vip group (auto)",
+        group: "vip",
         model_limits_enabled: false,
         model_limits: "",
       })

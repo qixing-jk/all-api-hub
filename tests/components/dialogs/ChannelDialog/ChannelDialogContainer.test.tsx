@@ -6,7 +6,6 @@ import {
   ChannelDialogProvider,
   useChannelDialogContext,
 } from "~/components/dialogs/ChannelDialog"
-import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -89,7 +88,7 @@ describe("ChannelDialogContainer", () => {
           isOpen: true,
           createPrefill: {
             modelId: "",
-            defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+            defaultName: "vip group (auto)",
             group: "vip",
             allowedGroups: ["vip"],
           },

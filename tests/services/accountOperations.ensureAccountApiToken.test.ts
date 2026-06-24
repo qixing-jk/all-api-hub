@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  buildGroupDefaultTokenRequest,
   DEFAULT_AUTO_PROVISION_TOKEN_NAME,
   ensureDefaultApiTokenForAccount,
   generateDefaultTokenRequest,
@@ -500,6 +501,36 @@ describe("accountOperations Sub2API token creation guards", () => {
     })
   })
 
+  it("normalizes ready default quick-create token names for non-default groups", async () => {
+    const { resolveDefaultTokenQuickCreateResolution } = await import(
+      "~/services/accounts/accountOperations"
+    )
+
+    resolveDefaultTokenCreationMock
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+        tokenData: { ...generateDefaultTokenRequest(), group: "vip" },
+        oneTimeSecret: false,
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+      })
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      vip: { desc: "VIP", ratio: 2 },
+    })
+
+    await expect(
+      resolveDefaultTokenQuickCreateResolution(DISPLAY_ACCOUNT),
+    ).resolves.toMatchObject({
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
+      tokenData: {
+        name: "vip group (auto)",
+        group: "vip",
+      },
+    })
+  })
+
   it("rejects quick-create resolution when Sub2API group inventory is missing", async () => {
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
       kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
@@ -657,6 +688,19 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
       model_limits_enabled: false,
       model_limits: "",
       group: "",
+    })
+  })
+
+  it("builds group-aware default token payload names", () => {
+    expect(buildGroupDefaultTokenRequest("default")).toEqual({
+      ...generateDefaultTokenRequest(),
+      name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+      group: "default",
+    })
+    expect(buildGroupDefaultTokenRequest("vip")).toEqual({
+      ...generateDefaultTokenRequest(),
+      name: "vip group (auto)",
+      group: "vip",
     })
   })
 

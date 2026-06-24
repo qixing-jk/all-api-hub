@@ -15,7 +15,6 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
@@ -26,8 +25,7 @@ import {
 import { t } from "~/utils/i18n/core"
 
 import {
-  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-  DEFAULT_USER_GROUP_NAME,
+  buildGroupDefaultTokenRequest,
   generateDefaultTokenRequest,
 } from "./ensureDefaultToken"
 
@@ -42,22 +40,6 @@ interface AccountKeyCoverageResult {
 
 const normalizeGroupName = (value: unknown) =>
   typeof value === "string" ? value.trim() : ""
-
-/**
- * Builds the default auto-provision token payload for one user group.
- */
-export function buildGroupDefaultTokenRequest(
-  group: string,
-): CreateTokenRequest {
-  return {
-    ...generateDefaultTokenRequest(),
-    name:
-      group && group !== DEFAULT_USER_GROUP_NAME
-        ? `${group} group (auto)`
-        : DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-    group,
-  }
-}
 
 /**
  * Builds the normalized API-service request for account key audit calls.

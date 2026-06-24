@@ -31,6 +31,7 @@ import {
   DefaultTokenLifecyclePolicyBlockedError,
   ensureDefaultTokenLifecycle,
   generateDefaultTokenRequest,
+  normalizeDefaultTokenRequestName,
   resolveDefaultTokenLifecycleDecision,
 } from "~/services/accounts/defaultTokenLifecycle"
 import {
@@ -513,7 +514,7 @@ export async function resolveDefaultTokenQuickCreateResolution(
   if (decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create) {
     return {
       kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-      tokenData: decision.tokenData,
+      tokenData: normalizeDefaultTokenRequestName(decision.tokenData),
     }
   }
 

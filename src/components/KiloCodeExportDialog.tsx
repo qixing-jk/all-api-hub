@@ -19,8 +19,8 @@ import {
   type CompactMultiSelectOption,
 } from "~/components/ui"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { buildDefaultTokenCreatePrefill } from "~/features/KeyManagement/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { useAccountData } from "~/hooks/useAccountData"
-import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   ensureAccountApiToken,
   resolveDefaultTokenQuickCreateResolution,
@@ -815,15 +815,9 @@ export function KiloCodeExportDialog({
   const defaultTokenQuickCreateSite = defaultTokenCreateContext
     ? displayById.get(defaultTokenCreateContext.siteId)
     : undefined
-  const defaultTokenQuickCreatePrefill =
-    defaultTokenCreateContext &&
-    defaultTokenCreateContext.allowedGroups.length > 0
-      ? {
-          modelId: "",
-          defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-          allowedGroups: defaultTokenCreateContext.allowedGroups,
-        }
-      : undefined
+  const defaultTokenQuickCreatePrefill = buildDefaultTokenCreatePrefill(
+    defaultTokenCreateContext?.allowedGroups,
+  )
 
   const renderSiteCard = (site: DisplaySiteData) => {
     const siteId = site.id

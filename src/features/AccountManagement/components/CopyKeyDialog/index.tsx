@@ -5,9 +5,9 @@ import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { buildDefaultTokenCreatePrefill } from "~/features/KeyManagement/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
-import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
@@ -114,15 +114,9 @@ export default function CopyKeyDialog({
     setIsAddTokenDialogOpen(true)
   }, [account, defaultTokenCreateAllowedGroups, isOpen])
 
-  const defaultTokenQuickCreatePrefill =
-    defaultTokenCreateAllowedGroups &&
-    defaultTokenCreateAllowedGroups.length > 0
-      ? {
-          modelId: "",
-          defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-          allowedGroups: defaultTokenCreateAllowedGroups,
-        }
-      : undefined
+  const defaultTokenQuickCreatePrefill = buildDefaultTokenCreatePrefill(
+    defaultTokenCreateAllowedGroups,
+  )
 
   const handleOpenCCSwitchDialog = (
     token: ApiToken,

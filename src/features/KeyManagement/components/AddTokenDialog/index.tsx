@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { normalizeDefaultTokenRequestName } from "~/services/accounts/defaultTokenLifecycle"
 import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
@@ -165,7 +166,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     )
     setIsSubmitting(true)
     try {
-      const tokenData: CreateTokenRequest = {
+      const rawTokenData: CreateTokenRequest = {
         name: formData.name.trim(),
         remain_quota: formData.unlimitedQuota
           ? -1
@@ -182,6 +183,9 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         allow_ips: formData.allowIps.trim() || "",
         group: formData.group,
       }
+      const tokenData = isEditMode
+        ? rawTokenData
+        : normalizeDefaultTokenRequestName(rawTokenData)
       const { keyManagement, request } =
         createDisplayAccountApiContext(currentAccount)
 

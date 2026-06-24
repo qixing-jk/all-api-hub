@@ -5,6 +5,7 @@ import { Z_INDEX } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/defaultTokenLifecycle"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -1328,6 +1329,58 @@ describe("AddTokenDialog prefill", () => {
 
     expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
       group: "level3",
+    })
+  })
+
+  it("normalizes the default auto token name when create prefill changes to a non-default group", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4"])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+      vip: { desc: "VIP", ratio: 2 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        createPrefill={{
+          modelId: "gpt-4",
+          defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+          group: "default",
+          allowedGroups: ["default", "vip"],
+        }}
+      />,
+    )
+
+    await screen.findByLabelText(/keyManagement:dialog\.tokenName/)
+
+    const groupField = screen
+      .getByText("keyManagement:dialog.groupLabel")
+      .closest("div")
+    expect(groupField).toBeTruthy()
+
+    const groupTrigger = within(groupField as HTMLElement).getByRole("combobox")
+    await user.click(groupTrigger)
+    await user.click(
+      await screen.findByText("vip - VIP (keyManagement:dialog.groupRate 2)"),
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+    })
+
+    expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
+      name: "vip group (auto)",
+      group: "vip",
     })
   })
 

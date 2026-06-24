@@ -362,6 +362,42 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
     expect(keyManagement.fetchTokens).not.toHaveBeenCalled()
   })
 
+  it("names auto-provisioned tokens after the selected non-default group before creation", async () => {
+    const createdToken = buildToken({ id: 22, key: "sk-created" })
+    const keyManagement = {
+      createToken: vi.fn().mockResolvedValueOnce(createdToken),
+      fetchTokens: vi.fn(),
+    } as unknown as KeyManagementCapability
+    const tokenProvisioning = {
+      classifyCreatedToken: vi.fn(() => ({
+        kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+        token: createdToken,
+        oneTimeSecret: false,
+      })),
+    } as unknown as TokenProvisioningCapability
+
+    await createDefaultTokenFromDecision({
+      workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
+      keyManagement,
+      tokenProvisioning,
+      createRequest: buildRequest(),
+      inventoryRequest: buildRequest(),
+      decision: createDecision({
+        ...generateDefaultTokenRequest(),
+        group: "vip",
+      }),
+      existingTokenIds: [],
+    })
+
+    expect(keyManagement.createToken).toHaveBeenCalledWith(
+      buildRequest(),
+      expect.objectContaining({
+        name: "vip group (auto)",
+        group: "vip",
+      }),
+    )
+  })
+
   it("refetches inventory and selects one new token when policy asks for inventory recovery", async () => {
     const createdToken = buildToken({ id: 22, key: "sk-created" })
     const keyManagement = {

@@ -15,6 +15,7 @@ import { t } from "~/utils/i18n/core"
 export {
   DEFAULT_AUTO_PROVISION_TOKEN_NAME,
   DEFAULT_USER_GROUP_NAME,
+  buildGroupDefaultTokenRequest,
   generateDefaultTokenRequest,
   resolvePreferredDefaultUserGroup,
 } from "~/services/accounts/defaultTokenLifecycle"

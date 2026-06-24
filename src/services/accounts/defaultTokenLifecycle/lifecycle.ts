@@ -29,6 +29,7 @@ import {
 import {
   createStoredAccountTokenRequest,
   generateDefaultTokenRequest,
+  normalizeDefaultTokenRequestName,
 } from "./requests"
 
 const isApiTokenWithValidId = (value: unknown): value is ApiToken =>
@@ -254,13 +255,11 @@ export async function createDefaultTokenFromDecision(params: {
     decision,
     existingTokenIds,
   } = params
+  const tokenData = normalizeDefaultTokenRequestName(decision.tokenData)
 
   let createResult: Awaited<ReturnType<KeyManagementCapability["createToken"]>>
   try {
-    createResult = await keyManagement.createToken(
-      createRequest,
-      decision.tokenData,
-    )
+    createResult = await keyManagement.createToken(createRequest, tokenData)
   } catch (error) {
     return blockCreatedToken({
       reason: DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.CreateTokenFailed,

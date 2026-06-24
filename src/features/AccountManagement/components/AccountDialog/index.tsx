@@ -14,12 +14,9 @@ import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/ty
 import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { buildDefaultTokenCreatePrefill } from "~/features/KeyManagement/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
-import {
-  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-  resolvePreferredDefaultUserGroup,
-} from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import {
@@ -171,18 +168,9 @@ export default function AccountDialog({
           ...addModeSiteInfoProps,
         }
 
-  const postSaveSub2ApiCreatePrefill =
-    state.postSaveSub2ApiAllowedGroups &&
-    state.postSaveSub2ApiAllowedGroups.length > 0
-      ? {
-          modelId: "",
-          defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-          group: resolvePreferredDefaultUserGroup(
-            state.postSaveSub2ApiAllowedGroups,
-          ),
-          allowedGroups: state.postSaveSub2ApiAllowedGroups,
-        }
-      : undefined
+  const postSaveSub2ApiCreatePrefill = buildDefaultTokenCreatePrefill(
+    state.postSaveSub2ApiAllowedGroups,
+  )
   const postSaveSub2ApiDialogSessionId =
     typeof state.postSaveSub2ApiDialogSessionId === "number"
       ? state.postSaveSub2ApiDialogSessionId

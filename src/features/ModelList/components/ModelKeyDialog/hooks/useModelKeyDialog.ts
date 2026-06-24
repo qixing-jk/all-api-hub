@@ -3,7 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/features/KeyManagement/utils"
-import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { buildGroupDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   canManageDisplayAccountTokens,
   createDisplayAccountApiContext,
@@ -334,8 +334,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       try {
         const { keyManagement, request } =
           createDisplayAccountApiContext(account)
-        const tokenRequest = generateDefaultTokenRequest()
-        tokenRequest.group = normalizedGroup
+        const tokenRequest = buildGroupDefaultTokenRequest(normalizedGroup)
         const created = await requireDisplayAccountKeyManagement(
           account,
           keyManagement,

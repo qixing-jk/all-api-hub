@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  buildGroupDefaultTokenRequest,
   DEFAULT_AUTO_PROVISION_TOKEN_NAME,
   generateDefaultTokenRequest,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
-  buildGroupDefaultTokenRequest,
   deleteInvalidAccountToken,
   ensureAccountKeysForAvailableGroups,
 } from "~/services/accounts/accountKeyAutoProvisioning/groupCoverage"

@@ -877,7 +877,7 @@ describe("AccountDialog", () => {
     ).toHaveTextContent(
       JSON.stringify({
         modelId: "",
-        defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        defaultName: "vip group (auto)",
         group: "vip",
         allowedGroups: ["vip", "paid"],
       }),
