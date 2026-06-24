@@ -1085,6 +1085,7 @@ describe("ManagedSiteChannels", () => {
       )
     })
     expect(screen.getByText("Alpha")).toBeInTheDocument()
+    expect(screen.getByText("Beta")).toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
         name: "managedSiteChannels:toolbar.clearSearch",

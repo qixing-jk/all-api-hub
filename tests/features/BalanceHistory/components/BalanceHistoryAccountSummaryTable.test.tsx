@@ -238,6 +238,13 @@ describe("BalanceHistoryAccountSummaryTable", () => {
     )
 
     expect(getAccountOrder()).toEqual(["Mike", "Alpha", "Zulu"])
+    expect(
+      screen
+        .getByRole("button", {
+          name: "balanceHistory:table.columns.startBalance",
+        })
+        .querySelector("svg"),
+    ).toBeInTheDocument()
   })
 
   it("sorts snapshot coverage using zero for rows without total days while preserving the displayed counts", async () => {
