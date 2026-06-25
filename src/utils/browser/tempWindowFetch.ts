@@ -41,13 +41,14 @@ import type {
   TempWindowTurnstileFetchParams,
 } from "~/types/tempWindowFetch"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
 import {
   isExtensionBackground,
   isExtensionPopup,
   isExtensionSidePanel,
 } from "~/utils/browser/index"
-import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
@@ -243,6 +244,9 @@ export async function tempWindowFetch(
 
   const payload: TempWindowFetchParams = {
     ...params,
+    ...(params.fetchOptions
+      ? { fetchOptions: normalizeRequestInitForMessage(params.fetchOptions) }
+      : {}),
     suppressMinimize,
   }
 
@@ -289,6 +293,9 @@ export async function tempWindowTurnstileFetch(
 
   const payload: TempWindowTurnstileFetchParams = {
     ...params,
+    ...(params.fetchOptions
+      ? { fetchOptions: normalizeRequestInitForMessage(params.fetchOptions) }
+      : {}),
     suppressMinimize,
   }
 

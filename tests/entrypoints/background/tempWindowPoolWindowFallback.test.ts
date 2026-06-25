@@ -2272,6 +2272,49 @@ describe("tempWindowPool window fallback", () => {
     expect(fetchCalls.at(-1)?.[0]).toBe(709)
   })
 
+  it("omits abort signals from content temp fetch messages", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 605 })
+    const abortController = new AbortController()
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/models",
+        fetchOptions: {
+          method: "POST",
+          signal: abortController.signal,
+        },
+        requestId: "req-signal",
+      },
+      sendResponse,
+    )
+    await vi.advanceTimersByTimeAsync(1000)
+    await request
+
+    const fetchCall = sendMessageMock.mock.calls.find(
+      ([, message]) =>
+        message.action === RuntimeActionIds.ContentPerformTempWindowFetch,
+    )
+
+    expect(fetchCall?.[1].fetchOptions).toEqual({
+      method: "POST",
+    })
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "ok",
+      },
+    })
+  })
+
   it("injects a WAF cookie rule for token-auth temp fetches and removes it afterward", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 606 })

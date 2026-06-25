@@ -74,6 +74,7 @@ import {
   removeTempWindowCookieRule,
 } from "~/utils/browser/dnrCookieInjector"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 import { resolveAuthTypeEnum } from "~/utils/core/authType"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -1124,7 +1125,7 @@ export async function handleTempWindowFetch(
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
       requestId: tempRequestId,
       fetchUrl,
-      fetchOptions: effectiveFetchOptions,
+      fetchOptions: normalizeRequestInitForMessage(effectiveFetchOptions),
       responseType,
     })
 
@@ -1540,7 +1541,7 @@ export async function handleTempWindowTurnstileFetch(
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
       requestId: tempRequestId,
       fetchUrl: fetchUrlWithToken,
-      fetchOptions: effectiveFetchOptions,
+      fetchOptions: normalizeRequestInitForMessage(effectiveFetchOptions),
       responseType,
     })) as TempWindowFetch | undefined
 

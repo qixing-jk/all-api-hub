@@ -249,6 +249,30 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
   })
 
+  it("omits abort signals from tempWindowFetch runtime messages", async () => {
+    const abortController = new AbortController()
+    mocks.sendRuntimeMessageMock.mockResolvedValue({
+      success: true,
+      data: "ok",
+    })
+
+    await tempWindowFetch({
+      originUrl: "https://example.com",
+      fetchUrl: "https://example.com/api/models",
+      fetchOptions: {
+        method: "POST",
+        signal: abortController.signal,
+      },
+    })
+
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.TempWindowFetch,
+        fetchOptions: { method: "POST" },
+      }),
+    )
+  })
+
   it("routes tempWindowTurnstileFetch through runtime messaging and keeps explicit suppression overrides", async () => {
     setWindowHref("chrome-extension://test/popup.html")
     mocks.isExtensionPopupMock.mockReturnValue(true)
@@ -279,6 +303,32 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       fetchOptions: { method: "POST" },
       suppressMinimize: false,
     })
+  })
+
+  it("omits abort signals from tempWindowTurnstileFetch runtime messages", async () => {
+    const abortController = new AbortController()
+    mocks.sendRuntimeMessageMock.mockResolvedValue({
+      success: true,
+      data: "token",
+      turnstile: { status: "token_obtained", hasTurnstile: true },
+    })
+
+    await tempWindowTurnstileFetch({
+      originUrl: "https://example.com",
+      pageUrl: "https://example.com/checkin",
+      fetchUrl: "https://example.com/api/checkin",
+      fetchOptions: {
+        method: "POST",
+        signal: abortController.signal,
+      },
+    })
+
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.TempWindowTurnstileFetch,
+        fetchOptions: { method: "POST" },
+      }),
+    )
   })
 
   it("routes tempWindowTriggerCheckinPageAction through runtime messaging", async () => {

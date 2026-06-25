@@ -30,6 +30,10 @@ import {
   COOKIE_AUTH_HEADER_NAME,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
+import {
+  normalizeHeaderInit,
+  normalizeRequestInitForMessage,
+} from "~/utils/browser/requestInitMessage"
 import { executeWithTempWindowFallback } from "~/utils/browser/tempWindowFetch"
 import { isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
@@ -207,56 +211,6 @@ const createBaseRequest = (
     },
     credentials,
     ...requestOptions,
-  }
-}
-
-/**
- * Converts supported header inputs into a structured-clone-safe object.
- */
-function normalizeHeaderInit(
-  headers: HeadersInit | undefined,
-): Record<string, string> {
-  if (!headers) return {}
-
-  if (headers instanceof Headers) {
-    const result: Record<string, string> = {}
-    headers.forEach((value, key) => {
-      result[key] = value
-    })
-    return result
-  }
-
-  if (Array.isArray(headers)) {
-    return headers.reduce(
-      (acc, [key, value]) => {
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>,
-    )
-  }
-
-  return Object.entries(headers).reduce(
-    (acc, [key, value]) => {
-      if (value != null) {
-        acc[key] = String(value)
-      }
-      return acc
-    },
-    {} as Record<string, string>,
-  )
-}
-
-/**
- * Normalizes request options before crossing an extension message boundary.
- */
-function normalizeRequestInitForMessage(options: RequestInit): RequestInit {
-  const normalizedOptions = { ...options }
-  delete normalizedOptions.signal
-
-  return {
-    ...normalizedOptions,
-    headers: normalizeHeaderInit(normalizedOptions.headers),
   }
 }
 
