@@ -2,7 +2,7 @@ import { act, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { useRepairMissingKeysJob } from "~/features/KeyManagement/components/useRepairMissingKeysJob"
+import { useRepairMissingKeysJob } from "~/features/KeyManagement/components/RepairMissingKeysDialog/useRepairMissingKeysJob"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,

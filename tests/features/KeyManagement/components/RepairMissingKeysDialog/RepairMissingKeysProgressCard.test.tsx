@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
-import { RepairMissingKeysProgressCard } from "~/features/KeyManagement/components/RepairMissingKeysProgressCard"
+import { RepairMissingKeysProgressCard } from "~/features/KeyManagement/components/RepairMissingKeysDialog/RepairMissingKeysProgressCard"
 import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 

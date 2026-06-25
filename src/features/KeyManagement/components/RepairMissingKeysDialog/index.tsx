@@ -1,21 +1,8 @@
-import { History, Info, ShieldCheck } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
-import Tooltip from "~/components/Tooltip"
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardFooter,
-  Checkbox,
-  Label,
-  Modal,
-  Spinner,
-} from "~/components/ui"
+import { Alert, Button, Modal } from "~/components/ui"
 import type { DisplaySiteData } from "~/types"
 import type { AccountKeyRepairOutcome } from "~/types/accountKeyAutoProvisioning"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
@@ -30,6 +17,10 @@ import {
 } from "./repairMissingKeysDialogHelpers"
 import { RepairMissingKeysProgressCard } from "./RepairMissingKeysProgressCard"
 import { RepairMissingKeysResultsPanel } from "./RepairMissingKeysResultsPanel"
+import { RepairMissingKeysSetupCard } from "./RepairMissingKeysSetupCard"
+import { RepairMissingKeysStatusBadge } from "./RepairMissingKeysStatusBadge"
+import { RepairPreviousResultSummary } from "./RepairPreviousResultSummary"
+import { RepairRenameOption } from "./RepairRenameOption"
 import { useInvalidKeyDeletion } from "./useInvalidKeyDeletion"
 import { useRepairMissingKeysJob } from "./useRepairMissingKeysJob"
 
@@ -213,73 +204,12 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     }
   }, [progress?.state])
 
-  const renderRenameOption = () => (
-    <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/40 rounded-lg border border-gray-200 bg-gray-50/70 p-3">
-      <div className="flex items-start gap-3">
-        <Checkbox
-          id="repair-missing-keys-rename-auto-template"
-          checked={renameAutoTemplateTokens}
-          onCheckedChange={(checked) =>
-            setRenameAutoTemplateTokens(checked === true)
-          }
-        />
-        <div className="min-w-0 space-y-1">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <Label
-              htmlFor="repair-missing-keys-rename-auto-template"
-              className="cursor-pointer text-sm font-medium text-gray-800 dark:text-gray-200"
-            >
-              {t("repairMissingKeys.renameOption.label")}
-            </Label>
-            <Tooltip
-              content={t("repairMissingKeys.renameOption.tooltip")}
-              position="top"
-              className="max-w-xs"
-            >
-              <button
-                type="button"
-                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none dark:text-gray-500 dark:hover:text-gray-300"
-                aria-label={t("repairMissingKeys.renameOption.infoLabel")}
-              >
-                <Info className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-            </Tooltip>
-          </div>
-          <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
-            {t("repairMissingKeys.renameOption.helper")}
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-
-  const renderPreviousResultSummary = () => (
-    <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/30 rounded-lg border border-dashed border-gray-200 bg-gray-50/60 p-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="shrink-0 rounded-lg bg-gray-100 p-2 text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
-            <History className="h-4 w-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0 space-y-1">
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-              {t("repairMissingKeys.previousResult.title")}
-            </p>
-            <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
-              {t("repairMissingKeys.previousResult.description")}
-            </p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setIsPreviousResultExpanded(true)}
-          className="w-full sm:w-auto"
-        >
-          {t("repairMissingKeys.previousResult.view")}
-        </Button>
-      </div>
-    </div>
+  const renameOption = (
+    <RepairRenameOption
+      checked={renameAutoTemplateTokens}
+      onCheckedChange={setRenameAutoTemplateTokens}
+      t={t}
+    />
   )
 
   const handleReturnToCheckSetup = () => {
@@ -298,47 +228,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
             <h2 className="text-base font-semibold">
               {t("repairMissingKeys.title")}
             </h2>
-            {statusProgress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running ? (
-              <Badge
-                variant="info"
-                size="sm"
-                className="shrink-0 border-transparent"
-              >
-                <Spinner size="sm" className="h-3.5 w-3.5" />
-                {t("common:status.processing")}
-              </Badge>
-            ) : statusProgress?.state ===
-              ACCOUNT_KEY_REPAIR_JOB_STATES.Failed ? (
-              <Badge
-                variant="danger"
-                size="sm"
-                className="shrink-0 border-transparent"
-              >
-                {t("common:status.failed")}
-              </Badge>
-            ) : statusProgress?.state ===
-              ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled ? (
-              <Badge
-                variant="warning"
-                size="sm"
-                className="shrink-0 border-transparent"
-              >
-                {t("common:status.cancelled")}
-              </Badge>
-            ) : statusProgress?.state ===
-              ACCOUNT_KEY_REPAIR_JOB_STATES.Completed ? (
-              <Badge
-                variant={
-                  statusProgress.summary.failed > 0 ? "warning" : "success"
-                }
-                size="sm"
-                className="shrink-0 border-transparent"
-              >
-                {statusProgress.summary.failed > 0
-                  ? t("common:status.error")
-                  : t("common:status.success")}
-              </Badge>
-            ) : null}
+            <RepairMissingKeysStatusBadge progress={statusProgress} t={t} />
           </div>
           <p className="dark:text-dark-text-secondary text-sm text-gray-500">
             {t("repairMissingKeys.description")}
@@ -369,48 +259,27 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
       {error ? <Alert variant="destructive" description={error} /> : null}
 
       {shouldShowCheckSetup ? (
-        <Card variant="outlined" className="overflow-hidden">
-          <CardContent padding="default" className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="shrink-0 rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
-                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <p className="pt-1 text-sm leading-6 text-gray-700 dark:text-gray-300">
-                {t("repairMissingKeys.initialNotice")}
-              </p>
-            </div>
-            <Alert
-              variant="info"
-              compact
-              description={t("repairMissingKeys.remoteWriteNotice")}
-            />
-            {renderRenameOption()}
-            {shouldShowPreviousResultSummary
-              ? renderPreviousResultSummary()
-              : null}
-          </CardContent>
-          <CardFooter
-            padding="sm"
-            className="dark:bg-dark-bg-primary/40 justify-start bg-gray-50/80"
-          >
-            <Button
-              type="button"
-              onClick={handleStartRepair}
-              disabled={isStarting}
-              loading={isStarting}
-              className="w-full sm:w-auto"
-            >
-              {t("repairMissingKeys.actions.start")}
-            </Button>
-          </CardFooter>
-        </Card>
+        <RepairMissingKeysSetupCard
+          isStarting={isStarting}
+          previousResultSummary={
+            shouldShowPreviousResultSummary ? (
+              <RepairPreviousResultSummary
+                onViewResult={() => setIsPreviousResultExpanded(true)}
+                t={t}
+              />
+            ) : null
+          }
+          renameOption={renameOption}
+          onStartRepair={handleStartRepair}
+          t={t}
+        />
       ) : null}
 
       {shouldShowProgressDetails && progress ? (
         <div className="space-y-4">
           {progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running &&
           !shouldShowReadonlyPreviousResult
-            ? renderRenameOption()
+            ? renameOption
             : null}
 
           <RepairMissingKeysProgressCard

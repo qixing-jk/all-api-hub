@@ -4,7 +4,7 @@ import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { RepairAccountCoverageList } from "~/features/KeyManagement/components/RepairAccountCoverageList"
+import { RepairAccountCoverageList } from "~/features/KeyManagement/components/RepairMissingKeysDialog/RepairAccountCoverageList"
 import type { AccountKeyRepairAccountResult } from "~/types/accountKeyAutoProvisioning"
 import {
   ACCOUNT_KEY_REPAIR_OUTCOMES,

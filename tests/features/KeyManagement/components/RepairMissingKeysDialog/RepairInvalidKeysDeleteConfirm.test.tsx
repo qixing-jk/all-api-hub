@@ -4,7 +4,7 @@ import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { RepairInvalidKeysDeleteConfirm } from "~/features/KeyManagement/components/RepairInvalidKeysDeleteConfirm"
+import { RepairInvalidKeysDeleteConfirm } from "~/features/KeyManagement/components/RepairMissingKeysDialog/RepairInvalidKeysDeleteConfirm"
 import type { AccountKeyRepairInvalidToken } from "~/types/accountKeyAutoProvisioning"
 import { ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS } from "~/types/accountKeyAutoProvisioning"
 

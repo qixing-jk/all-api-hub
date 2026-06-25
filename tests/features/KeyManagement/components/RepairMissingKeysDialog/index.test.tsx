@@ -42,20 +42,23 @@ function buildRepairProgress(
   }
 }
 
-vi.mock("~/features/KeyManagement/components/useRepairMissingKeysJob", () => ({
-  useRepairMissingKeysJob: (options: unknown) => {
-    mockUseRepairMissingKeysJob(options)
-    return {
-      error: "",
-      handleCancelAudit: vi.fn(),
-      handleStartAudit: mockHandleStartAudit,
-      isCancelling: false,
-      isStarting: mockIsStarting,
-      progress: mockProgress,
-      setProgress: vi.fn(),
-    }
-  },
-}))
+vi.mock(
+  "~/features/KeyManagement/components/RepairMissingKeysDialog/useRepairMissingKeysJob",
+  () => ({
+    useRepairMissingKeysJob: (options: unknown) => {
+      mockUseRepairMissingKeysJob(options)
+      return {
+        error: "",
+        handleCancelAudit: vi.fn(),
+        handleStartAudit: mockHandleStartAudit,
+        isCancelling: false,
+        isStarting: mockIsStarting,
+        progress: mockProgress,
+        setProgress: vi.fn(),
+      }
+    },
+  }),
+)
 
 function buildAccount(): DisplaySiteData {
   return {

@@ -6,7 +6,7 @@ import {
   getRepairOutcomeCounts,
   getRepairProgressBarColor,
   getRepairProgressTotals,
-} from "~/features/KeyManagement/components/repairMissingKeysDialogHelpers"
+} from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
 import type {
   AccountKeyRepairAccountResult,
   AccountKeyRepairInvalidToken,

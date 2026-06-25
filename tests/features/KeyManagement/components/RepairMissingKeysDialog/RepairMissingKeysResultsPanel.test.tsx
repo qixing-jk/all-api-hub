@@ -5,8 +5,8 @@ import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { REPAIR_RESULT_VIEWS } from "~/features/KeyManagement/components/repairMissingKeysDialogHelpers"
-import { RepairMissingKeysResultsPanel } from "~/features/KeyManagement/components/RepairMissingKeysResultsPanel"
+import { REPAIR_RESULT_VIEWS } from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
+import { RepairMissingKeysResultsPanel } from "~/features/KeyManagement/components/RepairMissingKeysDialog/RepairMissingKeysResultsPanel"
 import type {
   AccountKeyRepairAccountResult,
   AccountKeyRepairInvalidToken,
