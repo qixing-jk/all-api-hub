@@ -129,6 +129,7 @@ export function useRepairMissingKeysJob({
   const progressRef = useRef<AccountKeyRepairProgress | null>(null)
   const accountsRef = useRef(accounts)
   const isDialogOpenRef = useRef(isOpen)
+  const hasAutoStartedRef = useRef(false)
   const startInFlightRef = useRef(false)
   const startRequestIdRef = useRef(0)
 
@@ -327,9 +328,14 @@ export function useRepairMissingKeysJob({
   }, [isOpen, t])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      hasAutoStartedRef.current = false
+      return
+    }
     if (!startOnOpen) return
+    if (hasAutoStartedRef.current) return
 
+    hasAutoStartedRef.current = true
     void handleStartAudit()
   }, [handleStartAudit, isOpen, startOnOpen])
 

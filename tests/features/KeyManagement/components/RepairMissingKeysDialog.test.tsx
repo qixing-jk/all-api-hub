@@ -6,7 +6,10 @@ import { RepairMissingKeysDialog } from "~/features/KeyManagement/components/Rep
 import type { DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
+  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
   ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_OUTCOMES,
+  ACCOUNT_KEY_REPAIR_SKIP_REASONS,
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -18,6 +21,7 @@ let mockIsStarting = false
 
 function buildRepairProgress(
   state: AccountKeyRepairProgress["state"] = ACCOUNT_KEY_REPAIR_JOB_STATES.Idle,
+  overrides: Partial<AccountKeyRepairProgress> = {},
 ): AccountKeyRepairProgress {
   return {
     jobId: state,
@@ -34,6 +38,7 @@ function buildRepairProgress(
       failed: 0,
     },
     results: [],
+    ...overrides,
   }
 }
 
@@ -123,7 +128,35 @@ describe("RepairMissingKeysDialog", () => {
 
   it("de-emphasizes a historical result behind the current check setup", async () => {
     const user = userEvent.setup()
-    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
+    mockProgress = buildRepairProgress(
+      ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      {
+        results: [
+          {
+            accountId: "account-1",
+            accountName: "Account 1",
+            siteType: SITE_TYPES.SUB2API,
+            siteUrlOrigin: "https://sub2api.example.invalid",
+            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
+            skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
+            invalidTokens: [
+              {
+                accountId: "account-1",
+                accountName: "Account 1",
+                siteType: SITE_TYPES.SUB2API,
+                siteUrlOrigin: "https://sub2api.example.invalid",
+                tokenId: 1,
+                tokenName: "Invalid token",
+                group: "removed",
+                reason:
+                  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+              },
+            ],
+            finishedAt: 1,
+          },
+        ],
+      },
+    )
 
     render(
       <RepairMissingKeysDialog
@@ -212,7 +245,35 @@ describe("RepairMissingKeysDialog", () => {
 
   it("shows historical result details as read-only and can return to check setup", async () => {
     const user = userEvent.setup()
-    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
+    mockProgress = buildRepairProgress(
+      ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      {
+        results: [
+          {
+            accountId: "account-1",
+            accountName: "Account 1",
+            siteType: SITE_TYPES.SUB2API,
+            siteUrlOrigin: "https://sub2api.example.invalid",
+            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
+            skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
+            invalidTokens: [
+              {
+                accountId: "account-1",
+                accountName: "Account 1",
+                siteType: SITE_TYPES.SUB2API,
+                siteUrlOrigin: "https://sub2api.example.invalid",
+                tokenId: 1,
+                tokenName: "Invalid token",
+                group: "removed",
+                reason:
+                  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+              },
+            ],
+            finishedAt: 1,
+          },
+        ],
+      },
+    )
 
     render(
       <RepairMissingKeysDialog
@@ -248,10 +309,33 @@ describe("RepairMissingKeysDialog", () => {
       }),
     ).not.toBeInTheDocument()
     expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:dialog.createToken",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
       screen.queryByTestId("repair-missing-keys-progress-actions"),
     ).not.toHaveTextContent(
       "keyManagement:repairMissingKeys.previousResult.backToSetup",
     )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /keyManagement:repairMissingKeys\.views\.invalidKeys/,
+      }),
+    )
+
+    expect(screen.getByText("Invalid token")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("checkbox", {
+        name: "keyManagement:repairMissingKeys.invalidKeys.selectAll",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+      }),
+    ).not.toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", {

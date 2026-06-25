@@ -19,6 +19,7 @@ interface RepairAccountCoverageListProps {
   accountIds: Set<string>
   filteredResults: AccountKeyRepairAccountResult[]
   openingSub2ApiAccountId: string | null
+  readOnly?: boolean
   onOpenSub2ApiTokenDialog: (accountId: string) => void
   t: TFunction
 }
@@ -30,6 +31,7 @@ export function RepairAccountCoverageList({
   accountIds,
   filteredResults,
   openingSub2ApiAccountId,
+  readOnly = false,
   onOpenSub2ApiTokenDialog,
   t,
 }: RepairAccountCoverageListProps) {
@@ -54,6 +56,7 @@ export function RepairAccountCoverageList({
               ? result.errorMessage || ""
               : ""
         const canCreateSub2ApiKey =
+          !readOnly &&
           result.outcome === ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped &&
           result.skipReason === ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api &&
           accountIds.has(result.accountId)

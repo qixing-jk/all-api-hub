@@ -39,6 +39,7 @@ interface RepairMissingKeysResultsPanelProps {
   openingSub2ApiAccountId: string | null
   outcomeCounts: Record<AccountKeyRepairOutcome, number>
   outcomeFilter: AccountKeyRepairOutcome | null
+  readOnly?: boolean
   searchTerm: string
   selectedInvalidTokenKeys: Set<string>
   selectedInvalidTokens: AccountKeyRepairInvalidToken[]
@@ -65,6 +66,7 @@ export function RepairMissingKeysResultsPanel({
   openingSub2ApiAccountId,
   outcomeCounts,
   outcomeFilter,
+  readOnly = false,
   searchTerm,
   selectedInvalidTokenKeys,
   selectedInvalidTokens,
@@ -251,6 +253,7 @@ export function RepairMissingKeysResultsPanel({
                 deleteResultMessage={deleteResultMessage}
                 filteredInvalidTokens={filteredInvalidTokens}
                 invalidTokens={invalidTokens}
+                readOnly={readOnly}
                 selectedInvalidTokenKeys={selectedInvalidTokenKeys}
                 selectedInvalidTokens={selectedInvalidTokens}
                 onOpenDeleteConfirm={onOpenDeleteConfirm}
@@ -264,6 +267,7 @@ export function RepairMissingKeysResultsPanel({
                 accountIds={accountIds}
                 filteredResults={filteredResults}
                 openingSub2ApiAccountId={openingSub2ApiAccountId}
+                readOnly={readOnly}
                 onOpenSub2ApiTokenDialog={onOpenSub2ApiTokenDialog}
                 t={t}
               />

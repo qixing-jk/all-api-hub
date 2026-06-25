@@ -8,8 +8,11 @@ import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisionin
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 
 const t = ((key: string, options?: Record<string, unknown>) => {
-  if (key === "keyManagement:repairMissingKeys.renameSummary.resultNotice") {
-    return `${key}:${options?.renamed}/${options?.failed}`
+  if (key === "keyManagement:repairMissingKeys.renameSummary.accountRenamed") {
+    return `renamed ${options?.count}`
+  }
+  if (key === "keyManagement:repairMissingKeys.renameSummary.accountFailed") {
+    return `failed ${options?.count}`
   }
 
   return key
@@ -248,10 +251,6 @@ describe("RepairMissingKeysProgressCard", () => {
       }),
     })
 
-    expect(
-      screen.getByText(
-        "keyManagement:repairMissingKeys.renameSummary.resultNotice:3/1",
-      ),
-    ).toBeInTheDocument()
+    expect(screen.getByText("renamed 3；failed 1")).toBeInTheDocument()
   })
 })

@@ -13,6 +13,7 @@ interface RepairInvalidKeysListProps {
   deleteResultMessage: string
   filteredInvalidTokens: AccountKeyRepairInvalidToken[]
   invalidTokens: AccountKeyRepairInvalidToken[]
+  readOnly?: boolean
   selectedInvalidTokenKeys: Set<string>
   selectedInvalidTokens: AccountKeyRepairInvalidToken[]
   onOpenDeleteConfirm: () => void
@@ -29,6 +30,7 @@ export function RepairInvalidKeysList({
   deleteResultMessage,
   filteredInvalidTokens,
   invalidTokens,
+  readOnly = false,
   selectedInvalidTokenKeys,
   selectedInvalidTokens,
   onOpenDeleteConfirm,
@@ -80,45 +82,52 @@ export function RepairInvalidKeysList({
         </div>
       ) : null}
 
-      <div className="dark:border-dark-bg-tertiary space-y-2 border-b border-gray-200 px-4 py-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={
-                filteredInvalidTokens.length > 0 &&
-                selectedInvalidTokens.length === filteredInvalidTokens.length
-              }
-              onCheckedChange={(checked) => {
-                onSelectedInvalidTokenKeysChange(
-                  checked
-                    ? new Set(filteredInvalidTokens.map(getInvalidTokenKey))
-                    : new Set(),
-                )
-              }}
-              aria-label={t(
-                "keyManagement:repairMissingKeys.invalidKeys.selectAll",
-              )}
-            />
-            {t("keyManagement:repairMissingKeys.invalidKeys.selectAll")}
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {t("keyManagement:repairMissingKeys.invalidKeys.selectedCount", {
-                count: selectedInvalidTokens.length,
-              })}
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              disabled={selectedInvalidTokens.length === 0}
-              onClick={onOpenDeleteConfirm}
-            >
-              {t("keyManagement:repairMissingKeys.invalidKeys.deleteSelected")}
-            </Button>
+      {!readOnly ? (
+        <div className="dark:border-dark-bg-tertiary space-y-2 border-b border-gray-200 px-4 py-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={
+                  filteredInvalidTokens.length > 0 &&
+                  selectedInvalidTokens.length === filteredInvalidTokens.length
+                }
+                onCheckedChange={(checked) => {
+                  onSelectedInvalidTokenKeysChange(
+                    checked
+                      ? new Set(filteredInvalidTokens.map(getInvalidTokenKey))
+                      : new Set(),
+                  )
+                }}
+                aria-label={t(
+                  "keyManagement:repairMissingKeys.invalidKeys.selectAll",
+                )}
+              />
+              {t("keyManagement:repairMissingKeys.invalidKeys.selectAll")}
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {t(
+                  "keyManagement:repairMissingKeys.invalidKeys.selectedCount",
+                  {
+                    count: selectedInvalidTokens.length,
+                  },
+                )}
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                disabled={selectedInvalidTokens.length === 0}
+                onClick={onOpenDeleteConfirm}
+              >
+                {t(
+                  "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+                )}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <ul className="dark:divide-dark-bg-tertiary divide-y">
         {filteredInvalidTokens.map((token) => {
@@ -131,22 +140,24 @@ export function RepairInvalidKeysList({
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 gap-3">
-                  <Checkbox
-                    checked={selectedInvalidTokenKeys.has(tokenKey)}
-                    onCheckedChange={(checked) => {
-                      onSelectedInvalidTokenKeysChange((previous) => {
-                        const next = new Set(previous)
-                        if (checked) {
-                          next.add(tokenKey)
-                        } else {
-                          next.delete(tokenKey)
-                        }
-                        return next
-                      })
-                    }}
-                    aria-label={token.tokenName}
-                    className="mt-0.5 shrink-0"
-                  />
+                  {!readOnly ? (
+                    <Checkbox
+                      checked={selectedInvalidTokenKeys.has(tokenKey)}
+                      onCheckedChange={(checked) => {
+                        onSelectedInvalidTokenKeysChange((previous) => {
+                          const next = new Set(previous)
+                          if (checked) {
+                            next.add(tokenKey)
+                          } else {
+                            next.delete(tokenKey)
+                          }
+                          return next
+                        })
+                      }}
+                      aria-label={token.tokenName}
+                      className="mt-0.5 shrink-0"
+                    />
+                  ) : null}
                   <div className="min-w-0 space-y-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <div className="truncate text-sm font-medium">

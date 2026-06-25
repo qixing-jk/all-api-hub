@@ -201,12 +201,12 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     if (!isOpen) return
     if (!startOnOpen) return
 
-    setHasStartedRepairInSession(true)
     setIsPreviousResultExpanded(true)
   }, [isOpen, startOnOpen])
 
   useEffect(() => {
     if (progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running) {
+      setHasStartedRepairInSession(true)
       setHasSeenRunningRepairInSession(true)
       setPreviousResultJobId(null)
       setIsPreviousResultExpanded(true)
@@ -432,6 +432,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
             openingSub2ApiAccountId={openingSub2ApiAccountId}
             outcomeCounts={outcomeCounts}
             outcomeFilter={outcomeFilter}
+            readOnly={shouldShowReadonlyPreviousResult}
             searchTerm={searchTerm}
             selectedInvalidTokenKeys={selectedInvalidTokenKeys}
             selectedInvalidTokens={selectedInvalidTokens}

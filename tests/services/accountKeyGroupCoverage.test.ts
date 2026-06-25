@@ -185,11 +185,14 @@ describe("ensureAccountKeysForAvailableGroups", () => {
         id: 1,
         name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
         group: "vip",
+        models: "gpt-4o,gpt-4o-mini",
       }),
       buildApiToken({
         id: 2,
         name: "old group (auto)",
         group: "beta",
+        model_limits_enabled: true,
+        model_limits: "claude-3-5-sonnet",
       }),
       buildApiToken({
         id: 3,
@@ -230,6 +233,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       tokenData: expect.objectContaining({
         name: "vip group (auto)",
         group: "vip",
+        models: "gpt-4o,gpt-4o-mini",
       }),
     })
     expect(mocks.updateApiToken).toHaveBeenNthCalledWith(2, {
@@ -241,6 +245,8 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       tokenData: expect.objectContaining({
         name: "beta group (auto)",
         group: "beta",
+        model_limits_enabled: true,
+        model_limits: "claude-3-5-sonnet",
       }),
     })
   })

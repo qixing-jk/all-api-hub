@@ -15,6 +15,7 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import {
@@ -46,6 +47,7 @@ const normalizeGroupName = (value: unknown) =>
   typeof value === "string" ? value.trim() : ""
 
 const AUTO_GROUP_TOKEN_NAME_PATTERN = /^(.+) group \(auto\)$/
+type TokenRenameUpdateRequest = CreateTokenRequest & Pick<ApiToken, "models">
 
 /**
  * Finds rename candidates that still look like extension-created template keys.
@@ -78,7 +80,10 @@ function resolveAutoTemplateTokenRename(
 /**
  * Reuses the current token settings while changing only the display name.
  */
-function buildTokenUpdateRequest(token: ApiToken, nextName: string) {
+function buildTokenUpdateRequest(
+  token: ApiToken,
+  nextName: string,
+): TokenRenameUpdateRequest {
   return {
     name: nextName,
     remain_quota: token.remain_quota,
@@ -86,6 +91,7 @@ function buildTokenUpdateRequest(token: ApiToken, nextName: string) {
     unlimited_quota: token.unlimited_quota,
     model_limits_enabled: token.model_limits_enabled ?? false,
     model_limits: token.model_limits ?? "",
+    models: token.models ?? "",
     allow_ips: token.allow_ips ?? "",
     group: normalizeGroupName(token.group),
   }

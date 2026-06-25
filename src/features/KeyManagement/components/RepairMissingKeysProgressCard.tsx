@@ -38,6 +38,18 @@ export function RepairMissingKeysProgressCard({
   const renamedKeys = progress.summary.renamedKeys ?? 0
   const renameFailed = progress.summary.renameFailed ?? 0
   const shouldShowRenameSummary = renamedKeys > 0 || renameFailed > 0
+  const renameSummaryParts = [
+    renamedKeys > 0
+      ? t("keyManagement:repairMissingKeys.renameSummary.accountRenamed", {
+          count: renamedKeys,
+        })
+      : "",
+    renameFailed > 0
+      ? t("keyManagement:repairMissingKeys.renameSummary.accountFailed", {
+          count: renameFailed,
+        })
+      : "",
+  ].filter(Boolean)
 
   return (
     <Card>
@@ -102,10 +114,7 @@ export function RepairMissingKeysProgressCard({
 
         {shouldShowRenameSummary ? (
           <div className="rounded-md border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-200">
-            {t("keyManagement:repairMissingKeys.renameSummary.resultNotice", {
-              failed: renameFailed,
-              renamed: renamedKeys,
-            })}
+            {renameSummaryParts.join("；")}
           </div>
         ) : null}
 
