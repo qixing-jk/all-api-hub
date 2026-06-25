@@ -19,6 +19,7 @@ export function normalizeFetchOptions(options: RequestInit = {}): RequestInit {
     normalized.headers = sanitizeHeaders(options.headers)
   }
 
+  // Message-cloned signals lose the native AbortSignal prototype.
   if (normalized.signal && !(normalized.signal instanceof AbortSignal)) {
     delete normalized.signal
   }

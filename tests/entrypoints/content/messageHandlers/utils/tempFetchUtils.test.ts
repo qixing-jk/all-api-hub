@@ -112,6 +112,20 @@ describe("tempFetchUtils", () => {
     expect(normalized).not.toHaveProperty("signal")
   })
 
+  it("preserves native fetch signals during normalization", async () => {
+    const { normalizeFetchOptions } = await import(
+      "~/entrypoints/content/messageHandlers/utils/tempFetchUtils"
+    )
+
+    const abortController = new AbortController()
+    const normalized = normalizeFetchOptions({
+      method: "GET",
+      signal: abortController.signal,
+    })
+
+    expect(normalized.signal).toBe(abortController.signal)
+  })
+
   it("parses arrayBuffer and blob responses into serializable payloads", async () => {
     const { parseResponseData } = await import(
       "~/entrypoints/content/messageHandlers/utils/tempFetchUtils"
