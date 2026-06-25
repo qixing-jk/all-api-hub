@@ -342,7 +342,8 @@
       "accountFailed_other": "{{count}} 件の名前を同期できませんでした",
       "accountRenamed_other": "{{count}} 件の名前を同期しました",
       "failed": "名前未同期",
-      "renamed": "名前同期済み"
+      "renamed": "名前同期済み",
+      "summarySeparator": "、"
     },
     "resultsTitle": "結果",
     "runningNote": "このジョブはバックグラウンドで実行されます。このダイアログを閉じて後で確認するか、進捗カードからキャンセルできます。",

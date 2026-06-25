@@ -342,7 +342,8 @@
       "accountFailed_other": "{{count}} tên chưa đồng bộ",
       "accountRenamed_other": "{{count}} tên đã đồng bộ",
       "failed": "Tên chưa đồng bộ",
-      "renamed": "Tên đã đồng bộ"
+      "renamed": "Tên đã đồng bộ",
+      "summarySeparator": ", "
     },
     "resultsTitle": "Kết quả",
     "runningNote": "Tác vụ đang chạy trong nền. Bạn có thể đóng hộp thoại này để kiểm tra sau hoặc hủy trong thẻ tiến trình.",

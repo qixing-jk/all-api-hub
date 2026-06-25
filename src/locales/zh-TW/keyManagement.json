@@ -342,7 +342,8 @@
       "accountFailed_other": "名稱未同步：{{count}}",
       "accountRenamed_other": "已同步名稱：{{count}}",
       "failed": "名稱未同步",
-      "renamed": "已同步名稱"
+      "renamed": "已同步名稱",
+      "summarySeparator": "；"
     },
     "resultsTitle": "結果",
     "runningNote": "任務在後台執行；可關閉此對話框稍後查看，或在進度卡片中取消任務。",

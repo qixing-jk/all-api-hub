@@ -14,6 +14,11 @@ const t = ((key: string, options?: Record<string, unknown>) => {
   if (key === "keyManagement:repairMissingKeys.renameSummary.accountFailed") {
     return `failed ${options?.count}`
   }
+  if (
+    key === "keyManagement:repairMissingKeys.renameSummary.summarySeparator"
+  ) {
+    return " | "
+  }
 
   return key
 }) as TFunction
@@ -251,6 +256,6 @@ describe("RepairMissingKeysProgressCard", () => {
       }),
     })
 
-    expect(screen.getByText("renamed 3；failed 1")).toBeInTheDocument()
+    expect(screen.getByText("renamed 3 | failed 1")).toBeInTheDocument()
   })
 })

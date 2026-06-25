@@ -50,6 +50,9 @@ export function RepairMissingKeysProgressCard({
         })
       : "",
   ].filter(Boolean)
+  const renameSummarySeparator = t(
+    "keyManagement:repairMissingKeys.renameSummary.summarySeparator",
+  )
 
   return (
     <Card>
@@ -114,7 +117,7 @@ export function RepairMissingKeysProgressCard({
 
         {shouldShowRenameSummary ? (
           <div className="rounded-md border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-200">
-            {renameSummaryParts.join("；")}
+            {renameSummaryParts.join(renameSummarySeparator)}
           </div>
         ) : null}
 

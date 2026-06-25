@@ -354,7 +354,8 @@
       "accountRenamed_one": "{{count}} name synced",
       "accountRenamed_other": "{{count}} names synced",
       "failed": "Names not synced",
-      "renamed": "Names synced"
+      "renamed": "Names synced",
+      "summarySeparator": ", "
     },
     "resultsTitle": "Results",
     "runningNote": "This job runs in the background. You can close this dialog and check later, or cancel it from the progress card.",
