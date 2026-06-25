@@ -2,10 +2,7 @@ import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   resolveAccountSiteCreatedTokenSecretHandling,
 } from "~/services/accounts/accountSiteProfile"
-import {
-  hasUsableApiTokenKey,
-  isMaskedApiTokenKey,
-} from "~/services/apiService/common/apiKey"
+import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
 import type { DisplaySiteData } from "~/types"
 
 /**
@@ -31,5 +28,4 @@ export const shouldShowOneTimeKeyDialogForCreatedToken = (
   token: { key: string },
 ) =>
   shouldShowOneTimeKeyDialogForAccount(account) &&
-  hasUsableApiTokenKey(token.key) &&
-  !isMaskedApiTokenKey(token.key)
+  hasUsableApiTokenKey(token.key)
