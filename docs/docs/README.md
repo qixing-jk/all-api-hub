@@ -167,3 +167,17 @@ footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
     为 All API Hub 的用户提供专属福利：使用<a href="https://runapi.co/register?aff=cvDm">此链接</a>注册并联系 RunAPI 管理员，即可领取 ￥7 的免费额度（<a href="./sponsor-guides/runapi.md">使用教程</a>）。
   </p>
 </div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://www.right.codes/register?aff=690a8be5">
+      <img class="readme-sponsor-logo-small" src="../../resources/partners/aicodemirror.png" alt="AICodeMirror">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢 AICodeMirror 赞助了本项目！AICodeMirror 提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，支持企业级高并发、极速开票、7×24 专属技术支持。Claude Code / Codex / Gemini 官方渠道低至 3.8 / 0.2 / 0.9 折，充值更有折上折！AICodeMirror
+    为 All API Hub 的用户提供了特别福利：通过<a href="https://www.right.codes/register?aff=690a8be5">此链接</a>注册，可享受首充 8 折，企业客户最高可享 7.5 折！
+  </p>
+</div>

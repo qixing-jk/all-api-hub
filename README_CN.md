@@ -177,6 +177,18 @@ GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 St
 
 <hr>
 
+<div>
+  <a href="https://www.right.codes/register?aff=690a8be5">
+    <img src="resources/partners/aicodemirror.png" alt="AICodeMirror" width="64" align="left" hspace="10" vspace="4">
+  </a>
+  <p>
+    感谢 AICodeMirror 赞助了本项目！AICodeMirror 提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，支持企业级高并发、极速开票、7×24 专属技术支持。Claude Code / Codex / Gemini 官方渠道低至 3.8 / 0.2 / 0.9 折，充值更有折上折！AICodeMirror
+    为 All API Hub 的用户提供了特别福利：通过<a href="https://www.right.codes/register?aff=690a8be5">此链接</a>注册，可享受首充 8 折，企业客户最高可享 7.5 折！
+  </p>
+</div>
+
+<hr>
+
 > [!NOTE]
 > 如果你之前使用过 [One API Hub](https://github.com/fxaxg/one-api-hub)，All API Hub 已完成大幅重构，并保留数据兼容能力，支持一键导入原有数据。
 

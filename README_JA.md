@@ -176,6 +176,17 @@ GitHub Stable と Nightly は手動インストール用チャネルで、自動
 
 <hr>
 
+<div>
+  <a href="https://www.right.codes/register?aff=690a8be5">
+    <img src="resources/partners/aicodemirror.png" alt="AICodeMirror" width="64" align="left" hspace="10" vspace="4">
+  </a>
+  <p>
+    AICodeMirror 様、本プロジェクトへのご協賛ありがとうございます。AICodeMirror は Claude Code / Codex / Gemini CLI 向けの公式高安定中継サービスを提供し、エンタープライズ級の高同時実行、迅速な請求書発行、24 時間 365 日の専任技術サポートに対応しています。Claude Code / Codex / Gemini の公式チャネルを通常価格の 38% / 2% / 9% 程度から利用でき、チャージ時の追加割引もあります。All API Hub ユーザー向け特典として、<a href="https://www.right.codes/register?aff=690a8be5">こちらのリンク</a>から登録すると初回チャージが 20% オフになり、エンタープライズ顧客は最大 25% オフを受けられます。
+  </p>
+</div>
+
+<hr>
+
 > [!NOTE]
 > 以前 [One API Hub](https://github.com/fxaxg/one-api-hub) を使っていた場合でも、All API Hub は大幅なリファクタリング後もデータ互換性を維持しているため、既存データをワンクリックでインポートできます。
 
