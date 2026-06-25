@@ -291,6 +291,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
       isOpen={isOpen}
       onClose={onClose}
       size="lg"
+      panelClassName="sm:max-w-3xl"
       header={
         <div className="space-y-1 pr-10">
           <div className="flex flex-wrap items-center gap-2">

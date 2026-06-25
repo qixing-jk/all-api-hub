@@ -91,7 +91,7 @@ export function RepairAccountCoverageList({
             key={`${result.accountId}-${result.finishedAt}`}
             className="px-4 py-3"
           >
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               <div className="min-w-0 space-y-1">
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="truncate text-sm font-medium">
@@ -110,42 +110,53 @@ export function RepairAccountCoverageList({
                   {result.siteUrlOrigin}
                 </div>
               </div>
-              <Badge
-                variant={badgeVariant}
-                size="sm"
-                className="shrink-0 border-transparent"
-              >
-                {outcomeLabel}
-              </Badge>
-            </div>
 
-            {canCreateSub2ApiKey ? (
-              <div className="mt-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onOpenSub2ApiTokenDialog(result.accountId)}
-                  disabled={openingSub2ApiAccountId === result.accountId}
-                  loading={openingSub2ApiAccountId === result.accountId}
+              <div className="flex flex-col gap-2 sm:items-end">
+                <div
+                  className={[
+                    "flex w-full flex-col gap-2 sm:w-auto sm:items-end",
+                    canCreateSub2ApiKey ? "sm:min-w-72" : "",
+                  ].join(" ")}
                 >
-                  {t("keyManagement:dialog.createToken")}
-                </Button>
-              </div>
-            ) : null}
+                  <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    {details ? (
+                      <div
+                        className={[
+                          "max-w-full text-xs leading-5 sm:max-w-56 sm:text-right",
+                          result.outcome === ACCOUNT_KEY_REPAIR_OUTCOMES.Failed
+                            ? "text-red-700 dark:text-red-300"
+                            : "dark:text-dark-text-secondary text-gray-500",
+                        ].join(" ")}
+                      >
+                        {details}
+                      </div>
+                    ) : null}
 
-            {details ? (
-              <div
-                className={[
-                  "mt-2 text-xs",
-                  result.outcome === ACCOUNT_KEY_REPAIR_OUTCOMES.Failed
-                    ? "text-red-700 dark:text-red-300"
-                    : "dark:text-dark-text-secondary text-gray-500",
-                ].join(" ")}
-              >
-                {details}
+                    <Badge
+                      variant={badgeVariant}
+                      size="sm"
+                      className="w-fit shrink-0 border-transparent"
+                    >
+                      {outcomeLabel}
+                    </Badge>
+                  </div>
+
+                  {canCreateSub2ApiKey ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onOpenSub2ApiTokenDialog(result.accountId)}
+                      disabled={openingSub2ApiAccountId === result.accountId}
+                      loading={openingSub2ApiAccountId === result.accountId}
+                      className="w-full sm:w-auto"
+                    >
+                      {t("keyManagement:dialog.createToken")}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
-            ) : null}
+            </div>
 
             {result.availableGroups ? (
               <div className="mt-2 flex flex-wrap gap-2 text-xs">
