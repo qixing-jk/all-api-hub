@@ -5,6 +5,7 @@ import type {
   AccountKeyRepairDeleteInvalidTokensRequest,
   AccountKeyRepairDeleteInvalidTokensResult,
   AccountKeyRepairProgress,
+  AccountKeyRepairStartOptions,
 } from "~/types/accountKeyAutoProvisioning"
 
 export const AccountKeyRepairMessageTypes = {
@@ -15,7 +16,9 @@ export const AccountKeyRepairMessageTypes = {
 } as const
 
 interface AccountKeyRepairProtocolMap {
-  [AccountKeyRepairMessageTypes.Start](): RuntimeMessageResponse<AccountKeyRepairProgress>
+  [AccountKeyRepairMessageTypes.Start](
+    options?: AccountKeyRepairStartOptions,
+  ): RuntimeMessageResponse<AccountKeyRepairProgress>
   [AccountKeyRepairMessageTypes.Cancel](): RuntimeMessageResponse<AccountKeyRepairProgress>
   [AccountKeyRepairMessageTypes.GetProgress](): RuntimeMessageResponse<AccountKeyRepairProgress>
   [AccountKeyRepairMessageTypes.DeleteInvalidTokens](

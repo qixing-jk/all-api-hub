@@ -16,16 +16,18 @@ import {
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { DisplaySiteData, SiteAccount } from "~/types"
+import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
   type AccountKeyRepairDeleteInvalidTokensResult,
   type AccountKeyRepairInvalidToken,
+  type AccountKeyRepairRenamedToken,
 } from "~/types/accountKeyAutoProvisioning"
 import { t } from "~/utils/i18n/core"
 
 import {
   buildGroupDefaultTokenRequest,
+  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
   generateDefaultTokenRequest,
 } from "./ensureDefaultToken"
 
@@ -36,10 +38,58 @@ interface AccountKeyCoverageResult {
   createdGroups: string[]
   missingGroups: string[]
   invalidTokens: AccountKeyRepairInvalidToken[]
+  renamedTokens: AccountKeyRepairRenamedToken[]
+  renameFailedTokens: AccountKeyRepairRenamedToken[]
 }
 
 const normalizeGroupName = (value: unknown) =>
   typeof value === "string" ? value.trim() : ""
+
+const AUTO_GROUP_TOKEN_NAME_PATTERN = /^(.+) group \(auto\)$/
+
+/**
+ * Finds rename candidates that still look like extension-created template keys.
+ */
+function resolveAutoTemplateTokenRename(
+  token: ApiToken,
+): AccountKeyRepairRenamedToken | null {
+  const group = normalizeGroupName(token.group)
+  if (!group) return null
+
+  const previousName = token.name.trim()
+  if (
+    previousName !== DEFAULT_AUTO_PROVISION_TOKEN_NAME &&
+    !AUTO_GROUP_TOKEN_NAME_PATTERN.test(previousName)
+  ) {
+    return null
+  }
+
+  const nextName = buildGroupDefaultTokenRequest(group).name
+  if (previousName === nextName) return null
+
+  return {
+    tokenId: token.id,
+    group,
+    previousName,
+    nextName,
+  }
+}
+
+/**
+ * Reuses the current token settings while changing only the display name.
+ */
+function buildTokenUpdateRequest(token: ApiToken, nextName: string) {
+  return {
+    name: nextName,
+    remain_quota: token.remain_quota,
+    expired_time: token.expired_time,
+    unlimited_quota: token.unlimited_quota,
+    model_limits_enabled: token.model_limits_enabled ?? false,
+    model_limits: token.model_limits ?? "",
+    allow_ips: token.allow_ips ?? "",
+    group: normalizeGroupName(token.group),
+  }
+}
 
 /**
  * Builds the normalized API-service request for account key audit calls.
@@ -76,6 +126,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
   accountName: string
   siteUrlOrigin: string
   abortSignal?: AbortSignal
+  renameAutoTemplateTokens?: boolean
 }): Promise<AccountKeyCoverageResult> {
   const { account, displaySiteData, accountName, siteUrlOrigin, abortSignal } =
     params
@@ -108,6 +159,8 @@ export async function ensureAccountKeysForAvailableGroups(params: {
         createdGroups: [],
         missingGroups: [],
         invalidTokens: [],
+        renamedTokens: [],
+        renameFailedTokens: [],
       }
     }
 
@@ -175,12 +228,16 @@ export async function ensureAccountKeysForAvailableGroups(params: {
       createdGroups: [decision.tokenData.group],
       missingGroups: [],
       invalidTokens: [],
+      renamedTokens: [],
+      renameFailedTokens: [],
     }
   }
 
   const availableGroupSet = new Set(uniqueGroups)
   const coveredGroupSet = new Set<string>()
   const invalidTokens: AccountKeyRepairInvalidToken[] = []
+  const renamedTokens: AccountKeyRepairRenamedToken[] = []
+  const renameFailedTokens: AccountKeyRepairRenamedToken[] = []
 
   for (const token of tokens) {
     const group = normalizeGroupName(token.group)
@@ -188,6 +245,25 @@ export async function ensureAccountKeysForAvailableGroups(params: {
 
     if (availableGroupSet.has(group)) {
       coveredGroupSet.add(group)
+      if (params.renameAutoTemplateTokens !== false) {
+        const rename = resolveAutoTemplateTokenRename(token)
+        if (rename) {
+          try {
+            const updateResult = await keyManagement.updateToken({
+              request,
+              tokenId: token.id,
+              tokenData: buildTokenUpdateRequest(token, rename.nextName),
+            })
+            if (updateResult === false) {
+              renameFailedTokens.push(rename)
+            } else {
+              renamedTokens.push(rename)
+            }
+          } catch {
+            renameFailedTokens.push(rename)
+          }
+        }
+      }
       continue
     }
 
@@ -228,6 +304,8 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     createdGroups,
     missingGroups,
     invalidTokens,
+    renamedTokens,
+    renameFailedTokens,
   }
 }
 

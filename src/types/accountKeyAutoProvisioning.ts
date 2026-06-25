@@ -74,6 +74,17 @@ export interface AccountKeyRepairDeleteInvalidTokensResult {
   failed: AccountKeyRepairFailedInvalidTokenDelete[]
 }
 
+export interface AccountKeyRepairStartOptions {
+  renameAutoTemplateTokens?: boolean
+}
+
+export interface AccountKeyRepairRenamedToken {
+  tokenId: number
+  group: string
+  previousName: string
+  nextName: string
+}
+
 export interface AccountKeyRepairAccountResult {
   accountId: string
   accountName: string
@@ -87,6 +98,8 @@ export interface AccountKeyRepairAccountResult {
   createdGroups?: string[]
   missingGroups?: string[]
   invalidTokens?: AccountKeyRepairInvalidToken[]
+  renamedTokens?: AccountKeyRepairRenamedToken[]
+  renameFailedTokens?: AccountKeyRepairRenamedToken[]
   finishedAt: number
 }
 
@@ -118,6 +131,8 @@ export interface AccountKeyRepairProgress {
     invalidKeys?: number
     deletedKeys?: number
     deleteFailed?: number
+    renamedKeys?: number
+    renameFailed?: number
   }
   results: AccountKeyRepairAccountResult[]
   lastError?: string

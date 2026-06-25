@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => ({
   fetchAccountTokens: vi.fn(),
   fetchUserGroups: vi.fn(),
   createApiToken: vi.fn(),
+  updateApiToken: vi.fn(),
   deleteApiToken: vi.fn(),
   resolveDefaultTokenCreation: vi.fn(),
   classifyCreatedToken: vi.fn(),
@@ -44,6 +45,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
         fetch: (...args: unknown[]) => mocks.fetchUserGroups(...args),
       },
       createToken: (...args: unknown[]) => mocks.createApiToken(...args),
+      updateToken: (...args: unknown[]) => mocks.updateApiToken(...args),
       deleteToken: (...args: unknown[]) => mocks.deleteApiToken(...args),
       resolveTokenKey: vi.fn(),
       fetchAvailableModels: vi.fn(),
@@ -104,6 +106,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     mocks.fetchAccountTokens.mockReset()
     mocks.fetchUserGroups.mockReset()
     mocks.createApiToken.mockReset()
+    mocks.updateApiToken.mockReset()
     mocks.deleteApiToken.mockReset()
     mocks.resolveDefaultTokenCreation.mockReset()
     mocks.classifyCreatedToken.mockReset()
@@ -159,6 +162,8 @@ describe("ensureAccountKeysForAvailableGroups", () => {
           reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
         },
       ],
+      renamedTokens: [],
+      renameFailedTokens: [],
     })
     expect(mocks.createApiToken).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -172,6 +177,155 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       }),
       buildGroupDefaultTokenRequest("vip"),
     )
+  })
+
+  it("renames only auto-template token names to match their current group", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([
+      buildApiToken({
+        id: 1,
+        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "vip",
+      }),
+      buildApiToken({
+        id: 2,
+        name: "old group (auto)",
+        group: "beta",
+      }),
+      buildApiToken({
+        id: 3,
+        name: "Custom production key",
+        group: "vip",
+      }),
+    ])
+    mocks.fetchUserGroups.mockResolvedValue({
+      vip: { desc: "VIP", ratio: 1 },
+      beta: { desc: "Beta", ratio: 1 },
+    })
+    mocks.updateApiToken.mockResolvedValue(true)
+
+    const result = await runCoverage()
+
+    expect(result.renamedTokens).toEqual([
+      {
+        tokenId: 1,
+        group: "vip",
+        previousName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        nextName: "vip group (auto)",
+      },
+      {
+        tokenId: 2,
+        group: "beta",
+        previousName: "old group (auto)",
+        nextName: "beta group (auto)",
+      },
+    ])
+    expect(result.renameFailedTokens).toEqual([])
+    expect(mocks.updateApiToken).toHaveBeenCalledTimes(2)
+    expect(mocks.updateApiToken).toHaveBeenNthCalledWith(1, {
+      request: expect.objectContaining({
+        baseUrl: "https://relay.example.com",
+        accountId: "new-api-1",
+      }),
+      tokenId: 1,
+      tokenData: expect.objectContaining({
+        name: "vip group (auto)",
+        group: "vip",
+      }),
+    })
+    expect(mocks.updateApiToken).toHaveBeenNthCalledWith(2, {
+      request: expect.objectContaining({
+        baseUrl: "https://relay.example.com",
+        accountId: "new-api-1",
+      }),
+      tokenId: 2,
+      tokenData: expect.objectContaining({
+        name: "beta group (auto)",
+        group: "beta",
+      }),
+    })
+  })
+
+  it("skips auto-template rename when the repair option is disabled", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([
+      buildApiToken({
+        id: 1,
+        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "vip",
+      }),
+    ])
+    mocks.fetchUserGroups.mockResolvedValue({
+      vip: { desc: "VIP", ratio: 1 },
+    })
+
+    const result = await ensureAccountKeysForAvailableGroups({
+      account,
+      displaySiteData,
+      accountName: "Relay Account",
+      siteUrlOrigin: "https://relay.example.com",
+      renameAutoTemplateTokens: false,
+    })
+
+    expect(result.renamedTokens).toEqual([])
+    expect(result.renameFailedTokens).toEqual([])
+    expect(mocks.updateApiToken).not.toHaveBeenCalled()
+  })
+
+  it("keeps group coverage repair running when an auto-template rename fails", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([
+      buildApiToken({
+        id: 1,
+        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "vip",
+      }),
+    ])
+    mocks.fetchUserGroups.mockResolvedValue({
+      vip: { desc: "VIP", ratio: 1 },
+      beta: { desc: "Beta", ratio: 1 },
+    })
+    mocks.updateApiToken.mockRejectedValueOnce(new Error("rename failed"))
+    mocks.createApiToken.mockResolvedValue(true)
+
+    const result = await runCoverage()
+
+    expect(result.createdGroups).toEqual(["beta"])
+    expect(result.renameFailedTokens).toEqual([
+      {
+        tokenId: 1,
+        group: "vip",
+        previousName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        nextName: "vip group (auto)",
+      },
+    ])
+    expect(mocks.createApiToken).toHaveBeenCalledWith(
+      expect.any(Object),
+      buildGroupDefaultTokenRequest("beta"),
+    )
+  })
+
+  it("records a false auto-template rename response as a non-blocking failure", async () => {
+    mocks.fetchAccountTokens.mockResolvedValue([
+      buildApiToken({
+        id: 1,
+        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "vip",
+      }),
+    ])
+    mocks.fetchUserGroups.mockResolvedValue({
+      vip: { desc: "VIP", ratio: 1 },
+    })
+    mocks.updateApiToken.mockResolvedValueOnce(false)
+
+    const result = await runCoverage()
+
+    expect(result.renamedTokens).toEqual([])
+    expect(result.renameFailedTokens).toEqual([
+      {
+        tokenId: 1,
+        group: "vip",
+        previousName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        nextName: "vip group (auto)",
+      },
+    ])
   })
 
   it("passes the abort signal into token, group, and creation requests", async () => {
@@ -281,6 +435,8 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       createdGroups: [""],
       missingGroups: [],
       invalidTokens: [],
+      renamedTokens: [],
+      renameFailedTokens: [],
     })
     expect(mocks.createApiToken).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -323,6 +479,8 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       createdGroups: [""],
       missingGroups: [],
       invalidTokens: [],
+      renamedTokens: [],
+      renameFailedTokens: [],
     })
     expect(mocks.fetchAccountTokens).toHaveBeenCalledTimes(2)
   })
@@ -451,6 +609,8 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       createdGroups: [],
       missingGroups: [],
       invalidTokens: [],
+      renamedTokens: [],
+      renameFailedTokens: [],
     })
     expect(mocks.createApiToken).not.toHaveBeenCalled()
   })
@@ -481,6 +641,8 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       createdGroups: ["beta"],
       missingGroups: ["vip"],
       invalidTokens: [],
+      renamedTokens: [],
+      renameFailedTokens: [],
     })
     expect(mocks.createApiToken).toHaveBeenNthCalledWith(
       1,

@@ -13,6 +13,7 @@ import type {
   AccountKeyRepairDeleteInvalidTokensResult,
   AccountKeyRepairProgress,
   AccountKeyRepairSkipReason,
+  AccountKeyRepairStartOptions,
 } from "~/types/accountKeyAutoProvisioning"
 import {
   ACCOUNT_KEY_REPAIR_ERRORS,
@@ -131,7 +132,9 @@ class AccountKeyRepairRunner {
     return await this.terminalizeInactiveRunningProgress(stored)
   }
 
-  async start(): Promise<AccountKeyRepairProgress> {
+  async start(
+    options: AccountKeyRepairStartOptions = {},
+  ): Promise<AccountKeyRepairProgress> {
     if (this.currentRun) {
       return await this.getProgress()
     }
@@ -162,7 +165,7 @@ class AccountKeyRepairRunner {
     this.currentAbortController = abortController
     const initialPersist = this.persistAndNotify()
     const runPromise = initialPersist
-      .then(() => this.run(progress.jobId, abortController.signal))
+      .then(() => this.run(progress.jobId, abortController.signal, options))
       .catch((error) => {
         logger.error("Repair run failed to start", error)
       })
@@ -239,7 +242,11 @@ class AccountKeyRepairRunner {
     return cancelledProgress
   }
 
-  private async run(jobId: string, abortSignal: AbortSignal): Promise<void> {
+  private async run(
+    jobId: string,
+    abortSignal: AbortSignal,
+    options: AccountKeyRepairStartOptions,
+  ): Promise<void> {
     try {
       if (this.isCurrentJobCancelled(jobId, abortSignal)) {
         return
@@ -311,6 +318,7 @@ class AccountKeyRepairRunner {
             displaySiteDataById.get(account.id)?.name ?? account.site_name,
             displaySiteDataById,
             abortSignal,
+            options,
           )
         },
       })
@@ -357,6 +365,7 @@ class AccountKeyRepairRunner {
     accountName: string,
     displaySiteDataById: ReadonlyMap<string, DisplaySiteData>,
     abortSignal: AbortSignal,
+    options: AccountKeyRepairStartOptions,
   ): Promise<void> {
     const originKey = getOriginKey(account.site_url)
     try {
@@ -398,6 +407,7 @@ class AccountKeyRepairRunner {
         accountName: resolvedAccountName,
         siteUrlOrigin: originKey,
         abortSignal,
+        renameAutoTemplateTokens: options.renameAutoTemplateTokens,
       })
 
       if (abortSignal.aborted) {
@@ -420,6 +430,8 @@ class AccountKeyRepairRunner {
         createdGroups: result.createdGroups,
         missingGroups: result.missingGroups,
         invalidTokens: result.invalidTokens,
+        renamedTokens: result.renamedTokens,
+        renameFailedTokens: result.renameFailedTokens,
         finishedAt: Date.now(),
       })
     } catch (error) {
@@ -479,6 +491,8 @@ class AccountKeyRepairRunner {
       const coveredGroupCount = result.coveredGroups?.length ?? 0
       const createdKeyCount = result.createdGroups?.length ?? 0
       const invalidKeyCount = result.invalidTokens?.length ?? 0
+      const renamedKeyCount = result.renamedTokens?.length ?? 0
+      const renameFailedKeyCount = result.renameFailedTokens?.length ?? 0
       const nextProcessedEligibleAccounts = isEligibleOutcome
         ? (prev.totals.processedEligibleAccounts ??
             prev.totals.processedAccounts) + 1
@@ -496,6 +510,8 @@ class AccountKeyRepairRunner {
           invalidKeys: (prev.summary.invalidKeys ?? 0) + invalidKeyCount,
           deletedKeys: prev.summary.deletedKeys ?? 0,
           deleteFailed: prev.summary.deleteFailed ?? 0,
+          renamedKeys: (prev.summary.renamedKeys ?? 0) + renamedKeyCount,
+          renameFailed: (prev.summary.renameFailed ?? 0) + renameFailedKeyCount,
         },
         totals: {
           ...prev.totals,
@@ -594,8 +610,10 @@ export const accountKeyRepairRunner = new AccountKeyRepairRunner()
 /**
  * Start a background repair job for missing account API keys.
  */
-export async function startAccountKeyRepair() {
-  const progress = await accountKeyRepairRunner.start()
+export async function startAccountKeyRepair(
+  options: AccountKeyRepairStartOptions = {},
+) {
+  const progress = await accountKeyRepairRunner.start(options)
   return { success: true as const, data: progress }
 }
 
@@ -689,13 +707,16 @@ export function setupAccountKeyRepairMessagingListeners() {
   }
 
   accountKeyRepairMessagingCleanup = [
-    onAccountKeyRepairMessage(AccountKeyRepairMessageTypes.Start, async () => {
-      try {
-        return await startAccountKeyRepair()
-      } catch (error) {
-        return toAccountKeyRepairFailure(error)
-      }
-    }),
+    onAccountKeyRepairMessage(
+      AccountKeyRepairMessageTypes.Start,
+      async ({ data }) => {
+        try {
+          return await startAccountKeyRepair(data)
+        } catch (error) {
+          return toAccountKeyRepairFailure(error)
+        }
+      },
+    ),
     onAccountKeyRepairMessage(AccountKeyRepairMessageTypes.Cancel, async () => {
       try {
         return await cancelAccountKeyRepair()
