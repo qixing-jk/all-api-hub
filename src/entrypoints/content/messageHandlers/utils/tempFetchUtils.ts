@@ -19,6 +19,10 @@ export function normalizeFetchOptions(options: RequestInit = {}): RequestInit {
     normalized.headers = sanitizeHeaders(options.headers)
   }
 
+  if (normalized.signal && !(normalized.signal instanceof AbortSignal)) {
+    delete normalized.signal
+  }
+
   return normalized
 }
 

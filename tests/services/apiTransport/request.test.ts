@@ -403,6 +403,46 @@ describe("apiTransport request helpers", () => {
     )
   })
 
+  it("omits abort signals from current-tab content fetch messages", async () => {
+    const abortController = new AbortController()
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        data: { ok: true },
+        message: "ok",
+      },
+    })
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+            userId: "123",
+          },
+          abortSignal: abortController.signal,
+          fetchContext: {
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
+    expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
+      expect.not.objectContaining({
+        signal: expect.anything(),
+      }),
+    )
+  })
+
   it("normalizes Headers objects before sending current-tab content fetch", async () => {
     mockSendTabMessageWithRetry.mockResolvedValueOnce({
       success: true,

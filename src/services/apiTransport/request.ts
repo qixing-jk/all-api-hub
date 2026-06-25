@@ -251,9 +251,12 @@ function normalizeHeaderInit(
  * Normalizes request options before crossing an extension message boundary.
  */
 function normalizeRequestInitForMessage(options: RequestInit): RequestInit {
+  const normalizedOptions = { ...options }
+  delete normalizedOptions.signal
+
   return {
-    ...options,
-    headers: normalizeHeaderInit(options.headers),
+    ...normalizedOptions,
+    headers: normalizeHeaderInit(normalizedOptions.headers),
   }
 }
 

@@ -98,6 +98,20 @@ describe("tempFetchUtils", () => {
     })
   })
 
+  it("drops message-cloned fetch signals before content-side fetch", async () => {
+    const { normalizeFetchOptions } = await import(
+      "~/entrypoints/content/messageHandlers/utils/tempFetchUtils"
+    )
+
+    const normalized = normalizeFetchOptions({
+      method: "GET",
+      signal: { aborted: false } as unknown as AbortSignal,
+    })
+
+    expect(normalized).toEqual({ method: "GET" })
+    expect(normalized).not.toHaveProperty("signal")
+  })
+
   it("parses arrayBuffer and blob responses into serializable payloads", async () => {
     const { parseResponseData } = await import(
       "~/entrypoints/content/messageHandlers/utils/tempFetchUtils"
