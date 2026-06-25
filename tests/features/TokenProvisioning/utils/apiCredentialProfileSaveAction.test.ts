@@ -10,7 +10,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import {
   buildOneTimeApiKeyProfileSaveAction,
   saveApiTokensToApiCredentialProfiles,
-} from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
+} from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import {

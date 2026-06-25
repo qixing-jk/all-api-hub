@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useTokenData } from "~/features/KeyManagement/components/AddTokenDialog/hooks/useTokenData"
+import { useTokenData } from "~/features/TokenProvisioning/components/AddTokenDialog/hooks/useTokenData"
 import { AuthTypeEnum } from "~/types"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 

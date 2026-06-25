@@ -18,8 +18,8 @@ import {
   SelectValue,
   type CompactMultiSelectOption,
 } from "~/components/ui"
-import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
-import { buildDefaultTokenCreatePrefill } from "~/features/KeyManagement/components/AddTokenDialog/defaultTokenCreatePrefill"
+import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
+import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
   ensureAccountApiToken,

@@ -16,9 +16,9 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
-import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
-import { buildOneTimeApiKeyProfileSaveAction } from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
+import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
+import { OneTimeApiKeyDialog } from "~/features/TokenProvisioning/components/OneTimeApiKeyDialog"
+import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import {
   buildGroupDefaultTokenRequest,
   resolvePreferredDefaultUserGroup,

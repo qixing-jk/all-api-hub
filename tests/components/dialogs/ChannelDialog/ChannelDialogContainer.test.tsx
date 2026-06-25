@@ -15,7 +15,7 @@ vi.mock("~/components/dialogs/ChannelDialog/components/ChannelDialog", () => ({
   ChannelDialog: () => <div data-testid="mock-channel-dialog" />,
 }))
 
-vi.mock("~/features/KeyManagement/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   default: (props: {
     isOpen: boolean
     createPrefill?: Record<string, unknown>

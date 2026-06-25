@@ -45,10 +45,10 @@ import {
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { buildApiCredentialProfileName } from "~/features/KeyManagement/utils/apiCredentialProfileName"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
+import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
@@ -417,24 +417,20 @@ function TokenActionButtons({
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    const profileName = buildApiCredentialProfileName({
-      accountName: account.name,
-      fallbackAccountName: token.accountName,
-      tokenName: token.name,
-    })
     let resolvedToken = token
 
     try {
       resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
-      const profile = await apiCredentialProfilesStorage.createProfile({
-        name: profileName,
-        apiType,
-        baseUrl: normalizeAccountSiteUrlForManagedChannel({
-          siteType: account.siteType,
-          url: account.baseUrl,
-        }),
-        apiKey: resolvedToken.key,
+      const profile = await createProfileFromAccountToken({
+        accountName: account.name,
+        fallbackAccountName: token.accountName,
+        baseUrl: account.baseUrl,
+        siteType: account.siteType,
         tagIds: account.tagIds ?? [],
+        token: {
+          ...token,
+          key: resolvedToken.key,
+        },
       })
       toast.success(
         (toastInstance) => (

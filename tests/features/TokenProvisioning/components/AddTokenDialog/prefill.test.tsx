@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Z_INDEX } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
-import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/defaultTokenLifecycle"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

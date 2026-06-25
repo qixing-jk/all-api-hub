@@ -251,7 +251,7 @@ function resetMockState() {
   })
 }
 
-vi.mock("~/features/KeyManagement/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   default: (props: {
     isOpen: boolean
     preSelectedAccountId?: string
@@ -275,7 +275,7 @@ vi.mock("~/features/KeyManagement/components/AddTokenDialog", () => ({
   ),
 }))
 
-vi.mock("~/features/KeyManagement/components/OneTimeApiKeyDialog", () => ({
+vi.mock("~/features/TokenProvisioning/components/OneTimeApiKeyDialog", () => ({
   OneTimeApiKeyDialog: (props: {
     isOpen: boolean
     token: { key?: string } | null

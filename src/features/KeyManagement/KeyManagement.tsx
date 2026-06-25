@@ -5,10 +5,10 @@ import { DestructiveConfirmDialog } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,

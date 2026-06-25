@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 
-let OneTimeApiKeyDialog: typeof import("~/features/KeyManagement/components/OneTimeApiKeyDialog").OneTimeApiKeyDialog
+let OneTimeApiKeyDialog: typeof import("~/features/TokenProvisioning/components/OneTimeApiKeyDialog").OneTimeApiKeyDialog
 
 vi.mock("@headlessui/react", () => {
   const Dialog = ({ children }: any) => <div>{children}</div>
@@ -23,7 +23,7 @@ vi.mock("@headlessui/react", () => {
 describe("OneTimeApiKeyDialog", () => {
   beforeEach(async () => {
     ;({ OneTimeApiKeyDialog } = await import(
-      "~/features/KeyManagement/components/OneTimeApiKeyDialog"
+      "~/features/TokenProvisioning/components/OneTimeApiKeyDialog"
     ))
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,

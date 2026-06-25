@@ -28,7 +28,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 }))
 
 vi.mock(
-  "~/features/KeyManagement/utils/apiCredentialProfileSaveAction",
+  "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction",
   () => ({
     saveApiTokensToApiCredentialProfiles: (...args: unknown[]) =>
       mockSaveApiCredentialProfiles(...args),

@@ -57,7 +57,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     startProductAnalyticsActionMock(...args),
 }))
 
-vi.mock("~/features/KeyManagement/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   default: (props: {
     isOpen: boolean
     prefillNotice?: string

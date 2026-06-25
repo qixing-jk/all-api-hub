@@ -1,6 +1,6 @@
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
-import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
-import { buildDefaultTokenCreatePrefill } from "~/features/KeyManagement/components/AddTokenDialog/defaultTokenCreatePrefill"
+import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
+import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 
 import { ChannelDialog } from "./ChannelDialog"
 
