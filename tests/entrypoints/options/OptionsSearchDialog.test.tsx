@@ -121,6 +121,28 @@ describe("OptionsSearchDialog", () => {
     expect(input).toHaveValue("")
   })
 
+  it("lets Home and End move the caret while editing the search query", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <OptionsSearchDialog
+        open
+        onOpenChange={vi.fn()}
+        onPageNavigate={vi.fn()}
+        context={baseContext}
+      />,
+    )
+
+    await screen.findByRole("dialog")
+    const input = screen.getByRole("combobox")
+
+    await user.type(input, "middle")
+    await user.keyboard("{Home}start ")
+    await user.keyboard("{End} end")
+
+    expect(input).toHaveValue("start middle end")
+  })
+
   it("closes through dialog dismissal and resets the query", async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()

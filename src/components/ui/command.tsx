@@ -95,6 +95,7 @@ function CommandInput({
   className,
   onClear,
   clearButtonLabel = "Clear",
+  onKeyDown,
   ...props
 }: CommandInputProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
@@ -115,6 +116,12 @@ function CommandInput({
           "placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
+        onKeyDown={(event) => {
+          onKeyDown?.(event)
+          if (!event.defaultPrevented && ["Home", "End"].includes(event.key)) {
+            event.stopPropagation()
+          }
+        }}
         {...props}
       />
       {showClearButton && (
