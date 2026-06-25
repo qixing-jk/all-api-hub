@@ -324,8 +324,27 @@
       "failed": "失敗",
       "skipped": "已跳過"
     },
+    "previousResult": {
+      "backToSetup": "返回檢查",
+      "description": "可查看上次檢查結果；新的檢查會依目前設定執行。",
+      "title": "有上次檢查結果",
+      "view": "查看上次結果"
+    },
     "progressLabel": "進度",
     "remoteWriteNotice": "此操作可能會在對應網站建立新金鑰；不會自動刪除任何金鑰。",
+    "renameOption": {
+      "helper": "僅針對擴充功能自動建立的金鑰。檢查修復時，會讓名稱跟隨目前分組。",
+      "infoLabel": "查看金鑰名稱一致性說明",
+      "label": "保持金鑰名稱和分組一致",
+      "tooltip": "僅處理名稱符合自動建立樣式的金鑰，例如「user group (auto)」或「vip group (auto)」。修復後名稱會跟隨金鑰目前分組；其他名稱不會修改。"
+    },
+    "renameSummary": {
+      "accountFailed_other": "名稱未同步：{{count}}",
+      "accountRenamed_other": "已同步名稱：{{count}}",
+      "failed": "名稱未同步",
+      "renamed": "已同步名稱",
+      "resultNotice": "已同步 {{renamed}} 個密鑰名稱；{{failed}} 個未同步。"
+    },
     "resultsTitle": "結果",
     "runningNote": "任務在後台執行；可關閉此對話框稍後查看，或在進度卡片中取消任務。",
     "searchLabel": "搜尋",

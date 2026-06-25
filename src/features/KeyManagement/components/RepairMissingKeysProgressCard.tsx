@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next"
+import type { ReactNode } from "react"
 
 import { Button, Card, CardContent } from "~/components/ui"
 import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
@@ -15,6 +16,7 @@ interface RepairMissingKeysProgressCardProps {
   isStarting: boolean
   onCancelAudit: () => void
   onStartAudit: () => void
+  actions?: ReactNode
   t: TFunction
 }
 
@@ -27,11 +29,15 @@ export function RepairMissingKeysProgressCard({
   isStarting,
   onCancelAudit,
   onStartAudit,
+  actions,
   t,
 }: RepairMissingKeysProgressCardProps) {
   const { eligibleTotal, processedTotal, progressMax, progressPercent } =
     getRepairProgressTotals(progress)
   const progressBarColor = getRepairProgressBarColor(progress)
+  const renamedKeys = progress.summary.renamedKeys ?? 0
+  const renameFailed = progress.summary.renameFailed ?? 0
+  const shouldShowRenameSummary = renamedKeys > 0 || renameFailed > 0
 
   return (
     <Card>
@@ -51,7 +57,9 @@ export function RepairMissingKeysProgressCard({
               <span>
                 {processedTotal}/{eligibleTotal} ({progressPercent}%)
               </span>
-              {progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running ? (
+              {actions !== undefined ? (
+                actions
+              ) : progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -91,6 +99,15 @@ export function RepairMissingKeysProgressCard({
             />
           </div>
         </div>
+
+        {shouldShowRenameSummary ? (
+          <div className="rounded-md border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-200">
+            {t("keyManagement:repairMissingKeys.renameSummary.resultNotice", {
+              failed: renameFailed,
+              renamed: renamedKeys,
+            })}
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div>
@@ -159,6 +176,27 @@ export function RepairMissingKeysProgressCard({
             </p>
           </div>
         </div>
+
+        {shouldShowRenameSummary ? (
+          <div className="dark:border-dark-bg-tertiary grid grid-cols-2 gap-4 border-t border-gray-100 pt-4">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {t("keyManagement:repairMissingKeys.renameSummary.renamed")}
+              </p>
+              <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">
+                {renamedKeys}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {t("keyManagement:repairMissingKeys.renameSummary.failed")}
+              </p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                {renameFailed}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

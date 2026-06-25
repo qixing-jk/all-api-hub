@@ -103,6 +103,7 @@ interface UseRepairMissingKeysJobOptions {
   accounts: DisplaySiteData[]
   isOpen: boolean
   startOnOpen: boolean
+  renameAutoTemplateTokens?: boolean
   t: TFunction
 }
 
@@ -112,6 +113,7 @@ interface UseRepairMissingKeysJobOptions {
 export function useRepairMissingKeysJob({
   accounts,
   isOpen,
+  renameAutoTemplateTokens = true,
   startOnOpen,
   t,
 }: UseRepairMissingKeysJobOptions) {
@@ -154,6 +156,9 @@ export function useRepairMissingKeysJob({
     try {
       const response = await sendAccountKeyRepairMessage(
         AccountKeyRepairMessageTypes.Start,
+        {
+          renameAutoTemplateTokens,
+        },
       )
       if (response?.success && response.data) {
         startedAnalyticsJobIdRef.current = response.data.jobId
@@ -202,7 +207,7 @@ export function useRepairMissingKeysJob({
         }
       }
     }
-  }, [t])
+  }, [renameAutoTemplateTokens, t])
 
   const handleCancelAudit = useCallback(async () => {
     if (cancelInFlightRef.current) {

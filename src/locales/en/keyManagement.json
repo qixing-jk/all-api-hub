@@ -334,8 +334,29 @@
       "failed": "Failed",
       "skipped": "Skipped"
     },
+    "previousResult": {
+      "backToSetup": "Back to check",
+      "description": "You can view the previous check result. New checks use the current settings.",
+      "title": "Previous check result available",
+      "view": "View previous result"
+    },
     "progressLabel": "Progress",
     "remoteWriteNotice": "This action may create new keys on the corresponding sites. It will not automatically delete any keys.",
+    "renameOption": {
+      "helper": "Only applies to keys created automatically by the extension. During the check, their names will follow the current group.",
+      "infoLabel": "View key name alignment details",
+      "label": "Keep key names aligned with groups",
+      "tooltip": "Only keys with an auto-created naming style are handled, such as “user group (auto)” or “vip group (auto)”. After repair, the name follows the key’s current group. Other names are not changed."
+    },
+    "renameSummary": {
+      "accountFailed_one": "{{count}} name not synced",
+      "accountFailed_other": "{{count}} names not synced",
+      "accountRenamed_one": "{{count}} name synced",
+      "accountRenamed_other": "{{count}} names synced",
+      "failed": "Names not synced",
+      "renamed": "Names synced",
+      "resultNotice": "Synced {{renamed}} key names; {{failed}} not synced."
+    },
     "resultsTitle": "Results",
     "runningNote": "This job runs in the background. You can close this dialog and check later, or cancel it from the progress card.",
     "searchLabel": "Search",

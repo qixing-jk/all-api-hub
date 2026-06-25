@@ -289,8 +289,49 @@ describe("useRepairMissingKeysJob", () => {
     })
 
     expect(sendAccountKeyRepairMessageMock).toHaveBeenCalledTimes(1)
+    expect(sendAccountKeyRepairMessageMock.mock.calls[0]?.[0]).toBe(
+      AccountKeyRepairMessageTypes.Start,
+    )
+  })
+
+  it("sends the auto-template rename preference when starting repair", async () => {
+    sendAccountKeyRepairMessageMock.mockImplementation((type) => {
+      if (type === AccountKeyRepairMessageTypes.Start) {
+        return Promise.resolve({
+          success: true,
+          data: buildProgress({ jobId: "started-with-options" }),
+        })
+      }
+
+      return Promise.resolve({
+        success: true,
+        data: buildProgress(),
+      })
+    })
+
+    const { result } = renderHook(() =>
+      useRepairMissingKeysJob({
+        accounts: [buildAccount()],
+        isOpen: false,
+        startOnOpen: false,
+        renameAutoTemplateTokens: false,
+        t: testI18n.t,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current?.handleStartAudit).toBeTypeOf("function")
+    })
+
+    await act(async () => {
+      await result.current.handleStartAudit()
+    })
+
     expect(sendAccountKeyRepairMessageMock).toHaveBeenCalledWith(
       AccountKeyRepairMessageTypes.Start,
+      {
+        renameAutoTemplateTokens: false,
+      },
     )
   })
 

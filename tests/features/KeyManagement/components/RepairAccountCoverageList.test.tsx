@@ -21,6 +21,12 @@ const t = ((key: string, options?: Record<string, unknown>) => {
   if (key === "keyManagement:repairMissingKeys.coverage.missingGroup") {
     return `missing ${options?.group}`
   }
+  if (key === "keyManagement:repairMissingKeys.renameSummary.accountRenamed") {
+    return `renamed ${options?.count}`
+  }
+  if (key === "keyManagement:repairMissingKeys.renameSummary.accountFailed") {
+    return `rename failed ${options?.count}`
+  }
 
   return key
 }) as TFunction
@@ -89,6 +95,40 @@ describe("RepairAccountCoverageList", () => {
     expect(screen.getByText("1/3 groups")).toBeInTheDocument()
     expect(screen.getByText("created default")).toBeInTheDocument()
     expect(screen.getByText("missing vip")).toBeInTheDocument()
+  })
+
+  it("renders per-account auto-template rename results", () => {
+    renderList({
+      filteredResults: [
+        buildResult({
+          renamedTokens: [
+            {
+              tokenId: 1,
+              group: "vip",
+              previousName: "user group (auto)",
+              nextName: "vip group (auto)",
+            },
+            {
+              tokenId: 2,
+              group: "beta",
+              previousName: "old group (auto)",
+              nextName: "beta group (auto)",
+            },
+          ],
+          renameFailedTokens: [
+            {
+              tokenId: 3,
+              group: "trial",
+              previousName: "default group (auto)",
+              nextName: "trial group (auto)",
+            },
+          ],
+        }),
+      ],
+    })
+
+    expect(screen.getByText("renamed 2")).toBeInTheDocument()
+    expect(screen.getByText("rename failed 1")).toBeInTheDocument()
   })
 
   it("shows the Sub2API create-token action only for current skipped accounts", async () => {

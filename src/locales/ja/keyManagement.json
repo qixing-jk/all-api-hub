@@ -324,8 +324,27 @@
       "failed": "失敗",
       "skipped": "スキップ"
     },
+    "previousResult": {
+      "backToSetup": "チェックに戻る",
+      "description": "前回のチェック結果を確認できます。新しいチェックは現在の設定で実行されます。",
+      "title": "前回のチェック結果があります",
+      "view": "前回の結果を表示"
+    },
     "progressLabel": "進捗",
     "remoteWriteNotice": "この操作により、対応するサイトで新しいキーが作成される場合があります。キーが自動的に削除されることはありません。",
+    "renameOption": {
+      "helper": "拡張機能が自動作成したキーだけが対象です。チェック時に、名前を現在のグループに合わせます。",
+      "infoLabel": "キー名の整合について表示",
+      "label": "キー名とグループを一致させる",
+      "tooltip": "「user group (auto)」や「vip group (auto)」のような自動作成風の名前だけを処理します。修復後、名前はキーの現在のグループに合わせられます。その他の名前は変更されません。"
+    },
+    "renameSummary": {
+      "accountFailed_other": "{{count}} 件の名前を同期できませんでした",
+      "accountRenamed_other": "{{count}} 件の名前を同期しました",
+      "failed": "名前未同期",
+      "renamed": "名前同期済み",
+      "resultNotice": "{{renamed}} 個のキー名を同期しました。{{failed}} 個は同期できませんでした。"
+    },
     "resultsTitle": "結果",
     "runningNote": "このジョブはバックグラウンドで実行されます。このダイアログを閉じて後で確認するか、進捗カードからキャンセルできます。",
     "searchLabel": "検索",

@@ -324,8 +324,27 @@
       "failed": "Thất bại",
       "skipped": "Đã bỏ qua"
     },
+    "previousResult": {
+      "backToSetup": "Quay lại kiểm tra",
+      "description": "Bạn có thể xem kết quả kiểm tra trước đó. Lần kiểm tra mới sẽ dùng thiết lập hiện tại.",
+      "title": "Có kết quả kiểm tra trước đó",
+      "view": "Xem kết quả trước đó"
+    },
     "progressLabel": "Tiến trình",
     "remoteWriteNotice": "Thao tác này có thể tạo khóa mới trên các trang web tương ứng; sẽ không tự động xóa bất kỳ khóa nào.",
+    "renameOption": {
+      "helper": "Chỉ áp dụng cho khóa do tiện ích tự động tạo. Khi kiểm tra, tên khóa sẽ theo nhóm hiện tại.",
+      "infoLabel": "Xem chi tiết đồng bộ tên khóa",
+      "label": "Giữ tên khóa khớp với nhóm",
+      "tooltip": "Chỉ xử lý các khóa có kiểu tên tự động tạo, ví dụ “user group (auto)” hoặc “vip group (auto)”. Sau khi sửa, tên sẽ theo nhóm hiện tại của khóa. Các tên khác sẽ không bị thay đổi."
+    },
+    "renameSummary": {
+      "accountFailed_other": "{{count}} tên chưa đồng bộ",
+      "accountRenamed_other": "{{count}} tên đã đồng bộ",
+      "failed": "Tên chưa đồng bộ",
+      "renamed": "Tên đã đồng bộ",
+      "resultNotice": "Đã đồng bộ tên cho {{renamed}} khóa; {{failed}} khóa chưa đồng bộ."
+    },
     "resultsTitle": "Kết quả",
     "runningNote": "Tác vụ đang chạy trong nền. Bạn có thể đóng hộp thoại này để kiểm tra sau hoặc hủy trong thẻ tiến trình.",
     "searchLabel": "Tìm kiếm",
