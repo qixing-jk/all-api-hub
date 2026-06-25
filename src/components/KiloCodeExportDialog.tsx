@@ -957,6 +957,7 @@ export function KiloCodeExportDialog({
                     [siteId]: values,
                   }))
                 }}
+                size="default"
                 placeholder={t("ui:dialog.kiloCode.placeholders.selectTokens")}
                 clearable
               />
@@ -1161,6 +1162,7 @@ export function KiloCodeExportDialog({
             options={siteOptions}
             selected={selectedSiteIds}
             onChange={setSelectedSiteIds}
+            size="default"
             placeholder={t("ui:dialog.kiloCode.placeholders.selectSites")}
             clearable
           />

@@ -692,6 +692,7 @@ export function ChannelDialog({
             options={availableModels}
             selected={formData.models}
             onChange={(models) => updateField("models", models)}
+            size="default"
             placeholder={
               isLoadingModels
                 ? t("channelDialog:fields.models.loading")
@@ -713,6 +714,7 @@ export function ChannelDialog({
               options={availableGroups}
               selected={formData.groups}
               onChange={(groups) => updateField("groups", groups)}
+              size="default"
               placeholder={
                 isLoadingGroups
                   ? t("channelDialog:fields.groups.loading")

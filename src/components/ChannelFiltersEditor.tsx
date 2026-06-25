@@ -264,6 +264,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                         <CompactMultiSelect
                           options={probeOptions}
                           selected={filter.probeIds}
+                          size="default"
                           disabled={!probeRulesSupported}
                           onChange={(value) =>
                             onFieldChange(filter.id, "probeIds", value)

@@ -63,6 +63,7 @@ export function ModelLimits({
             }))}
             selected={modelLimits}
             onChange={handleModelLimitsChange}
+            size="default"
             placeholder={t("dialog.selectModels")}
             label={t("dialog.availableModels")}
           />

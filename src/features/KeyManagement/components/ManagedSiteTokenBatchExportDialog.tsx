@@ -754,6 +754,7 @@ export function ManagedSiteTokenBatchExportDialog({
                               onChange={(models) =>
                                 handleItemModelsChange(item, models)
                               }
+                              size="default"
                               placeholder={t(
                                 "channelDialog:fields.models.placeholder",
                               )}

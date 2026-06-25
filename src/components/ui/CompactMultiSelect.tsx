@@ -82,7 +82,7 @@ export interface CompactMultiSelectProps
   searchPlaceholder?: string
   emptyMessage?: string
   /**
-   * Trigger button size. Defaults to "sm" to keep the control compact.
+   * Trigger button size. Defaults to "default" to match regular form controls.
    */
   size?: React.ComponentProps<typeof Button>["size"]
   /**
@@ -114,7 +114,7 @@ export function CompactMultiSelect({
   maxDisplayValues = 2,
   searchPlaceholder,
   emptyMessage,
-  size = "sm",
+  size = "default",
   bulkActionsMinOptions = 0,
   className,
   ...buttonProps

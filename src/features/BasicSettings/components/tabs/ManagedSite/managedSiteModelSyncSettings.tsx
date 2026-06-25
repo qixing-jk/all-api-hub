@@ -739,6 +739,7 @@ export default function ManagedSiteModelSyncSettings() {
                 allowCustom
                 options={channelUpstreamModelOptions}
                 selected={preferences.allowedModels}
+                size="default"
                 placeholder={t(
                   "managedSiteModelSync:settings.allowedModelsPlaceholder",
                 )}

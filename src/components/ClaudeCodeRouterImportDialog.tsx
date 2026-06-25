@@ -291,6 +291,7 @@ export function ClaudeCodeRouterImportDialog(
             options={upstreamModelOptions}
             selected={selectedModels}
             onChange={setSelectedModels}
+            size="default"
             placeholder={
               isLoadingModels
                 ? t("common:status.loading")

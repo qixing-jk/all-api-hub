@@ -571,4 +571,17 @@ describe("CompactMultiSelect", () => {
       getBoundingClientRectSpy.mockRestore()
     }
   })
+
+  it("defaults the summary trigger to regular button height", async () => {
+    renderCompact(
+      <CompactMultiSelect
+        displayMode="summary"
+        options={[{ value: "alpha", label: "Alpha" }]}
+        selected={[]}
+        onChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("combobox")).toHaveClass("h-9")
+  })
 })

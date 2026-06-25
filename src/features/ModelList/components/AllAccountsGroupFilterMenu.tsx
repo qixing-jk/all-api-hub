@@ -267,6 +267,7 @@ export function AllAccountsGroupFilterMenu({
                       onChange={(values) =>
                         handleAccountSelectionChange(accountId, values)
                       }
+                      size="sm"
                       displayMode="summary"
                       placeholder={t(
                         selectedGroups.length === 0

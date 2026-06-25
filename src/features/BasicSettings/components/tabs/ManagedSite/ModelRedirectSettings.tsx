@@ -156,6 +156,7 @@ export default function ModelRedirectSettings() {
                   onChange={(standardModels) =>
                     handleUpdate({ standardModels })
                   }
+                  size="default"
                   placeholder={t("standardModelsPlaceholder")}
                   disabled={isUpdating}
                   allowCustom
