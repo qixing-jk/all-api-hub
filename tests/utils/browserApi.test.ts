@@ -53,6 +53,7 @@ import {
   onTabRemoved,
   onTabUpdated,
   onWindowRemoved,
+  openRuntimeOptionsPage,
   PERMISSION_OPERATION_FAILURE_REASONS,
   reloadRuntime,
   reloadTab,
@@ -1335,6 +1336,15 @@ describe("browserApi window and manifest helpers", () => {
     })
 
     expect(() => reloadRuntime()).not.toThrow()
+  })
+
+  it("opens the standard runtime options page", async () => {
+    const openOptionsPage = vi.fn().mockResolvedValue(undefined)
+    ;(globalThis as any).browser.runtime.openOptionsPage = openOptionsPage
+
+    await openRuntimeOptionsPage()
+
+    expect(openOptionsPage).toHaveBeenCalledTimes(1)
   })
 
   it("normalizes promise-based runtime update checks", async () => {

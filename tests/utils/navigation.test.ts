@@ -708,6 +708,18 @@ describe("navigation utilities", () => {
     expect(mockedCreateTab).not.toHaveBeenCalled()
   })
 
+  it("openOptionsPage should close the popup after opening the standard options page", async () => {
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {})
+    mockedIsExtensionPopup.mockReturnValue(true)
+
+    await openOptionsPage()
+
+    expect(openRuntimeOptionsPageApi).toHaveBeenCalledTimes(1)
+    expect(closeSpy).toHaveBeenCalledTimes(1)
+
+    closeSpy.mockRestore()
+  })
+
   it("opens account, bookmark, settings, and managed-site wrappers with the expected targets", async () => {
     await openFullAccountManagerPage()
     await openAccountManagerWithSearch("alpha")
