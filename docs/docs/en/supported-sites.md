@@ -27,11 +27,11 @@ If you are looking for stable, efficient, and highly compatible AI relay service
 
 <div class="sponsor-list">
   <section class="sponsor-item sponsor-item-featured">
-    <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">
-      <img src="../../../resources/partners/volcengine_en.jpg" alt="Dola Seed on BytePlus ModelArk">
+    <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">
+      <img src="../../../resources/partners/volcengine.png" alt="火山引擎方舟 Coding-Plan">
     </a>
     <p>
-      <strong>Dola Seed on BytePlus ModelArk</strong> is ByteDance's full-modal general large model for the global market, available through BytePlus ModelArk with multimodal understanding and generation, agent collaboration, reasoning, tool integration, and coding capabilities. Register through the <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">BytePlus ModelArk link</a> to get 500,000 free inference tokens per model.
+      <strong>Volcengine Ark Coding-Plan</strong> is ByteDance's developer productivity plan. Lite plans start at <strong>¥9.9/month</strong> and support mainstream models like Doubao, DeepSeek, and GLM. It's compatible with IDE tools such as Cursor, Claude Code, and Windsurf. Join through the <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">activity link</a> to enjoy referral rebates and first-order discounts.
     </p>
   </section>
 
@@ -80,6 +80,17 @@ If you are looking for stable, efficient, and highly compatible AI relay service
   </section>
 
   <hr>
+
+  <section class="sponsor-item">
+    <a class="sponsor-logo sponsor-logo-small" href="https://www.right.codes/register?aff=690a8be5">
+      <img src="../../../resources/partners/aicodemirror.png" alt="AICodeMirror">
+    </a>
+    <p>
+      <strong>AICodeMirror</strong> provides official high-stability relay services for Claude Code / Codex / Gemini CLI. It supports enterprise-level high concurrency, expedited invoicing, and 24/7 dedicated technical support. Claude Code / Codex / Gemini official channels are priced as low as 3.8 / 0.2 / 0.9折, with further discounts on top-ups. Register through <a href="https://www.right.codes/register?aff=690a8be5">this link</a> to enjoy an <strong>8折 discount</strong> on your first recharge, with up to 7.5折 for enterprise clients.
+    </p>
+  </section>
+
+  <hr>
 </div>
 
 ## Compatible Variants with Limited Public Information
@@ -107,6 +118,7 @@ If you are also building your own backend system, All API Hub supports importing
 ## Related Documentation
 
 - [Supported Export Tools List](./supported-export-tools.md)
+- [Sponsor Usage Guide](./sponsor-guides.md)
 - [Quick Export Site Configuration](./quick-export.md)
 - [Self-Hosted Site Management](./self-hosted-site-management.md)
 - [Managed Site Model Sync](./managed-site-model-sync.md)

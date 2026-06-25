@@ -27,11 +27,11 @@
 
 <div class="sponsor-list">
   <section class="sponsor-item sponsor-item-featured">
-    <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">
+    <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">
       <img src="../../../resources/partners/volcengine_en.jpg" alt="Dola Seed on BytePlus ModelArk">
     </a>
     <p>
-      <strong>Dola Seed on BytePlus ModelArk</strong> は ByteDance がグローバル市場向けに開発したフルモーダル汎用大規模モデルです。BytePlus ModelArk から、マルチモーダル理解と生成、エージェント協調、推論、ツール連携、コーディング機能を利用できます。<a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">BytePlus ModelArk のリンク</a>から登録すると、各モデルにつき 500,000 トークン分の無料推論枠を受け取れます。
+      <strong>Dola Seed on BytePlus ModelArk</strong> は ByteDance がグローバル市場向けに開発したフルモーダル汎用大規模モデルです。BytePlus ModelArk から、マルチモーダル理解と生成、エージェント協調、推論、ツール連携、コーディング機能を利用できます。<a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">BytePlus ModelArk のリンク</a>から登録すると、各モデルにつき 500,000 トークン分の無料推論枠を受け取れます。
     </p>
   </section>
 
@@ -76,6 +76,17 @@
     </a>
     <p>
       <strong>RunAPI</strong> は、高効率で安定した API OpenRouter の代替プラットフォームです。1 つの API Key で OpenAI、Claude、Gemini、DeepSeek、Grok など 150 以上の主要モデルにアクセスでき、元価格の 10% 程度から利用できます。Claude Code や OpenClaw などのツールにも対応しています。<a href="https://runapi.co/register?aff=cvDm">こちらのリンク</a>から登録し、RunAPI 管理者に連絡すると、<strong>￥7 の無料クレジット</strong>を受け取れます（<a href="./sponsor-guides/runapi.md">設定ガイド</a>）。
+    </p>
+  </section>
+
+  <hr>
+
+  <section class="sponsor-item">
+    <a class="sponsor-logo sponsor-logo-small" href="https://www.right.codes/register?aff=690a8be5">
+      <img src="../../../resources/partners/aicodemirror.png" alt="AICodeMirror">
+    </a>
+    <p>
+      <strong>AICodeMirror</strong> は、Claude Code / Codex / Gemini CLI の公式で高安定なプロキシサービスを提供しています。エンタープライズグレードのハイコンカレンシー、迅速な請求書発行、7×24 の専任テクニカルサポートに対応しています。Claude Code / Codex / Gemini の公式チャネルは最低 3.8 / 0.2 / 0.9 折で、チャージ時にはさらに割引があります。<a href="https://www.right.codes/register?aff=690a8be5">こちらのリンク</a>から登録すると、初回チャージ時に<strong>20% オフ</strong>、企業顧客は最大 25% オフになります。
     </p>
   </section>
 
