@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/features/KeyManagement/utils"
 import { resolveDefaultTokenQuickCreateResolution } from "~/services/accounts/accountOperations"
+import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
   canManageDisplayAccountTokens,

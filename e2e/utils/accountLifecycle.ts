@@ -8,6 +8,7 @@ import {
   getKeyManagementTokenRowTestId,
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
@@ -245,13 +246,13 @@ async function submitCreateTokenForm(params: {
   })
   await params.page.locator("#tokenName").fill(params.tokenName)
   await params.page
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenSubmitButton)
+    .getByTestId(TOKEN_PROVISIONING_TEST_IDS.addTokenSubmitButton)
     .click()
 }
 
 async function closeOneTimeKeyDialogIfPresent(page: Page) {
   const closeButton = page.getByTestId(
-    KEY_MANAGEMENT_TEST_IDS.oneTimeKeyCloseButton,
+    TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton,
   )
   const isVisible = await closeButton
     .waitFor({ state: "visible", timeout: 5_000 })
@@ -268,7 +269,7 @@ async function closeOneTimeKeyDialogIfPresent(page: Page) {
 }
 
 async function closeAddTokenDialogIfPresent(page: Page) {
-  const dialog = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenDialog)
+  const dialog = page.getByTestId(TOKEN_PROVISIONING_TEST_IDS.addTokenDialog)
 
   if (!(await dialog.isVisible().catch(() => false))) {
     return
@@ -282,7 +283,7 @@ async function closeTokenCreationDialogsIfPresent(page: Page) {
   const closedOneTimeKeyDialog = await closeOneTimeKeyDialogIfPresent(page)
   if (closedOneTimeKeyDialog) {
     await expect(
-      page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenDialog),
+      page.getByTestId(TOKEN_PROVISIONING_TEST_IDS.addTokenDialog),
     ).toBeHidden({ timeout: 30_000 })
   }
   await closeAddTokenDialogIfPresent(page)
@@ -415,7 +416,7 @@ export async function saveTokenToApiCredentialProfilesFromKeyManagementPage(para
 
   if (params.openProfilesPage !== false) {
     await params.page
-      .getByTestId(KEY_MANAGEMENT_TEST_IDS.openApiProfilesToastButton)
+      .getByTestId(TOKEN_PROVISIONING_TEST_IDS.openApiProfilesToastButton)
       .click()
     await expect(
       params.page.getByRole("heading", { name: savedProfile.name }),

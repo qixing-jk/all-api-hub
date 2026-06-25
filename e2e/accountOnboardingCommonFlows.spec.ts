@@ -8,7 +8,7 @@ import {
   SITE_TYPES,
 } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -577,7 +577,9 @@ test("adds an AIHubMix account, preserves its one-time key, and opens managed-si
     "sk-aihubmix-created-one-time-key",
   )
 
-  await page.getByTestId(KEY_MANAGEMENT_TEST_IDS.oneTimeKeyCloseButton).click()
+  await page
+    .getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton)
+    .click()
 
   await expect(
     page.getByRole("heading", { name: "Create Channel" }),

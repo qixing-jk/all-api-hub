@@ -2,11 +2,9 @@ import type { Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import {
-  KEY_MANAGEMENT_TEST_IDS,
-  KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX,
-} from "~/features/KeyManagement/testIds"
+import { KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX } from "~/features/KeyManagement/testIds"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import {
   runModelListCatalogScenario,
@@ -148,7 +146,9 @@ export async function runModelToKeyManagementScenario(
 
   await keyDialog.getByTestId(MODEL_LIST_TEST_IDS.createCustomKeyButton).click()
 
-  const addKeyDialog = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenDialog)
+  const addKeyDialog = page.getByTestId(
+    TOKEN_PROVISIONING_TEST_IDS.addTokenDialog,
+  )
   const tokenNameInput = addKeyDialog.locator("#tokenName")
   const defaultCreatedKeyName = await tokenNameInput.inputValue()
   const createdKeyName = params.createdKeyName ?? defaultCreatedKeyName
@@ -170,7 +170,7 @@ export async function runModelToKeyManagementScenario(
   }
 
   await addKeyDialog
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenSubmitButton)
+    .getByTestId(TOKEN_PROVISIONING_TEST_IDS.addTokenSubmitButton)
     .click()
 
   await expect(addKeyDialog).toHaveCount(0)

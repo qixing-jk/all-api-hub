@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 
 interface FormActionsProps {
   isSubmitting: boolean
@@ -38,7 +38,7 @@ export function FormActions({
         onClick={onSubmit}
         disabled={isSubmitting || !canSubmit}
         loading={isSubmitting}
-        data-testid={KEY_MANAGEMENT_TEST_IDS.addTokenSubmitButton}
+        data-testid={TOKEN_PROVISIONING_TEST_IDS.addTokenSubmitButton}
       >
         {isSubmitting
           ? isEditMode

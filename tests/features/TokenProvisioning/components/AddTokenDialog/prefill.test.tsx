@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Z_INDEX } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/defaultTokenLifecycle"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -663,7 +663,9 @@ describe("AddTokenDialog prefill", () => {
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
     )
     await user.click(
-      await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.oneTimeKeySaveButton),
+      await screen.findByTestId(
+        TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton,
+      ),
     )
 
     await waitFor(() => {

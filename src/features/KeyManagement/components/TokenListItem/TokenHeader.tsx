@@ -44,7 +44,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
@@ -82,6 +82,8 @@ import {
   openApiCredentialProfilesPage,
   openSettingsTab,
 } from "~/utils/navigation"
+
+import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 
 /**
  * Unified logger scoped to the Key Management token header actions.
@@ -442,7 +444,9 @@ function TokenActionButtons({
             </span>
             <button
               type="button"
-              data-testid={KEY_MANAGEMENT_TEST_IDS.openApiProfilesToastButton}
+              data-testid={
+                TOKEN_PROVISIONING_TEST_IDS.openApiProfilesToastButton
+              }
               className="shrink-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
               onClick={() => {
                 openApiCredentialProfilesPage()

@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 import toast from "react-hot-toast"
 
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -165,7 +165,7 @@ export async function saveApiTokensToApiCredentialProfiles({
           </span>
           <button
             type="button"
-            data-testid={KEY_MANAGEMENT_TEST_IDS.openApiProfilesToastButton}
+            data-testid={TOKEN_PROVISIONING_TEST_IDS.openApiProfilesToastButton}
             className="shrink-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
             onClick={() => {
               openApiCredentialProfilesPage()

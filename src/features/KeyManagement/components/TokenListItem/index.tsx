@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next"
 
 import { Card, CardContent, Checkbox } from "~/components/ui"
-import { getKeyManagementTokenRowTestId } from "~/features/KeyManagement/testIds"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken, DisplaySiteData } from "~/types"
 
+import { getKeyManagementTokenRowTestId } from "../../testIds"
 import { buildTokenIdentityKey } from "../../utils"
 import { KeyDisplay } from "./KeyDisplay"
 import { TokenDetails } from "./TokenDetails"

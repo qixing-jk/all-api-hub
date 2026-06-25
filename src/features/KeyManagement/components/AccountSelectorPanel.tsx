@@ -2,10 +2,10 @@ import type { Ref } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Button, Heading3, SearchableSelect } from "~/components/ui"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
+import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 
 interface AccountSelectorPanelProps {
   selectedAccount: string

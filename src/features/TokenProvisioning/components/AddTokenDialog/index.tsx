@@ -5,9 +5,9 @@ import { useTranslation } from "react-i18next"
 import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/features/KeyManagement/utils"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
 import { normalizeDefaultTokenRequestName } from "~/services/accounts/defaultTokenLifecycle"
 import {
   createDisplayAccountApiContext,
@@ -276,7 +276,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         onClose={handleClose}
         size="lg"
         header={<DialogHeader isEditMode={isEditMode} />}
-        panelTestId={KEY_MANAGEMENT_TEST_IDS.addTokenDialog}
+        panelTestId={TOKEN_PROVISIONING_TEST_IDS.addTokenDialog}
         footer={
           isLoading ? null : (
             <FormActions

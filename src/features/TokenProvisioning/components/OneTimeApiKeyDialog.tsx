@@ -4,7 +4,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, Input, Modal } from "~/components/ui"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import type { ApiToken } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -104,7 +104,7 @@ export function OneTimeApiKeyDialog({
             type="button"
             variant="secondary"
             onClick={handleClose}
-            data-testid={KEY_MANAGEMENT_TEST_IDS.oneTimeKeyCloseButton}
+            data-testid={TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton}
           >
             {t("oneTimeKey.close")}
           </Button>
@@ -114,7 +114,7 @@ export function OneTimeApiKeyDialog({
               onClick={() => void handleSave()}
               loading={isSaving}
               disabled={isSaving}
-              data-testid={KEY_MANAGEMENT_TEST_IDS.oneTimeKeySaveButton}
+              data-testid={TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton}
             >
               {saveAction.label ?? t("actions.saveToApiProfiles")}
             </Button>
