@@ -2,6 +2,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   DEFAULT_PREFERENCES,
+  TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type RedemptionAssistPreferences,
   type TempWindowFallbackPreferences,
   type TempWindowFallbackReminderPreferences,
@@ -106,7 +107,12 @@ function getTempWindowMode(
 function getActionClickBehavior(
   behavior: UserPreferences["actionClickBehavior"] | undefined,
 ) {
-  return behavior === "sidepanel" ? "sidepanel" : "popup"
+  if (behavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.Options) {
+    return TOOLBAR_ACTION_CLICK_BEHAVIORS.Options
+  }
+  return behavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel
+    ? TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel
+    : TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup
 }
 
 function getSortingPriorityPreferences(

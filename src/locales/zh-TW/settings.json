@@ -5,16 +5,18 @@
     "title": "帳號管理"
   },
   "actionClick": {
-    "actionIconClickDesc": "選擇擴充套件圖示時的開啟行為，彈出視窗或側邊欄。",
-    "actionIconClickTitle": "點擊擴充套件圖示時開啟",
-    "description": "選擇點擊擴充套件圖示時的行為。",
+    "actionIconClickDesc": "選擇點擊工具列圖示後開啟彈窗、側邊欄或完整選項頁。",
+    "actionIconClickTitle": "預設開啟內容",
+    "description": "設定瀏覽器工具列中擴充套件圖示的開啟方式。",
+    "optionsLabel": "選項頁",
+    "optionsTitle": "開啟完整選項頁",
     "popupLabel": "彈窗",
     "popupTitle": "開啟彈出視窗",
-    "sidepanelFallbackToast": "已儲存側邊欄偏好設定。本裝置不支援側邊欄，將回退為開啟彈窗。",
+    "sidepanelFallbackToast": "已儲存側邊欄偏好設定。目前瀏覽器不支援側邊欄，點擊時會回退到彈窗。",
     "sidepanelLabel": "側邊欄",
     "sidepanelTitle": "開啟側邊欄",
-    "sidepanelUnsupportedHelper": "當前裝置不支援側邊欄。點擊工具欄圖示將回退為開啟彈窗。",
-    "title": "工具欄圖示行為"
+    "sidepanelUnsupportedHelper": "目前瀏覽器不支援側邊欄；選擇側邊欄時會自動回退到彈窗。",
+    "title": "點擊擴充套件圖示"
   },
   "appearanceLanguage": {
     "language": "語言",

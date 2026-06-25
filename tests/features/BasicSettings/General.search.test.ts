@@ -64,4 +64,14 @@ describe("general settings search definitions", () => {
       SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE,
     ])
   })
+
+  it("lets users find the toolbar click behavior by options-page keywords", () => {
+    const actionClickControl = generalSearchControls.find(
+      (control) => control.id === "control:action-click",
+    )
+
+    expect(actionClickControl?.keywords).toEqual(
+      expect.arrayContaining(["options", "settings"]),
+    )
+  })
 })

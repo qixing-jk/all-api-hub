@@ -1,4 +1,8 @@
 import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import {
+  TOOLBAR_ACTION_CLICK_BEHAVIORS,
+  type ToolbarActionClickBehavior,
+} from "~/services/preferences/userPreferences"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -17,9 +21,7 @@ import {
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { openSidePanelWithFallback } from "~/utils/navigation"
-
-type ActionClickBehavior = "popup" | "sidepanel"
+import { openOptionsPage, openSidePanelWithFallback } from "~/utils/navigation"
 
 /**
  * Unified logger scoped to toolbar action click behavior wiring.
@@ -32,7 +34,7 @@ const logger = createLogger("ActionClickBehavior")
  * Forwarding the clicked tab lets Chromium keep the sidePanel.open call inside
  * the original user gesture.
  */
-const handleActionClick = async (tab: browser.tabs.Tab) => {
+const handleOpenSidePanelActionClick = async (tab: browser.tabs.Tab) => {
   const tracker = startProductAnalyticsAction({
     featureId: PRODUCT_ANALYTICS_FEATURE_IDS.SidepanelNavigation,
     actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenSidepanelFromToolbarAction,
@@ -51,34 +53,64 @@ const handleActionClick = async (tab: browser.tabs.Tab) => {
   }
 }
 
+const handleOpenOptionsActionClick = async () => {
+  await openOptionsPage()
+}
+
+const resolveToolbarActionClickBehavior = (
+  behavior: ToolbarActionClickBehavior,
+  sidePanelSupported: boolean,
+): ToolbarActionClickBehavior => {
+  if (behavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.Options) {
+    return TOOLBAR_ACTION_CLICK_BEHAVIORS.Options
+  }
+
+  if (
+    behavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel &&
+    sidePanelSupported
+  ) {
+    return TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel
+  }
+
+  return TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup
+}
+
 /**
  * Apply toolbar click behavior at runtime.
  * - "popup": restores the popup.html UI and removes side-panel click listeners.
  * - "sidepanel": disables the popup so onClicked fires and opens the shared
  *   side-panel-or-settings fallback path.
+ * - "options": disables the popup so onClicked opens the standard options page.
  */
 export async function applyActionClickBehavior(
-  behavior: ActionClickBehavior,
+  behavior: ToolbarActionClickBehavior,
 ): Promise<void> {
   const sidePanelSupport = getSidePanelSupport()
-  const effectiveBehavior: ActionClickBehavior =
-    behavior === "sidepanel" && sidePanelSupport.supported
-      ? "sidepanel"
-      : "popup"
-  const isSidePanel = effectiveBehavior === "sidepanel"
+  const effectiveBehavior = resolveToolbarActionClickBehavior(
+    behavior,
+    sidePanelSupport.supported,
+  )
+  const isSidePanel =
+    effectiveBehavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel
+  const isOptions = effectiveBehavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.Options
 
   // 清理旧的点击监听
-  removeActionClickListener(handleActionClick)
+  removeActionClickListener(handleOpenSidePanelActionClick)
+  removeActionClickListener(handleOpenOptionsActionClick)
 
   await disableNativeSidePanelActionClick()
 
   try {
-    await setActionPopup(isSidePanel ? "" : POPUP_PAGE_PATH)
+    await setActionPopup(isSidePanel || isOptions ? "" : POPUP_PAGE_PATH)
   } catch (error) {
     logger.warn(`action.setPopup not available:\n${getErrorMessage(error)}`)
   }
 
   if (isSidePanel) {
-    addActionClickListener(handleActionClick)
+    addActionClickListener(handleOpenSidePanelActionClick)
+  }
+
+  if (isOptions) {
+    addActionClickListener(handleOpenOptionsActionClick)
   }
 }

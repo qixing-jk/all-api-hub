@@ -180,7 +180,14 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.general",
         "settings:actionClick.title",
       ],
-      keywords: ["popup", "sidepanel", "toolbar", "icon"],
+      keywords: [
+        "popup",
+        "sidepanel",
+        "options",
+        "settings",
+        "toolbar",
+        "icon",
+      ],
     },
   ),
   buildControlDefinition(

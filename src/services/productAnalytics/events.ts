@@ -882,6 +882,7 @@ export type ProductAnalyticsManagedSiteType =
 export const PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS = {
   Popup: "popup",
   Sidepanel: "sidepanel",
+  Options: "options",
 } as const
 
 export type ProductAnalyticsToolbarActionClickBehavior =

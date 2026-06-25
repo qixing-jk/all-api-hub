@@ -835,6 +835,23 @@ describe("UserPreferencesContext", () => {
     )
   })
 
+  it("persists options-page toolbar action behavior through the provider", async () => {
+    const context = await renderProvider()
+
+    await act(async () => {
+      await context.updateActionClickBehavior("options")
+    })
+
+    expect(mockedUserPreferences.savePreferences).toHaveBeenCalledWith({
+      actionClickBehavior: "options",
+    })
+    expect((latestContext as any)?.actionClickBehavior).toBe("options")
+    expect(mockedSendPreferencesMessage).toHaveBeenCalledWith(
+      "preferences:updateActionClickBehavior",
+      { behavior: "options" },
+    )
+  })
+
   it("persists active tab changes through both tab update helpers", async () => {
     const preferences = clonePreferences()
     preferences.activeTab = DATA_TYPE_BALANCE

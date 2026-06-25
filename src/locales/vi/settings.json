@@ -5,16 +5,18 @@
     "title": "Quản lý tài khoản"
   },
   "actionClick": {
-    "actionIconClickDesc": "Chọn hành vi mở khi bấm vào biểu tượng tiện ích: popup hoặc thanh bên.",
-    "actionIconClickTitle": "Mở khi bấm biểu tượng tiện ích",
-    "description": "Chọn hành vi khi bấm vào biểu tượng tiện ích.",
+    "actionIconClickDesc": "Chọn thao tác bấm biểu tượng trên thanh công cụ sẽ mở popup, thanh bên hay toàn bộ trang tùy chọn.",
+    "actionIconClickTitle": "Đích mở mặc định",
+    "description": "Thiết lập nội dung mở ra khi bấm biểu tượng tiện ích trên thanh công cụ của trình duyệt.",
+    "optionsLabel": "Trang tùy chọn",
+    "optionsTitle": "Mở toàn bộ trang tùy chọn",
     "popupLabel": "Popup",
     "popupTitle": "Mở popup",
-    "sidepanelFallbackToast": "Đã lưu tùy chọn thanh bên. Thiết bị này không hỗ trợ thanh bên, sẽ chuyển về mở popup.",
+    "sidepanelFallbackToast": "Đã lưu tùy chọn thanh bên. Trình duyệt này không hỗ trợ thanh bên, nên thao tác bấm sẽ mở popup.",
     "sidepanelLabel": "Thanh bên",
     "sidepanelTitle": "Mở thanh bên",
-    "sidepanelUnsupportedHelper": "Thiết bị hiện tại không hỗ trợ thanh bên. Bấm biểu tượng trên thanh công cụ sẽ chuyển về mở popup.",
-    "title": "Hành vi biểu tượng thanh công cụ"
+    "sidepanelUnsupportedHelper": "Trình duyệt này không hỗ trợ thanh bên; lựa chọn thanh bên sẽ tự động chuyển về popup.",
+    "title": "Bấm biểu tượng tiện ích"
   },
   "appearanceLanguage": {
     "language": "Ngôn ngữ",

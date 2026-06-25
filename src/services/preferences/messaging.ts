@@ -1,3 +1,4 @@
+import type { ToolbarActionClickBehavior } from "~/services/preferences/userPreferences"
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
@@ -8,7 +9,7 @@ export const PreferencesMessageTypes = {
 } as const
 
 export interface PreferencesUpdateActionClickBehaviorRequest {
-  behavior: "popup" | "sidepanel"
+  behavior: ToolbarActionClickBehavior
 }
 
 interface PreferencesProtocolMap {

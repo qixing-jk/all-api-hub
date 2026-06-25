@@ -7,6 +7,7 @@ import {
   focusTab as focusTabApi,
   getExtensionURL,
   hasWindowsAPI,
+  openRuntimeOptionsPage as openRuntimeOptionsPageApi,
   openSidePanel as openSidePanelApi,
 } from "~/utils/browser/browserApi"
 import {
@@ -35,6 +36,7 @@ import {
   openManagedSiteModelSyncPage,
   openModelsPage,
   openMultiplePages,
+  openOptionsPage,
   openOrFocusOptionsPage,
   openPermissionsOnboardingPage,
   openRedeemPage,
@@ -66,6 +68,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const focusTab = vi.fn()
   const getExtensionURL = vi.fn((path: string) => `ext://${path}`)
   const hasWindowsAPI = vi.fn(() => false)
+  const openRuntimeOptionsPage = vi.fn()
   const openSidePanel = vi.fn()
 
   return {
@@ -75,6 +78,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     focusTab,
     getExtensionURL,
     hasWindowsAPI,
+    openRuntimeOptionsPage,
     openSidePanel,
   }
 })
@@ -695,6 +699,13 @@ describe("navigation utilities", () => {
     )
 
     querySpy.mockRestore()
+  })
+
+  it("openOptionsPage should use the browser's standard options page opener", async () => {
+    await openOptionsPage()
+
+    expect(openRuntimeOptionsPageApi).toHaveBeenCalledTimes(1)
+    expect(mockedCreateTab).not.toHaveBeenCalled()
   })
 
   it("opens account, bookmark, settings, and managed-site wrappers with the expected targets", async () => {

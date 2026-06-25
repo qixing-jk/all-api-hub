@@ -17,6 +17,7 @@ describe("background applyActionClickBehavior", () => {
   let disableNativeSidePanelActionClick: ReturnType<typeof vi.fn>
   let getSidePanelSupport: ReturnType<typeof vi.fn>
   let openSidePanelWithFallback: ReturnType<typeof vi.fn>
+  let openOptionsPage: ReturnType<typeof vi.fn>
   let startProductAnalyticsAction: ReturnType<typeof vi.fn>
   let trackerComplete: ReturnType<typeof vi.fn>
 
@@ -27,6 +28,7 @@ describe("background applyActionClickBehavior", () => {
     disableNativeSidePanelActionClick = vi.fn().mockResolvedValue(undefined)
     getSidePanelSupport = vi.fn()
     openSidePanelWithFallback = vi.fn().mockResolvedValue(undefined)
+    openOptionsPage = vi.fn().mockResolvedValue(undefined)
     trackerComplete = vi.fn().mockResolvedValue(undefined)
     startProductAnalyticsAction = vi.fn().mockReturnValue({
       complete: trackerComplete,
@@ -44,6 +46,7 @@ describe("background applyActionClickBehavior", () => {
 
     vi.doMock("~/utils/navigation", () => ({
       openSidePanelWithFallback,
+      openOptionsPage,
     }))
 
     vi.doMock("~/services/productAnalytics/actions", () => ({
@@ -72,7 +75,7 @@ describe("background applyActionClickBehavior", () => {
 
     await applyActionClickBehavior("sidepanel")
 
-    expect(removeActionClickListener).toHaveBeenCalledTimes(1)
+    expect(removeActionClickListener).toHaveBeenCalledTimes(2)
     expect(disableNativeSidePanelActionClick).toHaveBeenCalledTimes(1)
     expect(setActionPopup).toHaveBeenCalledWith(POPUP_PAGE_PATH)
     expect(addActionClickListener).not.toHaveBeenCalled()
@@ -90,7 +93,7 @@ describe("background applyActionClickBehavior", () => {
 
     await applyActionClickBehavior("sidepanel")
 
-    expect(removeActionClickListener).toHaveBeenCalledTimes(1)
+    expect(removeActionClickListener).toHaveBeenCalledTimes(2)
     expect(disableNativeSidePanelActionClick).toHaveBeenCalledTimes(1)
     expect(setActionPopup).toHaveBeenCalledWith("")
     expect(addActionClickListener).toHaveBeenCalledTimes(1)
@@ -108,10 +111,50 @@ describe("background applyActionClickBehavior", () => {
 
     await applyActionClickBehavior("sidepanel")
 
-    expect(removeActionClickListener).toHaveBeenCalledTimes(1)
+    expect(removeActionClickListener).toHaveBeenCalledTimes(2)
     expect(disableNativeSidePanelActionClick).toHaveBeenCalledTimes(1)
     expect(setActionPopup).toHaveBeenCalledWith("")
     expect(addActionClickListener).toHaveBeenCalledTimes(1)
+  })
+
+  it("installs options-page wiring when options behavior is selected", async () => {
+    getSidePanelSupport.mockReturnValue({
+      supported: false,
+      kind: "unsupported",
+      reason: "missing",
+    })
+
+    const { applyActionClickBehavior } = await import(
+      "~/entrypoints/background/actionClickBehavior"
+    )
+
+    await applyActionClickBehavior("options")
+
+    expect(removeActionClickListener).toHaveBeenCalledTimes(2)
+    expect(disableNativeSidePanelActionClick).toHaveBeenCalledTimes(1)
+    expect(setActionPopup).toHaveBeenCalledWith("")
+    expect(addActionClickListener).toHaveBeenCalledTimes(1)
+  })
+
+  it("routes options-page toolbar clicks through the standard options opener", async () => {
+    getSidePanelSupport.mockReturnValue({
+      supported: true,
+      kind: "chromium-side-panel",
+    })
+
+    const { applyActionClickBehavior } = await import(
+      "~/entrypoints/background/actionClickBehavior"
+    )
+
+    await applyActionClickBehavior("options")
+
+    const clickHandler = addActionClickListener.mock.calls[0]?.[0]
+    expect(typeof clickHandler).toBe("function")
+
+    await clickHandler?.({ id: 123, windowId: 456 } as browser.tabs.Tab)
+
+    expect(openOptionsPage).toHaveBeenCalledTimes(1)
+    expect(openSidePanelWithFallback).not.toHaveBeenCalled()
   })
 
   it("routes action clicks through the shared side-panel fallback helper", async () => {

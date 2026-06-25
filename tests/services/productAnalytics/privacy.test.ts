@@ -586,6 +586,19 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps options-page toolbar behavior values", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      {
+        toolbar_action_click_behavior: "options",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      toolbar_action_click_behavior: "options",
+    })
+  })
+
   it("keeps WebDAV settings snapshot fields and strips configured secrets", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.SettingChanged,

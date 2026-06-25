@@ -121,6 +121,15 @@ export interface TempWindowFallbackReminderPreferences {
   dismissed: boolean
 }
 
+export const TOOLBAR_ACTION_CLICK_BEHAVIORS = {
+  Popup: "popup",
+  SidePanel: "sidepanel",
+  Options: "options",
+} as const
+
+export type ToolbarActionClickBehavior =
+  (typeof TOOLBAR_ACTION_CLICK_BEHAVIORS)[keyof typeof TOOLBAR_ACTION_CLICK_BEHAVIORS]
+
 export interface RedemptionAssistUrlWhitelistPreferences {
   /**
    * When enabled, redemption assist will only run on URLs matching the whitelist.
@@ -202,8 +211,9 @@ export interface UserPreferences {
    * Controls what happens when the toolbar icon is clicked.
    * - popup: open extension popup (default)
    * - sidepanel: open side panel (if supported)
+   * - options: open the standard options page
    */
-  actionClickBehavior?: "popup" | "sidepanel"
+  actionClickBehavior?: ToolbarActionClickBehavior
   /**
    * language preference
    */
@@ -508,7 +518,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   showTodayCashflow: true,
   sortField: DATA_TYPE_BALANCE, // 与 UI_CONSTANTS.SORT.DEFAULT_FIELD 保持一致
   sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
-  actionClickBehavior: "popup",
+  actionClickBehavior: TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup,
   openChangelogOnUpdate: true,
   autoProvisionKeyOnAccountAdd: false, // 默认关闭，避免添加账号时无意创建密钥
   autoFillCurrentSiteUrlOnAccountAdd: false,

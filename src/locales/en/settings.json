@@ -5,16 +5,18 @@
     "title": "Account Management"
   },
   "actionClick": {
-    "actionIconClickDesc": "Choose open behavior when extension icon is clicked",
-    "actionIconClickTitle": "Opens when extension icon is clicked",
-    "description": "Choose what happens when you click the extension icon.",
+    "actionIconClickDesc": "Choose whether toolbar clicks open the popup, side panel, or full options page.",
+    "actionIconClickTitle": "Default destination",
+    "description": "Set what opens when you click the extension icon in the browser toolbar.",
+    "optionsLabel": "Options page",
+    "optionsTitle": "Open full options page",
     "popupLabel": "Popup",
     "popupTitle": "Open popup",
-    "sidepanelFallbackToast": "Side panel preference saved. This device will fall back to opening the popup.",
+    "sidepanelFallbackToast": "Side panel preference saved. This browser does not support side panels, so toolbar clicks will open the popup.",
     "sidepanelLabel": "Side panel",
     "sidepanelTitle": "Open side panel",
-    "sidepanelUnsupportedHelper": "Side panel is not supported on this device. Toolbar icon clicks will fall back to opening the popup.",
-    "title": "Toolbar icon behavior"
+    "sidepanelUnsupportedHelper": "This browser does not support side panels; side panel selections will fall back to the popup.",
+    "title": "Extension icon click"
   },
   "appearanceLanguage": {
     "language": "Language",

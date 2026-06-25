@@ -32,10 +32,12 @@ import {
 } from "~/services/preferences/messaging"
 import {
   DEFAULT_PREFERENCES,
+  TOOLBAR_ACTION_CLICK_BEHAVIORS,
   userPreferences,
   type RedemptionAssistPreferences,
   type TempWindowFallbackPreferences,
   type TempWindowFallbackReminderPreferences,
+  type ToolbarActionClickBehavior,
   type UserPreferences,
   type WebAiApiCheckPreferences,
 } from "~/services/preferences/userPreferences"
@@ -249,7 +251,7 @@ interface UserPreferencesContextType {
   refreshInterval: number
   minRefreshInterval: number
   refreshOnOpen: boolean
-  actionClickBehavior: "popup" | "sidepanel"
+  actionClickBehavior: ToolbarActionClickBehavior
   openChangelogOnUpdate: boolean
   autoProvisionKeyOnAccountAdd: boolean
   autoFillCurrentSiteUrlOnAccountAdd: boolean
@@ -303,7 +305,7 @@ interface UserPreferencesContextType {
   updateMinRefreshInterval: (interval: number) => Promise<boolean>
   updateRefreshOnOpen: (enabled: boolean) => Promise<boolean>
   updateActionClickBehavior: (
-    behavior: "popup" | "sidepanel",
+    behavior: ToolbarActionClickBehavior,
   ) => Promise<boolean>
   updateOpenChangelogOnUpdate: (enabled: boolean) => Promise<boolean>
   updateAutoProvisionKeyOnAccountAdd: (enabled: boolean) => Promise<boolean>
@@ -584,7 +586,7 @@ export const UserPreferencesProvider = ({
   }, [])
 
   const updateActionClickBehavior = useCallback(
-    async (behavior: "popup" | "sidepanel") => {
+    async (behavior: ToolbarActionClickBehavior) => {
       const success = await userPreferences.savePreferences({
         actionClickBehavior: behavior,
       })
@@ -2044,7 +2046,8 @@ export const UserPreferencesProvider = ({
     refreshOnOpen:
       preferences?.accountAutoRefresh?.refreshOnOpen ??
       DEFAULT_ACCOUNT_AUTO_REFRESH.refreshOnOpen,
-    actionClickBehavior: preferences?.actionClickBehavior ?? "popup",
+    actionClickBehavior:
+      preferences?.actionClickBehavior ?? TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup,
     openChangelogOnUpdate:
       preferences?.openChangelogOnUpdate ??
       DEFAULT_PREFERENCES.openChangelogOnUpdate ??

@@ -15,6 +15,7 @@ import {
   focusTab,
   getExtensionURL,
   hasWindowsAPI,
+  openRuntimeOptionsPage,
   queryTabs as queryTabsApi,
   updateTab as updateTabApi,
 } from "~/utils/browser/browserApi"
@@ -794,6 +795,11 @@ export const openBookmarkManagerWithSearch = withPopupClose((search: string) =>
  * applicable, so the user ends up in the options page only.
  */
 export const openSettingsPage = withPopupClose(_openSettingsPage)
+
+/**
+ * Open the extension's standard options page and close the popup if applicable.
+ */
+export const openOptionsPage = withPopupClose(openRuntimeOptionsPage)
 
 /**
  * Open the optional-permissions onboarding flow for manual review/debugging.

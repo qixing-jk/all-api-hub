@@ -5,16 +5,18 @@
     "title": "アカウント管理"
   },
   "actionClick": {
-    "actionIconClickDesc": "拡張機能アイコンをクリックしたときの開き方を選択します",
-    "actionIconClickTitle": "拡張機能アイコンをクリックしたときの動作",
-    "description": "拡張機能アイコンをクリックしたときの挙動を選択します。",
+    "actionIconClickDesc": "ツールバーアイコンのクリックで、ポップアップ、サイドパネル、または完全なオプションページのどれを開くか選択します。",
+    "actionIconClickTitle": "既定の表示先",
+    "description": "ブラウザーのツールバーにある拡張機能アイコンをクリックしたときの開き方を設定します。",
+    "optionsLabel": "オプションページ",
+    "optionsTitle": "完全なオプションページを開く",
     "popupLabel": "ポップアップ",
     "popupTitle": "ポップアップを開く",
-    "sidepanelFallbackToast": "サイドパネル設定を保存しました。この端末ではポップアップ表示にフォールバックします。",
+    "sidepanelFallbackToast": "サイドパネル設定を保存しました。このブラウザーではサイドパネルを利用できないため、クリック時はポップアップ表示にフォールバックします。",
     "sidepanelLabel": "サイドパネル",
     "sidepanelTitle": "サイドパネルを開く",
-    "sidepanelUnsupportedHelper": "この端末ではサイドパネルを利用できません。ツールバーアイコンをクリックするとポップアップ表示にフォールバックします。",
-    "title": "ツールバーアイコンの動作"
+    "sidepanelUnsupportedHelper": "このブラウザーではサイドパネルを利用できません。サイドパネルを選択するとポップアップ表示にフォールバックします。",
+    "title": "拡張機能アイコンのクリック"
   },
   "appearanceLanguage": {
     "language": "言語",

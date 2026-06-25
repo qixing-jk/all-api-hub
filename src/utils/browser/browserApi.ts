@@ -1249,6 +1249,13 @@ export function reloadRuntime(): void {
   }
 }
 
+/**
+ * Opens the extension's standard options page through the browser runtime API.
+ */
+export async function openRuntimeOptionsPage(): Promise<void> {
+  await browser.runtime.openOptionsPage()
+}
+
 export type RuntimeUpdateCheckStatus =
   | "throttled"
   | "no_update"

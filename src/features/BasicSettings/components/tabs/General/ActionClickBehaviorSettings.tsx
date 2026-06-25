@@ -5,12 +5,16 @@ import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  TOOLBAR_ACTION_CLICK_BEHAVIORS,
+  type ToolbarActionClickBehavior,
+} from "~/services/preferences/userPreferences"
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
- * Lets users choose what the toolbar icon does (popup vs side panel), while
- * reflecting runtime support and fallback messaging for unsupported devices.
+ * Lets users choose what the toolbar icon does, while reflecting runtime
+ * support and fallback messaging for unsupported side-panel devices.
  */
 export default function ActionClickBehaviorSettings() {
   const { t } = useTranslation("settings")
@@ -19,7 +23,7 @@ export default function ActionClickBehaviorSettings() {
   const sidePanelSupport = getSidePanelSupport()
   const sidePanelSupported = sidePanelSupport.supported
 
-  const handleChange = async (behavior: "popup" | "sidepanel") => {
+  const handleChange = async (behavior: ToolbarActionClickBehavior) => {
     if (behavior === actionClickBehavior) return
     const success = await updateActionClickBehavior(behavior)
     if (!success) {
@@ -27,7 +31,10 @@ export default function ActionClickBehaviorSettings() {
       return
     }
 
-    if (behavior === "sidepanel" && !sidePanelSupported) {
+    if (
+      behavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel &&
+      !sidePanelSupported
+    ) {
       showResultToast(true, t("actionClick.sidepanelFallbackToast"))
       return
     }
@@ -61,14 +68,19 @@ export default function ActionClickBehaviorSettings() {
                 onValueChange={handleChange}
                 options={[
                   {
-                    value: "popup",
+                    value: TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup,
                     label: t("actionClick.popupLabel"),
                     ariaLabel: t("actionClick.popupTitle"),
                   },
                   {
-                    value: "sidepanel",
+                    value: TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel,
                     label: t("actionClick.sidepanelLabel"),
                     ariaLabel: t("actionClick.sidepanelTitle"),
+                  },
+                  {
+                    value: TOOLBAR_ACTION_CLICK_BEHAVIORS.Options,
+                    label: t("actionClick.optionsLabel"),
+                    ariaLabel: t("actionClick.optionsTitle"),
                   },
                 ]}
               />

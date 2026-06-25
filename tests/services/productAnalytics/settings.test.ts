@@ -496,6 +496,33 @@ describe("settings product analytics snapshots", () => {
     expect(JSON.stringify(snapshot)).not.toContain("https://")
   })
 
+  it("preserves options-page toolbar behavior in settings snapshots", () => {
+    const preferences = createPreferences({
+      actionClickBehavior: "options",
+    })
+
+    const [appSnapshot] = buildSettingsSnapshotEvents(
+      preferences,
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      { actionClickBehavior: "options" },
+    )
+    const aggregateSnapshot = buildAggregateSettingsSnapshotEvent(
+      preferences,
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    )
+
+    expect(appSnapshot).toEqual(
+      expect.objectContaining({
+        toolbar_action_click_behavior: "options",
+      }),
+    )
+    expect(aggregateSnapshot).toEqual(
+      expect.objectContaining({
+        toolbar_action_click_behavior: "options",
+      }),
+    )
+  })
+
   it("reports cleared display sort as none in settings snapshots", () => {
     const preferences = createPreferences({ sortField: null })
 

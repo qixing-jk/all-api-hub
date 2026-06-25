@@ -107,6 +107,37 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
     expect(vi.mocked(showUpdateToast)).not.toHaveBeenCalled()
   })
 
+  it("persists options page selection and shows the standard update toast", async () => {
+    vi.mocked(getSidePanelSupport).mockReturnValue({
+      supported: true,
+      kind: "chromium-side-panel",
+    } satisfies SidePanelSupport)
+
+    const updateActionClickBehavior = vi.fn().mockResolvedValue(true)
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      actionClickBehavior: "popup",
+      updateActionClickBehavior,
+    } as unknown as ReturnType<typeof useUserPreferencesContext>)
+
+    renderSubject()
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "settings:actionClick.optionsTitle",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(updateActionClickBehavior).toHaveBeenCalledWith("options")
+    })
+
+    expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
+      true,
+      "settings:actionClick.title",
+    )
+    expect(vi.mocked(showResultToast)).not.toHaveBeenCalled()
+  })
+
   it("lets action behavior options wrap inside narrow settings cards", async () => {
     vi.mocked(getSidePanelSupport).mockReturnValue({
       supported: true,
