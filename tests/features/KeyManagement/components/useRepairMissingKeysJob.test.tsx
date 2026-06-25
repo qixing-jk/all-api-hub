@@ -287,11 +287,13 @@ describe("useRepairMissingKeysJob", () => {
 
     rerender({ renameAutoTemplateTokens: false })
 
-    expect(
-      sendAccountKeyRepairMessageMock.mock.calls.filter(
-        ([type]) => type === AccountKeyRepairMessageTypes.Start,
-      ),
-    ).toHaveLength(1)
+    await waitFor(() => {
+      expect(
+        sendAccountKeyRepairMessageMock.mock.calls.filter(
+          ([type]) => type === AccountKeyRepairMessageTypes.Start,
+        ),
+      ).toHaveLength(1)
+    })
   })
 
   it("ignores duplicate start requests while a start is already in flight", async () => {

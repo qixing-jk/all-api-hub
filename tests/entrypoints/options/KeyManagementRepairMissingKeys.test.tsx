@@ -503,6 +503,18 @@ const multiInvalidKeysProgress: AccountKeyRepairProgress = {
   ],
 }
 
+const runningCoverageProgress: AccountKeyRepairProgress = {
+  ...coverageProgress,
+  jobId: "job-coverage-running",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+}
+
+const runningMultiInvalidKeysProgress: AccountKeyRepairProgress = {
+  ...multiInvalidKeysProgress,
+  jobId: "job-many-invalid-running",
+  state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
   let reject!: (reason?: unknown) => void
@@ -561,7 +573,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        undefined,
+        { renameAutoTemplateTokens: true },
       )
     })
   })
@@ -600,7 +612,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        undefined,
+        { renameAutoTemplateTokens: true },
       )
     })
     expect(
@@ -647,7 +659,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        undefined,
+        { renameAutoTemplateTokens: true },
       )
     })
 
@@ -675,9 +687,23 @@ describe("KeyManagement repair missing keys entry point", () => {
       await startRequest.promise
     })
 
-    const rerunButton = screen.getByRole("button", {
-      name: "keyManagement:repairMissingKeys.actions.rerun",
-    })
+    expect(
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.previousResult.title",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.rerun",
+      }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.previousResult.view",
+      }),
+    )
+
     const progressHeader = screen.getByTestId(
       "repair-missing-keys-progress-header",
     )
@@ -697,25 +723,11 @@ describe("KeyManagement repair missing keys entry point", () => {
       "justify-end",
     )
     expect(progressActions).toHaveTextContent("2/2 (100%)")
-    expect(progressActions).toContainElement(rerunButton)
-
-    const enabledAccountsLabel = screen.getByText(
-      "keyManagement:repairMissingKeys.totalsLabels.enabledAccounts",
-    )
     expect(
-      rerunButton.compareDocumentPosition(enabledAccountsLabel) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-
-    fireEvent.click(rerunButton)
-
-    await waitFor(() => {
-      expect(
-        sendRuntimeActionMessageMock.mock.calls.filter(
-          ([message]) => message === AccountKeyRepairMessageTypes.Start,
-        ),
-      ).toHaveLength(2)
-    })
+      screen.queryByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.rerun",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("opens dialog, subscribes to progress, and hides disabled accounts", async () => {
@@ -749,7 +761,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        undefined,
+        { renameAutoTemplateTokens: true },
       )
     })
 
@@ -804,15 +816,35 @@ describe("KeyManagement repair missing keys entry point", () => {
     )
 
     expect(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.actions.rerun",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText("keyManagement:repairMissingKeys.historyNote"),
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.previousResult.title",
+      ),
     ).toBeInTheDocument()
     expect(
       screen.queryByText("keyManagement:repairMissingKeys.runningNote"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("keyManagement:repairMissingKeys.historyNote"),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.previousResult.view",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.previousResult.backToSetup",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("keyManagement:repairMissingKeys.historyNote"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.rerun",
+      }),
     ).not.toBeInTheDocument()
   })
 
@@ -844,7 +876,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        undefined,
+        { renameAutoTemplateTokens: true },
       )
     })
 
@@ -929,7 +961,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        undefined,
+        { renameAutoTemplateTokens: true },
       )
     })
 
@@ -1055,7 +1087,7 @@ describe("KeyManagement repair missing keys entry point", () => {
   it("switches between account coverage and invalid key views", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
-        return { success: true, data: coverageProgress }
+        return { success: true, data: runningCoverageProgress }
       }
       return { success: false }
     })
@@ -1118,7 +1150,7 @@ describe("KeyManagement repair missing keys entry point", () => {
   it("shows missing groups and bulk-selects invalid keys", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
-        return { success: true, data: multiInvalidKeysProgress }
+        return { success: true, data: runningMultiInvalidKeysProgress }
       }
       return { success: false }
     })
@@ -1160,7 +1192,7 @@ describe("KeyManagement repair missing keys entry point", () => {
   it("shows a search no-match state when invalid keys are filtered out", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
-        return { success: true, data: coverageProgress }
+        return { success: true, data: runningCoverageProgress }
       }
       return { success: false }
     })
@@ -1200,7 +1232,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     sendRuntimeActionMessageMock.mockImplementation(
       async (message: any, data: any) => {
         if (message === AccountKeyRepairMessageTypes.GetProgress) {
-          return { success: true, data: coverageProgress }
+          return { success: true, data: runningCoverageProgress }
         }
         if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
           return {
@@ -1307,7 +1339,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     sendRuntimeActionMessageMock.mockImplementation(
       async (message: any, data: any) => {
         if (message === AccountKeyRepairMessageTypes.GetProgress) {
-          return { success: true, data: coverageProgress }
+          return { success: true, data: runningCoverageProgress }
         }
         if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
           return {
@@ -1368,7 +1400,7 @@ describe("KeyManagement repair missing keys entry point", () => {
   it("closes confirmation and shows delete failure feedback when invalid key deletion fails", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
-        return { success: true, data: coverageProgress }
+        return { success: true, data: runningCoverageProgress }
       }
       if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
         return { success: false }
@@ -1419,7 +1451,7 @@ describe("KeyManagement repair missing keys entry point", () => {
   it("closes confirmation and shows delete failure feedback when the delete request throws", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
-        return { success: true, data: coverageProgress }
+        return { success: true, data: runningCoverageProgress }
       }
       if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
         throw new Error("delete request failed")
@@ -1476,7 +1508,7 @@ describe("KeyManagement repair missing keys entry point", () => {
   it("closes delete confirmation when selected invalid keys are pruned", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
-        return { success: true, data: coverageProgress }
+        return { success: true, data: runningCoverageProgress }
       }
       return { success: false }
     })
@@ -1515,12 +1547,12 @@ describe("KeyManagement repair missing keys entry point", () => {
       runtimeMessageState.listener?.({
         type: RuntimeMessageTypes.AccountKeyRepairProgress,
         payload: {
-          ...coverageProgress,
+          ...runningCoverageProgress,
           summary: {
-            ...coverageProgress.summary,
+            ...runningCoverageProgress.summary,
             invalidKeys: 0,
           },
-          results: coverageProgress.results.map((result) => ({
+          results: runningCoverageProgress.results.map((result) => ({
             ...result,
             invalidTokens: [],
           })),
@@ -1541,7 +1573,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     sendRuntimeActionMessageMock.mockImplementation(
       async (message: any, data: any) => {
         if (message === AccountKeyRepairMessageTypes.GetProgress) {
-          return { success: true, data: coverageProgress }
+          return { success: true, data: runningCoverageProgress }
         }
         if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
           return {
