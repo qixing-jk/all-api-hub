@@ -273,6 +273,25 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
   })
 
+  it("omits fetch options from tempWindowFetch runtime messages when none are provided", async () => {
+    mocks.sendRuntimeMessageMock.mockResolvedValue({
+      success: true,
+      data: "ok",
+    })
+
+    await tempWindowFetch({
+      originUrl: "https://example.com",
+      fetchUrl: "https://example.com/api/models",
+    })
+
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
+      action: RuntimeActionIds.TempWindowFetch,
+      originUrl: "https://example.com",
+      fetchUrl: "https://example.com/api/models",
+      suppressMinimize: false,
+    })
+  })
+
   it("routes tempWindowTurnstileFetch through runtime messaging and keeps explicit suppression overrides", async () => {
     setWindowHref("chrome-extension://test/popup.html")
     mocks.isExtensionPopupMock.mockReturnValue(true)
@@ -329,6 +348,28 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         fetchOptions: { method: "POST" },
       }),
     )
+  })
+
+  it("omits fetch options from tempWindowTurnstileFetch runtime messages when none are provided", async () => {
+    mocks.sendRuntimeMessageMock.mockResolvedValue({
+      success: true,
+      data: "token",
+      turnstile: { status: "token_obtained", hasTurnstile: true },
+    })
+
+    await tempWindowTurnstileFetch({
+      originUrl: "https://example.com",
+      pageUrl: "https://example.com/checkin",
+      fetchUrl: "https://example.com/api/checkin",
+    })
+
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
+      action: RuntimeActionIds.TempWindowTurnstileFetch,
+      originUrl: "https://example.com",
+      pageUrl: "https://example.com/checkin",
+      fetchUrl: "https://example.com/api/checkin",
+      suppressMinimize: false,
+    })
   })
 
   it("routes tempWindowTriggerCheckinPageAction through runtime messaging", async () => {
