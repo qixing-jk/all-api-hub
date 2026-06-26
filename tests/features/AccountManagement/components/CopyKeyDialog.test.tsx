@@ -28,7 +28,7 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   fetchAccountTokensMock,
@@ -244,6 +244,17 @@ const TOKEN = {
   model_limits: "",
   group: "",
 } as any
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve
+    reject = nextReject
+  })
+
+  return { promise, resolve, reject }
+}
 
 describe("CopyKeyDialog", () => {
   beforeEach(() => {
@@ -631,6 +642,39 @@ describe("CopyKeyDialog", () => {
         name: "ui:dialog.copyKey.createKey",
       }),
     ).toBeDisabled()
+    expect(screen.queryByText("default")).not.toBeInTheDocument()
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("ignores stale token fetch completions after the selected account loses manageable credentials", async () => {
+    const pendingTokens = createDeferred<(typeof TOKEN)[]>()
+    fetchAccountTokensMock.mockReturnValueOnce(pendingTokens.promise)
+
+    const { rerender } = render(
+      <CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />,
+    )
+
+    await screen.findByText("ui:dialog.copyKey.loading")
+
+    rerender(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{ ...ACCOUNT, token: "", cookieAuthSessionCookie: "" }}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    ).toBeDisabled()
+
+    await act(async () => {
+      pendingTokens.resolve([TOKEN])
+      await pendingTokens.promise
+    })
+
     expect(screen.queryByText("default")).not.toBeInTheDocument()
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })

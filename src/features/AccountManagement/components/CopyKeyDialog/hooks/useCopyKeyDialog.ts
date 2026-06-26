@@ -72,6 +72,7 @@ export function useCopyKeyDialog(
   const copiedTokenResetTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null)
+  const fetchRequestIdRef = useRef(0)
 
   const canCreateDefaultKey = useMemo(
     () => canManageDisplayAccountTokens(account),
@@ -92,6 +93,7 @@ export function useCopyKeyDialog(
   const fetchTokens = useCallback(async () => {
     if (!account) return
     if (!canCreateDefaultKey) {
+      fetchRequestIdRef.current += 1
       setTokens([])
       setError(null)
       setCreateError(null)
@@ -103,6 +105,7 @@ export function useCopyKeyDialog(
       return
     }
 
+    const requestId = (fetchRequestIdRef.current += 1)
     setIsLoading(true)
     setError(null)
     setCreateError(null)
@@ -110,8 +113,10 @@ export function useCopyKeyDialog(
 
     try {
       const tokensResponse = await fetchDisplayAccountTokens(account)
+      if (fetchRequestIdRef.current !== requestId) return
       setTokens(tokensResponse)
     } catch (error) {
+      if (fetchRequestIdRef.current !== requestId) return
       logger.error("Failed to load key list", {
         error,
         accountId: account.id,
@@ -124,7 +129,9 @@ export function useCopyKeyDialog(
       )
       setError(t("ui:dialog.copyKey.loadFailed", { error: errorMessage }))
     } finally {
-      setIsLoading(false)
+      if (fetchRequestIdRef.current === requestId) {
+        setIsLoading(false)
+      }
     }
   }, [account, canCreateDefaultKey, clearDefaultTokenCreateAllowedGroups, t])
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -61,6 +61,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
+  const fetchRequestIdRef = useRef(0)
 
   const canCreateToken = useMemo(
     () => canManageDisplayAccountTokens(account),
@@ -80,6 +81,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   const fetchTokens = useCallback(async () => {
     if (!account) return false
     if (!canCreateToken) {
+      fetchRequestIdRef.current += 1
       setTokens([])
       setSelectedTokenId(null)
       setError(null)
@@ -89,15 +91,18 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       return false
     }
 
+    const requestId = (fetchRequestIdRef.current += 1)
     setIsLoading(true)
     setError(null)
     setCreateError(null)
 
     try {
       const fetchedTokens = await fetchDisplayAccountTokens(account)
+      if (fetchRequestIdRef.current !== requestId) return false
       setTokens(fetchedTokens)
       return true
     } catch (error) {
+      if (fetchRequestIdRef.current !== requestId) return false
       const errorMessage =
         error instanceof InvalidTokenPayloadError
           ? t("messages:errors.unknown")
@@ -119,7 +124,9 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       setError(t("modelList:keyDialog.loadFailed", { error: errorMessage }))
       return false
     } finally {
-      setIsLoading(false)
+      if (fetchRequestIdRef.current === requestId) {
+        setIsLoading(false)
+      }
     }
   }, [account, canCreateToken, t])
 
