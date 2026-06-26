@@ -93,7 +93,9 @@ function getAccountRow(page: Page, accountName: string) {
 }
 
 async function getAccountButtonY(page: Page, accountName: string) {
-  const accountButton = page.getByRole("button", { name: accountName }).first()
+  const accountButton = getAccountRow(page, accountName)
+    .getByRole("button", { name: accountName })
+    .first()
   await expect(accountButton).toBeVisible()
 
   let accountButtonY: number | undefined
