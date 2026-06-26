@@ -17,6 +17,12 @@ import {
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
 } from "~/services/verification/aiApiVerification"
+import {
+  createProfileModelVerificationHistoryTarget,
+  createProfileVerificationHistoryTarget,
+  createVerificationHistorySummary,
+  verificationResultHistoryStorage,
+} from "~/services/verification/verificationResultHistory"
 import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import {
@@ -25,6 +31,7 @@ import {
 } from "~/services/verification/webAiApiCheck/messaging"
 import type { Tag } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import {
   API_CHECK_MODAL_CLOSE_REASONS,
@@ -45,6 +52,8 @@ import { useApiCheckBaseUrlHistory } from "./useApiCheckBaseUrlHistory"
 import { useApiCheckModalShell } from "./useApiCheckModalShell"
 import { useApiCheckModelDiscovery } from "./useApiCheckModelDiscovery"
 import { useApiCheckProbeRunner } from "./useApiCheckProbeRunner"
+
+const logger = createLogger("ApiCheckModalViewModel")
 
 /**
  * Converts an HTML date input value into a local day-level timestamp.
@@ -248,6 +257,7 @@ export function useApiCheckModalViewModel() {
     stopProbe,
     runAll,
     stopRunAll,
+    getCurrentVerificationResultsSnapshot,
   } = probeRunner
 
   const canClose = !isRunningAll && !isAnyProbeRunning
@@ -453,6 +463,38 @@ export function useApiCheckModalViewModel() {
 
   const canSaveProfile = !!baseUrl.trim() && !!apiKey.trim() && !isSavingProfile
 
+  const persistPreSaveVerificationHistory = useCallback(
+    async (profileId: string) => {
+      const snapshot = getCurrentVerificationResultsSnapshot()
+      if (!snapshot) return
+
+      const target = snapshot.modelId
+        ? createProfileModelVerificationHistoryTarget(
+            profileId,
+            snapshot.modelId,
+          )
+        : createProfileVerificationHistoryTarget(profileId)
+      if (!target) return
+
+      const summary = createVerificationHistorySummary({
+        target,
+        apiType: snapshot.apiType,
+        results: snapshot.results,
+        preferredModelId: snapshot.modelId,
+      })
+      if (!summary) return
+
+      try {
+        await verificationResultHistoryStorage.upsertLatestSummary(summary)
+      } catch (error) {
+        logger.error("Failed to persist pre-save verification history", {
+          error,
+        })
+      }
+    },
+    [getCurrentVerificationResultsSnapshot],
+  )
+
   const handleSaveProfile = async () => {
     const tracker = startProductAnalyticsAction({
       ...contentApiCheckAnalyticsScope,
@@ -493,6 +535,8 @@ export function useApiCheckModalViewModel() {
       )
 
       if (response?.success) {
+        await persistPreSaveVerificationHistory(response.profileId)
+
         toast.success(
           (toastInstance) => (
             <div className="flex min-w-0 items-center gap-2">

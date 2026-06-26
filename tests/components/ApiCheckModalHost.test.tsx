@@ -50,10 +50,12 @@ const {
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
   updateWebAiApiCheckMock,
+  upsertVerificationHistorySummaryMock,
 } = vi.hoisted(() => ({
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
   updateWebAiApiCheckMock: vi.fn(),
+  upsertVerificationHistorySummaryMock: vi.fn(),
 }))
 
 function createDeferred<T>() {
@@ -121,6 +123,23 @@ vi.mock(
   },
 )
 
+vi.mock(
+  "~/services/verification/verificationResultHistory",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/verification/verificationResultHistory")
+      >()
+    return {
+      ...actual,
+      verificationResultHistoryStorage: {
+        ...actual.verificationResultHistoryStorage,
+        upsertLatestSummary: upsertVerificationHistorySummaryMock,
+      },
+    }
+  },
+)
+
 describe("ApiCheckModalHost", () => {
   const expectAnalyticsCallsToExcludeSensitiveValues = (
     values: readonly string[],
@@ -160,6 +179,10 @@ describe("ApiCheckModalHost", () => {
     })
     updateWebAiApiCheckMock.mockReset()
     updateWebAiApiCheckMock.mockResolvedValue(true)
+    upsertVerificationHistorySummaryMock.mockReset()
+    upsertVerificationHistorySummaryMock.mockImplementation(
+      async (summary) => summary,
+    )
     vi.mocked(sendRuntimeMessage).mockReset()
     vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: false })
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
@@ -3240,6 +3263,179 @@ describe("ApiCheckModalHost", () => {
         },
       },
     )
+  })
+
+  it("persists completed pre-save probe results as profile verification history after saving", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["gpt-test-model"] }
+        }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 12,
+              summary: "Text generation OK",
+              summaryKey: "verifyDialog.summaries.textGenerationSucceeded",
+              summaryParams: { model: "gpt-test-model" },
+            },
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return {
+            success: true,
+            profileId: "p-verified",
+            name: "proxy.example.com",
+            apiType: message.apiType,
+            baseUrl: "https://proxy.example.com/api",
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    await user.click(
+      await screen.findByPlaceholderText("https://example.com/api"),
+    )
+    await user.paste("https://proxy.example.com/api")
+    await user.click(await screen.findByPlaceholderText("sk-..."))
+    await user.paste("sk-test-secret-fixture")
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+      ).toHaveTextContent("gpt-test-model")
+    })
+
+    const probeCard = await screen.findByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+    expect(
+      await within(probeCard).findByText(
+        "aiApiVerification:verifyDialog.summaries.textGenerationSucceeded",
+      ),
+    ).toBeVisible()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "webAiApiCheck:modal.actions.saveToProfiles",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(upsertVerificationHistorySummaryMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          target: {
+            kind: "profile-model",
+            profileId: "p-verified",
+            modelId: "gpt-test-model",
+          },
+          targetKey: "profile:p-verified:model:gpt-test-model",
+          status: "pass",
+          apiType: "openai-compatible",
+          resolvedModelId: "gpt-test-model",
+          probes: [
+            expect.objectContaining({
+              id: "text-generation",
+              status: "pass",
+              latencyMs: 12,
+              summary: "Text generation OK",
+              summaryKey: "verifyDialog.summaries.textGenerationSucceeded",
+              summaryParams: { model: "gpt-test-model" },
+            }),
+          ],
+        }),
+      )
+    })
+  })
+
+  it("does not persist stale pre-save probe results after credentials change", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["gpt-test-model"] }
+        }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 12,
+              summary: "Text generation OK",
+            },
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return {
+            success: true,
+            profileId: "p-changed",
+            name: "proxy.example.com",
+            apiType: message.apiType,
+            baseUrl: "https://proxy.example.com/api",
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    await user.click(
+      await screen.findByPlaceholderText("https://example.com/api"),
+    )
+    await user.paste("https://proxy.example.com/api")
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-original-fixture")
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+      ).toHaveTextContent("gpt-test-model")
+    })
+
+    const probeCard = await screen.findByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+    expect(
+      await within(probeCard).findByText("Text generation OK"),
+    ).toBeVisible()
+
+    await user.clear(apiKeyInput)
+    await user.paste("sk-test-changed-fixture")
+    await user.click(
+      await screen.findByRole("button", {
+        name: "webAiApiCheck:modal.actions.saveToProfiles",
+      }),
+    )
+
+    await waitFor(() => {
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.SaveProfile, {
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api",
+        apiKey: "sk-test-changed-fixture",
+        pageUrl: "https://example.com",
+      })
+    })
+    expect(upsertVerificationHistorySummaryMock).not.toHaveBeenCalled()
   })
 
   it("saves profile metadata entered in the API check modal", async () => {

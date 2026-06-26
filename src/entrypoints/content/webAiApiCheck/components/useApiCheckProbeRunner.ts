@@ -56,6 +56,14 @@ type RunProbeOptions = {
   shouldIgnoreResult?: () => boolean
 }
 
+type VerificationResultsSnapshot = {
+  apiType: ApiVerificationApiType
+  baseUrl: string
+  apiKey: string
+  modelId?: string
+  results: ApiVerificationProbeResult[]
+}
+
 /**
  * Build the initial probe UI state for the selected API type.
  */
@@ -81,6 +89,34 @@ function markProbeNotRunning(
   return probes.map((probe) =>
     probe.id === probeId ? { ...probe, isRunning: false } : probe,
   )
+}
+
+/**
+ * Extract completed probe results from the current UI state.
+ */
+function extractProbeResults(
+  probes: ProbeItemState[],
+): ApiVerificationProbeResult[] {
+  return probes
+    .map((probe) => probe.result)
+    .filter((result): result is ApiVerificationProbeResult => result !== null)
+}
+
+/**
+ * Serializes the credential context represented by a probe run.
+ */
+function createVerificationContextKey(params: {
+  apiType: ApiVerificationApiType
+  baseUrl: string
+  apiKey: string
+  modelId: string
+}) {
+  return [
+    params.apiType,
+    params.baseUrl.trim(),
+    params.apiKey.trim(),
+    params.modelId.trim(),
+  ].join("\n")
 }
 
 /**
@@ -136,6 +172,7 @@ export function useApiCheckProbeRunner({
   )
   const cancelledProbeRunIdsRef = useRef(new Set<string>())
   const activeRunAllProbeIdRef = useRef<ApiVerificationProbeId | null>(null)
+  const verifiedContextKeyRef = useRef<string | null>(null)
 
   const probeDefinitions = useMemo(
     () => getApiVerificationProbeDefinitions(apiType),
@@ -152,7 +189,48 @@ export function useApiCheckProbeRunner({
   const resetProbeState = useCallback((nextApiType: ApiVerificationApiType) => {
     setProbes(buildProbeState(nextApiType))
     setTestStoppedMessage(null)
+    verifiedContextKeyRef.current = null
   }, [])
+
+  const updateProbeResult = useCallback(
+    (probeId: ApiVerificationProbeId, result: ApiVerificationProbeResult) => {
+      verifiedContextKeyRef.current = createVerificationContextKey({
+        apiType,
+        baseUrl,
+        apiKey,
+        modelId,
+      })
+      setProbes((prev) =>
+        prev.map((probe) =>
+          probe.id === probeId ? { ...probe, isRunning: false, result } : probe,
+        ),
+      )
+    },
+    [apiKey, apiType, baseUrl, modelId],
+  )
+
+  const getCurrentVerificationResultsSnapshot =
+    useCallback((): VerificationResultsSnapshot | null => {
+      const currentContextKey = createVerificationContextKey({
+        apiType,
+        baseUrl,
+        apiKey,
+        modelId,
+      })
+      if (verifiedContextKeyRef.current !== currentContextKey) return null
+
+      const results = extractProbeResults(probes)
+      if (results.length === 0) return null
+
+      const trimmedModelId = modelId.trim()
+      return {
+        apiType,
+        baseUrl: baseUrl.trim(),
+        apiKey: apiKey.trim(),
+        ...(trimmedModelId ? { modelId: trimmedModelId } : {}),
+        results,
+      }
+    }, [apiKey, apiType, baseUrl, modelId, probes])
 
   const runProbe = useCallback(
     async (
@@ -261,13 +339,7 @@ export function useApiCheckProbeRunner({
             )
             return null
           }
-          setProbes((prev) =>
-            prev.map((probe) =>
-              probe.id === probeId
-                ? { ...probe, isRunning: false, result }
-                : probe,
-            ),
-          )
+          updateProbeResult(probeId, result)
           const analyticsResult = getProbeAnalyticsResult(result)
           tracker?.complete(analyticsResult, {
             ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
@@ -312,13 +384,7 @@ export function useApiCheckProbeRunner({
           return null
         }
 
-        setProbes((prev) =>
-          prev.map((probe) =>
-            probe.id === probeId
-              ? { ...probe, isRunning: false, result: fallback }
-              : probe,
-          ),
-        )
+        updateProbeResult(probeId, fallback)
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory:
             failedResponse?.errorCategory ??
@@ -353,17 +419,7 @@ export function useApiCheckProbeRunner({
           )
           return null
         }
-        setProbes((prev) =>
-          prev.map((probe) =>
-            probe.id === probeId
-              ? {
-                  ...probe,
-                  isRunning: false,
-                  result: fallback,
-                }
-              : probe,
-          ),
-        )
+        updateProbeResult(probeId, fallback)
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory,
           insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
@@ -391,6 +447,7 @@ export function useApiCheckProbeRunner({
       setValidationError,
       t,
       trigger,
+      updateProbeResult,
     ],
   )
 
@@ -596,6 +653,7 @@ export function useApiCheckProbeRunner({
     testStoppedMessage,
     hasAnyResult,
     isAnyProbeRunning,
+    getCurrentVerificationResultsSnapshot,
     resetProbeState,
     runProbe: (probeId: ApiVerificationProbeId) => {
       void runProbe(probeId)
