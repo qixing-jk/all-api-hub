@@ -592,8 +592,6 @@ describe("CopyKeyDialog", () => {
   })
 
   it("does not start token creation for accounts without manageable credentials", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([])
-
     render(
       <CopyKeyDialog
         isOpen={true}
@@ -607,7 +605,34 @@ describe("CopyKeyDialog", () => {
         name: "ui:dialog.copyKey.createKey",
       }),
     ).toBeDisabled()
+    expect(fetchAccountTokensMock).not.toHaveBeenCalled()
     expect(createApiTokenMock).not.toHaveBeenCalled()
+  })
+
+  it("clears loaded tokens when the selected account loses manageable credentials", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+
+    const { rerender } = render(
+      <CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />,
+    )
+
+    expect(await screen.findByText("default")).toBeInTheDocument()
+
+    rerender(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{ ...ACCOUNT, token: "", cookieAuthSessionCookie: "" }}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    ).toBeDisabled()
+    expect(screen.queryByText("default")).not.toBeInTheDocument()
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
   it("opens a generic constrained Add Token dialog when default token policy requires selection", async () => {

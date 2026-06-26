@@ -91,6 +91,17 @@ export function useCopyKeyDialog(
 
   const fetchTokens = useCallback(async () => {
     if (!account) return
+    if (!canCreateDefaultKey) {
+      setTokens([])
+      setError(null)
+      setCreateError(null)
+      setOneTimeToken(null)
+      clearDefaultTokenCreateAllowedGroups()
+      setCopiedTokenId(null)
+      setExpandedTokens(new Set())
+      setIsLoading(false)
+      return
+    }
 
     setIsLoading(true)
     setError(null)
@@ -115,7 +126,7 @@ export function useCopyKeyDialog(
     } finally {
       setIsLoading(false)
     }
-  }, [account, clearDefaultTokenCreateAllowedGroups, t])
+  }, [account, canCreateDefaultKey, clearDefaultTokenCreateAllowedGroups, t])
 
   useEffect(() => {
     if (isOpen && account) {

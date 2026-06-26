@@ -906,6 +906,42 @@ describe("ModelKeyDialog", () => {
     expect(fetchAccountTokensMock).not.toHaveBeenCalled()
   })
 
+  it("clears loaded token state when the selected account becomes ineligible", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+
+    const { rerender } = render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", { name: "common:actions.copyKey" }),
+    ).toBeInTheDocument()
+
+    rerender(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{ ...ACCOUNT, authType: AuthTypeEnum.None, token: "" }}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    expect(
+      await screen.findByText("modelList:keyDialog.ineligible.missingAuth"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "common:actions.copyKey" }),
+    ).not.toBeInTheDocument()
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
   it("uses the unknown fallback when token inventory payload is invalid", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce(null)
 

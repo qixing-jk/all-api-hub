@@ -79,7 +79,15 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
 
   const fetchTokens = useCallback(async () => {
     if (!account) return false
-    if (!canCreateToken) return false
+    if (!canCreateToken) {
+      setTokens([])
+      setSelectedTokenId(null)
+      setError(null)
+      setCreateError(null)
+      setOneTimeToken(null)
+      setIsLoading(false)
+      return false
+    }
 
     setIsLoading(true)
     setError(null)
