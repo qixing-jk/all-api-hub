@@ -53,6 +53,35 @@ function validateRegexPatterns(lines: string[]): {
 }
 
 /**
+ * Renders invalid RegExp patterns in the settings panels.
+ */
+function RegexPatternWarning({
+  invalid,
+  title,
+  more,
+}: {
+  invalid: string[]
+  title: string
+  more: string
+}) {
+  if (invalid.length === 0) return null
+
+  return (
+    <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800 dark:border-yellow-900/40 dark:bg-yellow-900/20 dark:text-yellow-200">
+      <div className="font-medium">{title}</div>
+      <ul className="mt-1 list-disc space-y-0.5 pl-4">
+        {invalid.slice(0, 10).map((pattern) => (
+          <li key={pattern}>
+            <code className="font-mono">{pattern}</code>
+          </li>
+        ))}
+      </ul>
+      {invalid.length > 10 ? <div className="mt-1">{more}</div> : null}
+    </div>
+  )
+}
+
+/**
  * Settings section for Web AI API Check auto-detect whitelist.
  */
 export default function WebAiApiCheckSettings() {
@@ -79,19 +108,33 @@ export default function WebAiApiCheckSettings() {
   const whitelist =
     autoDetect.urlWhitelist ??
     DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect.urlWhitelist
+  const keyCleanup =
+    config.keyCleanup ?? DEFAULT_PREFERENCES.webAiApiCheck!.keyCleanup
 
   const [patternsDraft, setPatternsDraft] = useState(
     (whitelist.patterns ?? []).join("\n"),
+  )
+  const [keyCleanupPatternsDraft, setKeyCleanupPatternsDraft] = useState(
+    (keyCleanup.removalPatterns ?? []).join("\n"),
   )
 
   useEffect(() => {
     setPatternsDraft((whitelist.patterns ?? []).join("\n"))
   }, [whitelist.patterns])
 
+  useEffect(() => {
+    setKeyCleanupPatternsDraft((keyCleanup.removalPatterns ?? []).join("\n"))
+  }, [keyCleanup.removalPatterns])
+
   const { patterns, invalid } = useMemo(
     () => validateRegexPatterns(patternsDraft.split(/\r?\n/)),
     [patternsDraft],
   )
+  const { patterns: keyCleanupPatterns, invalid: invalidKeyCleanupPatterns } =
+    useMemo(
+      () => validateRegexPatterns(keyCleanupPatternsDraft.split(/\r?\n/)),
+      [keyCleanupPatternsDraft],
+    )
 
   const saveSettings = async (updates: Partial<WebAiApiCheckPreferences>) => {
     try {
@@ -212,29 +255,15 @@ export default function WebAiApiCheckSettings() {
               disabled={isSaving}
             />
 
-            {invalid.length > 0 ? (
-              <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800 dark:border-yellow-900/40 dark:bg-yellow-900/20 dark:text-yellow-200">
-                <div className="font-medium">
-                  {t(
-                    "webAiApiCheck:settings.autoDetect.whitelist.invalidTitle",
-                  )}
-                </div>
-                <ul className="mt-1 list-disc space-y-0.5 pl-4">
-                  {invalid.slice(0, 10).map((pattern) => (
-                    <li key={pattern}>
-                      <code className="font-mono">{pattern}</code>
-                    </li>
-                  ))}
-                </ul>
-                {invalid.length > 10 ? (
-                  <div className="mt-1">
-                    {t(
-                      "webAiApiCheck:settings.autoDetect.whitelist.invalidMore",
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+            <RegexPatternWarning
+              invalid={invalid}
+              title={t(
+                "webAiApiCheck:settings.autoDetect.whitelist.invalidTitle",
+              )}
+              more={t(
+                "webAiApiCheck:settings.autoDetect.whitelist.invalidMore",
+              )}
+            />
 
             <div className="flex justify-end">
               <Button
@@ -256,6 +285,57 @@ export default function WebAiApiCheckSettings() {
                 }}
               >
                 {t("common:actions.save")}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+
+        <CardContent
+          className="border-border dark:border-dark-bg-tertiary border-t"
+          spacing="sm"
+        >
+          <div className="space-y-2">
+            <div className="text-sm font-medium">
+              {t("webAiApiCheck:settings.keyCleanup.patterns")}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              {t("webAiApiCheck:settings.keyCleanup.patternsDesc")}
+            </div>
+
+            <Textarea
+              id={WEB_AI_API_CHECK_TARGET_IDS.keyCleanupPatterns}
+              value={keyCleanupPatternsDraft}
+              onChange={(event) =>
+                setKeyCleanupPatternsDraft(event.target.value)
+              }
+              placeholder={t(
+                "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
+              )}
+              rows={4}
+              disabled={isSaving}
+            />
+
+            <RegexPatternWarning
+              invalid={invalidKeyCleanupPatterns}
+              title={t("webAiApiCheck:settings.keyCleanup.invalidTitle")}
+              more={t("webAiApiCheck:settings.keyCleanup.invalidMore")}
+            />
+
+            <div className="flex justify-end">
+              <Button
+                id={WEB_AI_API_CHECK_TARGET_IDS.saveKeyCleanupPatterns}
+                type="button"
+                variant="outline"
+                disabled={isSaving}
+                onClick={() => {
+                  void saveSettings({
+                    keyCleanup: {
+                      removalPatterns: keyCleanupPatterns,
+                    },
+                  })
+                }}
+              >
+                {t("webAiApiCheck:settings.keyCleanup.save")}
               </Button>
             </div>
           </div>

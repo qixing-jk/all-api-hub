@@ -150,6 +150,7 @@ describe("content entrypoint", () => {
       expect(setupWebAiApiCheckContentMock).toHaveBeenCalledWith({
         enableDetection: true,
         enableContextMenu: false,
+        apiKeyCleanupPatterns: [],
       })
     })
 
@@ -194,6 +195,7 @@ describe("content entrypoint", () => {
     expect(setupWebAiApiCheckContentMock).toHaveBeenLastCalledWith({
       enableDetection: false,
       enableContextMenu: false,
+      apiKeyCleanupPatterns: [],
     })
 
     expect(firstRedemptionCleanup).toHaveBeenCalledTimes(1)
@@ -274,6 +276,7 @@ describe("content entrypoint", () => {
       expect(setupWebAiApiCheckContentMock).toHaveBeenCalledWith({
         enableDetection: true,
         enableContextMenu: true,
+        apiKeyCleanupPatterns: [],
       })
     })
 
@@ -589,6 +592,7 @@ describe("content entrypoint", () => {
     expect(setupWebAiApiCheckContentMock).toHaveBeenLastCalledWith({
       enableDetection: true,
       enableContextMenu: false,
+      apiKeyCleanupPatterns: [],
     })
     expect(firstRedemptionCleanup).toHaveBeenCalledTimes(1)
     expect(firstApiCheckCleanup).toHaveBeenCalledTimes(1)

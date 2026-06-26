@@ -492,6 +492,8 @@ function buildWebAiApiCheckSnapshot(
     auto_detect_enhanced_enabled: config.autoDetect?.enhanced?.enabled === true,
     auto_detect_url_patterns_configured:
       (config.autoDetect?.urlWhitelist?.patterns ?? []).length > 0,
+    api_key_cleanup_patterns_configured:
+      (config.keyCleanup?.removalPatterns ?? []).length > 0,
   }
 }
 

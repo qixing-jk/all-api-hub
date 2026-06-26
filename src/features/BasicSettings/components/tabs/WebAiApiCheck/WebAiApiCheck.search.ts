@@ -100,4 +100,36 @@ export const webAiApiCheckSearchControls: OptionsSearchItemDefinition[] = [
       keywords: ["api check", "whitelist", "save", "patterns"],
     },
   ),
+  buildControlDefinition(
+    "control:web-ai-api-check-key-cleanup-patterns",
+    "webAiApiCheck",
+    WEB_AI_API_CHECK_TARGET_IDS.keyCleanupPatterns,
+    "webAiApiCheck:settings.keyCleanup.patterns",
+    625,
+    {
+      descriptionKey: "webAiApiCheck:settings.keyCleanup.patternsDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.webAiApiCheck",
+        "webAiApiCheck:settings.title",
+      ],
+      keywords: ["api check", "api key", "cleanup", "regex", "patterns"],
+    },
+  ),
+  buildControlDefinition(
+    "control:web-ai-api-check-save-key-cleanup-patterns",
+    "webAiApiCheck",
+    WEB_AI_API_CHECK_TARGET_IDS.saveKeyCleanupPatterns,
+    "webAiApiCheck:settings.keyCleanup.save",
+    626,
+    {
+      descriptionKey: "webAiApiCheck:settings.keyCleanup.patternsDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.webAiApiCheck",
+        "webAiApiCheck:settings.title",
+      ],
+      keywords: ["api check", "api key", "cleanup", "save", "regex"],
+    },
+  ),
 ]

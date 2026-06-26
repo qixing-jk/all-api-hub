@@ -159,6 +159,9 @@ export function useApiCheckModalViewModel() {
   const [apiKey, setApiKey] = useState("")
   const [extractionMetadata, setExtractionMetadata] =
     useState<ApiCheckOpenModalDetail["extraction"]>(undefined)
+  const [apiKeyCleanupPatterns, setApiKeyCleanupPatterns] = useState<string[]>(
+    [],
+  )
   const [apiKeyVisible, setApiKeyVisible] = useState(true)
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     API_TYPES.OPENAI_COMPATIBLE,
@@ -334,8 +337,12 @@ export function useApiCheckModalViewModel() {
       const nextSourceText = (detail.sourceText ?? "").toString()
       skipNextSourceTextExtractionRef.current = nextSourceText
       setSourceText(nextSourceText)
+      const nextApiKeyCleanupPatterns = detail.apiKeyCleanupPatterns ?? []
+      setApiKeyCleanupPatterns(nextApiKeyCleanupPatterns)
 
-      const extracted = extractApiCheckCredentialsFromText(nextSourceText)
+      const extracted = extractApiCheckCredentialsFromText(nextSourceText, {
+        apiKeyCleanupPatterns: nextApiKeyCleanupPatterns,
+      })
       const extraction = detail.extraction ?? {
         candidates: extracted.candidates,
         summary: extracted.summary,
@@ -444,7 +451,9 @@ export function useApiCheckModalViewModel() {
       skipNextSourceTextExtractionRef.current = null
       return
     }
-    const extracted = extractApiCheckCredentialsFromText(sourceText)
+    const extracted = extractApiCheckCredentialsFromText(sourceText, {
+      apiKeyCleanupPatterns,
+    })
     setExtractionMetadata({
       candidates: extracted.candidates,
       summary: extracted.summary,
@@ -455,7 +464,7 @@ export function useApiCheckModalViewModel() {
     if (extracted.apiKey) {
       setApiKey(extracted.apiKey)
     }
-  }, [isOpen, sourceText, updateBaseUrl])
+  }, [apiKeyCleanupPatterns, isOpen, sourceText, updateBaseUrl])
 
   const handleSelectBaseUrlHistory = useCallback(
     (value: string) => {

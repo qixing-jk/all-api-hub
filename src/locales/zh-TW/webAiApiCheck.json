@@ -102,6 +102,14 @@
       "enableDesc": "啟用後，在網頁右鍵選單中顯示“AI API 檢測”入口。"
     },
     "description": "手動右鍵選單始終可用。自動檢測為可選功能，僅在白名單頁面執行，並在開啟彈窗前請求確認。預設不會儲存提取到的 API Key。",
+    "keyCleanup": {
+      "invalidMore": "…以及更多",
+      "invalidTitle": "無效清理規則",
+      "patterns": "API Key 清理規則",
+      "patternsDesc": "如果複製到的 Key 夾帶提示詞、括號或分隔符，可以在這裡填寫要刪除的正規表示式規則。每行一條，儲存前會提示無效規則。",
+      "patternsPlaceholder": "\\[\\[刪除這裡\\]\\]\n【刪除這裡】\n<remove-this>\n(?:分隔符|separator|noise)\n[\\s\\-_.]+",
+      "save": "儲存清理規則"
+    },
     "title": "網頁 AI API 功能可用性測試"
   }
 }

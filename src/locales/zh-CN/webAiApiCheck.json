@@ -102,6 +102,14 @@
       "enableDesc": "启用后，在网页右键菜单中显示“AI API 检测”入口。"
     },
     "description": "手动右键菜单始终可用。自动检测为可选功能，仅在白名单页面运行，并在打开弹窗前请求确认。默认不会保存提取到的 API Key。",
+    "keyCleanup": {
+      "invalidMore": "…以及更多",
+      "invalidTitle": "无效清理规则",
+      "patterns": "API Key 清理规则",
+      "patternsDesc": "如果复制到的 Key 里夹着提示词、括号或分隔符，可以在这里填写要删除的正则规则。每行一条，保存前会提示无效规则。",
+      "patternsPlaceholder": "\\[\\[删除这里\\]\\]\n【删除这里】\n<remove-this>\n(?:分隔符|separator|noise)\n[\\s\\-_.]+",
+      "save": "保存清理规则"
+    },
     "title": "网页 AI API 功能可用性测试"
   }
 }

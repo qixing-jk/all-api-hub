@@ -593,6 +593,10 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
             ...(storedAutoDetect?.enhanced ?? {}),
           },
         },
+        keyCleanup: {
+          ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES.keyCleanup,
+          ...(storedWebAiApiCheck?.keyCleanup ?? {}),
+        },
       },
       preferencesVersion: 26,
     }

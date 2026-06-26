@@ -186,6 +186,9 @@ describe("settings product analytics snapshots", () => {
             patterns: ["https://private.example/api-keys"],
           },
         },
+        keyCleanup: {
+          removalPatterns: ["private-cleanup-pattern"],
+        },
       },
       tempWindowFallback: {
         enabled: true,
@@ -387,6 +390,7 @@ describe("settings product analytics snapshots", () => {
         auto_detect_enabled: true,
         auto_detect_enhanced_enabled: true,
         auto_detect_url_patterns_configured: true,
+        api_key_cleanup_patterns_configured: true,
       },
       {
         setting_id:

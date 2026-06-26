@@ -102,6 +102,14 @@
       "enableDesc": "Sau khi bật, mục \"Phát hiện AI API\" sẽ hiển thị trong menu chuột phải của trang web."
     },
     "description": "Menu chuột phải thủ công luôn khả dụng. Tự động phát hiện là một tính năng tùy chọn, chỉ chạy trên các trang trong danh sách trắng và yêu cầu xác nhận trước khi mở cửa sổ bật lên. API Key được trích xuất sẽ không được lưu theo mặc định.",
+    "keyCleanup": {
+      "invalidMore": "...và nhiều hơn nữa",
+      "invalidTitle": "Quy tắc làm sạch không hợp lệ",
+      "patterns": "Quy tắc làm sạch API Key",
+      "patternsDesc": "Dùng khi Key sao chép có kèm nhãn, dấu ngoặc hoặc ký tự phân tách thừa. Mỗi dòng là một biểu thức chính quy; quy tắc không hợp lệ sẽ được báo trước khi lưu.",
+      "patternsPlaceholder": "\\[\\[xóa phần này\\]\\]\n【xóa phần này】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
+      "save": "Lưu quy tắc làm sạch"
+    },
     "title": "Kiểm tra khả năng khả dụng của AI API trên trang web"
   }
 }

@@ -21,6 +21,9 @@ export type ContentFeaturePreferenceSource = {
         enabled?: boolean
       }
     }
+    keyCleanup?: {
+      removalPatterns?: string[]
+    }
   }
 }
 
@@ -30,6 +33,7 @@ export type ContentFeaturePreferences = {
   webAiApiCheckDetectionEnabled: boolean
   webAiApiCheckEnhancedDetectionEnabled: boolean
   webAiApiCheckContextMenuEnabled: boolean
+  webAiApiCheckKeyCleanupPatterns: string[]
 }
 
 export const DEFAULT_REDEMPTION_ASSIST_PREFERENCES: RedemptionAssistPreferences =
@@ -61,6 +65,9 @@ export const DEFAULT_WEB_AI_API_CHECK_PREFERENCES: WebAiApiCheckPreferences = {
       patterns: [],
     },
   },
+  keyCleanup: {
+    removalPatterns: [],
+  },
 }
 
 export const DEFAULT_CONTENT_FEATURE_PREFERENCES: ContentFeaturePreferences = {
@@ -79,6 +86,8 @@ export const DEFAULT_CONTENT_FEATURE_PREFERENCES: ContentFeaturePreferences = {
   webAiApiCheckContextMenuEnabled:
     DEFAULT_WEB_AI_API_CHECK_PREFERENCES.enabled &&
     DEFAULT_WEB_AI_API_CHECK_PREFERENCES.contextMenu.enabled,
+  webAiApiCheckKeyCleanupPatterns:
+    DEFAULT_WEB_AI_API_CHECK_PREFERENCES.keyCleanup.removalPatterns,
 }
 
 /**
@@ -116,5 +125,8 @@ export function resolveContentFeaturePreferences(
       webAiApiCheckEnabled &&
       (source.webAiApiCheck?.contextMenu?.enabled ??
         DEFAULT_WEB_AI_API_CHECK_PREFERENCES.contextMenu.enabled),
+    webAiApiCheckKeyCleanupPatterns:
+      source.webAiApiCheck?.keyCleanup?.removalPatterns ??
+      DEFAULT_WEB_AI_API_CHECK_PREFERENCES.keyCleanup.removalPatterns,
   }
 }

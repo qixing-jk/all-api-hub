@@ -126,6 +126,7 @@ function setupContentFeatureControllers() {
     cleanupWebAiApiCheck = setupWebAiApiCheckContent({
       enableDetection: nextPreferences.webAiApiCheckDetectionEnabled,
       enableContextMenu: nextPreferences.webAiApiCheckContextMenuEnabled,
+      apiKeyCleanupPatterns: nextPreferences.webAiApiCheckKeyCleanupPatterns,
     })
     currentPreferences = nextPreferences
   }

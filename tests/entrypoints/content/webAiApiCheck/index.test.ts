@@ -11,6 +11,7 @@ import {
   waitForApiCheckModalHostReady,
 } from "~/entrypoints/content/webAiApiCheck/events"
 import { showApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts"
+import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
@@ -47,6 +48,22 @@ vi.mock("~/services/verification/webAiApiCheck/messaging", () => ({
   },
   sendWebAiApiCheckMessage: vi.fn(),
 }))
+
+vi.mock(
+  "~/services/verification/webAiApiCheck/extractCredentials",
+  async () => {
+    const actual = await vi.importActual<
+      typeof import("~/services/verification/webAiApiCheck/extractCredentials")
+    >("~/services/verification/webAiApiCheck/extractCredentials")
+
+    return {
+      ...actual,
+      extractApiCheckCredentialsFromText: vi.fn(
+        actual.extractApiCheckCredentialsFromText,
+      ),
+    }
+  },
+)
 
 vi.mock("~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts", () => ({
   showApiCheckConfirmToast: vi.fn(),
@@ -240,6 +257,41 @@ describe("setupWebAiApiCheckContent", () => {
     )
     expect(showApiCheckConfirmToast).toHaveBeenCalledWith({
       usesEnhancedResult: true,
+    })
+
+    cleanup()
+  })
+
+  it("passes configured API key cleanup regex patterns into auto-detect extraction", async () => {
+    const apiKey = buildApiKey()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.ShouldPrompt) {
+          return {
+            success: true,
+            shouldPrompt: true,
+          }
+        }
+        return { success: false }
+      },
+    )
+    vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
+
+    const cleanup = setupWebAiApiCheckContent({
+      apiKeyCleanupPatterns: ["\\[\\[remove-me\\]\\]"],
+    })
+
+    document.dispatchEvent(
+      makeClipboardEvent("copy", buildApiCheckClipboardText({ apiKey })),
+    )
+
+    await waitFor(() => {
+      expect(extractApiCheckCredentialsFromText).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          apiKeyCleanupPatterns: ["\\[\\[remove-me\\]\\]"],
+        },
+      )
     })
 
     cleanup()
@@ -704,6 +756,7 @@ describe("setupWebAiApiCheckContent", () => {
         sourceText: "",
         pageUrl: window.location.href,
         trigger: "contextMenu",
+        apiKeyCleanupPatterns: [],
       }),
     )
 

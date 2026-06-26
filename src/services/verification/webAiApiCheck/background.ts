@@ -83,6 +83,9 @@ function getWebAiApiCheckPreferences(
         enhanced: { enabled: true },
         urlWhitelist: { patterns: [] },
       },
+      keyCleanup: {
+        removalPatterns: [],
+      },
     }
   )
 }
@@ -176,6 +179,7 @@ export async function resolveWebAiApiCheckShouldPromptMessage(
       success: true,
       shouldPrompt,
       enhancedShouldPrompt,
+      apiKeyCleanupPatterns: config.keyCleanup?.removalPatterns ?? [],
     }
   } catch (error) {
     logger.error("ApiCheck message handling failed", {

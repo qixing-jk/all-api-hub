@@ -102,6 +102,14 @@
       "enableDesc": "ブラウザのコンテキストメニューに「AI API Check」を追加します。"
     },
     "description": "手動のコンテキストメニュー起動は常に利用可能です。自動検出はオプトイン方式で、ホワイトリスト対象ページでのみ動作します。抽出した API キーは既定では保存されません。",
+    "keyCleanup": {
+      "invalidMore": "…他",
+      "invalidTitle": "無効なクリーンアップパターン",
+      "patterns": "API キーのクリーンアップパターン",
+      "patternsDesc": "コピーしたキーに不要なラベル、括弧、区切り文字が混ざる場合に使います。削除したい正規表現を 1 行に 1 つ入力してください。無効なルールは保存前に表示されます。",
+      "patternsPlaceholder": "\\[\\[削除\\]\\]\n【削除】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
+      "save": "クリーンアップパターンを保存"
+    },
     "title": "Web AI API 機能可用性テスト"
   }
 }

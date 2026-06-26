@@ -29,6 +29,7 @@ export type ApiCheckCandidateReason =
   | "schemeAdded"
   | "pathNormalized"
   | "illegalCharsRemoved"
+  | "customRegexRemoved"
   | "base64Decoded"
 
 export type ApiCheckCandidateKind = "baseUrl" | "apiKey"
@@ -61,6 +62,10 @@ type ApiCheckExtractionResult = {
   summary: ApiCheckExtractionSummary
   baseUrl: string | null
   apiKey: string | null
+}
+
+type ApiCheckExtractionOptions = {
+  apiKeyCleanupPatterns?: string[]
 }
 
 type InternalApiCheckCandidate = ApiCheckCandidate & {
@@ -384,6 +389,35 @@ function cleanKeyWindow(raw: string) {
 }
 
 /**
+ * Apply user-provided removal regexes to an API key candidate window.
+ */
+function applyCustomApiKeyCleanupPatterns(
+  raw: string,
+  patterns: string[] = [],
+) {
+  let value = raw
+  let cleanupApplied = false
+
+  for (const pattern of patterns) {
+    const normalizedPattern = pattern.trim()
+    if (!normalizedPattern) continue
+
+    try {
+      const regex = new RegExp(normalizedPattern, "gi")
+      const nextValue = value.replace(regex, "")
+      if (nextValue !== value) {
+        value = nextValue
+        cleanupApplied = true
+      }
+    } catch {
+      // Invalid saved patterns are ignored, matching settings validation.
+    }
+  }
+
+  return { value, cleanupApplied }
+}
+
+/**
  * Decode pasted base64/base64url text before key-shape classification.
  */
 function decodeBase64ApiKeyCandidate(raw: string): string | null {
@@ -597,9 +631,10 @@ function isLikelyBareDomainCandidate(raw: string): boolean {
  */
 export function extractApiCheckCredentialsFromText(
   text: string,
+  options: ApiCheckExtractionOptions = {},
 ): ApiCheckExtractionResult {
-  const input = (text ?? "").trim()
-  if (!input) {
+  const rawInput = (text ?? "").trim()
+  if (!rawInput) {
     return {
       baseUrlCandidates: [],
       apiKeyCandidates: [],
@@ -616,6 +651,12 @@ export function extractApiCheckCredentialsFromText(
       apiKey: null,
     }
   }
+
+  const cleanedApiKeyInput = applyCustomApiKeyCleanupPatterns(
+    rawInput,
+    options.apiKeyCleanupPatterns,
+  )
+  const apiKeyInput = cleanedApiKeyInput.value
 
   const baseUrlCandidates: InternalApiCheckCandidate[] = []
   const apiKeyCandidates: InternalApiCheckCandidate[] = []
@@ -643,6 +684,16 @@ export function extractApiCheckCredentialsFromText(
     reasons: ApiCheckCandidateReason[],
   ) => {
     if (!value) return
+    const cleanedByCustomPatterns = applyCustomApiKeyCleanupPatterns(
+      value,
+      options.apiKeyCleanupPatterns,
+    )
+    const candidateValue = cleanedByCustomPatterns.value
+    const candidateReasons =
+      cleanedApiKeyInput.cleanupApplied ||
+      cleanedByCustomPatterns.cleanupApplied
+        ? mergeReasons(reasons, ["customRegexRemoved"])
+        : reasons
 
     const pushClassifiedCandidate = (
       candidateValue: string,
@@ -655,50 +706,64 @@ export function extractApiCheckCredentialsFromText(
         ...classified,
         kind: "apiKey",
         reasons: mergeReasons(candidateReasons, classified.reasons),
-        cleanupApplied: cleanupApplied || classified.cleanupApplied,
+        cleanupApplied:
+          cleanedApiKeyInput.cleanupApplied ||
+          cleanupApplied ||
+          classified.cleanupApplied,
         insertionOrder,
       })
       insertionOrder += 1
       return true
     }
 
-    const decoded = decodeBase64ApiKeyCandidate(value)
+    const decoded = decodeBase64ApiKeyCandidate(candidateValue)
     const pushedDecoded = decoded
       ? pushClassifiedCandidate(
           decoded,
-          mergeReasons(reasons, ["base64Decoded"]),
+          mergeReasons(candidateReasons, ["base64Decoded"]),
           true,
         )
       : false
     if (pushedDecoded) return
 
-    const classified = classifyApiKeyCandidate(value)
+    const classified = classifyApiKeyCandidate(candidateValue)
     if (classified) {
       pushCandidate(apiKeyCandidates, {
         ...classified,
         kind: "apiKey",
-        reasons: mergeReasons(reasons, classified.reasons),
+        reasons: mergeReasons(candidateReasons, classified.reasons),
+        cleanupApplied:
+          cleanedApiKeyInput.cleanupApplied ||
+          cleanedByCustomPatterns.cleanupApplied ||
+          classified.cleanupApplied,
         insertionOrder,
       })
       insertionOrder += 1
       return
     }
-    if (value.length < 10) return
-    pushCandidate(apiKeyCandidates, {
-      value,
+    if (candidateValue.length < 10) return
+    const fallbackCandidate: InternalApiCheckCandidate = {
+      value: candidateValue,
       kind: "apiKey",
       confidence: "standard",
-      reasons,
+      reasons: candidateReasons,
       autoPromptEligible: true,
       insertionOrder,
-    })
+    }
+    if (
+      cleanedApiKeyInput.cleanupApplied ||
+      cleanedByCustomPatterns.cleanupApplied
+    ) {
+      fallbackCandidate.cleanupApplied = true
+    }
+    pushCandidate(apiKeyCandidates, fallbackCandidate)
     insertionOrder += 1
   }
 
   // 1) Keyword-guided URL extractions (highest confidence).
   const baseUrlPattern =
     /\b(?:base[_\s-]?url|baseURL|baseUrl|api[_\s-]?base|endpoint|proxy[_\s-]?url)\b\s*[:=]\s*([^\s'"]+)/gi
-  for (const match of input.matchAll(baseUrlPattern)) {
+  for (const match of rawInput.matchAll(baseUrlPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
     const normalized = normalizeApiCheckBaseUrl(raw)
     const openAiNormalized = normalizeOpenAiFamilyBaseUrl(raw)
@@ -730,7 +795,7 @@ export function extractApiCheckCredentialsFromText(
 
   // 2) Generic URL scan (fallback).
   const urlPattern = /\bhttps?:\/\/[^\s'"]+/gi
-  for (const match of input.matchAll(urlPattern)) {
+  for (const match of rawInput.matchAll(urlPattern)) {
     const raw = trimWrappingPunctuation(match[0] ?? "")
     const normalized = normalizeApiCheckBaseUrl(raw)
     const openAiNormalized = normalizeOpenAiFamilyBaseUrl(raw)
@@ -747,11 +812,11 @@ export function extractApiCheckCredentialsFromText(
   // 3) Bare domain scan, adding a scheme before normalization.
   const bareDomainPattern =
     /(^|[\s("'`[{<])([a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:\/[^\s'"]*)?)/gi
-  for (const match of input.matchAll(bareDomainPattern)) {
+  for (const match of rawInput.matchAll(bareDomainPattern)) {
     const raw = trimWrappingPunctuation(match[2] ?? "")
     const startIndex = match.index ?? 0
     const endIndex = startIndex + match[0].length
-    if (isEmailAddressLike(input, startIndex, endIndex)) continue
+    if (isEmailAddressLike(rawInput, startIndex, endIndex)) continue
     if (!isLikelyBareDomainCandidate(raw)) continue
 
     const withScheme = `https://${raw}`
@@ -779,34 +844,36 @@ export function extractApiCheckCredentialsFromText(
 
   // 4) Keyword-guided key extraction.
   const authBearerPattern = /\bAuthorization\b\s*:\s*Bearer\s+([^\s'"]+)/gi
-  for (const match of input.matchAll(authBearerPattern)) {
+  for (const match of apiKeyInput.matchAll(authBearerPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
     if (raw) pushApiKeyCandidate(raw, ["authorizationHeader", "knownPrefix"])
   }
 
   const apiKeyPattern =
     /\b(?:api[_\s-]?key|key|token|access[_\s-]?token|secret)\b\s*[:=]\s*([^\s'"]+)/gi
-  for (const match of input.matchAll(apiKeyPattern)) {
+  for (const match of apiKeyInput.matchAll(apiKeyPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
     if (raw) pushApiKeyCandidate(raw, ["labeled"])
   }
 
   const labeledSeparatedKnownKeyWindowPattern =
     /\b(?:api[_\s-]?key|key|token|access[_\s-]?token|secret)\b\s*[:=]\s*((?:(?:sk-ant|sk-or|sk|tp)-|AIza)[A-Za-z0-9_-]{6,}(?:[ \t.\u200B-\u200D]+[A-Za-z0-9_-]{6,})+)(?=$|[\r\n"'`,;)\]}])/gi
-  for (const match of input.matchAll(labeledSeparatedKnownKeyWindowPattern)) {
+  for (const match of apiKeyInput.matchAll(
+    labeledSeparatedKnownKeyWindowPattern,
+  )) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
     if (raw) pushApiKeyCandidate(raw, ["labeled"])
   }
 
   const separatedKnownKeyWindowPattern =
     /(?<![A-Za-z0-9_-])((?:(?:sk-ant|sk-or|sk|tp)-|AIza)[A-Za-z0-9_-]{6,}(?:[ \t.\u200B-\u200D]+[A-Za-z0-9_-]{6,})+)(?![A-Za-z0-9_-])/gi
-  for (const match of input.matchAll(separatedKnownKeyWindowPattern)) {
+  for (const match of apiKeyInput.matchAll(separatedKnownKeyWindowPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
     if (raw) pushApiKeyCandidate(raw, ["knownPrefix"])
   }
 
   // 5) Common provider token prefixes (lowest confidence, but useful when no labels exist).
-  for (const match of input.matchAll(KNOWN_KEY_TOKEN_PATTERN)) {
+  for (const match of apiKeyInput.matchAll(KNOWN_KEY_TOKEN_PATTERN)) {
     const raw = trimWrappingPunctuation(match[0] ?? "")
     if (raw) pushApiKeyCandidate(raw, ["knownPrefix"])
   }
@@ -815,13 +882,18 @@ export function extractApiCheckCredentialsFromText(
   // can remove accidental punctuation without merging URLs, assignments, or lines.
   const enhancedKeyWindowPattern =
     /(?<![A-Za-z0-9_-])([A-Za-z0-9_-][^\s'"=:/\\]{17,})(?![A-Za-z0-9_-])/g
-  for (const match of input.matchAll(enhancedKeyWindowPattern)) {
+  for (const match of apiKeyInput.matchAll(enhancedKeyWindowPattern)) {
     const classified = classifyApiKeyCandidate(match[1] ?? "")
     if (!classified) continue
 
     pushCandidate(apiKeyCandidates, {
       ...classified,
       kind: "apiKey",
+      reasons: cleanedApiKeyInput.cleanupApplied
+        ? mergeReasons(classified.reasons, ["customRegexRemoved"])
+        : classified.reasons,
+      cleanupApplied:
+        cleanedApiKeyInput.cleanupApplied || classified.cleanupApplied,
       insertionOrder,
     })
     insertionOrder += 1

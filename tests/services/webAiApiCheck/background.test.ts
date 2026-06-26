@@ -126,6 +126,9 @@ describe("webAiApiCheck background handlers", () => {
           enhanced: { enabled: true },
           urlWhitelist: { patterns: ["^https://example\\.com"] },
         },
+        keyCleanup: {
+          removalPatterns: [],
+        },
       },
     })
 
@@ -141,6 +144,7 @@ describe("webAiApiCheck background handlers", () => {
       success: true,
       shouldPrompt: false,
       enhancedShouldPrompt: false,
+      apiKeyCleanupPatterns: [],
     })
   })
 
@@ -161,6 +165,9 @@ describe("webAiApiCheck background handlers", () => {
           enhanced: { enabled: true },
           urlWhitelist: { patterns: ["^https://example\\.com"] },
         },
+        keyCleanup: {
+          removalPatterns: ["\\[\\[remove-me\\]\\]"],
+        },
       },
     })
 
@@ -176,6 +183,7 @@ describe("webAiApiCheck background handlers", () => {
       success: true,
       shouldPrompt: true,
       enhancedShouldPrompt: true,
+      apiKeyCleanupPatterns: ["\\[\\[remove-me\\]\\]"],
     })
   })
 
@@ -201,6 +209,7 @@ describe("webAiApiCheck background handlers", () => {
       success: true,
       shouldPrompt: false,
       enhancedShouldPrompt: false,
+      apiKeyCleanupPatterns: [],
     })
   })
 

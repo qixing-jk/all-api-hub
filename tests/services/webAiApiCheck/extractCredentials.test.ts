@@ -552,6 +552,57 @@ describe("webAiApiCheck extractCredentials", () => {
     )
   })
 
+  it("applies custom API key cleanup patterns before classifying candidates", () => {
+    const apiKey = buildKnownKey("testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    const result = extractApiCheckCredentialsFromText(
+      `
+        endpoint=https://proxy.example.com/v1
+        API Key: ${OPENAI_KEY_PREFIX}testAa1Bb2Cc3Dd4[[remove-me]]Ee5Ff6Gg7Hh8Ii9Jj0Kk1
+      `,
+      {
+        apiKeyCleanupPatterns: ["\\[\\[remove-me\\]\\]"],
+      },
+    )
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.summary.hasCleanup).toBe(true)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: apiKey,
+        cleanupApplied: true,
+        reasons: expect.arrayContaining([
+          "labeled",
+          "knownPrefix",
+          "customRegexRemoved",
+        ]),
+      }),
+    )
+  })
+
+  it("applies custom cleanup before unsupported marker characters are stripped", () => {
+    const apiKey = "test-key-FixtureAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1Ll2Mm3Nn"
+    const result = extractApiCheckCredentialsFromText(
+      "test-key-FixtureAa1Bb2Cc3Dd4Ee5Ff6Gg[deleteme7Hh8Ii9Jj0Kk1Ll2Mm3Nn",
+      {
+        apiKeyCleanupPatterns: ["\\[deleteme"],
+      },
+    )
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.summary.hasCleanup).toBe(true)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: apiKey,
+        cleanupApplied: true,
+        reasons: expect.arrayContaining([
+          "customRegexRemoved",
+          "unknownShortPrefix",
+          "multiSegment",
+        ]),
+      }),
+    )
+  })
+
   it("decodes labeled unpadded base64-obfuscated API keys", () => {
     const apiKey = buildKnownKey("base64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A")
     const encodedApiKey = btoa(apiKey).replace(/=+$/, "")

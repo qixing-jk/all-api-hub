@@ -1100,6 +1100,7 @@ export type ProductAnalyticsEventPayloadMap = {
     auto_detect_enabled?: boolean
     auto_detect_enhanced_enabled?: boolean
     auto_detect_url_patterns_configured?: boolean
+    api_key_cleanup_patterns_configured?: boolean
     popup_enabled?: boolean
     sidepanel_enabled?: boolean
     options_enabled?: boolean

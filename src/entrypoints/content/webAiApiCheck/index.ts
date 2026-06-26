@@ -42,15 +42,17 @@ const SCAN_DEDUP_INTERVAL_MS = 1000
 export function setupWebAiApiCheckContent(options?: {
   enableDetection?: boolean
   enableContextMenu?: boolean
+  apiKeyCleanupPatterns?: string[]
 }) {
   const cleanups: Array<() => void> = []
+  const apiKeyCleanupPatterns = options?.apiKeyCleanupPatterns ?? []
 
   if (options?.enableDetection ?? true) {
-    cleanups.push(setupWebAiApiCheckDetection())
+    cleanups.push(setupWebAiApiCheckDetection({ apiKeyCleanupPatterns }))
   }
 
   if (options?.enableContextMenu ?? true) {
-    cleanups.push(registerContextMenuTriggerListener())
+    cleanups.push(registerContextMenuTriggerListener({ apiKeyCleanupPatterns }))
   }
 
   return () => {
@@ -64,7 +66,9 @@ export function setupWebAiApiCheckContent(options?: {
  * Listens for right-click context menu triggers from the background page.
  * This entry point always opens the modal even if extraction yields no credentials.
  */
-function registerContextMenuTriggerListener() {
+function registerContextMenuTriggerListener(options: {
+  apiKeyCleanupPatterns: string[]
+}) {
   const listener = (request: any) => {
     if (request?.action !== RuntimeActionIds.ApiCheckContextMenuTrigger) return
 
@@ -75,6 +79,7 @@ function registerContextMenuTriggerListener() {
       sourceText,
       pageUrl,
       trigger: "contextMenu",
+      apiKeyCleanupPatterns: options.apiKeyCleanupPatterns,
     })
   }
 
@@ -92,7 +97,9 @@ function registerContextMenuTriggerListener() {
  * Wires DOM events (click/copy/cut) to scan for API credentials, with throttling.
  * Skips interactions originating from the extension content-script UI itself.
  */
-function setupWebAiApiCheckDetection() {
+function setupWebAiApiCheckDetection(config: {
+  apiKeyCleanupPatterns: string[]
+}) {
   const CLICK_SCAN_INTERVAL_MS = 2000
   let lastClickScan = 0
 
@@ -124,7 +131,11 @@ function setupWebAiApiCheckDetection() {
 
   const requestShouldPrompt = async (
     pageUrl: string,
-  ): Promise<{ shouldPrompt: boolean; enhancedShouldPrompt: boolean }> => {
+  ): Promise<{
+    shouldPrompt: boolean
+    enhancedShouldPrompt: boolean
+    apiKeyCleanupPatterns: string[]
+  }> => {
     try {
       const response = await sendWebAiApiCheckMessage(
         WebAiApiCheckMessageTypes.ShouldPrompt,
@@ -134,10 +145,18 @@ function setupWebAiApiCheckDetection() {
         shouldPrompt: !!response?.success && !!response?.shouldPrompt,
         enhancedShouldPrompt:
           !!response?.success && !!response?.enhancedShouldPrompt,
+        apiKeyCleanupPatterns:
+          response?.success && response.apiKeyCleanupPatterns
+            ? response.apiKeyCleanupPatterns
+            : config.apiKeyCleanupPatterns,
       }
     } catch (error) {
       logger.warn("Failed to read ApiCheck shouldPrompt state", error)
-      return { shouldPrompt: false, enhancedShouldPrompt: false }
+      return {
+        shouldPrompt: false,
+        enhancedShouldPrompt: false,
+        apiKeyCleanupPatterns: config.apiKeyCleanupPatterns,
+      }
     }
   }
 
@@ -147,6 +166,7 @@ function setupWebAiApiCheckDetection() {
       pageUrl?: string
       shouldPrompt?: boolean
       enhancedShouldPrompt?: boolean
+      apiKeyCleanupPatterns?: string[]
     },
   ) => {
     const text = (sourceText ?? "").trim()
@@ -159,7 +179,12 @@ function setupWebAiApiCheckDetection() {
     if (toastInFlight) return
     if (now - lastPromptAt < AUTO_DETECT_COOLDOWN_MS) return
 
-    const extracted = extractApiCheckCredentialsFromText(text)
+    const apiKeyCleanupPatterns =
+      options?.apiKeyCleanupPatterns ?? config.apiKeyCleanupPatterns
+
+    const extracted = extractApiCheckCredentialsFromText(text, {
+      apiKeyCleanupPatterns,
+    })
     if (!extracted.baseUrl || !extracted.apiKey) return
     if (
       extracted.summary.usesEnhancedResult &&
@@ -176,6 +201,7 @@ function setupWebAiApiCheckDetection() {
           ? {
               shouldPrompt: options.shouldPrompt,
               enhancedShouldPrompt: !!options.enhancedShouldPrompt,
+              apiKeyCleanupPatterns,
             }
           : await requestShouldPrompt(pageUrl)
 
@@ -199,6 +225,7 @@ function setupWebAiApiCheckDetection() {
         sourceText: text,
         pageUrl,
         trigger: "autoDetect",
+        apiKeyCleanupPatterns,
         extraction: {
           candidates: extracted.candidates,
           summary: extracted.summary,
@@ -217,6 +244,7 @@ function setupWebAiApiCheckDetection() {
       pageUrl?: string
       shouldPrompt?: boolean
       enhancedShouldPrompt?: boolean
+      apiKeyCleanupPatterns?: string[]
     },
   ) => {
     const text = (sourceText ?? "").trim()
@@ -339,6 +367,7 @@ async function openModal(params: {
   sourceText: string
   pageUrl: string
   trigger: "contextMenu" | "autoDetect"
+  apiKeyCleanupPatterns?: string[]
   extraction?: ApiCheckOpenModalDetail["extraction"]
 }) {
   await ensureRedemptionToastUi()

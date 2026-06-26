@@ -175,6 +175,16 @@ export interface WebAiApiCheckUrlWhitelistPreferences {
   patterns: string[]
 }
 
+export interface WebAiApiCheckKeyCleanupPreferences {
+  /**
+   * User-provided removal patterns, one RegExp pattern per entry.
+   *
+   * Matching text is removed from API key candidates before key-shape
+   * classification. Patterns are evaluated using JavaScript RegExp syntax.
+   */
+  removalPatterns: string[]
+}
+
 export interface WebAiApiCheckEnhancedAutoDetectPreferences {
   /**
    * When enabled, automatic detection may prompt for enhanced extraction
@@ -202,6 +212,7 @@ export interface WebAiApiCheckPreferences {
   enabled: boolean
   contextMenu: ContextMenuVisibilityPreferences
   autoDetect: WebAiApiCheckAutoDetectPreferences
+  keyCleanup: WebAiApiCheckKeyCleanupPreferences
 }
 
 // 用户偏好设置类型定义

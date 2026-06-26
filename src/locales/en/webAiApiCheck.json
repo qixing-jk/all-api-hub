@@ -102,6 +102,14 @@
       "enableDesc": "Adds an “AI API Check” item to the browser context menu."
     },
     "description": "Manual context-menu trigger is always available. Auto-detect is opt-in and only runs on whitelisted pages. Extracted API keys are not saved by default.",
+    "keyCleanup": {
+      "invalidMore": "…and more",
+      "invalidTitle": "Invalid cleanup patterns",
+      "patterns": "API key cleanup patterns",
+      "patternsDesc": "Use this when copied keys include extra labels, brackets, or separators. Add one regular expression per line; invalid rules are shown before saving.",
+      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
+      "save": "Save cleanup patterns"
+    },
     "title": "Web AI API Functionality Availability Test"
   }
 }

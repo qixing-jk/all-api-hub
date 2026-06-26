@@ -152,6 +152,9 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
           patterns: ["^https://stored\\.example\\.com"],
         },
       },
+      keyCleanup: {
+        removalPatterns: ["\\[\\[remove-me\\]\\]"],
+      },
     },
   },
   updateWebAiApiCheck: mockUpdateWebAiApiCheck,
@@ -198,6 +201,11 @@ describe("WebAiApiCheckSettings", () => {
       "webAiApiCheck:settings.autoDetect.whitelist.patternsPlaceholder",
     )
     expect(textarea).toHaveValue("")
+    expect(
+      screen.getByLabelText(
+        "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
+      ),
+    ).toHaveValue("")
 
     fireEvent.change(textarea, {
       target: {
@@ -289,6 +297,55 @@ describe("WebAiApiCheckSettings", () => {
     })
   })
 
+  it("trims and saves custom API key cleanup removal regex patterns", async () => {
+    render(<WebAiApiCheckSettings />)
+
+    const textarea = screen.getByLabelText(
+      "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
+    )
+    expect(textarea).toHaveValue("\\[\\[remove-me\\]\\]")
+
+    fireEvent.change(textarea, {
+      target: {
+        value: " \\[\\[ad\\]\\] \n\n<remove-this>",
+      },
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:settings.keyCleanup.save",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpdateWebAiApiCheck).toHaveBeenCalledWith({
+        keyCleanup: {
+          removalPatterns: ["\\[\\[ad\\]\\]", "<remove-this>"],
+        },
+      })
+    })
+  })
+
+  it("shows invalid custom API key cleanup regex warnings", () => {
+    render(<WebAiApiCheckSettings />)
+
+    fireEvent.change(
+      screen.getByLabelText(
+        "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
+      ),
+      {
+        target: {
+          value: "broken-[",
+        },
+      },
+    )
+
+    expect(
+      screen.getByText("webAiApiCheck:settings.keyCleanup.invalidTitle"),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText("broken-[")).toHaveLength(2)
+  })
+
   it("disables enhanced auto-detect control when auto-detect is disabled", () => {
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({
@@ -333,6 +390,11 @@ describe("WebAiApiCheckSettings", () => {
       expect(switches[1]).toBeDisabled()
       expect(switches[2]).toBeDisabled()
       expect(textarea).toBeDisabled()
+      expect(
+        screen.getByLabelText(
+          "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
+        ),
+      ).toBeDisabled()
       expect(saveButton).toBeDisabled()
     })
 
@@ -415,6 +477,9 @@ describe("WebAiApiCheckSettings", () => {
               ],
             },
           },
+          keyCleanup: {
+            removalPatterns: ["server-cleanup"],
+          },
         },
       },
     })
@@ -426,5 +491,10 @@ describe("WebAiApiCheckSettings", () => {
         "^https://server\\.example\\.com\n^https://next\\.example\\.com",
       )
     })
+    expect(
+      screen.getByLabelText(
+        "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
+      ),
+    ).toHaveValue("server-cleanup")
   })
 })

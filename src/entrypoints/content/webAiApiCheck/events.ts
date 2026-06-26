@@ -31,6 +31,7 @@ export type ApiCheckOpenModalDetail = {
   sourceText: string
   pageUrl: string
   trigger: "contextMenu" | "autoDetect"
+  apiKeyCleanupPatterns?: string[]
   extraction?: {
     candidates: {
       baseUrls: ApiCheckCandidate[]

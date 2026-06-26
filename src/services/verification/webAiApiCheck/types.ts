@@ -24,6 +24,7 @@ export type ApiCheckShouldPromptResponse =
       success: true
       shouldPrompt: boolean
       enhancedShouldPrompt?: boolean
+      apiKeyCleanupPatterns?: string[]
     }
   | {
       success: false
