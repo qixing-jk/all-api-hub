@@ -79,6 +79,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
 
   const fetchTokens = useCallback(async () => {
     if (!account) return false
+    if (!canCreateToken) return false
 
     setIsLoading(true)
     setError(null)
@@ -112,7 +113,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     } finally {
       setIsLoading(false)
     }
-  }, [account, t])
+  }, [account, canCreateToken, t])
 
   const modelContext = useMemo(
     () => ({ id: modelId, enableGroups: modelEnableGroups }),

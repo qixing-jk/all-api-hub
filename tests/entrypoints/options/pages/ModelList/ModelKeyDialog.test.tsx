@@ -882,7 +882,7 @@ describe("ModelKeyDialog", () => {
     expect(
       await screen.findByText("modelList:keyDialog.ineligible.missingAuth"),
     ).toBeInTheDocument()
-    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+    expect(fetchAccountTokensMock).not.toHaveBeenCalled()
   })
 
   it("explains missing credentials when token management credentials are incomplete", async () => {
@@ -903,7 +903,7 @@ describe("ModelKeyDialog", () => {
         "modelList:keyDialog.ineligible.missingCredentials",
       ),
     ).toBeInTheDocument()
-    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+    expect(fetchAccountTokensMock).not.toHaveBeenCalled()
   })
 
   it("uses the unknown fallback when token inventory payload is invalid", async () => {
