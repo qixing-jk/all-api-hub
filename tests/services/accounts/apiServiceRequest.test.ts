@@ -4,13 +4,21 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import {
   canManageDisplayAccountTokens,
+  createAccountApiRequestFromStoredAccount,
   createDisplayAccountApiContext,
+  createDisplayAccountRequestContext,
   fetchDisplayAccountTokens,
   InvalidTokenPayloadError,
   resolveDisplayAccountTokenForSecret,
+  resolveStoredAccountApiContext,
+  StoredAccountApiContextError,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
+
+const { mockGetAccountById } = vi.hoisted(() => ({
+  mockGetAccountById: vi.fn(),
+}))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteAdapter: vi.fn(),
@@ -20,6 +28,12 @@ vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
   accountSub2ApiAuthSession: {
     getLatestAuth: vi.fn(),
     persistAuthUpdate: vi.fn(),
+  },
+}))
+
+vi.mock("~/services/accounts/accountStorage", () => ({
+  accountStorage: {
+    getAccountById: mockGetAccountById,
   },
 }))
 
@@ -43,6 +57,21 @@ const REQUEST = {
     cookie: "",
   },
 }
+
+const buildStoredAccount = (overrides: Record<string, unknown> = {}) => ({
+  id: "account-1",
+  site_name: "Example",
+  site_url: "https://example.com",
+  site_type: "new-api",
+  authType: AuthTypeEnum.AccessToken,
+  account_info: {
+    id: "1",
+    username: "Ada",
+    access_token: "token",
+  },
+  cookieAuth: undefined,
+  ...overrides,
+})
 
 describe("fetchDisplayAccountTokens", () => {
   let fetchTokens: ReturnType<typeof vi.fn>
@@ -104,6 +133,7 @@ describe("fetchDisplayAccountTokens", () => {
 
     vi.mocked(getSiteAdapter).mockReset()
     vi.mocked(getSiteAdapter).mockReturnValue(adapter as any)
+    mockGetAccountById.mockReset()
   })
 
   it("returns the token array when the API payload is valid", async () => {
@@ -113,12 +143,14 @@ describe("fetchDisplayAccountTokens", () => {
 
     expect(result).toEqual([{ id: 1, key: "sk-test", status: 1 }])
     expect(fetchTokens).toHaveBeenCalledWith(expect.objectContaining(REQUEST))
-    expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual({
-      adapter,
-      keyManagement,
-      tokenProvisioning,
-      request: expect.objectContaining(REQUEST),
-    })
+    expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual(
+      expect.objectContaining({
+        adapter,
+        keyManagement,
+        tokenProvisioning,
+        request: expect.objectContaining(REQUEST),
+      }),
+    )
     expect(createDisplayAccountApiContext(ACCOUNT as any)).not.toHaveProperty(
       "service",
     )
@@ -129,6 +161,252 @@ describe("fetchDisplayAccountTokens", () => {
         }),
       }),
     )
+  })
+
+  it("builds a request-only context from a display account snapshot", () => {
+    expect(createDisplayAccountRequestContext(ACCOUNT as any)).toEqual({
+      accountId: "account-1",
+      siteType: "new-api",
+      request: expect.objectContaining(REQUEST),
+    })
+    expect(
+      createDisplayAccountRequestContext(ACCOUNT as any),
+    ).not.toHaveProperty("adapter")
+    expect(
+      createDisplayAccountRequestContext(ACCOUNT as any).request,
+    ).not.toHaveProperty("cookieAuthSessionCookie")
+  })
+
+  it("keeps cookie-auth sessions in request auth for display snapshots", () => {
+    const context = createDisplayAccountRequestContext({
+      ...ACCOUNT,
+      authType: AuthTypeEnum.Cookie,
+      token: "",
+      cookieAuthSessionCookie: "session=abc",
+    } as any)
+
+    expect(context.request).toEqual(
+      expect.objectContaining({
+        accountId: "account-1",
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.Cookie,
+          cookie: "session=abc",
+        }),
+      }),
+    )
+  })
+
+  it("rejects display account snapshots without a stable id", () => {
+    expect(() =>
+      createDisplayAccountRequestContext({
+        ...ACCOUNT,
+        id: "   ",
+      } as any),
+    ).toThrow("account_api_context_missing_account_id")
+  })
+
+  it("resolves stored account context from the latest persisted account", async () => {
+    mockGetAccountById.mockResolvedValueOnce(
+      buildStoredAccount({
+        account_info: {
+          id: "stored-user",
+          username: "Latest",
+          access_token: "stored-token",
+        },
+      }),
+    )
+
+    await expect(resolveStoredAccountApiContext("account-1")).resolves.toEqual({
+      accountId: "account-1",
+      siteType: "new-api",
+      request: expect.objectContaining({
+        baseUrl: "https://example.com",
+        accountId: "account-1",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "stored-user",
+          accessToken: "stored-token",
+          cookie: undefined,
+        },
+      }),
+    })
+    expect(mockGetAccountById).toHaveBeenCalledWith("account-1")
+  })
+
+  it("preserves stored cookie-auth session in request auth", async () => {
+    mockGetAccountById.mockResolvedValueOnce(
+      buildStoredAccount({
+        authType: AuthTypeEnum.Cookie,
+        account_info: {
+          id: "stored-user",
+          username: "Latest",
+          access_token: "",
+        },
+        cookieAuth: {
+          sessionCookie: "session=stored",
+        },
+      }),
+    )
+
+    const context = await resolveStoredAccountApiContext("account-1")
+
+    expect(context.request).toEqual(
+      expect.objectContaining({
+        accountId: "account-1",
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.Cookie,
+          userId: "stored-user",
+          accessToken: "",
+          cookie: "session=stored",
+        }),
+      }),
+    )
+    expect(context.request).not.toHaveProperty("cookieAuthSessionCookie")
+  })
+
+  it("decorates stored Sub2API contexts with the account auth session port", async () => {
+    mockGetAccountById.mockResolvedValueOnce(
+      buildStoredAccount({
+        site_type: SITE_TYPES.SUB2API,
+      }),
+    )
+
+    const context = await resolveStoredAccountApiContext("account-1")
+
+    expect(context.siteType).toBe(SITE_TYPES.SUB2API)
+    expect(context.request).toEqual(
+      expect.objectContaining({
+        sub2apiAuthSession: accountSub2ApiAuthSession,
+      }),
+    )
+  })
+
+  it("throws a stable error when the stored account id is blank", async () => {
+    await expect(resolveStoredAccountApiContext("   ")).rejects.toMatchObject({
+      name: "StoredAccountApiContextError",
+      code: "MISSING_ACCOUNT_ID",
+      message: "account_api_context_missing_account_id",
+    })
+    expect(mockGetAccountById).not.toHaveBeenCalled()
+  })
+
+  it("throws a stable error when the stored account no longer exists", async () => {
+    mockGetAccountById.mockResolvedValueOnce(null)
+
+    await expect(
+      resolveStoredAccountApiContext("missing"),
+    ).rejects.toMatchObject({
+      name: "StoredAccountApiContextError",
+      code: "ACCOUNT_NOT_FOUND",
+      message: "account_api_context_account_not_found",
+    })
+  })
+
+  it("throws a stable error when a stored account has a blank id", () => {
+    expect(() =>
+      createAccountApiRequestFromStoredAccount(
+        buildStoredAccount({
+          id: "   ",
+        }) as any,
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        name: "StoredAccountApiContextError",
+        code: "MISSING_ACCOUNT_ID",
+        message: "account_api_context_missing_account_id",
+      }),
+    )
+  })
+
+  it("throws a stable error when a stored account has a blank base URL", () => {
+    expect(() =>
+      createAccountApiRequestFromStoredAccount(
+        buildStoredAccount({
+          site_url: "   ",
+        }) as any,
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        name: "StoredAccountApiContextError",
+        code: "MISSING_BASE_URL",
+        message: "account_api_context_missing_base_url",
+      }),
+    )
+  })
+
+  it("throws a stable error when a stored account has a blank user id", () => {
+    expect(() =>
+      createAccountApiRequestFromStoredAccount(
+        buildStoredAccount({
+          account_info: {
+            id: "   ",
+            username: "Ada",
+            access_token: "token",
+          },
+        }) as any,
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        name: "StoredAccountApiContextError",
+        code: "MISSING_USER_ID",
+        message: "account_api_context_missing_user_id",
+      }),
+    )
+  })
+
+  it("throws a stable error when an access-token stored account has a blank credential", () => {
+    expect(() =>
+      createAccountApiRequestFromStoredAccount(
+        buildStoredAccount({
+          account_info: {
+            id: "1",
+            username: "Ada",
+            access_token: "   ",
+          },
+        }) as any,
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        name: "StoredAccountApiContextError",
+        code: "MISSING_CREDENTIAL",
+        message: "account_api_context_missing_credential",
+      }),
+    )
+  })
+
+  it("throws a stable error when a cookie stored account has no credential", () => {
+    expect(() =>
+      createAccountApiRequestFromStoredAccount(
+        buildStoredAccount({
+          authType: AuthTypeEnum.Cookie,
+          account_info: {
+            id: "1",
+            username: "Ada",
+            access_token: "   ",
+          },
+          cookieAuth: undefined,
+        }) as any,
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        name: "StoredAccountApiContextError",
+        code: "MISSING_CREDENTIAL",
+        message: "account_api_context_missing_credential",
+      }),
+    )
+  })
+
+  it("exposes StoredAccountApiContextError for caller recovery checks", () => {
+    expect(
+      new StoredAccountApiContextError(
+        "MISSING_CREDENTIAL",
+        "account_api_context_missing_credential",
+      ),
+    ).toMatchObject({
+      name: "StoredAccountApiContextError",
+      code: "MISSING_CREDENTIAL",
+      message: "account_api_context_missing_credential",
+    })
   })
 
   it("keeps non-Sub2API account-scoped requests transport-only", async () => {

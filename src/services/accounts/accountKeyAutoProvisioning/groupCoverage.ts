@@ -5,6 +5,7 @@ import {
   resolveDefaultTokenLifecycleDecisionFromCapabilities,
 } from "~/services/accounts/defaultTokenLifecycle"
 import {
+  createAccountApiRequestFromStoredAccount,
   requireDisplayAccountKeyManagement,
   requireDisplayAccountTokenProvisioning,
 } from "~/services/accounts/utils/apiServiceRequest"
@@ -16,7 +17,6 @@ import {
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
@@ -98,32 +98,6 @@ function buildTokenUpdateRequest(
 }
 
 /**
- * Builds the normalized API-service request for account key audit calls.
- *
- * This helper accepts the stored account too so repair fallback paths can still
- * build a request when display data is missing URL/id fields.
- */
-function createAccountApiRequest(
-  account: SiteAccount,
-  displaySiteData: DisplaySiteData,
-  abortSignal?: AbortSignal,
-): ApiServiceRequest {
-  const accountId = displaySiteData.id || account.id
-
-  return {
-    baseUrl: displaySiteData.baseUrl || account.site_url,
-    accountId,
-    abortSignal,
-    auth: {
-      authType: displaySiteData.authType,
-      userId: displaySiteData.userId,
-      accessToken: displaySiteData.token,
-      cookie: displaySiteData.cookieAuthSessionCookie,
-    },
-  }
-}
-
-/**
  * Ensures one account has API keys for every currently available user group.
  */
 export async function ensureAccountKeysForAvailableGroups(params: {
@@ -145,7 +119,10 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     displaySiteData,
     adapter.tokenProvisioning,
   )
-  const request = createAccountApiRequest(account, displaySiteData, abortSignal)
+  const accountContext = createAccountApiRequestFromStoredAccount(account)
+  const request = abortSignal
+    ? { ...accountContext.request, abortSignal }
+    : accountContext.request
   const accountId = displaySiteData.id || account.id
 
   const tokens = await keyManagement.fetchTokens(request)
@@ -328,7 +305,7 @@ export async function deleteInvalidAccountToken(params: {
     displaySiteData,
     getSiteAdapter(displaySiteData.siteType).keyManagement,
   )
-  const request = createAccountApiRequest(account, displaySiteData)
+  const { request } = createAccountApiRequestFromStoredAccount(account)
   await keyManagement.deleteToken({
     request,
     tokenId: token.tokenId,

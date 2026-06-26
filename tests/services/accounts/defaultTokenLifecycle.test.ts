@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   createDefaultTokenFromDecision,
-  createStoredAccountTokenRequest,
   DEFAULT_TOKEN_INVENTORY_STATE_KINDS,
   DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
   DEFAULT_TOKEN_LIFECYCLE_ERRORS,
@@ -14,6 +13,7 @@ import {
   resolveDefaultTokenLifecycleDecision,
   selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/defaultTokenLifecycle"
+import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
 import {
@@ -564,7 +564,9 @@ describe("ensureDefaultTokenLifecycle", () => {
 
     expect(resolveDefaultTokenCreationMock).toHaveBeenCalledTimes(1)
     expect(createTokenMock).toHaveBeenCalledWith(
-      createStoredAccountTokenRequest(buildStoredAccount(displayAccount)),
+      createAccountApiRequestFromStoredAccount(
+        buildStoredAccount(displayAccount),
+      ).request,
       generateDefaultTokenRequest(),
     )
   })

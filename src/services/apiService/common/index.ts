@@ -891,6 +891,9 @@ export async function fetchTodayUsage(
  * @param queryConfig Optional override for non-standard log pagination APIs.
  * @returns Total income amount for today.
  */
+// Temporary exception during account API context migration:
+// this helper still owns exchange-rate lookup until account-data refresh
+// orchestration moves that policy into src/services/accounts/**.
 export async function fetchTodayIncome(
   request: ApiServiceAccountRequest,
   queryConfig?: TodayLogQueryConfig,

@@ -1,4 +1,4 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { resolveLegacyAccountAwareRequest } from "~/services/accounts/utils/legacyAccountAwareRequest"
 import type {
   ApiResponse,
   FetchApiOptions,
@@ -12,44 +12,8 @@ import {
   fetchApiData as transportFetchApiData,
 } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { AuthTypeEnum } from "~/types"
-import { createLogger } from "~/utils/core/logger"
 
 export { extractDataFromApiResponseBody, isHttpUrl }
-
-const logger = createLogger("ApiServiceCommonUtils")
-
-const resolveAccountAwareRequest = async (
-  request: ApiServiceRequest,
-  endpoint: string,
-): Promise<ApiServiceRequest> => {
-  if (request.accountId) return request
-
-  const userId = request.auth?.userId
-
-  logger.warn("fetchApi called without accountId in request", {
-    baseUrl: request.baseUrl,
-    userId,
-    endpoint,
-    authType: request.auth?.authType ?? AuthTypeEnum.None,
-    hasAccessToken: Boolean(request.auth?.accessToken),
-    hasCookie: Boolean(request.auth?.cookie),
-  })
-
-  const accountInfo = await accountStorage.getAccountByBaseUrlAndUserId(
-    request.baseUrl,
-    userId,
-  )
-
-  if (!accountInfo) return request
-
-  return {
-    ...request,
-    accountId: accountInfo.id,
-    cookieAuthSessionCookie:
-      request.cookieAuthSessionCookie ?? accountInfo.cookieAuth?.sessionCookie,
-  }
-}
 
 /**
  * Fetch account-site API data after applying account-aware fallback metadata.
@@ -62,7 +26,9 @@ export async function fetchApiData<T>(
   options: FetchApiOptions,
 ): Promise<T> {
   return await transportFetchApiData(
-    await resolveAccountAwareRequest(request, options.endpoint),
+    await resolveLegacyAccountAwareRequest(request, {
+      endpoint: options.endpoint,
+    }),
     options,
   )
 }
@@ -90,7 +56,9 @@ export async function fetchApi<T>(
   _normalResponseType?: boolean,
 ): Promise<T | ApiResponse<T>> {
   return await transportFetchApi(
-    await resolveAccountAwareRequest(request, options.endpoint),
+    await resolveLegacyAccountAwareRequest(request, {
+      endpoint: options.endpoint,
+    }),
     options,
     _normalResponseType as true,
   )

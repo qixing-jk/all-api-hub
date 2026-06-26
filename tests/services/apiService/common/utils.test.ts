@@ -4,17 +4,19 @@ import type { LogItem } from "~/services/apiService/common/type"
 import {
   aggregateUsageData,
   extractAmount,
+  fetchApi,
   fetchApiData,
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
 
-const { mockFetchApiData } = vi.hoisted(() => ({
+const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({
+  mockFetchApi: vi.fn(),
   mockFetchApiData: vi.fn(),
 }))
 
-const { mockGetAccountByBaseUrlAndUserId } = vi.hoisted(() => ({
-  mockGetAccountByBaseUrlAndUserId: vi.fn(),
+const { mockResolveLegacyAccountAwareRequest } = vi.hoisted(() => ({
+  mockResolveLegacyAccountAwareRequest: vi.fn(),
 }))
 
 vi.mock("~/services/apiTransport/request", async (importOriginal) => {
@@ -22,90 +24,26 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => {
     await importOriginal<typeof import("~/services/apiTransport/request")>()
   return {
     ...actual,
+    fetchApi: mockFetchApi,
     fetchApiData: mockFetchApiData,
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAccountByBaseUrlAndUserId: mockGetAccountByBaseUrlAndUserId,
-  },
+vi.mock("~/services/accounts/utils/legacyAccountAwareRequest", () => ({
+  resolveLegacyAccountAwareRequest: mockResolveLegacyAccountAwareRequest,
 }))
 
 describe("API Service Common Utils", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockResolveLegacyAccountAwareRequest.mockReset()
+    mockResolveLegacyAccountAwareRequest.mockImplementation(
+      async (request) => request,
+    )
   })
 
   describe("fetchApiData", () => {
-    it("enriches account metadata before delegating to transport when accountId is absent", async () => {
-      mockGetAccountByBaseUrlAndUserId.mockResolvedValueOnce({
-        id: "account-1",
-        cookieAuth: {
-          sessionCookie: "session=stored",
-        },
-      })
-      mockFetchApiData.mockResolvedValueOnce({ ok: true })
-
-      await expect(
-        fetchApiData(
-          {
-            baseUrl: "https://example.com",
-            auth: {
-              authType: AuthTypeEnum.Cookie,
-              userId: "123",
-            },
-          },
-          { endpoint: "/api/test" },
-        ),
-      ).resolves.toEqual({ ok: true })
-
-      expect(mockGetAccountByBaseUrlAndUserId).toHaveBeenCalledWith(
-        "https://example.com",
-        "123",
-      )
-      expect(mockFetchApiData).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accountId: "account-1",
-          cookieAuthSessionCookie: "session=stored",
-        }),
-        { endpoint: "/api/test" },
-      )
-    })
-
-    it("preserves a caller-provided session cookie when enriching account metadata", async () => {
-      mockGetAccountByBaseUrlAndUserId.mockResolvedValueOnce({
-        id: "account-1",
-        cookieAuth: {
-          sessionCookie: "session=stored",
-        },
-      })
-      mockFetchApiData.mockResolvedValueOnce({ ok: true })
-
-      await expect(
-        fetchApiData(
-          {
-            baseUrl: "https://example.com",
-            cookieAuthSessionCookie: "session=fresh",
-            auth: {
-              authType: AuthTypeEnum.Cookie,
-              userId: "123",
-            },
-          },
-          { endpoint: "/api/test" },
-        ),
-      ).resolves.toEqual({ ok: true })
-
-      expect(mockFetchApiData).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accountId: "account-1",
-          cookieAuthSessionCookie: "session=fresh",
-        }),
-        { endpoint: "/api/test" },
-      )
-    })
-
-    it("delegates the original request unchanged when account lookup misses", async () => {
+    it("delegates account-aware compatibility resolution before transport", async () => {
       const request = {
         baseUrl: "https://example.com",
         auth: {
@@ -113,44 +51,84 @@ describe("API Service Common Utils", () => {
           userId: "123",
         },
       }
+      const enrichedRequest = {
+        ...request,
+        accountId: "account-1",
+        cookieAuthSessionCookie: "session=stored",
+      }
+      mockResolveLegacyAccountAwareRequest.mockResolvedValueOnce(
+        enrichedRequest,
+      )
+      mockFetchApiData.mockResolvedValueOnce({ ok: true })
+
+      await expect(
+        fetchApiData(request, { endpoint: "/api/test" }),
+      ).resolves.toEqual({ ok: true })
+
+      expect(mockResolveLegacyAccountAwareRequest).toHaveBeenCalledWith(
+        request,
+        { endpoint: "/api/test" },
+      )
+      expect(mockFetchApiData).toHaveBeenCalledWith(enrichedRequest, {
+        endpoint: "/api/test",
+      })
+    })
+
+    it("passes through the original request when compatibility resolution is a no-op", async () => {
+      const request = {
+        baseUrl: "https://example.com",
+        accountId: "account-1",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: "123",
+        },
+      }
       const options = { endpoint: "/api/test" }
-      mockGetAccountByBaseUrlAndUserId.mockResolvedValueOnce(undefined)
       mockFetchApiData.mockResolvedValueOnce({ ok: true })
 
       await expect(fetchApiData(request, options)).resolves.toEqual({
         ok: true,
       })
 
-      expect(mockGetAccountByBaseUrlAndUserId).toHaveBeenCalledWith(
-        "https://example.com",
-        "123",
+      expect(mockResolveLegacyAccountAwareRequest).toHaveBeenCalledWith(
+        request,
+        options,
       )
       expect(mockFetchApiData).toHaveBeenCalledWith(request, options)
     })
+  })
 
-    it("does not look up account metadata when accountId is already present", async () => {
-      mockFetchApiData.mockResolvedValueOnce({ ok: true })
+  describe("fetchApi", () => {
+    it("delegates account-aware compatibility resolution before transport", async () => {
+      const request = {
+        baseUrl: "https://example.com",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: "123",
+        },
+      }
+      const enrichedRequest = {
+        ...request,
+        accountId: "account-1",
+        cookieAuthSessionCookie: "session=stored",
+      }
+      mockResolveLegacyAccountAwareRequest.mockResolvedValueOnce(
+        enrichedRequest,
+      )
+      mockFetchApi.mockResolvedValueOnce({ ok: true })
 
       await expect(
-        fetchApiData(
-          {
-            baseUrl: "https://example.com",
-            accountId: "account-1",
-            auth: {
-              authType: AuthTypeEnum.Cookie,
-              userId: "123",
-            },
-          },
-          { endpoint: "/api/test" },
-        ),
+        fetchApi(request, { endpoint: "/api/test" }, true),
       ).resolves.toEqual({ ok: true })
 
-      expect(mockGetAccountByBaseUrlAndUserId).not.toHaveBeenCalled()
-      expect(mockFetchApiData).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accountId: "account-1",
-        }),
+      expect(mockResolveLegacyAccountAwareRequest).toHaveBeenCalledWith(
+        request,
         { endpoint: "/api/test" },
+      )
+      expect(mockFetchApi).toHaveBeenCalledWith(
+        enrichedRequest,
+        { endpoint: "/api/test" },
+        true,
       )
     })
   })

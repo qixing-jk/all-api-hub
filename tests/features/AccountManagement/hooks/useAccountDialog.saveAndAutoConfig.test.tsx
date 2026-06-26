@@ -2450,6 +2450,8 @@ describe("useAccountDialog save and auto-config flows", () => {
       apiServiceRequest,
       "createDisplayAccountApiContext",
     ).mockReturnValue({
+      accountId: savedDisplayData.id,
+      siteType: SITE_TYPES.SUB2API,
       adapter: {
         siteType: SITE_TYPES.SUB2API,
         keyManagement: {
@@ -2559,6 +2561,8 @@ describe("useAccountDialog save and auto-config flows", () => {
       apiServiceRequest,
       "createDisplayAccountApiContext",
     ).mockReturnValue({
+      accountId: savedDisplayData.id,
+      siteType: SITE_TYPES.SUB2API,
       adapter: {
         siteType: SITE_TYPES.SUB2API,
         keyManagement: {
@@ -2661,6 +2665,8 @@ describe("useAccountDialog save and auto-config flows", () => {
       apiServiceRequest,
       "createDisplayAccountApiContext",
     ).mockReturnValue({
+      accountId: savedDisplayData.id,
+      siteType: SITE_TYPES.SUB2API,
       adapter: {
         siteType: SITE_TYPES.SUB2API,
         keyManagement: {

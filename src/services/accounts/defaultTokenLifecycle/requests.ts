@@ -1,6 +1,4 @@
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { SiteAccount } from "~/types"
 
 export const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
 export const DEFAULT_USER_GROUP_NAME = "default"
@@ -37,7 +35,6 @@ export function generateDefaultTokenRequest(): CreateTokenRequest {
     group: "",
   }
 }
-
 /**
  * Builds the default auto-provision token payload for one user group.
  */
@@ -72,23 +69,5 @@ export function normalizeDefaultTokenRequestName(
         ? groupDefaultTokenData.name
         : tokenData.name,
     group: normalizedGroup,
-  }
-}
-
-/**
- * Creates an adapter request DTO from a stored account record.
- */
-export function createStoredAccountTokenRequest(
-  account: SiteAccount,
-): ApiServiceRequest {
-  return {
-    baseUrl: account.site_url,
-    accountId: account.id,
-    auth: {
-      authType: account.authType,
-      userId: account.account_info.id,
-      accessToken: account.account_info.access_token,
-      cookie: account.cookieAuth?.sessionCookie,
-    },
   }
 }

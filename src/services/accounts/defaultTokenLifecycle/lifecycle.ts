@@ -1,4 +1,5 @@
 import {
+  createAccountApiRequestFromStoredAccount,
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
   requireDisplayAccountTokenProvisioning,
@@ -27,7 +28,6 @@ import {
   type DefaultTokenLifecycleResult,
 } from "./contracts"
 import {
-  createStoredAccountTokenRequest,
   generateDefaultTokenRequest,
   normalizeDefaultTokenRequestName,
 } from "./requests"
@@ -454,7 +454,7 @@ export async function ensureDefaultTokenLifecycle(params: {
     workflow,
     keyManagement,
     tokenProvisioning,
-    createRequest: createStoredAccountTokenRequest(account),
+    createRequest: createAccountApiRequestFromStoredAccount(account).request,
     inventoryRequest: context.request,
     decision,
     existingTokenIds,
