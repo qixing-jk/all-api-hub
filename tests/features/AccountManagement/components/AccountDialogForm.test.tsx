@@ -152,6 +152,9 @@ describe("AccountDialog AccountForm", () => {
       screen.getByText("accountDialog:sections.checkInConfig.title"),
     ).toBeInTheDocument()
     expect(
+      screen.getByText("accountDialog:form.checkInStatusDesc"),
+    ).toBeInTheDocument()
+    expect(
       screen.getByText("accountDialog:sections.balanceAndStats.title"),
     ).toBeInTheDocument()
 

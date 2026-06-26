@@ -486,6 +486,9 @@ export default function AccountForm({
             >
               {t("form.checkInStatus")}
             </label>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {t("form.checkInStatusDesc")}
+            </p>
             {!canUseBuiltInCheckInDetection && (
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {t("form.sub2apiCheckInUnsupported")}
