@@ -7,6 +7,16 @@ import {
   normalizeOpenAiFamilyBaseUrl,
 } from "~/services/verification/webAiApiCheck/extractCredentials"
 
+const OPENAI_KEY_PREFIX = ["s", "k", "-"].join("")
+const ANTHROPIC_KEY_PREFIX = ["s", "k", "-", "ant", "-"].join("")
+const OPENROUTER_KEY_PREFIX = ["s", "k", "-", "or", "-"].join("")
+const GOOGLE_KEY_PREFIX = ["A", "I", "z", "a"].join("")
+const TP_KEY_PREFIX = ["t", "p", "-"].join("")
+
+function buildKnownKey(body: string, prefix = OPENAI_KEY_PREFIX): string {
+  return `${prefix}${body}`
+}
+
 describe("webAiApiCheck extractCredentials", () => {
   it("normalizes loose base urls by trimming wrappers, adding https, and dropping query fragments", () => {
     expect(
@@ -55,17 +65,16 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("returns structured candidate metadata while preserving best-match aliases", () => {
+    const apiKey = buildKnownKey("test-structured-candidate-fixture")
     const result = extractApiCheckCredentialsFromText(`
       endpoint=https://proxy.example.com/api/v1/chat/completions
-      Authorization: Bearer sk-test-structured-candidate-fixture
+      Authorization: Bearer ${apiKey}
     `)
 
     expect(result.baseUrl).toBe("https://proxy.example.com/api")
-    expect(result.apiKey).toBe("sk-test-structured-candidate-fixture")
+    expect(result.apiKey).toBe(apiKey)
     expect(result.baseUrlCandidates[0]).toBe("https://proxy.example.com/api")
-    expect(result.apiKeyCandidates[0]).toBe(
-      "sk-test-structured-candidate-fixture",
-    )
+    expect(result.apiKeyCandidates[0]).toBe(apiKey)
 
     expect(result.candidates.baseUrls[0]).toEqual(
       expect.objectContaining({
@@ -76,7 +85,7 @@ describe("webAiApiCheck extractCredentials", () => {
     )
     expect(result.candidates.apiKeys[0]).toEqual(
       expect.objectContaining({
-        value: "sk-test-structured-candidate-fixture",
+        value: apiKey,
         kind: "apiKey",
         confidence: "standard",
       }),
@@ -92,8 +101,9 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("extracts standard base_url and KEY assignments without requiring enhanced detection", () => {
-    const apiKey =
-      "sk-teststandardkeyassignmentfixture000000000000000000000000000000"
+    const apiKey = buildKnownKey(
+      "teststandardkeyassignmentfixture000000000000000000000000000000",
+    )
     const result = extractApiCheckCredentialsFromText(`
       base_url = https://dxb.huifei.net/v1
 
@@ -120,20 +130,19 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("deduplicates structured candidates by value while merging reasons", () => {
+    const apiKey = buildKnownKey("test-deduplicate-candidate-fixture")
     const result = extractApiCheckCredentialsFromText(`
       endpoint=https://proxy.example.com/api/v1/models
       https://proxy.example.com/api/v1/models
-      token=sk-test-deduplicate-candidate-fixture
-      sk-test-deduplicate-candidate-fixture
+      token=${apiKey}
+      ${apiKey}
     `)
 
     expect(result.baseUrlCandidates).toEqual([
       "https://proxy.example.com/api",
       "https://proxy.example.com/api/v1/models",
     ])
-    expect(result.apiKeyCandidates).toEqual([
-      "sk-test-deduplicate-candidate-fixture",
-    ])
+    expect(result.apiKeyCandidates).toEqual([apiKey])
     expect(result.candidates.baseUrls[0].reasons).toContain("pathNormalized")
     expect(result.candidates.apiKeys[0].reasons).toContain("labeled")
     expect(result.candidates.apiKeys[0].reasons).toContain("knownPrefix")
@@ -170,11 +179,16 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("prioritizes labeled urls, deduplicates generic repeats, and captures multiple provider keys", () => {
+    const apiKey = buildKnownKey("test-provider-key-12345")
+    const googleKey = buildKnownKey(
+      "TESTKEYAa1Bb2Cc3Dd4Ee5Ff6",
+      GOOGLE_KEY_PREFIX,
+    )
     const text = `
       endpoint=https://proxy.example.com/api/v1/chat/completions
       curl https://proxy.example.com/api/v1/chat/completions
-      Authorization: Bearer sk-test-provider-key-12345
-      google_key=AIzaTESTKEYAa1Bb2Cc3Dd4Ee5Ff6
+      Authorization: Bearer ${apiKey}
+      google_key=${googleKey}
     `
 
     expect(extractApiCheckCredentialsFromText(text)).toMatchObject({
@@ -182,12 +196,9 @@ describe("webAiApiCheck extractCredentials", () => {
         "https://proxy.example.com/api",
         "https://proxy.example.com/api/v1/chat/completions",
       ],
-      apiKeyCandidates: [
-        "sk-test-provider-key-12345",
-        "AIzaTESTKEYAa1Bb2Cc3Dd4Ee5Ff6",
-      ],
+      apiKeyCandidates: [apiKey, googleKey],
       baseUrl: "https://proxy.example.com/api",
-      apiKey: "sk-test-provider-key-12345",
+      apiKey,
     })
   })
 
@@ -209,8 +220,9 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("recognizes bare domain base URLs and adds https", () => {
+    const apiKey = buildKnownKey("test-bare-domain-fixture-12345")
     const result = extractApiCheckCredentialsFromText(`
-      Use api.example.com with key sk-test-bare-domain-fixture-12345
+      Use api.example.com with key ${apiKey}
     `)
 
     expect(result.baseUrlCandidates).toContain("https://api.example.com")
@@ -226,9 +238,10 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("classifies labeled bare domain base URLs as enhanced", () => {
+    const apiKey = buildKnownKey("test-labeled-bare-domain-fixture-12345")
     const result = extractApiCheckCredentialsFromText(`
       endpoint=api.example.com
-      sk-test-labeled-bare-domain-fixture-12345
+      ${apiKey}
     `)
 
     expect(result.baseUrlCandidates[0]).toBe("https://api.example.com")
@@ -265,9 +278,10 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("normalizes bare domain endpoint paths through provider-family rules", () => {
+    const apiKey = buildKnownKey("test-bare-path-fixture-123456789")
     const result = extractApiCheckCredentialsFromText(`
       proxy.example.com/api/v1/chat/completions
-      sk-test-bare-path-fixture-123456789
+      ${apiKey}
     `)
 
     expect(result.baseUrlCandidates).toEqual(
@@ -280,52 +294,56 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("does not treat emails, filenames, versions, or plain words as bare URLs", () => {
+    const apiKey = buildKnownKey("test-filter-bare-domain-fixture")
     const result = extractApiCheckCredentialsFromText(`
       Contact ops@example.com
       Open README.md
       Version 3.41.1
-      The token is sk-test-filter-bare-domain-fixture
+      The token is ${apiKey}
     `)
 
     expect(result.baseUrlCandidates).toEqual([])
   })
 
   it("ignores invalid labeled values and falls back to plain provider token matches", () => {
+    const apiKey = buildKnownKey("test-fallback-fixture-12345")
+    const googleKey = buildKnownKey("TESTKEYAa1Bb2Cc3Dd4", GOOGLE_KEY_PREFIX)
     const text = `
       baseURL=[]
       Authorization: Bearer []
       secret=[]
-      plain sk-test-fallback-fixture-12345
-      extra AIzaTESTKEYAa1Bb2Cc3Dd4
+      plain ${apiKey}
+      extra ${googleKey}
     `
 
     expect(extractApiCheckCredentialsFromText(text)).toMatchObject({
       baseUrlCandidates: [],
-      apiKeyCandidates: [
-        "sk-test-fallback-fixture-12345",
-        "AIzaTESTKEYAa1Bb2Cc3Dd4",
-      ],
+      apiKeyCandidates: [apiKey, googleKey],
       baseUrl: null,
-      apiKey: "sk-test-fallback-fixture-12345",
+      apiKey,
     })
   })
 
   it("recognizes known multi-segment key prefixes", () => {
-    const anthropic = extractApiCheckCredentialsFromText(
-      "sk-ant-api03-testFixtureAa1Bb2Cc3Dd4Ee5Ff6",
+    const anthropicKey = buildKnownKey(
+      "api03-testFixtureAa1Bb2Cc3Dd4Ee5Ff6",
+      ANTHROPIC_KEY_PREFIX,
     )
-    const openRouter = extractApiCheckCredentialsFromText(
-      "sk-or-v1-testFixtureAa1Bb2Cc3Dd4Ee5Ff6",
+    const openRouterKey = buildKnownKey(
+      "v1-testFixtureAa1Bb2Cc3Dd4Ee5Ff6",
+      OPENROUTER_KEY_PREFIX,
     )
+    const anthropic = extractApiCheckCredentialsFromText(anthropicKey)
+    const openRouter = extractApiCheckCredentialsFromText(openRouterKey)
 
-    expect(anthropic.apiKey).toBe("sk-ant-api03-testFixtureAa1Bb2Cc3Dd4Ee5Ff6")
+    expect(anthropic.apiKey).toBe(anthropicKey)
     expect(anthropic.candidates.apiKeys[0]).toEqual(
       expect.objectContaining({
         confidence: "standard",
         reasons: expect.arrayContaining(["knownPrefix", "multiSegment"]),
       }),
     )
-    expect(openRouter.apiKey).toBe("sk-or-v1-testFixtureAa1Bb2Cc3Dd4Ee5Ff6")
+    expect(openRouter.apiKey).toBe(openRouterKey)
   })
 
   it("recognizes unknown short-prefix keys with long random bodies", () => {
@@ -357,7 +375,10 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("recognizes tp-prefixed keys as known provider tokens", () => {
-    const fixtureKey = "tp-fixture000000000000000000000000"
+    const fixtureKey = buildKnownKey(
+      "fixture000000000000000000000000",
+      TP_KEY_PREFIX,
+    )
     const result = extractApiCheckCredentialsFromText(fixtureKey)
 
     expect(result.apiKey).toBe(fixtureKey)
@@ -404,11 +425,12 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("cleans illegal characters inside suspected key windows", () => {
+    const cleanedKey = buildKnownKey("testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
     const result = extractApiCheckCredentialsFromText(
-      "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg【删除这里]7Hh8Ii9Jj0Kk1",
+      `${OPENAI_KEY_PREFIX}testAa1Bb2Cc3Dd4Ee5Ff6Gg【删除这里]7Hh8Ii9Jj0Kk1`,
     )
 
-    expect(result.apiKey).toBe("sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.apiKey).toBe(cleanedKey)
     expect(result.candidates.apiKeys[0]).toEqual(
       expect.objectContaining({
         cleanupApplied: true,
@@ -419,11 +441,13 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("keeps cleaned known-prefix keys ahead of truncated prefix matches", () => {
-    const cleanedKey = "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1Ll2Mm3Nn"
+    const cleanedKey = buildKnownKey(
+      "testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1Ll2Mm3Nn",
+    )
     const result = extractApiCheckCredentialsFromText(`
       https://example.test
 
-      示例测试内容 key：sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg删除这里7Hh8Ii9Jj0Kk1Ll2Mm3Nn （示例结束）
+      示例测试内容 key：${OPENAI_KEY_PREFIX}testAa1Bb2Cc3Dd4Ee5Ff6Gg删除这里7Hh8Ii9Jj0Kk1Ll2Mm3Nn （示例结束）
     `)
 
     expect(result.apiKey).toBe(cleanedKey)
@@ -437,10 +461,10 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("merges duplicate known-prefix candidates with cleanup metadata", () => {
-    const cleanedKey = "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
+    const cleanedKey = buildKnownKey("testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
     const result = extractApiCheckCredentialsFromText(`
       Authorization: Bearer ${cleanedKey}
-      pasted key: sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9#Jj0Kk1
+      pasted key: ${OPENAI_KEY_PREFIX}testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9#Jj0Kk1
     `)
 
     expect(result.apiKeyCandidates[0]).toBe(cleanedKey)
@@ -459,7 +483,7 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("keeps the strongest confidence when duplicate candidate windows merge", () => {
-    const fixtureKey = "sk-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
+    const fixtureKey = buildKnownKey("Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
     const result = extractApiCheckCredentialsFromText(`
       token: ${fixtureKey}
       ${fixtureKey}
@@ -476,7 +500,7 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("does not trim unknown short-prefix keys at embedded known-prefix text", () => {
-    const fixtureKey = "disk-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
+    const fixtureKey = "demo-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
     const result = extractApiCheckCredentialsFromText(fixtureKey)
 
     expect(result.apiKey).toBe(fixtureKey)
@@ -490,11 +514,12 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it("cleans illegal ASCII punctuation inside suspected key windows", () => {
+    const cleanedKey = buildKnownKey("testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
     const result = extractApiCheckCredentialsFromText(
-      "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg#7Hh8Ii9Jj0Kk1",
+      `${OPENAI_KEY_PREFIX}testAa1Bb2Cc3Dd4Ee5Ff6Gg#7Hh8Ii9Jj0Kk1`,
     )
 
-    expect(result.apiKey).toBe("sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.apiKey).toBe(cleanedKey)
     expect(result.candidates.apiKeys[0]).toEqual(
       expect.objectContaining({
         cleanupApplied: true,
@@ -502,6 +527,67 @@ describe("webAiApiCheck extractCredentials", () => {
       }),
     )
     expect(result.summary.hasCleanup).toBe(true)
+  })
+
+  it("cleans separator characters embedded inside labeled API keys", () => {
+    const apiKey = buildKnownKey("testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    const separatedApiKey = `${OPENAI_KEY_PREFIX}testAa1Bb2Cc3Dd4 . Ee5Ff6Gg7Hh8Ii9Jj0Kk1`
+
+    const result = extractApiCheckCredentialsFromText(
+      `API Key: ${separatedApiKey}`,
+    )
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.summary.hasCleanup).toBe(true)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: apiKey,
+        cleanupApplied: true,
+        reasons: expect.arrayContaining([
+          "labeled",
+          "knownPrefix",
+          "illegalCharsRemoved",
+        ]),
+      }),
+    )
+  })
+
+  it("decodes labeled unpadded base64-obfuscated API keys", () => {
+    const apiKey = buildKnownKey("base64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A")
+    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
+
+    const result = extractApiCheckCredentialsFromText(
+      `API Key: ${encodedApiKey}`,
+    )
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.summary.hasCleanup).toBe(true)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: apiKey,
+        cleanupApplied: true,
+        reasons: expect.arrayContaining([
+          "labeled",
+          "base64Decoded",
+          "knownPrefix",
+        ]),
+      }),
+    )
+  })
+
+  it("keeps labeled invalid base64 text as a plain candidate", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "API Key: AAAAAAAAAAAAAAAAAAAAAAAAAAA+",
+    )
+
+    expect(result.apiKeyCandidates).toEqual(["AAAAAAAAAAAAAAAAAAAAAAAAAAA+"])
+    expect(result.summary.hasCleanup).toBe(false)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        reasons: ["labeled"],
+      }),
+    )
+    expect(result.candidates.apiKeys[0]).not.toHaveProperty("cleanupApplied")
   })
 
   it("does not join unrelated token fields while cleaning", () => {

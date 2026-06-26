@@ -29,6 +29,7 @@ export type ApiCheckCandidateReason =
   | "schemeAdded"
   | "pathNormalized"
   | "illegalCharsRemoved"
+  | "base64Decoded"
 
 export type ApiCheckCandidateKind = "baseUrl" | "apiKey"
 
@@ -383,6 +384,22 @@ function cleanKeyWindow(raw: string) {
 }
 
 /**
+ * Decode pasted base64/base64url text before key-shape classification.
+ */
+function decodeBase64ApiKeyCandidate(raw: string): string | null {
+  const encoded = trimWrappingPunctuation(raw).replace(/[ \t\r\n]+/g, "")
+  if (encoded.length < 24 || encoded.length % 4 === 1) return null
+  if (!/^[A-Za-z0-9+/_-]+={0,2}$/.test(encoded)) return null
+
+  const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/")
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")
+  const decoded = atob(padded)
+  if (!/^[\x20-\x7E]+$/.test(decoded)) return null
+  if (decoded === encoded) return null
+  return decoded
+}
+
+/**
  * Detect token segments that look generated rather than natural language.
  */
 function isRandomLookingSegment(segment: string): boolean {
@@ -626,6 +643,35 @@ export function extractApiCheckCredentialsFromText(
     reasons: ApiCheckCandidateReason[],
   ) => {
     if (!value) return
+
+    const pushClassifiedCandidate = (
+      candidateValue: string,
+      candidateReasons: ApiCheckCandidateReason[],
+      cleanupApplied = false,
+    ) => {
+      const classified = classifyApiKeyCandidate(candidateValue)
+      if (!classified) return false
+      pushCandidate(apiKeyCandidates, {
+        ...classified,
+        kind: "apiKey",
+        reasons: mergeReasons(candidateReasons, classified.reasons),
+        cleanupApplied: cleanupApplied || classified.cleanupApplied,
+        insertionOrder,
+      })
+      insertionOrder += 1
+      return true
+    }
+
+    const decoded = decodeBase64ApiKeyCandidate(value)
+    const pushedDecoded = decoded
+      ? pushClassifiedCandidate(
+          decoded,
+          mergeReasons(reasons, ["base64Decoded"]),
+          true,
+        )
+      : false
+    if (pushedDecoded) return
+
     const classified = classifyApiKeyCandidate(value)
     if (classified) {
       pushCandidate(apiKeyCandidates, {
@@ -743,6 +789,20 @@ export function extractApiCheckCredentialsFromText(
   for (const match of input.matchAll(apiKeyPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
     if (raw) pushApiKeyCandidate(raw, ["labeled"])
+  }
+
+  const labeledSeparatedKnownKeyWindowPattern =
+    /\b(?:api[_\s-]?key|key|token|access[_\s-]?token|secret)\b\s*[:=]\s*((?:(?:sk-ant|sk-or|sk|tp)-|AIza)[A-Za-z0-9_-]{6,}(?:[ \t.\u200B-\u200D]+[A-Za-z0-9_-]{6,})+)(?=$|[\r\n"'`,;)\]}])/gi
+  for (const match of input.matchAll(labeledSeparatedKnownKeyWindowPattern)) {
+    const raw = trimWrappingPunctuation(match[1] ?? "")
+    if (raw) pushApiKeyCandidate(raw, ["labeled"])
+  }
+
+  const separatedKnownKeyWindowPattern =
+    /(?<![A-Za-z0-9_-])((?:(?:sk-ant|sk-or|sk|tp)-|AIza)[A-Za-z0-9_-]{6,}(?:[ \t.\u200B-\u200D]+[A-Za-z0-9_-]{6,})+)(?![A-Za-z0-9_-])/gi
+  for (const match of input.matchAll(separatedKnownKeyWindowPattern)) {
+    const raw = trimWrappingPunctuation(match[1] ?? "")
+    if (raw) pushApiKeyCandidate(raw, ["knownPrefix"])
   }
 
   // 5) Common provider token prefixes (lowest confidence, but useful when no labels exist).
