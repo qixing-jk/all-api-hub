@@ -1957,6 +1957,7 @@ describe("accountStorage core behaviors", () => {
       id: "income-sync",
       site_url: "https://income.example.com",
       site_type: "one-api",
+      exchange_rate: 8.5,
       checkIn: { enableDetection: true },
     })
     seedStorage([account])
@@ -1985,6 +1986,12 @@ describe("accountStorage core behaviors", () => {
 
     await accountStorage.refreshAccount("income-sync", true)
 
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "income-sync",
+        exchangeRate: 8.5,
+      }),
+    )
     const updatedAccount = await accountStorage.getAccountById("income-sync")
     expect(updatedAccount?.account_info.today_income).toBe(123_456)
   })

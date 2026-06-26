@@ -668,6 +668,7 @@ export async function validateAndSaveAccount(
     siteType: normalizedSiteType,
     url,
   })
+  const resolvedExchangeRate = resolveExchangeRate(exchangeRate)
   const normalizedTagIds = normalizeTagIdsInput(tagIds)
 
   if (options.deferDataRefresh === true) {
@@ -687,7 +688,7 @@ export async function validateAndSaveAccount(
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
       sub2apiAuth: normalizedSub2ApiAuth,
-      exchange_rate: resolveExchangeRate(exchangeRate),
+      exchange_rate: resolvedExchangeRate,
       notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
@@ -757,6 +758,7 @@ export async function validateAndSaveAccount(
         baseUrl: requestBaseUrl,
         checkIn: checkInConfig,
         accountId: undefined, // New account, no ID yet
+        exchangeRate: resolvedExchangeRate,
         includeTodayCashflow,
         auth: {
           authType,
@@ -791,7 +793,7 @@ export async function validateAndSaveAccount(
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
       sub2apiAuth: normalizedSub2ApiAuth,
-      exchange_rate: resolveExchangeRate(exchangeRate), // 使用用户输入的汇率
+      exchange_rate: resolvedExchangeRate, // 使用用户输入的汇率
       notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
@@ -850,7 +852,7 @@ export async function validateAndSaveAccount(
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
       sub2apiAuth: normalizedSub2ApiAuth,
-      exchange_rate: resolveExchangeRate(exchangeRate),
+      exchange_rate: resolvedExchangeRate,
       notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
@@ -990,6 +992,7 @@ export async function validateAndUpdateAccount(
     siteType: normalizedSiteType,
     url,
   })
+  const resolvedExchangeRate = resolveExchangeRate(exchangeRate)
   const normalizedTagIds = normalizeTagIdsInput(tagIds)
 
   if (options.deferDataRefresh === true) {
@@ -1005,7 +1008,7 @@ export async function validateAndUpdateAccount(
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
       sub2apiAuth: normalizedSub2ApiAuth,
-      exchange_rate: resolveExchangeRate(exchangeRate),
+      exchange_rate: resolvedExchangeRate,
       notes: notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
@@ -1064,6 +1067,7 @@ export async function validateAndUpdateAccount(
       baseUrl: requestBaseUrl,
       checkIn: checkInConfig,
       accountId,
+      exchangeRate: resolvedExchangeRate,
       includeTodayCashflow,
       auth: {
         authType,
@@ -1090,7 +1094,7 @@ export async function validateAndUpdateAccount(
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
       sub2apiAuth: normalizedSub2ApiAuth,
-      exchange_rate: resolveExchangeRate(exchangeRate), // 使用用户输入的汇率
+      exchange_rate: resolvedExchangeRate, // 使用用户输入的汇率
       notes: notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
@@ -1149,7 +1153,7 @@ export async function validateAndUpdateAccount(
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
       sub2apiAuth: normalizedSub2ApiAuth,
-      exchange_rate: resolveExchangeRate(exchangeRate),
+      exchange_rate: resolvedExchangeRate,
       notes: notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,

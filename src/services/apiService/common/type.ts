@@ -396,6 +396,14 @@ export interface AuthTypeFetchParams extends AuthFetchParams {
 export type ApiServiceAccountRequest = ApiServiceRequest & {
   checkIn: CheckInConfig
   /**
+   * Account-owned exchange rate (CNY per USD) used when parsing recharge/system
+   * log text into quota units.
+   *
+   * The API service layer consumes this value but does not resolve it from
+   * account storage.
+   */
+  exchangeRate?: number
+  /**
    * Whether account refresh should include fetching "today cashflow" statistics
    * (today consumption/income plus token/request counts).
    *

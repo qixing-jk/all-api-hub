@@ -1119,6 +1119,7 @@ class AccountStorageService {
             baseUrl,
             accountId: account.id,
             checkIn: checkInForRefresh,
+            exchangeRate: account.exchange_rate,
             auth,
             includeTodayCashflow,
           })

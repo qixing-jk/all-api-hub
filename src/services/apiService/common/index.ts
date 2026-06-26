@@ -1,6 +1,5 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
@@ -891,9 +890,6 @@ export async function fetchTodayUsage(
  * @param queryConfig Optional override for non-standard log pagination APIs.
  * @returns Total income amount for today.
  */
-// Temporary exception during account API context migration:
-// this helper still owns exchange-rate lookup until account-data refresh
-// orchestration moves that policy into src/services/accounts/**.
 export async function fetchTodayIncome(
   request: ApiServiceAccountRequest,
   queryConfig?: TodayLogQueryConfig,
@@ -902,19 +898,11 @@ export async function fetchTodayIncome(
     return { today_income: 0 }
   }
 
-  const { baseUrl } = request
-  const { userId } = request.auth
-  let exchangeRate: number = UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-
-  const account = request.accountId
-    ? await accountStorage.getAccountById(request.accountId)
-    : userId === undefined
-      ? null
-      : await accountStorage.getAccountByBaseUrlAndUserId(baseUrl, userId)
-
-  if (account?.exchange_rate) {
-    exchangeRate = account.exchange_rate
-  }
+  const exchangeRate =
+    typeof request.exchangeRate === "number" &&
+    Number.isFinite(request.exchangeRate)
+      ? request.exchangeRate
+      : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
   const incomeAggregator = (
     accumulator: number,
     items: LogResponseData["items"],

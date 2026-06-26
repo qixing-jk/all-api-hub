@@ -571,8 +571,7 @@ describe("apiService common account-data helpers", () => {
     expect(mockGetAccountById).not.toHaveBeenCalled()
   })
 
-  it("fetchTodayIncome uses the account exchange rate and parses quota fallbacks", async () => {
-    mockGetAccountById.mockResolvedValueOnce({ exchange_rate: 9 })
+  it("fetchTodayIncome uses the request exchange rate and parses quota fallbacks", async () => {
     mockExtractAmount.mockReturnValueOnce({ amount: 3 })
     mockFetchApiData
       .mockResolvedValueOnce({
@@ -588,18 +587,20 @@ describe("apiService common account-data helpers", () => {
       fetchTodayIncome({
         ...baseRequest,
         accountId: "account-1",
+        exchangeRate: 9,
       } as any),
     ).resolves.toEqual({ today_income: 375 })
 
-    expect(mockGetAccountById).toHaveBeenCalledWith("account-1")
+    expect(mockGetAccountById).not.toHaveBeenCalled()
+    expect(mockGetAccountByBaseUrlAndUserId).not.toHaveBeenCalled()
     expect(mockExtractAmount).toHaveBeenCalledWith("recharge 3 USD", 9)
   })
 
-  it("fetchTodayIncome falls back to lookup by baseUrl and userId when accountId is absent", async () => {
-    mockGetAccountByBaseUrlAndUserId.mockResolvedValueOnce({ exchange_rate: 8 })
+  it("fetchTodayIncome uses the default exchange rate when the request has no exchange rate", async () => {
+    mockExtractAmount.mockReturnValueOnce({ amount: 2 })
     mockFetchApiData
       .mockResolvedValueOnce({
-        items: [{ quota: 20 }],
+        items: [{ content: "recharge 2 USD" }],
         total: 1,
       })
       .mockResolvedValueOnce({
@@ -608,12 +609,11 @@ describe("apiService common account-data helpers", () => {
       })
 
     await expect(fetchTodayIncome(baseRequest as any)).resolves.toEqual({
-      today_income: 20,
+      today_income: 200,
     })
-    expect(mockGetAccountByBaseUrlAndUserId).toHaveBeenCalledWith(
-      baseRequest.baseUrl,
-      "7",
-    )
+    expect(mockGetAccountById).not.toHaveBeenCalled()
+    expect(mockGetAccountByBaseUrlAndUserId).not.toHaveBeenCalled()
+    expect(mockExtractAmount).toHaveBeenCalledWith("recharge 2 USD", 7)
   })
 
   it("fetchTodayIncome supports overridden log query params and response fields", async () => {
