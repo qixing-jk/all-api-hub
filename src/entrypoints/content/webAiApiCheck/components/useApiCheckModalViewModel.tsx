@@ -449,8 +449,12 @@ export function useApiCheckModalViewModel() {
       candidates: extracted.candidates,
       summary: extracted.summary,
     })
-    updateBaseUrl(extracted.baseUrl ?? "")
-    setApiKey(extracted.apiKey ?? "")
+    if (extracted.baseUrl) {
+      updateBaseUrl(extracted.baseUrl)
+    }
+    if (extracted.apiKey) {
+      setApiKey(extracted.apiKey)
+    }
   }, [isOpen, sourceText, updateBaseUrl])
 
   const handleSelectBaseUrlHistory = useCallback(

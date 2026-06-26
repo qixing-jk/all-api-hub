@@ -823,7 +823,7 @@ describe("ApiCheckModalHost", () => {
     ).toBeInTheDocument()
   })
 
-  it("clears active credentials when edited source text no longer contains credentials", async () => {
+  it("preserves active credentials when edited source text has no extraction result", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
@@ -856,14 +856,14 @@ describe("ApiCheckModalHost", () => {
     await user.type(sourceTextInput, "No credentials here")
 
     await waitFor(() => {
-      expect(baseUrlInput.value).toBe("")
-      expect(apiKeyInput.value).toBe("")
+      expect(baseUrlInput.value).toBe("https://proxy.example.com/api")
+      expect(apiKeyInput.value).toBe("sk-test-source-clear-fixture")
     })
     expect(
       screen.getByRole("button", {
         name: "webAiApiCheck:modal.actions.saveToProfiles",
       }),
-    ).toBeDisabled()
+    ).toBeEnabled()
   })
 
   it("tracks modal open with safe credential presence insights", async () => {
