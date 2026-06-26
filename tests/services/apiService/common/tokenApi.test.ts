@@ -2,16 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  fetchAccountTokens,
-  fetchTokenById,
   formatOptionalSkPrefixSiteToken,
   formatOptionalSkPrefixSiteTokenAuthKey,
   formatOptionalSkPrefixSiteTokenComparableKey,
   formatOptionalSkPrefixTokenComparableKey,
   hasOptionalSkPrefixSiteTokenSemantics,
+  normalizeApiTokenKeyValue,
+} from "~/services/accountTokens/apiTokenKey"
+import {
+  fetchAccountTokens,
+  fetchTokenById,
   resolveApiTokenKey,
 } from "~/services/apiService/common"
-import { normalizeApiTokenKeyValue } from "~/services/apiService/common/apiKey"
 import {
   fetchTokenSecretKeyById,
   fetchTokenSecretKeyByIdWithMethod,

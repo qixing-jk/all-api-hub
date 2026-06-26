@@ -1,5 +1,5 @@
 import { UI_CONSTANTS } from "~/constants/ui"
-import { normalizeApiTokenKey } from "~/services/apiService/common/apiKey"
+import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { extractItemsFromArrayOrItemsPayload } from "~/services/apiService/common/pagination"
 import type {

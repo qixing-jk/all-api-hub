@@ -12,8 +12,8 @@ import {
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
 import { TOKEN_PROVISIONING_ERRORS } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { sleep } from "~/utils/core/async"

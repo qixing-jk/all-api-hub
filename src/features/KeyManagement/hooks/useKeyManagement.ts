@@ -10,7 +10,7 @@ import {
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/apiService/common/apiKey"
+import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/accountTokens/apiTokenKey"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import {

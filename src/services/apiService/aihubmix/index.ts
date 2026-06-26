@@ -1,13 +1,13 @@
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { determineHealthStatus } from "~/services/apiService/common"
 import {
   hasUsableApiTokenKey,
   isMaskedApiTokenKey,
   normalizeApiTokenKey,
   normalizeApiTokenKeyValue,
-} from "~/services/apiService/common/apiKey"
+} from "~/services/accountTokens/apiTokenKey"
+import { determineHealthStatus } from "~/services/apiService/common"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
   MODEL_LIST_SOURCE_KINDS,

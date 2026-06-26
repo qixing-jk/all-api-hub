@@ -1,4 +1,4 @@
-import { normalizeApiTokenKey } from "~/services/apiService/common/apiKey"
+import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type {
   ApiServiceRequest,
   PricingResponse,

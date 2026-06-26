@@ -2,7 +2,7 @@ import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   resolveAccountSiteCreatedTokenSecretHandling,
 } from "~/services/accounts/accountSiteProfile"
-import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type { DisplaySiteData } from "~/types"
 
 /**

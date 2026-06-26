@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   getManagedSiteLegacyAdminConfig,
   resolveManagedSiteRuntimeConfigForType,

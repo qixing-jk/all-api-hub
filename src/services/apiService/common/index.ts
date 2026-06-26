@@ -1,7 +1,7 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { normalizeApiTokenKey } from "~/services/apiService/common/apiKey"
+import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { fetchAllItems } from "~/services/apiService/common/pagination"
@@ -88,14 +88,6 @@ export {
   fetchTokenSecretKeyById,
   resolveApiTokenKey,
 } from "~/services/apiService/common/tokenKeyResolver"
-
-export {
-  formatOptionalSkPrefixSiteToken,
-  formatOptionalSkPrefixSiteTokenAuthKey,
-  formatOptionalSkPrefixSiteTokenComparableKey,
-  formatOptionalSkPrefixTokenComparableKey,
-  hasOptionalSkPrefixSiteTokenSemantics,
-} from "~/services/apiService/common/apiKey"
 
 /**
  * 搜索指定关键词的渠道。

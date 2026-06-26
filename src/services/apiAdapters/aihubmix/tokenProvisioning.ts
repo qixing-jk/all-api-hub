@@ -1,4 +1,8 @@
 import {
+  hasUsableApiTokenKey,
+  isMaskedApiTokenKey,
+} from "~/services/accountTokens/apiTokenKey"
+import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   isCreatedApiToken,
@@ -8,10 +12,6 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import {
-  hasUsableApiTokenKey,
-  isMaskedApiTokenKey,
-} from "~/services/apiService/common/apiKey"
 import type { ApiToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 

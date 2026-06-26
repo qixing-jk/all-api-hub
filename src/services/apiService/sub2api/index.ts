@@ -4,11 +4,11 @@
  * Sub2API differs from One-API/New-API backends in that authenticated endpoints
  * live under `/api/v1/*` and require a dashboard JWT.
  */
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   determineHealthStatus,
   extractDefaultExchangeRate as extractCommonDefaultExchangeRate,
 } from "~/services/apiService/common"
-import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { resolveApiTokenKeyWithFetcher } from "~/services/apiService/common/tokenKeyResolver"
 import type {

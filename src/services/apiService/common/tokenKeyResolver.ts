@@ -1,12 +1,11 @@
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
-import { fetchApiData } from "~/services/apiService/common/utils"
-import type { ApiToken } from "~/types"
-
 import {
   hasUsableApiTokenKey,
   isMaskedApiTokenKey,
   normalizeApiTokenKeyValue,
-} from "./apiKey"
+} from "~/services/accountTokens/apiTokenKey"
+import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import { fetchApiData } from "~/services/apiService/common/utils"
+import type { ApiToken } from "~/types"
 
 type TokenKeyLike = Pick<ApiToken, "id" | "key">
 type TokenSecretResolutionMethod = "GET" | "POST"

@@ -13,7 +13,7 @@ import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
+import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {

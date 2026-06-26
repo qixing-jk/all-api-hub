@@ -96,7 +96,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/services/apiService/common/apiKey", () => ({
+vi.mock("~/services/accountTokens/apiTokenKey", () => ({
   normalizeApiTokenKey: mockNormalizeApiTokenKey,
 }))
 

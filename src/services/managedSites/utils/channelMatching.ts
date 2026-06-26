@@ -5,7 +5,7 @@ import {
 import {
   formatOptionalSkPrefixTokenComparableKey,
   hasOptionalSkPrefixSiteTokenSemantics,
-} from "~/services/apiService/common/apiKey"
+} from "~/services/accountTokens/apiTokenKey"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MATCH_LEVELS,
