@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
@@ -30,6 +31,21 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   return {
     ...actual,
     createTab: mockCreateTab,
+  }
+})
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+
+  return {
+    ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
+    useUserPreferencesContext: () => ({
+      themeMode: "light",
+      updateThemeMode: vi.fn().mockResolvedValue(undefined),
+    }),
   }
 })
 
@@ -606,6 +622,12 @@ describe("ModelItem profile actions", () => {
       authType: AuthTypeEnum.AccessToken,
       checkIn: { enableDetection: false },
     })
+    const catalogFallbackSource = {
+      ...accountSource,
+      capabilities: toAihubmixCatalogFallbackCapabilities(
+        accountSource.capabilities,
+      ),
+    }
 
     render(
       <ModelItem
@@ -632,10 +654,8 @@ describe("ModelItem profile actions", () => {
         effectiveGroup="default"
         selectedGroups={["default"]}
         availableGroups={["default"]}
-        source={accountSource}
-        displayCapabilities={toAihubmixCatalogFallbackCapabilities(
-          accountSource.capabilities,
-        )}
+        source={catalogFallbackSource}
+        displayCapabilities={catalogFallbackSource.capabilities}
         onVerifyModel={() => {}}
         onVerifyCliSupport={() => {}}
         onOpenModelKeyDialog={() => {}}

@@ -27,7 +27,7 @@ function IdentityProvider({ children }: { children: ReactNode }) {
 
 const AppProviders = ({
   children,
-  withReleaseUpdateStatusProvider = true,
+  withReleaseUpdateStatusProvider = false,
   withUserPreferencesProvider = true,
   withThemeProvider = true,
 }: AppProvidersProps) => {
@@ -83,7 +83,7 @@ function normalizeProviderOptions<T extends ProviderToggleOptions>(
   remainingOptions: Omit<T, keyof ProviderToggleOptions>
 } {
   const {
-    withReleaseUpdateStatusProvider = true,
+    withReleaseUpdateStatusProvider = false,
     withUserPreferencesProvider = true,
     withThemeProvider = true,
     ...remainingOptions

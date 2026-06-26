@@ -14,6 +14,16 @@ vi.mock("~/services/updates/runtime", () => ({
 }))
 
 describe("test render utilities", () => {
+  it("does not request release update status by default", async () => {
+    const { result } = renderHook(() => "ok")
+
+    await waitFor(() => {
+      expect(result.current).toBe("ok")
+    })
+    expect(requestReleaseUpdateStatusMock).not.toHaveBeenCalled()
+    expect(requestReleaseUpdateCheckNowMock).not.toHaveBeenCalled()
+  })
+
   it("supports renderHook with withReleaseUpdateStatusProvider false", async () => {
     const { result } = renderHook(() => "ok", {
       withReleaseUpdateStatusProvider: false,

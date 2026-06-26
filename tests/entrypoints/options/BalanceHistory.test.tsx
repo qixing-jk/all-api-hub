@@ -8,6 +8,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
+import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   getDayKeyFromUnixSeconds,
@@ -27,7 +28,13 @@ import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageT
 import { tagStorage } from "~/services/tags/tagStorage"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const getMetricDropdownButtonName = (
   section: "breakdown" | "trend",
@@ -1051,6 +1058,15 @@ describe("BalanceHistory options page", () => {
       render(<BalanceHistory />)
 
       expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
+      const accountSummary = await screen.findByTestId(
+        BALANCE_HISTORY_TEST_IDS.accountSummary,
+      )
+      expect(
+        await within(accountSummary).findByText("Site A"),
+      ).toBeInTheDocument()
+      expect(
+        await within(accountSummary).findByText("$10.00"),
+      ).toBeInTheDocument()
 
       const user = userEvent.setup()
       await user.click(
@@ -1075,6 +1091,9 @@ describe("BalanceHistory options page", () => {
       expect(updateCurrencyType).toHaveBeenCalledWith("CNY")
       expect(screen.getByLabelText(START_DAY_LABEL)).toHaveValue("2026-02-01")
       expect(screen.getByLabelText(END_DAY_LABEL)).toHaveValue("2026-02-07")
+      expect(
+        await within(accountSummary).findByText("Site A"),
+      ).toBeInTheDocument()
     } finally {
       dateNowSpy.mockRestore()
     }

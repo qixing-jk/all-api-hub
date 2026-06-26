@@ -114,6 +114,10 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   }),
 }))
 
+vi.mock("~/features/ProductAnnouncements/ProductAnnouncementButton", () => ({
+  ProductAnnouncementButton: () => null,
+}))
+
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: (...args: unknown[]) =>
     startProductAnalyticsActionMock(...args),

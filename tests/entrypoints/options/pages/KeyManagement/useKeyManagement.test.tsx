@@ -1480,11 +1480,9 @@ describe("useKeyManagement enabled account filtering", () => {
       expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
     )
 
-    await expect(
-      act(async () => {
-        await result.current.refreshManagedSiteTokenStatuses()
-      }),
-    ).resolves.toBeUndefined()
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatuses()
+    })
 
     await waitFor(() =>
       expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2),
