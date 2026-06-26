@@ -56,7 +56,7 @@ type RunProbeOptions = {
   shouldIgnoreResult?: () => boolean
 }
 
-type VerificationResultsSnapshot = {
+interface VerificationResultsSnapshot {
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
@@ -94,10 +94,13 @@ function markProbeNotRunning(
 /**
  * Extract completed probe results from the current UI state.
  */
-function extractProbeResults(
+function extractProbeResultsForContext(
   probes: ProbeItemState[],
+  resultContextKeys: ReadonlyMap<ApiVerificationProbeId, string>,
+  contextKey: string,
 ): ApiVerificationProbeResult[] {
   return probes
+    .filter((probe) => resultContextKeys.get(probe.id) === contextKey)
     .map((probe) => probe.result)
     .filter((result): result is ApiVerificationProbeResult => result !== null)
 }
@@ -172,7 +175,9 @@ export function useApiCheckProbeRunner({
   )
   const cancelledProbeRunIdsRef = useRef(new Set<string>())
   const activeRunAllProbeIdRef = useRef<ApiVerificationProbeId | null>(null)
-  const verifiedContextKeyRef = useRef<string | null>(null)
+  const probeResultContextKeysRef = useRef(
+    new Map<ApiVerificationProbeId, string>(),
+  )
 
   const probeDefinitions = useMemo(
     () => getApiVerificationProbeDefinitions(apiType),
@@ -189,17 +194,20 @@ export function useApiCheckProbeRunner({
   const resetProbeState = useCallback((nextApiType: ApiVerificationApiType) => {
     setProbes(buildProbeState(nextApiType))
     setTestStoppedMessage(null)
-    verifiedContextKeyRef.current = null
+    probeResultContextKeysRef.current.clear()
   }, [])
 
   const updateProbeResult = useCallback(
     (probeId: ApiVerificationProbeId, result: ApiVerificationProbeResult) => {
-      verifiedContextKeyRef.current = createVerificationContextKey({
-        apiType,
-        baseUrl,
-        apiKey,
-        modelId,
-      })
+      probeResultContextKeysRef.current.set(
+        probeId,
+        createVerificationContextKey({
+          apiType,
+          baseUrl,
+          apiKey,
+          modelId,
+        }),
+      )
       setProbes((prev) =>
         prev.map((probe) =>
           probe.id === probeId ? { ...probe, isRunning: false, result } : probe,
@@ -217,9 +225,12 @@ export function useApiCheckProbeRunner({
         apiKey,
         modelId,
       })
-      if (verifiedContextKeyRef.current !== currentContextKey) return null
 
-      const results = extractProbeResults(probes)
+      const results = extractProbeResultsForContext(
+        probes,
+        probeResultContextKeysRef.current,
+        currentContextKey,
+      )
       if (results.length === 0) return null
 
       const trimmedModelId = modelId.trim()

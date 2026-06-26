@@ -3438,6 +3438,111 @@ describe("ApiCheckModalHost", () => {
     expect(upsertVerificationHistorySummaryMock).not.toHaveBeenCalled()
   })
 
+  it("does not persist mixed-context pre-save probe results after a later probe matches changed credentials", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["gpt-test-model"] }
+        }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 12,
+              summary:
+                message.probeId === "models"
+                  ? "Original models OK"
+                  : "Changed text generation OK",
+            },
+          }
+        }
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return {
+            success: true,
+            profileId: "p-changed",
+            name: "proxy.example.com",
+            apiType: message.apiType,
+            baseUrl: "https://proxy.example.com/api",
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    await user.click(
+      await screen.findByPlaceholderText("https://example.com/api"),
+    )
+    await user.paste("https://proxy.example.com/api")
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-original-fixture")
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+      ).toHaveTextContent("gpt-test-model")
+    })
+
+    const modelsProbeCard = await screen.findByTestId(
+      getWebAiApiCheckProbeTestId("models"),
+    )
+    await user.click(
+      within(modelsProbeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+    expect(
+      await within(modelsProbeCard).findByText("Original models OK"),
+    ).toBeVisible()
+
+    await user.clear(apiKeyInput)
+    await user.paste("sk-test-changed-fixture")
+
+    await waitFor(() => {
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.FetchModels, {
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api",
+        apiKey: "sk-test-changed-fixture",
+      })
+    })
+
+    const textGenerationProbeCard = await screen.findByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+    await user.click(
+      within(textGenerationProbeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+    expect(
+      await within(textGenerationProbeCard).findByText(
+        "Changed text generation OK",
+      ),
+    ).toBeVisible()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "webAiApiCheck:modal.actions.saveToProfiles",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(upsertVerificationHistorySummaryMock).toHaveBeenCalled()
+    })
+    const [[summary]] = upsertVerificationHistorySummaryMock.mock.calls
+    expect(summary.probes).toEqual([
+      expect.objectContaining({
+        id: "text-generation",
+        summary: "Changed text generation OK",
+      }),
+    ])
+  })
+
   it("saves profile metadata entered in the API check modal", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
