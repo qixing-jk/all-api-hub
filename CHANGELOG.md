@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.49.0](https://github.com/qixing-jk/all-api-hub/compare/v3.48.0...v3.49.0) (2026-06-26)
+
+
+### Features
+
+* **api-credentials:** add expiration metadata ([#1051](https://github.com/qixing-jk/all-api-hub/issues/1051)) ([b2524c5](https://github.com/qixing-jk/all-api-hub/commit/b2524c578ca4719e16727088057ab510c27a6d22))
+* **checkin:** fallback through native page checkin ([#1032](https://github.com/qixing-jk/all-api-hub/issues/1032)) ([adc04e7](https://github.com/qixing-jk/all-api-hub/commit/adc04e77b4eb781087cd080a0cd0ac9a6127d7f6))
+* **key-management:** align auto-created key names during repair ([#1056](https://github.com/qixing-jk/all-api-hub/issues/1056)) ([fe4bc74](https://github.com/qixing-jk/all-api-hub/commit/fe4bc74bd5ee1aedfc291f21ca31b011826e965d))
+* **key-management:** verify account token APIs ([#1045](https://github.com/qixing-jk/all-api-hub/issues/1045)) ([77844ae](https://github.com/qixing-jk/all-api-hub/commit/77844ae0bbb02dac55ee534884ee1b2fee90fab7))
+* **settings:** open options page from toolbar action ([#1058](https://github.com/qixing-jk/all-api-hub/issues/1058)) ([831876e](https://github.com/qixing-jk/all-api-hub/commit/831876ecc9e868598ccd9874ea54f8272b8b1a7b))
+* **verification:** support aborting model verification flows ([#1049](https://github.com/qixing-jk/all-api-hub/issues/1049)) ([333735f](https://github.com/qixing-jk/all-api-hub/commit/333735f3cf70878ab0bb9ab8fd3e8d969b65b5c1))
+* **web-ai-api-check:** add custom key cleanup regex ([#1071](https://github.com/qixing-jk/all-api-hub/issues/1071)) ([df21f20](https://github.com/qixing-jk/all-api-hub/commit/df21f20ce8896ff408f218ea545fb27caaea7993))
+* **web-ai-api-check:** add optional save metadata fields ([#1053](https://github.com/qixing-jk/all-api-hub/issues/1053)) ([19d901f](https://github.com/qixing-jk/all-api-hub/commit/19d901f171542b47cf75cf4c7da04ed8fa234bd5))
+* **web-ai-api-check:** clean obfuscated API keys ([#1070](https://github.com/qixing-jk/all-api-hub/issues/1070)) ([f41eee8](https://github.com/qixing-jk/all-api-hub/commit/f41eee8376dcaac1c25729a9f067bbc439bcc0ed))
+* **web-ai-api-check:** persist pre-save verification history ([#1068](https://github.com/qixing-jk/all-api-hub/issues/1068)) ([5893527](https://github.com/qixing-jk/all-api-hub/commit/5893527cb2d66958ab66315ceb63d52ef8f7f427))
+* **web-ai-api-check:** remember base url history ([#1034](https://github.com/qixing-jk/all-api-hub/issues/1034)) ([916ebe7](https://github.com/qixing-jk/all-api-hub/commit/916ebe718e8cd39b24ec670dd616898c3f87711a))
+
+
+### Bug Fixes
+
+* **account:** clarify check-in setting behavior ([#1066](https://github.com/qixing-jk/all-api-hub/issues/1066)) ([bc40458](https://github.com/qixing-jk/all-api-hub/commit/bc4045805ac0f0aa61830182dae7cc9c2a49ad4b))
+* **account:** expose auth method help tooltip ([#1046](https://github.com/qixing-jk/all-api-hub/issues/1046)) ([e3edf7f](https://github.com/qixing-jk/all-api-hub/commit/e3edf7fcb37e3f0343a54439f3c1727f4ebe2c96))
+* **accounts:** use group-aware default token names ([#1050](https://github.com/qixing-jk/all-api-hub/issues/1050)) ([e74122c](https://github.com/qixing-jk/all-api-hub/commit/e74122c0640a6f7bae23b75d1f4a360ca4ce89ef))
+* address Sub2API repair layout and content fetch signals ([#1060](https://github.com/qixing-jk/all-api-hub/issues/1060)) ([f3b1826](https://github.com/qixing-jk/all-api-hub/commit/f3b18263b2464f7647fecacb303fde2500891c66))
+* **key-management:** allow cancelling key repair checks ([#1041](https://github.com/qixing-jk/all-api-hub/issues/1041)) ([9b6bda9](https://github.com/qixing-jk/all-api-hub/commit/9b6bda9a1cf57880299aa4eccba01b57a4c738b8))
+* **key-management:** terminalize stale repair history ([#1043](https://github.com/qixing-jk/all-api-hub/issues/1043)) ([4b5fb4c](https://github.com/qixing-jk/all-api-hub/commit/4b5fb4c2f6c1b8809ac5c1248529e70dc9433514))
+* **model-list:** align custom key prefill with group defaults ([#1052](https://github.com/qixing-jk/all-api-hub/issues/1052)) ([06b55fe](https://github.com/qixing-jk/all-api-hub/commit/06b55fe50a7be9fbf6f912628491099f99ec98ad))
+* **options:** preserve search input home end keys ([#1059](https://github.com/qixing-jk/all-api-hub/issues/1059)) ([11bde8d](https://github.com/qixing-jk/all-api-hub/commit/11bde8df0d76e1536501938b7c730c7753fa8c0c))
+* **web-ai-api-check:** preserve credentials on empty extraction ([#1069](https://github.com/qixing-jk/all-api-hub/issues/1069)) ([d4c0ac6](https://github.com/qixing-jk/all-api-hub/commit/d4c0ac64a41bd85dc55788071543a60620ae35a3))
+
 ## [3.48.0](https://github.com/qixing-jk/all-api-hub/compare/v3.47.0...v3.48.0) (2026-06-23)
 
 
