@@ -1,4 +1,8 @@
 import {
+  Description as HeadlessDescription,
+  Switch as HeadlessSwitch,
+} from "@headlessui/react"
+import {
   ArrowDownTrayIcon,
   CalendarDaysIcon,
   CurrencyDollarIcon,
@@ -478,7 +482,10 @@ export default function AccountForm({
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["check-in"]}
         testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
       >
-        <div className="flex w-full items-center justify-between gap-4">
+        <HeadlessSwitch.Group
+          as="div"
+          className="flex w-full items-center justify-between gap-4"
+        >
           <div className="flex-1">
             <label
               htmlFor="supports-check-in"
@@ -486,9 +493,13 @@ export default function AccountForm({
             >
               {t("form.checkInStatus")}
             </label>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <HeadlessDescription
+              as="p"
+              id="supports-check-in-description"
+              className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+            >
               {t("form.checkInStatusDesc")}
-            </p>
+            </HeadlessDescription>
             {!canUseBuiltInCheckInDetection && (
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {t("form.sub2apiCheckInUnsupported")}
@@ -516,7 +527,7 @@ export default function AccountForm({
               checkIn.enableDetection ? "bg-green-600" : "bg-gray-200"
             } focus:ring-green-500`}
           />
-        </div>
+        </HeadlessSwitch.Group>
 
         {checkIn.enableDetection && (
           <div className="flex w-full items-center justify-between gap-4">

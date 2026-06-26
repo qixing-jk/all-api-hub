@@ -151,9 +151,18 @@ describe("AccountDialog AccountForm", () => {
     expect(
       screen.getByText("accountDialog:sections.checkInConfig.title"),
     ).toBeInTheDocument()
+    const checkInStatusDescription = screen.getByText(
+      "accountDialog:form.checkInStatusDesc",
+    )
+    expect(checkInStatusDescription).toHaveAttribute(
+      "id",
+      "supports-check-in-description",
+    )
     expect(
-      screen.getByText("accountDialog:form.checkInStatusDesc"),
-    ).toBeInTheDocument()
+      screen.getByRole("switch", {
+        name: "accountDialog:form.checkInStatus",
+      }),
+    ).toHaveAccessibleDescription("accountDialog:form.checkInStatusDesc")
     expect(
       screen.getByText("accountDialog:sections.balanceAndStats.title"),
     ).toBeInTheDocument()
