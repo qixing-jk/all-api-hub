@@ -72,6 +72,7 @@ export function useCopyKeyDialog(
   const copiedTokenResetTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null)
+  // Incremented to invalidate slower token inventory requests after account eligibility changes.
   const fetchRequestIdRef = useRef(0)
 
   const canCreateDefaultKey = useMemo(

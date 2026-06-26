@@ -61,6 +61,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
+  // Incremented to invalidate slower token inventory requests after account eligibility changes.
   const fetchRequestIdRef = useRef(0)
 
   const canCreateToken = useMemo(
