@@ -27,7 +27,7 @@ export type ApiCheckModalCloseReason =
 
 let isModalHostReady = false
 
-export type ApiCheckOpenModalDetail = {
+export interface ApiCheckOpenModalDetail {
   sourceText: string
   pageUrl: string
   trigger: "contextMenu" | "autoDetect"
@@ -41,7 +41,7 @@ export type ApiCheckOpenModalDetail = {
   }
 }
 
-export type ApiCheckModalClosedDetail = {
+export interface ApiCheckModalClosedDetail {
   pageUrl: string
   trigger: ApiCheckOpenModalDetail["trigger"]
   reason: ApiCheckModalCloseReason

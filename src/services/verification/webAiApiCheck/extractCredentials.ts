@@ -64,7 +64,7 @@ type ApiCheckExtractionResult = {
   apiKey: string | null
 }
 
-type ApiCheckExtractionOptions = {
+interface ApiCheckExtractionOptions {
   apiKeyCleanupPatterns?: string[]
 }
 

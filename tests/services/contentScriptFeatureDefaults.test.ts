@@ -48,6 +48,7 @@ describe("resolveContentFeaturePreferences", () => {
       webAiApiCheckDetectionEnabled: false,
       webAiApiCheckEnhancedDetectionEnabled: false,
       webAiApiCheckContextMenuEnabled: false,
+      webAiApiCheckKeyCleanupPatterns: [],
     })
   })
 
@@ -73,6 +74,22 @@ describe("resolveContentFeaturePreferences", () => {
       webAiApiCheckDetectionEnabled: true,
       webAiApiCheckEnhancedDetectionEnabled: true,
       webAiApiCheckContextMenuEnabled: false,
+      webAiApiCheckKeyCleanupPatterns: [],
+    })
+  })
+
+  it("resolves Web AI API Check key cleanup patterns for content listeners", () => {
+    expect(
+      resolveContentFeaturePreferences({
+        webAiApiCheck: {
+          enabled: true,
+          keyCleanup: {
+            removalPatterns: ["\\[deleteme", "<noise>"],
+          },
+        },
+      }),
+    ).toMatchObject({
+      webAiApiCheckKeyCleanupPatterns: ["\\[deleteme", "<noise>"],
     })
   })
 

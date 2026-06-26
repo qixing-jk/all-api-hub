@@ -25,7 +25,17 @@ const logger = createLogger("ContentEntrypoint")
 const contentPreferencesStorage = new Storage({ area: "local" })
 
 /**
- * Shallow compare the listener-toggle preferences that matter to content scripts.
+ * Compare ordered string preference arrays used by content listeners.
+ */
+function areStringArraysEqual(left: string[], right: string[]) {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  )
+}
+
+/**
+ * Shallow compare the content preferences that matter to content scripts.
  */
 function areContentFeaturePreferencesEqual(
   left: ContentFeaturePreferences | null,
@@ -42,7 +52,11 @@ function areContentFeaturePreferencesEqual(
     left.webAiApiCheckEnhancedDetectionEnabled ===
       right.webAiApiCheckEnhancedDetectionEnabled &&
     left.webAiApiCheckContextMenuEnabled ===
-      right.webAiApiCheckContextMenuEnabled
+      right.webAiApiCheckContextMenuEnabled &&
+    areStringArraysEqual(
+      left.webAiApiCheckKeyCleanupPatterns,
+      right.webAiApiCheckKeyCleanupPatterns,
+    )
   )
 }
 
