@@ -146,6 +146,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       baseUrl: "https://cookie.example.com/console",
       checkIn: CHECK_IN_DISABLED,
       accountId: undefined,
+      exchangeRate: 7,
       includeTodayCashflow: false,
       auth: {
         authType: AuthTypeEnum.Cookie,
