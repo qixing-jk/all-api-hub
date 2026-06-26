@@ -181,7 +181,7 @@ Add a request-only Interface that makes the source explicit:
 export interface AccountApiContext {
   accountId: string
   siteType: AccountSiteType
-  request: ApiServiceRequest
+  request: ApiServiceRequest | Sub2ApiAuthSessionRequest
 }
 
 export async function resolveStoredAccountApiContext(
@@ -220,7 +220,7 @@ export interface DisplayAccountApiCapabilityContext {
   adapter: SiteAdapter
   keyManagement: KeyManagementCapability | undefined
   tokenProvisioning: TokenProvisioningCapability | undefined
-  request: ApiServiceRequest
+  request: ApiServiceRequest | Sub2ApiAuthSessionRequest
 }
 ```
 
@@ -236,17 +236,19 @@ workflows a smaller request-only seam.
 1. reject a missing or blank `accountId`;
 2. read the latest `SiteAccount` from `accountStorage`;
 3. normalize it through existing storage normalization;
-4. build `ApiServiceRequest` from canonical account fields;
+4. build `ApiServiceRequest` from canonical stored-account fields;
 5. set `request.accountId` from the stored account id;
 6. apply account-site profile request decoration, such as Sub2API auth session;
-7. include the same cookie-auth session value currently added by
-   `DisplaySiteData.cookieAuthSessionCookie`;
+7. copy the stored cookie-auth session from
+   `SiteAccount.cookieAuth.sessionCookie` into `request.auth.cookie`;
 8. throw a typed or clearly named error if the account no longer exists or is
    not usable for account API requests.
 
 The stored path and snapshot path should share the same request builder after
 their input data is normalized. New request contexts should place the session
-cookie in `request.auth.cookie`, matching the current display-account builder.
+cookie in `request.auth.cookie`: stored-account contexts read it from
+`SiteAccount.cookieAuth.sessionCookie`, while display snapshot contexts read it
+from `DisplaySiteData.cookieAuthSessionCookie`.
 Top-level `request.cookieAuthSessionCookie` should be kept only where needed to
 preserve legacy prepared requests during migration.
 

@@ -801,7 +801,7 @@ Create `src/services/accounts/utils/legacyAccountAwareRequest.ts`:
 
 ```ts
 import { accountStorage } from "~/services/accounts/accountStorage"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 

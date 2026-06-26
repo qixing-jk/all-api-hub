@@ -94,6 +94,21 @@ describe("resolveLegacyAccountAwareRequest", () => {
     ).resolves.toBe(request)
   })
 
+  it("does not query storage when auth user id is missing", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+      },
+    }
+
+    await expect(
+      resolveLegacyAccountAwareRequest(request, { endpoint: "/api/test" }),
+    ).resolves.toBe(request)
+    expect(mockGetAccountByBaseUrlAndUserId).not.toHaveBeenCalled()
+  })
+
   it("does not query storage when accountId is already present", async () => {
     const request = {
       baseUrl: "https://example.com",

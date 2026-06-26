@@ -27,6 +27,8 @@ export async function resolveLegacyAccountAwareRequest(
     hasCookie: Boolean(request.auth?.cookie),
   })
 
+  if (!userId) return request
+
   const accountInfo = await accountStorage.getAccountByBaseUrlAndUserId(
     request.baseUrl,
     userId,

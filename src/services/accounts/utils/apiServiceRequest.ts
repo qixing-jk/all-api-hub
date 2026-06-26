@@ -89,16 +89,15 @@ export class StoredAccountApiContextError extends Error {
   }
 }
 
-export type DisplayAccountApiSnapshot = Pick<
-  DisplaySiteData,
-  | "id"
-  | "siteType"
-  | "baseUrl"
-  | "authType"
-  | "userId"
-  | "token"
-  | "cookieAuthSessionCookie"
->
+export interface DisplayAccountApiSnapshot {
+  id: DisplaySiteData["id"]
+  siteType: DisplaySiteData["siteType"]
+  baseUrl: DisplaySiteData["baseUrl"]
+  authType: DisplaySiteData["authType"]
+  userId: DisplaySiteData["userId"]
+  token: DisplaySiteData["token"]
+  cookieAuthSessionCookie?: DisplaySiteData["cookieAuthSessionCookie"]
+}
 
 export interface AccountApiContext {
   accountId: string
@@ -112,57 +111,57 @@ export interface DisplayAccountApiCapabilityContext extends AccountApiContext {
   tokenProvisioning: TokenProvisioningCapability | undefined
 }
 
-/**
- * Build the shared ApiService request DTO used by account-scoped UI flows.
- */
-const buildApiRequestFromDisplayAccount = (
-  account: DisplayAccountApiSnapshot,
-): ApiServiceRequest => ({
-  baseUrl: account.baseUrl,
-  accountId: account.id,
-  auth: {
-    authType: account.authType,
-    userId: account.userId,
-    accessToken: account.token,
-    cookie: account.cookieAuthSessionCookie,
-  },
-})
+interface StoredAccountApiRequestSource {
+  id: SiteAccount["id"]
+  site_url: SiteAccount["site_url"]
+  site_type: SiteAccount["site_type"]
+  authType: SiteAccount["authType"]
+  account_info: SiteAccount["account_info"]
+  cookieAuth?: SiteAccount["cookieAuth"]
+}
 
-type StoredAccountApiRequestSource = Pick<
-  SiteAccount,
-  "id" | "site_url" | "site_type" | "authType" | "account_info" | "cookieAuth"
->
+interface AccountApiRequestSource {
+  id: unknown
+  siteUrl: unknown
+  siteType: AccountSiteType
+  authType: AuthTypeEnum
+  userId: unknown
+  accessToken: unknown
+  cookie: unknown
+}
 
-export const createAccountApiRequestFromStoredAccount = (
-  account: StoredAccountApiRequestSource,
+const createAccountApiContextFromSource = (
+  source: AccountApiRequestSource,
 ): AccountApiContext => {
-  if (!hasNonEmptyString(account.id)) {
+  if (!hasNonEmptyString(source.id)) {
     throw new StoredAccountApiContextError(
       "MISSING_ACCOUNT_ID",
       "account_api_context_missing_account_id",
     )
   }
 
-  if (!hasNonEmptyString(account.site_url)) {
+  if (!hasNonEmptyString(source.siteUrl)) {
     throw new StoredAccountApiContextError(
       "MISSING_BASE_URL",
       "account_api_context_missing_base_url",
     )
   }
 
-  if (!hasNonEmptyString(account.account_info?.id)) {
+  if (!hasNonEmptyString(source.userId)) {
     throw new StoredAccountApiContextError(
       "MISSING_USER_ID",
       "account_api_context_missing_user_id",
     )
   }
 
-  const accessToken = account.account_info?.access_token ?? ""
-  const cookie = account.cookieAuth?.sessionCookie
+  const accessToken =
+    typeof source.accessToken === "string" ? source.accessToken : ""
+  const cookie = typeof source.cookie === "string" ? source.cookie : undefined
 
   if (
-    account.authType === AuthTypeEnum.AccessToken &&
-    !hasNonEmptyString(accessToken)
+    source.authType === AuthTypeEnum.None ||
+    (source.authType === AuthTypeEnum.AccessToken &&
+      !hasNonEmptyString(accessToken))
   ) {
     throw new StoredAccountApiContextError(
       "MISSING_CREDENTIAL",
@@ -171,7 +170,7 @@ export const createAccountApiRequestFromStoredAccount = (
   }
 
   if (
-    account.authType === AuthTypeEnum.Cookie &&
+    source.authType === AuthTypeEnum.Cookie &&
     !hasNonEmptyString(accessToken) &&
     !hasNonEmptyString(cookie)
   ) {
@@ -182,25 +181,38 @@ export const createAccountApiRequestFromStoredAccount = (
   }
 
   const request: ApiServiceRequest = {
-    baseUrl: account.site_url,
-    accountId: account.id,
+    baseUrl: source.siteUrl,
+    accountId: source.id,
     auth: {
-      authType: account.authType,
-      userId: account.account_info.id,
+      authType: source.authType,
+      userId: source.userId,
       accessToken,
       cookie,
     },
   }
 
   return {
-    accountId: account.id,
-    siteType: account.site_type,
+    accountId: source.id,
+    siteType: source.siteType,
     request: withDisplayAccountAuthSession(
-      { siteType: account.site_type },
+      { siteType: source.siteType },
       request,
     ),
   }
 }
+
+export const createAccountApiRequestFromStoredAccount = (
+  account: StoredAccountApiRequestSource,
+): AccountApiContext =>
+  createAccountApiContextFromSource({
+    id: account.id,
+    siteUrl: account.site_url,
+    siteType: account.site_type,
+    authType: account.authType,
+    userId: account.account_info?.id,
+    accessToken: account.account_info?.access_token ?? "",
+    cookie: account.cookieAuth?.sessionCookie,
+  })
 
 /**
  * Resolve the latest stored account and build its account API request context.
@@ -246,23 +258,16 @@ const withDisplayAccountAuthSession = (
  */
 export const createDisplayAccountRequestContext = (
   account: DisplayAccountApiSnapshot,
-): AccountApiContext => {
-  if (!hasNonEmptyString(account.id)) {
-    throw new StoredAccountApiContextError(
-      "MISSING_ACCOUNT_ID",
-      "account_api_context_missing_account_id",
-    )
-  }
-
-  return {
-    accountId: account.id,
+): AccountApiContext =>
+  createAccountApiContextFromSource({
+    id: account.id,
+    siteUrl: account.baseUrl,
     siteType: account.siteType,
-    request: withDisplayAccountAuthSession(
-      account,
-      buildApiRequestFromDisplayAccount(account),
-    ),
-  }
-}
+    authType: account.authType,
+    userId: account.userId,
+    accessToken: account.token,
+    cookie: account.cookieAuthSessionCookie,
+  })
 
 /**
  * Resolve the site adapter and request DTO for a display account.

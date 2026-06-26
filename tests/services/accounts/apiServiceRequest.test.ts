@@ -205,6 +205,53 @@ describe("fetchDisplayAccountTokens", () => {
     ).toThrow("account_api_context_missing_account_id")
   })
 
+  it.each([
+    [
+      "base URL",
+      { baseUrl: "   " },
+      "MISSING_BASE_URL",
+      "account_api_context_missing_base_url",
+    ],
+    [
+      "user id",
+      { userId: "   " },
+      "MISSING_USER_ID",
+      "account_api_context_missing_user_id",
+    ],
+    [
+      "access-token credential",
+      { token: "   " },
+      "MISSING_CREDENTIAL",
+      "account_api_context_missing_credential",
+    ],
+    [
+      "cookie credential",
+      {
+        authType: AuthTypeEnum.Cookie,
+        token: "   ",
+        cookieAuthSessionCookie: "   ",
+      },
+      "MISSING_CREDENTIAL",
+      "account_api_context_missing_credential",
+    ],
+  ])(
+    "rejects display account snapshots with a blank %s",
+    (_label, overrides, code, message) => {
+      expect(() =>
+        createDisplayAccountRequestContext({
+          ...ACCOUNT,
+          ...overrides,
+        } as any),
+      ).toThrow(
+        expect.objectContaining({
+          name: "StoredAccountApiContextError",
+          code,
+          message,
+        }),
+      )
+    },
+  )
+
   it("resolves stored account context from the latest persisted account", async () => {
     mockGetAccountById.mockResolvedValueOnce(
       buildStoredAccount({
@@ -385,6 +432,22 @@ describe("fetchDisplayAccountTokens", () => {
             access_token: "   ",
           },
           cookieAuth: undefined,
+        }) as any,
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        name: "StoredAccountApiContextError",
+        code: "MISSING_CREDENTIAL",
+        message: "account_api_context_missing_credential",
+      }),
+    )
+  })
+
+  it("throws a stable error when a stored account has no supported auth type", () => {
+    expect(() =>
+      createAccountApiRequestFromStoredAccount(
+        buildStoredAccount({
+          authType: AuthTypeEnum.None,
         }) as any,
       ),
     ).toThrow(
