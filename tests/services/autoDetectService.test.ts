@@ -6,6 +6,7 @@ import {
   AUTO_DETECT_STRATEGIES,
 } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { AuthTypeEnum } from "~/types"
@@ -17,6 +18,7 @@ const {
   mockGetAccountSiteType,
   mockGetSiteAdapter,
   mockIsMessageReceiverUnavailableError,
+  mockReadAccountBrowserSessionFromTab,
   mockSendRuntimeMessage,
 } = vi.hoisted(() => ({
   mockFetchUserInfo: vi.fn(),
@@ -25,12 +27,23 @@ const {
   mockGetAccountSiteType: vi.fn(),
   mockGetSiteAdapter: vi.fn(),
   mockIsMessageReceiverUnavailableError: vi.fn(),
+  mockReadAccountBrowserSessionFromTab: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteAdapter: mockGetSiteAdapter,
 }))
+
+vi.mock("~/services/accountBrowserSession", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/accountBrowserSession")>()
+
+  return {
+    ...actual,
+    readAccountBrowserSessionFromTab: mockReadAccountBrowserSessionFromTab,
+  }
+})
 
 vi.mock("~/services/siteDetection/detectSiteType", () => ({
   getAccountSiteType: mockGetAccountSiteType,
@@ -75,6 +88,7 @@ describe("autoDetectSmart", () => {
     mockGetActiveOrAllTabs.mockResolvedValue([])
     mockGetActiveTabs.mockResolvedValue([])
     mockIsMessageReceiverUnavailableError.mockReturnValue(false)
+    mockReadAccountBrowserSessionFromTab.mockResolvedValue(null)
     mockSendRuntimeMessage.mockResolvedValue(null)
     mockGetSiteAdapter.mockReturnValue({
       accountBootstrap: {
@@ -106,13 +120,17 @@ describe("autoDetectSmart", () => {
       },
     ])
     mockGetActiveTabs.mockResolvedValue([{ id: 1 }])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "12",
-        user: { id: 12, username: "alice" },
-        accessToken: "current-tab-token",
-        siteTypeHint: SITE_TYPES.VELOERA,
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.NEW_API,
+      siteTypeHint: SITE_TYPES.VELOERA,
+      userId: "12",
+      user: { id: 12, username: "alice" },
+      accessToken: "current-tab-token",
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 1,
+        origin: "https://example.com",
       },
     })
 
@@ -147,11 +165,17 @@ describe("autoDetectSmart", () => {
         cookieStoreId: "1-incognito",
       },
     ])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "12",
-        user: { id: 12, username: "alice" },
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.NEW_API,
+      userId: "12",
+      user: { id: 12, username: "alice" },
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 101,
+        origin: "https://example.com",
+        incognito: true,
+        cookieStoreId: "1-incognito",
       },
     })
 
@@ -174,10 +198,19 @@ describe("autoDetectSmart", () => {
         },
       },
     })
-    expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(101, {
-      action: expect.any(String),
-      url: "https://example.com/console",
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      tabId: 101,
+      baseUrl: "https://example.com/console",
       siteType: SITE_TYPES.NEW_API,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 101,
+        origin: "https://example.com",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+      onError: expect.any(Function),
     })
     expect(mockGetActiveTabs).not.toHaveBeenCalled()
   })
@@ -192,11 +225,17 @@ describe("autoDetectSmart", () => {
         cookieStoreId: "1-incognito",
       },
     ])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "12",
-        user: { id: 12, username: "alice" },
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.NEW_API,
+      userId: "12",
+      user: { id: 12, username: "alice" },
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 101,
+        origin: "https://example.com",
+        incognito: true,
+        cookieStoreId: "1-incognito",
       },
     })
 
@@ -221,10 +260,6 @@ describe("autoDetectSmart", () => {
         cookieStoreId: "1-incognito",
       },
     ])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: false,
-      error: "no local storage user",
-    })
     mockFetchUserInfo.mockResolvedValue({
       id: 13,
       username: "api-incognito-user",
@@ -265,6 +300,57 @@ describe("autoDetectSmart", () => {
     })
   })
 
+  it("uses the browser-session reader for current-tab auto-detect before API fallback", async () => {
+    mockGetAccountSiteType.mockResolvedValueOnce(SITE_TYPES.SUB2API)
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 201,
+        active: true,
+        url: "https://sub2.example.com/dashboard",
+      },
+    ])
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.SUB2API,
+      siteTypeHint: SITE_TYPES.SUB2API,
+      userId: "42",
+      user: { username: "tab-user" },
+      accessToken: "jwt-from-tab",
+      sub2apiAuth: { refreshToken: "refresh-from-tab" },
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 201,
+        origin: "https://sub2.example.com",
+      },
+    })
+
+    const result = await autoDetectSmart("https://sub2.example.com/console")
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        userId: "42",
+        user: { username: "tab-user" },
+        siteType: SITE_TYPES.SUB2API,
+        accessToken: "jwt-from-tab",
+        sub2apiAuth: { refreshToken: "refresh-from-tab" },
+      },
+    })
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      tabId: 201,
+      baseUrl: "https://sub2.example.com/console",
+      siteType: SITE_TYPES.SUB2API,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 201,
+        origin: "https://sub2.example.com",
+      },
+      onError: expect.any(Function),
+    })
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
   it("does not report Sub2API API fallback success from cookie-auth user-info calls", async () => {
     mockGetAccountSiteType.mockResolvedValueOnce(SITE_TYPES.SUB2API)
     mockGetActiveOrAllTabs.mockResolvedValue([
@@ -274,10 +360,6 @@ describe("autoDetectSmart", () => {
         url: "https://sub2.example.com/dashboard",
       },
     ])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: false,
-      error: "no local storage user",
-    })
     mockFetchUserInfo.mockRejectedValue(
       new Error("messages:sub2api.loginRequired"),
     )
@@ -317,10 +399,6 @@ describe("autoDetectSmart", () => {
         url: "https://example.com/home",
       },
     ])
-    browserAny.tabs.sendMessage.mockResolvedValueOnce({
-      success: false,
-      error: "no local storage user",
-    })
 
     const result = await autoDetectSmart("https://example.com/console")
 
@@ -337,8 +415,11 @@ describe("autoDetectSmart", () => {
         url: "https://example.com/dashboard",
       },
     ])
-    browserAny.tabs.sendMessage.mockRejectedValueOnce(
-      new Error("content storage failed"),
+    mockReadAccountBrowserSessionFromTab.mockImplementationOnce(
+      async (options) => {
+        options.onError?.(new Error("content storage failed"))
+        return null
+      },
     )
     mockIsMessageReceiverUnavailableError.mockReturnValue(false)
     mockFetchUserInfo.mockResolvedValueOnce({
@@ -368,8 +449,11 @@ describe("autoDetectSmart", () => {
         url: "https://example.com/dashboard",
       },
     ])
-    browserAny.tabs.sendMessage.mockRejectedValueOnce(
-      new Error("content storage failed"),
+    mockReadAccountBrowserSessionFromTab.mockImplementationOnce(
+      async (options) => {
+        options.onError?.(new Error("content storage failed"))
+        return null
+      },
     )
     mockIsMessageReceiverUnavailableError.mockImplementationOnce(() => {
       throw new Error("classifier failed")
@@ -409,11 +493,15 @@ describe("autoDetectSmart", () => {
       id: 17,
       username: "fallback-after-site-type-failure",
     })
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "16",
-        user: { id: 16, username: "content-user" },
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.NEW_API,
+      userId: "16",
+      user: { id: 16, username: "content-user" },
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 106,
+        origin: "https://example.com",
       },
     })
 
@@ -455,11 +543,15 @@ describe("autoDetectSmart", () => {
         url: "https://other.example.com/home",
       },
     ])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "12",
-        user: { id: 12, username: "alice" },
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.NEW_API,
+      userId: "12",
+      user: { id: 12, username: "alice" },
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 101,
+        origin: "https://example.com",
       },
     })
 
@@ -473,14 +565,20 @@ describe("autoDetectSmart", () => {
         tabId: 101,
       },
     })
-    expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(101, {
-      action: expect.any(String),
-      url: "https://example.com/console",
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      tabId: 101,
+      baseUrl: "https://example.com/console",
       siteType: SITE_TYPES.NEW_API,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 101,
+        origin: "https://example.com",
+      },
+      onError: expect.any(Function),
     })
-    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalledWith(
-      202,
-      expect.anything(),
+    expect(mockReadAccountBrowserSessionFromTab).not.toHaveBeenCalledWith(
+      expect.objectContaining({ tabId: 202 }),
     )
     expect(mockGetActiveTabs).not.toHaveBeenCalled()
   })
@@ -495,15 +593,6 @@ describe("autoDetectSmart", () => {
       },
     ])
     mockGetActiveTabs.mockResolvedValue([{ id: 2 }])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "99",
-        user: { id: 99, username: "wrong-current-tab-user" },
-        accessToken: "wrong-current-tab-token",
-        siteTypeHint: SITE_TYPES.AIHUBMIX,
-      },
-    })
     mockSendRuntimeMessage.mockResolvedValue({
       success: true,
       data: {
@@ -527,7 +616,7 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(result.data).not.toHaveProperty("fetchContext")
-    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+    expect(mockReadAccountBrowserSessionFromTab).not.toHaveBeenCalled()
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
       action: expect.any(String),
       requestId: expect.any(String),
@@ -581,13 +670,17 @@ describe("autoDetectSmart", () => {
       },
     ])
     mockGetActiveTabs.mockResolvedValue([{ id: 2 }])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "7",
-        user: { id: 7, username: "aihubmix-user" },
-        accessToken: "main-origin-session-token",
-        siteTypeHint: SITE_TYPES.AIHUBMIX,
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.AIHUBMIX,
+      siteTypeHint: SITE_TYPES.AIHUBMIX,
+      userId: "7",
+      user: { id: 7, username: "aihubmix-user" },
+      accessToken: "main-origin-session-token",
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 2,
+        origin: "https://aihubmix.com",
       },
     })
 
@@ -608,10 +701,17 @@ describe("autoDetectSmart", () => {
         },
       },
     })
-    expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(2, {
-      action: expect.any(String),
-      url: "https://aihubmix.com",
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      tabId: 2,
+      baseUrl: "https://aihubmix.com",
       siteType: SITE_TYPES.AIHUBMIX,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 2,
+        origin: "https://aihubmix.com",
+      },
+      onError: expect.any(Function),
     })
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
@@ -628,7 +728,12 @@ describe("autoDetectSmart", () => {
       },
     ])
     mockGetActiveTabs.mockResolvedValue([{ id: 1 }])
-    browserAny.tabs.sendMessage.mockRejectedValue(new Error("no receiver"))
+    mockReadAccountBrowserSessionFromTab.mockImplementationOnce(
+      async (options) => {
+        options.onError?.(new Error("no receiver"))
+        return null
+      },
+    )
     mockIsMessageReceiverUnavailableError.mockReturnValue(true)
     mockFetchUserInfo.mockResolvedValue(null)
 
@@ -706,7 +811,7 @@ describe("autoDetectSmart", () => {
         cookieStoreId: "1-incognito",
       },
     })
-    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+    expect(mockReadAccountBrowserSessionFromTab).not.toHaveBeenCalled()
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
       action: expect.any(String),
       requestId: expect.any(String),
@@ -726,10 +831,6 @@ describe("autoDetectSmart", () => {
         cookieStoreId: "1-incognito",
       },
     ])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: false,
-      error: "no local storage user",
-    })
     mockFetchUserInfo.mockResolvedValue(null)
     mockSendRuntimeMessage.mockResolvedValue({
       success: true,
@@ -1083,7 +1184,7 @@ describe("autoDetectSmart", () => {
       user: { id: 32, username: "background-after-current-tab-throw" },
     })
     expect(result.data).not.toHaveProperty("fetchContext")
-    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+    expect(mockReadAccountBrowserSessionFromTab).not.toHaveBeenCalled()
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
   })
 
@@ -1097,7 +1198,12 @@ describe("autoDetectSmart", () => {
         url: "https://example.com/home",
       },
     ])
-    browserAny.tabs.sendMessage.mockRejectedValueOnce(new Error("no receiver"))
+    mockReadAccountBrowserSessionFromTab.mockImplementationOnce(
+      async (options) => {
+        options.onError?.(new Error("no receiver"))
+        return null
+      },
+    )
     mockIsMessageReceiverUnavailableError.mockReturnValue(true)
     mockFetchUserInfo.mockResolvedValue(null)
 
@@ -1129,7 +1235,12 @@ describe("autoDetectSmart", () => {
         cookieStoreId: "private-store",
       },
     ])
-    browserAny.tabs.sendMessage.mockRejectedValueOnce(new Error("no receiver"))
+    mockReadAccountBrowserSessionFromTab.mockImplementationOnce(
+      async (options) => {
+        options.onError?.(new Error("no receiver"))
+        return null
+      },
+    )
     mockIsMessageReceiverUnavailableError.mockReturnValue(true)
     mockFetchUserInfo.mockResolvedValue(null)
 

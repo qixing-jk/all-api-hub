@@ -21,6 +21,10 @@ import {
   isAccountSiteType,
   type AccountSiteType,
 } from "~/constants/siteType"
+import {
+  ACCOUNT_BROWSER_SESSION_SOURCES,
+  readAccountBrowserSessionFromTab,
+} from "~/services/accountBrowserSession"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import {
@@ -34,7 +38,6 @@ import {
   getBrowserApiCapabilities,
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
-  sendTabMessage,
 } from "~/utils/browser/browserApi"
 import { isExtensionPopup } from "~/utils/browser/index"
 import { getErrorMessage } from "~/utils/core/error"
@@ -500,47 +503,46 @@ async function getUserDataFromCurrentTab(
   })
 
   try {
-    // 通过 content script 获取用户信息
-    try {
-      const userResponse = await sendTabMessage(tabId, {
-        action: RuntimeActionIds.ContentGetUserFromLocalStorage,
-        url: url,
-        siteType,
-      })
+    const session = await readAccountBrowserSessionFromTab({
+      tabId,
+      baseUrl: url,
+      siteType,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      fetchContext,
+      onError(error) {
+        contentScriptUnavailable = isMessageReceiverUnavailableError(error)
 
-      const userId = normalizeAccountIdentity(userResponse?.data?.userId)
-      if (userResponse?.success && userResponse.data && userId) {
-        return {
-          userData: {
-            userId,
-            user: userResponse.data.user,
-            accessToken: userResponse.data.accessToken,
-            sub2apiAuth: userResponse.data.sub2apiAuth,
-            siteTypeHint: normalizeSiteTypeHint(userResponse.data.siteTypeHint),
-            fetchContext,
-          },
-          contentScriptUnavailable,
-          strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
-          fetchContext,
+        if (contentScriptUnavailable) {
+          logger.warn("当前标签页 content script 不可用，尝试 API 降级", {
+            url,
+            tabId,
+            fetchContext: summarizeApiServiceFetchContext(fetchContext),
+            error: getErrorMessage(error),
+          })
+        } else {
+          logger.warn("从当前标签页获取用户数据失败", {
+            url,
+            tabId,
+            fetchContext: summarizeApiServiceFetchContext(fetchContext),
+            error: getErrorMessage(error),
+          })
         }
-      }
-    } catch (error) {
-      contentScriptUnavailable = isMessageReceiverUnavailableError(error)
+      },
+    })
 
-      if (contentScriptUnavailable) {
-        logger.warn("当前标签页 content script 不可用，尝试 API 降级", {
-          url,
-          tabId,
-          fetchContext: summarizeApiServiceFetchContext(fetchContext),
-          error: getErrorMessage(error),
-        })
-      } else {
-        logger.warn("从当前标签页获取用户数据失败", {
-          url,
-          tabId,
-          fetchContext: summarizeApiServiceFetchContext(fetchContext),
-          error: getErrorMessage(error),
-        })
+    if (session) {
+      return {
+        userData: {
+          userId: session.userId,
+          user: session.user,
+          accessToken: session.accessToken,
+          sub2apiAuth: session.sub2apiAuth,
+          siteTypeHint: normalizeSiteTypeHint(session.siteTypeHint),
+          fetchContext,
+        },
+        contentScriptUnavailable,
+        strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+        fetchContext,
       }
     }
 

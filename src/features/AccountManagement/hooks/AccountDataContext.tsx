@@ -19,6 +19,10 @@ import {
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  ACCOUNT_BROWSER_SESSION_SOURCES,
+  readAccountBrowserSessionFromTab,
+} from "~/services/accountBrowserSession"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   doAccountSiteIdentitiesMatch,
@@ -26,6 +30,7 @@ import {
 } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { isSameAccountSiteOrigin } from "~/services/accounts/utils/siteUrlNormalization"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
@@ -61,7 +66,6 @@ import {
   onTabActivated,
   onTabRemoved,
   onTabUpdated,
-  sendTabMessage,
 } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
@@ -502,26 +506,21 @@ export const AccountDataProvider = ({
         }
 
         try {
-          // Ask the content script to read the site's localStorage and return the current userId.
-          const userResponse = await sendTabMessage(tabId, {
-            action: RuntimeActionIds.ContentGetUserFromLocalStorage,
-            url: parsedUrl.origin,
+          const session = await readAccountBrowserSessionFromTab({
+            tabId,
+            baseUrl: parsedUrl.origin,
             siteType: siteTypeForUserRead,
+            source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+            fetchContext: {
+              kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+              tabId,
+              origin: parsedUrl.origin,
+            },
           })
 
-          const userIdRaw = userResponse?.success
-            ? userResponse?.data?.userId
-            : null
-          const userRaw =
-            userResponse?.success &&
-            userResponse?.data?.user &&
-            typeof userResponse.data.user === "object" &&
-            !Array.isArray(userResponse.data.user)
-              ? (userResponse.data.user as Record<string, unknown>)
-              : null
-          verifiedUserId = normalizeAccountIdentity(userIdRaw)
+          verifiedUserId = normalizeAccountIdentity(session?.userId)
           verifiedUser =
-            userRaw ??
+            session?.user ??
             (verifiedUserId
               ? { id: verifiedUserId, username: verifiedUserId }
               : null)

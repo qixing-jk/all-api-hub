@@ -14,6 +14,8 @@ import {
   AccountDataProvider,
   useAccountDataContext,
 } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import type { SearchResult } from "~/services/search/accountSearch"
 import type { DisplaySiteData } from "~/types"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
@@ -58,6 +60,7 @@ const {
   mockRefreshAllAccounts,
   mockRefreshDisabledAccounts,
   mockToastPromise,
+  mockReadAccountBrowserSessionFromTab,
   mockGetActiveTabs,
   mockGetAllTabs,
   mockSendTabMessage,
@@ -97,6 +100,7 @@ const {
   mockRefreshAllAccounts: vi.fn(),
   mockRefreshDisabledAccounts: vi.fn(),
   mockToastPromise: vi.fn(),
+  mockReadAccountBrowserSessionFromTab: vi.fn(),
   mockGetActiveTabs: vi.fn<() => Promise<browser.tabs.Tab[]>>(async () => []),
   mockGetAllTabs: vi.fn<() => Promise<browser.tabs.Tab[]>>(async () => []),
   mockSendTabMessage: vi.fn(
@@ -239,6 +243,16 @@ vi.mock("~/utils/browser/browserApi", () => ({
   onTabUpdated: mockOnTabUpdated,
 }))
 
+vi.mock("~/services/accountBrowserSession", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/accountBrowserSession")>()
+
+  return {
+    ...actual,
+    readAccountBrowserSessionFromTab: mockReadAccountBrowserSessionFromTab,
+  }
+})
+
 vi.mock("~/services/search/accountSearch", () => ({
   buildAccountSearchIndex: mockBuildAccountSearchIndex,
   searchAccountSearchIndex: mockSearchAccountSearchIndex,
@@ -312,6 +326,7 @@ beforeEach(() => {
     latestSyncTime: 0,
   })
   mockToastPromise.mockImplementation((promise: Promise<any>) => promise)
+  mockReadAccountBrowserSessionFromTab.mockResolvedValue(null)
   mockGetActiveTabs.mockResolvedValue([])
   mockGetAllTabs.mockResolvedValue([])
   mockOnRuntimeMessage.mockImplementation((listener: any) => {
@@ -1524,10 +1539,17 @@ describe("AccountDataContext current tab detection", () => {
     mockGetActiveTabs.mockResolvedValue([
       createBrowserTab({ id: 7, url: "https://api.example.com/settings" }),
     ])
-    vi.mocked(globalThis.browser.tabs.sendMessage).mockResolvedValue({
-      success: true,
-      data: { userId: "42" },
-    } as any)
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: "new-api",
+      userId: "42",
+      user: { id: "42", username: "42" },
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 7,
+        origin: "https://api.example.com",
+      },
+    })
 
     const getLatestCtx = await renderAccountDataProvider()
 
@@ -1538,10 +1560,16 @@ describe("AccountDataContext current tab detection", () => {
       expect(getLatestCtx().detectedAccount?.id).toBe("acc-2")
     })
 
-    expect(globalThis.browser.tabs.sendMessage).toHaveBeenCalledWith(7, {
-      action: RuntimeActionIds.ContentGetUserFromLocalStorage,
-      url: "https://api.example.com",
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      tabId: 7,
+      baseUrl: "https://api.example.com",
       siteType: "new-api",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 7,
+        origin: "https://api.example.com",
+      },
     })
   })
 
@@ -1558,9 +1586,7 @@ describe("AccountDataContext current tab detection", () => {
     mockGetActiveTabs.mockResolvedValue([
       createBrowserTab({ id: 8, url: "https://api.example.com/settings" }),
     ])
-    vi.mocked(globalThis.browser.tabs.sendMessage).mockRejectedValue(
-      new Error("content script unavailable"),
-    )
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce(null)
 
     const getLatestCtx = await renderAccountDataProvider()
 
@@ -1594,7 +1620,7 @@ describe("AccountDataContext current tab detection", () => {
       expect(getLatestCtx().isDetecting).toBe(false)
     })
 
-    expect(globalThis.browser.tabs.sendMessage).not.toHaveBeenCalled()
+    expect(mockReadAccountBrowserSessionFromTab).not.toHaveBeenCalled()
   })
 
   it("clears previously detected hints when the active tab context disappears", async () => {
@@ -1621,10 +1647,12 @@ describe("AccountDataContext current tab detection", () => {
         }
       }
     })
-    vi.mocked(globalThis.browser.tabs.sendMessage).mockResolvedValue({
-      success: true,
-      data: { userId: "7" },
-    } as any)
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: "new-api",
+      userId: "7",
+      user: { id: "7", username: "7" },
+    })
 
     const getLatestCtx = await renderAccountDataProvider()
 
@@ -1649,7 +1677,7 @@ describe("AccountDataContext current tab detection", () => {
       expect(getLatestCtx().isDetecting).toBe(false)
     })
 
-    expect(globalThis.browser.tabs.sendMessage).toHaveBeenCalledTimes(1)
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledTimes(1)
   })
 
   it("rechecks only when the updated tab is still active", async () => {
@@ -1676,10 +1704,12 @@ describe("AccountDataContext current tab detection", () => {
         }
       }
     })
-    vi.mocked(globalThis.browser.tabs.sendMessage).mockResolvedValue({
-      success: true,
-      data: { userId: "7" },
-    } as any)
+    mockReadAccountBrowserSessionFromTab.mockResolvedValue({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: "new-api",
+      userId: "7",
+      user: { id: "7", username: "7" },
+    })
 
     const getLatestCtx = await renderAccountDataProvider()
 
@@ -1695,7 +1725,7 @@ describe("AccountDataContext current tab detection", () => {
       }
     })
 
-    expect(globalThis.browser.tabs.sendMessage).toHaveBeenCalledTimes(1)
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       for (const listener of updatedListeners) {
@@ -1704,7 +1734,7 @@ describe("AccountDataContext current tab detection", () => {
     })
 
     await waitFor(() => {
-      expect(globalThis.browser.tabs.sendMessage).toHaveBeenCalledTimes(2)
+      expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledTimes(2)
       expect(getLatestCtx().detectedAccount?.id).toBe("acc-1")
     })
   })
