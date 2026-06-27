@@ -147,18 +147,18 @@ src/services/accountBrowserSession/
 The public contract should be small and result-focused:
 
 ```ts
-export type AccountBrowserSessionSource =
-  | "current_tab"
-  | "existing_tab"
-  | "temp_window"
+import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
 
-export type AccountBrowserSessionFetchContext = {
-  kind: "current_tab" | "browser_context"
-  tabId?: number
-  origin?: string
-  incognito?: boolean
-  cookieStoreId?: string
-}
+export const ACCOUNT_BROWSER_SESSION_SOURCES = {
+  CURRENT_TAB: "current_tab",
+  EXISTING_TAB: "existing_tab",
+  TEMP_WINDOW: "temp_window",
+} as const
+
+export type AccountBrowserSessionSource =
+  (typeof ACCOUNT_BROWSER_SESSION_SOURCES)[keyof typeof ACCOUNT_BROWSER_SESSION_SOURCES]
+
+export type AccountBrowserSessionFetchContext = ApiServiceFetchContext
 
 export type AccountBrowserSession = {
   source: AccountBrowserSessionSource
@@ -263,13 +263,15 @@ It should preserve the current public return shape:
 ```ts
 type Sub2ApiResyncedToken = {
   accessToken: string
-  source: "existing_tab" | "temp_window"
+  source:
+    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
+    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
 }
 ```
 
-If the new Module returns `"current_tab"` in this path, map it to
-`"existing_tab"` because token re-sync's public contract only exposes the two
-existing categories.
+If the new Module returns `ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB` in this
+path, map it to `ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB` because token
+re-sync's public contract only exposes the two existing categories.
 
 ### 7. Keep Auto-Detect Fallback Semantics Stable
 

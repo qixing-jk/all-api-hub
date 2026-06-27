@@ -48,6 +48,49 @@ const normalizeSub2ApiAuth = (
   }
 }
 
+const normalizeFetchContext = (
+  value: unknown,
+): AccountBrowserSessionFetchContext | undefined => {
+  if (!value || typeof value !== "object") return undefined
+
+  const context = value as {
+    kind?: unknown
+    tabId?: unknown
+    origin?: unknown
+    incognito?: unknown
+    cookieStoreId?: unknown
+  }
+  const browserContext = {
+    ...(context.incognito === true ? { incognito: true } : {}),
+    ...(hasNonEmptyString(context.cookieStoreId)
+      ? { cookieStoreId: context.cookieStoreId.trim() }
+      : {}),
+  }
+
+  if (context.kind === API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT) {
+    return {
+      kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+      ...browserContext,
+    }
+  }
+
+  if (
+    context.kind === API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB &&
+    typeof context.tabId === "number" &&
+    Number.isFinite(context.tabId) &&
+    hasNonEmptyString(context.origin)
+  ) {
+    return {
+      kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+      tabId: context.tabId,
+      origin: context.origin.trim(),
+      ...browserContext,
+    }
+  }
+
+  return undefined
+}
+
 const normalizeSessionData = (
   data: unknown,
   options: {
@@ -65,7 +108,7 @@ const normalizeSessionData = (
     siteTypeHint?: unknown
     siteType?: unknown
     sub2apiAuth?: unknown
-    fetchContext?: AccountBrowserSessionFetchContext
+    fetchContext?: unknown
   }
 
   const userId = normalizeAccountIdentity(payload.userId)
@@ -84,7 +127,8 @@ const normalizeSessionData = (
       ? payload.siteType
       : undefined
   const sub2apiAuth = normalizeSub2ApiAuth(payload.sub2apiAuth)
-  const fetchContext = options.fetchContext ?? payload.fetchContext
+  const fetchContext =
+    options.fetchContext ?? normalizeFetchContext(payload.fetchContext)
 
   return {
     source: options.source,
@@ -129,7 +173,33 @@ export async function readAccountBrowserSessionFromTab(
   }
 }
 
-const getSameOriginTabs = async (baseUrl: string) => {
+const doesTabMatchBrowserContext = (
+  tab: browser.tabs.Tab,
+  browserContext: ReadAccountBrowserSessionFromExistingTabsOptions["browserContext"],
+) => {
+  if (!browserContext) return true
+
+  if (
+    typeof browserContext.incognito === "boolean" &&
+    (tab.incognito === true) !== browserContext.incognito
+  ) {
+    return false
+  }
+
+  if (
+    browserContext.cookieStoreId &&
+    tab.cookieStoreId !== browserContext.cookieStoreId
+  ) {
+    return false
+  }
+
+  return true
+}
+
+const getSameOriginTabs = async (
+  baseUrl: string,
+  browserContext?: ReadAccountBrowserSessionFromExistingTabsOptions["browserContext"],
+) => {
   const origin = tryParseOrigin(baseUrl)
   if (!origin) return []
   if (!getBrowserApiCapabilities().hasTabs) return []
@@ -138,7 +208,10 @@ const getSameOriginTabs = async (baseUrl: string) => {
   return tabs
     .filter((tab) => {
       if (!tab?.id || !tab.url) return false
-      return tryParseOrigin(tab.url) === origin
+      return (
+        tryParseOrigin(tab.url) === origin &&
+        doesTabMatchBrowserContext(tab, browserContext)
+      )
     })
     .sort((a, b) => Number(Boolean(b.active)) - Number(Boolean(a.active)))
 }
@@ -168,7 +241,7 @@ const createCurrentTabFetchContext = (
 export async function readAccountBrowserSessionFromExistingTabs(
   options: ReadAccountBrowserSessionFromExistingTabsOptions,
 ): Promise<AccountBrowserSession | null> {
-  const tabs = await getSameOriginTabs(options.baseUrl)
+  const tabs = await getSameOriginTabs(options.baseUrl, options.browserContext)
 
   for (const tab of tabs) {
     const tabId = tab.id
@@ -179,6 +252,13 @@ export async function readAccountBrowserSessionFromExistingTabs(
       baseUrl: options.baseUrl,
       siteType: options.siteType,
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      fetchContext: normalizeFetchContext({
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId,
+        origin: tryParseOrigin(options.baseUrl),
+        ...(tab.incognito === true ? { incognito: true } : {}),
+        ...(tab.cookieStoreId ? { cookieStoreId: tab.cookieStoreId } : {}),
+      }),
       onError: options.onError,
     })
 
@@ -247,6 +327,14 @@ export async function resolveAccountBrowserSession(
     const session = await readAccountBrowserSessionFromExistingTabs({
       baseUrl: options.baseUrl,
       siteType: options.siteType,
+      browserContext: options.currentTab
+        ? {
+            incognito: options.currentTab.incognito === true,
+            ...(options.currentTab.cookieStoreId
+              ? { cookieStoreId: options.currentTab.cookieStoreId }
+              : {}),
+          }
+        : undefined,
       isUsableSession: isUsable,
       onError: options.onError,
     })

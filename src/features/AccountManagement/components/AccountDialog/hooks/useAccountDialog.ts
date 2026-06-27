@@ -30,6 +30,7 @@ import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   resolveAccountBrowserSession,
   type AccountBrowserSession,
+  type ResolveAccountBrowserSessionOptions,
 } from "~/services/accountBrowserSession"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
@@ -159,6 +160,30 @@ function createCurrentTabCookieImportContext(
     ...(typeof tab.cookieStoreId === "string" && tab.cookieStoreId.trim()
       ? { cookieStoreId: tab.cookieStoreId.trim() }
       : {}),
+  }
+}
+
+/**
+ * Reuses the active tab only when it belongs to the target origin and browser profile.
+ */
+function createCurrentTabBrowserSessionContext(
+  context: CurrentTabCookieImportContext | null,
+  targetUrl: string,
+): ResolveAccountBrowserSessionOptions["currentTab"] | undefined {
+  const targetOrigin = tryParseOrigin(targetUrl)
+  if (
+    !context ||
+    !targetOrigin ||
+    targetOrigin !== context.origin ||
+    typeof context.tabId !== "number"
+  ) {
+    return undefined
+  }
+
+  return {
+    tabId: context.tabId,
+    incognito: context.incognito === true,
+    ...(context.cookieStoreId ? { cookieStoreId: context.cookieStoreId } : {}),
   }
 }
 
@@ -1527,11 +1552,16 @@ export function useAccountDialog({
       ): value is AccountBrowserSession =>
         typeof value?.sub2apiAuth?.refreshToken === "string" &&
         value.sub2apiAuth.refreshToken.trim().length > 0
+      const currentTab = createCurrentTabBrowserSessionContext(
+        currentTabCookieImportContextRef.current,
+        baseUrl,
+      )
       let importError: unknown
 
       const imported = await resolveAccountBrowserSession({
         baseUrl,
         siteType: SITE_TYPES.SUB2API,
+        ...(currentTab ? { currentTab } : {}),
         useExistingTabs: true,
         useTempWindow: true,
         requestIdPrefix: "account-dialog-sub2api-import",

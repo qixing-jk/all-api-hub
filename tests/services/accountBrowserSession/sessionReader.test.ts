@@ -126,6 +126,94 @@ describe("account browser-session reader", () => {
     ).resolves.toBeNull()
   })
 
+  it("normalizes payload fetch context only when it matches a trusted shape", async () => {
+    mockSendTabMessage
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "42",
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 42,
+            origin: " https://sub2.example.com ",
+            incognito: true,
+            cookieStoreId: " firefox-container-1 ",
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "43",
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: "not-a-number",
+            origin: "https://sub2.example.com",
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "44",
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+            incognito: true,
+            cookieStoreId: " firefox-container-2 ",
+          },
+        },
+      })
+
+    await expect(
+      readAccountBrowserSessionFromTab({
+        tabId: 42,
+        baseUrl: "https://sub2.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        fetchContext: {
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+          tabId: 42,
+          origin: "https://sub2.example.com",
+          incognito: true,
+          cookieStoreId: "firefox-container-1",
+        },
+      }),
+    )
+
+    await expect(
+      readAccountBrowserSessionFromTab({
+        tabId: 43,
+        baseUrl: "https://sub2.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      }),
+    ).resolves.toEqual(
+      expect.not.objectContaining({
+        fetchContext: expect.anything(),
+      }),
+    )
+
+    await expect(
+      readAccountBrowserSessionFromTab({
+        tabId: 44,
+        baseUrl: "https://sub2.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        fetchContext: {
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+          incognito: true,
+          cookieStoreId: "firefox-container-2",
+        },
+      }),
+    )
+  })
+
   it("notifies callers about tab read errors without throwing", async () => {
     const onError = vi.fn()
     const error = new Error("receiver missing")
@@ -186,6 +274,67 @@ describe("account browser-session reader", () => {
       siteType: SITE_TYPES.SUB2API,
     })
     expect(mockSendTabMessage).toHaveBeenNthCalledWith(2, 2, {
+      action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      url: "https://sub2.example.com",
+      siteType: SITE_TYPES.SUB2API,
+    })
+  })
+
+  it("filters existing tabs by browser context before probing local storage", async () => {
+    mockGetAllTabs.mockResolvedValueOnce([
+      {
+        id: 1,
+        url: "https://sub2.example.com/dashboard",
+        active: true,
+        incognito: false,
+      },
+      {
+        id: 2,
+        url: "https://sub2.example.com/settings",
+        active: false,
+        incognito: true,
+        cookieStoreId: "firefox-container-2",
+      },
+      {
+        id: 3,
+        url: "https://sub2.example.com/console",
+        active: false,
+        incognito: true,
+        cookieStoreId: "firefox-container-1",
+      },
+    ])
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "3",
+        user: { username: "container-user" },
+        accessToken: "container-token",
+      },
+    })
+
+    const session = await readAccountBrowserSessionFromExistingTabs({
+      baseUrl: "https://sub2.example.com",
+      siteType: SITE_TYPES.SUB2API,
+      browserContext: {
+        incognito: true,
+        cookieStoreId: "firefox-container-1",
+      },
+    })
+
+    expect(session).toEqual(
+      expect.objectContaining({
+        userId: "3",
+        fetchContext: {
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+          tabId: 3,
+          origin: "https://sub2.example.com",
+          incognito: true,
+          cookieStoreId: "firefox-container-1",
+        },
+      }),
+    )
+    expect(mockSendTabMessage).toHaveBeenCalledTimes(1)
+    expect(mockSendTabMessage).toHaveBeenCalledWith(3, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
@@ -261,6 +410,22 @@ describe("account browser-session reader", () => {
     expect(onError).toHaveBeenCalledWith(error, {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
     })
+  })
+
+  it("returns null when temp-window auto-detect responds without session data", async () => {
+    mockGetAllTabs.mockResolvedValueOnce([])
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: false,
+    })
+
+    await expect(
+      resolveAccountBrowserSession({
+        baseUrl: "https://sub2.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        useExistingTabs: true,
+        useTempWindow: true,
+      }),
+    ).resolves.toBeNull()
   })
 
   it("omits current-tab fetch context when the base URL has no parseable origin", async () => {

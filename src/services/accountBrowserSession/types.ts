@@ -53,6 +53,10 @@ export type ReadAccountBrowserSessionFromTabOptions = {
 export type ReadAccountBrowserSessionFromExistingTabsOptions = {
   baseUrl: string
   siteType: AccountSiteType
+  browserContext?: {
+    incognito?: boolean
+    cookieStoreId?: string
+  }
   isUsableSession?: AccountBrowserSessionPredicate
   onError?: AccountBrowserSessionErrorHandler
 }

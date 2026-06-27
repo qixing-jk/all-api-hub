@@ -299,6 +299,66 @@ describe("useAccountDialog Sub2API constraints", () => {
     expect(mockToastSuccess).toHaveBeenCalled()
   })
 
+  it("passes the current private tab context to the Sub2API browser-session import", async () => {
+    const { getActiveTabs } = await import("~/utils/browser/browserApi")
+    vi.mocked(getActiveTabs).mockResolvedValue([
+      {
+        id: 99,
+        url: "https://sub2.example.com/dashboard",
+        incognito: true,
+        cookieStoreId: "firefox-container-1",
+      } as browser.tabs.Tab,
+    ])
+    mockResolveAccountBrowserSession.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.SUB2API,
+      userId: "42",
+      user: { username: "private-tab-user" },
+      accessToken: "jwt-from-private-tab",
+      sub2apiAuth: {
+        refreshToken: "refresh-from-private-tab",
+      },
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://sub2.example.com",
+      )
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportSub2apiSession()
+    })
+
+    expect(mockResolveAccountBrowserSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+        currentTab: {
+          tabId: 99,
+          incognito: true,
+          cookieStoreId: "firefox-container-1",
+        },
+      }),
+    )
+    expect(result.current.state.sub2apiRefreshToken).toBe(
+      "refresh-from-private-tab",
+    )
+  })
+
   it("shows missing-session feedback when the browser-session reader finds no usable Sub2API session", async () => {
     mockResolveAccountBrowserSession.mockResolvedValueOnce(null)
     const { result } = renderHook(() =>

@@ -111,9 +111,9 @@ describe("account browser-session reader", () => {
       tabId: 12,
       baseUrl: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
-      source: "current_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       fetchContext: {
-        kind: "current_tab",
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId: 12,
         origin: "https://sub2.example.com",
         incognito: true,
@@ -122,7 +122,7 @@ describe("account browser-session reader", () => {
     })
 
     expect(session).toEqual({
-      source: "current_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       siteType: SITE_TYPES.SUB2API,
       userId: "42",
       user: { username: " tab-user " },
@@ -133,7 +133,7 @@ describe("account browser-session reader", () => {
         tokenExpiresAt: 123456,
       },
       fetchContext: {
-        kind: "current_tab",
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId: 12,
         origin: "https://sub2.example.com",
         incognito: true,
@@ -158,7 +158,7 @@ describe("account browser-session reader", () => {
         tabId: 1,
         baseUrl: "https://sub2.example.com",
         siteType: SITE_TYPES.SUB2API,
-        source: "current_tab",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       }),
     ).resolves.toBeNull()
     await expect(
@@ -166,7 +166,7 @@ describe("account browser-session reader", () => {
         tabId: 1,
         baseUrl: "https://sub2.example.com",
         siteType: SITE_TYPES.SUB2API,
-        source: "current_tab",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       }),
     ).resolves.toBeNull()
     await expect(
@@ -174,7 +174,7 @@ describe("account browser-session reader", () => {
         tabId: 1,
         baseUrl: "https://sub2.example.com",
         siteType: SITE_TYPES.SUB2API,
-        source: "current_tab",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       }),
     ).resolves.toBeNull()
   })
@@ -197,20 +197,19 @@ Create `src/services/accountBrowserSession/types.ts`:
 
 ```ts
 import type { AccountSiteType } from "~/constants/siteType"
+import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
 import type { Sub2ApiAuthConfig } from "~/types"
 
-export type AccountBrowserSessionSource =
-  | "current_tab"
-  | "existing_tab"
-  | "temp_window"
+export const ACCOUNT_BROWSER_SESSION_SOURCES = {
+  CURRENT_TAB: "current_tab",
+  EXISTING_TAB: "existing_tab",
+  TEMP_WINDOW: "temp_window",
+} as const
 
-export type AccountBrowserSessionFetchContext = {
-  kind: "current_tab" | "browser_context"
-  tabId?: number
-  origin?: string
-  incognito?: boolean
-  cookieStoreId?: string
-}
+export type AccountBrowserSessionSource =
+  (typeof ACCOUNT_BROWSER_SESSION_SOURCES)[keyof typeof ACCOUNT_BROWSER_SESSION_SOURCES]
+
+export type AccountBrowserSessionFetchContext = ApiServiceFetchContext
 
 export type AccountBrowserSession = {
   source: AccountBrowserSessionSource
@@ -231,7 +230,11 @@ export type ReadAccountBrowserSessionFromTabOptions = {
   tabId: number
   baseUrl: string
   siteType: AccountSiteType
-  source: Extract<AccountBrowserSessionSource, "current_tab" | "existing_tab">
+  source: Extract<
+    AccountBrowserSessionSource,
+    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB
+    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
+  >
   fetchContext?: AccountBrowserSessionFetchContext
 }
 
@@ -412,7 +415,7 @@ export async function readAccountBrowserSessionFromExistingTabs(
       tabId,
       baseUrl: options.baseUrl,
       siteType: options.siteType,
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
     if (session && (!options.isUsableSession || options.isUsableSession(session))) {
@@ -441,7 +444,7 @@ const readAccountBrowserSessionFromTempWindow = async (
     if (!response?.success || !response.data) return null
 
     return normalizeSessionData(response.data, {
-      source: "temp_window",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
       siteType: options.siteType,
     })
   } catch (error) {
@@ -464,9 +467,9 @@ export async function resolveAccountBrowserSession(
       tabId: options.currentTab.tabId,
       baseUrl: options.baseUrl,
       siteType: options.siteType,
-      source: "current_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       fetchContext: {
-        kind: "current_tab",
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId: options.currentTab.tabId,
         ...(origin ? { origin } : {}),
         ...(options.currentTab.incognito === true ? { incognito: true } : {}),
@@ -553,7 +556,7 @@ Append these tests inside the same `describe` block:
     })
 
     expect(session?.userId).toBe("2")
-    expect(session?.source).toBe("existing_tab")
+    expect(session?.source).toBe(ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB)
     expect(mockSendTabMessage).toHaveBeenNthCalledWith(1, 3, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: "https://sub2.example.com",
@@ -600,7 +603,7 @@ Append these tests inside the same `describe` block:
 
     expect(session).toEqual(
       expect.objectContaining({
-        source: "temp_window",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
         userId: "11",
         accessToken: "temp-token",
         sub2apiAuth: { refreshToken: "temp-refresh" },
@@ -668,7 +671,7 @@ Rewrite the behavior tests to assert the public contract and the new dependency:
 ```ts
 it("returns an existing-tab token from the browser-session reader", async () => {
   mockResolveAccountBrowserSession.mockResolvedValueOnce({
-    source: "existing_tab",
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     siteType: "sub2api",
     userId: "42",
     user: { username: "tab-user" },
@@ -679,7 +682,7 @@ it("returns an existing-tab token from the browser-session reader", async () => 
     resyncSub2ApiAuthToken("https://sub2.example.com"),
   ).resolves.toEqual({
     accessToken: "token-from-tab",
-    source: "existing_tab",
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
   })
   expect(mockResolveAccountBrowserSession).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -695,7 +698,7 @@ it("returns an existing-tab token from the browser-session reader", async () => 
 
 it("maps current-tab source to the existing public existing-tab source", async () => {
   mockResolveAccountBrowserSession.mockResolvedValueOnce({
-    source: "current_tab",
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
     siteType: "sub2api",
     userId: "42",
     user: { username: "tab-user" },
@@ -706,13 +709,13 @@ it("maps current-tab source to the existing public existing-tab source", async (
     resyncSub2ApiAuthToken("https://sub2.example.com"),
   ).resolves.toEqual({
     accessToken: "current-tab-token",
-    source: "existing_tab",
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
   })
 })
 
 it("returns a temp-window token from the browser-session reader", async () => {
   mockResolveAccountBrowserSession.mockResolvedValueOnce({
-    source: "temp_window",
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
     siteType: "sub2api",
     userId: "7",
     user: { username: "temp-user" },
@@ -723,7 +726,7 @@ it("returns a temp-window token from the browser-session reader", async () => {
     resyncSub2ApiAuthToken("https://sub2.example.com"),
   ).resolves.toEqual({
     accessToken: "temp-window-token",
-    source: "temp_window",
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
   })
 })
 
@@ -753,13 +756,16 @@ Replace the direct browser orchestration in `src/services/apiService/sub2api/tok
 ```ts
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  ACCOUNT_BROWSER_SESSION_SOURCES,
   resolveAccountBrowserSession,
   type AccountBrowserSession,
 } from "~/services/accountBrowserSession"
 
 type Sub2ApiResyncedToken = {
   accessToken: string
-  source: "existing_tab" | "temp_window"
+  source:
+    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
+    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
 }
 
 const hasUsableAccessToken = (session: AccountBrowserSession): boolean =>
@@ -767,8 +773,19 @@ const hasUsableAccessToken = (session: AccountBrowserSession): boolean =>
 
 const mapResyncSource = (
   source: AccountBrowserSession["source"],
-): Sub2ApiResyncedToken["source"] =>
-  source === "temp_window" ? "temp_window" : "existing_tab"
+): Sub2ApiResyncedToken["source"] => {
+  switch (source) {
+    case ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB:
+    case ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB:
+      return ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
+    case ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW:
+      return ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
+    default: {
+      const exhaustive: never = source
+      return exhaustive
+    }
+  }
+}
 
 /**
  * Re-sync Sub2API JWT from browser-session state.
@@ -867,7 +884,7 @@ Add this test near the existing Sub2API import tests:
 ```ts
 it("imports Sub2API session data through the browser-session reader", async () => {
   mockResolveAccountBrowserSession.mockResolvedValueOnce({
-    source: "existing_tab",
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     siteType: SITE_TYPES.SUB2API,
     userId: "42",
     user: { username: "tab-user" },
@@ -1098,12 +1115,12 @@ Update the existing test `"matches the active tab user to the correct same-origi
 
 ```ts
 mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
-  source: "current_tab",
+  source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
   siteType: "new-api",
   userId: "42",
   user: { id: "42", username: "42" },
   fetchContext: {
-    kind: "current_tab",
+    kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
     tabId: 7,
     origin: "https://api.example.com",
   },
@@ -1117,9 +1134,9 @@ expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
   tabId: 7,
   baseUrl: "https://api.example.com",
   siteType: "new-api",
-  source: "current_tab",
+  source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
   fetchContext: {
-    kind: "current_tab",
+    kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
     tabId: 7,
     origin: "https://api.example.com",
   },
@@ -1160,20 +1177,16 @@ Replace the direct `sendTabMessage` block with:
             tabId,
             baseUrl: parsedUrl.origin,
             siteType: siteTypeForUserRead,
-            source: "current_tab",
+            source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
             fetchContext: {
-              kind: "current_tab",
+              kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
               tabId,
               origin: parsedUrl.origin,
             },
           })
 
-          verifiedUserId = normalizeAccountIdentity(session?.userId)
-          verifiedUser =
-            session?.user ??
-            (verifiedUserId
-              ? { id: verifiedUserId, username: verifiedUserId }
-              : null)
+          verifiedUserId = session?.userId ?? null
+          verifiedUser = session?.user ?? null
 ```
 
 Preserve the existing cache assignment and error handling structure.
@@ -1260,7 +1273,7 @@ it("uses the browser-session reader for current-tab auto-detect before API fallb
     },
   ])
   mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
-    source: "current_tab",
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
     siteType: SITE_TYPES.SUB2API,
     siteTypeHint: SITE_TYPES.SUB2API,
     userId: "42",
@@ -1289,7 +1302,7 @@ it("uses the browser-session reader for current-tab auto-detect before API fallb
     tabId: 201,
     baseUrl: "https://sub2.example.com/console",
     siteType: SITE_TYPES.SUB2API,
-    source: "current_tab",
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
     fetchContext: {
       kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
       tabId: 201,
@@ -1327,7 +1340,7 @@ In `getUserDataFromCurrentTab(...)`, replace the direct `sendTabMessage` call wi
         tabId,
         baseUrl: url,
         siteType,
-        source: "current_tab",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
         fetchContext,
       })
 
@@ -1348,18 +1361,28 @@ In `getUserDataFromCurrentTab(...)`, replace the direct `sendTabMessage` call wi
       }
 ```
 
-Because the new helper returns `null` for both failed responses and thrown content-message errors, preserve reload-hint behavior by catching receiver-unavailable errors inside the helper only for caller paths that need it is not possible. For this task, keep reload-hint behavior by allowing `readAccountBrowserSessionFromTab` to accept an optional `onError?: (error: unknown) => void` callback:
+Because the helper returns `null` for both failed responses and thrown content-message errors, preserve reload-hint behavior by passing an `onError` callback with the reader source context into `readAccountBrowserSessionFromTab`.
 
 Extend `ReadAccountBrowserSessionFromTabOptions` in `types.ts`:
 
 ```ts
-  onError?: (error: unknown) => void
+export type AccountBrowserSessionErrorContext = {
+  source: AccountBrowserSessionSource
+}
+
+export type AccountBrowserSessionErrorHandler = (
+  error: unknown,
+  context: AccountBrowserSessionErrorContext,
+) => void
+
+// ...
+  onError?: AccountBrowserSessionErrorHandler
 ```
 
 In `readAccountBrowserSessionFromTab(...)` catch block:
 
 ```ts
-    options.onError?.(error)
+    options.onError?.(error, { source: options.source })
 ```
 
 Then call it from auto-detect:
@@ -1401,11 +1424,13 @@ In `tests/services/accountBrowserSession/sessionReader.test.ts`, add:
         tabId: 1,
         baseUrl: "https://sub2.example.com",
         siteType: SITE_TYPES.SUB2API,
-        source: "current_tab",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
         onError,
       }),
     ).resolves.toBeNull()
-    expect(onError).toHaveBeenCalledWith(error)
+    expect(onError).toHaveBeenCalledWith(error, {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+    })
   })
 ```
 

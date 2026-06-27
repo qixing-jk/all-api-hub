@@ -23,7 +23,6 @@ import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   readAccountBrowserSessionFromTab,
 } from "~/services/accountBrowserSession"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   doAccountSiteIdentitiesMatch,
   resolveAccountSiteContentSessionHintForOrigin,
@@ -518,12 +517,8 @@ export const AccountDataProvider = ({
             },
           })
 
-          verifiedUserId = normalizeAccountIdentity(session?.userId)
-          verifiedUser =
-            session?.user ??
-            (verifiedUserId
-              ? { id: verifiedUserId, username: verifiedUserId }
-              : null)
+          verifiedUserId = session?.userId ?? null
+          verifiedUser = session?.user ?? null
 
           // Cache verified user identity data by tab+url to prevent duplicate reads.
           currentTabUserCacheRef.current = {
