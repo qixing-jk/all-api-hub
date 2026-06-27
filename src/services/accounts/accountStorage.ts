@@ -1092,6 +1092,8 @@ class AccountStorageService {
         try {
           const support = await accountRefresh.fetchCheckInSupport({
             baseUrl,
+            accountId: account.id,
+            cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
             auth,
           })
 

@@ -9,6 +9,7 @@ import {
   ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
   ensureAccountTokenForPostSaveWorkflow,
+  ensureAccountTokenForPostSaveWorkflowFromStoredAccount,
   inspectAccountTokenInventory,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import {
@@ -265,6 +266,83 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     expect(createApiTokenMock).not.toHaveBeenCalled()
   })
 
+  it("can run post-save automation from the stored account context without display request fields", async () => {
+    const account = buildSiteAccount({
+      id: "stored-account-id",
+      site_name: "Stored Account",
+      site_url: "https://stored.example.invalid",
+      site_type: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.Cookie,
+      cookieAuth: { sessionCookie: "stored-session-cookie" },
+      account_info: {
+        id: "stored-user-id",
+        access_token: "stored-access-token",
+        username: "stored-user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const createdToken = buildToken({ id: 88, key: "sk-created" })
+
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce(createdToken)
+    classifyCreatedTokenMock.mockReturnValueOnce({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+      token: createdToken,
+      oneTimeSecret: false,
+    })
+
+    await expect(
+      ensureAccountTokenForPostSaveWorkflowFromStoredAccount({
+        account,
+      }),
+    ).resolves.toEqual({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
+      token: createdToken,
+      created: true,
+      oneTimeSecret: false,
+    })
+
+    const expectedStoredRequest = {
+      baseUrl: "https://stored.example.invalid",
+      accountId: "stored-account-id",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: "stored-user-id",
+        accessToken: "stored-access-token",
+        cookie: "stored-session-cookie",
+      },
+    }
+
+    expect(fetchAccountTokensMock).toHaveBeenCalledWith(expectedStoredRequest)
+    expect(createApiTokenMock).toHaveBeenCalledWith(
+      expectedStoredRequest,
+      expect.objectContaining({ name: DEFAULT_AUTO_PROVISION_TOKEN_NAME }),
+    )
+  })
+
+  it("keeps the post-save display wrapper as a compatibility path", async () => {
+    const displayAccount = buildDisplayAccount()
+    const account = buildStoredAccount(displayAccount)
+    const existingToken = buildToken({ id: 5, key: "sk-ready" })
+    fetchAccountTokensMock.mockResolvedValueOnce([existingToken])
+
+    await expect(
+      ensureAccountTokenForPostSaveWorkflow({
+        account,
+        displaySiteData: displayAccount,
+      }),
+    ).resolves.toMatchObject({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
+      token: existingToken,
+      created: false,
+    })
+  })
+
   it("reports an existing AIHubMix masked inventory token as present but not usable as a secret", async () => {
     const displayAccount = buildDisplayAccount({
       siteType: SITE_TYPES.AIHUBMIX,
@@ -359,7 +437,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
   })
 
-  it("uses display account fields for inventory reads and stored account fields for token creation", async () => {
+  it("uses stored account fields for post-save inventory reads and token creation", async () => {
     const displayAccount = buildDisplayAccount({
       id: "display-account-id",
       baseUrl: "https://display.example.invalid",
@@ -406,37 +484,28 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       oneTimeSecret: false,
     })
 
-    const expectedDisplayRequest = {
-      baseUrl: "https://display.example.invalid",
-      accountId: "display-account-id",
+    const expectedStoredRequest = {
+      baseUrl: "https://stored.example.invalid",
+      accountId: "stored-account-id",
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: "display-user-id",
-        accessToken: "display-access-token",
-        cookie: "display-session-cookie",
+        userId: "stored-user-id",
+        accessToken: "stored-access-token",
+        cookie: "stored-session-cookie",
       },
     }
 
     expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
       1,
-      expectedDisplayRequest,
+      expectedStoredRequest,
     )
     expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
       2,
-      expectedDisplayRequest,
+      expectedStoredRequest,
     )
     expect(createApiTokenMock).toHaveBeenCalledWith(
-      {
-        baseUrl: "https://stored.example.invalid",
-        accountId: "stored-account-id",
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId: "stored-user-id",
-          accessToken: "stored-access-token",
-          cookie: "stored-session-cookie",
-        },
-      },
+      expectedStoredRequest,
       expect.objectContaining({
         name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
         group: "",

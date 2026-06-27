@@ -90,6 +90,9 @@ describe("veloeraProvider", () => {
         messageKey: "autoCheckin:providerFallback.checkinSuccessful",
         data: { quota_awarded: 2 },
       })
+      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+        accountId: "test-id",
+      })
     })
 
     it("returns success on successful check-in", async () => {

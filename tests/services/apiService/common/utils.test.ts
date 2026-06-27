@@ -15,10 +15,6 @@ const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
 }))
 
-const { mockResolveLegacyAccountAwareRequest } = vi.hoisted(() => ({
-  mockResolveLegacyAccountAwareRequest: vi.fn(),
-}))
-
 vi.mock("~/services/apiTransport/request", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/services/apiTransport/request")>()
@@ -29,57 +25,18 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/utils/legacyAccountAwareRequest", () => ({
-  resolveLegacyAccountAwareRequest: mockResolveLegacyAccountAwareRequest,
-}))
-
 describe("API Service Common Utils", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockResolveLegacyAccountAwareRequest.mockReset()
-    mockResolveLegacyAccountAwareRequest.mockImplementation(
-      async (request) => request,
-    )
   })
 
   describe("fetchApiData", () => {
-    it("delegates account-aware compatibility resolution before transport", async () => {
+    it("passes requests directly to transport without account-aware lookup", async () => {
       const request = {
-        baseUrl: "https://example.com",
+        baseUrl: "https://example.invalid",
         auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId: "123",
-        },
-      }
-      const enrichedRequest = {
-        ...request,
-        accountId: "account-1",
-        cookieAuthSessionCookie: "session=stored",
-      }
-      mockResolveLegacyAccountAwareRequest.mockResolvedValueOnce(
-        enrichedRequest,
-      )
-      mockFetchApiData.mockResolvedValueOnce({ ok: true })
-
-      await expect(
-        fetchApiData(request, { endpoint: "/api/test" }),
-      ).resolves.toEqual({ ok: true })
-
-      expect(mockResolveLegacyAccountAwareRequest).toHaveBeenCalledWith(
-        request,
-        { endpoint: "/api/test" },
-      )
-      expect(mockFetchApiData).toHaveBeenCalledWith(enrichedRequest, {
-        endpoint: "/api/test",
-      })
-    })
-
-    it("passes through the original request when compatibility resolution is a no-op", async () => {
-      const request = {
-        baseUrl: "https://example.com",
-        accountId: "account-1",
-        auth: {
-          authType: AuthTypeEnum.Cookie,
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "token",
           userId: "123",
         },
       }
@@ -90,46 +47,29 @@ describe("API Service Common Utils", () => {
         ok: true,
       })
 
-      expect(mockResolveLegacyAccountAwareRequest).toHaveBeenCalledWith(
-        request,
-        options,
-      )
       expect(mockFetchApiData).toHaveBeenCalledWith(request, options)
     })
   })
 
   describe("fetchApi", () => {
-    it("delegates account-aware compatibility resolution before transport", async () => {
+    it("passes response requests directly to transport without account-aware lookup", async () => {
       const request = {
-        baseUrl: "https://example.com",
+        baseUrl: "https://example.invalid",
         auth: {
-          authType: AuthTypeEnum.Cookie,
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "token",
           userId: "123",
         },
       }
-      const enrichedRequest = {
-        ...request,
-        accountId: "account-1",
-        cookieAuthSessionCookie: "session=stored",
-      }
-      mockResolveLegacyAccountAwareRequest.mockResolvedValueOnce(
-        enrichedRequest,
-      )
-      mockFetchApi.mockResolvedValueOnce({ ok: true })
+      const options = { endpoint: "/api/test" }
+      mockFetchApi.mockResolvedValueOnce({ success: true, data: { ok: true } })
 
-      await expect(
-        fetchApi(request, { endpoint: "/api/test" }, true),
-      ).resolves.toEqual({ ok: true })
+      await expect(fetchApi(request, options, true)).resolves.toEqual({
+        success: true,
+        data: { ok: true },
+      })
 
-      expect(mockResolveLegacyAccountAwareRequest).toHaveBeenCalledWith(
-        request,
-        { endpoint: "/api/test" },
-      )
-      expect(mockFetchApi).toHaveBeenCalledWith(
-        enrichedRequest,
-        { endpoint: "/api/test" },
-        true,
-      )
+      expect(mockFetchApi).toHaveBeenCalledWith(request, options, true)
     })
   })
 

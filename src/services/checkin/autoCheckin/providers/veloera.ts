@@ -36,6 +36,8 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
     const response = await fetchApi<unknown>(
       {
         baseUrl: site_url,
+        accountId: account.id,
+        cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
         auth: {
           authType,
           userId: account_info.id,

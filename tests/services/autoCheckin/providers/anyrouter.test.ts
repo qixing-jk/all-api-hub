@@ -74,6 +74,9 @@ describe("anyrouterProvider", () => {
 
       const result = await anyrouterProvider.checkIn(mockAccount)
       expect(result.status).toBe("success")
+      expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
+        accountId: "test-id",
+      })
     })
 
     it("returns success for English success messages", async () => {

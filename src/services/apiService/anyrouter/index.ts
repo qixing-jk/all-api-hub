@@ -48,6 +48,9 @@ export async function fetchCheckInStatus(
 
     const checkInData = await anyrouterProvider.checkIn({
       site_url: request.baseUrl,
+      id: request.accountId,
+      cookieAuthSessionCookie:
+        request.cookieAuthSessionCookie ?? request.auth.cookie,
       account_info: { id: numericUserId },
     })
     return checkInData.status !== CHECKIN_RESULT_STATUS.ALREADY_CHECKED

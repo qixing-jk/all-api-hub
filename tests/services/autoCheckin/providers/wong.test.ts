@@ -93,6 +93,9 @@ describe("wongGongyiProvider", () => {
 
       const result = await wongGongyiProvider.checkIn(mockAccount)
       expect(result.status).toBe("already_checked")
+      expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
+        accountId: "test-id",
+      })
       expect(result.messageKey).toBe(
         "autoCheckin:providerFallback.alreadyCheckedToday",
       )

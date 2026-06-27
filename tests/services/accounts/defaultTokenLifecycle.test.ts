@@ -2,18 +2,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  buildGroupDefaultTokenRequest,
   createDefaultTokenFromDecision,
   DEFAULT_TOKEN_INVENTORY_STATE_KINDS,
   DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
   DEFAULT_TOKEN_LIFECYCLE_ERRORS,
   DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
   ensureDefaultTokenLifecycle,
+  ensureDefaultTokenLifecycleWithContext,
   generateDefaultTokenRequest,
   inspectDefaultTokenInventory,
+  inspectDefaultTokenInventoryWithContext,
   resolveDefaultTokenLifecycleDecision,
+  resolveDefaultTokenLifecycleDecisionWithContext,
   selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/defaultTokenLifecycle"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import type { AccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
 import {
@@ -136,6 +141,14 @@ const buildRequest = (): ApiServiceRequest => ({
   },
 })
 
+const buildPreparedContext = (
+  request: ApiServiceRequest = buildRequest(),
+): AccountApiContext => ({
+  accountId: request.accountId ?? "account-id",
+  siteType: SITE_TYPES.NEW_API,
+  request,
+})
+
 const createDecision = (
   tokenData = generateDefaultTokenRequest(),
 ): Extract<
@@ -200,6 +213,28 @@ describe("defaultTokenLifecycle inventory helpers", () => {
       kind: DEFAULT_TOKEN_INVENTORY_STATE_KINDS.Missing,
       existingTokenIds: [],
     })
+  })
+
+  it("inspects inventory from a prepared request context", async () => {
+    const request = buildRequest()
+    const existingToken = buildToken({ id: 12, key: "sk-prepared" })
+    fetchAccountTokensMock.mockResolvedValueOnce([existingToken])
+    isInventoryTokenUsableMock.mockReturnValueOnce(true)
+
+    await expect(
+      inspectDefaultTokenInventoryWithContext({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
+        context: buildPreparedContext(request),
+      }),
+    ).resolves.toEqual({
+      kind: DEFAULT_TOKEN_INVENTORY_STATE_KINDS.Present,
+      token: existingToken,
+      existingTokenIds: [12],
+      hasUsableSecret: true,
+    })
+
+    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(fetchAccountTokensMock).toHaveBeenCalledWith(request)
   })
 
   it("reports the latest valid inventory token and policy usability", async () => {
@@ -296,6 +331,53 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
         },
       }),
     )
+  })
+
+  it("resolves creation decisions from a prepared request context", async () => {
+    const resolveDefaultTokenCreationMock = vi
+      .fn()
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+      })
+      .mockReturnValueOnce({
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+        tokenData: buildGroupDefaultTokenRequest("vip"),
+        oneTimeSecret: false,
+        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+      })
+    const fetchUserGroupsMock = vi.fn().mockResolvedValueOnce({
+      vip: { desc: "VIP", ratio: 2 },
+    })
+
+    getSiteAdapterMock.mockReturnValueOnce({
+      keyManagement: {
+        fetchTokens: vi.fn(),
+        createToken: vi.fn(),
+        updateToken: vi.fn(),
+        resolveTokenKey: vi.fn(),
+        deleteToken: vi.fn(),
+        fetchAvailableModels: vi.fn(),
+        userGroups: { fetch: fetchUserGroupsMock },
+      },
+      tokenProvisioning: {
+        isInventoryTokenUsable: vi.fn(),
+        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+        classifyCreatedToken: vi.fn(),
+        getRepairPolicy: vi.fn(),
+      },
+    })
+
+    await expect(
+      resolveDefaultTokenLifecycleDecisionWithContext({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
+        context: buildPreparedContext(),
+      }),
+    ).resolves.toMatchObject({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+      tokenData: expect.objectContaining({ group: "vip" }),
+    })
+
+    expect(fetchUserGroupsMock).toHaveBeenCalledWith(buildRequest())
   })
 
   it("throws the provided missing-user-groups message when group lookup is unavailable", async () => {
@@ -506,6 +588,68 @@ describe("ensureDefaultTokenLifecycle", () => {
       created: false,
       existingTokenIds: [5],
     })
+  })
+
+  it("uses the prepared stored request for both inventory and token creation", async () => {
+    const request = {
+      baseUrl: "https://stored.example.invalid",
+      accountId: "stored-account-id",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: "stored-user-id",
+        accessToken: "stored-access-token",
+        cookie: "stored-session-cookie",
+      },
+    }
+    const createdToken = buildToken({ id: 17, key: "sk-created" })
+    const createTokenMock = vi.fn().mockResolvedValueOnce(createdToken)
+    const resolveDefaultTokenCreationMock = vi.fn(() => ({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+      tokenData: generateDefaultTokenRequest(),
+      oneTimeSecret: false,
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.CreatedResponseFirst,
+    }))
+
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    getSiteAdapterMock.mockReturnValueOnce({
+      keyManagement: {
+        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+        createToken: createTokenMock,
+        updateToken: vi.fn(),
+        resolveTokenKey: vi.fn(),
+        deleteToken: vi.fn(),
+        fetchAvailableModels: vi.fn(),
+      },
+      tokenProvisioning: {
+        isInventoryTokenUsable: vi.fn(),
+        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+        classifyCreatedToken: vi.fn(() => ({
+          kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+          token: createdToken,
+          oneTimeSecret: false,
+        })),
+        getRepairPolicy: vi.fn(),
+      },
+    })
+
+    await expect(
+      ensureDefaultTokenLifecycleWithContext({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
+        context: buildPreparedContext(request),
+      }),
+    ).resolves.toEqual({
+      kind: DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Created,
+      token: createdToken,
+      created: true,
+      oneTimeSecret: false,
+      existingTokenIds: [],
+    })
+
+    expect(fetchAccountTokensMock).toHaveBeenCalledWith(request)
+    expect(createTokenMock).toHaveBeenCalledWith(
+      request,
+      generateDefaultTokenRequest(),
+    )
   })
 
   it("continues to policy creation when the existing inventory token is unusable", async () => {

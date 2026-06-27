@@ -1,10 +1,11 @@
 import {
   DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
   DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
-  ensureDefaultTokenLifecycle,
+  ensureDefaultTokenLifecycleWithContext,
   inspectDefaultTokenInventory,
   selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/defaultTokenLifecycle"
+import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import {
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_WORKFLOWS,
@@ -36,14 +37,14 @@ export function inspectAccountTokenInventory(params: {
 /**
  * Ensures a saved account has a token that can be used by post-save automation.
  */
-export async function ensureAccountTokenForPostSaveWorkflow(params: {
+export async function ensureAccountTokenForPostSaveWorkflowFromStoredAccount(params: {
   account: SiteAccount
-  displaySiteData: DisplaySiteData
 }): Promise<EnsureAccountTokenResult> {
-  const result = await ensureDefaultTokenLifecycle({
+  const storedContext = createAccountApiRequestFromStoredAccount(params.account)
+  const result = await ensureDefaultTokenLifecycleWithContext({
     workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
-    account: params.account,
-    displaySiteData: params.displaySiteData,
+    context: storedContext,
+    createContext: storedContext,
   })
 
   if (result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Ready) {
@@ -99,4 +100,17 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
     code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
     message: t("messages:accountOperations.createTokenFailed"),
   }
+}
+
+/**
+ * Preserves the post-save display-shaped call contract while request context
+ * comes from the saved account record.
+ */
+export function ensureAccountTokenForPostSaveWorkflow(params: {
+  account: SiteAccount
+  displaySiteData: DisplaySiteData
+}): Promise<EnsureAccountTokenResult> {
+  return ensureAccountTokenForPostSaveWorkflowFromStoredAccount({
+    account: params.account,
+  })
 }

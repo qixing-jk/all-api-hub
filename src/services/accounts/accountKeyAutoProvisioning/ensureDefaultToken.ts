@@ -2,14 +2,15 @@ import {
   DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
   DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
   DefaultTokenLifecyclePolicyBlockedError,
-  ensureDefaultTokenLifecycle,
+  ensureDefaultTokenLifecycleWithContext,
 } from "~/services/accounts/defaultTokenLifecycle"
+import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import {
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
+import type { ApiToken, SiteAccount } from "~/types"
 import { t } from "~/utils/i18n/core"
 
 export {
@@ -28,13 +29,13 @@ export {
  */
 export async function ensureDefaultApiTokenForAccount(params: {
   account: SiteAccount
-  displaySiteData: DisplaySiteData
 }): Promise<{ token: ApiToken; created: boolean }> {
-  const { account, displaySiteData } = params
-  const result = await ensureDefaultTokenLifecycle({
+  const { account } = params
+  const storedContext = createAccountApiRequestFromStoredAccount(account)
+  const result = await ensureDefaultTokenLifecycleWithContext({
     workflow: TOKEN_PROVISIONING_WORKFLOWS.BackgroundAutoProvision,
-    account,
-    displaySiteData,
+    context: storedContext,
+    createContext: storedContext,
   })
 
   if (

@@ -1657,6 +1657,7 @@ describe("accountStorage core behaviors", () => {
       id: "needs-detect",
       site_url: "https://foo.example.com",
       site_type: "unknown",
+      cookieAuth: { sessionCookie: "stored-session-cookie" },
       checkIn: {} as any,
     })
     seedStorage([account])
@@ -1673,14 +1674,19 @@ describe("accountStorage core behaviors", () => {
     )
     expect(mockGetSiteAdapter).toHaveBeenCalledWith("one-api")
     expect(mockGetSiteAdapter).not.toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
-      baseUrl: "https://foo.example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        userId: "1",
-        accessToken: "token",
-      },
-    })
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://foo.example.com",
+        accountId: "needs-detect",
+        cookieAuthSessionCookie: "stored-session-cookie",
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.AccessToken,
+          userId: "1",
+          accessToken: "token",
+          cookie: "stored-session-cookie",
+        }),
+      }),
+    )
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
   })
@@ -1727,17 +1733,17 @@ describe("accountStorage core behaviors", () => {
       },
     )
 
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
-      baseUrl: "https://revive.example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        userId: "1",
-        accessToken: "token",
-        cookie: undefined,
-        refreshToken: undefined,
-        tokenExpiresAt: undefined,
-      },
-    })
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://revive.example.com",
+        accountId: "disabled-revive",
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.AccessToken,
+          userId: "1",
+          accessToken: "token",
+        }),
+      }),
+    )
     expect(mockRefreshAccountData).toHaveBeenCalledTimes(1)
     expect(result).toEqual(
       expect.objectContaining({
@@ -1837,14 +1843,17 @@ describe("accountStorage core behaviors", () => {
 
     expect(mockGetAccountSiteType).not.toHaveBeenCalled()
     expect(mockGetSiteAdapter).toHaveBeenCalledWith("one-api")
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
-      baseUrl: "https://bar.example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        userId: "1",
-        accessToken: "token",
-      },
-    })
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://bar.example.com",
+        accountId: "known-site",
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.AccessToken,
+          userId: "1",
+          accessToken: "token",
+        }),
+      }),
+    )
     const updatedAccount = await accountStorage.getAccountById("known-site")
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(false)

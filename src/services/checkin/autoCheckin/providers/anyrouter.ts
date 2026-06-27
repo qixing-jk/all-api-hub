@@ -13,11 +13,17 @@ import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { AutoCheckinProvider } from "./index"
 
 export type AnyrouterCheckInParams = {
+  id?: string
   site_url: string
+  cookieAuthSessionCookie?: string
   account_info: {
     id: number
   }
 }
+
+const isSiteAccount = (
+  account: SiteAccount | AnyrouterCheckInParams,
+): account is SiteAccount => "site_type" in account
 
 /**
  * AnyRouter returns an empty message string when the user has already checked in.
@@ -36,6 +42,9 @@ const checkinAnyRouter = async (
   account: SiteAccount | AnyrouterCheckInParams,
 ): Promise<AutoCheckinProviderResult> => {
   const { site_url, account_info } = account
+  const cookieAuthSessionCookie = isSiteAccount(account)
+    ? account.cookieAuth?.sessionCookie
+    : account.cookieAuthSessionCookie
 
   try {
     const response = await fetchApi<{
@@ -46,6 +55,8 @@ const checkinAnyRouter = async (
     }>(
       {
         baseUrl: site_url,
+        ...(account.id ? { accountId: account.id } : {}),
+        ...(cookieAuthSessionCookie ? { cookieAuthSessionCookie } : {}),
         auth: {
           authType: AuthTypeEnum.Cookie,
           userId: account_info.id,

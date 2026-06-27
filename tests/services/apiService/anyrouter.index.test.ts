@@ -110,6 +110,28 @@ describe("AnyRouter API service", () => {
 
     expect(mockCheckIn).toHaveBeenCalledWith({
       site_url: "https://anyrouter.example.com",
+      id: undefined,
+      account_info: { id: 42 },
+    })
+  })
+
+  it("passes request account identity to the AnyRouter check-in provider", async () => {
+    mockCheckIn.mockResolvedValueOnce({
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+    })
+
+    await expect(
+      fetchCheckInStatus({
+        ...baseRequest,
+        accountId: "stored-account-id",
+        cookieAuthSessionCookie: "stored-session-cookie",
+      }),
+    ).resolves.toBe(true)
+
+    expect(mockCheckIn).toHaveBeenCalledWith({
+      site_url: "https://anyrouter.example.com",
+      id: "stored-account-id",
+      cookieAuthSessionCookie: "stored-session-cookie",
       account_info: { id: 42 },
     })
   })
@@ -128,10 +150,12 @@ describe("AnyRouter API service", () => {
 
     expect(mockCheckIn).toHaveBeenNthCalledWith(1, {
       site_url: "https://anyrouter.example.com",
+      id: undefined,
       account_info: { id: 42 },
     })
     expect(mockCheckIn).toHaveBeenNthCalledWith(2, {
       site_url: "https://anyrouter.example.com",
+      id: undefined,
       account_info: { id: 42 },
     })
   })

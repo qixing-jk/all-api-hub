@@ -300,14 +300,23 @@ describe("accountKeyRepair", () => {
         cookieAuthSessionCookie: "",
       }),
     ])
-    mocks.ensureAccountKeysForAvailableGroups.mockResolvedValueOnce({
-      created: true,
-      availableGroups: [],
-      coveredGroups: [],
-      createdGroups: [""],
-      missingGroups: [],
-      invalidTokens: [],
-    })
+    mocks.ensureAccountKeysForAvailableGroups
+      .mockResolvedValueOnce({
+        created: true,
+        availableGroups: [],
+        coveredGroups: [],
+        createdGroups: [""],
+        missingGroups: [],
+        invalidTokens: [],
+      })
+      .mockResolvedValueOnce({
+        created: true,
+        availableGroups: [],
+        coveredGroups: [],
+        createdGroups: [""],
+        missingGroups: [],
+        invalidTokens: [],
+      })
     mocks.sendRuntimeMessage.mockResolvedValue(undefined)
 
     const { accountKeyRepairRunner } = await import(
@@ -333,13 +342,13 @@ describe("accountKeyRepair", () => {
       processedEligibleAccounts: 2,
     })
     expect(progress.summary).toEqual({
-      created: 1,
+      created: 2,
       alreadyHad: 0,
       skipped: 2,
-      failed: 1,
+      failed: 0,
       availableGroups: 0,
       coveredGroups: 0,
-      createdKeys: 1,
+      createdKeys: 2,
       renamedKeys: 0,
       renameFailed: 0,
       invalidKeys: 0,
@@ -367,13 +376,12 @@ describe("accountKeyRepair", () => {
         }),
         expect.objectContaining({
           accountId: "bad-cookie-1",
-          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed,
-          errorMessage: ACCOUNT_KEY_REPAIR_ERRORS.InvalidDisplaySiteData,
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
           siteUrlOrigin: "https://cookie.example.com",
         }),
       ]),
     )
-    expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledTimes(1)
+    expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledTimes(2)
     expect(mocks.sendRuntimeMessage).toHaveBeenCalledWith(
       {
         type: RuntimeMessageTypes.AccountKeyRepairProgress,

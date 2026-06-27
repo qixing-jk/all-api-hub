@@ -108,22 +108,22 @@ export async function ensureAccountKeysForAvailableGroups(params: {
   abortSignal?: AbortSignal
   renameAutoTemplateTokens?: boolean
 }): Promise<AccountKeyCoverageResult> {
-  const { account, displaySiteData, accountName, siteUrlOrigin, abortSignal } =
-    params
-  const adapter = getSiteAdapter(displaySiteData.siteType)
+  const { account, accountName, siteUrlOrigin, abortSignal } = params
+  const adapter = getSiteAdapter(account.site_type)
+  const capabilitySite = { siteType: account.site_type }
   const keyManagement = requireDisplayAccountKeyManagement(
-    displaySiteData,
+    capabilitySite,
     adapter.keyManagement,
   )
   const tokenProvisioning = requireDisplayAccountTokenProvisioning(
-    displaySiteData,
+    capabilitySite,
     adapter.tokenProvisioning,
   )
   const accountContext = createAccountApiRequestFromStoredAccount(account)
   const request = abortSignal
     ? { ...accountContext.request, abortSignal }
     : accountContext.request
-  const accountId = displaySiteData.id || account.id
+  const accountId = account.id
 
   const tokens = await keyManagement.fetchTokens(request)
   const groupsData = keyManagement.userGroups
@@ -253,7 +253,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     invalidTokens.push({
       accountId,
       accountName,
-      siteType: displaySiteData.siteType,
+      siteType: account.site_type,
       siteUrlOrigin,
       tokenId: token.id,
       tokenName: token.name,
@@ -300,10 +300,11 @@ export async function deleteInvalidAccountToken(params: {
   account: SiteAccount
   displaySiteData: DisplaySiteData
 }): Promise<AccountKeyRepairDeleteInvalidTokensResult["deleted"][number]> {
-  const { token, account, displaySiteData } = params
+  const { token, account } = params
+  const adapter = getSiteAdapter(account.site_type)
   const keyManagement = requireDisplayAccountKeyManagement(
-    displaySiteData,
-    getSiteAdapter(displaySiteData.siteType).keyManagement,
+    { siteType: account.site_type },
+    adapter.keyManagement,
   )
   const { request } = createAccountApiRequestFromStoredAccount(account)
   await keyManagement.deleteToken({

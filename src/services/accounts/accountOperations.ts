@@ -72,7 +72,6 @@ import {
   type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
-import { ACCOUNT_KEY_REPAIR_ERRORS } from "~/types/accountKeyAutoProvisioning"
 import type {
   AccountSaveResponse,
   AccountValidationResponse,
@@ -1301,49 +1300,18 @@ async function autoProvisionKeyOnAccountAdd(
       return
     }
 
-    const displaySiteData =
-      (await accountStorage.getDisplayDataById(accountId)) ??
-      accountStorage.convertToDisplayData(account)
-    const hasToken =
-      typeof displaySiteData?.token === "string" &&
-      displaySiteData.token.trim().length > 0
-    const hasCookie =
-      typeof displaySiteData?.cookieAuthSessionCookie === "string" &&
-      displaySiteData.cookieAuthSessionCookie.trim().length > 0
-
-    if (
-      typeof displaySiteData?.id !== "string" ||
-      displaySiteData.id.trim().length === 0 ||
-      typeof displaySiteData?.baseUrl !== "string" ||
-      displaySiteData.baseUrl.trim().length === 0 ||
-      typeof displaySiteData?.siteType !== "string" ||
-      displaySiteData.siteType.trim().length === 0 ||
-      displaySiteData.authType === AuthTypeEnum.None ||
-      typeof displaySiteData.userId !== "string" ||
-      displaySiteData.userId.trim().length === 0 ||
-      (displaySiteData.authType === AuthTypeEnum.AccessToken && !hasToken) ||
-      (displaySiteData.authType === AuthTypeEnum.Cookie &&
-        !hasToken &&
-        !hasCookie)
-    ) {
-      throw new Error(ACCOUNT_KEY_REPAIR_ERRORS.InvalidDisplaySiteData)
-    }
-
-    const { created } = await ensureDefaultApiTokenForAccount({
-      account,
-      displaySiteData,
-    })
+    const { created } = await ensureDefaultApiTokenForAccount({ account })
 
     if (created) {
       toast.success(
         t("messages:accountOperations.autoProvisionCreated", {
-          accountName: displaySiteData.name || account.site_name,
+          accountName: account.site_name,
         }),
       )
     } else {
       showWarningToast(
         t("messages:accountOperations.autoProvisionAlreadyHad", {
-          accountName: displaySiteData.name || account.site_name,
+          accountName: account.site_name,
         }),
       )
     }

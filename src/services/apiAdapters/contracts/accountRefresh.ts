@@ -4,10 +4,10 @@ import type {
   RefreshAccountResult,
 } from "~/services/apiService/common/type"
 
-export type AccountRefreshSupportRequest = {
-  baseUrl: string
-  auth: ApiServiceRequest["auth"]
-}
+export type AccountRefreshSupportRequest = Pick<
+  ApiServiceRequest,
+  "baseUrl" | "auth" | "accountId" | "cookieAuthSessionCookie"
+>
 
 export type AccountRefreshRequest = ApiServiceAccountRequest
 

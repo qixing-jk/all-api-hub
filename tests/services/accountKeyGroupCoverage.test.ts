@@ -179,6 +179,74 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     )
   })
 
+  it("uses stored account context for group coverage token APIs and adapter lookup", async () => {
+    const account = buildSiteAccount({
+      id: "stored-account-id",
+      site_url: "https://stored.example.invalid",
+      site_type: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.Cookie,
+      cookieAuth: { sessionCookie: "stored-session-cookie" },
+      account_info: {
+        id: "stored-user-id",
+        access_token: "stored-access-token",
+        username: "stored-user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const displaySiteData = buildDisplaySiteData({
+      id: "display-account-id",
+      baseUrl: "https://display.example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.Cookie,
+      userId: "display-user-id",
+      token: "display-access-token",
+      cookieAuthSessionCookie: "display-session-cookie",
+    })
+
+    mocks.fetchAccountTokens.mockResolvedValueOnce([])
+    mocks.fetchUserGroups.mockResolvedValueOnce({
+      default: { desc: "Default", ratio: 1 },
+    })
+    mocks.createApiToken.mockResolvedValueOnce({ id: 1, key: "sk-created" })
+    mocks.classifyCreatedToken.mockReturnValueOnce({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+      token: { id: 1, key: "sk-created" },
+      oneTimeSecret: false,
+    })
+
+    await ensureAccountKeysForAvailableGroups({
+      account,
+      displaySiteData,
+      accountName: "Stored Account",
+      siteUrlOrigin: "https://stored.example.invalid",
+    })
+
+    const expectedStoredRequest = {
+      baseUrl: "https://stored.example.invalid",
+      accountId: "stored-account-id",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: "stored-user-id",
+        accessToken: "stored-access-token",
+        cookie: "stored-session-cookie",
+      },
+    }
+
+    const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
+    expect(getSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(mocks.fetchAccountTokens).toHaveBeenCalledWith(expectedStoredRequest)
+    expect(mocks.fetchUserGroups).toHaveBeenCalledWith(expectedStoredRequest)
+    expect(mocks.createApiToken).toHaveBeenCalledWith(
+      expectedStoredRequest,
+      expect.any(Object),
+    )
+  })
+
   it("renames only auto-template token names to match their current group", async () => {
     mocks.fetchAccountTokens.mockResolvedValue([
       buildApiToken({

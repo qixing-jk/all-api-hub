@@ -1,5 +1,6 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -53,16 +54,7 @@ class RedeemService {
       }
 
       const creditedAmount = await redemption.redeem({
-        request: {
-          baseUrl: account.site_url,
-          accountId,
-          auth: {
-            authType: account.authType,
-            userId: account.account_info.id,
-            accessToken: account.account_info.access_token,
-            cookie: account.cookieAuth?.sessionCookie,
-          },
-        },
+        request: createAccountApiRequestFromStoredAccount(account).request,
         code,
       })
 

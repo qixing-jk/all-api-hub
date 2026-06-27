@@ -46,6 +46,8 @@ async function performCheckin(
   return await fetchApi<WongCheckinStatusData | undefined>(
     {
       baseUrl: site_url,
+      accountId: account.id,
+      cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
       auth: {
         authType: getEffectiveAuthType(account),
         userId: account_info.id,

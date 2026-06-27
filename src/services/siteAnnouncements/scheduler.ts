@@ -1,6 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
@@ -59,24 +59,6 @@ function clampIntervalMinutes(value: unknown): number {
 }
 
 /**
- * Builds the API request object from a stored account record.
- */
-function createApiRequestFromAccount(account: SiteAccount): ApiServiceRequest {
-  return {
-    baseUrl: account.site_url,
-    accountId: account.id,
-    auth: {
-      authType: account.authType,
-      userId: account.account_info?.id,
-      accessToken: account.account_info?.access_token,
-      cookie: account.cookieAuth?.sessionCookie,
-      refreshToken: account.sub2apiAuth?.refreshToken,
-      tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
-    },
-  }
-}
-
-/**
  * Creates the provider request context for a specific account.
  */
 function createProviderRequest(
@@ -89,7 +71,7 @@ function createProviderRequest(
     siteType: account.site_type,
     baseUrl: account.site_url,
     providerId: provider.id,
-    apiRequest: createApiRequestFromAccount(account),
+    apiRequest: createAccountApiRequestFromStoredAccount(account).request,
   }
 }
 

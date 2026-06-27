@@ -1,4 +1,3 @@
-import { resolveLegacyAccountAwareRequest } from "~/services/accounts/utils/legacyAccountAwareRequest"
 import type {
   ApiResponse,
   FetchApiOptions,
@@ -16,7 +15,7 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
 export { extractDataFromApiResponseBody, isHttpUrl }
 
 /**
- * Fetch account-site API data after applying account-aware fallback metadata.
+ * Fetch account-site API data.
  * @param request Account-site request DTO.
  * @param options Fetch options.
  * @returns Extracted response data.
@@ -25,16 +24,11 @@ export async function fetchApiData<T>(
   request: ApiServiceRequest,
   options: FetchApiOptions,
 ): Promise<T> {
-  return await transportFetchApiData(
-    await resolveLegacyAccountAwareRequest(request, {
-      endpoint: options.endpoint,
-    }),
-    options,
-  )
+  return await transportFetchApiData(request, options)
 }
 
 /**
- * Fetch account-site API responses after applying account-aware fallback metadata.
+ * Fetch account-site API responses.
  * @param request Account-site request DTO.
  * @param options Fetch options.
  * @param _normalResponseType Whether to unwrap normal response envelopes.
@@ -55,13 +49,7 @@ export async function fetchApi<T>(
   options: FetchApiOptions,
   _normalResponseType?: boolean,
 ): Promise<T | ApiResponse<T>> {
-  return await transportFetchApi(
-    await resolveLegacyAccountAwareRequest(request, {
-      endpoint: options.endpoint,
-    }),
-    options,
-    _normalResponseType as true,
-  )
+  return await transportFetchApi(request, options, _normalResponseType as true)
 }
 
 /**

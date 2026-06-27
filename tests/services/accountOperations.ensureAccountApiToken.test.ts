@@ -247,7 +247,6 @@ describe("accountOperations Sub2API token creation guards", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: SITE_ACCOUNT,
-        displaySiteData: DISPLAY_ACCOUNT,
       }),
     ).rejects.toThrow("messages:tokenProvisioning.createRequiresGroup")
 
@@ -274,7 +273,6 @@ describe("accountOperations Sub2API token creation guards", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: SITE_ACCOUNT,
-        displaySiteData: DISPLAY_ACCOUNT,
       }),
     ).rejects.toThrow("messages:tokenProvisioning.createRequiresGroup")
 
@@ -288,7 +286,6 @@ describe("accountOperations Sub2API token creation guards", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: SITE_ACCOUNT,
-        displaySiteData: DISPLAY_ACCOUNT,
       }),
     ).resolves.toEqual({ token, created: false })
 
@@ -716,7 +713,6 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: siteAccount as any,
-        displaySiteData: displayAccount as any,
       }),
     ).resolves.toEqual({ token: createdToken, created: true })
 
@@ -732,16 +728,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     )
   })
 
-  it("uses display account fields for inventory reads and stored account fields for token creation", async () => {
-    const displayAccount = {
-      id: "display-account-id",
-      siteType: SITE_TYPES.NEW_API,
-      baseUrl: "https://display.example.invalid",
-      authType: AuthTypeEnum.Cookie,
-      userId: "display-user-id",
-      token: "display-access-token",
-      cookieAuthSessionCookie: "display-session-cookie",
-    }
+  it("uses stored account fields for inventory reads and token creation", async () => {
     const siteAccount = buildSiteAccount({
       id: "stored-account-id",
       site_type: SITE_TYPES.NEW_API,
@@ -770,41 +757,31 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: siteAccount,
-        displaySiteData: displayAccount as any,
       }),
     ).resolves.toEqual({ token: createdToken, created: true })
 
-    const expectedDisplayRequest = {
-      baseUrl: "https://display.example.invalid",
-      accountId: "display-account-id",
+    const expectedStoredRequest = {
+      baseUrl: "https://stored.example.invalid",
+      accountId: "stored-account-id",
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: "display-user-id",
-        accessToken: "display-access-token",
-        cookie: "display-session-cookie",
+        userId: "stored-user-id",
+        accessToken: "stored-access-token",
+        cookie: "stored-session-cookie",
       },
     }
 
     expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
       1,
-      expectedDisplayRequest,
+      expectedStoredRequest,
     )
     expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
       2,
-      expectedDisplayRequest,
+      expectedStoredRequest,
     )
     expect(createApiTokenMock).toHaveBeenCalledWith(
-      {
-        baseUrl: "https://stored.example.invalid",
-        accountId: "stored-account-id",
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId: "stored-user-id",
-          accessToken: "stored-access-token",
-          cookie: "stored-session-cookie",
-        },
-      },
+      expectedStoredRequest,
       expect.objectContaining({
         name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
         group: "",
@@ -834,7 +811,6 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: siteAccount as any,
-        displaySiteData: displayAccount as any,
       }),
     ).resolves.toEqual({ token: createdToken, created: true })
 
@@ -842,7 +818,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
   })
 
   it("blocks implicit AIHubMix default-token creation because the key must be shown once", async () => {
-    const { displayAccount, siteAccount } = createAIHubMixAccounts()
+    const { siteAccount } = createAIHubMixAccounts()
 
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
@@ -853,7 +829,6 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: siteAccount as any,
-        displaySiteData: displayAccount as any,
       }),
     ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
 
@@ -1067,7 +1042,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
   })
 
   it("blocks background token ensure when created token secret cannot be recovered", async () => {
-    const { displayAccount, siteAccount } = createAIHubMixAccounts()
+    const { siteAccount } = createAIHubMixAccounts()
 
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
@@ -1085,13 +1060,12 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: siteAccount as any,
-        displaySiteData: displayAccount as any,
       }),
     ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
   })
 
   it("preserves the fallback policy reason for unsupported background auto-provision", async () => {
-    const { displayAccount, siteAccount } = createNonSub2ApiAccounts()
+    const { siteAccount } = createNonSub2ApiAccounts()
 
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
@@ -1102,7 +1076,6 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: siteAccount as any,
-        displaySiteData: displayAccount as any,
       }),
     ).rejects.toMatchObject({
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
@@ -1110,7 +1083,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
   })
 
   it("fails when default token creation reports false", async () => {
-    const { displayAccount, siteAccount } = createNonSub2ApiAccounts()
+    const { siteAccount } = createNonSub2ApiAccounts()
 
     fetchAccountTokensMock.mockResolvedValueOnce([])
     createApiTokenMock.mockResolvedValueOnce(false)
@@ -1118,13 +1091,12 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: siteAccount as any,
-        displaySiteData: displayAccount as any,
       }),
     ).rejects.toThrow(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
   })
 
   it("fails when the token inventory is still empty after a successful create", async () => {
-    const { displayAccount, siteAccount } = createNonSub2ApiAccounts()
+    const { siteAccount } = createNonSub2ApiAccounts()
 
     fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce([])
     createApiTokenMock.mockResolvedValueOnce(true)
@@ -1132,7 +1104,6 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     await expect(
       ensureDefaultApiTokenForAccount({
         account: siteAccount as any,
-        displaySiteData: displayAccount as any,
       }),
     ).rejects.toThrow(TOKEN_PROVISIONING_ERRORS.TokenNotFound)
   })

@@ -377,29 +377,6 @@ class AccountKeyRepairRunner {
         displaySiteDataById.get(account.id) ??
         accountStorage.convertToDisplayData(account)
       const resolvedAccountName = displaySiteData.name || accountName
-      const hasToken =
-        typeof displaySiteData?.token === "string" &&
-        displaySiteData.token.trim().length > 0
-      const hasCookie =
-        typeof displaySiteData?.cookieAuthSessionCookie === "string" &&
-        displaySiteData.cookieAuthSessionCookie.trim().length > 0
-      if (
-        typeof displaySiteData?.id !== "string" ||
-        displaySiteData.id.trim().length === 0 ||
-        typeof displaySiteData?.baseUrl !== "string" ||
-        displaySiteData.baseUrl.trim().length === 0 ||
-        typeof displaySiteData?.siteType !== "string" ||
-        displaySiteData.siteType.trim().length === 0 ||
-        displaySiteData.authType === AuthTypeEnum.None ||
-        typeof displaySiteData.userId !== "string" ||
-        displaySiteData.userId.trim().length === 0 ||
-        (displaySiteData.authType === AuthTypeEnum.AccessToken && !hasToken) ||
-        (displaySiteData.authType === AuthTypeEnum.Cookie &&
-          !hasToken &&
-          !hasCookie)
-      ) {
-        throw new Error(ACCOUNT_KEY_REPAIR_ERRORS.InvalidDisplaySiteData)
-      }
 
       const result = await ensureAccountKeysForAvailableGroups({
         account,

@@ -3,6 +3,8 @@ import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
   requireDisplayAccountTokenProvisioning,
+  type AccountApiContext,
+  type DisplayAccountApiCapabilityContext,
 } from "~/services/accounts/utils/apiServiceRequest"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import {
@@ -15,6 +17,7 @@ import {
   type TokenProvisioningCapability,
   type TokenProvisioningWorkflow,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
+import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 
@@ -47,6 +50,39 @@ class MissingUserGroupsCapabilityError extends Error {
   constructor(message: string) {
     super(message)
     this.name = "MissingUserGroupsCapabilityError"
+  }
+}
+
+const isDisplayAccountApiCapabilityContext = (
+  context: AccountApiContext,
+): context is DisplayAccountApiCapabilityContext =>
+  "keyManagement" in context && "tokenProvisioning" in context
+
+const requireTokenLifecycleCapabilities = (context: AccountApiContext) => {
+  if (isDisplayAccountApiCapabilityContext(context)) {
+    return {
+      keyManagement: requireDisplayAccountKeyManagement(
+        { siteType: context.siteType },
+        context.keyManagement,
+      ),
+      tokenProvisioning: requireDisplayAccountTokenProvisioning(
+        { siteType: context.siteType },
+        context.tokenProvisioning,
+      ),
+    }
+  }
+
+  const adapter = getSiteAdapter(context.siteType)
+
+  return {
+    keyManagement: requireDisplayAccountKeyManagement(
+      { siteType: context.siteType },
+      adapter.keyManagement,
+    ),
+    tokenProvisioning: requireDisplayAccountTokenProvisioning(
+      { siteType: context.siteType },
+      adapter.tokenProvisioning,
+    ),
   }
 }
 
@@ -97,28 +133,33 @@ const inspectDefaultTokenInventoryWithCapabilities = async (params: {
 }
 
 /**
- * Fetches the current default-token inventory and evaluates policy usability.
+ * Fetches the current default-token inventory from an already prepared context.
+ */
+export async function inspectDefaultTokenInventoryWithContext(params: {
+  workflow: TokenProvisioningWorkflow
+  context: AccountApiContext
+}): Promise<DefaultTokenInventoryState> {
+  const { keyManagement, tokenProvisioning } =
+    requireTokenLifecycleCapabilities(params.context)
+
+  return inspectDefaultTokenInventoryWithCapabilities({
+    workflow: params.workflow,
+    keyManagement,
+    tokenProvisioning,
+    request: params.context.request,
+  })
+}
+
+/**
+ * Fetches the current default-token inventory for a display account snapshot.
  */
 export async function inspectDefaultTokenInventory(params: {
   workflow: TokenProvisioningWorkflow
   displaySiteData: DisplaySiteData
 }): Promise<DefaultTokenInventoryState> {
-  const { workflow, displaySiteData } = params
-  const context = createDisplayAccountApiContext(displaySiteData)
-  const keyManagement = requireDisplayAccountKeyManagement(
-    displaySiteData,
-    context.keyManagement,
-  )
-  const tokenProvisioning = requireDisplayAccountTokenProvisioning(
-    displaySiteData,
-    context.tokenProvisioning,
-  )
-
-  return inspectDefaultTokenInventoryWithCapabilities({
-    workflow,
-    keyManagement,
-    tokenProvisioning,
-    request: context.request,
+  return inspectDefaultTokenInventoryWithContext({
+    workflow: params.workflow,
+    context: createDisplayAccountApiContext(params.displaySiteData),
   })
 }
 
@@ -156,7 +197,34 @@ async function resolveDefaultTokenCreationWithUserGroups(params: {
 }
 
 /**
- * Resolves the lifecycle-level default-token creation decision for a display account.
+ * Resolves lifecycle-level default-token creation policy from a prepared context.
+ */
+export async function resolveDefaultTokenLifecycleDecisionWithContext(params: {
+  workflow: TokenProvisioningWorkflow
+  context: AccountApiContext
+  defaultTokenData?: ResolveDefaultTokenCreationRequest["defaultTokenData"]
+  explicitGroup?: string
+  missingUserGroupsMessage?: string
+}): Promise<DefaultTokenCreationDecision> {
+  const { keyManagement, tokenProvisioning } =
+    requireTokenLifecycleCapabilities(params.context)
+
+  return resolveDefaultTokenCreationWithUserGroups({
+    keyManagement,
+    tokenProvisioning,
+    request: params.context.request,
+    decisionRequest: {
+      workflow: params.workflow,
+      defaultTokenData:
+        params.defaultTokenData ?? generateDefaultTokenRequest(),
+      explicitGroup: params.explicitGroup,
+    },
+    missingUserGroupsMessage: params.missingUserGroupsMessage,
+  })
+}
+
+/**
+ * Resolves lifecycle-level default-token creation policy for a display account.
  */
 export async function resolveDefaultTokenLifecycleDecision(params: {
   workflow: TokenProvisioningWorkflow
@@ -165,26 +233,11 @@ export async function resolveDefaultTokenLifecycleDecision(params: {
   explicitGroup?: string
   missingUserGroupsMessage?: string
 }): Promise<DefaultTokenCreationDecision> {
-  const context = createDisplayAccountApiContext(params.displaySiteData)
-  const keyManagement = requireDisplayAccountKeyManagement(
-    params.displaySiteData,
-    context.keyManagement,
-  )
-  const tokenProvisioning = requireDisplayAccountTokenProvisioning(
-    params.displaySiteData,
-    context.tokenProvisioning,
-  )
-
-  return resolveDefaultTokenCreationWithUserGroups({
-    keyManagement,
-    tokenProvisioning,
-    request: context.request,
-    decisionRequest: {
-      workflow: params.workflow,
-      defaultTokenData:
-        params.defaultTokenData ?? generateDefaultTokenRequest(),
-      explicitGroup: params.explicitGroup,
-    },
+  return resolveDefaultTokenLifecycleDecisionWithContext({
+    workflow: params.workflow,
+    context: createDisplayAccountApiContext(params.displaySiteData),
+    defaultTokenData: params.defaultTokenData,
+    explicitGroup: params.explicitGroup,
     missingUserGroupsMessage: params.missingUserGroupsMessage,
   })
 }
@@ -335,17 +388,17 @@ export async function createDefaultTokenFromDecision(params: {
 }
 
 /**
- * Ensures a default token exists and is usable for workflows that can create one.
+ * Ensures a default token exists using an already prepared request context.
  */
-export async function ensureDefaultTokenLifecycle(params: {
+export async function ensureDefaultTokenLifecycleWithContext(params: {
   workflow: TokenProvisioningWorkflow
-  account: SiteAccount
-  displaySiteData: DisplaySiteData
+  context: AccountApiContext
+  createContext?: AccountApiContext
   defaultTokenData?: ResolveDefaultTokenCreationRequest["defaultTokenData"]
   explicitGroup?: string
   inspectInventory?: boolean
 }): Promise<DefaultTokenLifecycleResult> {
-  const { workflow, account, displaySiteData } = params
+  const { workflow, context } = params
 
   if (workflow === TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection) {
     throw new Error(
@@ -354,16 +407,8 @@ export async function ensureDefaultTokenLifecycle(params: {
   }
 
   let existingTokenIds: number[] = []
-
-  const context = createDisplayAccountApiContext(displaySiteData)
-  const keyManagement = requireDisplayAccountKeyManagement(
-    displaySiteData,
-    context.keyManagement,
-  )
-  const tokenProvisioning = requireDisplayAccountTokenProvisioning(
-    displaySiteData,
-    context.tokenProvisioning,
-  )
+  const { keyManagement, tokenProvisioning } =
+    requireTokenLifecycleCapabilities(context)
 
   if (params.inspectInventory !== false) {
     const inventoryState = await inspectDefaultTokenInventoryWithCapabilities({
@@ -454,11 +499,38 @@ export async function ensureDefaultTokenLifecycle(params: {
     workflow,
     keyManagement,
     tokenProvisioning,
-    createRequest: createAccountApiRequestFromStoredAccount(account).request,
+    createRequest: (params.createContext ?? context).request,
     inventoryRequest: context.request,
     decision,
     existingTokenIds,
   })
 
   return createResult
+}
+
+/**
+ * Ensures a default token exists for display/stored account compatibility callers.
+ */
+export async function ensureDefaultTokenLifecycle(params: {
+  workflow: TokenProvisioningWorkflow
+  account: SiteAccount
+  displaySiteData: DisplaySiteData
+  defaultTokenData?: ResolveDefaultTokenCreationRequest["defaultTokenData"]
+  explicitGroup?: string
+  inspectInventory?: boolean
+}): Promise<DefaultTokenLifecycleResult> {
+  if (params.workflow === TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection) {
+    throw new Error(
+      DEFAULT_TOKEN_LIFECYCLE_ERRORS.QuickCreateSelectionIsDecisionOnly,
+    )
+  }
+
+  return ensureDefaultTokenLifecycleWithContext({
+    workflow: params.workflow,
+    context: createDisplayAccountApiContext(params.displaySiteData),
+    createContext: createAccountApiRequestFromStoredAccount(params.account),
+    defaultTokenData: params.defaultTokenData,
+    explicitGroup: params.explicitGroup,
+    inspectInventory: params.inspectInventory,
+  })
 }

@@ -1,15 +1,15 @@
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { ApiError } from "~/services/apiService/common/errors"
 import {
   LogType,
-  type ApiServiceRequest,
   type LogItem,
   type LogResponseData,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import type { SiteAccount } from "~/types"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   USAGE_HISTORY_SCHEDULE_MODE,
@@ -48,22 +48,6 @@ function getUsageHistoryPreferences(
   preferences: Awaited<ReturnType<typeof userPreferences.getPreferences>>,
 ): UsageHistoryPreferences {
   return preferences.usageHistory ?? DEFAULT_USAGE_HISTORY_PREFERENCES
-}
-
-/**
- * Build an ApiServiceRequest DTO from a stored account record.
- */
-function buildApiRequestForAccount(account: SiteAccount): ApiServiceRequest {
-  return {
-    baseUrl: account.site_url,
-    accountId: account.id,
-    auth: {
-      authType: account.authType,
-      userId: account.account_info.id,
-      accessToken: account.account_info.access_token,
-      cookie: account.cookieAuth?.sessionCookie,
-    },
-  }
 }
 
 /**
@@ -208,7 +192,7 @@ export async function syncUsageHistoryForAccount(params: {
     }
   }
 
-  const apiRequest = buildApiRequestForAccount(account)
+  const apiRequest = createAccountApiRequestFromStoredAccount(account).request
   // Defensive: preferences may be corrupted or come from untyped sources; avoid NaN propagation.
   const retentionDaysRaw = Number(config.retentionDays)
   const retentionDays = Number.isFinite(retentionDaysRaw)

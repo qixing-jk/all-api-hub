@@ -252,13 +252,14 @@ describe("accountOperations auto-provision key on add", () => {
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
     expect(toastCustomMock).not.toHaveBeenCalled()
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        displaySiteData: expect.objectContaining({
-          name: "Test Site · tester-2",
+    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledWith({
+      account: expect.objectContaining({
+        site_name: "Test Site",
+        account_info: expect.objectContaining({
+          username: "tester-2",
         }),
       }),
-    )
+    })
   })
 
   it("defaults to disabling auto-provision when preferences read fails", async () => {
@@ -409,9 +410,7 @@ describe("accountOperations auto-provision key on add", () => {
     expect(toastErrorMock).toHaveBeenCalledTimes(1)
   })
 
-  it("shows failure feedback when saved account display data is invalid for auto-provision", async () => {
-    // Intentionally omit required DisplaySiteData fields to exercise the
-    // defensive validation branch used when storage returns malformed data.
+  it("does not require saved display request fields for background auto-provision", async () => {
     const invalidDisplaySiteData: Partial<DisplaySiteData> = {
       id: "invalid-display-account",
       name: "Invalid Display",
@@ -446,8 +445,19 @@ describe("accountOperations auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
-    expect(toastSuccessMock).not.toHaveBeenCalled()
-    expect(toastErrorMock).toHaveBeenCalledTimes(1)
+    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: expect.objectContaining({
+          id: expect.any(String),
+          site_url: "https://api.example.com",
+          account_info: expect.objectContaining({
+            id: "1",
+            access_token: "test-token",
+          }),
+        }),
+      }),
+    )
+    expect(toastSuccessMock).toHaveBeenCalledTimes(1)
+    expect(toastErrorMock).not.toHaveBeenCalled()
   })
 })

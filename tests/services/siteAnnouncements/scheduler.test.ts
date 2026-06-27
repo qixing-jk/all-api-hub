@@ -614,6 +614,57 @@ describe("siteAnnouncementScheduler", () => {
     }
   })
 
+  it("uses the stored-account API context for provider requests", async () => {
+    providerFetchMock.mockResolvedValue({
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+      siteKey: "sub2api:sub-1:https://sub.example.com",
+      status: "success",
+      announcements: [],
+    })
+    const account = createAccount({
+      id: "sub-1",
+      site_type: "sub2api",
+      site_url: "https://sub.example.com",
+      authType: AuthTypeEnum.Cookie,
+      account_info: {
+        id: "stored-user",
+        access_token: "stored-access-token",
+        username: "stored-user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      cookieAuth: { sessionCookie: "stored-session-cookie" },
+      sub2apiAuth: {
+        refreshToken: "stored-refresh-token",
+        tokenExpiresAt: 123456,
+      },
+    })
+    getEnabledAccountsMock.mockResolvedValue([account])
+
+    const response = await resolveSiteAnnouncementsCheckNowMessage({})
+
+    expect(response).toMatchObject({ success: true })
+    expect(providerFetchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiRequest: expect.objectContaining({
+          baseUrl: "https://sub.example.com",
+          accountId: "sub-1",
+          auth: expect.objectContaining({
+            authType: AuthTypeEnum.Cookie,
+            userId: "stored-user",
+            accessToken: "stored-access-token",
+            cookie: "stored-session-cookie",
+          }),
+          sub2apiAuthSession: expect.any(Object),
+        }),
+      }),
+    )
+  })
+
   it("dedupes common site checks but keeps Sub2API account-scoped checks", async () => {
     providerFetchMock.mockImplementation((request) =>
       Promise.resolve({

@@ -264,6 +264,8 @@ async function fetchCheckedInTodayStatus(
     const checkInData = await fetchApiData<CheckInStatus>(
       {
         baseUrl: account.site_url,
+        accountId: account.id,
+        cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
         auth: {
           authType: getEffectiveAuthType(account),
           userId: account.account_info.id,
@@ -773,6 +775,8 @@ async function performCheckin(
   return await fetchApi<CheckinRecord>(
     {
       baseUrl: site_url,
+      accountId: account.id,
+      cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
       auth: {
         authType: getEffectiveAuthType(account),
         userId: account_info.id,

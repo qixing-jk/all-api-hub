@@ -165,6 +165,12 @@ describe("newApiProvider", () => {
           reason: "clicked",
         }),
       })
+      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+        accountId: "test-id",
+      })
+      expect(vi.mocked(fetchApiData).mock.calls[0]?.[0]).toMatchObject({
+        accountId: "test-id",
+      })
       expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledWith(
         expect.objectContaining({
           originUrl: "https://test.com",
