@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type {
   ApiServiceAccountRequest,
@@ -573,7 +574,7 @@ describe("apiService sub2api refreshAccountData", () => {
 
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "new-jwt",
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
     const request = createRequest()
@@ -616,7 +617,7 @@ describe("apiService sub2api refreshAccountData", () => {
 
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "new-jwt",
-      source: "temp_window",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
     })
 
     const result = await refreshAccountData(createRequest())
@@ -896,7 +897,7 @@ describe("apiService sub2api refreshAccountData", () => {
 
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "resynced-jwt",
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
     const request = createRequest({
@@ -999,7 +1000,7 @@ describe("apiService sub2api refreshAccountData", () => {
 
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "resynced-jwt",
-      source: "temp_window",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
     })
 
     const request = createRequest({
@@ -1324,7 +1325,7 @@ describe("apiService sub2api exported operations", () => {
     vi.stubGlobal("fetch", fetchMock as any)
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "resynced-jwt",
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
     vi.mocked(fetchApi).mockResolvedValueOnce({
       code: 0,
@@ -1428,7 +1429,7 @@ describe("apiService sub2api exported operations", () => {
 
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "resynced-jwt",
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
     vi.mocked(fetchApi)
@@ -1473,7 +1474,7 @@ describe("apiService sub2api exported operations", () => {
   it("getOrCreateAccessToken falls back to browser-session re-sync when no refresh token is available", async () => {
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "resynced-jwt",
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
     vi.mocked(fetchApi).mockResolvedValueOnce({
@@ -1529,7 +1530,7 @@ describe("apiService sub2api exported operations", () => {
   it("getOrCreateAccessToken converts 401 after re-sync into login-required", async () => {
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "resynced-jwt",
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
     vi.mocked(fetchApi).mockRejectedValueOnce(
       new ApiError("still unauthorized", 401, "/api/v1/auth/me"),
@@ -1552,7 +1553,7 @@ describe("apiService sub2api exported operations", () => {
   it("getOrCreateAccessToken preserves non-auth errors after re-sync retry", async () => {
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "resynced-jwt",
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
     vi.mocked(fetchApi).mockRejectedValueOnce(new Error("server exploded"))
 
@@ -2082,7 +2083,7 @@ describe("apiService sub2api exported operations", () => {
 
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "resynced-jwt",
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
     await expect(

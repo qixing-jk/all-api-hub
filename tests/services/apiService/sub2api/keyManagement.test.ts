@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { ApiError } from "~/services/apiService/common/errors"
 import type {
   ApiServiceRequest,
@@ -742,7 +743,7 @@ describe("apiService sub2api key management service", () => {
     getLatestAuthMock.mockResolvedValue(null)
     resyncSub2ApiAuthTokenMock.mockResolvedValue({
       accessToken: "resynced-jwt",
-      source: "existing_tab",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
     fetchApiMock
