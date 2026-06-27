@@ -256,7 +256,8 @@ export const SearchableSelect = React.forwardRef<
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
+                  value={option.value}
+                  keywords={[option.label]}
                   data-testid={getOptionTestId?.(option)}
                   disabled={option.disabled}
                   onSelect={() => {

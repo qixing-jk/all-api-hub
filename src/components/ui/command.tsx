@@ -77,11 +77,7 @@ function CommandDialog({
 }
 
 /**
- * CommandInput renders the searchable input with an icon wrapper.
- *
- * Optional clear button:
- * - Provide `onClear` to show a trailing clear (X) control when the input has a string `value`.
- * - This is used by combobox-like UIs (e.g. multi-select search inputs) to quickly reset filters.
+ * Props for the command input with an optional clear action.
  */
 type CommandInputProps = React.ComponentProps<typeof CommandPrimitive.Input> & {
   onClear?: () => void
@@ -89,7 +85,7 @@ type CommandInputProps = React.ComponentProps<typeof CommandPrimitive.Input> & {
 }
 
 /**
- * Renders the command palette input with a clear action.
+ * CommandInput renders the searchable input with an optional clear button.
  */
 function CommandInput({
   className,

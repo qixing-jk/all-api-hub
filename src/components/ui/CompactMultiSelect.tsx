@@ -658,7 +658,8 @@ export function CompactMultiSelect({
                     return (
                       <CommandItem
                         key={option.value}
-                        value={option.label}
+                        value={option.value}
+                        keywords={[option.label]}
                         disabled={isOptionDisabled}
                         onSelect={() => toggleValue(option.value)}
                       >

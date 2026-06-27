@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { SearchableSelect } from "~/components/ui"
 import {
@@ -63,6 +63,34 @@ describe("SearchableSelect", () => {
     expect(
       await screen.findByRole("option", { name: "Account 1" }),
     ).toBeVisible()
+  })
+
+  it("renders labels with selector-sensitive characters without crashing", async () => {
+    const onChange = vi.fn()
+
+    render(
+      <SearchableSelect
+        options={[
+          {
+            value: "model-1",
+            label:
+              'gpt-"稳定通道" - 目前是plus+pro池目前断断续续 (倍率： 0.13)',
+          },
+        ]}
+        value=""
+        onChange={onChange}
+        open={true}
+        onOpenChange={() => {}}
+      />,
+    )
+
+    const option = await screen.findByRole("option", {
+      name: /gpt-"稳定通道" - 目前是plus\+pro池目前断断续续/,
+    })
+    expect(option).toBeVisible()
+
+    fireEvent.click(option)
+    expect(onChange).toHaveBeenCalledWith("model-1")
   })
 
   it("uses default viewport-aware height constraints and supports option suffix content", async () => {
