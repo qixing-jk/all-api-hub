@@ -1094,6 +1094,59 @@ describe("useAccountDialog analytics", () => {
     expectNoSensitiveAnalyticsFields()
   })
 
+  it("keeps Sub2API import skipped when an existing-tab probe fails before missing temp-window session", async () => {
+    const { getAllTabs, sendRuntimeMessage } = await import(
+      "~/utils/browser/browserApi"
+    )
+    vi.mocked(getAllTabs).mockResolvedValueOnce([
+      {
+        id: 12,
+        url: "https://sub2.example.com/dashboard",
+        active: true,
+      } as browser.tabs.Tab,
+    ])
+    vi.mocked(globalThis.browser.tabs.sendMessage).mockRejectedValueOnce(
+      new Error("receiver missing"),
+    )
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: true,
+      data: {
+        accessToken: "private-jwt",
+        userId: "42",
+        user: { username: "private-user" },
+        sub2apiAuth: {
+          refreshToken: " ",
+        },
+      },
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://sub2.example.com")
+      expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportSub2apiSession()
+    })
+
+    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.ImportSub2apiSession)
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
+    expectNoSensitiveAnalyticsFields()
+  })
+
   it("tracks Sub2API import runtime errors as failures without raw error text", async () => {
     const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
     vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(

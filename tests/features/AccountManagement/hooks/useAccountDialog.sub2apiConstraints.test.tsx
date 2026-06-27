@@ -2,9 +2,9 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
+import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -12,11 +12,13 @@ import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 const {
   mockOpenWithAccount,
   mockOpenDefaultTokenQuickCreateDialogForAccount,
+  mockResolveAccountBrowserSession,
   mockToastError,
   mockToastSuccess,
 } = vi.hoisted(() => ({
   mockOpenWithAccount: vi.fn(),
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
+  mockResolveAccountBrowserSession: vi.fn(),
   mockToastError: vi.fn(),
   mockToastSuccess: vi.fn(),
 }))
@@ -38,6 +40,16 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   }),
 }))
 
+vi.mock("~/services/accountBrowserSession", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/accountBrowserSession")>()
+
+  return {
+    ...actual,
+    resolveAccountBrowserSession: mockResolveAccountBrowserSession,
+  }
+})
+
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: vi.fn(() => ({
     complete: vi.fn(),
@@ -50,7 +62,6 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   return {
     ...actual,
     getActiveTabs: vi.fn(async () => []),
-    getAllTabs: vi.fn(async () => []),
     onTabActivated: vi.fn(() => () => {}),
     onTabUpdated: vi.fn(() => () => {}),
     sendRuntimeMessage: vi.fn(),
@@ -60,6 +71,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 describe("useAccountDialog Sub2API constraints", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockResolveAccountBrowserSession.mockResolvedValue(null)
     await accountStorage.clearAllData()
     ;(globalThis.browser.tabs.sendMessage as any) = vi.fn()
   })
@@ -203,108 +215,43 @@ describe("useAccountDialog Sub2API constraints", () => {
     })
   })
 
-  it("prefers importing Sub2API session data from an existing matching tab before falling back to background auto-detect", async () => {
-    const { getAllTabs, sendRuntimeMessage } = await import(
-      "~/utils/browser/browserApi"
-    )
-    vi.mocked(getAllTabs).mockResolvedValue([
-      { id: 10, url: "https://other.example.com", active: false } as any,
-      {
-        id: 11,
-        url: "https://sub2.example.com/dashboard",
-        active: false,
-      } as any,
-      { id: 12, url: "https://sub2.example.com/settings", active: true } as any,
-    ])
-    vi.mocked(globalThis.browser.tabs.sendMessage).mockImplementation(
-      async (tabId: number, message: { action: string; url: string }) => {
-        expect(message.action).toBe(
-          RuntimeActionIds.ContentGetUserFromLocalStorage,
-        )
-        expect(message.url).toBe("https://sub2.example.com")
-        expect(message).toMatchObject({ siteType: "sub2api" })
-
-        if (tabId === 12) {
-          return {
-            success: true,
-            data: {
-              accessToken: "jwt-from-tab",
-              userId: "42",
-              user: { username: "tab-user" },
-              sub2apiAuth: {
-                refreshToken: "refresh-from-tab",
-                tokenExpiresAt: 123456,
-              },
-            },
-          }
-        }
-
-        throw new Error("unexpected tab")
-      },
-    )
-
-    const { result } = renderHook(() =>
-      useAccountDialog({
-        mode: DIALOG_MODES.ADD,
-        isOpen: true,
-        onClose: vi.fn(),
-        onSuccess: vi.fn(),
-      }),
-    )
-
-    await waitFor(() => {
-      expect(result.current.state).toBeTruthy()
-    })
-
-    await act(async () => {
-      result.current.setters.setUrl("https://sub2.example.com")
-      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
-    })
-
-    await waitFor(() => {
-      expect(result.current.state.url).toBe("https://sub2.example.com")
-      expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
-    })
-
-    await act(async () => {
-      await result.current.handlers.handleImportSub2apiSession()
-    })
-
-    expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
-    expect(result.current.state.sub2apiRefreshToken).toBe("refresh-from-tab")
-    expect(result.current.state.sub2apiTokenExpiresAt).toBe(123456)
-    expect(result.current.state.accessToken).toBe("jwt-from-tab")
-    expect(result.current.state.userId).toBe("42")
-    expect(result.current.state.username).toBe("tab-user")
-    expect(mockToastSuccess).toHaveBeenCalled()
-    expect(sendRuntimeMessage).not.toHaveBeenCalled()
-  })
-
-  it("falls back to background auto-detect when no matching tab yields a Sub2API refresh token", async () => {
-    const { getAllTabs, sendRuntimeMessage } = await import(
-      "~/utils/browser/browserApi"
-    )
-    vi.mocked(getAllTabs).mockResolvedValue([
-      {
-        id: 21,
-        url: "https://sub2.example.com/dashboard",
-        active: true,
-      } as any,
-    ])
-    vi.mocked(globalThis.browser.tabs.sendMessage).mockRejectedValue(
-      new Error("content script unavailable"),
-    )
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
-      success: true,
-      data: {
-        accessToken: "jwt-from-background",
-        userId: "7",
-        user: { username: "bg-user" },
+  it("imports Sub2API session data through the browser-session reader", async () => {
+    mockResolveAccountBrowserSession.mockImplementationOnce(async (options) => {
+      const noRefreshSession = {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        siteType: SITE_TYPES.SUB2API,
+        userId: "41",
+        user: { username: "missing-refresh-user" },
+        accessToken: "jwt-without-refresh",
+      }
+      const blankRefreshSession = {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        siteType: SITE_TYPES.SUB2API,
+        userId: "41",
+        user: { username: "blank-refresh-user" },
+        accessToken: "jwt-with-blank-refresh",
         sub2apiAuth: {
           refreshToken: "   ",
         },
-      },
-    } as any)
+      }
+      const usableSession = {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        siteType: SITE_TYPES.SUB2API,
+        userId: "42",
+        user: { username: "tab-user" },
+        accessToken: "jwt-from-reader",
+        sub2apiAuth: {
+          refreshToken: "refresh-from-reader",
+          tokenExpiresAt: 123456,
+        },
+      }
+
+      expect(options.isUsableSession(noRefreshSession)).toBe(false)
+      expect(options.isUsableSession(blankRefreshSession)).toBe(false)
+      expect(options.isUsableSession(usableSession)).toBe(true)
+
+      return usableSession
+    })
 
     const { result } = renderHook(() =>
       useAccountDialog({
@@ -333,116 +280,72 @@ describe("useAccountDialog Sub2API constraints", () => {
       await result.current.handlers.handleImportSub2apiSession()
     })
 
-    expect(sendRuntimeMessage).toHaveBeenCalledWith(
+    expect(mockResolveAccountBrowserSession).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: RuntimeActionIds.AutoDetectSite,
-        url: "https://sub2.example.com",
+        baseUrl: "https://sub2.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        useExistingTabs: true,
+        useTempWindow: true,
+        requestIdPrefix: "account-dialog-sub2api-import",
+        isUsableSession: expect.any(Function),
       }),
     )
+    expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
+    expect(result.current.state.sub2apiRefreshToken).toBe("refresh-from-reader")
+    expect(result.current.state.sub2apiTokenExpiresAt).toBe(123456)
+    expect(result.current.state.accessToken).toBe("jwt-from-reader")
+    expect(result.current.state.userId).toBe("42")
+    expect(result.current.state.username).toBe("tab-user")
+    expect(mockToastSuccess).toHaveBeenCalled()
+  })
+
+  it("shows missing-session feedback when the browser-session reader finds no usable Sub2API session", async () => {
+    mockResolveAccountBrowserSession.mockResolvedValueOnce(null)
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://sub2.example.com")
+      expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportSub2apiSession()
+    })
+
     expect(result.current.state.sub2apiRefreshToken).toBe("")
     expect(result.current.state.accessToken).toBe("")
     expect(result.current.state.userId).toBe("")
     expect(mockToastError).toHaveBeenCalled()
   })
 
-  it("continues scanning matching tabs until a Sub2API refresh token is found", async () => {
-    const { getAllTabs, sendRuntimeMessage } = await import(
-      "~/utils/browser/browserApi"
-    )
-    vi.mocked(getAllTabs).mockResolvedValue([
-      {
-        id: 31,
-        url: "https://sub2.example.com/dashboard",
-        active: true,
-      } as any,
-      {
-        id: 32,
-        url: "https://sub2.example.com/settings",
-        active: false,
-      } as any,
-    ])
-    vi.mocked(globalThis.browser.tabs.sendMessage)
-      .mockResolvedValueOnce({
-        success: true,
-        data: {
-          accessToken: "stale-tab-token",
-          userId: "1",
-          user: { username: "stale-user" },
-        },
-      } as any)
-      .mockResolvedValueOnce({
-        success: true,
-        data: {
-          accessToken: "fresh-tab-token",
-          userId: "2",
-          user: { username: "fresh-user" },
-          sub2apiAuth: {
-            refreshToken: "refresh-from-second-tab",
-            tokenExpiresAt: 555666,
-          },
-        },
-      } as any)
-
-    const { result } = renderHook(() =>
-      useAccountDialog({
-        mode: DIALOG_MODES.ADD,
-        isOpen: true,
-        onClose: vi.fn(),
-        onSuccess: vi.fn(),
-      }),
-    )
-
-    await waitFor(() => {
-      expect(result.current.state).toBeTruthy()
-    })
-
-    await act(async () => {
-      result.current.setters.setUrl("https://sub2.example.com")
-      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
-    })
-
-    await act(async () => {
-      await result.current.handlers.handleImportSub2apiSession()
-    })
-
-    expect(globalThis.browser.tabs.sendMessage).toHaveBeenCalledTimes(2)
-    expect(sendRuntimeMessage).not.toHaveBeenCalled()
-    expect(result.current.state.sub2apiRefreshToken).toBe(
-      "refresh-from-second-tab",
-    )
-    expect(result.current.state.sub2apiTokenExpiresAt).toBe(555666)
-    expect(result.current.state.accessToken).toBe("fresh-tab-token")
-    expect(result.current.state.userId).toBe("2")
-    expect(result.current.state.username).toBe("fresh-user")
-    expect(mockToastSuccess).toHaveBeenCalled()
-  })
-
-  it("hydrates Sub2API session fields from the background fallback when tab import cannot provide them", async () => {
-    const { getAllTabs, sendRuntimeMessage } = await import(
-      "~/utils/browser/browserApi"
-    )
-    vi.mocked(getAllTabs).mockResolvedValue([
-      {
-        id: 41,
-        url: "https://sub2.example.com/dashboard",
-        active: true,
-      } as any,
-    ])
-    vi.mocked(globalThis.browser.tabs.sendMessage).mockRejectedValue(
-      new Error("content script unavailable"),
-    )
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
-      success: true,
-      data: {
-        accessToken: "jwt-from-background",
-        userId: "7",
-        user: { username: "bg-user" },
-        sub2apiAuth: {
-          refreshToken: "refresh-from-background",
-          tokenExpiresAt: 987654,
-        },
+  it("hydrates Sub2API session fields from the browser-session reader temp-window result", async () => {
+    mockResolveAccountBrowserSession.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      siteType: SITE_TYPES.SUB2API,
+      accessToken: "jwt-from-background",
+      userId: "7",
+      user: { username: "bg-user" },
+      sub2apiAuth: {
+        refreshToken: "refresh-from-background",
+        tokenExpiresAt: 987654,
       },
-    } as any)
+    })
 
     const { result } = renderHook(() =>
       useAccountDialog({
@@ -466,12 +369,6 @@ describe("useAccountDialog Sub2API constraints", () => {
       await result.current.handlers.handleImportSub2apiSession()
     })
 
-    expect(sendRuntimeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.AutoDetectSite,
-        url: "https://sub2.example.com",
-      }),
-    )
     expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
     expect(result.current.state.sub2apiRefreshToken).toBe(
       "refresh-from-background",
@@ -484,31 +381,17 @@ describe("useAccountDialog Sub2API constraints", () => {
   })
 
   it("keeps existing JWT fields when the imported optional Sub2API values are malformed", async () => {
-    const { getAllTabs, sendRuntimeMessage } = await import(
-      "~/utils/browser/browserApi"
-    )
-    vi.mocked(getAllTabs).mockResolvedValue([
-      {
-        id: 51,
-        url: "https://sub2.example.com/dashboard",
-        active: true,
-      } as any,
-    ])
-    vi.mocked(globalThis.browser.tabs.sendMessage).mockRejectedValue(
-      new Error("content script unavailable"),
-    )
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
-      success: true,
-      data: {
-        accessToken: "   ",
-        userId: Number.NaN,
-        user: { username: "   " },
-        sub2apiAuth: {
-          refreshToken: "refresh-from-background",
-          tokenExpiresAt: Number.POSITIVE_INFINITY,
-        },
+    mockResolveAccountBrowserSession.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      siteType: SITE_TYPES.SUB2API,
+      accessToken: "   ",
+      userId: "",
+      user: { username: "   " },
+      sub2apiAuth: {
+        refreshToken: "refresh-from-background",
+        tokenExpiresAt: Number.POSITIVE_INFINITY,
       },
-    } as any)
+    })
 
     const { result } = renderHook(() =>
       useAccountDialog({
@@ -757,25 +640,18 @@ describe("useAccountDialog Sub2API constraints", () => {
     getAccountByIdSpy.mockRestore()
   })
 
-  it("falls back to background auto-detect when enumerating tabs fails entirely", async () => {
-    const { getAllTabs, sendRuntimeMessage } = await import(
-      "~/utils/browser/browserApi"
-    )
-    vi.mocked(getAllTabs).mockRejectedValue(
-      new Error("tab enumeration unavailable"),
-    )
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
-      success: true,
-      data: {
-        accessToken: "jwt-from-background",
-        userId: "77",
-        user: { username: "bg-user" },
-        sub2apiAuth: {
-          refreshToken: "refresh-from-background",
-          tokenExpiresAt: 222333,
-        },
+  it("imports a usable Sub2API session even when the browser-session reader handles tab enumeration failures", async () => {
+    mockResolveAccountBrowserSession.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      siteType: SITE_TYPES.SUB2API,
+      accessToken: "jwt-from-background",
+      userId: "77",
+      user: { username: "bg-user" },
+      sub2apiAuth: {
+        refreshToken: "refresh-from-background",
+        tokenExpiresAt: 222333,
       },
-    } as any)
+    })
 
     const { result } = renderHook(() =>
       useAccountDialog({
@@ -799,12 +675,6 @@ describe("useAccountDialog Sub2API constraints", () => {
       await result.current.handlers.handleImportSub2apiSession()
     })
 
-    expect(sendRuntimeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.AutoDetectSite,
-        url: "https://sub2.example.com",
-      }),
-    )
     expect(result.current.state.sub2apiRefreshToken).toBe(
       "refresh-from-background",
     )
@@ -815,24 +685,8 @@ describe("useAccountDialog Sub2API constraints", () => {
     expect(mockToastSuccess).toHaveBeenCalled()
   })
 
-  it("surfaces background fallback failures during Sub2API session import and resets the loading state", async () => {
-    const { getAllTabs, sendRuntimeMessage } = await import(
-      "~/utils/browser/browserApi"
-    )
-    vi.mocked(getAllTabs).mockResolvedValue([
-      {
-        id: 31,
-        url: "https://sub2.example.com/dashboard",
-        active: true,
-      } as any,
-    ])
-    vi.mocked(globalThis.browser.tabs.sendMessage).mockRejectedValue(
-      new Error("content script unavailable"),
-    )
-    vi.mocked(sendRuntimeMessage).mockRejectedValue(
-      new Error("background auto-detect failed"),
-    )
-
+  it("shows missing-session feedback when Sub2API session import cannot find a usable session and resets the loading state", async () => {
+    mockResolveAccountBrowserSession.mockResolvedValueOnce(null)
     const { result } = renderHook(() =>
       useAccountDialog({
         mode: DIALOG_MODES.ADD,
@@ -855,14 +709,8 @@ describe("useAccountDialog Sub2API constraints", () => {
       await result.current.handlers.handleImportSub2apiSession()
     })
 
-    expect(sendRuntimeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.AutoDetectSite,
-        url: "https://sub2.example.com",
-      }),
-    )
     expect(mockToastError).toHaveBeenCalledWith(
-      "accountDialog:messages.operationFailed",
+      "accountDialog:messages.importSub2apiSessionMissing",
     )
     expect(result.current.state.isImportingSub2apiSession).toBe(false)
     expect(result.current.state.sub2apiRefreshToken).toBe("")
