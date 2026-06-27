@@ -365,6 +365,35 @@ describe("detectSiteType", () => {
         )
       })
 
+      it("falls through to New API-family detection when the Sub2API auth endpoint probe fails", async () => {
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse(
+              "<html><title>White Label Dashboard</title></html>",
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            )
+          }),
+          http.get("https://example.com/api/v1/auth/me", () => {
+            return HttpResponse.error()
+          }),
+          http.get("https://example.com/api/user/self", () => {
+            return HttpResponse.json(
+              {
+                success: false,
+                message: "Unauthorized, New-Api-User header not provided",
+              },
+              { status: 401 },
+            )
+          }),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.NEW_API,
+        )
+      })
+
       it("should fallback to API detection when title doesn't match", async () => {
         const mockHTML = "<html><title>Unknown Site</title></html>"
         const mockApiResponse = {
