@@ -1069,10 +1069,8 @@ describe("accountOperations validateAndSaveAccount", () => {
       expect.objectContaining({
         account: expect.objectContaining({
           site_name: "Example",
-        }),
-        displaySiteData: expect.objectContaining({
-          name: "Example",
-          baseUrl: "https://api.example.com",
+          site_url: "https://api.example.com",
+          site_type: SITE_TYPES.NEW_API,
         }),
       }),
     )

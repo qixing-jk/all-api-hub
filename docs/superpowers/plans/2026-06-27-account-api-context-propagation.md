@@ -112,6 +112,8 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 Add this test under `describe("siteAnnouncementScheduler", () => { ... })`:
 
 ```ts
+  import { SITE_TYPES } from "~/constants/siteType"
+
   it("uses the stored-account API context for provider requests", async () => {
     providerFetchMock.mockResolvedValue({
       providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
@@ -121,7 +123,7 @@ Add this test under `describe("siteAnnouncementScheduler", () => { ... })`:
     })
     const account = createAccount({
       id: "sub-1",
-      site_type: "sub2api",
+      site_type: SITE_TYPES.SUB2API,
       site_url: "https://sub.example.com",
       authType: AuthTypeEnum.Cookie,
       account_info: {
@@ -159,6 +161,19 @@ Add this test under `describe("siteAnnouncementScheduler", () => { ... })`:
           }),
           sub2apiAuthSession: expect.any(Object),
         }),
+      }),
+    )
+    const providerRequest = providerFetchMock.mock.calls[0]?.[0]
+    await expect(
+      providerRequest.apiRequest.sub2apiAuthSession.getLatestAuth("sub-1"),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        accessToken: "stored-access-token",
+        userId: "stored-user",
+        sub2apiAuth: {
+          refreshToken: "stored-refresh-token",
+          tokenExpiresAt: 123456,
+        },
       }),
     )
   })
@@ -228,11 +243,11 @@ Change:
 to:
 
 ```ts
-  const apiRequest = createAccountApiRequestFromStoredAccount(account)
-    .request as ApiServiceRequest
+  const apiRequest = createAccountApiRequestFromStoredAccount(account).request
 ```
 
-The cast is acceptable only if TypeScript cannot infer the `Sub2ApiAuthSessionRequest` extension as assignable to `ApiServiceRequest`; do not keep the cast if `tsc` accepts the expression without it.
+Do not add a cast here; the context builder return type should stay assignable
+to the downstream request type without masking type drift.
 
 - [ ] **Step 5: Replace manual request construction in redemption**
 

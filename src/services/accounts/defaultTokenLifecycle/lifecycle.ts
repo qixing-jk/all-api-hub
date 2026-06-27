@@ -58,32 +58,33 @@ const isDisplayAccountApiCapabilityContext = (
 ): context is DisplayAccountApiCapabilityContext =>
   "keyManagement" in context && "tokenProvisioning" in context
 
+const requireTokenLifecycleCapabilityPair = (params: {
+  siteType: AccountApiContext["siteType"]
+  keyManagement: KeyManagementCapability | undefined
+  tokenProvisioning: TokenProvisioningCapability | undefined
+}) => ({
+  keyManagement: requireDisplayAccountKeyManagement(
+    { siteType: params.siteType },
+    params.keyManagement,
+  ),
+  tokenProvisioning: requireDisplayAccountTokenProvisioning(
+    { siteType: params.siteType },
+    params.tokenProvisioning,
+  ),
+})
+
 const requireTokenLifecycleCapabilities = (context: AccountApiContext) => {
   if (isDisplayAccountApiCapabilityContext(context)) {
-    return {
-      keyManagement: requireDisplayAccountKeyManagement(
-        { siteType: context.siteType },
-        context.keyManagement,
-      ),
-      tokenProvisioning: requireDisplayAccountTokenProvisioning(
-        { siteType: context.siteType },
-        context.tokenProvisioning,
-      ),
-    }
+    return requireTokenLifecycleCapabilityPair(context)
   }
 
   const adapter = getSiteAdapter(context.siteType)
 
-  return {
-    keyManagement: requireDisplayAccountKeyManagement(
-      { siteType: context.siteType },
-      adapter.keyManagement,
-    ),
-    tokenProvisioning: requireDisplayAccountTokenProvisioning(
-      { siteType: context.siteType },
-      adapter.tokenProvisioning,
-    ),
-  }
+  return requireTokenLifecycleCapabilityPair({
+    siteType: context.siteType,
+    keyManagement: adapter.keyManagement,
+    tokenProvisioning: adapter.tokenProvisioning,
+  })
 }
 
 /**

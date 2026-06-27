@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
@@ -623,7 +624,7 @@ describe("siteAnnouncementScheduler", () => {
     })
     const account = createAccount({
       id: "sub-1",
-      site_type: "sub2api",
+      site_type: SITE_TYPES.SUB2API,
       site_url: "https://sub.example.com",
       authType: AuthTypeEnum.Cookie,
       account_info: {
@@ -644,6 +645,9 @@ describe("siteAnnouncementScheduler", () => {
       },
     })
     getEnabledAccountsMock.mockResolvedValue([account])
+    getAccountByIdMock.mockImplementation(async (id: string) =>
+      id === account.id ? account : null,
+    )
 
     const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
@@ -661,6 +665,19 @@ describe("siteAnnouncementScheduler", () => {
           }),
           sub2apiAuthSession: expect.any(Object),
         }),
+      }),
+    )
+    const providerRequest = providerFetchMock.mock.calls[0]?.[0]
+    await expect(
+      providerRequest.apiRequest.sub2apiAuthSession.getLatestAuth("sub-1"),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        accessToken: "stored-access-token",
+        userId: "stored-user",
+        sub2apiAuth: {
+          refreshToken: "stored-refresh-token",
+          tokenExpiresAt: 123456,
+        },
       }),
     )
   })
@@ -682,12 +699,12 @@ describe("siteAnnouncementScheduler", () => {
       createAccount({ id: "common-2" }),
       createAccount({
         id: "sub-1",
-        site_type: "sub2api",
+        site_type: SITE_TYPES.SUB2API,
         site_url: "https://sub.example.com",
       }),
       createAccount({
         id: "sub-2",
-        site_type: "sub2api",
+        site_type: SITE_TYPES.SUB2API,
         site_url: "https://sub.example.com",
       }),
     ])
@@ -842,7 +859,7 @@ describe("siteAnnouncementScheduler", () => {
     })
     const account = createAccount({
       id: "sub-1",
-      site_type: "sub2api",
+      site_type: SITE_TYPES.SUB2API,
       site_url: "https://sub.example.com",
     })
     getEnabledAccountsMock.mockResolvedValue([account])
