@@ -771,21 +771,22 @@ type Sub2ApiResyncedToken = {
 const hasUsableAccessToken = (session: AccountBrowserSession): boolean =>
   typeof session.accessToken === "string" && session.accessToken.trim().length > 0
 
+const SUB2API_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE = {
+  [ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB]:
+    ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+  [ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB]:
+    ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+  [ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW]:
+    ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+} as const satisfies Record<
+  AccountBrowserSession["source"],
+  Sub2ApiResyncedToken["source"]
+>
+
 const mapResyncSource = (
   source: AccountBrowserSession["source"],
-): Sub2ApiResyncedToken["source"] => {
-  switch (source) {
-    case ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB:
-    case ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB:
-      return ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
-    case ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW:
-      return ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
-    default: {
-      const exhaustive: never = source
-      return exhaustive
-    }
-  }
-}
+): Sub2ApiResyncedToken["source"] =>
+  SUB2API_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE[source]
 
 /**
  * Re-sync Sub2API JWT from browser-session state.

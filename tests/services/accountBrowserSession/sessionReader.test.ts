@@ -145,6 +145,7 @@ describe("account browser-session reader", () => {
         success: true,
         data: {
           userId: "43",
+          siteType: SITE_TYPES.SUB2API,
           fetchContext: {
             kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: "not-a-number",
@@ -183,18 +184,21 @@ describe("account browser-session reader", () => {
       }),
     )
 
-    await expect(
-      readAccountBrowserSessionFromTab({
+    const sessionWithoutTrustedFetchContext =
+      await readAccountBrowserSessionFromTab({
         tabId: 43,
         baseUrl: "https://sub2.example.com",
         siteType: SITE_TYPES.SUB2API,
         source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
-      }),
-    ).resolves.toEqual(
-      expect.not.objectContaining({
-        fetchContext: expect.anything(),
+      })
+
+    expect(sessionWithoutTrustedFetchContext).toEqual(
+      expect.objectContaining({
+        userId: "43",
+        siteTypeHint: SITE_TYPES.SUB2API,
       }),
     )
+    expect(sessionWithoutTrustedFetchContext).not.toHaveProperty("fetchContext")
 
     await expect(
       readAccountBrowserSessionFromTab({
@@ -426,6 +430,55 @@ describe("account browser-session reader", () => {
         useTempWindow: true,
       }),
     ).resolves.toBeNull()
+
+    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it("passes current-tab browser context without container metadata to fallbacks", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "9",
+        user: { username: "current-user" },
+        accessToken: "current-token",
+      },
+    })
+    mockGetAllTabs.mockResolvedValueOnce([])
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "11",
+        user: { username: "temp-user" },
+        accessToken: "temp-token",
+      },
+    })
+
+    const session = await resolveAccountBrowserSession({
+      baseUrl: "https://sub2.example.com",
+      siteType: SITE_TYPES.SUB2API,
+      currentTab: {
+        tabId: 9,
+        incognito: true,
+      },
+      useExistingTabs: true,
+      useTempWindow: true,
+      isUsableSession: (candidate) =>
+        candidate.source === ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+    })
+
+    expect(session?.source).toBe(ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AutoDetectSite,
+        url: "https://sub2.example.com",
+        useIncognito: true,
+      }),
+    )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        cookieStoreId: expect.any(String),
+      }),
+    )
   })
 
   it("omits current-tab fetch context when the base URL has no parseable origin", async () => {
