@@ -6,6 +6,7 @@ import {
 } from "~/services/accountSiteOnboarding/registry"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { AuthTypeEnum } from "~/types"
 import {
   canUseTempWindowFetch,
@@ -112,9 +113,11 @@ function detectAccountSiteTypeFromApiErrorMessage(
 
 /**
  * Probes the /api/user/self endpoint using cookie auth and infers the site
- * type from upstream auth error messages when title detection fails.
+ * type from One/New API-family auth error messages when title detection fails.
  */
-async function getAccountSiteUserIdType(url: string): Promise<AccountSiteType> {
+async function detectNewApiFamilySiteTypeFromCompatAuthError(
+  url: string,
+): Promise<AccountSiteType> {
   try {
     await fetchApiData<unknown>(
       {
@@ -134,6 +137,48 @@ async function getAccountSiteUserIdType(url: string): Promise<AccountSiteType> {
     }
     throw error
   }
+  return SITE_TYPES.UNKNOWN
+}
+
+/**
+ * Returns whether a parsed response body is a plain JSON object.
+ */
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+/**
+ * Probe Sub2API's JWT identity endpoint without opening a browser context.
+ *
+ * Source: https://github.com/Wei-Shaw/sub2api
+ * `/api/v1/auth/me` is protected by JWT middleware; without Authorization,
+ * upstream returns a JSON object with a string `code`. The endpoint-shape signal
+ * is enough to identify white-label Sub2API deployments in the current adapter
+ * set without relying on the visible page title.
+ */
+async function detectSub2ApiFromAuthEndpoint(
+  url: string,
+): Promise<AccountSiteType> {
+  try {
+    const response = await fetch(new URL(SUB2API_AUTH_ME_ENDPOINT, url), {
+      method: "GET",
+      cache: "no-store",
+      credentials: "omit",
+    })
+
+    const contentType = response.headers.get("content-type") || ""
+    if (!/\bjson\b/i.test(contentType)) {
+      return SITE_TYPES.UNKNOWN
+    }
+
+    const responseBody = (await response.json()) as unknown
+    if (isJsonObject(responseBody) && typeof responseBody.code === "string") {
+      return SITE_TYPES.SUB2API
+    }
+  } catch (error) {
+    logger.debug("Sub2API auth endpoint probe failed", { url, error })
+  }
+
   return SITE_TYPES.UNKNOWN
 }
 
@@ -170,5 +215,10 @@ export const getAccountSiteType = async (
     }
   }
 
-  return await getAccountSiteUserIdType(url)
+  const sub2ApiSiteType = await detectSub2ApiFromAuthEndpoint(url)
+  if (sub2ApiSiteType !== SITE_TYPES.UNKNOWN) {
+    return sub2ApiSiteType
+  }
+
+  return await detectNewApiFamilySiteTypeFromCompatAuthError(url)
 }

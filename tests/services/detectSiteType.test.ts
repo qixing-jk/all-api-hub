@@ -22,6 +22,11 @@ vi.mock("~/utils/browser/tempWindowFetch", async (importOriginal) => {
 describe("detectSiteType", () => {
   beforeEach(() => {
     server.resetHandlers()
+    server.use(
+      http.get("https://example.com/api/v1/auth/me", () => {
+        return HttpResponse.json({ message: "not found" }, { status: 404 })
+      }),
+    )
   })
 
   describe("fetchSiteOriginalTitle", () => {
@@ -263,6 +268,12 @@ describe("detectSiteType", () => {
                 { status: 400 },
               )
             }),
+            http.get("https://example.com/api/v1/auth/me", () => {
+              return HttpResponse.json(
+                { message: "not found" },
+                { status: 404 },
+              )
+            }),
           )
 
           await expect(getAccountSiteType("https://example.com")).resolves.toBe(
@@ -287,6 +298,73 @@ describe("detectSiteType", () => {
     })
 
     describe("Fallback to API detection", () => {
+      it("detects Sub2API from its unauthenticated auth endpoint JSON code", async () => {
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse(
+              "<html><title>White Label Dashboard</title></html>",
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            )
+          }),
+          http.get("https://example.com/api/v1/auth/me", () => {
+            return HttpResponse.json(
+              {
+                code: "UNAUTHORIZED",
+                message: "Authorization header is required",
+              },
+              { status: 401 },
+            )
+          }),
+          http.get("https://example.com/api/user/self", () => {
+            return HttpResponse.json(
+              {
+                success: false,
+                message: "error: completely unmatched identifier",
+              },
+              { status: 400 },
+            )
+          }),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.SUB2API,
+        )
+      })
+
+      it("does not detect Sub2API when the auth endpoint returns non-JSON fallback content", async () => {
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse(
+              "<html><title>White Label Dashboard</title></html>",
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            )
+          }),
+          http.get("https://example.com/api/v1/auth/me", () => {
+            return new HttpResponse("<html><title>App</title></html>", {
+              status: 200,
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+          http.get("https://example.com/api/user/self", () => {
+            return HttpResponse.json(
+              {
+                success: false,
+                message: "error: completely unmatched identifier",
+              },
+              { status: 400 },
+            )
+          }),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.UNKNOWN,
+        )
+      })
+
       it("should fallback to API detection when title doesn't match", async () => {
         const mockHTML = "<html><title>Unknown Site</title></html>"
         const mockApiResponse = {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { ApiError } from "~/services/apiService/common/errors"
@@ -41,12 +41,25 @@ vi.mock("~/utils/core/logger", () => ({
 describe("detectSiteType temp-context fallbacks", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ message: "not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
     mocks.canUseTempWindowFetch.mockResolvedValue(false)
     mocks.tempWindowFetch.mockResolvedValue({ success: false })
     mocks.fetchApi.mockResolvedValue(
       "<html><title>Fallback Title</title></html>",
     )
     mocks.fetchApiData.mockResolvedValue({})
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it("uses the temp-window HTML title when that fetch succeeds", async () => {
