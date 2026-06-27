@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
+import {
+  anyrouterProvider,
+  type AnyrouterCheckInParams,
+} from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 
 vi.mock("~/services/apiService/common/utils", () => ({
@@ -76,6 +79,43 @@ describe("anyrouterProvider", () => {
       expect(result.status).toBe("success")
       expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
+      })
+    })
+
+    it("passes lightweight AnyRouter account context to fetchApi", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const mockedFetchApi = vi.mocked(
+        fetchApi as unknown as (...args: any[]) => Promise<any>,
+      )
+      mockedFetchApi.mockResolvedValueOnce({
+        code: 1,
+        ret: 1,
+        success: true,
+        message: "Success",
+      })
+
+      const account: AnyrouterCheckInParams = {
+        id: "stored-account-id",
+        site_url: "https://anyrouter.top",
+        cookieAuthSessionCookie: "session=stored-cookie",
+        account_info: {
+          id: 12345,
+        },
+      }
+
+      const result = await anyrouterProvider.checkIn(account)
+
+      const latestRequest =
+        mockedFetchApi.mock.calls[mockedFetchApi.mock.calls.length - 1]?.[0]
+      expect(result.status).toBe("success")
+      expect(latestRequest).toMatchObject({
+        baseUrl: "https://anyrouter.top",
+        accountId: "stored-account-id",
+        cookieAuthSessionCookie: "session=stored-cookie",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: 12345,
+        },
       })
     })
 

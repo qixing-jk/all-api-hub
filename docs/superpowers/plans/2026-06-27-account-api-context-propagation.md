@@ -1342,6 +1342,8 @@ Use the stored account site type for adapter and capability lookup:
   )
 ```
 
+Before changing adapter or capability lookup, verify this site type source against the current in-repo contracts in `src/constants/siteType.ts`, `src/services/siteDetection/detectSiteType.ts`, and `src/services/apiService/index.ts`. This keeps the repair workflow aligned with the saved account type instead of a display snapshot or a guessed compatible family.
+
 Narrow display-data usage to metadata:
 
 ```ts
