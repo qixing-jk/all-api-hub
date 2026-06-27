@@ -65,17 +65,18 @@ describe("SearchableSelect", () => {
     ).toBeVisible()
   })
 
-  it("renders labels with selector-sensitive characters without crashing", async () => {
+  it("searches labels with selector-sensitive characters and returns the stable option value", async () => {
     const onChange = vi.fn()
+    const selectorSensitiveOption = {
+      value: "example-option-id",
+      label: 'Example "quoted" \\label + alias (weight: 0.13)',
+    }
 
     render(
       <SearchableSelect
         options={[
-          {
-            value: "model-1",
-            label:
-              'gpt-"稳定通道" - 目前是plus+pro池目前断断续续 (倍率： 0.13)',
-          },
+          selectorSensitiveOption,
+          { value: "other-option-id", label: "Other option" },
         ]}
         value=""
         onChange={onChange}
@@ -84,13 +85,25 @@ describe("SearchableSelect", () => {
       />,
     )
 
+    const searchInput = await waitFor(() => {
+      const input = document.querySelector('[data-slot="command-input"]')
+      expect(input).toBeInTheDocument()
+      return input as HTMLInputElement
+    })
+    fireEvent.change(searchInput, {
+      target: { value: "quoted + alias" },
+    })
+
     const option = await screen.findByRole("option", {
-      name: /gpt-"稳定通道" - 目前是plus\+pro池目前断断续续/,
+      name: selectorSensitiveOption.label,
     })
     expect(option).toBeVisible()
+    expect(
+      screen.queryByRole("option", { name: "Other option" }),
+    ).not.toBeInTheDocument()
 
     fireEvent.click(option)
-    expect(onChange).toHaveBeenCalledWith("model-1")
+    expect(onChange).toHaveBeenCalledWith(selectorSensitiveOption.value)
   })
 
   it("uses default viewport-aware height constraints and supports option suffix content", async () => {
