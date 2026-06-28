@@ -8,7 +8,7 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import type { CreateTokenRequest } from "~/services/apiService/common/type"
+import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
 const createWithGroup = (

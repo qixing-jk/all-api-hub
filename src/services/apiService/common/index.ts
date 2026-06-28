@@ -14,14 +14,11 @@ import {
   ApiServiceAccountRequest,
   ApiServiceRequest,
   CheckInStatus,
-  CreateTokenRequest,
-  CreateTokenResult,
   HealthCheckResult,
   LogItem,
   LogResponseData,
   LogStatResponseData,
   LogType,
-  PaginatedTokenResponse,
   PaymentResponse,
   RedeemCodeRequest,
   RefreshAccountResult,
@@ -29,7 +26,6 @@ import {
   TodayIncomeData,
   TodayLogQueryConfig,
   TodayUsageData,
-  UserGroupInfo,
   UserInfo,
 } from "~/services/apiService/common/type"
 import {
@@ -40,6 +36,12 @@ import {
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
+import type {
+  CreateTokenRequest,
+  CreateTokenResult,
+  PaginatedTokenResponse,
+  UserGroupInfo,
+} from "~/services/tokenProvisioning/model"
 import {
   AuthTypeEnum,
   CheckInConfig,

@@ -9,8 +9,8 @@ import {
   TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import { createTokenProvisioningImplementation } from "~/services/apiService/newApiFamily/tokenProvisioning"
+import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import type { ApiToken } from "~/types"
 
 const defaultTokenData: CreateTokenRequest = {

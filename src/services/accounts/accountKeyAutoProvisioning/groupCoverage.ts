@@ -16,7 +16,7 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import type { CreateTokenRequest } from "~/services/apiService/common/type"
+import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,

@@ -1,9 +1,9 @@
+import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import type {
-  ApiServiceRequest,
   CreateTokenRequest,
   CreateTokenResult,
   UserGroupInfo,
-} from "~/services/apiService/common/type"
+} from "~/services/tokenProvisioning/model"
 import type { ApiToken } from "~/types"
 
 export type FetchAccountTokensOptions = {

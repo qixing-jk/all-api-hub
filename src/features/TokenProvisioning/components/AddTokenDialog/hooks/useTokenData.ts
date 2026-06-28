@@ -7,7 +7,7 @@ import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
 } from "~/services/accounts/utils/apiServiceRequest"
-import type { UserGroupInfo } from "~/services/apiService/common/type"
+import type { UserGroupInfo } from "~/services/tokenProvisioning/model"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

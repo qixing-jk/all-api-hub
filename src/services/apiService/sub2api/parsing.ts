@@ -5,7 +5,7 @@ import { extractItemsFromArrayOrItemsPayload } from "~/services/apiService/commo
 import type {
   CreateTokenRequest,
   UserGroupInfo,
-} from "~/services/apiService/common/type"
+} from "~/services/tokenProvisioning/model"
 import type { ApiToken } from "~/types"
 import { t } from "~/utils/i18n/core"
 

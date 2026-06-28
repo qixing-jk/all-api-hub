@@ -9,19 +9,17 @@ import {
 } from "~/services/accountTokens/apiTokenKey"
 import { determineHealthStatus } from "~/services/apiService/common"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import {
-  type AccessTokenInfo,
-  type AccountData,
-  type ApiResponse,
-  type ApiServiceAccountRequest,
-  type ApiServiceRequest,
-  type CreateTokenRequest,
-  type CreateTokenResult,
-  type RefreshAccountResult,
-  type SiteStatusInfo,
-  type TodayIncomeData,
-  type TodayUsageData,
-  type UserInfo,
+import type {
+  AccessTokenInfo,
+  AccountData,
+  ApiResponse,
+  ApiServiceAccountRequest,
+  ApiServiceRequest,
+  RefreshAccountResult,
+  SiteStatusInfo,
+  TodayIncomeData,
+  TodayUsageData,
+  UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import {
@@ -29,6 +27,10 @@ import {
   type ModelPricing,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import type {
+  CreateTokenRequest,
+  CreateTokenResult,
+} from "~/services/tokenProvisioning/model"
 import { AuthTypeEnum, SiteHealthStatus, type ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"

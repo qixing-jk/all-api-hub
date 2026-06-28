@@ -16,16 +16,18 @@ import type {
   AccountData,
   ApiServiceAccountRequest,
   ApiServiceRequest,
-  CreateTokenRequest,
-  CreateTokenResult,
   RefreshAccountResult,
   SiteStatusInfo,
   TodayIncomeData,
   TodayUsageData,
-  UserGroupInfo,
   UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
+import type {
+  CreateTokenRequest,
+  CreateTokenResult,
+  UserGroupInfo,
+} from "~/services/tokenProvisioning/model"
 import {
   AuthTypeEnum,
   SiteHealthStatus,

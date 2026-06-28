@@ -1,4 +1,3 @@
-import { type UserGroupInfo } from "~/services/apiService/common/type"
 import type {
   OneHubModelPricing,
   OneHubUserGroupMap,
@@ -8,6 +7,7 @@ import {
   type ModelPricing,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import type { UserGroupInfo } from "~/services/tokenProvisioning/model"
 
 /**
  * 将 OneHub 模型定价转换为通用定价

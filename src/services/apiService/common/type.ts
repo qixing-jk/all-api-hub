@@ -3,7 +3,6 @@
  */
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
-  ApiToken,
   AuthTypeEnum,
   CheckInConfig,
   SiteHealthStatus,
@@ -118,43 +117,6 @@ export interface ModelsResponse {
   message: string
   success: boolean
 }
-
-// 分组信息类型
-export interface UserGroupInfo {
-  desc: string
-  ratio: number
-}
-
-// 分组响应类型
-export interface UserGroupsResponse {
-  data: Record<string, UserGroupInfo>
-  message: string
-  success: boolean
-}
-
-// 创建令牌请求类型
-export interface CreateTokenRequest {
-  name: string
-  remain_quota: number
-  expired_time: number
-  unlimited_quota: boolean
-  model_limits_enabled: boolean
-  model_limits: string
-  allow_ips: string
-  group: string
-}
-
-export type CreateTokenResult = boolean | ApiToken
-
-export interface PaginatedData<T> {
-  page: number
-  page_size: number
-  total: number
-  items: T[]
-}
-
-// 分页令牌响应类型
-export type PaginatedTokenResponse = PaginatedData<ApiToken>
 
 /**
  * 日志类型

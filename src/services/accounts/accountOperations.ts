@@ -57,12 +57,12 @@ import {
   type TokenProvisioningBlockReason,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
+import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import {
   ApiToken,
   AuthTypeEnum,

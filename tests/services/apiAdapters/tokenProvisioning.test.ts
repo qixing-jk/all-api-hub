@@ -15,7 +15,7 @@ import {
   normalizeTokenProvisioningGroupNames,
   sub2ApiTokenProvisioning,
 } from "~/services/apiAdapters/sub2api/tokenProvisioning"
-import type { CreateTokenRequest } from "~/services/apiService/common/type"
+import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import type { ApiToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
