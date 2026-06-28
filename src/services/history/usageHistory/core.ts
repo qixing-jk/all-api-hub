@@ -1,4 +1,5 @@
-import { LogType, type LogItem } from "~/services/apiService/common/type"
+import { LogType } from "~/services/usageLogs/model"
+import type { LogItem } from "~/services/usageLogs/model"
 import type {
   UsageHistoryAccountStore,
   UsageHistoryAggregate,

@@ -2,14 +2,11 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { ApiError } from "~/services/apiService/common/errors"
-import {
-  LogType,
-  type LogItem,
-  type LogResponseData,
-} from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { LogType } from "~/services/usageLogs/model"
+import type { LogItem, LogResponseData } from "~/services/usageLogs/model"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   USAGE_HISTORY_SCHEDULE_MODE,

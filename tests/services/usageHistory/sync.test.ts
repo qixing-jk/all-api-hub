@@ -2,11 +2,12 @@ import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { LogType, type LogItem } from "~/services/apiService/common/type"
 import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { syncUsageHistoryForAccount } from "~/services/history/usageHistory/sync"
+import { LogType } from "~/services/usageLogs/model"
+import type { LogItem } from "~/services/usageLogs/model"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import {
   USAGE_HISTORY_SCHEDULE_MODE,

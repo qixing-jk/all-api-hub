@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { LogItem } from "~/services/apiService/common/type"
 import {
   aggregateUsageData,
   extractAmount,
@@ -8,6 +7,7 @@ import {
   fetchApiData,
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
+import type { LogItem } from "~/services/usageLogs/model"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({

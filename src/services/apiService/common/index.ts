@@ -14,16 +14,11 @@ import {
   ApiServiceAccountRequest,
   CheckInStatus,
   HealthCheckResult,
-  LogItem,
-  LogResponseData,
-  LogStatResponseData,
-  LogType,
   PaymentResponse,
   RedeemCodeRequest,
   RefreshAccountResult,
   SiteStatusInfo,
   TodayIncomeData,
-  TodayLogQueryConfig,
   TodayUsageData,
   UserInfo,
 } from "~/services/apiService/common/type"
@@ -42,6 +37,13 @@ import type {
   PaginatedTokenResponse,
   UserGroupInfo,
 } from "~/services/tokenProvisioning/model"
+import { LogType } from "~/services/usageLogs/model"
+import type {
+  LogItem,
+  LogResponseData,
+  LogStatResponseData,
+  TodayLogQueryConfig,
+} from "~/services/usageLogs/model"
 import {
   AuthTypeEnum,
   CheckInConfig,

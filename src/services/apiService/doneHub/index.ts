@@ -12,10 +12,10 @@ import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
-  TodayLogQueryConfig,
 } from "~/services/apiService/common/type"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { TodayLogQueryConfig } from "~/services/usageLogs/model"
 import { CheckInConfig, SiteHealthStatus } from "~/types"
 import type {
   CreateChannelPayload,

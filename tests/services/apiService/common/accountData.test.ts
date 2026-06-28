@@ -34,7 +34,7 @@ import {
   validateAccountConnection,
 } from "~/services/apiService/common"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import { LogType } from "~/services/apiService/common/type"
+import { LogType } from "~/services/usageLogs/model"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
