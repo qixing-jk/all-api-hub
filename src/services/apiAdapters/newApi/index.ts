@@ -21,8 +21,8 @@ export const createNewApiAdapter = (
   accountBootstrap: createNewApiAccountBootstrap(siteType),
   accountCompletion: newApiAccountCompletion,
   keyManagement: createNewApiKeyManagement(siteType),
-  tokenProvisioning: createNewApiTokenProvisioning(siteType),
+  tokenProvisioning: createNewApiTokenProvisioning(),
   accountRefresh: createNewApiAccountRefresh(siteType),
   modelPricing: createNewApiModelPricing(siteType),
-  redemption: createNewApiRedemption(siteType),
+  redemption: createNewApiRedemption(),
 })

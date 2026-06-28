@@ -15,10 +15,8 @@ vi.mock("~/services/apiService/common", () => ({
   fetchSiteNotice: commonFetchSiteNoticeMock,
 }))
 
-vi.mock("~/services/apiService/newApiFamily", () => ({
-  siteNotice: {
-    fetchSiteNotice: newApiFamilyFetchSiteNoticeMock,
-  },
+vi.mock("~/services/apiService/newApiFamily/default/siteNotice", () => ({
+  fetchSiteNotice: newApiFamilyFetchSiteNoticeMock,
 }))
 
 describe("newApiSiteNotice", () => {

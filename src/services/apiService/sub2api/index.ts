@@ -5,31 +5,29 @@
  * live under `/api/v1/*` and require a dashboard JWT.
  */
 import type {
-  AccessTokenInfo,
-  SiteStatusInfo,
-  UserInfo,
-} from "~/services/accountBootstrap/model"
-import type {
   AccountData,
+  ApiServiceAccountRequest,
   RefreshAccountResult,
   TodayIncomeData,
   TodayUsageData,
-} from "~/services/accountData/model"
+} from "~/services/accounts/accountDataModel"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
-import {
-  determineHealthStatus,
-  extractDefaultExchangeRate as extractCommonDefaultExchangeRate,
-} from "~/services/apiService/common"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import { resolveApiTokenKeyWithFetcher } from "~/services/apiService/common/tokenKeyResolver"
-import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
-import { fetchApi } from "~/services/apiService/common/utils"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
   CreateTokenRequest,
   CreateTokenResult,
   UserGroupInfo,
-} from "~/services/tokenProvisioning/model"
+} from "~/services/accountTokens/tokenProvisioningModel"
+import type {
+  AccessTokenInfo,
+  SiteStatusInfo,
+  UserInfo,
+} from "~/services/apiAdapters/contracts/accountBootstrap"
+import { determineHealthStatus } from "~/services/apiService/common"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { resolveApiTokenKeyWithFetcher } from "~/services/apiService/common/tokenKeyResolver"
+import { fetchApi } from "~/services/apiService/common/utils"
+import { extractDefaultExchangeRate as extractNewApiFamilyDefaultExchangeRate } from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -1045,7 +1043,7 @@ export async function fetchSiteStatus(
  * Keep strict Sub2API routing compatible with shared account completion code
  * while reusing the common status exchange-rate fallback order.
  */
-export const extractDefaultExchangeRate = extractCommonDefaultExchangeRate
+export const extractDefaultExchangeRate = extractNewApiFamilyDefaultExchangeRate
 
 /**
  * Sub2API does not support the extension's built-in check-in flow.

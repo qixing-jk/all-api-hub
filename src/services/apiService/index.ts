@@ -5,6 +5,14 @@ import * as anyrouterAPI from "./anyrouter"
 import * as axonHubAPI from "./axonHub"
 import * as commonAPI from "./common"
 import * as doneHubAPI from "./doneHub"
+import * as newApiFamilyChannelManagement from "./newApiFamily/channelManagement"
+import * as newApiFamilyAccountBootstrap from "./newApiFamily/default/accountBootstrap"
+import * as newApiFamilyAccountData from "./newApiFamily/default/accountData"
+import * as newApiFamilyAccountRefresh from "./newApiFamily/default/accountRefresh"
+import * as newApiFamilyKeyManagement from "./newApiFamily/default/keyManagement"
+import * as newApiFamilyModelPricing from "./newApiFamily/default/modelPricing"
+import * as newApiFamilyRedemption from "./newApiFamily/default/redemption"
+import * as newApiFamilySiteNotice from "./newApiFamily/default/siteNotice"
 import * as octopusAPI from "./octopus"
 import * as oneHubAPI from "./oneHub"
 import * as sub2apiAPI from "./sub2api"
@@ -12,6 +20,51 @@ import * as veloeraAPI from "./veloera"
 import * as wongAPI from "./wong"
 
 type ApiOverrideModule = Record<string, unknown>
+
+const newApiFamilyKeyManagementLegacyAPI = {
+  fetchAccountTokens: newApiFamilyKeyManagement.fetchAccountTokens,
+  fetchAccountAvailableModels:
+    newApiFamilyKeyManagement.fetchAccountAvailableModels,
+  fetchUserGroups: newApiFamilyKeyManagement.fetchUserGroups,
+  fetchSiteUserGroups: newApiFamilyKeyManagement.fetchSiteUserGroups,
+  createApiToken: newApiFamilyKeyManagement.createApiToken,
+  fetchTokenById: newApiFamilyKeyManagement.fetchTokenById,
+  updateApiToken: newApiFamilyKeyManagement.updateApiToken,
+  deleteApiToken: newApiFamilyKeyManagement.deleteApiToken,
+  resolveApiTokenKey: newApiFamilyKeyManagement.resolveApiTokenKey,
+}
+
+const newApiFamilyAccountLifecycleLegacyAPI = {
+  fetchAccountQuota: newApiFamilyAccountData.fetchAccountQuota,
+  fetchCheckInStatus: newApiFamilyAccountData.fetchCheckInStatus,
+  fetchTodayUsage: newApiFamilyAccountData.fetchTodayUsage,
+  fetchTodayIncome: newApiFamilyAccountData.fetchTodayIncome,
+  fetchAccountData: newApiFamilyAccountData.fetchAccountData,
+  refreshAccountData: newApiFamilyAccountRefresh.refreshAccountData,
+  validateAccountConnection:
+    newApiFamilyAccountRefresh.validateAccountConnection,
+}
+
+const newApiFamilyAccountBootstrapLegacyAPI = {
+  fetchUserInfo: newApiFamilyAccountBootstrap.fetchUserInfo,
+  createAccessToken: newApiFamilyAccountBootstrap.createAccessToken,
+  getOrCreateAccessToken: newApiFamilyAccountBootstrap.getOrCreateAccessToken,
+  fetchSupportCheckIn: newApiFamilyAccountBootstrap.fetchSupportCheckIn,
+  fetchSiteStatus: newApiFamilyAccountBootstrap.fetchSiteStatus,
+  extractDefaultExchangeRate:
+    newApiFamilyAccountBootstrap.extractDefaultExchangeRate,
+}
+
+const baseAPI = {
+  ...commonAPI,
+  ...newApiFamilyAccountBootstrapLegacyAPI,
+  ...newApiFamilyAccountLifecycleLegacyAPI,
+  ...newApiFamilyChannelManagement,
+  ...newApiFamilyKeyManagementLegacyAPI,
+  fetchSiteNotice: newApiFamilySiteNotice.fetchSiteNotice,
+  fetchModelPricing: newApiFamilyModelPricing.fetchModelPricing,
+  redeemCode: newApiFamilyRedemption.redeemCode,
+}
 
 /**
  * Legacy compatibility facade for managed-site and unmigrated flat API callers.
@@ -26,8 +79,20 @@ const siteOverrideMap = {
   [SITE_TYPES.DONE_HUB]: [doneHubAPI, oneHubAPI],
   [SITE_TYPES.VELOERA]: [veloeraAPI],
   [SITE_TYPES.ANYROUTER]: [anyrouterAPI],
-  [SITE_TYPES.NEW_API]: [commonAPI],
-  [SITE_TYPES.V_API]: [commonAPI],
+  [SITE_TYPES.NEW_API]: [
+    newApiFamilyAccountBootstrapLegacyAPI,
+    newApiFamilyAccountLifecycleLegacyAPI,
+    newApiFamilyChannelManagement,
+    newApiFamilyKeyManagementLegacyAPI,
+    commonAPI,
+  ],
+  [SITE_TYPES.V_API]: [
+    newApiFamilyAccountBootstrapLegacyAPI,
+    newApiFamilyAccountLifecycleLegacyAPI,
+    newApiFamilyChannelManagement,
+    newApiFamilyKeyManagementLegacyAPI,
+    commonAPI,
+  ],
   [SITE_TYPES.WONG_GONGYI]: [wongAPI],
   [SITE_TYPES.SUB2API]: [sub2apiAPI],
   [SITE_TYPES.OCTOPUS]: [octopusAPI],
@@ -63,12 +128,12 @@ type WithSiteHint<F> = F extends (...args: infer A) => infer R
  * Resolve an API implementation taking site overrides into account.
  * @param funcName Name of the API helper to retrieve.
  * @param currentSite Site identifier used to look up overrides.
- * @returns The concrete function reference sourced from overrides or common.
+ * @returns The concrete function reference sourced from overrides or base API.
  */
-function getApiFunc<T extends keyof typeof commonAPI>(
+function getApiFunc<T extends keyof typeof baseAPI>(
   funcName: T,
   currentSite: ApiOverrideSite | null = null,
-): (typeof commonAPI)[T] {
+): (typeof baseAPI)[T] {
   const overrideModules =
     currentSite && hasOwnOverrideSite(currentSite)
       ? (siteOverrideMap[currentSite] as readonly ApiOverrideModule[])
@@ -78,7 +143,7 @@ function getApiFunc<T extends keyof typeof commonAPI>(
     for (const overrideModule of overrideModules) {
       if (overrideModule && funcName in overrideModule) {
         // 使用类型断言避免索引类型错误
-        return (overrideModule as any)[funcName] as (typeof commonAPI)[T]
+        return (overrideModule as any)[funcName] as (typeof baseAPI)[T]
       }
     }
 
@@ -88,8 +153,7 @@ function getApiFunc<T extends keyof typeof commonAPI>(
       )
     }
   }
-  // eslint-disable-next-line import/namespace
-  return commonAPI[funcName] as (typeof commonAPI)[T]
+  return baseAPI[funcName] as (typeof baseAPI)[T]
 }
 
 // 创建包装函数的辅助函数
@@ -99,7 +163,7 @@ function getApiFunc<T extends keyof typeof commonAPI>(
  * @returns A proxy function that inspects arguments for site hints.
  */
 function createWrappedFunction<T extends (...args: any[]) => any>(
-  funcName: keyof typeof commonAPI,
+  funcName: keyof typeof baseAPI,
 ): T {
   return ((...args: any[]) => {
     let currentSite: ApiOverrideSite | null = null
@@ -127,7 +191,7 @@ function createWrappedFunction<T extends (...args: any[]) => any>(
 }
 
 const createSiteScopedFunction = <T extends (...args: any[]) => any>(
-  funcName: keyof typeof commonAPI,
+  funcName: keyof typeof baseAPI,
   site: ApiOverrideSite,
 ): T => {
   return ((...args: any[]) => {
@@ -138,15 +202,14 @@ const createSiteScopedFunction = <T extends (...args: any[]) => any>(
 
 const apiForSite = (site: ApiOverrideSite) => {
   const scopedAPI = {} as {
-    [K in keyof typeof commonAPI]: (typeof commonAPI)[K]
+    [K in keyof typeof baseAPI]: (typeof baseAPI)[K]
   }
 
-  for (const key in commonAPI) {
-    // eslint-disable-next-line import/namespace
-    const func = commonAPI[key as keyof typeof commonAPI]
+  for (const key in baseAPI) {
+    const func = baseAPI[key as keyof typeof baseAPI]
     if (typeof func === "function") {
       ;(scopedAPI as any)[key] = createSiteScopedFunction(
-        key as keyof typeof commonAPI,
+        key as keyof typeof baseAPI,
         site,
       )
     } else {
@@ -167,16 +230,15 @@ export const getApiService = (site: unknown) =>
 
 // 创建导出对象
 const exportedAPI = {} as {
-  [K in keyof typeof commonAPI]: WithSiteHint<(typeof commonAPI)[K]>
+  [K in keyof typeof baseAPI]: WithSiteHint<(typeof baseAPI)[K]>
 }
 
-// 遍历 commonAPI 并包装每个函数
-for (const key in commonAPI) {
-  // eslint-disable-next-line import/namespace
-  const func = commonAPI[key as keyof typeof commonAPI]
+// Wrap the legacy facade surface, including common helpers and New API-family extras.
+for (const key in baseAPI) {
+  const func = baseAPI[key as keyof typeof baseAPI]
   if (typeof func === "function") {
     ;(exportedAPI as any)[key] = createWrappedFunction(
-      key as keyof typeof commonAPI,
+      key as keyof typeof baseAPI,
     )
   } else {
     ;(exportedAPI as any)[key] = func

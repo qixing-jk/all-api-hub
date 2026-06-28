@@ -5,25 +5,47 @@ import { createNewApiAccountData } from "~/services/apiAdapters/newApi/accountDa
 import { AuthTypeEnum } from "~/types"
 
 const {
-  mockCreateAccountDataImplementation,
+  anyrouterFetchAccountData,
   mockFetchAccountData,
   mockGetApiService,
+  doneHubFetchAccountData,
+  veloeraFetchAccountData,
+  wongFetchAccountData,
 } = vi.hoisted(() => ({
-  mockCreateAccountDataImplementation: vi.fn(),
+  anyrouterFetchAccountData: vi.fn(),
   mockFetchAccountData: vi.fn(),
   mockGetApiService: vi.fn(() => {
     throw new Error("legacy apiService facade should not be used")
   }),
+  doneHubFetchAccountData: vi.fn(),
+  veloeraFetchAccountData: vi.fn(),
+  wongFetchAccountData: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/newApiFamily", () => ({
-  accountData: {
-    createAccountDataImplementation: mockCreateAccountDataImplementation,
+vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
+  defaultAccountDataImplementation: {
+    fetchAccountData: mockFetchAccountData,
   },
 }))
 
 vi.mock("~/services/apiService", () => ({
   getApiService: mockGetApiService,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
+  fetchAccountData: anyrouterFetchAccountData,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/doneHub", () => ({
+  fetchAccountData: doneHubFetchAccountData,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/veloera", () => ({
+  fetchAccountData: veloeraFetchAccountData,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
+  fetchAccountData: wongFetchAccountData,
 }))
 
 const request = {
@@ -47,31 +69,45 @@ const request = {
 describe("createNewApiAccountData", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockCreateAccountDataImplementation.mockReturnValue({
-      fetchAccountData: mockFetchAccountData,
-    })
   })
 
-  it("delegates account-data loading through the New API-family implementation", async () => {
-    const accountData = {
-      quota: 123,
-      today_prompt_tokens: 1,
-      today_completion_tokens: 2,
-      today_quota_consumption: 3,
-      today_requests_count: 4,
-      today_income: 5,
-      checkIn: request.checkIn,
-    }
+  const accountData = {
+    quota: 123,
+    today_prompt_tokens: 1,
+    today_completion_tokens: 2,
+    today_quota_consumption: 3,
+    today_requests_count: 4,
+    today_income: 5,
+    checkIn: request.checkIn,
+  }
+
+  it("delegates account-data loading through the default New API-family implementation", async () => {
     mockFetchAccountData.mockResolvedValueOnce(accountData)
 
-    const capability = createNewApiAccountData(SITE_TYPES.DONE_HUB)
+    const capability = createNewApiAccountData(SITE_TYPES.NEW_API)
 
     await expect(capability.fetchData(request)).resolves.toBe(accountData)
 
-    expect(mockCreateAccountDataImplementation).toHaveBeenCalledWith(
-      SITE_TYPES.DONE_HUB,
-    )
     expect(mockFetchAccountData).toHaveBeenCalledWith(request)
     expect(mockGetApiService).not.toHaveBeenCalled()
   })
+
+  it.each([
+    [SITE_TYPES.ANYROUTER, anyrouterFetchAccountData],
+    [SITE_TYPES.DONE_HUB, doneHubFetchAccountData],
+    [SITE_TYPES.VELOERA, veloeraFetchAccountData],
+    [SITE_TYPES.WONG_GONGYI, wongFetchAccountData],
+  ])(
+    "uses the adapter-level account-data override for %s",
+    async (siteType, loader) => {
+      loader.mockResolvedValueOnce(accountData)
+
+      const capability = createNewApiAccountData(siteType)
+
+      await expect(capability.fetchData(request)).resolves.toBe(accountData)
+
+      expect(loader).toHaveBeenCalledWith(request)
+      expect(mockFetchAccountData).not.toHaveBeenCalled()
+    },
+  )
 })

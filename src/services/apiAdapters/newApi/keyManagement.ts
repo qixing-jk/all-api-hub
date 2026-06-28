@@ -1,6 +1,27 @@
-import type { AccountSiteType } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
-import { keyManagement } from "~/services/apiService/newApiFamily"
+import * as keyManagement from "~/services/apiService/newApiFamily/default/keyManagement"
+import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
+import * as wong from "~/services/apiService/newApiFamily/variants/wong"
+
+type KeyManagementImplementation =
+  typeof keyManagement.defaultKeyManagementImplementation
+
+const oneHubKeyManagementOverrides: Partial<KeyManagementImplementation> = {
+  fetchAccountTokens: oneHub.fetchAccountTokens,
+  fetchUserGroups: oneHub.fetchUserGroups,
+  fetchAccountAvailableModels: oneHub.fetchAccountAvailableModels,
+}
+
+const keyManagementOverrides: Partial<
+  Record<AccountSiteType, Partial<KeyManagementImplementation>>
+> = {
+  [SITE_TYPES.ONE_HUB]: oneHubKeyManagementOverrides,
+  [SITE_TYPES.DONE_HUB]: oneHubKeyManagementOverrides,
+  [SITE_TYPES.WONG_GONGYI]: {
+    resolveApiTokenKey: wong.resolveApiTokenKey,
+  },
+}
 
 /**
  * Create key-management operations bound to the New API-family site type.
@@ -8,8 +29,10 @@ import { keyManagement } from "~/services/apiService/newApiFamily"
 export function createNewApiKeyManagement(
   siteType: AccountSiteType,
 ): KeyManagementCapability {
-  const implementation =
-    keyManagement.createKeyManagementImplementation(siteType)
+  const implementation = {
+    ...keyManagement.defaultKeyManagementImplementation,
+    ...keyManagementOverrides[siteType],
+  }
 
   return {
     fetchTokens: (request, options) =>

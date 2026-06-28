@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import { aihubmixTokenProvisioning } from "~/services/apiAdapters/aihubmix/tokenProvisioning"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
@@ -15,32 +15,20 @@ import {
   normalizeTokenProvisioningGroupNames,
   sub2ApiTokenProvisioning,
 } from "~/services/apiAdapters/sub2api/tokenProvisioning"
-import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import type { ApiToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
-const { createTokenProvisioningImplementationMock, tokenProvisioningMock } =
-  vi.hoisted(() => {
-    const tokenProvisioningMock = {
-      isInventoryTokenUsable: vi.fn(),
-      resolveDefaultTokenCreation: vi.fn(),
-      classifyCreatedToken: vi.fn(),
-      getRepairPolicy: vi.fn(),
-    }
-
-    return {
-      createTokenProvisioningImplementationMock: vi.fn(
-        () => tokenProvisioningMock,
-      ),
-      tokenProvisioningMock,
-    }
-  })
-
-vi.mock("~/services/apiService/newApiFamily", () => ({
-  tokenProvisioning: {
-    createTokenProvisioningImplementation:
-      createTokenProvisioningImplementationMock,
+const { tokenProvisioningMock } = vi.hoisted(() => ({
+  tokenProvisioningMock: {
+    isInventoryTokenUsable: vi.fn(),
+    resolveDefaultTokenCreation: vi.fn(),
+    classifyCreatedToken: vi.fn(),
+    getRepairPolicy: vi.fn(),
   },
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/tokenProvisioning", () => ({
+  defaultTokenProvisioning: tokenProvisioningMock,
 }))
 
 const defaultTokenData: CreateTokenRequest = {
@@ -80,7 +68,7 @@ describe("apiAdapter tokenProvisioning", () => {
   })
 
   it("delegates New API-family token provisioning through the New API-family implementation", () => {
-    const provisioning = createNewApiTokenProvisioning(SITE_TYPES.NEW_API)
+    const provisioning = createNewApiTokenProvisioning()
     const createdToken = token()
     const maskedToken = token({ key: "sk-****abcd" })
 
@@ -107,10 +95,6 @@ describe("apiAdapter tokenProvisioning", () => {
     tokenProvisioningMock.getRepairPolicy.mockReturnValueOnce({
       kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
     })
-
-    expect(createTokenProvisioningImplementationMock).toHaveBeenCalledWith(
-      SITE_TYPES.NEW_API,
-    )
 
     expect(
       provisioning.resolveDefaultTokenCreation({

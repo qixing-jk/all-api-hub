@@ -1,53 +1,50 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
-import { createKeyManagementImplementation } from "~/services/apiService/newApiFamily/keyManagement"
+import {
+  createApiToken,
+  defaultKeyManagementImplementation,
+  deleteApiToken,
+  fetchAccountAvailableModels,
+  fetchAccountTokens,
+  fetchSiteUserGroups,
+  fetchTokenById,
+  fetchUserGroups,
+  updateApiToken,
+} from "~/services/apiService/newApiFamily/default/keyManagement"
 import { AuthTypeEnum, type ApiToken } from "~/types"
 
 const {
-  commonCreateApiToken,
-  commonDeleteApiToken,
-  commonFetchAccountAvailableModels,
-  commonFetchAccountTokens,
-  commonFetchUserGroups,
-  commonResolveApiTokenKey,
-  commonUpdateApiToken,
-  oneHubFetchAccountAvailableModels,
-  oneHubFetchAccountTokens,
-  oneHubFetchUserGroups,
-  wongResolveApiTokenKey,
+  mockFetchApi,
+  mockFetchApiData,
+  mockInvalidateResolvedApiTokenKeyCache,
+  mockResolveApiTokenKey,
+  mockSyncResolvedApiTokenKeyCache,
 } = vi.hoisted(() => ({
-  commonCreateApiToken: vi.fn(),
-  commonDeleteApiToken: vi.fn(),
-  commonFetchAccountAvailableModels: vi.fn(),
-  commonFetchAccountTokens: vi.fn(),
-  commonFetchUserGroups: vi.fn(),
-  commonResolveApiTokenKey: vi.fn(),
-  commonUpdateApiToken: vi.fn(),
-  oneHubFetchAccountAvailableModels: vi.fn(),
-  oneHubFetchAccountTokens: vi.fn(),
-  oneHubFetchUserGroups: vi.fn(),
-  wongResolveApiTokenKey: vi.fn(),
+  mockFetchApi: vi.fn(),
+  mockFetchApiData: vi.fn(),
+  mockInvalidateResolvedApiTokenKeyCache: vi.fn(),
+  mockResolveApiTokenKey: vi.fn(),
+  mockSyncResolvedApiTokenKeyCache: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
-  createApiToken: commonCreateApiToken,
-  deleteApiToken: commonDeleteApiToken,
-  fetchAccountAvailableModels: commonFetchAccountAvailableModels,
-  fetchAccountTokens: commonFetchAccountTokens,
-  fetchUserGroups: commonFetchUserGroups,
-  resolveApiTokenKey: commonResolveApiTokenKey,
-  updateApiToken: commonUpdateApiToken,
+vi.mock("~/services/apiService/common/tokenKeyResolver", () => ({
+  invalidateResolvedApiTokenKeyCache: mockInvalidateResolvedApiTokenKeyCache,
+  resolveApiTokenKey: mockResolveApiTokenKey,
+  syncResolvedApiTokenKeyCache: mockSyncResolvedApiTokenKeyCache,
 }))
 
-vi.mock("~/services/apiService/oneHub", () => ({
-  fetchAccountAvailableModels: oneHubFetchAccountAvailableModels,
-  fetchAccountTokens: oneHubFetchAccountTokens,
-  fetchUserGroups: oneHubFetchUserGroups,
+vi.mock("~/services/apiService/common/utils", () => ({
+  fetchApi: mockFetchApi,
+  fetchApiData: mockFetchApiData,
 }))
 
-vi.mock("~/services/apiService/wong", () => ({
-  resolveApiTokenKey: wongResolveApiTokenKey,
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: vi.fn(() => ({
+    debug: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  })),
 }))
 
 describe("newApiFamily keyManagement", () => {
@@ -96,18 +93,178 @@ describe("newApiFamily keyManagement", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetchApi.mockReset()
+    mockFetchApiData.mockReset()
   })
 
-  it("uses common-compatible key-management helpers by default for New API", async () => {
-    const keyManagement = createKeyManagementImplementation(SITE_TYPES.NEW_API)
+  it("fetchAccountTokens normalizes array and paginated responses", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce([
+        { id: 1, key: " plain-key " },
+        { id: 2, key: "sk-already" },
+      ])
+      .mockResolvedValueOnce({
+        items: [{ id: 3, key: "  sk-trim  " }],
+      })
 
-    commonFetchAccountTokens.mockResolvedValue([token])
-    commonCreateApiToken.mockResolvedValue(true)
-    commonUpdateApiToken.mockResolvedValue(true)
-    commonResolveApiTokenKey.mockResolvedValue("sk-resolved")
-    commonDeleteApiToken.mockResolvedValue(true)
-    commonFetchUserGroups.mockResolvedValue({ default: { desc: "", ratio: 1 } })
-    commonFetchAccountAvailableModels.mockResolvedValue(["gpt-4o"])
+    const arrayResult = await fetchAccountTokens(request)
+    const pageResult = await fetchAccountTokens(request, 2, 10)
+
+    expect(arrayResult.map((item) => item.key)).toEqual([
+      "plain-key",
+      "sk-already",
+    ])
+    expect(pageResult.map((item) => item.key)).toEqual(["sk-trim"])
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      endpoint: "/api/token/?p=0&size=100",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/token/?p=2&size=10",
+    })
+    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenNthCalledWith(
+      1,
+      request,
+      arrayResult,
+    )
+    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenNthCalledWith(
+      2,
+      request,
+      pageResult,
+    )
+  })
+
+  it("fetchAccountTokens returns an empty list for unexpected payloads", async () => {
+    mockFetchApiData.mockResolvedValueOnce({ something: "else" })
+
+    await expect(fetchAccountTokens(request)).resolves.toEqual([])
+    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenCalledWith(request, [])
+  })
+
+  it("fetchAccountTokens and related fetch helpers rethrow upstream failures", async () => {
+    const tokensError = new Error("tokens unavailable")
+    const modelsError = new Error("models unavailable")
+    const groupsError = new Error("groups unavailable")
+    const siteGroupsError = new Error("site groups unavailable")
+    const tokenError = new Error("token unavailable")
+
+    mockFetchApiData
+      .mockRejectedValueOnce(tokensError)
+      .mockRejectedValueOnce(modelsError)
+      .mockRejectedValueOnce(groupsError)
+      .mockRejectedValueOnce(siteGroupsError)
+      .mockRejectedValueOnce(tokenError)
+
+    await expect(fetchAccountTokens(request)).rejects.toBe(tokensError)
+    await expect(fetchAccountAvailableModels(request)).rejects.toBe(modelsError)
+    await expect(fetchUserGroups(request)).rejects.toBe(groupsError)
+    await expect(fetchSiteUserGroups(request)).rejects.toBe(siteGroupsError)
+    await expect(fetchTokenById(request, 9)).rejects.toBe(tokenError)
+  })
+
+  it("fetchAccountAvailableModels and fetchUserGroups delegate to their endpoints", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce(["gpt-4.1", "claude-3.7"])
+      .mockResolvedValueOnce({ default: { quota: 1 } })
+      .mockResolvedValueOnce(["default", "vip"])
+
+    await expect(fetchAccountAvailableModels(request)).resolves.toEqual([
+      "gpt-4.1",
+      "claude-3.7",
+    ])
+    await expect(fetchUserGroups(request)).resolves.toEqual({
+      default: { quota: 1 },
+    })
+    await expect(fetchSiteUserGroups(request)).resolves.toEqual([
+      "default",
+      "vip",
+    ])
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      endpoint: "/api/user/models",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/user/self/groups",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
+      endpoint: "/api/group",
+    })
+  })
+
+  it("createApiToken, fetchTokenById, updateApiToken, and deleteApiToken manage token flows", async () => {
+    mockFetchApi
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: false, message: "update failed" })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: false, message: "delete failed" })
+    mockFetchApiData.mockResolvedValueOnce({ id: 9, key: "  sk-123  " })
+
+    await expect(createApiToken(request, tokenData)).resolves.toBe(true)
+    await expect(fetchTokenById(request, 9)).resolves.toMatchObject({
+      id: 9,
+      key: "sk-123",
+    })
+    await expect(updateApiToken(request, 9, tokenData)).resolves.toBe(true)
+    await expect(updateApiToken(request, 9, tokenData)).rejects.toMatchObject({
+      message: "update failed",
+    })
+    await expect(deleteApiToken(request, 9)).resolves.toBe(true)
+    await expect(deleteApiToken(request, 9)).rejects.toMatchObject({
+      message: "delete failed",
+    })
+
+    expect(mockFetchApi).toHaveBeenNthCalledWith(1, request, {
+      endpoint: "/api/token/",
+      options: {
+        method: "POST",
+        body: JSON.stringify(tokenData),
+      },
+    })
+    expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/token/9",
+    })
+    expect(mockFetchApi).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/token/",
+      options: {
+        method: "PUT",
+        body: JSON.stringify({ ...tokenData, id: 9 }),
+      },
+    })
+    expect(mockFetchApi).toHaveBeenNthCalledWith(4, request, {
+      endpoint: "/api/token/9",
+      options: {
+        method: "DELETE",
+      },
+    })
+    expect(mockInvalidateResolvedApiTokenKeyCache).toHaveBeenCalledTimes(3)
+  })
+
+  it("createApiToken rethrows failed create responses and transport failures", async () => {
+    const transportError = new Error("create transport failed")
+
+    mockFetchApi
+      .mockResolvedValueOnce({ success: false, message: "create failed" })
+      .mockRejectedValueOnce(transportError)
+
+    await expect(createApiToken(request, tokenData)).rejects.toMatchObject({
+      message: "create failed",
+    })
+    await expect(createApiToken(request, tokenData)).rejects.toBe(
+      transportError,
+    )
+  })
+
+  it("uses New API-family helpers by default", async () => {
+    const keyManagement = defaultKeyManagementImplementation
+
+    mockFetchApiData
+      .mockResolvedValueOnce([token])
+      .mockResolvedValueOnce({ default: { desc: "", ratio: 1 } })
+      .mockResolvedValueOnce(["gpt-4o"])
+    mockFetchApi
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+    mockResolveApiTokenKey.mockResolvedValue("sk-resolved")
 
     await expect(
       keyManagement.fetchAccountTokens(request, 2, 25),
@@ -131,73 +288,12 @@ describe("newApiFamily keyManagement", () => {
       keyManagement.fetchAccountAvailableModels(request),
     ).resolves.toEqual(["gpt-4o"])
 
-    expect(commonFetchAccountTokens).toHaveBeenCalledWith(request, 2, 25)
-    expect(commonCreateApiToken).toHaveBeenCalledWith(request, tokenData)
-    expect(commonUpdateApiToken).toHaveBeenCalledWith(
-      request,
-      token.id,
-      tokenData,
-    )
-    expect(commonResolveApiTokenKey).toHaveBeenCalledWith(
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      endpoint: "/api/token/?p=2&size=25",
+    })
+    expect(mockResolveApiTokenKey).toHaveBeenCalledWith(
       request,
       tokenKeyReference,
     )
-    expect(commonDeleteApiToken).toHaveBeenCalledWith(request, token.id)
-    expect(commonFetchUserGroups).toHaveBeenCalledWith(request)
-    expect(commonFetchAccountAvailableModels).toHaveBeenCalledWith(request)
-  })
-
-  it.each([SITE_TYPES.ONE_HUB, SITE_TYPES.DONE_HUB])(
-    "uses OneHub-family helpers for %s token list, groups, and models",
-    async (siteType) => {
-      const keyManagement = createKeyManagementImplementation(siteType)
-
-      oneHubFetchAccountTokens.mockResolvedValue([token])
-      oneHubFetchUserGroups.mockResolvedValue({
-        default: { desc: "", ratio: 1 },
-      })
-      oneHubFetchAccountAvailableModels.mockResolvedValue(["gpt-4o"])
-
-      await expect(
-        keyManagement.fetchAccountTokens(request, 4, 10),
-      ).resolves.toEqual([token])
-      await expect(keyManagement.fetchUserGroups(request)).resolves.toEqual({
-        default: { desc: "", ratio: 1 },
-      })
-      await expect(
-        keyManagement.fetchAccountAvailableModels(request),
-      ).resolves.toEqual(["gpt-4o"])
-
-      expect(oneHubFetchAccountTokens).toHaveBeenCalledWith(request, 4, 10)
-      expect(oneHubFetchUserGroups).toHaveBeenCalledWith(request)
-      expect(oneHubFetchAccountAvailableModels).toHaveBeenCalledWith(request)
-      expect(commonFetchAccountTokens).not.toHaveBeenCalled()
-      expect(commonFetchUserGroups).not.toHaveBeenCalled()
-      expect(commonFetchAccountAvailableModels).not.toHaveBeenCalled()
-    },
-  )
-
-  it("uses the Wong key resolver while keeping token listing common-compatible", async () => {
-    const keyManagement = createKeyManagementImplementation(
-      SITE_TYPES.WONG_GONGYI,
-    )
-
-    wongResolveApiTokenKey.mockResolvedValue("sk-wong-resolved")
-    commonFetchAccountTokens.mockResolvedValue([token])
-
-    await expect(
-      keyManagement.resolveApiTokenKey(request, tokenKeyReference),
-    ).resolves.toBe("sk-wong-resolved")
-    await expect(keyManagement.fetchAccountTokens(request)).resolves.toEqual([
-      token,
-    ])
-
-    expect(wongResolveApiTokenKey).toHaveBeenCalledWith(
-      request,
-      tokenKeyReference,
-    )
-    expect(commonResolveApiTokenKey).not.toHaveBeenCalled()
-    expect(commonFetchAccountTokens).toHaveBeenCalledWith(request, 0, 100)
-    expect(oneHubFetchAccountTokens).not.toHaveBeenCalled()
   })
 })

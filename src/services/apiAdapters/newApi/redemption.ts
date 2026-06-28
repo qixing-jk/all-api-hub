@@ -1,16 +1,12 @@
-import type { AccountSiteType } from "~/constants/siteType"
 import type { RedemptionCapability } from "~/services/apiAdapters/contracts/redemption"
-import { redemption } from "~/services/apiService/newApiFamily"
+import * as redemption from "~/services/apiService/newApiFamily/default/redemption"
 
 /**
  * Create redemption operations bound to the New API-family site type.
  */
-export function createNewApiRedemption(
-  siteType: AccountSiteType,
-): RedemptionCapability {
-  const implementation = redemption.createRedemptionImplementation(siteType)
-
+export function createNewApiRedemption(): RedemptionCapability {
   return {
-    redeem: ({ request, code }) => implementation.redeemCode(request, code),
+    redeem: ({ request, code }) =>
+      redemption.defaultRedemptionImplementation.redeemCode(request, code),
   }
 }

@@ -1,16 +1,12 @@
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import type {
-  AccessTokenInfo,
-  SiteStatusInfo,
-  UserInfo,
-} from "~/services/accountBootstrap/model"
-import type {
   AccountData,
+  ApiServiceAccountRequest,
   RefreshAccountResult,
   TodayIncomeData,
   TodayUsageData,
-} from "~/services/accountData/model"
+} from "~/services/accounts/accountDataModel"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   hasUsableApiTokenKey,
@@ -18,9 +14,17 @@ import {
   normalizeApiTokenKey,
   normalizeApiTokenKeyValue,
 } from "~/services/accountTokens/apiTokenKey"
+import type {
+  CreateTokenRequest,
+  CreateTokenResult,
+} from "~/services/accountTokens/tokenProvisioningModel"
+import type {
+  AccessTokenInfo,
+  SiteStatusInfo,
+  UserInfo,
+} from "~/services/apiAdapters/contracts/accountBootstrap"
 import { determineHealthStatus } from "~/services/apiService/common"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import type {
   ApiResponse,
@@ -31,10 +35,6 @@ import {
   type ModelPricing,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
-import type {
-  CreateTokenRequest,
-  CreateTokenResult,
-} from "~/services/tokenProvisioning/model"
 import { AuthTypeEnum, SiteHealthStatus, type ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"

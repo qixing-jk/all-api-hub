@@ -1,5 +1,5 @@
+import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import type { TokenProvisioningBlockReason } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 
 /**
  * Resolution kinds shared by default-token quick-create policy and legacy Sub2API wrappers.

@@ -1,3 +1,4 @@
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   CheckInConfig,
   SiteHealthStatus,
@@ -27,6 +28,34 @@ export interface AccountData extends TodayStatsData {
    */
   can_check_in?: boolean
   checkIn: CheckInConfig
+}
+
+/**
+ * Account-data related requests must include check-in config.
+ *
+ * Note: we keep `ApiServiceRequest` as the minimal/common request DTO, and only
+ * extend it for flows that actually need extra fields (like check-in).
+ */
+export type ApiServiceAccountRequest = ApiServiceRequest & {
+  checkIn: CheckInConfig
+  /**
+   * Account-owned exchange rate (CNY per USD) used when parsing recharge/system
+   * log text into quota units.
+   *
+   * The API service layer consumes this value but does not resolve it from
+   * account storage.
+   */
+  exchangeRate?: number
+  /**
+   * Whether account refresh should include fetching "today cashflow" statistics
+   * (today consumption/income plus token/request counts).
+   *
+   * When false, API services MUST skip the log pagination requests used solely
+   * for today stats and return zeroed today fields instead.
+   *
+   * Default: true (when undefined).
+   */
+  includeTodayCashflow?: boolean
 }
 
 type RefreshAuthUpdate = {

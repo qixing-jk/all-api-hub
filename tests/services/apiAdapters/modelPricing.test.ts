@@ -8,30 +8,34 @@ import { AuthTypeEnum } from "~/types"
 
 const {
   mockAihubmixFetchModelPricing,
-  mockCreateModelPricingImplementation,
   mockFetchModelPricing,
   mockGetApiService,
+  mockOneHubFetchModelPricing,
 } = vi.hoisted(() => ({
   mockAihubmixFetchModelPricing: vi.fn(),
-  mockCreateModelPricingImplementation: vi.fn(),
   mockFetchModelPricing: vi.fn(),
   mockGetApiService: vi.fn(() => {
     throw new Error("legacy apiService facade should not be used")
   }),
+  mockOneHubFetchModelPricing: vi.fn(),
 }))
 
 vi.mock("~/services/apiService", () => ({
   getApiService: mockGetApiService,
 }))
 
-vi.mock("~/services/apiService/newApiFamily", () => ({
-  modelPricing: {
-    createModelPricingImplementation: mockCreateModelPricingImplementation,
+vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
+  defaultModelPricingImplementation: {
+    fetchModelPricing: mockFetchModelPricing,
   },
 }))
 
 vi.mock("~/services/apiService/aihubmix", () => ({
   fetchModelPricing: mockAihubmixFetchModelPricing,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
+  fetchModelPricing: mockOneHubFetchModelPricing,
 }))
 
 const request = {
@@ -64,28 +68,37 @@ const pricingResponse: PricingResponse = {
 describe("apiAdapter modelPricing", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockCreateModelPricingImplementation.mockReturnValue({
-      fetchModelPricing: mockFetchModelPricing,
-    })
   })
 
   it("delegates New API-family model pricing through the New API-family implementation", async () => {
     mockFetchModelPricing.mockResolvedValueOnce(pricingResponse)
 
-    const modelPricing = createNewApiModelPricing(SITE_TYPES.ONE_HUB)
+    const modelPricing = createNewApiModelPricing(SITE_TYPES.NEW_API)
 
     await expect(modelPricing.fetchPricing(request)).resolves.toBe(
       pricingResponse,
     )
 
-    expect(mockCreateModelPricingImplementation).toHaveBeenCalledOnce()
-    expect(mockCreateModelPricingImplementation).toHaveBeenCalledWith(
-      SITE_TYPES.ONE_HUB,
-    )
     expect(mockFetchModelPricing).toHaveBeenCalledOnce()
     expect(mockFetchModelPricing).toHaveBeenCalledWith(request)
     expect(mockGetApiService).not.toHaveBeenCalled()
   })
+
+  it.each([SITE_TYPES.ONE_HUB, SITE_TYPES.DONE_HUB])(
+    "uses OneHub-family model pricing override for %s",
+    async (siteType) => {
+      mockOneHubFetchModelPricing.mockResolvedValueOnce(pricingResponse)
+
+      const modelPricing = createNewApiModelPricing(siteType)
+
+      await expect(modelPricing.fetchPricing(request)).resolves.toBe(
+        pricingResponse,
+      )
+
+      expect(mockOneHubFetchModelPricing).toHaveBeenCalledWith(request)
+      expect(mockFetchModelPricing).not.toHaveBeenCalled()
+    },
+  )
 
   it("delegates AIHubMix model pricing to the AIHubMix helper", async () => {
     mockAihubmixFetchModelPricing.mockResolvedValueOnce(pricingResponse)

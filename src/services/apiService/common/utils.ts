@@ -1,4 +1,4 @@
-import type { TodayUsageData } from "~/services/accountData/model"
+import type { TodayUsageData } from "~/services/accounts/accountDataModel"
 import {
   extractDataFromApiResponseBody,
   isHttpUrl,
@@ -10,7 +10,7 @@ import type {
   ApiServiceRequest,
   FetchApiOptions,
 } from "~/services/apiTransport/type"
-import type { LogItem } from "~/services/usageLogs/model"
+import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
 
 export { extractDataFromApiResponseBody, isHttpUrl }
 

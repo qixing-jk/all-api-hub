@@ -4,9 +4,12 @@ import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { LogType } from "~/services/history/usageHistory/usageLogModel"
+import type {
+  LogItem,
+  LogResponseData,
+} from "~/services/history/usageHistory/usageLogModel"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { LogType } from "~/services/usageLogs/model"
-import type { LogItem, LogResponseData } from "~/services/usageLogs/model"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   USAGE_HISTORY_SCHEDULE_MODE,

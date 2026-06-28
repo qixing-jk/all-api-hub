@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
+import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
+import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import {
   createApiToken,
@@ -45,7 +46,6 @@ import type {
   Sub2ApiAnnouncementListData,
   Sub2ApiEnvelope,
 } from "~/services/apiService/sub2api/type"
-import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 const { mockGetLatestAuth, mockPersistAuthUpdate } = vi.hoisted(() => ({

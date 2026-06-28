@@ -29,6 +29,9 @@ const {
 
 vi.mock("~/services/apiService/common", () => ({
   determineHealthStatus: mockDetermineHealthStatus,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchAccountQuota: mockFetchAccountQuota,
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,

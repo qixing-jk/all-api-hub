@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   createApiToken,
   deleteApiToken,
@@ -30,7 +31,6 @@ import {
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
-import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 

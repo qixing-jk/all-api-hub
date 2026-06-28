@@ -1,24 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiRedemption } from "~/services/apiAdapters/newApi/redemption"
 import { AuthTypeEnum } from "~/types"
 
-const {
-  mockCreateRedemptionImplementation,
-  mockGetApiService,
-  mockRedeemCode,
-} = vi.hoisted(() => ({
-  mockCreateRedemptionImplementation: vi.fn(),
+const { mockGetApiService, mockRedeemCode } = vi.hoisted(() => ({
   mockGetApiService: vi.fn(() => {
     throw new Error("legacy apiService facade should not be used")
   }),
   mockRedeemCode: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/newApiFamily", () => ({
-  redemption: {
-    createRedemptionImplementation: mockCreateRedemptionImplementation,
+vi.mock("~/services/apiService/newApiFamily/default/redemption", () => ({
+  defaultRedemptionImplementation: {
+    redeemCode: mockRedeemCode,
   },
 }))
 
@@ -39,15 +33,12 @@ const request = {
 describe("createNewApiRedemption", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockCreateRedemptionImplementation.mockReturnValue({
-      redeemCode: mockRedeemCode,
-    })
   })
 
   it("delegates code redemption through the New API-family implementation", async () => {
     mockRedeemCode.mockResolvedValueOnce(500)
 
-    const redemption = createNewApiRedemption(SITE_TYPES.VELOERA)
+    const redemption = createNewApiRedemption()
 
     await expect(
       redemption.redeem({
@@ -56,10 +47,6 @@ describe("createNewApiRedemption", () => {
       }),
     ).resolves.toBe(500)
 
-    expect(mockCreateRedemptionImplementation).toHaveBeenCalledOnce()
-    expect(mockCreateRedemptionImplementation).toHaveBeenCalledWith(
-      SITE_TYPES.VELOERA,
-    )
     expect(mockRedeemCode).toHaveBeenCalledOnce()
     expect(mockRedeemCode).toHaveBeenCalledWith(request, "example-code")
     expect(mockGetApiService).not.toHaveBeenCalled()

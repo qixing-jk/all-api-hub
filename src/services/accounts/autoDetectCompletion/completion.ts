@@ -2,8 +2,8 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
-import type { SiteStatusInfo } from "~/services/accountBootstrap/model"
 import { getSiteName } from "~/services/accounts/siteName"
+import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"

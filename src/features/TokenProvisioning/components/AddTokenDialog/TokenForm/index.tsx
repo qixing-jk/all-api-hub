@@ -2,7 +2,7 @@ import {
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
   resolveAccountSiteTokenFormNetworkLimitPolicy,
 } from "~/services/accounts/accountSiteProfile"
-import type { UserGroupInfo } from "~/services/tokenProvisioning/model"
+import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 
 import type { FormData } from "../hooks/useTokenForm"
 import type { Account } from "./AccountSelection"

@@ -1,50 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
-import { createAccountRefreshImplementation } from "~/services/apiService/newApiFamily/accountRefresh"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import {
+  defaultAccountRefreshImplementation,
+  refreshAccountData,
+  validateAccountConnection,
+} from "~/services/apiService/newApiFamily/default/accountRefresh"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  TEMP_WINDOW_HEALTH_STATUS_CODES,
+} from "~/types"
 
 const {
-  anyrouterFetchSupportCheckIn,
-  anyrouterRefreshAccountData,
-  commonFetchSupportCheckIn,
-  commonRefreshAccountData,
-  doneHubRefreshAccountData,
-  veloeraRefreshAccountData,
-  wongFetchSupportCheckIn,
-  wongRefreshAccountData,
+  commonDetermineHealthStatus,
+  newApiFamilyFetchSupportCheckIn,
+  newApiFamilyFetchAccountData,
+  newApiFamilyFetchAccountQuota,
 } = vi.hoisted(() => ({
-  anyrouterFetchSupportCheckIn: vi.fn(),
-  anyrouterRefreshAccountData: vi.fn(),
-  commonFetchSupportCheckIn: vi.fn(),
-  commonRefreshAccountData: vi.fn(),
-  doneHubRefreshAccountData: vi.fn(),
-  veloeraRefreshAccountData: vi.fn(),
-  wongFetchSupportCheckIn: vi.fn(),
-  wongRefreshAccountData: vi.fn(),
+  commonDetermineHealthStatus: vi.fn(),
+  newApiFamilyFetchSupportCheckIn: vi.fn(),
+  newApiFamilyFetchAccountData: vi.fn(),
+  newApiFamilyFetchAccountQuota: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/common", () => ({
-  fetchSupportCheckIn: commonFetchSupportCheckIn,
-  refreshAccountData: commonRefreshAccountData,
+  determineHealthStatus: commonDetermineHealthStatus,
 }))
 
-vi.mock("~/services/apiService/anyrouter", () => ({
-  fetchSupportCheckIn: anyrouterFetchSupportCheckIn,
-  refreshAccountData: anyrouterRefreshAccountData,
+vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
+  fetchAccountData: newApiFamilyFetchAccountData,
+  fetchAccountQuota: newApiFamilyFetchAccountQuota,
 }))
 
-vi.mock("~/services/apiService/doneHub", () => ({
-  refreshAccountData: doneHubRefreshAccountData,
-}))
-
-vi.mock("~/services/apiService/veloera", () => ({
-  refreshAccountData: veloeraRefreshAccountData,
-}))
-
-vi.mock("~/services/apiService/wong", () => ({
-  fetchSupportCheckIn: wongFetchSupportCheckIn,
-  refreshAccountData: wongRefreshAccountData,
+vi.mock("~/services/apiService/newApiFamily/default/accountBootstrap", () => ({
+  fetchSupportCheckIn: newApiFamilyFetchSupportCheckIn,
 }))
 
 describe("newApiFamily accountRefresh", () => {
@@ -82,83 +72,69 @@ describe("newApiFamily accountRefresh", () => {
     },
     healthStatus: {
       status: SiteHealthStatus.Healthy,
-      message: "ok",
+      message: "account:healthStatus.normal",
     },
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
+    commonDetermineHealthStatus.mockReturnValue({
+      status: SiteHealthStatus.Warning,
+      message: "account:healthStatus.tempWindowDisabled",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+    })
   })
 
-  it("uses common-compatible refresh helpers by default for New API", async () => {
-    commonFetchSupportCheckIn.mockResolvedValueOnce(true)
-    commonRefreshAccountData.mockResolvedValueOnce(refreshResult)
+  it("refreshAccountData wraps successful refreshes with a healthy status", async () => {
+    newApiFamilyFetchAccountData.mockResolvedValueOnce(refreshResult.data)
 
-    const implementation = createAccountRefreshImplementation(
-      SITE_TYPES.NEW_API,
+    await expect(refreshAccountData(refreshRequest)).resolves.toEqual(
+      refreshResult,
     )
+  })
+
+  it("refreshAccountData maps runtime failures through determineHealthStatus", async () => {
+    const error = new ApiError(
+      "fallback disabled",
+      undefined,
+      "/api/user/self",
+      API_ERROR_CODES.TEMP_WINDOW_DISABLED,
+    )
+    newApiFamilyFetchAccountData.mockRejectedValueOnce(error)
+
+    await expect(refreshAccountData(refreshRequest)).resolves.toEqual({
+      success: false,
+      healthStatus: {
+        status: SiteHealthStatus.Warning,
+        message: "account:healthStatus.tempWindowDisabled",
+        code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      },
+    })
+    expect(commonDetermineHealthStatus).toHaveBeenCalledWith(error)
+  })
+
+  it("validateAccountConnection reflects whether quota fetch succeeds", async () => {
+    newApiFamilyFetchAccountQuota.mockResolvedValueOnce(1)
+    await expect(validateAccountConnection(supportRequest)).resolves.toBe(true)
+
+    newApiFamilyFetchAccountQuota.mockRejectedValueOnce(new Error("offline"))
+    await expect(validateAccountConnection(supportRequest)).resolves.toBe(false)
+  })
+
+  it("uses New API-family refresh helpers by default for New API", async () => {
+    newApiFamilyFetchSupportCheckIn.mockResolvedValueOnce(true)
+    newApiFamilyFetchAccountData.mockResolvedValueOnce(refreshResult.data)
+
+    const implementation = defaultAccountRefreshImplementation
 
     await expect(
       implementation.fetchSupportCheckIn(supportRequest),
     ).resolves.toBe(true)
     await expect(
       implementation.refreshAccountData(refreshRequest),
-    ).resolves.toBe(refreshResult)
+    ).resolves.toEqual(refreshResult)
 
-    expect(commonFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
-    expect(commonRefreshAccountData).toHaveBeenCalledWith(refreshRequest)
+    expect(newApiFamilyFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
+    expect(newApiFamilyFetchAccountData).toHaveBeenCalledWith(refreshRequest)
   })
-
-  it.each([
-    [
-      SITE_TYPES.ANYROUTER,
-      anyrouterFetchSupportCheckIn,
-      anyrouterRefreshAccountData,
-    ],
-    [SITE_TYPES.WONG_GONGYI, wongFetchSupportCheckIn, wongRefreshAccountData],
-  ])(
-    "uses site-specific support and refresh helpers for %s",
-    async (siteType, supportProbe, refreshLoader) => {
-      supportProbe.mockResolvedValueOnce(true)
-      refreshLoader.mockResolvedValueOnce(refreshResult)
-
-      const implementation = createAccountRefreshImplementation(siteType)
-
-      await expect(
-        implementation.fetchSupportCheckIn(supportRequest),
-      ).resolves.toBe(true)
-      await expect(
-        implementation.refreshAccountData(refreshRequest),
-      ).resolves.toBe(refreshResult)
-
-      expect(supportProbe).toHaveBeenCalledWith(supportRequest)
-      expect(refreshLoader).toHaveBeenCalledWith(refreshRequest)
-      expect(commonFetchSupportCheckIn).not.toHaveBeenCalled()
-      expect(commonRefreshAccountData).not.toHaveBeenCalled()
-    },
-  )
-
-  it.each([
-    [SITE_TYPES.DONE_HUB, doneHubRefreshAccountData],
-    [SITE_TYPES.VELOERA, veloeraRefreshAccountData],
-  ])(
-    "uses common support probing and site-specific refresh for %s",
-    async (siteType, refreshLoader) => {
-      commonFetchSupportCheckIn.mockResolvedValueOnce(true)
-      refreshLoader.mockResolvedValueOnce(refreshResult)
-
-      const implementation = createAccountRefreshImplementation(siteType)
-
-      await expect(
-        implementation.fetchSupportCheckIn(supportRequest),
-      ).resolves.toBe(true)
-      await expect(
-        implementation.refreshAccountData(refreshRequest),
-      ).resolves.toBe(refreshResult)
-
-      expect(commonFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
-      expect(refreshLoader).toHaveBeenCalledWith(refreshRequest)
-      expect(commonRefreshAccountData).not.toHaveBeenCalled()
-    },
-  )
 })

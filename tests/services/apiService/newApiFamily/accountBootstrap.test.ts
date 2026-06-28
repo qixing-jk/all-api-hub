@@ -1,41 +1,35 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
-import { createAccountBootstrapImplementation } from "~/services/apiService/newApiFamily/accountBootstrap"
+import {
+  createAccessToken,
+  defaultAccountBootstrapImplementation,
+  extractDefaultExchangeRate,
+  fetchSiteStatus,
+  fetchSupportCheckIn,
+  fetchUserInfo,
+  getOrCreateAccessToken,
+} from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { AuthTypeEnum } from "~/types"
 
-const {
-  anyrouterFetchSupportCheckIn,
-  commonExtractDefaultExchangeRate,
-  commonFetchSiteStatus,
-  commonFetchSupportCheckIn,
-  commonFetchUserInfo,
-  commonGetOrCreateAccessToken,
-  wongFetchSupportCheckIn,
-} = vi.hoisted(() => ({
-  anyrouterFetchSupportCheckIn: vi.fn(),
-  commonExtractDefaultExchangeRate: vi.fn(),
-  commonFetchSiteStatus: vi.fn(),
-  commonFetchSupportCheckIn: vi.fn(),
-  commonFetchUserInfo: vi.fn(),
-  commonGetOrCreateAccessToken: vi.fn(),
-  wongFetchSupportCheckIn: vi.fn(),
+const { mockFetchApiData } = vi.hoisted(() => ({
+  mockFetchApiData: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
-  extractDefaultExchangeRate: commonExtractDefaultExchangeRate,
-  fetchSiteStatus: commonFetchSiteStatus,
-  fetchSupportCheckIn: commonFetchSupportCheckIn,
-  fetchUserInfo: commonFetchUserInfo,
-  getOrCreateAccessToken: commonGetOrCreateAccessToken,
+vi.mock("~/services/apiService/common/utils", () => ({
+  fetchApiData: mockFetchApiData,
 }))
 
-vi.mock("~/services/apiService/anyrouter", () => ({
-  fetchSupportCheckIn: anyrouterFetchSupportCheckIn,
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: vi.fn(() => ({
+    debug: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  })),
 }))
 
-vi.mock("~/services/apiService/wong", () => ({
-  fetchSupportCheckIn: wongFetchSupportCheckIn,
+vi.mock("~/utils/i18n/core", () => ({
+  t: vi.fn((key: string) => key),
 }))
 
 describe("newApiFamily accountBootstrap", () => {
@@ -53,14 +47,145 @@ describe("newApiFamily accountBootstrap", () => {
     vi.clearAllMocks()
   })
 
-  it("uses common-compatible bootstrap helpers by default for New API", async () => {
-    const implementation = createAccountBootstrapImplementation(
-      SITE_TYPES.NEW_API,
+  it("fetchUserInfo returns the normalized public shape", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      id: 9,
+      username: "alice",
+      access_token: "",
+      quota: 123,
+    })
+
+    await expect(fetchUserInfo(request)).resolves.toEqual({
+      id: "9",
+      username: "alice",
+      access_token: "",
+      user: {
+        id: 9,
+        username: "alice",
+        access_token: "",
+        quota: 123,
+      },
+    })
+  })
+
+  it("fetchUserInfo rejects missing upstream user ids", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      username: "alice",
+      access_token: "",
+      quota: 123,
+    })
+
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      name: "ApiError",
+      endpoint: "/api/user/self",
+    })
+  })
+
+  it("createAccessToken delegates to the token endpoint", async () => {
+    mockFetchApiData.mockResolvedValueOnce("new-token")
+
+    await expect(createAccessToken(request)).resolves.toBe("new-token")
+    expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/user/token",
+    })
+  })
+
+  it("getOrCreateAccessToken reuses the existing token when present", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      id: 1,
+      username: "alice",
+      access_token: "existing-token",
+    })
+
+    await expect(getOrCreateAccessToken(request)).resolves.toEqual({
+      username: "alice",
+      access_token: "existing-token",
+    })
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+  })
+
+  it("getOrCreateAccessToken creates a token when the account has none", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        id: 1,
+        username: "alice",
+        access_token: "",
+      })
+      .mockResolvedValueOnce("generated-token")
+
+    await expect(getOrCreateAccessToken(request)).resolves.toEqual({
+      username: "alice",
+      access_token: "generated-token",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/user/token",
+    })
+  })
+
+  it("fetchSiteStatus forces public auth and returns null on failures", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        checkin_enabled: true,
+        price: 2.5,
+      })
+      .mockRejectedValueOnce(new Error("status failed"))
+
+    await expect(fetchSiteStatus(request)).resolves.toEqual({
+      checkin_enabled: true,
+      price: 2.5,
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(
+      1,
+      {
+        ...request,
+        auth: { authType: AuthTypeEnum.None },
+      },
+      { endpoint: "/api/status" },
     )
+    await expect(fetchSiteStatus(request)).resolves.toBeNull()
+  })
+
+  it("extractDefaultExchangeRate follows the documented fallback order", () => {
+    expect(extractDefaultExchangeRate(null)).toBeNull()
+    expect(extractDefaultExchangeRate({ price: 2.5 } as any)).toBe(2.5)
+    expect(
+      extractDefaultExchangeRate({ price: 0, stripe_unit_price: 3 } as any),
+    ).toBe(3)
+    expect(
+      extractDefaultExchangeRate({
+        price: 0,
+        stripe_unit_price: 0,
+        PaymentUSDRate: 4,
+      } as any),
+    ).toBe(4)
+    expect(
+      extractDefaultExchangeRate({
+        price: -1,
+        stripe_unit_price: 0,
+        PaymentUSDRate: 0,
+      } as any),
+    ).toBeNull()
+  })
+
+  it("fetchSupportCheckIn forwards the site flag from fetchSiteStatus", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      checkin_enabled: false,
+    })
+
+    await expect(fetchSupportCheckIn(request)).resolves.toBe(false)
+  })
+
+  it("uses New API-family bootstrap helpers by default for New API", async () => {
+    const implementation = defaultAccountBootstrapImplementation
     const userInfo = {
       id: "user-1",
       username: "Example User",
       access_token: "access-token",
+      user: {
+        id: "user-1",
+        username: "Example User",
+        access_token: "access-token",
+      },
     }
     const accessToken = {
       username: "Example User",
@@ -71,16 +196,22 @@ describe("newApiFamily accountBootstrap", () => {
       checkin_enabled: true,
       price: 7.2,
     }
-    commonFetchUserInfo.mockResolvedValueOnce(userInfo)
-    commonGetOrCreateAccessToken.mockResolvedValueOnce(accessToken)
-    commonFetchSiteStatus.mockResolvedValueOnce(siteStatus)
-    commonFetchSupportCheckIn.mockResolvedValueOnce(true)
-    commonExtractDefaultExchangeRate.mockReturnValueOnce(7.2)
+    mockFetchApiData
+      .mockResolvedValueOnce(userInfo.user)
+      .mockResolvedValueOnce({
+        id: userInfo.id,
+        username: accessToken.username,
+        access_token: accessToken.access_token,
+      })
+    mockFetchApiData.mockResolvedValueOnce(siteStatus)
+    mockFetchApiData.mockResolvedValueOnce(siteStatus)
 
-    await expect(implementation.fetchUserInfo(request)).resolves.toBe(userInfo)
-    await expect(implementation.getOrCreateAccessToken(request)).resolves.toBe(
-      accessToken,
+    await expect(implementation.fetchUserInfo(request)).resolves.toEqual(
+      userInfo,
     )
+    await expect(
+      implementation.getOrCreateAccessToken(request),
+    ).resolves.toEqual(accessToken)
     await expect(implementation.fetchSiteStatus(request)).resolves.toBe(
       siteStatus,
     )
@@ -89,25 +220,8 @@ describe("newApiFamily accountBootstrap", () => {
     )
     expect(implementation.extractDefaultExchangeRate(siteStatus)).toBe(7.2)
 
-    expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
-    expect(commonGetOrCreateAccessToken).toHaveBeenCalledWith(request)
-    expect(commonFetchSiteStatus).toHaveBeenCalledWith(request)
-    expect(commonFetchSupportCheckIn).toHaveBeenCalledWith(request)
-    expect(commonExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
-  })
-
-  it.each([
-    [SITE_TYPES.ANYROUTER, anyrouterFetchSupportCheckIn],
-    [SITE_TYPES.WONG_GONGYI, wongFetchSupportCheckIn],
-  ])("uses the site-specific support probe for %s", async (siteType, probe) => {
-    const implementation = createAccountBootstrapImplementation(siteType)
-    probe.mockResolvedValueOnce(true)
-
-    await expect(implementation.fetchSupportCheckIn(request)).resolves.toBe(
-      true,
-    )
-
-    expect(probe).toHaveBeenCalledWith(request)
-    expect(commonFetchSupportCheckIn).not.toHaveBeenCalled()
+    expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/user/self",
+    })
   })
 })

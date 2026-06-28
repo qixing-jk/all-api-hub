@@ -1,11 +1,11 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import { extractItemsFromArrayOrItemsPayload } from "~/services/apiService/common/pagination"
 import type {
   CreateTokenRequest,
   UserGroupInfo,
-} from "~/services/tokenProvisioning/model"
+} from "~/services/accountTokens/tokenProvisioningModel"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { extractItemsFromArrayOrItemsPayload } from "~/services/apiService/common/pagination"
 import type { ApiToken } from "~/types"
 import { t } from "~/utils/i18n/core"
 

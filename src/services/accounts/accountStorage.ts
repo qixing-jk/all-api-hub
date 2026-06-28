@@ -2,7 +2,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
-import type { RefreshAccountResult } from "~/services/accountData/model"
+import type { RefreshAccountResult } from "~/services/accounts/accountDataModel"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   isAccountSiteProfileUrl,

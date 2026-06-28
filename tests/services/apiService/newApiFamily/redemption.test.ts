@@ -1,15 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
-import { createRedemptionImplementation } from "~/services/apiService/newApiFamily/redemption"
+import { defaultRedemptionImplementation } from "~/services/apiService/newApiFamily/default/redemption"
 import { AuthTypeEnum } from "~/types"
 
-const { commonRedeemCode } = vi.hoisted(() => ({
-  commonRedeemCode: vi.fn(),
+const { fetchApiDataMock, loggerErrorMock } = vi.hoisted(() => ({
+  fetchApiDataMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
-  redeemCode: commonRedeemCode,
+vi.mock("~/services/apiService/common/utils", () => ({
+  fetchApiData: fetchApiDataMock,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    error: loggerErrorMock,
+  }),
 }))
 
 const request = {
@@ -27,16 +33,31 @@ describe("newApiFamily redemption", () => {
     vi.clearAllMocks()
   })
 
-  it("uses common-compatible code redemption by default for New API-family sites", async () => {
-    commonRedeemCode.mockResolvedValueOnce(500)
+  it("redeems codes through the top-up endpoint", async () => {
+    fetchApiDataMock.mockResolvedValueOnce(500)
 
-    const redemption = createRedemptionImplementation(SITE_TYPES.VELOERA)
+    const redemption = defaultRedemptionImplementation
 
     await expect(redemption.redeemCode(request, "example-code")).resolves.toBe(
       500,
     )
 
-    expect(commonRedeemCode).toHaveBeenCalledOnce()
-    expect(commonRedeemCode).toHaveBeenCalledWith(request, "example-code")
+    expect(fetchApiDataMock).toHaveBeenCalledWith(request, {
+      endpoint: "/api/user/topup",
+      options: {
+        method: "POST",
+        body: JSON.stringify({ key: "example-code" }),
+      },
+    })
+  })
+
+  it("rethrows redemption endpoint failures", async () => {
+    const error = new Error("redeem unavailable")
+    fetchApiDataMock.mockRejectedValueOnce(error)
+
+    await expect(
+      defaultRedemptionImplementation.redeemCode(request, "example-code"),
+    ).rejects.toBe(error)
+    expect(loggerErrorMock).toHaveBeenCalledWith("兑换码充值失败", error)
   })
 })

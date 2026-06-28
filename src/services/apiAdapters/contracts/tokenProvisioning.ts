@@ -2,7 +2,7 @@ import type {
   CreateTokenRequest,
   CreateTokenResult,
   UserGroupInfo,
-} from "~/services/tokenProvisioning/model"
+} from "~/services/accountTokens/tokenProvisioningModel"
 import type { ApiToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 

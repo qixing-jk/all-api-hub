@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import type { AccountData } from "~/services/accountData/model"
+import type { AccountData } from "~/services/accounts/accountDataModel"
 import { aihubmixAccountData } from "~/services/apiAdapters/aihubmix/accountData"
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/accountData"
 import { sub2ApiAccountData } from "~/services/apiAdapters/sub2api/accountData"
@@ -9,13 +9,13 @@ import { AuthTypeEnum } from "~/types"
 
 const {
   mockAihubmixFetchAccountData,
-  mockCreateAccountDataImplementation,
+  mockDoneHubFetchAccountData,
   mockFetchAccountData,
   mockGetApiService,
   mockSub2ApiFetchAccountData,
 } = vi.hoisted(() => ({
   mockAihubmixFetchAccountData: vi.fn(),
-  mockCreateAccountDataImplementation: vi.fn(),
+  mockDoneHubFetchAccountData: vi.fn(),
   mockFetchAccountData: vi.fn(),
   mockGetApiService: vi.fn(),
   mockSub2ApiFetchAccountData: vi.fn(),
@@ -25,10 +25,14 @@ vi.mock("~/services/apiService", () => ({
   getApiService: mockGetApiService,
 }))
 
-vi.mock("~/services/apiService/newApiFamily", () => ({
-  accountData: {
-    createAccountDataImplementation: mockCreateAccountDataImplementation,
+vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
+  defaultAccountDataImplementation: {
+    fetchAccountData: mockFetchAccountData,
   },
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/doneHub", () => ({
+  fetchAccountData: mockDoneHubFetchAccountData,
 }))
 
 vi.mock("~/services/apiService/sub2api", () => ({
@@ -85,15 +89,12 @@ const disabledCheckInAccountData: AccountData = {
 describe("apiAdapter accountData", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockCreateAccountDataImplementation.mockReturnValue({
-      fetchAccountData: mockFetchAccountData,
-    })
   })
 
   it("delegates New API-family account data through the family implementation", async () => {
     mockFetchAccountData.mockResolvedValueOnce(accountData)
 
-    const accountDataCapability = createNewApiAccountData(SITE_TYPES.ONE_HUB)
+    const accountDataCapability = createNewApiAccountData(SITE_TYPES.NEW_API)
 
     expect(mockGetApiService).not.toHaveBeenCalled()
 
@@ -101,12 +102,22 @@ describe("apiAdapter accountData", () => {
       accountData,
     )
 
-    expect(mockCreateAccountDataImplementation).toHaveBeenCalledOnce()
-    expect(mockCreateAccountDataImplementation).toHaveBeenCalledWith(
-      SITE_TYPES.ONE_HUB,
-    )
     expect(mockFetchAccountData).toHaveBeenCalledOnce()
     expect(mockFetchAccountData).toHaveBeenCalledWith(request)
+    expect(mockGetApiService).not.toHaveBeenCalled()
+  })
+
+  it("delegates New API-family site-specific account data through adapter overrides", async () => {
+    mockDoneHubFetchAccountData.mockResolvedValueOnce(accountData)
+
+    const accountDataCapability = createNewApiAccountData(SITE_TYPES.DONE_HUB)
+
+    await expect(accountDataCapability.fetchData(request)).resolves.toBe(
+      accountData,
+    )
+
+    expect(mockDoneHubFetchAccountData).toHaveBeenCalledWith(request)
+    expect(mockFetchAccountData).not.toHaveBeenCalled()
     expect(mockGetApiService).not.toHaveBeenCalled()
   })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
@@ -9,8 +9,7 @@ import {
   TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { createTokenProvisioningImplementation } from "~/services/apiService/newApiFamily/tokenProvisioning"
-import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
+import { defaultTokenProvisioning } from "~/services/apiService/newApiFamily/default/tokenProvisioning"
 import type { ApiToken } from "~/types"
 
 const defaultTokenData: CreateTokenRequest = {
@@ -46,9 +45,7 @@ const token = (overrides: Partial<ApiToken> = {}): ApiToken =>
 
 describe("newApiFamily tokenProvisioning", () => {
   it("allows default creation and inventory recovery for New API-family sites", () => {
-    const provisioning = createTokenProvisioningImplementation(
-      SITE_TYPES.NEW_API,
-    )
+    const provisioning = defaultTokenProvisioning
     const createdToken = token()
     const maskedToken = token({ key: "sk-****abcd" })
 

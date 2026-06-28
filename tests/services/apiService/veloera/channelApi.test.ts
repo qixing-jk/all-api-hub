@@ -44,6 +44,9 @@ vi.mock("~/services/apiService/common/utils", () => ({
 vi.mock("~/services/apiService/common", () => ({
   determineHealthStatus: (...args: unknown[]) =>
     mockDetermineHealthStatus(...args),
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchAccountQuota: (...args: unknown[]) => mockFetchAccountQuota(...args),
   fetchTodayIncome: (...args: unknown[]) => mockFetchTodayIncome(...args),
   fetchTodayUsage: (...args: unknown[]) => mockFetchTodayUsage(...args),

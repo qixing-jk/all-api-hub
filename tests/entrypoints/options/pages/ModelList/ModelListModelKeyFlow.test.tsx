@@ -30,14 +30,17 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/apiService/newApiFamily", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/services/apiService/newApiFamily")>()
+vi.mock(
+  "~/services/apiService/newApiFamily/default/keyManagement",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiService/newApiFamily/default/keyManagement")
+      >()
 
-  return {
-    ...actual,
-    keyManagement: {
-      createKeyManagementImplementation: () => ({
+    return {
+      ...actual,
+      defaultKeyManagementImplementation: {
         fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
         createApiToken: (...args: any[]) => createApiTokenMock(...args),
         updateApiToken: vi.fn(async () => true),
@@ -46,10 +49,10 @@ vi.mock("~/services/apiService/newApiFamily", async (importOriginal) => {
         fetchAccountAvailableModels: (...args: any[]) =>
           fetchAccountAvailableModelsMock(...args),
         fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
-      }),
-    },
-  }
-})
+      },
+    }
+  },
+)
 
 vi.mock("~/services/models/utils/modelProviders", async (importOriginal) => {
   const actual =

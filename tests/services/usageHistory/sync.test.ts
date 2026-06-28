@@ -6,8 +6,8 @@ import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { syncUsageHistoryForAccount } from "~/services/history/usageHistory/sync"
-import { LogType } from "~/services/usageLogs/model"
-import type { LogItem } from "~/services/usageLogs/model"
+import { LogType } from "~/services/history/usageHistory/usageLogModel"
+import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import {
   USAGE_HISTORY_SCHEDULE_MODE,

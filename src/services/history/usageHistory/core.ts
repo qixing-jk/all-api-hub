@@ -1,5 +1,5 @@
-import { LogType } from "~/services/usageLogs/model"
-import type { LogItem } from "~/services/usageLogs/model"
+import { LogType } from "~/services/history/usageHistory/usageLogModel"
+import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
 import type {
   UsageHistoryAccountStore,
   UsageHistoryAggregate,

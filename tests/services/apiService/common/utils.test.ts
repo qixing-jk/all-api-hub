@@ -7,7 +7,7 @@ import {
   fetchApiData,
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
-import type { LogItem } from "~/services/usageLogs/model"
+import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({

@@ -1,5 +1,7 @@
-import type { RefreshAccountResult } from "~/services/accountData/model"
-import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
+import type {
+  ApiServiceAccountRequest,
+  RefreshAccountResult,
+} from "~/services/accounts/accountDataModel"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 export type AccountRefreshSupportRequest = Pick<

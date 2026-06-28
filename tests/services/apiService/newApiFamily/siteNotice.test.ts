@@ -1,14 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
-import { fetchSiteNotice } from "~/services/apiService/newApiFamily/siteNotice"
+import { fetchSiteNotice } from "~/services/apiService/newApiFamily/default/siteNotice"
 import { AuthTypeEnum } from "~/types"
 
-const { commonFetchSiteNotice } = vi.hoisted(() => ({
-  commonFetchSiteNotice: vi.fn(),
+const { fetchApiMock, loggerWarnMock } = vi.hoisted(() => ({
+  fetchApiMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
-  fetchSiteNotice: commonFetchSiteNotice,
+vi.mock("~/services/apiService/common/utils", () => ({
+  fetchApi: fetchApiMock,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    warn: loggerWarnMock,
+  }),
 }))
 
 const request = {
@@ -21,16 +28,38 @@ const request = {
 }
 
 describe("newApiFamily siteNotice", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it("uses the common-compatible site notice fetcher", async () => {
-    commonFetchSiteNotice.mockResolvedValueOnce("Notice body")
+  it("returns a non-empty notice string from a successful response", async () => {
+    fetchApiMock.mockResolvedValueOnce({
+      success: true,
+      data: "Notice body",
+    })
 
     await expect(fetchSiteNotice(request)).resolves.toBe("Notice body")
 
-    expect(commonFetchSiteNotice).toHaveBeenCalledOnce()
-    expect(commonFetchSiteNotice).toHaveBeenCalledWith(request)
+    expect(fetchApiMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({ authType: AuthTypeEnum.None }),
+      }),
+      { endpoint: "/api/notice" },
+      false,
+    )
+  })
+
+  it("returns null for unsuccessful or malformed notice responses", async () => {
+    fetchApiMock.mockResolvedValueOnce({ success: false })
+    await expect(fetchSiteNotice(request)).resolves.toBeNull()
+
+    fetchApiMock.mockResolvedValueOnce({ success: true, data: "   " })
+    await expect(fetchSiteNotice(request)).resolves.toBeNull()
+  })
+
+  it("returns null when the network request throws", async () => {
+    fetchApiMock.mockRejectedValueOnce(new TypeError("network failed"))
+
+    await expect(fetchSiteNotice(request)).resolves.toBeNull()
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      "获取站点公告信息失败",
+      expect.any(TypeError),
+    )
   })
 })

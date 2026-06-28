@@ -1,13 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ApiError } from "~/services/apiService/common/errors"
 import {
+  createChannel,
+  deleteChannel,
   fetchChannelModels,
   listAllChannels,
-} from "~/services/apiService/common"
+  searchChannel,
+  updateChannel,
+  updateChannelModelMapping,
+  updateChannelModels,
+} from "~/services/apiService/newApiFamily/channelManagement"
 import { AuthTypeEnum } from "~/types"
 
-const { mockFetchApi } = vi.hoisted(() => ({
+const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),
+  mockFetchApiData: vi.fn(),
 }))
 
 vi.mock("~/constants/ui", () => ({
@@ -20,15 +28,99 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApi: mockFetchApi,
-  fetchApiData: vi.fn(),
+  fetchApiData: mockFetchApiData,
   aggregateUsageData: vi.fn(),
   extractAmount: vi.fn(),
   getTodayTimestampRange: vi.fn(),
 }))
 
-describe("apiService common channel APIs", () => {
+const baseRequest = {
+  baseUrl: "https://example.com",
+  auth: {
+    authType: AuthTypeEnum.AccessToken,
+    accessToken: "token",
+    userId: "7",
+  },
+}
+
+describe("newApiFamily channel management APIs", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("searchChannel returns data on success and null on failure", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({ items: [{ id: 1 }], total: 1 })
+      .mockRejectedValueOnce(new ApiError("denied", 403))
+
+    await expect(searchChannel(baseRequest, "gpt-4")).resolves.toEqual({
+      items: [{ id: 1 }],
+      total: 1,
+    })
+    await expect(searchChannel(baseRequest, "gpt-4")).resolves.toBeNull()
+  })
+
+  it("createChannel serializes groups and wraps transport failures", async () => {
+    mockFetchApi
+      .mockResolvedValueOnce({ success: true })
+      .mockRejectedValueOnce(new Error("network"))
+
+    await expect(
+      createChannel(baseRequest, {
+        name: "My Channel",
+        channel: {
+          name: "inner",
+          groups: ["default", "vip"],
+        },
+      } as any),
+    ).resolves.toEqual({ success: true })
+
+    expect(mockFetchApi).toHaveBeenNthCalledWith(
+      1,
+      baseRequest,
+      expect.objectContaining({
+        endpoint: "/api/channel/",
+        options: {
+          method: "POST",
+          body: JSON.stringify({
+            name: "My Channel",
+            channel: {
+              name: "inner",
+              groups: ["default", "vip"],
+              group: "default,vip",
+            },
+          }),
+        },
+      }),
+    )
+
+    await expect(
+      createChannel(baseRequest, {
+        channel: { groups: [] },
+      } as any),
+    ).rejects.toThrow("创建渠道失败，请检查网络或 New API 配置。")
+  })
+
+  it("updateChannel and deleteChannel wrap transport failures with user-facing messages", async () => {
+    mockFetchApi
+      .mockResolvedValueOnce({ success: true })
+      .mockRejectedValueOnce(new Error("update failed"))
+      .mockResolvedValueOnce({ success: true })
+      .mockRejectedValueOnce(new Error("delete failed"))
+
+    await expect(
+      updateChannel(baseRequest, { id: 1, name: "Updated" } as any),
+    ).resolves.toEqual({ success: true })
+    await expect(
+      updateChannel(baseRequest, { id: 1, name: "Updated" } as any),
+    ).rejects.toThrow("更新渠道失败，请检查网络或 New API 配置。")
+
+    await expect(deleteChannel(baseRequest, 1)).resolves.toEqual({
+      success: true,
+    })
+    await expect(deleteChannel(baseRequest, 1)).rejects.toThrow(
+      "删除渠道失败，请检查网络或 New API 配置。",
+    )
   })
 
   it("listAllChannels should paginate and aggregate type_counts", async () => {
@@ -169,5 +261,27 @@ describe("apiService common channel APIs", () => {
         message: "malformed payload",
       },
     )
+  })
+
+  it("updateChannelModels and updateChannelModelMapping validate response envelopes", async () => {
+    mockFetchApi
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: false, message: "bad models" })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: false, message: "bad mapping" })
+
+    await expect(
+      updateChannelModels(baseRequest, 1, "gpt-4,gpt-4o"),
+    ).resolves.toBeUndefined()
+    await expect(
+      updateChannelModels(baseRequest, 1, "gpt-4,gpt-4o"),
+    ).rejects.toMatchObject({ message: "bad models" })
+
+    await expect(
+      updateChannelModelMapping(baseRequest, 1, "gpt-4", '{"gpt-4":"gpt-4o"}'),
+    ).resolves.toBeUndefined()
+    await expect(
+      updateChannelModelMapping(baseRequest, 1, "gpt-4", '{"gpt-4":"gpt-4o"}'),
+    ).rejects.toMatchObject({ message: "bad mapping" })
   })
 })

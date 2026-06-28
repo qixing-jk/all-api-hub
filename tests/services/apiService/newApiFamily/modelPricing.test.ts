@@ -1,21 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
-import { createModelPricingImplementation } from "~/services/apiService/newApiFamily/modelPricing"
+import { defaultModelPricingImplementation } from "~/services/apiService/newApiFamily/default/modelPricing"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum } from "~/types"
 
-const { commonFetchModelPricing, oneHubFetchModelPricing } = vi.hoisted(() => ({
-  commonFetchModelPricing: vi.fn(),
-  oneHubFetchModelPricing: vi.fn(),
+const { fetchApiMock, loggerErrorMock } = vi.hoisted(() => ({
+  fetchApiMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
-  fetchModelPricing: commonFetchModelPricing,
+vi.mock("~/services/apiService/common/utils", () => ({
+  fetchApi: fetchApiMock,
 }))
 
-vi.mock("~/services/apiService/oneHub", () => ({
-  fetchModelPricing: oneHubFetchModelPricing,
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    error: loggerErrorMock,
+  }),
 }))
 
 const request = {
@@ -50,34 +51,29 @@ describe("newApiFamily modelPricing", () => {
     vi.clearAllMocks()
   })
 
-  it("uses common-compatible model pricing by default for New API-family sites", async () => {
-    commonFetchModelPricing.mockResolvedValueOnce(pricingResponse)
+  it("fetches New API-family model pricing from the pricing endpoint", async () => {
+    fetchApiMock.mockResolvedValueOnce(pricingResponse)
 
-    const modelPricing = createModelPricingImplementation(SITE_TYPES.NEW_API)
+    const modelPricing = defaultModelPricingImplementation
 
     await expect(modelPricing.fetchModelPricing(request)).resolves.toBe(
       pricingResponse,
     )
 
-    expect(commonFetchModelPricing).toHaveBeenCalledOnce()
-    expect(commonFetchModelPricing).toHaveBeenCalledWith(request)
-    expect(oneHubFetchModelPricing).not.toHaveBeenCalled()
+    expect(fetchApiMock).toHaveBeenCalledWith(
+      request,
+      { endpoint: "/api/pricing" },
+      true,
+    )
   })
 
-  it.each([SITE_TYPES.ONE_HUB, SITE_TYPES.DONE_HUB])(
-    "uses OneHub-family model pricing for %s",
-    async (siteType) => {
-      oneHubFetchModelPricing.mockResolvedValueOnce(pricingResponse)
+  it("rethrows pricing endpoint failures", async () => {
+    const error = new Error("pricing unavailable")
+    fetchApiMock.mockRejectedValueOnce(error)
 
-      const modelPricing = createModelPricingImplementation(siteType)
-
-      await expect(modelPricing.fetchModelPricing(request)).resolves.toBe(
-        pricingResponse,
-      )
-
-      expect(oneHubFetchModelPricing).toHaveBeenCalledOnce()
-      expect(oneHubFetchModelPricing).toHaveBeenCalledWith(request)
-      expect(commonFetchModelPricing).not.toHaveBeenCalled()
-    },
-  )
+    await expect(
+      defaultModelPricingImplementation.fetchModelPricing(request),
+    ).rejects.toBe(error)
+    expect(loggerErrorMock).toHaveBeenCalledWith("获取模型定价失败", error)
+  })
 })

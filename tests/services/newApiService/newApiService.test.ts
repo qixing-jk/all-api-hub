@@ -55,10 +55,25 @@ const mockSearchChannel = vi.fn()
 const mockCreateChannel = vi.fn()
 const mockUpdateChannel = vi.fn()
 const mockDeleteChannel = vi.fn()
-vi.mock("~/services/apiService/common", async () => {
+vi.mock(
+  "~/services/apiService/newApiFamily/default/keyManagement",
+  async () => {
+    const actual = await vi.importActual<
+      typeof import("~/services/apiService/newApiFamily/default/keyManagement")
+    >("~/services/apiService/newApiFamily/default/keyManagement")
+
+    return {
+      ...actual,
+      fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+      fetchSiteUserGroups: mockFetchSiteUserGroups,
+    }
+  },
+)
+
+vi.mock("~/services/apiService/newApiFamily/channelManagement", async () => {
   const actual = await vi.importActual<
-    typeof import("~/services/apiService/common")
-  >("~/services/apiService/common")
+    typeof import("~/services/apiService/newApiFamily/channelManagement")
+  >("~/services/apiService/newApiFamily/channelManagement")
 
   mockSearchChannel.mockImplementation(actual.searchChannel)
   mockCreateChannel.mockImplementation(actual.createChannel)
@@ -67,8 +82,6 @@ vi.mock("~/services/apiService/common", async () => {
 
   return {
     ...actual,
-    fetchAccountAvailableModels: mockFetchAccountAvailableModels,
-    fetchSiteUserGroups: mockFetchSiteUserGroups,
     searchChannel: mockSearchChannel,
     createChannel: mockCreateChannel,
     updateChannel: mockUpdateChannel,
@@ -328,7 +341,9 @@ describe("newApiService", () => {
 
   describe("searchChannel", () => {
     it("should return channel list data on success", async () => {
-      const { searchChannel } = await import("~/services/apiService/common")
+      const { searchChannel } = await import(
+        "~/services/apiService/newApiFamily/channelManagement"
+      )
       const mockChannelData = createMockNewApiChannelListData([
         createMockNewApiChannel({ id: 1, name: "Channel 1" }),
         createMockNewApiChannel({ id: 2, name: "Channel 2" }),
@@ -356,7 +371,9 @@ describe("newApiService", () => {
     })
 
     it("should return null when ApiError is thrown", async () => {
-      const { searchChannel } = await import("~/services/apiService/common")
+      const { searchChannel } = await import(
+        "~/services/apiService/newApiFamily/channelManagement"
+      )
       const error = new MockApiError("API request failed")
 
       mockFetchApiData.mockRejectedValueOnce(error)
@@ -375,7 +392,9 @@ describe("newApiService", () => {
     })
 
     it("should return null when other error is thrown", async () => {
-      const { searchChannel } = await import("~/services/apiService/common")
+      const { searchChannel } = await import(
+        "~/services/apiService/newApiFamily/channelManagement"
+      )
       const error = new Error("Network error")
 
       mockFetchApiData.mockRejectedValueOnce(error)
@@ -400,7 +419,9 @@ describe("newApiService", () => {
 
   describe("createChannel", () => {
     it("should create channel successfully", async () => {
-      const { createChannel } = await import("~/services/apiService/common")
+      const { createChannel } = await import(
+        "~/services/apiService/newApiFamily/channelManagement"
+      )
       const payload: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -442,7 +463,9 @@ describe("newApiService", () => {
     })
 
     it("should throw error when creation fails", async () => {
-      const { createChannel } = await import("~/services/apiService/common")
+      const { createChannel } = await import(
+        "~/services/apiService/newApiFamily/channelManagement"
+      )
       const payload: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -474,7 +497,9 @@ describe("newApiService", () => {
     })
 
     it("should join groups in payload", async () => {
-      const { createChannel } = await import("~/services/apiService/common")
+      const { createChannel } = await import(
+        "~/services/apiService/newApiFamily/channelManagement"
+      )
       const payload: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -515,7 +540,9 @@ describe("newApiService", () => {
 
   describe("updateChannel", () => {
     it("should update channel successfully", async () => {
-      const { updateChannel } = await import("~/services/apiService/common")
+      const { updateChannel } = await import(
+        "~/services/apiService/newApiFamily/channelManagement"
+      )
       const updateData = { id: 1, name: "Updated Name" }
 
       mockFetchApi.mockResolvedValueOnce({ success: true })
@@ -545,7 +572,9 @@ describe("newApiService", () => {
     })
 
     it("should throw error when update fails", async () => {
-      const { updateChannel } = await import("~/services/apiService/common")
+      const { updateChannel } = await import(
+        "~/services/apiService/newApiFamily/channelManagement"
+      )
 
       mockFetchApi.mockRejectedValueOnce(new Error("API error"))
 

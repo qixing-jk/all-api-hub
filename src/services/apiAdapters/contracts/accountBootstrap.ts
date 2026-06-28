@@ -1,10 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import type {
-  AccessTokenInfo,
-  SiteStatusInfo,
-  UserInfo,
-} from "~/services/accountBootstrap/model"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { AccountIdentity } from "~/types"
 
 export const ACCOUNT_BOOTSTRAP_ROUTE_KINDS = {
   Login: "login",
@@ -21,6 +17,29 @@ export type AccountBootstrapRouteKind =
 export type AccountBootstrapRouteTarget = {
   baseUrl: string
   siteType: AccountSiteType
+}
+
+export interface UserInfo {
+  id: AccountIdentity
+  username: string
+  access_token: string | null
+}
+
+export interface AccessTokenInfo {
+  username: string
+  access_token: string
+}
+
+export interface SiteStatusInfo {
+  price?: number
+  stripe_unit_price?: number
+  PaymentUSDRate?: number
+  system_name?: string
+  theme?: string
+  /**
+   * 是否启用签到功能
+   */
+  checkin_enabled?: boolean
 }
 
 export type AccountBootstrapCapability = {

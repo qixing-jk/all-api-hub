@@ -11,6 +11,7 @@ import {
   USAGE_HISTORY_STORAGE_KEYS,
 } from "~/services/history/usageHistory/constants"
 import { getDayKeyFromUnixSeconds as getUsageHistoryDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
+import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   AutoCheckinMessageTypes,
@@ -21,7 +22,6 @@ import {
   WebdavAutoSyncMessageTypes,
 } from "~/services/runtimeMessaging/messageTypes"
 import { SITE_ANNOUNCEMENTS_ALARM_NAME } from "~/services/siteAnnouncements/constants"
-import { LogType } from "~/services/usageLogs/model"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import type { AutoCheckinStatus } from "~/types/autoCheckin"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"

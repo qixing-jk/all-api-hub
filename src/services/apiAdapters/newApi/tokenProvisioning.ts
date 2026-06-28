@@ -1,8 +1,5 @@
-import type { AccountSiteType } from "~/constants/siteType"
 import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { tokenProvisioning } from "~/services/apiService/newApiFamily"
+import * as tokenProvisioning from "~/services/apiService/newApiFamily/default/tokenProvisioning"
 
-export const createNewApiTokenProvisioning = (
-  siteType: AccountSiteType,
-): TokenProvisioningCapability =>
-  tokenProvisioning.createTokenProvisioningImplementation(siteType)
+export const createNewApiTokenProvisioning = (): TokenProvisioningCapability =>
+  tokenProvisioning.defaultTokenProvisioning

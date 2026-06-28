@@ -4,12 +4,32 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 
 const {
-  commonFetchUserInfo,
-  commonFetchModelPricing,
-  commonFetchAccountTokens,
-  commonResolveApiTokenKey,
-  commonExtractDefaultExchangeRate,
-  commonFetchSiteNotice,
+  newApiFamilyFetchUserInfo,
+  newApiFamilyCreateAccessToken,
+  newApiFamilyGetOrCreateAccessToken,
+  newApiFamilyFetchSupportCheckIn,
+  newApiFamilyFetchSiteStatus,
+  newApiFamilyExtractDefaultExchangeRate,
+  newApiFamilyFetchAccountData,
+  newApiFamilyFetchAccountQuota,
+  newApiFamilyFetchCheckInStatus,
+  newApiFamilyFetchTodayUsage,
+  newApiFamilyFetchTodayIncome,
+  newApiFamilyRefreshAccountData,
+  newApiFamilyValidateAccountConnection,
+  newApiFamilySearchChannel,
+  newApiFamilyFetchAccountAvailableModels,
+  newApiFamilyFetchAccountTokens,
+  newApiFamilyFetchSiteUserGroups,
+  newApiFamilyFetchUserGroups,
+  newApiFamilyCreateApiToken,
+  newApiFamilyFetchTokenById,
+  newApiFamilyUpdateApiToken,
+  newApiFamilyDeleteApiToken,
+  newApiFamilyResolveApiTokenKey,
+  newApiFamilyFetchSiteNotice,
+  newApiFamilyFetchModelPricing,
+  newApiFamilyRedeemCode,
   aihubmixFetchAccountTokens,
   oneHubFetchModelPricing,
   oneHubFetchAccountTokens,
@@ -29,12 +49,32 @@ const {
   aihubmixFetchSupportCheckIn,
   aihubmixRefreshAccountData,
 } = vi.hoisted(() => ({
-  commonFetchUserInfo: vi.fn(),
-  commonFetchModelPricing: vi.fn(),
-  commonFetchAccountTokens: vi.fn(),
-  commonResolveApiTokenKey: vi.fn(),
-  commonExtractDefaultExchangeRate: vi.fn(),
-  commonFetchSiteNotice: vi.fn(),
+  newApiFamilyFetchUserInfo: vi.fn(),
+  newApiFamilyCreateAccessToken: vi.fn(),
+  newApiFamilyGetOrCreateAccessToken: vi.fn(),
+  newApiFamilyFetchSupportCheckIn: vi.fn(),
+  newApiFamilyFetchSiteStatus: vi.fn(),
+  newApiFamilyExtractDefaultExchangeRate: vi.fn(),
+  newApiFamilyFetchAccountData: vi.fn(),
+  newApiFamilyFetchAccountQuota: vi.fn(),
+  newApiFamilyFetchCheckInStatus: vi.fn(),
+  newApiFamilyFetchTodayUsage: vi.fn(),
+  newApiFamilyFetchTodayIncome: vi.fn(),
+  newApiFamilyRefreshAccountData: vi.fn(),
+  newApiFamilyValidateAccountConnection: vi.fn(),
+  newApiFamilySearchChannel: vi.fn(),
+  newApiFamilyFetchAccountAvailableModels: vi.fn(),
+  newApiFamilyFetchAccountTokens: vi.fn(),
+  newApiFamilyFetchSiteUserGroups: vi.fn(),
+  newApiFamilyFetchUserGroups: vi.fn(),
+  newApiFamilyCreateApiToken: vi.fn(),
+  newApiFamilyFetchTokenById: vi.fn(),
+  newApiFamilyUpdateApiToken: vi.fn(),
+  newApiFamilyDeleteApiToken: vi.fn(),
+  newApiFamilyResolveApiTokenKey: vi.fn(),
+  newApiFamilyFetchSiteNotice: vi.fn(),
+  newApiFamilyFetchModelPricing: vi.fn(),
+  newApiFamilyRedeemCode: vi.fn(),
   aihubmixFetchAccountTokens: vi.fn(),
   oneHubFetchModelPricing: vi.fn(),
   oneHubFetchAccountTokens: vi.fn(),
@@ -55,19 +95,62 @@ const {
   aihubmixRefreshAccountData: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
-  fetchUserInfo: commonFetchUserInfo,
-  fetchModelPricing: commonFetchModelPricing,
-  fetchAccountTokens: commonFetchAccountTokens,
-  resolveApiTokenKey: commonResolveApiTokenKey,
-  extractDefaultExchangeRate: commonExtractDefaultExchangeRate,
-  fetchSiteNotice: commonFetchSiteNotice,
+vi.mock("~/services/apiService/common", () => ({}))
+
+vi.mock("~/services/apiService/newApiFamily/default/accountBootstrap", () => ({
+  fetchUserInfo: newApiFamilyFetchUserInfo,
+  createAccessToken: newApiFamilyCreateAccessToken,
+  getOrCreateAccessToken: newApiFamilyGetOrCreateAccessToken,
+  fetchSupportCheckIn: newApiFamilyFetchSupportCheckIn,
+  fetchSiteStatus: newApiFamilyFetchSiteStatus,
+  extractDefaultExchangeRate: newApiFamilyExtractDefaultExchangeRate,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
+  fetchAccountQuota: newApiFamilyFetchAccountQuota,
+  fetchCheckInStatus: newApiFamilyFetchCheckInStatus,
+  fetchTodayUsage: newApiFamilyFetchTodayUsage,
+  fetchTodayIncome: newApiFamilyFetchTodayIncome,
+  fetchAccountData: newApiFamilyFetchAccountData,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/accountRefresh", () => ({
+  refreshAccountData: newApiFamilyRefreshAccountData,
+  validateAccountConnection: newApiFamilyValidateAccountConnection,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/channelManagement", () => ({
+  searchChannel: newApiFamilySearchChannel,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({
+  fetchAccountTokens: newApiFamilyFetchAccountTokens,
+  fetchAccountAvailableModels: newApiFamilyFetchAccountAvailableModels,
+  fetchUserGroups: newApiFamilyFetchUserGroups,
+  fetchSiteUserGroups: newApiFamilyFetchSiteUserGroups,
+  createApiToken: newApiFamilyCreateApiToken,
+  fetchTokenById: newApiFamilyFetchTokenById,
+  updateApiToken: newApiFamilyUpdateApiToken,
+  deleteApiToken: newApiFamilyDeleteApiToken,
+  resolveApiTokenKey: newApiFamilyResolveApiTokenKey,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/siteNotice", () => ({
+  fetchSiteNotice: newApiFamilyFetchSiteNotice,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
+  fetchModelPricing: newApiFamilyFetchModelPricing,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/redemption", () => ({
+  redeemCode: newApiFamilyRedeemCode,
 }))
 
 vi.mock("~/services/apiService/oneHub", () => ({
   fetchModelPricing: oneHubFetchModelPricing,
   fetchAccountTokens: oneHubFetchAccountTokens,
-  // Intentionally omit fetchUserInfo so getApiFunc falls back to common
+  // Intentionally omit fetchUserInfo so getApiFunc falls back to the default bootstrap implementation.
 }))
 
 vi.mock("~/services/apiService/aihubmix", () => ({
@@ -101,8 +184,8 @@ describe("apiService index wrapper", () => {
     vi.clearAllMocks()
   })
 
-  it("should call common implementation by default when no site override provided", async () => {
-    commonFetchUserInfo.mockResolvedValue({} as any)
+  it("should call New API-family bootstrap implementation by default when no site override provided", async () => {
+    newApiFamilyFetchUserInfo.mockResolvedValue({} as any)
 
     const request = {
       baseUrl: "https://example.com",
@@ -111,8 +194,8 @@ describe("apiService index wrapper", () => {
 
     await (getApiService(undefined).fetchUserInfo as any)(request)
 
-    expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
-    expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
+    expect(newApiFamilyFetchUserInfo).toHaveBeenCalledTimes(1)
+    expect(newApiFamilyFetchUserInfo).toHaveBeenCalledWith(request)
   })
 
   it("should use override module when selecting a site-scoped api instance", async () => {
@@ -158,7 +241,7 @@ describe("apiService index wrapper", () => {
   })
 
   it("should ignore prototype-inherited siteType when detecting override sites", async () => {
-    commonFetchUserInfo.mockResolvedValue({} as any)
+    newApiFamilyFetchUserInfo.mockResolvedValue({} as any)
 
     const request = Object.assign(
       Object.create({ siteType: SITE_TYPES.ONE_HUB }),
@@ -170,12 +253,12 @@ describe("apiService index wrapper", () => {
 
     await (getApiService(undefined).fetchUserInfo as any)(request)
 
-    expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
-    expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
+    expect(newApiFamilyFetchUserInfo).toHaveBeenCalledTimes(1)
+    expect(newApiFamilyFetchUserInfo).toHaveBeenCalledWith(request)
   })
 
   it("should ignore non-site trailing selector values", async () => {
-    commonFetchUserInfo.mockResolvedValue({} as any)
+    newApiFamilyFetchUserInfo.mockResolvedValue({} as any)
 
     const request = {
       baseUrl: "https://example.com",
@@ -184,8 +267,8 @@ describe("apiService index wrapper", () => {
 
     await (getApiService("toString").fetchUserInfo as any)(request)
 
-    expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
-    expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
+    expect(newApiFamilyFetchUserInfo).toHaveBeenCalledTimes(1)
+    expect(newApiFamilyFetchUserInfo).toHaveBeenCalledWith(request)
   })
 
   it("should respect an explicit trailing site hint when using the exported wrapper", async () => {
@@ -204,8 +287,8 @@ describe("apiService index wrapper", () => {
     expect(oneHubFetchModelPricing).toHaveBeenCalledWith(request)
   })
 
-  it("should fall back to common implementation when override module does not implement function", async () => {
-    commonFetchUserInfo.mockResolvedValue({} as any)
+  it("should fall back to New API-family bootstrap implementation when override module does not implement function", async () => {
+    newApiFamilyFetchUserInfo.mockResolvedValue({} as any)
 
     const request = {
       baseUrl: "https://example.com",
@@ -214,8 +297,8 @@ describe("apiService index wrapper", () => {
 
     await (getApiService(SITE_TYPES.ONE_HUB).fetchUserInfo as any)(request)
 
-    expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
-    expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
+    expect(newApiFamilyFetchUserInfo).toHaveBeenCalledTimes(1)
+    expect(newApiFamilyFetchUserInfo).toHaveBeenCalledWith(request)
   })
 
   it("should route WONG token secret resolution through the site override", async () => {
@@ -237,7 +320,109 @@ describe("apiService index wrapper", () => {
 
     expect(wongResolveApiTokenKey).toHaveBeenCalledTimes(1)
     expect(wongResolveApiTokenKey).toHaveBeenCalledWith(request, token)
-    expect(commonResolveApiTokenKey).not.toHaveBeenCalled()
+    expect(newApiFamilyResolveApiTokenKey).not.toHaveBeenCalled()
+  })
+
+  it("should route New API-family channel calls through the explicit channel module override", async () => {
+    newApiFamilySearchChannel.mockResolvedValue({ items: [], total: 0 })
+
+    const request = {
+      baseUrl: "https://new-api.example.com",
+      auth: { authType: "access_token", userId: "1", accessToken: "token" },
+    }
+
+    await (getApiService(SITE_TYPES.NEW_API).searchChannel as any)(
+      request,
+      "https://upstream.example.com",
+    )
+    await (getApiService(SITE_TYPES.V_API).searchChannel as any)(
+      request,
+      "https://v-api-upstream.example.com",
+    )
+
+    expect(newApiFamilySearchChannel).toHaveBeenNthCalledWith(
+      1,
+      request,
+      "https://upstream.example.com",
+    )
+    expect(newApiFamilySearchChannel).toHaveBeenNthCalledWith(
+      2,
+      request,
+      "https://v-api-upstream.example.com",
+    )
+  })
+
+  it("should route New API-family account lifecycle calls through explicit lifecycle module overrides", async () => {
+    newApiFamilyFetchAccountData.mockResolvedValue({ quota: 1 })
+    newApiFamilyRefreshAccountData.mockResolvedValue({ success: true })
+    newApiFamilyValidateAccountConnection.mockResolvedValue(true)
+
+    const request = {
+      baseUrl: "https://new-api.example.com",
+      auth: { authType: "access_token", userId: "1", accessToken: "token" },
+      checkIn: { enableDetection: false, siteStatus: {} },
+      includeTodayCashflow: false,
+    }
+
+    await (getApiService(SITE_TYPES.NEW_API).fetchAccountData as any)(request)
+    await (getApiService(SITE_TYPES.V_API).refreshAccountData as any)(request)
+    await (getApiService(undefined).validateAccountConnection as any)(request)
+
+    expect(newApiFamilyFetchAccountData).toHaveBeenCalledWith(request)
+    expect(newApiFamilyRefreshAccountData).toHaveBeenCalledWith(request)
+    expect(newApiFamilyValidateAccountConnection).toHaveBeenCalledWith(request)
+  })
+
+  it("should route New API-family bootstrap calls through explicit bootstrap module overrides", async () => {
+    newApiFamilyFetchUserInfo.mockResolvedValue({ id: "1" })
+    newApiFamilyCreateAccessToken.mockResolvedValue("created-token")
+    newApiFamilyGetOrCreateAccessToken.mockResolvedValue({
+      username: "Example User",
+      access_token: "created-token",
+    })
+    newApiFamilyFetchSupportCheckIn.mockResolvedValue(true)
+
+    const request = {
+      baseUrl: "https://new-api.example.com",
+      auth: { authType: "cookie", userId: "1" },
+    }
+
+    await (getApiService(SITE_TYPES.NEW_API).fetchUserInfo as any)(request)
+    await (getApiService(SITE_TYPES.V_API).createAccessToken as any)(request)
+    await (getApiService(undefined).getOrCreateAccessToken as any)(request)
+    await (getApiService(undefined).fetchSupportCheckIn as any)(request)
+
+    expect(newApiFamilyFetchUserInfo).toHaveBeenCalledWith(request)
+    expect(newApiFamilyCreateAccessToken).toHaveBeenCalledWith(request)
+    expect(newApiFamilyGetOrCreateAccessToken).toHaveBeenCalledWith(request)
+    expect(newApiFamilyFetchSupportCheckIn).toHaveBeenCalledWith(request)
+  })
+
+  it("should route New API-family key-management calls through the explicit key module override", async () => {
+    newApiFamilyFetchAccountTokens.mockResolvedValue([])
+    newApiFamilyResolveApiTokenKey.mockResolvedValue("sk-new-api-secret")
+
+    const request = {
+      baseUrl: "https://new-api.example.com",
+      auth: { authType: "access_token", userId: "1", accessToken: "token" },
+    }
+    const token = {
+      id: 9,
+      key: "sk-abcd************wxyz",
+    }
+
+    await (getApiService(SITE_TYPES.NEW_API).fetchAccountTokens as any)(
+      request,
+      3,
+      25,
+    )
+    await (getApiService(SITE_TYPES.V_API).resolveApiTokenKey as any)(
+      request,
+      token,
+    )
+
+    expect(newApiFamilyFetchAccountTokens).toHaveBeenCalledWith(request, 3, 25)
+    expect(newApiFamilyResolveApiTokenKey).toHaveBeenCalledWith(request, token)
   })
 
   it("should route AIHubMix account token calls through the site override", async () => {
@@ -254,7 +439,7 @@ describe("apiService index wrapper", () => {
 
     expect(aihubmixFetchAccountTokens).toHaveBeenCalledTimes(1)
     expect(aihubmixFetchAccountTokens).toHaveBeenCalledWith(request)
-    expect(commonFetchAccountTokens).not.toHaveBeenCalled()
+    expect(newApiFamilyFetchAccountTokens).not.toHaveBeenCalled()
   })
 
   it("should keep account capability facts out of the legacy apiService facade", () => {
@@ -270,8 +455,41 @@ describe("apiService index wrapper", () => {
     )
   })
 
+  it("should keep key-management default implementation objects out of the legacy apiService facade", () => {
+    expect(
+      "defaultKeyManagementImplementation" in (getApiService(undefined) as any),
+    ).toBe(false)
+    expect(
+      "defaultKeyManagementImplementation" in
+        (getApiService(SITE_TYPES.NEW_API) as any),
+    ).toBe(false)
+  })
+
+  it("should keep account lifecycle default implementation objects out of the legacy apiService facade", () => {
+    expect(
+      "defaultAccountBootstrapImplementation" in getApiService(undefined),
+    ).toBe(false)
+    expect("defaultAccountDataImplementation" in getApiService(undefined)).toBe(
+      false,
+    )
+    expect(
+      "defaultAccountRefreshImplementation" in getApiService(undefined),
+    ).toBe(false)
+    expect(
+      "defaultAccountBootstrapImplementation" in
+        getApiService(SITE_TYPES.NEW_API),
+    ).toBe(false)
+    expect(
+      "defaultAccountDataImplementation" in getApiService(SITE_TYPES.NEW_API),
+    ).toBe(false)
+    expect(
+      "defaultAccountRefreshImplementation" in
+        getApiService(SITE_TYPES.NEW_API),
+    ).toBe(false)
+  })
+
   it("should not silently fall back to common for missing AIHubMix overrides", async () => {
-    commonFetchModelPricing.mockResolvedValue({} as any)
+    newApiFamilyFetchModelPricing.mockResolvedValue({} as any)
 
     const request = {
       baseUrl: "https://aihubmix.com",
@@ -284,7 +502,7 @@ describe("apiService index wrapper", () => {
       `apiService.fetchModelPricing is not implemented for ${SITE_TYPES.AIHUBMIX}`,
     )
 
-    expect(commonFetchModelPricing).not.toHaveBeenCalled()
+    expect(newApiFamilyFetchModelPricing).not.toHaveBeenCalled()
   })
 
   it("should route Sub2API fetchUserInfo through the site override", async () => {
@@ -299,7 +517,7 @@ describe("apiService index wrapper", () => {
 
     expect(sub2apiFetchUserInfo).toHaveBeenCalledTimes(1)
     expect(sub2apiFetchUserInfo).toHaveBeenCalledWith(request)
-    expect(commonFetchUserInfo).not.toHaveBeenCalled()
+    expect(newApiFamilyFetchUserInfo).not.toHaveBeenCalled()
   })
 
   it("should route Sub2API exchange-rate extraction through the site override", () => {
@@ -317,11 +535,11 @@ describe("apiService index wrapper", () => {
     expect(rate).toBe(7.2)
     expect(sub2apiExtractDefaultExchangeRate).toHaveBeenCalledTimes(1)
     expect(sub2apiExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
-    expect(commonExtractDefaultExchangeRate).not.toHaveBeenCalled()
+    expect(newApiFamilyExtractDefaultExchangeRate).not.toHaveBeenCalled()
   })
 
   it("should not silently fall back to common for missing Sub2API overrides", async () => {
-    commonFetchModelPricing.mockResolvedValue({} as any)
+    newApiFamilyFetchModelPricing.mockResolvedValue({} as any)
 
     const request = {
       baseUrl: "https://sub2.example.com",
@@ -334,6 +552,6 @@ describe("apiService index wrapper", () => {
       `apiService.fetchModelPricing is not implemented for ${SITE_TYPES.SUB2API}`,
     )
 
-    expect(commonFetchModelPricing).not.toHaveBeenCalled()
+    expect(newApiFamilyFetchModelPricing).not.toHaveBeenCalled()
   })
 })

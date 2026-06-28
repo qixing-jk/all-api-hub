@@ -9,6 +9,7 @@ import {
   requireDisplayAccountKeyManagement,
   requireDisplayAccountTokenProvisioning,
 } from "~/services/accounts/utils/apiServiceRequest"
+import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
@@ -16,7 +17,6 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,

@@ -10,14 +10,10 @@ import {
   normalizeApiTokenKeyValue,
 } from "~/services/accountTokens/apiTokenKey"
 import {
-  fetchAccountTokens,
-  fetchTokenById,
-  resolveApiTokenKey,
-} from "~/services/apiService/common"
-import {
   fetchTokenSecretKeyById,
   fetchTokenSecretKeyByIdWithMethod,
   invalidateResolvedApiTokenKeyCache,
+  resolveApiTokenKey,
   resolveApiTokenKeyWithFetcher,
   syncResolvedApiTokenKeyCache,
 } from "~/services/apiService/common/tokenKeyResolver"
@@ -120,75 +116,6 @@ describe("apiService common token APIs", () => {
     )
 
     expect(unchanged).toBe(alreadyPrefixed)
-  })
-
-  it("fetchAccountTokens trims token.key without forcing an sk- prefix (array response)", async () => {
-    mockedFetchApiData.mockResolvedValueOnce([
-      { id: 1, key: "plain-key" },
-      { id: 2, key: "sk-already" },
-      { id: 3, key: "  sk-trim  " },
-    ])
-
-    const request = {
-      baseUrl: "https://example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        userId: "1",
-        accessToken: "token",
-      },
-    }
-
-    const result = await fetchAccountTokens(request as any)
-
-    expect(mockedFetchApiData).toHaveBeenCalledTimes(1)
-    const endpoint = mockedFetchApiData.mock.calls[0][1].endpoint as string
-    expect(endpoint).toContain("/api/token/?")
-    expect(endpoint).toContain("p=0")
-    expect(endpoint).toContain("size=100")
-
-    expect(result.map((token: any) => token.key)).toEqual([
-      "plain-key",
-      "sk-already",
-      "sk-trim",
-    ])
-  })
-
-  it("fetchAccountTokens trims token.key without forcing an sk- prefix (paginated response)", async () => {
-    mockedFetchApiData.mockResolvedValueOnce({
-      items: [{ id: 1, key: "plain" }],
-    })
-
-    const request = {
-      baseUrl: "https://example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        userId: "1",
-        accessToken: "token",
-      },
-    }
-
-    const result = await fetchAccountTokens(request as any)
-    expect(result.map((token: any) => token.key)).toEqual(["plain"])
-  })
-
-  it("fetchTokenById trims token.key without forcing an sk- prefix", async () => {
-    mockedFetchApiData.mockResolvedValueOnce({ id: 99, key: "abc" })
-
-    const request = {
-      baseUrl: "https://example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        userId: "1",
-        accessToken: "token",
-      },
-    }
-
-    const result = await fetchTokenById(request as any, 99)
-
-    expect(mockedFetchApiData).toHaveBeenCalledWith(request, {
-      endpoint: "/api/token/99",
-    })
-    expect((result as any).key).toBe("abc")
   })
 
   it("resolveApiTokenKey fetches the explicit secret when inventory key is masked", async () => {

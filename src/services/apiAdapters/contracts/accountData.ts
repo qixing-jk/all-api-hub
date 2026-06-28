@@ -1,5 +1,7 @@
-import type { AccountData } from "~/services/accountData/model"
-import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
+import type {
+  AccountData,
+  ApiServiceAccountRequest,
+} from "~/services/accounts/accountDataModel"
 
 export type AccountDataRequest = ApiServiceAccountRequest
 

@@ -9,15 +9,16 @@ import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/acco
 import { AuthTypeEnum } from "~/types"
 
 const {
-  mockCreateAccountBootstrapImplementation,
+  anyrouterFetchSupportCheckIn,
   mockExtractDefaultExchangeRate,
   mockFetchCheckInSupport,
   mockFetchSiteStatus,
   mockFetchUserInfo,
   mockGetApiService,
   mockGetOrCreateAccessToken,
+  wongFetchSupportCheckIn,
 } = vi.hoisted(() => ({
-  mockCreateAccountBootstrapImplementation: vi.fn(),
+  anyrouterFetchSupportCheckIn: vi.fn(),
   mockExtractDefaultExchangeRate: vi.fn(),
   mockFetchCheckInSupport: vi.fn(),
   mockFetchSiteStatus: vi.fn(),
@@ -26,17 +27,29 @@ const {
     throw new Error("legacy apiService facade should not be used")
   }),
   mockGetOrCreateAccessToken: vi.fn(),
+  wongFetchSupportCheckIn: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/newApiFamily", () => ({
-  accountBootstrap: {
-    createAccountBootstrapImplementation:
-      mockCreateAccountBootstrapImplementation,
+vi.mock("~/services/apiService/newApiFamily/default/accountBootstrap", () => ({
+  defaultAccountBootstrapImplementation: {
+    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+    fetchSupportCheckIn: mockFetchCheckInSupport,
+    fetchSiteStatus: mockFetchSiteStatus,
+    fetchUserInfo: mockFetchUserInfo,
+    getOrCreateAccessToken: mockGetOrCreateAccessToken,
   },
 }))
 
 vi.mock("~/services/apiService", () => ({
   getApiService: mockGetApiService,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
+  fetchSupportCheckIn: anyrouterFetchSupportCheckIn,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
+  fetchSupportCheckIn: wongFetchSupportCheckIn,
 }))
 
 const request = {
@@ -52,13 +65,6 @@ const request = {
 describe("createNewApiAccountBootstrap", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockCreateAccountBootstrapImplementation.mockReturnValue({
-      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-      fetchSupportCheckIn: mockFetchCheckInSupport,
-      fetchSiteStatus: mockFetchSiteStatus,
-      fetchUserInfo: mockFetchUserInfo,
-      getOrCreateAccessToken: mockGetOrCreateAccessToken,
-    })
   })
 
   it("delegates New API-family bootstrap operations through the New API-family implementation", async () => {
@@ -98,10 +104,6 @@ describe("createNewApiAccountBootstrap", () => {
     )
     expect(accountBootstrap.extractDefaultExchangeRate(siteStatus)).toBe(7.2)
 
-    expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledWith(
-      SITE_TYPES.VELOERA,
-    )
-    expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledOnce()
     expect(mockFetchUserInfo).toHaveBeenCalledWith(request)
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith(request)
     expect(mockFetchSiteStatus).toHaveBeenCalledWith(request)
@@ -124,10 +126,25 @@ describe("createNewApiAccountBootstrap", () => {
       ),
     ).resolves.toBe("/login")
 
-    expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledWith(
-      SITE_TYPES.NEW_API,
-    )
-    expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledOnce()
     expect(mockGetApiService).not.toHaveBeenCalled()
   })
+
+  it.each([
+    [SITE_TYPES.ANYROUTER, anyrouterFetchSupportCheckIn],
+    [SITE_TYPES.WONG_GONGYI, wongFetchSupportCheckIn],
+  ])(
+    "uses the adapter-level support probe override for %s",
+    async (siteType, supportProbe) => {
+      supportProbe.mockResolvedValueOnce(true)
+
+      const accountBootstrap = createNewApiAccountBootstrap(siteType)
+
+      await expect(accountBootstrap.fetchCheckInSupport(request)).resolves.toBe(
+        true,
+      )
+
+      expect(supportProbe).toHaveBeenCalledWith(request)
+      expect(mockFetchCheckInSupport).not.toHaveBeenCalled()
+    },
+  )
 })

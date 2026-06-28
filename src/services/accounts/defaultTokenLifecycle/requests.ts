@@ -1,4 +1,4 @@
-import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
+import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 
 export const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
 export const DEFAULT_USER_GROUP_NAME = "default"

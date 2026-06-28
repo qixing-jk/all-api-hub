@@ -7,12 +7,12 @@ import {
 import { buildCompatUserIdHeaders } from "~/services/apiService/common/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { ApiError } from "~/services/apiService/common/errors"
-import type {
-  CheckinRecord,
-  CheckInStatus,
-  NewApiCheckinResponse,
-} from "~/services/apiService/common/type"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import type {
+  NewApiCheckInRecord,
+  NewApiCheckInResponse,
+  NewApiCheckInStatus,
+} from "~/services/apiService/newApiFamily/checkInDto"
 import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
@@ -216,7 +216,7 @@ function resolveCheckInUrl(account: SiteAccount): Promise<string> {
  * can fall back to Turnstile/manual-required handling.
  */
 function resolveStandardCheckinResult(params: {
-  payload: NewApiCheckinResponse | undefined
+  payload: NewApiCheckInResponse | undefined
   message?: string
 }): CheckinResult | null {
   const payload = params.payload
@@ -261,7 +261,7 @@ async function fetchCheckedInTodayStatus(
     .slice(0, CHECKIN_STATUS_MONTH_FORMAT_LENGTH)
 
   try {
-    const checkInData = await fetchApiData<CheckInStatus>(
+    const checkInData = await fetchApiData<NewApiCheckInStatus>(
       {
         baseUrl: account.site_url,
         accountId: account.id,
@@ -409,7 +409,7 @@ async function maybeRetryTurnstileInIncognito(params: {
   }
 
   const incognitoPayload = incognitoAssisted.data as
-    | NewApiCheckinResponse
+    | NewApiCheckInResponse
     | undefined
   const incognitoMessage = normalizeCheckinMessage(incognitoPayload?.message)
 
@@ -645,7 +645,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
 
         if (normalAssisted) {
           const normalPayload = normalAssisted.data as
-            | NewApiCheckinResponse
+            | NewApiCheckInResponse
             | undefined
           const normalMessage = normalizeCheckinMessage(normalPayload?.message)
           const normalResult = resolveStandardCheckinResult({
@@ -720,7 +720,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
     }
   }
 
-  const assistedPayload = assisted.data as NewApiCheckinResponse | undefined
+  const assistedPayload = assisted.data as NewApiCheckInResponse | undefined
   const assistedMessage = normalizeCheckinMessage(assistedPayload?.message)
 
   const assistedResult = resolveStandardCheckinResult({
@@ -769,10 +769,10 @@ async function resolveTurnstileAssistedCheckinResult(params: {
  */
 async function performCheckin(
   account: SiteAccount,
-): Promise<NewApiCheckinResponse> {
+): Promise<NewApiCheckInResponse> {
   const { site_url, account_info } = account
 
-  return await fetchApi<CheckinRecord>(
+  return await fetchApi<NewApiCheckInRecord>(
     {
       baseUrl: site_url,
       accountId: account.id,

@@ -1,4 +1,3 @@
-import type { AccountSiteType } from "~/constants/siteType"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
@@ -9,7 +8,7 @@ import {
   type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 
-const defaultTokenProvisioningImplementation: TokenProvisioningCapability = {
+export const defaultTokenProvisioning: TokenProvisioningCapability = {
   isInventoryTokenUsable: () => true,
   resolveDefaultTokenCreation: ({ defaultTokenData }) => ({
     kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
@@ -39,19 +38,3 @@ const defaultTokenProvisioningImplementation: TokenProvisioningCapability = {
     kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
   }),
 }
-
-/**
- * Create token-provisioning policy facts bound to a New API-family site type.
- */
-export const createTokenProvisioningImplementation = (
-  _siteType: AccountSiteType,
-): TokenProvisioningCapability => ({
-  isInventoryTokenUsable: (params) =>
-    defaultTokenProvisioningImplementation.isInventoryTokenUsable(params),
-  resolveDefaultTokenCreation: (request) =>
-    defaultTokenProvisioningImplementation.resolveDefaultTokenCreation(request),
-  classifyCreatedToken: (params) =>
-    defaultTokenProvisioningImplementation.classifyCreatedToken(params),
-  getRepairPolicy: () =>
-    defaultTokenProvisioningImplementation.getRepairPolicy(),
-})

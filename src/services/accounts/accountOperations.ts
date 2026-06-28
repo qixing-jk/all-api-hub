@@ -48,6 +48,7 @@ import {
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
+import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import {
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
@@ -62,7 +63,6 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
-import type { CreateTokenRequest } from "~/services/tokenProvisioning/model"
 import {
   ApiToken,
   AuthTypeEnum,

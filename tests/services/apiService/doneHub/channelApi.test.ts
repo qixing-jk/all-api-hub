@@ -67,6 +67,9 @@ vi.mock("~/services/apiService/common/utils", () => ({
 
 vi.mock("~/services/apiService/common", () => ({
   determineHealthStatus: mockDetermineHealthStatus,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchAccountQuota: mockFetchAccountQuota,
   fetchCheckInStatus: mockFetchCheckInStatus,
   fetchTodayIncome: mockFetchTodayIncome,
@@ -923,7 +926,7 @@ describe("apiService doneHub channel APIs", () => {
     ])
   })
 
-  it("fetchTodayUsage should delegate to common with DoneHub log query overrides", async () => {
+  it("fetchTodayUsage should delegate to the New API-family helper with DoneHub log query overrides", async () => {
     const request = {
       baseUrl: "https://example.com",
       auth: {
@@ -965,7 +968,7 @@ describe("apiService doneHub channel APIs", () => {
     )
   })
 
-  it("fetchTodayIncome should delegate to common with DoneHub log query overrides", async () => {
+  it("fetchTodayIncome should delegate to the New API-family helper with DoneHub log query overrides", async () => {
     const request = {
       baseUrl: "https://example.com",
       auth: {

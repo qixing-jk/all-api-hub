@@ -13,12 +13,14 @@ const {
   mockAihubmixFetchAccountTokens,
   mockAihubmixResolveApiTokenKey,
   mockAihubmixUpdateApiToken,
-  mockCreateKeyManagementImplementation,
   mockCreateApiToken,
   mockDeleteApiToken,
   mockFetchAccountAvailableModels,
   mockFetchAccountTokens,
   mockFetchUserGroups,
+  mockOneHubFetchAccountAvailableModels,
+  mockOneHubFetchAccountTokens,
+  mockOneHubFetchUserGroups,
   mockResolveApiTokenKey,
   mockSub2ApiCreateApiToken,
   mockSub2ApiDeleteApiToken,
@@ -28,6 +30,7 @@ const {
   mockSub2ApiResolveApiTokenKey,
   mockSub2ApiUpdateApiToken,
   mockUpdateApiToken,
+  mockWongResolveApiTokenKey,
 } = vi.hoisted(() => ({
   mockAihubmixCreateApiToken: vi.fn(),
   mockAihubmixDeleteApiToken: vi.fn(),
@@ -35,12 +38,14 @@ const {
   mockAihubmixFetchAccountTokens: vi.fn(),
   mockAihubmixResolveApiTokenKey: vi.fn(),
   mockAihubmixUpdateApiToken: vi.fn(),
-  mockCreateKeyManagementImplementation: vi.fn(),
   mockCreateApiToken: vi.fn(),
   mockDeleteApiToken: vi.fn(),
   mockFetchAccountAvailableModels: vi.fn(),
   mockFetchAccountTokens: vi.fn(),
   mockFetchUserGroups: vi.fn(),
+  mockOneHubFetchAccountAvailableModels: vi.fn(),
+  mockOneHubFetchAccountTokens: vi.fn(),
+  mockOneHubFetchUserGroups: vi.fn(),
   mockResolveApiTokenKey: vi.fn(),
   mockSub2ApiCreateApiToken: vi.fn(),
   mockSub2ApiDeleteApiToken: vi.fn(),
@@ -50,11 +55,18 @@ const {
   mockSub2ApiResolveApiTokenKey: vi.fn(),
   mockSub2ApiUpdateApiToken: vi.fn(),
   mockUpdateApiToken: vi.fn(),
+  mockWongResolveApiTokenKey: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/newApiFamily", () => ({
-  keyManagement: {
-    createKeyManagementImplementation: mockCreateKeyManagementImplementation,
+vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({
+  defaultKeyManagementImplementation: {
+    createApiToken: mockCreateApiToken,
+    deleteApiToken: mockDeleteApiToken,
+    fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+    fetchAccountTokens: mockFetchAccountTokens,
+    fetchUserGroups: mockFetchUserGroups,
+    resolveApiTokenKey: mockResolveApiTokenKey,
+    updateApiToken: mockUpdateApiToken,
   },
 }))
 
@@ -75,6 +87,16 @@ vi.mock("~/services/apiService/aihubmix", () => ({
   fetchAccountTokens: mockAihubmixFetchAccountTokens,
   resolveApiTokenKey: mockAihubmixResolveApiTokenKey,
   updateApiToken: mockAihubmixUpdateApiToken,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
+  fetchAccountAvailableModels: mockOneHubFetchAccountAvailableModels,
+  fetchAccountTokens: mockOneHubFetchAccountTokens,
+  fetchUserGroups: mockOneHubFetchUserGroups,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
+  resolveApiTokenKey: mockWongResolveApiTokenKey,
 }))
 
 const request = {
@@ -112,15 +134,6 @@ const availableModels = ["gpt-4o-mini", "claude-3-haiku"]
 describe("apiAdapter keyManagement", () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    mockCreateKeyManagementImplementation.mockReturnValue({
-      createApiToken: mockCreateApiToken,
-      deleteApiToken: mockDeleteApiToken,
-      fetchAccountAvailableModels: mockFetchAccountAvailableModels,
-      fetchAccountTokens: mockFetchAccountTokens,
-      fetchUserGroups: mockFetchUserGroups,
-      resolveApiTokenKey: mockResolveApiTokenKey,
-      updateApiToken: mockUpdateApiToken,
-    })
   })
 
   it("delegates New API-family key operations through the New API-family implementation", async () => {
@@ -133,7 +146,7 @@ describe("apiAdapter keyManagement", () => {
     mockFetchUserGroups.mockResolvedValueOnce(userGroups)
     mockFetchAccountAvailableModels.mockResolvedValueOnce(availableModels)
 
-    const keyManagement = createNewApiKeyManagement(SITE_TYPES.ONE_HUB)
+    const keyManagement = createNewApiKeyManagement(SITE_TYPES.NEW_API)
 
     await expect(
       keyManagement.fetchTokens(request, { page: 2, size: 25 }),
@@ -161,9 +174,6 @@ describe("apiAdapter keyManagement", () => {
       availableModels,
     )
 
-    expect(mockCreateKeyManagementImplementation).toHaveBeenCalledWith(
-      SITE_TYPES.ONE_HUB,
-    )
     expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, 2, 25)
     expect(mockCreateApiToken).toHaveBeenCalledWith(request, tokenData)
     expect(mockUpdateApiToken).toHaveBeenCalledWith(
@@ -175,6 +185,45 @@ describe("apiAdapter keyManagement", () => {
     expect(mockDeleteApiToken).toHaveBeenCalledWith(request, token.id)
     expect(mockFetchUserGroups).toHaveBeenCalledWith(request)
     expect(mockFetchAccountAvailableModels).toHaveBeenCalledWith(request)
+  })
+
+  it("uses OneHub-family key inventory overrides at the adapter layer", async () => {
+    const expectedTokens = [token]
+    mockOneHubFetchAccountTokens.mockResolvedValueOnce(expectedTokens)
+    mockOneHubFetchUserGroups.mockResolvedValueOnce(userGroups)
+    mockOneHubFetchAccountAvailableModels.mockResolvedValueOnce(availableModels)
+
+    const keyManagement = createNewApiKeyManagement(SITE_TYPES.ONE_HUB)
+
+    await expect(
+      keyManagement.fetchTokens(request, { page: 2, size: 25 }),
+    ).resolves.toBe(expectedTokens)
+    await expect(keyManagement.userGroups?.fetch(request)).resolves.toBe(
+      userGroups,
+    )
+    await expect(keyManagement.fetchAvailableModels(request)).resolves.toBe(
+      availableModels,
+    )
+
+    expect(mockOneHubFetchAccountTokens).toHaveBeenCalledWith(request, 2, 25)
+    expect(mockOneHubFetchUserGroups).toHaveBeenCalledWith(request)
+    expect(mockOneHubFetchAccountAvailableModels).toHaveBeenCalledWith(request)
+    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+    expect(mockFetchUserGroups).not.toHaveBeenCalled()
+    expect(mockFetchAccountAvailableModels).not.toHaveBeenCalled()
+  })
+
+  it("uses WONG token-key resolution override at the adapter layer", async () => {
+    mockWongResolveApiTokenKey.mockResolvedValueOnce("sk-wong-secret")
+
+    const keyManagement = createNewApiKeyManagement(SITE_TYPES.WONG_GONGYI)
+
+    await expect(
+      keyManagement.resolveTokenKey({ request, token }),
+    ).resolves.toBe("sk-wong-secret")
+
+    expect(mockWongResolveApiTokenKey).toHaveBeenCalledWith(request, token)
+    expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
   })
 
   it("propagates New API-family key lifecycle errors from the implementation Module", async () => {

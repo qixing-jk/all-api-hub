@@ -1,8 +1,24 @@
-import type { AccountSiteType } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { accountBootstrap } from "~/services/apiService/newApiFamily"
+import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import * as anyrouter from "~/services/apiService/newApiFamily/variants/anyrouter"
+import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
 import { resolveStaticAccountRoutePath } from "../accountRoutes"
+
+type AccountBootstrapImplementation =
+  typeof accountBootstrap.defaultAccountBootstrapImplementation
+
+const accountBootstrapOverrides: Partial<
+  Record<AccountSiteType, Partial<AccountBootstrapImplementation>>
+> = {
+  [SITE_TYPES.ANYROUTER]: {
+    fetchSupportCheckIn: anyrouter.fetchSupportCheckIn,
+  },
+  [SITE_TYPES.WONG_GONGYI]: {
+    fetchSupportCheckIn: wong.fetchSupportCheckIn,
+  },
+}
 
 /**
  * Create account-bootstrap operations bound to the New API-family site type.
@@ -10,8 +26,10 @@ import { resolveStaticAccountRoutePath } from "../accountRoutes"
 export function createNewApiAccountBootstrap(
   siteType: AccountSiteType,
 ): AccountBootstrapCapability {
-  const implementation =
-    accountBootstrap.createAccountBootstrapImplementation(siteType)
+  const implementation = {
+    ...accountBootstrap.defaultAccountBootstrapImplementation,
+    ...accountBootstrapOverrides[siteType],
+  }
 
   return {
     fetchUserInfo: (request) => implementation.fetchUserInfo(request),
