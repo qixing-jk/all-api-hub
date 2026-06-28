@@ -14,7 +14,7 @@ import {
   updateChannelModelMapping,
   updateChannelModels,
 } from "~/services/apiService/doneHub"
-import { AuthTypeEnum } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
@@ -81,7 +81,11 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
           isCheckedInToday: !canCheckIn,
           lastDetectedAt: Date.now(),
         }
-      : checkIn.siteStatus,
+      : {
+          ...(checkIn.siteStatus ?? {}),
+          isCheckedInToday: checkIn.siteStatus?.isCheckedInToday,
+          lastDetectedAt: checkIn.siteStatus?.lastDetectedAt,
+        },
 }))
 
 vi.mock("~/utils/i18n/core", () => ({
@@ -1042,5 +1046,36 @@ describe("apiService doneHub channel APIs", () => {
         today_income: 0,
       },
     })
+  })
+
+  it("refreshAccountData should map refresh failures to health status", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+      checkIn: {
+        enableDetection: false,
+        siteStatus: {},
+      },
+    }
+
+    const error = new Error("quota unavailable")
+    mockFetchAccountQuota.mockRejectedValueOnce(error)
+    mockDetermineHealthStatus.mockReturnValueOnce({
+      status: SiteHealthStatus.Error,
+      message: "quota unavailable",
+    })
+
+    await expect(refreshAccountData(request as any)).resolves.toEqual({
+      success: false,
+      healthStatus: {
+        status: SiteHealthStatus.Error,
+        message: "quota unavailable",
+      },
+    })
+    expect(mockDetermineHealthStatus).toHaveBeenCalledWith(error)
   })
 })

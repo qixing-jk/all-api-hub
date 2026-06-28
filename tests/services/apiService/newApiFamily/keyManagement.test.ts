@@ -149,6 +149,20 @@ describe("newApiFamily keyManagement", () => {
     )
   })
 
+  it("fetchAccountTokens does not sync cache when the paginated metadata does not match the request", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      items: [{ id: 3, key: "  sk-trim  " }],
+      page: 0,
+      page_size: 50,
+      total: 1,
+    })
+
+    const result = await fetchAccountTokens(request)
+
+    expect(result.map((item) => item.key)).toEqual(["sk-trim"])
+    expect(mockSyncResolvedApiTokenKeyCache).not.toHaveBeenCalled()
+  })
+
   it("fetchAccountTokens returns an empty list for unexpected payloads", async () => {
     mockFetchApiData.mockResolvedValueOnce({ something: "else" })
 

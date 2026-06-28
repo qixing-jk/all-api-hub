@@ -57,7 +57,11 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
           isCheckedInToday: !canCheckIn,
           lastDetectedAt: Date.now(),
         }
-      : checkIn.siteStatus,
+      : {
+          ...(checkIn.siteStatus ?? {}),
+          isCheckedInToday: checkIn.siteStatus?.isCheckedInToday,
+          lastDetectedAt: checkIn.siteStatus?.lastDetectedAt,
+        },
 }))
 
 /**

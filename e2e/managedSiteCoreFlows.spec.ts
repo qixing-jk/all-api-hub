@@ -816,11 +816,15 @@ test("edits a managed-site channel from row actions", async ({
       name: "Production OpenAI Edited",
       base_url: "https://upstream-a.example.com/v1",
       models: "gpt-4o-mini,gpt-4.1-mini",
-      groups: ["default", "vip"],
       group: "default,vip",
       priority: 3,
       weight: 2,
       status: 1,
+    }),
+  )
+  expect(updatePayloads).not.toContainEqual(
+    expect.objectContaining({
+      groups: ["default", "vip"],
     }),
   )
 })

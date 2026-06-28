@@ -60,10 +60,8 @@ describe("newApiFamily channel management APIs", () => {
     await expect(searchChannel(baseRequest, "gpt-4")).resolves.toBeNull()
   })
 
-  it("createChannel serializes groups and wraps transport failures", async () => {
-    mockFetchApi
-      .mockResolvedValueOnce({ success: true })
-      .mockRejectedValueOnce(new Error("network"))
+  it("createChannel serializes groups", async () => {
+    mockFetchApi.mockResolvedValueOnce({ success: true })
 
     await expect(
       createChannel(baseRequest, {
@@ -93,10 +91,14 @@ describe("newApiFamily channel management APIs", () => {
         },
       }),
     )
+  })
+
+  it("createChannel wraps transport failures", async () => {
+    mockFetchApi.mockRejectedValueOnce(new Error("network"))
 
     await expect(
       createChannel(baseRequest, {
-        channel: { groups: [] },
+        channel: { groups: ["default"] },
       } as any),
     ).rejects.toThrow("创建渠道失败，请检查网络或 New API 配置。")
   })

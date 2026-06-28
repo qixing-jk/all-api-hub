@@ -358,14 +358,13 @@ describe("newApiFamily accountData", () => {
   })
 
   it("fetchAccountData preserves existing siteStatus when detection is disabled", async () => {
-    mockFetchApiData
-      .mockResolvedValueOnce({ quota: 321 })
-      .mockResolvedValueOnce({ quota: 3 })
+    mockFetchApiData.mockResolvedValueOnce({ quota: 321 })
 
     const implementation = defaultAccountDataImplementation
 
     const result = await implementation.fetchAccountData({
       ...baseRequest,
+      includeTodayCashflow: false,
       checkIn: {
         enableDetection: false,
         siteStatus: {
@@ -378,7 +377,7 @@ describe("newApiFamily accountData", () => {
     expect(result).toMatchObject({
       quota: 321,
       today_income: 0,
-      today_quota_consumption: 3,
+      today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
       today_requests_count: 0,
