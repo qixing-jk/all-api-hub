@@ -70,15 +70,7 @@ Create `tests/services/apiService/newApiFamily/keyManagement.test.ts`:
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  createApiToken,
-  deleteApiToken,
-  fetchAccountAvailableModels,
-  fetchAccountTokens,
-  fetchUserGroups,
-  resolveApiTokenKey,
-  updateApiToken,
-} from "~/services/apiService/newApiFamily/keyManagement"
+import { createKeyManagementImplementation } from "~/services/apiService/newApiFamily/keyManagement"
 import { AuthTypeEnum, type ApiToken } from "~/types"
 
 const {
@@ -160,6 +152,7 @@ describe("newApiFamily keyManagement implementation", () => {
   })
 
   it("uses common-compatible helpers by default", async () => {
+    const keyManagement = createKeyManagementImplementation(SITE_TYPES.NEW_API)
     const tokens = [token]
     const groups = {
       default: { desc: "Default", ratio: 1 },
@@ -175,44 +168,23 @@ describe("newApiFamily keyManagement implementation", () => {
     commonFetchAccountAvailableModels.mockResolvedValueOnce(models)
 
     await expect(
-      fetchAccountTokens(request, {
-        siteType: SITE_TYPES.NEW_API,
-        page: 2,
-        size: 25,
-      }),
+      keyManagement.fetchAccountTokens(request, 2, 25),
     ).resolves.toBe(tokens)
     await expect(
-      createApiToken(request, {
-        siteType: SITE_TYPES.NEW_API,
-        tokenData,
-      }),
+      keyManagement.createApiToken(request, tokenData),
     ).resolves.toBe(true)
     await expect(
-      updateApiToken(request, {
-        siteType: SITE_TYPES.NEW_API,
-        tokenId: token.id,
-        tokenData,
-      }),
+      keyManagement.updateApiToken(request, token.id, tokenData),
     ).resolves.toBe(true)
     await expect(
-      resolveApiTokenKey(request, {
-        siteType: SITE_TYPES.NEW_API,
-        token,
-      }),
+      keyManagement.resolveApiTokenKey(request, token),
     ).resolves.toBe("sk-real")
     await expect(
-      deleteApiToken(request, {
-        siteType: SITE_TYPES.NEW_API,
-        tokenId: token.id,
-      }),
+      keyManagement.deleteApiToken(request, token.id),
     ).resolves.toBe(true)
+    await expect(keyManagement.fetchUserGroups(request)).resolves.toBe(groups)
     await expect(
-      fetchUserGroups(request, { siteType: SITE_TYPES.NEW_API }),
-    ).resolves.toBe(groups)
-    await expect(
-      fetchAccountAvailableModels(request, {
-        siteType: SITE_TYPES.NEW_API,
-      }),
+      keyManagement.fetchAccountAvailableModels(request),
     ).resolves.toBe(models)
 
     expect(commonFetchAccountTokens).toHaveBeenCalledWith(request, 2, 25)
@@ -229,6 +201,7 @@ describe("newApiFamily keyManagement implementation", () => {
   })
 
   it("uses OneHub-family helpers for token list, groups, and available models", async () => {
+    const keyManagement = createKeyManagementImplementation(SITE_TYPES.DONE_HUB)
     const tokens = [token]
     const groups = {
       onehub: { desc: "OneHub", ratio: 1.5 },
@@ -240,19 +213,13 @@ describe("newApiFamily keyManagement implementation", () => {
     oneHubFetchAccountAvailableModels.mockResolvedValueOnce(models)
 
     await expect(
-      fetchAccountTokens(request, {
-        siteType: SITE_TYPES.DONE_HUB,
-        page: 4,
-        size: 10,
-      }),
+      keyManagement.fetchAccountTokens(request, 4, 10),
     ).resolves.toBe(tokens)
     await expect(
-      fetchUserGroups(request, { siteType: SITE_TYPES.DONE_HUB }),
+      keyManagement.fetchUserGroups(request),
     ).resolves.toBe(groups)
     await expect(
-      fetchAccountAvailableModels(request, {
-        siteType: SITE_TYPES.DONE_HUB,
-      }),
+      keyManagement.fetchAccountAvailableModels(request),
     ).resolves.toBe(models)
 
     expect(oneHubFetchAccountTokens).toHaveBeenCalledWith(request, 4, 10)
@@ -264,20 +231,19 @@ describe("newApiFamily keyManagement implementation", () => {
   })
 
   it("uses WONG token-secret resolution while keeping other operations common-compatible", async () => {
+    const keyManagement = createKeyManagementImplementation(
+      SITE_TYPES.WONG_GONGYI,
+    )
+
     wongResolveApiTokenKey.mockResolvedValueOnce("sk-wong-secret")
     commonFetchAccountTokens.mockResolvedValueOnce([token])
 
     await expect(
-      resolveApiTokenKey(request, {
-        siteType: SITE_TYPES.WONG_GONGYI,
-        token,
-      }),
+      keyManagement.resolveApiTokenKey(request, token),
     ).resolves.toBe("sk-wong-secret")
-    await expect(
-      fetchAccountTokens(request, {
-        siteType: SITE_TYPES.WONG_GONGYI,
-      }),
-    ).resolves.toEqual([token])
+    await expect(keyManagement.fetchAccountTokens(request)).resolves.toEqual([
+      token,
+    ])
 
     expect(wongResolveApiTokenKey).toHaveBeenCalledWith(request, token)
     expect(commonResolveApiTokenKey).not.toHaveBeenCalled()
@@ -312,15 +278,6 @@ import type {
   UserGroupInfo,
 } from "~/services/apiService/common/type"
 import type { ApiToken } from "~/types"
-
-type PaginationOptions = {
-  page?: number
-  size?: number
-}
-
-type NewApiFamilySiteOptions = {
-  siteType: AccountSiteType
-}
 
 type KeyManagementImplementation = {
   fetchAccountTokens(
@@ -377,82 +334,33 @@ const keyManagementOverrides: Partial<
   },
 }
 
-function getKeyManagementImplementation(
+const getKeyManagementImplementation = (
+  siteType: AccountSiteType,
+): KeyManagementImplementation => ({
+  ...defaultKeyManagementImplementation,
+  ...keyManagementOverrides[siteType],
+})
+
+export function createKeyManagementImplementation(
   siteType: AccountSiteType,
 ): KeyManagementImplementation {
+  const implementation = getKeyManagementImplementation(siteType)
+
   return {
-    ...defaultKeyManagementImplementation,
-    ...keyManagementOverrides[siteType],
+    fetchAccountTokens: (request, page, size) =>
+      implementation.fetchAccountTokens(request, page ?? 0, size ?? 100),
+    createApiToken: (request, tokenData) =>
+      implementation.createApiToken(request, tokenData),
+    updateApiToken: (request, tokenId, tokenData) =>
+      implementation.updateApiToken(request, tokenId, tokenData),
+    resolveApiTokenKey: (request, token) =>
+      implementation.resolveApiTokenKey(request, token),
+    deleteApiToken: (request, tokenId) =>
+      implementation.deleteApiToken(request, tokenId),
+    fetchUserGroups: (request) => implementation.fetchUserGroups(request),
+    fetchAccountAvailableModels: (request) =>
+      implementation.fetchAccountAvailableModels(request),
   }
-}
-
-export async function fetchAccountTokens(
-  request: ApiServiceRequest,
-  options: NewApiFamilySiteOptions & PaginationOptions,
-): Promise<ApiToken[]> {
-  const implementation = getKeyManagementImplementation(options.siteType)
-  return implementation.fetchAccountTokens(
-    request,
-    options.page ?? 0,
-    options.size ?? 100,
-  )
-}
-
-export async function createApiToken(
-  request: ApiServiceRequest,
-  options: NewApiFamilySiteOptions & { tokenData: CreateTokenRequest },
-): Promise<CreateTokenResult> {
-  const implementation = getKeyManagementImplementation(options.siteType)
-  return implementation.createApiToken(request, options.tokenData)
-}
-
-export async function updateApiToken(
-  request: ApiServiceRequest,
-  options: NewApiFamilySiteOptions & {
-    tokenId: number
-    tokenData: CreateTokenRequest
-  },
-): Promise<boolean | void> {
-  const implementation = getKeyManagementImplementation(options.siteType)
-  return implementation.updateApiToken(
-    request,
-    options.tokenId,
-    options.tokenData,
-  )
-}
-
-export async function resolveApiTokenKey(
-  request: ApiServiceRequest,
-  options: NewApiFamilySiteOptions & {
-    token: Pick<ApiToken, "id" | "key">
-  },
-): Promise<string> {
-  const implementation = getKeyManagementImplementation(options.siteType)
-  return implementation.resolveApiTokenKey(request, options.token)
-}
-
-export async function deleteApiToken(
-  request: ApiServiceRequest,
-  options: NewApiFamilySiteOptions & { tokenId: number },
-): Promise<boolean | void> {
-  const implementation = getKeyManagementImplementation(options.siteType)
-  return implementation.deleteApiToken(request, options.tokenId)
-}
-
-export async function fetchUserGroups(
-  request: ApiServiceRequest,
-  options: NewApiFamilySiteOptions,
-): Promise<Record<string, UserGroupInfo>> {
-  const implementation = getKeyManagementImplementation(options.siteType)
-  return implementation.fetchUserGroups(request)
-}
-
-export async function fetchAccountAvailableModels(
-  request: ApiServiceRequest,
-  options: NewApiFamilySiteOptions,
-): Promise<string[]> {
-  const implementation = getKeyManagementImplementation(options.siteType)
-  return implementation.fetchAccountAvailableModels(request)
 }
 ```
 
@@ -506,10 +414,20 @@ vi.mock("~/services/apiService", () => ({
 }))
 ```
 
-with a mock for the New API-family implementation Module:
+with a mock for the New API-family implementation Module factory:
 
 ```ts
-vi.mock("~/services/apiService/newApiFamily/keyManagement", () => ({
+vi.mock("~/services/apiService/newApiFamily", () => ({
+  keyManagement: {
+    createKeyManagementImplementation: mockCreateKeyManagementImplementation,
+  },
+}))
+```
+
+In `beforeEach`, replace the `mockGetApiService.mockReturnValue(...)` setup with:
+
+```ts
+mockCreateKeyManagementImplementation.mockReturnValue({
   createApiToken: mockCreateApiToken,
   deleteApiToken: mockDeleteApiToken,
   fetchAccountAvailableModels: mockFetchAccountAvailableModels,
@@ -517,10 +435,8 @@ vi.mock("~/services/apiService/newApiFamily/keyManagement", () => ({
   fetchUserGroups: mockFetchUserGroups,
   resolveApiTokenKey: mockResolveApiTokenKey,
   updateApiToken: mockUpdateApiToken,
-}))
+})
 ```
-
-In `beforeEach`, remove the `mockGetApiService.mockReturnValue(...)` setup.
 
 In `"delegates New API-family key operations through the site-specific apiService"`, rename the test to:
 
@@ -534,37 +450,23 @@ Remove:
 expect(mockGetApiService).not.toHaveBeenCalled()
 ```
 
-Replace the final `mockGetApiService.mock.calls` assertion with assertions that every implementation call receives the `siteType` option:
+Replace the final `mockGetApiService.mock.calls` assertion with assertions that the implementation factory receives `siteType` once and all operations call the bound implementation:
 
 ```ts
-expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, {
-  siteType: SITE_TYPES.ONE_HUB,
-  page: 2,
-  size: 25,
-})
-expect(mockCreateApiToken).toHaveBeenCalledWith(request, {
-  siteType: SITE_TYPES.ONE_HUB,
+expect(mockCreateKeyManagementImplementation).toHaveBeenCalledWith(
+  SITE_TYPES.ONE_HUB,
+)
+expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, 2, 25)
+expect(mockCreateApiToken).toHaveBeenCalledWith(request, tokenData)
+expect(mockUpdateApiToken).toHaveBeenCalledWith(
+  request,
+  token.id,
   tokenData,
-})
-expect(mockUpdateApiToken).toHaveBeenCalledWith(request, {
-  siteType: SITE_TYPES.ONE_HUB,
-  tokenId: token.id,
-  tokenData,
-})
-expect(mockResolveApiTokenKey).toHaveBeenCalledWith(request, {
-  siteType: SITE_TYPES.ONE_HUB,
-  token,
-})
-expect(mockDeleteApiToken).toHaveBeenCalledWith(request, {
-  siteType: SITE_TYPES.ONE_HUB,
-  tokenId: token.id,
-})
-expect(mockFetchUserGroups).toHaveBeenCalledWith(request, {
-  siteType: SITE_TYPES.ONE_HUB,
-})
-expect(mockFetchAccountAvailableModels).toHaveBeenCalledWith(request, {
-  siteType: SITE_TYPES.ONE_HUB,
-})
+)
+expect(mockResolveApiTokenKey).toHaveBeenCalledWith(request, token)
+expect(mockDeleteApiToken).toHaveBeenCalledWith(request, token.id)
+expect(mockFetchUserGroups).toHaveBeenCalledWith(request)
+expect(mockFetchAccountAvailableModels).toHaveBeenCalledWith(request)
 ```
 
 In `"propagates New API-family key lifecycle errors from the site-specific apiService"`, rename the test to:
@@ -579,14 +481,7 @@ Replace:
 expect(mockDeleteApiToken).toHaveBeenCalledWith(request, token.id)
 ```
 
-with:
-
-```ts
-expect(mockDeleteApiToken).toHaveBeenCalledWith(request, {
-  siteType: SITE_TYPES.ONE_HUB,
-  tokenId: token.id,
-})
-```
+with the same assertion, because the bound implementation receives only the business arguments after `siteType` is selected by the factory.
 
 - [ ] **Step 2: Run adapter key-management tests and verify the expected failure**
 
@@ -596,7 +491,7 @@ Run:
 pnpm vitest run tests/services/apiAdapters/keyManagement.test.ts
 ```
 
-Expected: FAIL because `src/services/apiAdapters/newApi/keyManagement.ts` still imports `getApiService(...)` and calls old argument shapes.
+Expected: FAIL because `src/services/apiAdapters/newApi/keyManagement.ts` still imports `getApiService(...)` instead of creating a bound New API-family key-management implementation.
 
 - [ ] **Step 3: Rewire the New API adapter implementation**
 
@@ -611,15 +506,14 @@ import { getApiService } from "~/services/apiService"
 with:
 
 ```ts
-import {
-  createApiToken,
-  deleteApiToken,
-  fetchAccountAvailableModels,
-  fetchAccountTokens,
-  fetchUserGroups,
-  resolveApiTokenKey,
-  updateApiToken,
-} from "~/services/apiService/newApiFamily/keyManagement"
+import { keyManagement } from "~/services/apiService/newApiFamily"
+```
+
+Create the bound implementation at the start of `createNewApiKeyManagement(...)`:
+
+```ts
+const implementation =
+  keyManagement.createKeyManagementImplementation(siteType)
 ```
 
 Replace the `return` object in `createNewApiKeyManagement(...)` with:
@@ -627,23 +521,19 @@ Replace the `return` object in `createNewApiKeyManagement(...)` with:
 ```ts
   return {
     fetchTokens: (request, options) =>
-      fetchAccountTokens(request, {
-        siteType,
-        page: options?.page,
-        size: options?.size,
-      }),
+      implementation.fetchAccountTokens(request, options?.page, options?.size),
     createToken: (request, tokenData) =>
-      createApiToken(request, { siteType, tokenData }),
+      implementation.createApiToken(request, tokenData),
     updateToken: ({ request, tokenId, tokenData }) =>
-      updateApiToken(request, { siteType, tokenId, tokenData }),
+      implementation.updateApiToken(request, tokenId, tokenData),
     resolveTokenKey: ({ request, token }) =>
-      resolveApiTokenKey(request, { siteType, token }),
+      implementation.resolveApiTokenKey(request, token),
     deleteToken: ({ request, tokenId }) =>
-      deleteApiToken(request, { siteType, tokenId }),
+      implementation.deleteApiToken(request, tokenId),
     fetchAvailableModels: (request) =>
-      fetchAccountAvailableModels(request, { siteType }),
+      implementation.fetchAccountAvailableModels(request),
     userGroups: {
-      fetch: (request) => fetchUserGroups(request, { siteType }),
+      fetch: (request) => implementation.fetchUserGroups(request),
     },
   }
 ```
@@ -777,7 +667,8 @@ Skip this commit if Step 2 made no changes.
 Run:
 
 ```powershell
-rg -n "getApiService|~/services/apiService\"|~/services/apiService'" src/services/apiAdapters/newApi/keyManagement.ts
+rg -n "getApiService" src/services/apiAdapters/newApi/keyManagement.ts
+rg -nF 'from "~/services/apiService"' src/services/apiAdapters/newApi/keyManagement.ts
 ```
 
 Expected: no output.

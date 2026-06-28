@@ -30,15 +30,19 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({
-    fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-    createApiToken: (...args: any[]) => createApiTokenMock(...args),
-    fetchAccountAvailableModels: (...args: any[]) =>
-      fetchAccountAvailableModelsMock(...args),
-    fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
-    updateApiToken: vi.fn(async () => true),
-  }),
+vi.mock("~/services/apiService/newApiFamily", () => ({
+  keyManagement: {
+    createKeyManagementImplementation: () => ({
+      fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+      createApiToken: (...args: any[]) => createApiTokenMock(...args),
+      updateApiToken: vi.fn(async () => true),
+      resolveApiTokenKey: vi.fn(),
+      deleteApiToken: vi.fn(),
+      fetchAccountAvailableModels: (...args: any[]) =>
+        fetchAccountAvailableModelsMock(...args),
+      fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
+    }),
+  },
 }))
 
 vi.mock("~/services/models/utils/modelProviders", async (importOriginal) => {
