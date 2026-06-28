@@ -257,34 +257,17 @@ describe("apiService index wrapper", () => {
     expect(commonFetchAccountTokens).not.toHaveBeenCalled()
   })
 
-  it("should expose default capabilities for common-compatible sites", () => {
-    expect(getApiService(undefined).capabilities).toEqual({
-      keyManagement: true,
-      modelPricing: true,
-      siteAnnouncements: true,
-    })
-
-    expect(getApiService(SITE_TYPES.ONE_HUB).capabilities).toEqual({
-      keyManagement: true,
-      modelPricing: true,
-      siteAnnouncements: true,
-    })
-  })
-
-  it("should expose Sub2API capability overrides", () => {
-    expect(getApiService(SITE_TYPES.SUB2API).capabilities).toEqual({
-      keyManagement: true,
-      modelPricing: false,
-      siteAnnouncements: true,
-    })
-  })
-
-  it("should expose AIHubMix default apiService capabilities", () => {
-    expect(getApiService(SITE_TYPES.AIHUBMIX).capabilities).toEqual({
-      keyManagement: true,
-      modelPricing: true,
-      siteAnnouncements: true,
-    })
+  it("should keep account capability facts out of the legacy apiService facade", () => {
+    expect((getApiService(undefined) as any).capabilities).toBeUndefined()
+    expect(
+      (getApiService(SITE_TYPES.ONE_HUB) as any).capabilities,
+    ).toBeUndefined()
+    expect(
+      (getApiService(SITE_TYPES.SUB2API) as any).capabilities,
+    ).toBeUndefined()
+    expect(
+      (getApiService(SITE_TYPES.AIHUBMIX) as any).capabilities,
+    ).toBeUndefined()
   })
 
   it("should not silently fall back to common for missing AIHubMix overrides", async () => {

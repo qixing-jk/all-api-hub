@@ -38,35 +38,6 @@ const strictOverrideSites = new Set<ApiOverrideSite>([
   SITE_TYPES.SUB2API,
 ])
 
-type ApiServiceCapabilities = {
-  keyManagement: boolean
-  modelPricing: boolean
-  siteAnnouncements: boolean
-}
-
-type ApiServiceCapabilityOverrides = Partial<ApiServiceCapabilities>
-
-const defaultApiServiceCapabilities: ApiServiceCapabilities = {
-  keyManagement: true,
-  modelPricing: true,
-  siteAnnouncements: true,
-}
-
-const siteCapabilityOverrides: Partial<
-  Record<ApiOverrideSite, ApiServiceCapabilityOverrides>
-> = {
-  [SITE_TYPES.SUB2API]: {
-    modelPricing: false,
-  },
-}
-
-const getApiServiceCapabilities = (
-  site: ApiOverrideSite | null,
-): ApiServiceCapabilities => ({
-  ...defaultApiServiceCapabilities,
-  ...(site ? siteCapabilityOverrides[site] : undefined),
-})
-
 const hasOwnOverrideSite = (value: unknown): value is ApiOverrideSite =>
   typeof value === "string" &&
   Object.prototype.hasOwnProperty.call(siteOverrideMap, value)
@@ -161,8 +132,6 @@ const createSiteScopedFunction = <T extends (...args: any[]) => any>(
 const apiForSite = (site: ApiOverrideSite) => {
   const scopedAPI = {} as {
     [K in keyof typeof commonAPI]: (typeof commonAPI)[K]
-  } & {
-    capabilities: ApiServiceCapabilities
   }
 
   for (const key in commonAPI) {
@@ -178,8 +147,6 @@ const apiForSite = (site: ApiOverrideSite) => {
     }
   }
 
-  scopedAPI.capabilities = getApiServiceCapabilities(site)
-
   return scopedAPI
 }
 
@@ -194,8 +161,6 @@ export const getApiService = (site: unknown) =>
 // 创建导出对象
 const exportedAPI = {} as {
   [K in keyof typeof commonAPI]: WithSiteHint<(typeof commonAPI)[K]>
-} & {
-  capabilities: ApiServiceCapabilities
 }
 
 // 遍历 commonAPI 并包装每个函数
@@ -210,5 +175,3 @@ for (const key in commonAPI) {
     ;(exportedAPI as any)[key] = func
   }
 }
-
-exportedAPI.capabilities = getApiServiceCapabilities(null)
