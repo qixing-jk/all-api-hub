@@ -13,6 +13,13 @@ import * as wongAPI from "./wong"
 
 type ApiOverrideModule = Record<string, unknown>
 
+/**
+ * Legacy compatibility facade for managed-site and unmigrated flat API callers.
+ *
+ * Account-site capabilities are owned by the site-adapter seam and the
+ * newApiFamily implementation modules. Do not add new account capability facts
+ * here or route migrated adapters back through getApiService.
+ */
 // 映射表,只放需要覆盖的站点
 const siteOverrideMap = {
   [SITE_TYPES.ONE_HUB]: [oneHubAPI],

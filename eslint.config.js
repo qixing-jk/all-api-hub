@@ -74,6 +74,12 @@ const accountSiteMainlineApiServiceFacadeImportPattern = {
   message:
     "Account-site product flows must use ~/services/apiAdapters or account workflow helpers instead of the legacy apiService facade.",
 }
+const newApiAdapterLegacyApiServiceImportPattern = {
+  regex:
+    "^(?:~/services/apiService|(?:\\.\\./)+(?:services/)?apiService)(?:$|/(?!newApiFamily(?:$|/)).*)",
+  message:
+    "New API adapters may import ~/services/apiService/newApiFamily only. Do not depend on the legacy apiService facade or common/backend implementation modules.",
+}
 
 export default defineConfig([
   {
@@ -258,6 +264,22 @@ export default defineConfig([
     files: ["src/entrypoints/options/**/*.{js,cjs,mjs,jsx,ts,tsx}"],
     rules: {
       "no-restricted-imports": "off",
+    },
+  },
+  // Guardrails: migrated New API adapters depend on the newApiFamily bridge,
+  // not the legacy dynamic apiService facade or common implementation modules.
+  {
+    files: ["src/services/apiAdapters/newApi/**/*.{js,cjs,mjs,jsx,ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            optionsPageImportRestrictionPattern,
+            newApiAdapterLegacyApiServiceImportPattern,
+          ],
+        },
+      ],
     },
   },
   // Guardrails: keep direct backend-specific apiService imports behind adapters
