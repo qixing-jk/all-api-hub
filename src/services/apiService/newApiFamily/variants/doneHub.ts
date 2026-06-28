@@ -9,6 +9,7 @@ import {
   fetchCheckInStatus,
   fetchTodayIncome as fetchTodayIncomeFromNewApiFamily,
   fetchTodayUsage as fetchTodayUsageFromNewApiFamily,
+  resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import type { TodayLogQueryConfig } from "~/services/history/usageHistory/usageLogModel"
 import { CheckInConfig, SiteHealthStatus } from "~/types"
@@ -72,26 +73,13 @@ export async function fetchAccountData(
     checkInPromise,
   ])
 
-  const didDetectCheckInStatus = resolvedCheckIn?.enableDetection === true
-  const checkInDetectedAt = didDetectCheckInStatus
-    ? Date.now()
-    : resolvedCheckIn.siteStatus?.lastDetectedAt
-
   return {
     quota,
     ...todayUsage,
     ...todayIncome,
     checkIn: {
       ...resolvedCheckIn,
-      siteStatus: {
-        ...(resolvedCheckIn.siteStatus ?? {}),
-        isCheckedInToday: didDetectCheckInStatus
-          ? canCheckIn === undefined
-            ? undefined
-            : !canCheckIn
-          : resolvedCheckIn.siteStatus?.isCheckedInToday,
-        lastDetectedAt: checkInDetectedAt,
-      },
+      siteStatus: resolveCheckInSiteStatus(resolvedCheckIn, canCheckIn),
     },
   }
 }

@@ -105,6 +105,9 @@ describe("newApiFamily keyManagement", () => {
       ])
       .mockResolvedValueOnce({
         items: [{ id: 3, key: "  sk-trim  " }],
+        page: 2,
+        page_size: 10,
+        total: 21,
       })
 
     const arrayResult = await fetchAccountTokens(request)
@@ -126,10 +129,23 @@ describe("newApiFamily keyManagement", () => {
       request,
       arrayResult,
     )
-    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenNthCalledWith(
-      2,
+    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenCalledTimes(1)
+  })
+
+  it("fetchAccountTokens syncs cache for a complete first paginated inventory", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      items: [{ id: 3, key: "  sk-trim  " }],
+      page: 0,
+      page_size: 100,
+      total: 1,
+    })
+
+    const result = await fetchAccountTokens(request)
+
+    expect(result.map((item) => item.key)).toEqual(["sk-trim"])
+    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenCalledWith(
       request,
-      pageResult,
+      result,
     )
   })
 
@@ -137,7 +153,7 @@ describe("newApiFamily keyManagement", () => {
     mockFetchApiData.mockResolvedValueOnce({ something: "else" })
 
     await expect(fetchAccountTokens(request)).resolves.toEqual([])
-    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenCalledWith(request, [])
+    expect(mockSyncResolvedApiTokenKeyCache).not.toHaveBeenCalled()
   })
 
   it("fetchAccountTokens and related fetch helpers rethrow upstream failures", async () => {

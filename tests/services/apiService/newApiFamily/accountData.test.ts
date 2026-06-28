@@ -8,6 +8,7 @@ import {
   fetchCheckInStatus,
   fetchTodayIncome,
   fetchTodayUsage,
+  resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import { AuthTypeEnum } from "~/types"
@@ -433,5 +434,23 @@ describe("newApiFamily accountData", () => {
       lastDetectedAt: Date.parse("2026-03-28T12:00:00.000Z"),
     })
     vi.useRealTimers()
+  })
+
+  it("resolveCheckInSiteStatus preserves the previous status after inconclusive detection", () => {
+    expect(
+      resolveCheckInSiteStatus(
+        {
+          enableDetection: true,
+          siteStatus: {
+            isCheckedInToday: true,
+            lastDetectedAt: 1234,
+          },
+        },
+        undefined,
+      ),
+    ).toEqual({
+      isCheckedInToday: true,
+      lastDetectedAt: 1234,
+    })
   })
 })

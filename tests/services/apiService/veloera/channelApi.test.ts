@@ -50,6 +50,14 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchAccountQuota: (...args: unknown[]) => mockFetchAccountQuota(...args),
   fetchTodayIncome: (...args: unknown[]) => mockFetchTodayIncome(...args),
   fetchTodayUsage: (...args: unknown[]) => mockFetchTodayUsage(...args),
+  resolveCheckInSiteStatus: (checkIn: any, canCheckIn: boolean | undefined) =>
+    typeof canCheckIn === "boolean"
+      ? {
+          ...(checkIn.siteStatus ?? {}),
+          isCheckedInToday: !canCheckIn,
+          lastDetectedAt: Date.now(),
+        }
+      : checkIn.siteStatus,
 }))
 
 /**

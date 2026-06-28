@@ -49,6 +49,16 @@ interface KeyManagementImplementation {
   fetchAccountAvailableModels: (request: ApiServiceRequest) => Promise<string[]>
 }
 
+const isCompleteFirstTokenPage = (
+  response: PaginatedTokenResponse,
+  page: number,
+  size: number,
+) =>
+  page === 0 &&
+  response.page === page &&
+  response.page_size === size &&
+  response.total <= response.items.length
+
 /**
  * Fetch the API token list for a user and normalize multiple response shapes.
  */
@@ -80,11 +90,12 @@ export async function fetchAccountTokens(
       const normalizedTokens = (tokensData.items || []).map(
         normalizeApiTokenKey,
       )
-      syncResolvedApiTokenKeyCache(request, normalizedTokens)
+      if (isCompleteFirstTokenPage(tokensData, page, size)) {
+        syncResolvedApiTokenKeyCache(request, normalizedTokens)
+      }
       return normalizedTokens
     }
 
-    syncResolvedApiTokenKeyCache(request, [])
     logger.warn("Unexpected token response format", {
       receivedType: Array.isArray(tokensData) ? "array" : typeof tokensData,
       keys:

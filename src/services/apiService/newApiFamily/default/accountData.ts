@@ -418,6 +418,28 @@ export async function fetchTodayIncome(
   return { today_income: totalIncome }
 }
 
+export const resolveCheckInSiteStatus = (
+  checkIn: CheckInConfig,
+  canCheckIn: boolean | undefined,
+) => {
+  const didDetectCheckInStatus =
+    checkIn?.enableDetection === true && typeof canCheckIn === "boolean"
+
+  if (!didDetectCheckInStatus) {
+    return {
+      ...(checkIn.siteStatus ?? {}),
+      isCheckedInToday: checkIn.siteStatus?.isCheckedInToday,
+      lastDetectedAt: checkIn.siteStatus?.lastDetectedAt,
+    }
+  }
+
+  return {
+    ...(checkIn.siteStatus ?? {}),
+    isCheckedInToday: !canCheckIn,
+    lastDetectedAt: Date.now(),
+  }
+}
+
 /**
  * Fetch the default New API-family account snapshot.
  */
@@ -440,29 +462,13 @@ export async function fetchAccountData(
     checkInPromise,
   ])
 
-  const didDetectCheckInStatus = resolvedCheckIn?.enableDetection === true
-  const checkInDetectedAt = didDetectCheckInStatus
-    ? Date.now()
-    : resolvedCheckIn.siteStatus?.lastDetectedAt
-
   return {
     quota,
     ...todayUsage,
     ...todayIncome,
     checkIn: {
       ...resolvedCheckIn,
-      siteStatus: {
-        ...(resolvedCheckIn.siteStatus ?? {}),
-        // `canCheckIn` means "can check in today" (i.e. NOT checked-in yet).
-        // Map it into the UI-facing `isCheckedInToday` flag and keep `undefined`
-        // when upstream does not provide a reliable status.
-        isCheckedInToday: didDetectCheckInStatus
-          ? canCheckIn === undefined
-            ? undefined
-            : !canCheckIn
-          : resolvedCheckIn.siteStatus?.isCheckedInToday,
-        lastDetectedAt: checkInDetectedAt,
-      },
+      siteStatus: resolveCheckInSiteStatus(resolvedCheckIn, canCheckIn),
     },
   }
 }

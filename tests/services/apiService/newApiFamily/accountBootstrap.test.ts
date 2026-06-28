@@ -122,6 +122,21 @@ describe("newApiFamily accountBootstrap", () => {
     })
   })
 
+  it("getOrCreateAccessToken rejects blank generated tokens at the bootstrap boundary", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        id: 1,
+        username: "alice",
+        access_token: "",
+      })
+      .mockResolvedValueOnce("   ")
+
+    await expect(getOrCreateAccessToken(request)).rejects.toMatchObject({
+      name: "ApiError",
+      endpoint: "/api/user/token",
+    })
+  })
+
   it("fetchSiteStatus forces public auth and returns null on failures", async () => {
     mockFetchApiData
       .mockResolvedValueOnce({

@@ -15,6 +15,20 @@ const CHANNEL_API_BASE = "/api/channel/"
 
 const logger = createLogger("NewApiFamilyChannelManagement")
 
+const serializeChannelGroups = <T extends { groups?: string[] }>(
+  payload: T,
+) => {
+  if (!payload.groups) {
+    return payload
+  }
+
+  const { groups, ...rest } = payload
+  return {
+    ...rest,
+    group: groups.join(","),
+  }
+}
+
 /**
  * 搜索指定关键词的渠道。
  * @param request ApiServiceRequest（包含 baseUrl + 认证信息）。
@@ -79,11 +93,13 @@ export async function updateChannel(
   channelData: UpdateChannelPayload,
 ) {
   try {
+    const payload = serializeChannelGroups(channelData)
+
     return await fetchApi<void>(request, {
       endpoint: CHANNEL_API_BASE,
       options: {
         method: "PUT",
-        body: JSON.stringify(channelData),
+        body: JSON.stringify(payload),
       },
     })
   } catch (error) {

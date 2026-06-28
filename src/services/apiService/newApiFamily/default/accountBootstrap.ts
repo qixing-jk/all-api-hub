@@ -108,9 +108,22 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
 export async function createAccessToken(
   request: ApiServiceRequest,
 ): Promise<string> {
-  return await fetchApiData<string>(request, {
+  const accessToken = await fetchApiData<string>(request, {
     endpoint: "/api/user/token",
   })
+
+  const normalizedAccessToken =
+    typeof accessToken === "string" ? accessToken.trim() : ""
+
+  if (!normalizedAccessToken) {
+    throw new ApiError(
+      t("messages:errors.api.invalidResponseFormat"),
+      undefined,
+      "/api/user/token",
+    )
+  }
+
+  return normalizedAccessToken
 }
 
 /**

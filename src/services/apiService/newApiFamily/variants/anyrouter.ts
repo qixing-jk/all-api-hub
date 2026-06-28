@@ -8,6 +8,7 @@ import {
   fetchAccountQuota,
   fetchTodayIncome,
   fetchTodayUsage,
+  resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
@@ -77,26 +78,13 @@ export async function fetchAccountData(
     checkInPromise,
   ])
 
-  const didDetectCheckInStatus = checkIn?.enableDetection === true
-  const checkInDetectedAt = didDetectCheckInStatus
-    ? Date.now()
-    : checkIn.siteStatus?.lastDetectedAt
-
   return {
     quota,
     ...todayUsage,
     ...todayIncome,
     checkIn: {
       ...checkIn,
-      siteStatus: {
-        ...(checkIn.siteStatus ?? {}),
-        isCheckedInToday: didDetectCheckInStatus
-          ? canCheckIn === undefined
-            ? undefined
-            : !canCheckIn
-          : checkIn.siteStatus?.isCheckedInToday,
-        lastDetectedAt: checkInDetectedAt,
-      },
+      siteStatus: resolveCheckInSiteStatus(checkIn, canCheckIn),
     },
   }
 }

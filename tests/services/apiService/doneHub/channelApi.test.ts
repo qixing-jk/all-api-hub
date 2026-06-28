@@ -74,6 +74,14 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchCheckInStatus: mockFetchCheckInStatus,
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
+  resolveCheckInSiteStatus: (checkIn: any, canCheckIn: boolean | undefined) =>
+    typeof canCheckIn === "boolean"
+      ? {
+          ...(checkIn.siteStatus ?? {}),
+          isCheckedInToday: !canCheckIn,
+          lastDetectedAt: Date.now(),
+        }
+      : checkIn.siteStatus,
 }))
 
 vi.mock("~/utils/i18n/core", () => ({

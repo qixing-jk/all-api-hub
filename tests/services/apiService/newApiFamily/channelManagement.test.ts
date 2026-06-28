@@ -123,6 +123,24 @@ describe("newApiFamily channel management APIs", () => {
     )
   })
 
+  it("updateChannel serializes groups into the New API group field", async () => {
+    mockFetchApi.mockResolvedValueOnce({ success: true })
+
+    await updateChannel(baseRequest, {
+      id: 1,
+      name: "Updated",
+      groups: ["default", "vip"],
+    } as any)
+
+    const body = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
+    expect(body).toMatchObject({
+      id: 1,
+      name: "Updated",
+      group: "default,vip",
+    })
+    expect(body.groups).toBeUndefined()
+  })
+
   it("listAllChannels should paginate and aggregate type_counts", async () => {
     const baseUrl = "https://example.com"
     const token = "token"
