@@ -1,5 +1,11 @@
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import type {
+  AccountData,
+  RefreshAccountResult,
+  TodayIncomeData,
+  TodayUsageData,
+} from "~/services/accountData/model"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   hasUsableApiTokenKey,
@@ -11,12 +17,8 @@ import { determineHealthStatus } from "~/services/apiService/common"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type {
   AccessTokenInfo,
-  AccountData,
   ApiServiceAccountRequest,
-  RefreshAccountResult,
   SiteStatusInfo,
-  TodayIncomeData,
-  TodayUsageData,
   UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"

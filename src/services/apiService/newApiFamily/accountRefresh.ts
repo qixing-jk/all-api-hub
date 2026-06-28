@@ -1,10 +1,8 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { RefreshAccountResult } from "~/services/accountData/model"
 import * as anyrouterAccountRefresh from "~/services/apiService/anyrouter"
 import * as commonAccountRefresh from "~/services/apiService/common"
-import type {
-  ApiServiceAccountRequest,
-  RefreshAccountResult,
-} from "~/services/apiService/common/type"
+import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
 import * as doneHubAccountRefresh from "~/services/apiService/doneHub"
 import * as veloeraAccountRefresh from "~/services/apiService/veloera"
 import * as wongAccountRefresh from "~/services/apiService/wong"

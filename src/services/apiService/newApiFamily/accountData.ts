@@ -1,10 +1,8 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { AccountData } from "~/services/accountData/model"
 import * as anyrouterAccountData from "~/services/apiService/anyrouter"
 import * as commonAccountData from "~/services/apiService/common"
-import type {
-  AccountData,
-  ApiServiceAccountRequest,
-} from "~/services/apiService/common/type"
+import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
 import * as doneHubAccountData from "~/services/apiService/doneHub"
 import * as veloeraAccountData from "~/services/apiService/veloera"
 import * as wongAccountData from "~/services/apiService/wong"

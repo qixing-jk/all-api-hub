@@ -1,4 +1,4 @@
-import type { TodayUsageData } from "~/services/apiService/common/type"
+import type { TodayUsageData } from "~/services/accountData/model"
 import {
   extractDataFromApiResponseBody,
   isHttpUrl,

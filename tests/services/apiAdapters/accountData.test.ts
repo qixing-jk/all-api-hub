@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import type { AccountData } from "~/services/accountData/model"
 import { aihubmixAccountData } from "~/services/apiAdapters/aihubmix/accountData"
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/accountData"
 import { sub2ApiAccountData } from "~/services/apiAdapters/sub2api/accountData"
-import type { AccountData } from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
 
 const {

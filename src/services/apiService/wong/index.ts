@@ -6,6 +6,10 @@
  * - Check-in support and daily check-in status (GET `/api/user/checkin`).
  * - Account refresh composition while preserving common quota/usage calls.
  */
+import type {
+  AccountData,
+  RefreshAccountResult,
+} from "~/services/accountData/model"
 import {
   determineHealthStatus,
   fetchAccountQuota,
@@ -16,11 +20,7 @@ import {
   fetchTokenSecretKeyByIdWithMethod,
   resolveApiTokenKeyWithFetcher,
 } from "~/services/apiService/common/tokenKeyResolver"
-import type {
-  AccountData,
-  ApiServiceAccountRequest,
-  RefreshAccountResult,
-} from "~/services/apiService/common/type"
+import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {

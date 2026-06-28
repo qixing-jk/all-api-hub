@@ -2,6 +2,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import type { RefreshAccountResult } from "~/services/accountData/model"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   isAccountSiteProfileUrl,
@@ -12,7 +13,6 @@ import {
   collectDuplicateAccountNameKeys,
   resolveAccountDisplayName,
 } from "~/services/accounts/utils/accountDisplayName"
-import type { RefreshAccountResult } from "~/services/apiService/common/type"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,

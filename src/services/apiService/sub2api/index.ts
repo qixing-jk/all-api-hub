@@ -4,6 +4,12 @@
  * Sub2API differs from One-API/New-API backends in that authenticated endpoints
  * live under `/api/v1/*` and require a dashboard JWT.
  */
+import type {
+  AccountData,
+  RefreshAccountResult,
+  TodayIncomeData,
+  TodayUsageData,
+} from "~/services/accountData/model"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   determineHealthStatus,
@@ -13,12 +19,8 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { resolveApiTokenKeyWithFetcher } from "~/services/apiService/common/tokenKeyResolver"
 import type {
   AccessTokenInfo,
-  AccountData,
   ApiServiceAccountRequest,
-  RefreshAccountResult,
   SiteStatusInfo,
-  TodayIncomeData,
-  TodayUsageData,
   UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"

@@ -1,4 +1,11 @@
 import { UI_CONSTANTS } from "~/constants/ui"
+import type {
+  AccountData,
+  HealthCheckResult,
+  RefreshAccountResult,
+  TodayIncomeData,
+  TodayUsageData,
+} from "~/services/accountData/model"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
@@ -10,16 +17,11 @@ import {
 } from "~/services/apiService/common/tokenKeyResolver"
 import {
   AccessTokenInfo,
-  AccountData,
   ApiServiceAccountRequest,
   CheckInStatus,
-  HealthCheckResult,
   PaymentResponse,
   RedeemCodeRequest,
-  RefreshAccountResult,
   SiteStatusInfo,
-  TodayIncomeData,
-  TodayUsageData,
   UserInfo,
 } from "~/services/apiService/common/type"
 import {

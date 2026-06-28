@@ -2,14 +2,7 @@
  * API 服务 - 用于与 One API/New API 站点进行交互
  */
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import {
-  AuthTypeEnum,
-  CheckInConfig,
-  SiteHealthStatus,
-  TempWindowHealthStatusCode,
-  type AccountIdentity,
-  type Sub2ApiAuthConfig,
-} from "~/types"
+import { AuthTypeEnum, CheckInConfig, type AccountIdentity } from "~/types"
 
 // ============= 类型定义 =============
 export interface UserInfo {
@@ -21,57 +14,6 @@ export interface UserInfo {
 export interface AccessTokenInfo {
   username: string
   access_token: string
-}
-
-export interface TodayUsageData {
-  today_quota_consumption: number
-  today_prompt_tokens: number
-  today_completion_tokens: number
-  today_requests_count: number
-}
-
-export interface TodayIncomeData {
-  today_income: number
-}
-
-export type TodayStatsData = TodayUsageData & TodayIncomeData
-
-export interface AccountData extends TodayStatsData {
-  quota: number
-  /**
-   * Legacy flag indicating whether the account can be checked in today.
-   * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
-   */
-  can_check_in?: boolean
-  checkIn: CheckInConfig
-}
-
-export interface RefreshAccountResult {
-  success: boolean
-  data?: AccountData
-  healthStatus: HealthCheckResult
-  /**
-   * Optional auth/identity updates discovered during refresh.
-   *
-   * This is used by site implementations that can re-sync credentials from a
-   * browser context (e.g., Sub2API JWT stored in localStorage) without
-   * re-authenticating the user.
-   */
-  authUpdate?: {
-    accessToken?: string
-    userId?: AccountIdentity
-    username?: string
-    sub2apiAuth?: Sub2ApiAuthConfig
-  }
-}
-
-export interface HealthCheckResult {
-  status: SiteHealthStatus
-  message: string
-  /**
-   * Optional machine-readable reason code for actionable UI.
-   */
-  code?: TempWindowHealthStatusCode
 }
 
 export interface SiteStatusInfo {
