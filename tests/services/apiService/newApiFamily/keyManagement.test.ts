@@ -164,8 +164,11 @@ describe("newApiFamily keyManagement", () => {
   })
 
   it("fetchAccountTokens returns an empty list for unexpected payloads", async () => {
-    mockFetchApiData.mockResolvedValueOnce({ something: "else" })
+    mockFetchApiData
+      .mockResolvedValueOnce({ something: "else" })
+      .mockResolvedValueOnce(null)
 
+    await expect(fetchAccountTokens(request)).resolves.toEqual([])
     await expect(fetchAccountTokens(request)).resolves.toEqual([])
     expect(mockSyncResolvedApiTokenKeyCache).not.toHaveBeenCalled()
   })

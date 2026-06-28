@@ -191,6 +191,19 @@ describe("newApiFamily accountData", () => {
     })
   })
 
+  it("fetchTodayUsage treats non-numeric stat quota as zero", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      quota: "not-a-number",
+    })
+
+    await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
+      today_quota_consumption: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 0,
+    })
+  })
+
   it("fetchTodayUsage supports overridden log query params on the fast path", async () => {
     mockFetchApiData.mockResolvedValueOnce({
       quota: 60,
@@ -256,6 +269,41 @@ describe("newApiFamily accountData", () => {
         maxPages: 2,
       },
     )
+  })
+
+  it("fetchTodayUsage aggregates legacy array log responses with extra query params", async () => {
+    mockFetchApiData
+      .mockRejectedValueOnce(new Error("stat unavailable"))
+      .mockResolvedValueOnce([
+        { quota: 10, prompt_tokens: 2, completion_tokens: 3 },
+      ])
+
+    await expect(
+      fetchTodayUsage(baseRequest, {
+        extraParams: {
+          source: "admin",
+        },
+      }),
+    ).resolves.toEqual({
+      today_quota_consumption: 10,
+      today_prompt_tokens: 2,
+      today_completion_tokens: 3,
+      today_requests_count: 1,
+    })
+
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
+      endpoint: `/api/log/self?${new URLSearchParams({
+        p: "1",
+        page_size: "2",
+        token_name: "",
+        model_name: "",
+        start_timestamp: "111",
+        end_timestamp: "222",
+        type: String(LogType.Consume),
+        group: "",
+        source: "admin",
+      }).toString()}`,
+    })
   })
 
   it("fetchTodayIncome short-circuits when cashflow collection is disabled", async () => {
