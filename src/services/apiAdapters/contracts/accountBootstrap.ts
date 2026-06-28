@@ -3,7 +3,7 @@ import type {
   AccessTokenInfo,
   SiteStatusInfo,
   UserInfo,
-} from "~/services/apiService/common/type"
+} from "~/services/accountBootstrap/model"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 export const ACCOUNT_BOOTSTRAP_ROUTE_KINDS = {

@@ -1,5 +1,10 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import type {
+  AccessTokenInfo,
+  SiteStatusInfo,
+  UserInfo,
+} from "~/services/accountBootstrap/model"
+import type {
   AccountData,
   HealthCheckResult,
   RefreshAccountResult,
@@ -15,14 +20,11 @@ import {
   invalidateResolvedApiTokenKeyCache,
   syncResolvedApiTokenKeyCache,
 } from "~/services/apiService/common/tokenKeyResolver"
-import {
-  AccessTokenInfo,
+import type {
   ApiServiceAccountRequest,
   CheckInStatus,
   PaymentResponse,
   RedeemCodeRequest,
-  SiteStatusInfo,
-  UserInfo,
 } from "~/services/apiService/common/type"
 import {
   aggregateUsageData,

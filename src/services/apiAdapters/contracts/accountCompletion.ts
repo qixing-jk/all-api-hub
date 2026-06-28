@@ -1,10 +1,10 @@
 import type { AutoDetectFailureReason } from "~/constants/autoDetect"
+import type { SiteStatusInfo } from "~/services/accountBootstrap/model"
 import type {
   AutoDetectCompletionData,
   AutoDetectCompletionError,
   AutoDetectCompletionRequest,
 } from "~/services/accounts/autoDetectCompletion/types"
-import type { SiteStatusInfo } from "~/services/apiService/common/type"
 import type {
   ApiServiceFetchContext,
   ApiServiceRequest,

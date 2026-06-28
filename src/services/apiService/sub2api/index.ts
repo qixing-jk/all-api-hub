@@ -5,6 +5,11 @@
  * live under `/api/v1/*` and require a dashboard JWT.
  */
 import type {
+  AccessTokenInfo,
+  SiteStatusInfo,
+  UserInfo,
+} from "~/services/accountBootstrap/model"
+import type {
   AccountData,
   RefreshAccountResult,
   TodayIncomeData,
@@ -17,12 +22,7 @@ import {
 } from "~/services/apiService/common"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { resolveApiTokenKeyWithFetcher } from "~/services/apiService/common/tokenKeyResolver"
-import type {
-  AccessTokenInfo,
-  ApiServiceAccountRequest,
-  SiteStatusInfo,
-  UserInfo,
-} from "~/services/apiService/common/type"
+import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {

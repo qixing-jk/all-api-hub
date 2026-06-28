@@ -2,32 +2,9 @@
  * API 服务 - 用于与 One API/New API 站点进行交互
  */
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { AuthTypeEnum, CheckInConfig, type AccountIdentity } from "~/types"
+import { AuthTypeEnum, CheckInConfig } from "~/types"
 
 // ============= 类型定义 =============
-export interface UserInfo {
-  id: AccountIdentity
-  username: string
-  access_token: string | null
-}
-
-export interface AccessTokenInfo {
-  username: string
-  access_token: string
-}
-
-export interface SiteStatusInfo {
-  price?: number
-  stripe_unit_price?: number
-  PaymentUSDRate?: number
-  system_name?: string
-  theme?: string
-  /**
-   * 是否启用签到功能
-   */
-  checkin_enabled?: boolean
-}
-
 export interface SiteNoticeResponse {
   success: boolean
   data?: string | null

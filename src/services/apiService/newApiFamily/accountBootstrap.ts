@@ -1,7 +1,7 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { SiteStatusInfo } from "~/services/accountBootstrap/model"
 import * as anyrouterBootstrap from "~/services/apiService/anyrouter"
 import * as commonBootstrap from "~/services/apiService/common"
-import type { SiteStatusInfo } from "~/services/apiService/common/type"
 import * as wongBootstrap from "~/services/apiService/wong"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
