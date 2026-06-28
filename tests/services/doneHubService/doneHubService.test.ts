@@ -12,7 +12,9 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/apiService/doneHub", () => ({
+  fetchAccountData: vi.fn(),
   fetchChannel: (...args: unknown[]) => mockFetchDoneHubChannel(...args),
+  refreshAccountData: vi.fn(),
 }))
 
 describe("doneHubService hydrateComparableChannelKeys", () => {

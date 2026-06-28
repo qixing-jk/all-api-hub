@@ -9,11 +9,13 @@ import { AuthTypeEnum } from "~/types"
 
 const {
   mockAihubmixFetchAccountData,
+  mockCreateAccountDataImplementation,
   mockFetchAccountData,
   mockGetApiService,
   mockSub2ApiFetchAccountData,
 } = vi.hoisted(() => ({
   mockAihubmixFetchAccountData: vi.fn(),
+  mockCreateAccountDataImplementation: vi.fn(),
   mockFetchAccountData: vi.fn(),
   mockGetApiService: vi.fn(),
   mockSub2ApiFetchAccountData: vi.fn(),
@@ -21,6 +23,12 @@ const {
 
 vi.mock("~/services/apiService", () => ({
   getApiService: mockGetApiService,
+}))
+
+vi.mock("~/services/apiService/newApiFamily", () => ({
+  accountData: {
+    createAccountDataImplementation: mockCreateAccountDataImplementation,
+  },
 }))
 
 vi.mock("~/services/apiService/sub2api", () => ({
@@ -77,12 +85,12 @@ const disabledCheckInAccountData: AccountData = {
 describe("apiAdapter accountData", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetApiService.mockReturnValue({
+    mockCreateAccountDataImplementation.mockReturnValue({
       fetchAccountData: mockFetchAccountData,
     })
   })
 
-  it("delegates New API-family account data through the site-specific apiService", async () => {
+  it("delegates New API-family account data through the family implementation", async () => {
     mockFetchAccountData.mockResolvedValueOnce(accountData)
 
     const accountDataCapability = createNewApiAccountData(SITE_TYPES.ONE_HUB)
@@ -93,10 +101,13 @@ describe("apiAdapter accountData", () => {
       accountData,
     )
 
-    expect(mockGetApiService).toHaveBeenCalledOnce()
-    expect(mockGetApiService).toHaveBeenCalledWith(SITE_TYPES.ONE_HUB)
+    expect(mockCreateAccountDataImplementation).toHaveBeenCalledOnce()
+    expect(mockCreateAccountDataImplementation).toHaveBeenCalledWith(
+      SITE_TYPES.ONE_HUB,
+    )
     expect(mockFetchAccountData).toHaveBeenCalledOnce()
     expect(mockFetchAccountData).toHaveBeenCalledWith(request)
+    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it("delegates Sub2API account data without reshaping disabled check-in or zeroed stats", async () => {

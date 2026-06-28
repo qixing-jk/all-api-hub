@@ -258,16 +258,16 @@ describe("apiService index wrapper", () => {
   })
 
   it("should keep account capability facts out of the legacy apiService facade", () => {
-    expect((getApiService(undefined) as any).capabilities).toBeUndefined()
-    expect(
-      (getApiService(SITE_TYPES.ONE_HUB) as any).capabilities,
-    ).toBeUndefined()
-    expect(
-      (getApiService(SITE_TYPES.SUB2API) as any).capabilities,
-    ).toBeUndefined()
-    expect(
-      (getApiService(SITE_TYPES.AIHUBMIX) as any).capabilities,
-    ).toBeUndefined()
+    expect("capabilities" in (getApiService(undefined) as any)).toBe(false)
+    expect("capabilities" in (getApiService(SITE_TYPES.ONE_HUB) as any)).toBe(
+      false,
+    )
+    expect("capabilities" in (getApiService(SITE_TYPES.SUB2API) as any)).toBe(
+      false,
+    )
+    expect("capabilities" in (getApiService(SITE_TYPES.AIHUBMIX) as any)).toBe(
+      false,
+    )
   })
 
   it("should not silently fall back to common for missing AIHubMix overrides", async () => {

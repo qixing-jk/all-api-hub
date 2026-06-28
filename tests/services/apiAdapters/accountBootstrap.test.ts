@@ -14,6 +14,7 @@ const {
   mockAihubmixFetchSupportCheckIn,
   mockAihubmixFetchUserInfo,
   mockAihubmixGetOrCreateAccessToken,
+  mockCreateAccountBootstrapImplementation,
   mockExtractDefaultExchangeRate,
   mockFetchSiteStatus,
   mockFetchSupportCheckIn,
@@ -31,6 +32,7 @@ const {
   mockAihubmixFetchSupportCheckIn: vi.fn(),
   mockAihubmixFetchUserInfo: vi.fn(),
   mockAihubmixGetOrCreateAccessToken: vi.fn(),
+  mockCreateAccountBootstrapImplementation: vi.fn(),
   mockExtractDefaultExchangeRate: vi.fn(),
   mockFetchSiteStatus: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
@@ -46,6 +48,13 @@ const {
 
 vi.mock("~/services/apiService", () => ({
   getApiService: mockGetApiService,
+}))
+
+vi.mock("~/services/apiService/newApiFamily", () => ({
+  accountBootstrap: {
+    createAccountBootstrapImplementation:
+      mockCreateAccountBootstrapImplementation,
+  },
 }))
 
 vi.mock("~/services/apiService/sub2api", () => ({
@@ -77,15 +86,15 @@ describe("account bootstrap adapters", () => {
     vi.clearAllMocks()
   })
 
-  it("delegates New API-family bootstrap operations to the site API service", async () => {
-    const accountBootstrap = createNewApiAccountBootstrap(SITE_TYPES.VELOERA)
-    mockGetApiService.mockReturnValue({
+  it("delegates New API-family bootstrap operations to the family implementation", async () => {
+    mockCreateAccountBootstrapImplementation.mockReturnValue({
       extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
       fetchSiteStatus: mockFetchSiteStatus,
       fetchSupportCheckIn: mockFetchSupportCheckIn,
       fetchUserInfo: mockFetchUserInfo,
       getOrCreateAccessToken: mockGetOrCreateAccessToken,
     })
+    const accountBootstrap = createNewApiAccountBootstrap(SITE_TYPES.VELOERA)
     mockFetchUserInfo.mockResolvedValue(userInfo)
     mockGetOrCreateAccessToken.mockResolvedValue(tokenInfo)
     mockFetchSiteStatus.mockResolvedValue(siteStatus)
@@ -112,12 +121,16 @@ describe("account bootstrap adapters", () => {
       ),
     ).resolves.toBe("/app/me")
 
-    expect(mockGetApiService).toHaveBeenCalledWith(SITE_TYPES.VELOERA)
+    expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledOnce()
+    expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledWith(
+      SITE_TYPES.VELOERA,
+    )
     expect(mockFetchUserInfo).toHaveBeenCalledWith(request)
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith(request)
     expect(mockFetchSiteStatus).toHaveBeenCalledWith(request)
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(request)
     expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
+    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it("resolves static account route paths from shared route kinds", () => {

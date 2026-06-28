@@ -37,7 +37,9 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/apiService/veloera", () => ({
+  fetchAccountData: vi.fn(),
   fetchChannel: (...args: unknown[]) => mockFetchVeloeraChannel(...args),
+  refreshAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({

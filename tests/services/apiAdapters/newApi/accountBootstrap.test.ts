@@ -101,6 +101,7 @@ describe("createNewApiAccountBootstrap", () => {
     expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledWith(
       SITE_TYPES.VELOERA,
     )
+    expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledOnce()
     expect(mockFetchUserInfo).toHaveBeenCalledWith(request)
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith(request)
     expect(mockFetchSiteStatus).toHaveBeenCalledWith(request)
@@ -126,6 +127,7 @@ describe("createNewApiAccountBootstrap", () => {
     expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledWith(
       SITE_TYPES.NEW_API,
     )
+    expect(mockCreateAccountBootstrapImplementation).toHaveBeenCalledOnce()
     expect(mockGetApiService).not.toHaveBeenCalled()
   })
 })

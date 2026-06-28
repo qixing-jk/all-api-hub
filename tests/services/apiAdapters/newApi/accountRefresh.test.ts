@@ -90,6 +90,7 @@ describe("createNewApiAccountRefresh", () => {
     expect(mockCreateAccountRefreshImplementation).toHaveBeenCalledWith(
       SITE_TYPES.ONE_HUB,
     )
+    expect(mockCreateAccountRefreshImplementation).toHaveBeenCalledOnce()
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
     expect(mockRefreshAccountData).toHaveBeenCalledWith(refreshRequest)
     expect(mockGetApiService).not.toHaveBeenCalled()
