@@ -13,12 +13,12 @@ const {
   mockAihubmixFetchAccountTokens,
   mockAihubmixResolveApiTokenKey,
   mockAihubmixUpdateApiToken,
+  mockCreateKeyManagementImplementation,
   mockCreateApiToken,
   mockDeleteApiToken,
   mockFetchAccountAvailableModels,
   mockFetchAccountTokens,
   mockFetchUserGroups,
-  mockGetApiService,
   mockResolveApiTokenKey,
   mockSub2ApiCreateApiToken,
   mockSub2ApiDeleteApiToken,
@@ -35,12 +35,12 @@ const {
   mockAihubmixFetchAccountTokens: vi.fn(),
   mockAihubmixResolveApiTokenKey: vi.fn(),
   mockAihubmixUpdateApiToken: vi.fn(),
+  mockCreateKeyManagementImplementation: vi.fn(),
   mockCreateApiToken: vi.fn(),
   mockDeleteApiToken: vi.fn(),
   mockFetchAccountAvailableModels: vi.fn(),
   mockFetchAccountTokens: vi.fn(),
   mockFetchUserGroups: vi.fn(),
-  mockGetApiService: vi.fn(),
   mockResolveApiTokenKey: vi.fn(),
   mockSub2ApiCreateApiToken: vi.fn(),
   mockSub2ApiDeleteApiToken: vi.fn(),
@@ -52,8 +52,10 @@ const {
   mockUpdateApiToken: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
+vi.mock("~/services/apiService/newApiFamily", () => ({
+  keyManagement: {
+    createKeyManagementImplementation: mockCreateKeyManagementImplementation,
+  },
 }))
 
 vi.mock("~/services/apiService/sub2api", () => ({
@@ -110,7 +112,7 @@ const availableModels = ["gpt-4o-mini", "claude-3-haiku"]
 describe("apiAdapter keyManagement", () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    mockGetApiService.mockReturnValue({
+    mockCreateKeyManagementImplementation.mockReturnValue({
       createApiToken: mockCreateApiToken,
       deleteApiToken: mockDeleteApiToken,
       fetchAccountAvailableModels: mockFetchAccountAvailableModels,
@@ -121,7 +123,7 @@ describe("apiAdapter keyManagement", () => {
     })
   })
 
-  it("delegates New API-family key operations through the site-specific apiService", async () => {
+  it("delegates New API-family key operations through the New API-family implementation", async () => {
     const expectedTokens = [token]
     mockFetchAccountTokens.mockResolvedValueOnce(expectedTokens)
     mockCreateApiToken.mockResolvedValueOnce(true)
@@ -132,8 +134,6 @@ describe("apiAdapter keyManagement", () => {
     mockFetchAccountAvailableModels.mockResolvedValueOnce(availableModels)
 
     const keyManagement = createNewApiKeyManagement(SITE_TYPES.ONE_HUB)
-
-    expect(mockGetApiService).not.toHaveBeenCalled()
 
     await expect(
       keyManagement.fetchTokens(request, { page: 2, size: 25 }),
@@ -161,15 +161,9 @@ describe("apiAdapter keyManagement", () => {
       availableModels,
     )
 
-    expect(mockGetApiService.mock.calls).toEqual([
-      [SITE_TYPES.ONE_HUB],
-      [SITE_TYPES.ONE_HUB],
-      [SITE_TYPES.ONE_HUB],
-      [SITE_TYPES.ONE_HUB],
-      [SITE_TYPES.ONE_HUB],
-      [SITE_TYPES.ONE_HUB],
-      [SITE_TYPES.ONE_HUB],
-    ])
+    expect(mockCreateKeyManagementImplementation).toHaveBeenCalledWith(
+      SITE_TYPES.ONE_HUB,
+    )
     expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, 2, 25)
     expect(mockCreateApiToken).toHaveBeenCalledWith(request, tokenData)
     expect(mockUpdateApiToken).toHaveBeenCalledWith(
@@ -183,7 +177,7 @@ describe("apiAdapter keyManagement", () => {
     expect(mockFetchAccountAvailableModels).toHaveBeenCalledWith(request)
   })
 
-  it("propagates New API-family key lifecycle errors from the site-specific apiService", async () => {
+  it("propagates New API-family key lifecycle errors from the implementation Module", async () => {
     const error = new Error("delete failed")
     mockDeleteApiToken.mockRejectedValueOnce(error)
 
