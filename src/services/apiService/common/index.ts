@@ -23,7 +23,6 @@ import {
   LogType,
   PaginatedTokenResponse,
   PaymentResponse,
-  PricingResponse,
   RedeemCodeRequest,
   RefreshAccountResult,
   SiteStatusInfo,
@@ -40,6 +39,7 @@ import {
   fetchApiData,
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
+import type { PricingResponse } from "~/services/modelList/pricingModel"
 import {
   AuthTypeEnum,
   CheckInConfig,

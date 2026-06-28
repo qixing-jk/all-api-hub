@@ -6,7 +6,8 @@ import {
   isModelPriceUnavailable,
   type ModelPricing,
   type ModelUnavailablePriceReason,
-} from "~/services/apiService/common/type"
+  type PerCallPrice,
+} from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { CurrencyType } from "~/types"
 import { t } from "~/utils/i18n/core"
@@ -33,8 +34,6 @@ export interface UnavailableCalculatedPrice {
   outputCNY?: undefined
   perCallPrice?: undefined
 }
-
-export type PerCallPrice = number | { input: number; output: number }
 
 const NEW_API_QUOTA_PER_USD = 500_000
 const TOKEN_PRICE_UNIT_TOKENS = 1_000_000

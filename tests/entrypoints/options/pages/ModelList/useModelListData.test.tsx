@@ -11,7 +11,7 @@ import {
   toProfileSourceValue,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
-import { MODEL_LIST_SOURCE_KINDS } from "~/services/apiService/common/type"
+import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 const mockUseAccountData = vi.fn()

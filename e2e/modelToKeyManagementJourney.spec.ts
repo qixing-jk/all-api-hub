@@ -1,4 +1,4 @@
-import type { ModelPricing } from "~/services/apiService/common/type"
+import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { test } from "~~/e2e/fixtures/extensionTest"
 import { runModelToKeyManagementScenario } from "~~/e2e/scenarios/modelToKeyManagement"
 import {

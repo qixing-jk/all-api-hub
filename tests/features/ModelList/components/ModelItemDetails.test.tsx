@@ -7,7 +7,7 @@ import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
-} from "~/services/apiService/common/type"
+} from "~/services/modelList/pricingModel"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { formatPriceMock, getEndpointTypesTextMock, isTokenBillingTypeMock } =

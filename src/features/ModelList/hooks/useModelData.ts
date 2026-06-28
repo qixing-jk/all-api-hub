@@ -27,13 +27,13 @@ import {
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
-import type { PricingResponse } from "~/services/apiService/common/type"
 import {
   ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
   loadAccountTokenFallbackPricingResponse,
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   resolveModelListAccountSourceReadiness,
 } from "~/services/modelList/accountSources"
+import type { PricingResponse } from "~/services/modelList/pricingModel"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
   modelPricingCache,

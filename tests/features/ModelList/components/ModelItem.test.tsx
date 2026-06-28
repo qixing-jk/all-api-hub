@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import ModelItem from "~/features/ModelList/components/ModelItem"
 import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
 import { createAccountTokenModelListSourceIdentity } from "~/features/ModelList/modelManagementSources"
-import type { ModelPricing } from "~/services/apiService/common/type"
+import type { ModelPricing } from "~/services/modelList/pricingModel"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

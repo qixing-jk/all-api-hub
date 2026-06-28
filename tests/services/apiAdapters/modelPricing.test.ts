@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/modelPricing"
 import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/modelPricing"
-import type { PricingResponse } from "~/services/apiService/common/type"
+import type { PricingResponse } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum } from "~/types"
 
 const {

@@ -28,10 +28,8 @@ import {
   validateAccountConnection,
 } from "~/services/apiService/aihubmix"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import {
-  MODEL_LIST_SOURCE_KINDS,
-  type CreateTokenRequest,
-} from "~/services/apiService/common/type"
+import { type CreateTokenRequest } from "~/services/apiService/common/type"
+import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"

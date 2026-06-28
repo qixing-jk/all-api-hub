@@ -6,12 +6,12 @@ import {
   normalizeAccountStorageConfigForWrite,
   normalizeSiteAccount,
 } from "~/services/accounts/accountDefaults"
-import type { ModelPricing } from "~/services/apiService/common/type"
 import {
   I18NEXT_LANGUAGE_STORAGE_KEY,
   STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import { USAGE_HISTORY_STORAGE_KEYS } from "~/services/history/usageHistory/constants"
+import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { SITE_ANNOUNCEMENTS_STORE_SCHEMA_VERSION } from "~/services/siteAnnouncements/constants"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import {

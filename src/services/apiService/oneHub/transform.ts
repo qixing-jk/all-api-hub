@@ -1,13 +1,13 @@
-import type {
-  ModelPricing,
-  PricingResponse,
-  UserGroupInfo,
-} from "~/services/apiService/common/type"
+import { type UserGroupInfo } from "~/services/apiService/common/type"
 import type {
   OneHubModelPricing,
   OneHubUserGroupMap,
   OneHubUserGroupsResponse,
 } from "~/services/apiService/oneHub/type"
+import {
+  type ModelPricing,
+  type PricingResponse,
+} from "~/services/modelList/pricingModel"
 
 /**
  * 将 OneHub 模型定价转换为通用定价

@@ -9,7 +9,6 @@ import {
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
-import { type PricingResponse } from "~/services/apiService/common/type"
 import {
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS,
@@ -19,6 +18,7 @@ import {
   buildSub2ApiRuntimePricingResponse,
   loadSub2ApiEstimatedPricingResponse,
 } from "~/services/modelList/accountSources/sub2apiEstimates"
+import type { PricingResponse } from "~/services/modelList/pricingModel"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   isAbortError,

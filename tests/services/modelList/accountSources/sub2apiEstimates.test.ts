@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  MODEL_LIST_SOURCE_KINDS,
-  MODEL_PRICE_PRECISION_KINDS,
-  MODEL_PRICE_SOURCE_KINDS,
-  MODEL_UNAVAILABLE_PRICE_REASONS,
-} from "~/services/apiService/common/type"
-import {
   applySub2ApiPriceEstimates,
   buildSub2ApiRuntimePricingResponse,
   resolveSub2ApiKeyGroupForPriceEstimation,
 } from "~/services/modelList/accountSources/sub2apiEstimates"
+import {
+  MODEL_LIST_SOURCE_KINDS,
+  MODEL_PRICE_PRECISION_KINDS,
+  MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
+} from "~/services/modelList/pricingModel"
 import type { ApiToken } from "~/types"
 
 const createToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({

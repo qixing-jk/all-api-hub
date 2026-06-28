@@ -1,4 +1,4 @@
-import type { ModelListSourceInfo } from "~/services/apiService/common/type"
+import type { ModelListSourceInfo } from "~/services/modelList/pricingModel"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 

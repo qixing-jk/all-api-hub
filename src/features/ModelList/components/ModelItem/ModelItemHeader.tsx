@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next"
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
 import { Badge, BadgeAdornment, IconButton } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import type { ModelPricing } from "~/services/apiService/common/type"
+import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { getBillingModeText } from "~/services/models/utils/modelPricing"
 import { getProviderConfig } from "~/services/models/utils/modelProviders"
 import {

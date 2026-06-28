@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { ModelDisplay } from "~/features/ModelList/components/ModelDisplay"
 import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
-import type { ModelPricing } from "~/services/apiService/common/type"
+import type { ModelPricing } from "~/services/modelList/pricingModel"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import {
   createAccountModelVerificationHistoryTarget,

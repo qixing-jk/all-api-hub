@@ -11,7 +11,7 @@ import {
 import {
   MODEL_LIST_SOURCE_KINDS,
   type PricingResponse,
-} from "~/services/apiService/common/type"
+} from "~/services/modelList/pricingModel"
 import type { DisplaySiteData } from "~/types"
 
 /**

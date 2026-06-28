@@ -1,8 +1,7 @@
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
-import type {
-  ApiServiceRequest,
-  PricingResponse,
-  UserGroupInfo,
+import {
+  type ApiServiceRequest,
+  type UserGroupInfo,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import {
@@ -15,6 +14,7 @@ import type {
   OneHubUserGroupsResponse,
   PaginatedTokenDate,
 } from "~/services/apiService/oneHub/type"
+import type { PricingResponse } from "~/services/modelList/pricingModel"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 

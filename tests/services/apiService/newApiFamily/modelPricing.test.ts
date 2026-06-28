@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import type { PricingResponse } from "~/services/apiService/common/type"
 import { createModelPricingImplementation } from "~/services/apiService/newApiFamily/modelPricing"
+import type { PricingResponse } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum } from "~/types"
 
 const { commonFetchModelPricing, oneHubFetchModelPricing } = vi.hoisted(() => ({

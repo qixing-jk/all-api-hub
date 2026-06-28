@@ -18,7 +18,7 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type ModelPricing,
   type ModelUnavailablePriceReason,
-} from "~/services/apiService/common/type"
+} from "~/services/modelList/pricingModel"
 import {
   formatPriceCompact,
   isTokenBillingType,

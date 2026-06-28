@@ -1,7 +1,7 @@
 import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
-import type { PricingResponse } from "~/services/apiService/common/type"
+import type { PricingResponse } from "~/services/modelList/pricingModel"
 import {
   buildModelListCatalogPricingResponse,
   normalizeModelListModelIds,

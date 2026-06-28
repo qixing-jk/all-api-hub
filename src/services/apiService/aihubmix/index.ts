@@ -10,7 +10,6 @@ import {
 import { determineHealthStatus } from "~/services/apiService/common"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
-  MODEL_LIST_SOURCE_KINDS,
   type AccessTokenInfo,
   type AccountData,
   type ApiResponse,
@@ -18,8 +17,6 @@ import {
   type ApiServiceRequest,
   type CreateTokenRequest,
   type CreateTokenResult,
-  type ModelPricing,
-  type PricingResponse,
   type RefreshAccountResult,
   type SiteStatusInfo,
   type TodayIncomeData,
@@ -27,6 +24,11 @@ import {
   type UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
+import {
+  MODEL_LIST_SOURCE_KINDS,
+  type ModelPricing,
+  type PricingResponse,
+} from "~/services/modelList/pricingModel"
 import { AuthTypeEnum, SiteHealthStatus, type ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"

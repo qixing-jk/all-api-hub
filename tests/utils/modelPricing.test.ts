@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import type { ModelPricing } from "~/services/apiService/common/type"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
-} from "~/services/apiService/common/type"
+  type ModelPricing,
+} from "~/services/modelList/pricingModel"
 import {
   calculateModelPrice,
   formatPrice,

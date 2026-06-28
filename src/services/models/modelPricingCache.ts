@@ -1,6 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import type { PricingResponse } from "~/services/apiService/common/type"
+import type { PricingResponse } from "~/services/modelList/pricingModel"
 import { createLogger } from "~/utils/core/logger"
 
 /**

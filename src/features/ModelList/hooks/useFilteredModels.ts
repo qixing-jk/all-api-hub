@@ -17,7 +17,7 @@ import {
 import {
   isModelPriceUnavailable,
   type PricingResponse,
-} from "~/services/apiService/common/type"
+} from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import {
   calculateModelPrice,

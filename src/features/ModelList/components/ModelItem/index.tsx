@@ -18,7 +18,7 @@ import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
 import {
   isModelPriceUnavailable,
   type ModelPricing,
-} from "~/services/apiService/common/type"
+} from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import {

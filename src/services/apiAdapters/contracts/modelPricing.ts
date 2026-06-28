@@ -1,7 +1,5 @@
-import type {
-  ApiServiceRequest,
-  PricingResponse,
-} from "~/services/apiService/common/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { PricingResponse } from "~/services/modelList/pricingModel"
 
 export type ModelPricingRequest = ApiServiceRequest
 

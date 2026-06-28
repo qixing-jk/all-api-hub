@@ -4,6 +4,8 @@ import {
   normalizeApiTokenKeyValue,
 } from "~/services/accountTokens/apiTokenKey"
 import { loadSub2ApiDashboardEstimateData } from "~/services/apiAdapters/sub2api/dashboardEstimates"
+import { parseSub2ApiGroupRates } from "~/services/apiService/sub2api/parsing"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -11,9 +13,7 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type ModelPricing,
   type PricingResponse,
-} from "~/services/apiService/common/type"
-import { parseSub2ApiGroupRates } from "~/services/apiService/sub2api/parsing"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
+} from "~/services/modelList/pricingModel"
 import { buildModelListCatalogPricingResponse } from "~/services/modelList/pricingResponse"
 import {
   loadModelPriceTable,

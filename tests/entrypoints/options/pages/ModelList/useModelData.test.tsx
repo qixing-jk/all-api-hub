@@ -20,7 +20,7 @@ import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
-} from "~/services/apiService/common/type"
+} from "~/services/modelList/pricingModel"
 import { modelPricingCache } from "~/services/models/modelPricingCache"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

@@ -3,16 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
+  ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
+  loadAccountTokenFallbackPricingResponse,
+} from "~/services/modelList/accountSources/tokenScopedFallback"
+import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
-} from "~/services/apiService/common/type"
-import {
-  ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
-  loadAccountTokenFallbackPricingResponse,
-} from "~/services/modelList/accountSources/tokenScopedFallback"
+} from "~/services/modelList/pricingModel"
 import { AuthTypeEnum } from "~/types"
 
 const {

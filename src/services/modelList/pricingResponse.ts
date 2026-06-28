@@ -5,7 +5,7 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type ModelPricing,
   type PricingResponse,
-} from "~/services/apiService/common/type"
+} from "~/services/modelList/pricingModel"
 
 interface BuildModelListCatalogPricingResponseParams {
   modelIds: unknown[]

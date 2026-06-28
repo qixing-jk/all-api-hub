@@ -18,7 +18,7 @@ import {
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
-} from "~/services/apiService/common/type"
+} from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { MODEL_PROVIDER_FILTER_VALUES } from "~/services/models/utils/modelProviders"
 import { API_TYPES } from "~/services/verification/aiApiVerification"

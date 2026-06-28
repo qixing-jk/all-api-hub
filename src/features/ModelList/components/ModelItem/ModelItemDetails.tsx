@@ -12,7 +12,7 @@ import {
   formatGroupLabel,
   resolveGroupRatio,
 } from "~/features/ModelList/groupLabels"
-import type { ModelPricing } from "~/services/apiService/common/type"
+import type { ModelPricing } from "~/services/modelList/pricingModel"
 import {
   formatPrice,
   getEndpointTypesText,
