@@ -2,6 +2,7 @@ import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type {
   ApiServiceRequest,
   PricingResponse,
+  UserGroupInfo,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import {
@@ -10,7 +11,6 @@ import {
 } from "~/services/apiService/oneHub/transform"
 import type {
   OneHubModelPricing,
-  OneHubUserGroupInfo,
   OneHubUserGroupMap,
   OneHubUserGroupsResponse,
   PaginatedTokenDate,
@@ -101,7 +101,7 @@ export const fetchAccountTokens = async (
  */
 export const fetchUserGroups = async (
   request: ApiServiceRequest,
-): Promise<Record<string, OneHubUserGroupInfo>> => {
+): Promise<Record<string, UserGroupInfo>> => {
   try {
     const response = await fetchApiData<OneHubUserGroupsResponse["data"]>(
       request,

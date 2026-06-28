@@ -1,6 +1,7 @@
 import type {
   ModelPricing,
   PricingResponse,
+  UserGroupInfo,
 } from "~/services/apiService/common/type"
 import type {
   OneHubModelPricing,
@@ -63,8 +64,8 @@ export function transformModelPricing(
  */
 export function transformUserGroup(
   input: OneHubUserGroupsResponse["data"],
-): OneHubUserGroupsResponse["data"] {
-  const result: Record<string, any> = {}
+): Record<string, UserGroupInfo> {
+  const result: Record<string, UserGroupInfo> = {}
 
   // 转换已有的分组
   for (const key in input) {
