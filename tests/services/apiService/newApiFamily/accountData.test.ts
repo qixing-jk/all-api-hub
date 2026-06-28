@@ -271,6 +271,23 @@ describe("newApiFamily accountData", () => {
     )
   })
 
+  it("fetchTodayUsage treats invalid log totals as a single page", async () => {
+    mockFetchApiData
+      .mockRejectedValueOnce(new Error("stat unavailable"))
+      .mockResolvedValueOnce({
+        items: [{ quota: 10, prompt_tokens: 2, completion_tokens: 3 }],
+        total: Number.NaN,
+      })
+
+    await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
+      today_quota_consumption: 10,
+      today_prompt_tokens: 2,
+      today_completion_tokens: 3,
+      today_requests_count: 1,
+    })
+    expect(mockFetchApiData).toHaveBeenCalledTimes(2)
+  })
+
   it("fetchTodayUsage aggregates legacy array log responses with extra query params", async () => {
     mockFetchApiData
       .mockRejectedValueOnce(new Error("stat unavailable"))
@@ -353,6 +370,23 @@ describe("newApiFamily accountData", () => {
       today_income: 200,
     })
     expect(mockExtractAmount).toHaveBeenCalledWith("recharge 2 USD", 7)
+  })
+
+  it("fetchTodayIncome treats unparsable income log content as zero", async () => {
+    mockExtractAmount.mockReturnValueOnce(null)
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        items: [{ content: "unparsed income" }],
+        total: 1,
+      })
+      .mockResolvedValueOnce({
+        items: [],
+        total: 0,
+      })
+
+    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+      today_income: 0,
+    })
   })
 
   it("fetchTodayIncome supports overridden log query params and response fields", async () => {
