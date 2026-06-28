@@ -758,7 +758,24 @@ test("creates a managed-site channel from channel management", async ({
 
   await expect(page.getByText("Channel saved")).toBeVisible()
   await expect(page.getByText("E2E Created OpenAI")).toBeVisible()
-  await expect(createPayloads).toContainEqual({
+  const createdPayload = createPayloads.find(
+    (
+      payload,
+    ): payload is {
+      mode: string
+      channel: Record<string, unknown>
+    } =>
+      typeof payload === "object" &&
+      payload !== null &&
+      "mode" in payload &&
+      payload.mode === "single" &&
+      "channel" in payload &&
+      typeof payload.channel === "object" &&
+      payload.channel !== null &&
+      "name" in payload.channel &&
+      payload.channel.name === "E2E Created OpenAI",
+  )
+  expect(createdPayload).toMatchObject({
     mode: "single",
     channel: {
       name: "E2E Created OpenAI",
@@ -766,13 +783,13 @@ test("creates a managed-site channel from channel management", async ({
       key: "sk-e2e-created-channel",
       base_url: "",
       models: "gpt-4.1-mini",
-      groups: ["default"],
       group: "default",
       priority: 0,
       weight: 0,
       status: 1,
     },
   })
+  expect(createdPayload?.channel).not.toHaveProperty("groups")
 })
 
 test("edits a managed-site channel from row actions", async ({
