@@ -8,16 +8,26 @@ import { AuthTypeEnum } from "~/types"
 
 const {
   mockAihubmixFetchModelPricing,
+  mockCreateModelPricingImplementation,
   mockFetchModelPricing,
   mockGetApiService,
 } = vi.hoisted(() => ({
   mockAihubmixFetchModelPricing: vi.fn(),
+  mockCreateModelPricingImplementation: vi.fn(),
   mockFetchModelPricing: vi.fn(),
-  mockGetApiService: vi.fn(),
+  mockGetApiService: vi.fn(() => {
+    throw new Error("legacy apiService facade should not be used")
+  }),
 }))
 
 vi.mock("~/services/apiService", () => ({
   getApiService: mockGetApiService,
+}))
+
+vi.mock("~/services/apiService/newApiFamily", () => ({
+  modelPricing: {
+    createModelPricingImplementation: mockCreateModelPricingImplementation,
+  },
 }))
 
 vi.mock("~/services/apiService/aihubmix", () => ({
@@ -54,26 +64,27 @@ const pricingResponse: PricingResponse = {
 describe("apiAdapter modelPricing", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetApiService.mockReturnValue({
+    mockCreateModelPricingImplementation.mockReturnValue({
       fetchModelPricing: mockFetchModelPricing,
     })
   })
 
-  it("delegates New API-family model pricing through the site-specific apiService", async () => {
+  it("delegates New API-family model pricing through the New API-family implementation", async () => {
     mockFetchModelPricing.mockResolvedValueOnce(pricingResponse)
 
     const modelPricing = createNewApiModelPricing(SITE_TYPES.ONE_HUB)
-
-    expect(mockGetApiService).not.toHaveBeenCalled()
 
     await expect(modelPricing.fetchPricing(request)).resolves.toBe(
       pricingResponse,
     )
 
-    expect(mockGetApiService).toHaveBeenCalledOnce()
-    expect(mockGetApiService).toHaveBeenCalledWith(SITE_TYPES.ONE_HUB)
+    expect(mockCreateModelPricingImplementation).toHaveBeenCalledOnce()
+    expect(mockCreateModelPricingImplementation).toHaveBeenCalledWith(
+      SITE_TYPES.ONE_HUB,
+    )
     expect(mockFetchModelPricing).toHaveBeenCalledOnce()
     expect(mockFetchModelPricing).toHaveBeenCalledWith(request)
+    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it("delegates AIHubMix model pricing to the AIHubMix helper", async () => {

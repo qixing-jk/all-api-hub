@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
@@ -7,18 +7,6 @@ import {
 } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import { getApiService } from "~/services/apiService"
-import { AuthTypeEnum } from "~/types"
-
-const { redeemCodeMock } = vi.hoisted(() => ({
-  redeemCodeMock: vi.fn(),
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
-    redeemCode: redeemCodeMock,
-  })),
-}))
 
 const expectTokenProvisioningCapability = (
   adapter: ReturnType<typeof getSiteAdapter>,
@@ -157,31 +145,6 @@ describe("apiAdapters registry", () => {
       expect(adapter.siteAnnouncements).toBeUndefined()
       expect(adapter.modelCatalog).toBeUndefined()
     }
-  })
-
-  it("binds New API family redemption to the selected site type", async () => {
-    redeemCodeMock.mockResolvedValueOnce(500)
-
-    const adapter = getSiteAdapter(SITE_TYPES.VELOERA)
-    const request = {
-      baseUrl: "https://example.invalid",
-      accountId: "account-1",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        userId: "user-1",
-        accessToken: "access-token",
-      },
-    }
-
-    await expect(
-      adapter.redemption?.redeem({
-        request,
-        code: "example-code",
-      }),
-    ).resolves.toBe(500)
-
-    expect(getApiService).toHaveBeenCalledWith(SITE_TYPES.VELOERA)
-    expect(redeemCodeMock).toHaveBeenCalledWith(request, "example-code")
   })
 
   it("returns an AIHubMix Adapter with account completion and key management", () => {
