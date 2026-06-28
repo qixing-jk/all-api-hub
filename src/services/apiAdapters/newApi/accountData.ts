@@ -1,6 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
-import { getApiService } from "~/services/apiService"
+import { accountData } from "~/services/apiService/newApiFamily"
 
 /**
  * Create account-data loading bound to the New API-family site type.
@@ -8,7 +8,9 @@ import { getApiService } from "~/services/apiService"
 export function createNewApiAccountData(
   siteType: AccountSiteType,
 ): AccountDataCapability {
+  const implementation = accountData.createAccountDataImplementation(siteType)
+
   return {
-    fetchData: (request) => getApiService(siteType).fetchAccountData(request),
+    fetchData: (request) => implementation.fetchAccountData(request),
   }
 }

@@ -1,6 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { getApiService } from "~/services/apiService"
+import { accountBootstrap } from "~/services/apiService/newApiFamily"
 
 import { resolveStaticAccountRoutePath } from "../accountRoutes"
 
@@ -10,16 +10,18 @@ import { resolveStaticAccountRoutePath } from "../accountRoutes"
 export function createNewApiAccountBootstrap(
   siteType: AccountSiteType,
 ): AccountBootstrapCapability {
+  const implementation =
+    accountBootstrap.createAccountBootstrapImplementation(siteType)
+
   return {
-    fetchUserInfo: (request) => getApiService(siteType).fetchUserInfo(request),
+    fetchUserInfo: (request) => implementation.fetchUserInfo(request),
     getOrCreateAccessToken: (request) =>
-      getApiService(siteType).getOrCreateAccessToken(request),
-    fetchSiteStatus: (request) =>
-      getApiService(siteType).fetchSiteStatus(request),
+      implementation.getOrCreateAccessToken(request),
+    fetchSiteStatus: (request) => implementation.fetchSiteStatus(request),
     fetchCheckInSupport: (request) =>
-      getApiService(siteType).fetchSupportCheckIn(request),
+      implementation.fetchSupportCheckIn(request),
     extractDefaultExchangeRate: (siteStatus) =>
-      getApiService(siteType).extractDefaultExchangeRate(siteStatus),
+      implementation.extractDefaultExchangeRate(siteStatus),
     resolveRoutePath: async (target, route) =>
       resolveStaticAccountRoutePath(target, route),
   }

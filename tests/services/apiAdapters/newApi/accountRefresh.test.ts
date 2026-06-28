@@ -4,12 +4,25 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiAccountRefresh } from "~/services/apiAdapters/newApi/accountRefresh"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
-const { mockFetchSupportCheckIn, mockGetApiService, mockRefreshAccountData } =
-  vi.hoisted(() => ({
-    mockFetchSupportCheckIn: vi.fn(),
-    mockGetApiService: vi.fn(),
-    mockRefreshAccountData: vi.fn(),
-  }))
+const {
+  mockCreateAccountRefreshImplementation,
+  mockFetchSupportCheckIn,
+  mockGetApiService,
+  mockRefreshAccountData,
+} = vi.hoisted(() => ({
+  mockCreateAccountRefreshImplementation: vi.fn(),
+  mockFetchSupportCheckIn: vi.fn(),
+  mockGetApiService: vi.fn(() => {
+    throw new Error("legacy apiService facade should not be used")
+  }),
+  mockRefreshAccountData: vi.fn(),
+}))
+
+vi.mock("~/services/apiService/newApiFamily", () => ({
+  accountRefresh: {
+    createAccountRefreshImplementation: mockCreateAccountRefreshImplementation,
+  },
+}))
 
 vi.mock("~/services/apiService", () => ({
   getApiService: mockGetApiService,
@@ -39,13 +52,13 @@ const refreshRequest = {
 describe("createNewApiAccountRefresh", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetApiService.mockReturnValue({
+    mockCreateAccountRefreshImplementation.mockReturnValue({
       fetchSupportCheckIn: mockFetchSupportCheckIn,
       refreshAccountData: mockRefreshAccountData,
     })
   })
 
-  it("delegates refresh operations through the site-specific apiService", async () => {
+  it("delegates refresh operations through the New API-family implementation", async () => {
     const refreshResult = {
       success: true,
       data: {
@@ -74,8 +87,11 @@ describe("createNewApiAccountRefresh", () => {
       refreshResult,
     )
 
-    expect(mockGetApiService).toHaveBeenCalledWith(SITE_TYPES.ONE_HUB)
+    expect(mockCreateAccountRefreshImplementation).toHaveBeenCalledWith(
+      SITE_TYPES.ONE_HUB,
+    )
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
     expect(mockRefreshAccountData).toHaveBeenCalledWith(refreshRequest)
+    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 })
