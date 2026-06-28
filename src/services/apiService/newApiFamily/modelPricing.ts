@@ -1,7 +1,7 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import * as commonModelPricing from "~/services/apiService/common"
-import { type ApiServiceRequest } from "~/services/apiService/common/type"
 import * as oneHubModelPricing from "~/services/apiService/oneHub"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
 
 interface ModelPricingImplementation {

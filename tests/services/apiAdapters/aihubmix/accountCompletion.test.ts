@@ -9,7 +9,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import { aihubmixAccountCompletion } from "~/services/apiAdapters/aihubmix/accountCompletion"
 import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const {

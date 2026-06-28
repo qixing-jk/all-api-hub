@@ -1,8 +1,8 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import * as commonKeyManagement from "~/services/apiService/common"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import * as oneHubKeyManagement from "~/services/apiService/oneHub"
 import * as wongKeyManagement from "~/services/apiService/wong"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
   CreateTokenRequest,
   CreateTokenResult,

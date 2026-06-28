@@ -11,11 +11,11 @@ import { fetchAllItems } from "~/services/apiService/common/pagination"
 import type {
   AccountData,
   ApiServiceAccountRequest,
-  ApiServiceRequest,
   RefreshAccountResult,
   TodayLogQueryConfig,
 } from "~/services/apiService/common/type"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { CheckInConfig, SiteHealthStatus } from "~/types"
 import type {
   CreateChannelPayload,

@@ -21,7 +21,7 @@ import {
   updateAxonHubChannelStatus,
   updateChannel as updateChannelAdapter,
 } from "~/services/apiService/axonHub"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import { server } from "~~/tests/msw/server"

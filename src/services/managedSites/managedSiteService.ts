@@ -1,5 +1,5 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import type { ApiResponse } from "~/services/apiService/common/type"
+import type { ApiResponse } from "~/services/apiTransport/type"
 import {
   getCurrentManagedSiteRuntimeConfig,
   getManagedSiteRuntimeConfigForType,

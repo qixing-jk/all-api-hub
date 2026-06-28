@@ -12,9 +12,7 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type {
   AccessTokenInfo,
   AccountData,
-  ApiResponse,
   ApiServiceAccountRequest,
-  ApiServiceRequest,
   RefreshAccountResult,
   SiteStatusInfo,
   TodayIncomeData,
@@ -22,6 +20,10 @@ import type {
   UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
+import type {
+  ApiResponse,
+  ApiServiceRequest,
+} from "~/services/apiTransport/type"
 import {
   MODEL_LIST_SOURCE_KINDS,
   type ModelPricing,

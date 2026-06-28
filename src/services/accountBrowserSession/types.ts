@@ -1,5 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
+import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { Sub2ApiAuthConfig } from "~/types"
 
 export const ACCOUNT_BROWSER_SESSION_SOURCES = {

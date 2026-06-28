@@ -1,6 +1,6 @@
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum } from "~/types"
 import type { NewApiConfig } from "~/types/newApiConfig"

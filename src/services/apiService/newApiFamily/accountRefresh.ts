@@ -3,12 +3,12 @@ import * as anyrouterAccountRefresh from "~/services/apiService/anyrouter"
 import * as commonAccountRefresh from "~/services/apiService/common"
 import type {
   ApiServiceAccountRequest,
-  ApiServiceRequest,
   RefreshAccountResult,
 } from "~/services/apiService/common/type"
 import * as doneHubAccountRefresh from "~/services/apiService/doneHub"
 import * as veloeraAccountRefresh from "~/services/apiService/veloera"
 import * as wongAccountRefresh from "~/services/apiService/wong"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 interface AccountRefreshImplementation {
   fetchSupportCheckIn: (

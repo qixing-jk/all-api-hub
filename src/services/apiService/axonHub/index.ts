@@ -2,7 +2,7 @@ import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
 import type {
   ApiResponse,
   ApiServiceRequest,
-} from "~/services/apiService/common/type"
+} from "~/services/apiTransport/type"
 import type {
   AxonHubChannel,
   AxonHubCreateChannelInput,

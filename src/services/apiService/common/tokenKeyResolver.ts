@@ -3,8 +3,8 @@ import {
   isMaskedApiTokenKey,
   normalizeApiTokenKeyValue,
 } from "~/services/accountTokens/apiTokenKey"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 
 type TokenKeyLike = Pick<ApiToken, "id" | "key">

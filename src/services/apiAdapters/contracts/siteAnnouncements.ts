@@ -1,5 +1,5 @@
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 export type SiteAnnouncementsFetchOptions = {
   unreadOnly?: boolean

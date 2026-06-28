@@ -10,7 +10,7 @@ import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
-import type { ApiResponse } from "~/services/apiService/common/type"
+import type { ApiResponse } from "~/services/apiTransport/type"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,

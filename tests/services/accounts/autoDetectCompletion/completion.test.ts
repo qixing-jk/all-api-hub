@@ -9,10 +9,8 @@ import {
   AutoDetectCompletionError,
   completeAutoDetectedAccount,
 } from "~/services/accounts/autoDetectCompletion/completion"
-import {
-  API_SERVICE_FETCH_CONTEXT_KINDS,
-  type ApiServiceFetchContext,
-} from "~/services/apiService/common/type"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const { getSiteAdapterMock, accountCompletionMock } = vi.hoisted(() => ({

@@ -7,8 +7,8 @@ import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/k
 import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
 import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteAdapter } from "~/services/apiAdapters/registry"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AuthTypeEnum,
   type ApiToken,

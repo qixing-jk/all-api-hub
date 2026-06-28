@@ -30,8 +30,8 @@ import { getSiteAdapter } from "~/services/apiAdapters/registry"
 import {
   API_SERVICE_FETCH_CONTEXT_KINDS,
   summarizeApiServiceFetchContext,
-  type ApiServiceFetchContext,
-} from "~/services/apiService/common/type"
+} from "~/services/apiTransport/type"
+import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,

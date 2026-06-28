@@ -3,7 +3,7 @@ import type {
   AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import type { AccountSiteType } from "~/constants/siteType"
-import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
+import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { AuthTypeEnum, CheckInConfig, Sub2ApiAuthConfig } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 

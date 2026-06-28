@@ -1,5 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 export const SITE_ANNOUNCEMENT_PROVIDER_IDS = {
   Common: "common",

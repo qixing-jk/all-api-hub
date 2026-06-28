@@ -1,7 +1,7 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { isAccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import {
   getAllTabs,
   getBrowserApiCapabilities,

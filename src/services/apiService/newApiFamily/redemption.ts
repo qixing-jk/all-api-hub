@@ -1,6 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import * as commonRedemption from "~/services/apiService/common"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 interface RedemptionImplementation {
   redeemCode: (

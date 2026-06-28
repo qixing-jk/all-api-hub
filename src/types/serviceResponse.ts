@@ -3,7 +3,7 @@ import type {
   AutoDetectError,
   AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
-import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
+import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 
 import type {
   ApiToken,

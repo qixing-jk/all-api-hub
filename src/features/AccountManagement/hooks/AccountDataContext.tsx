@@ -29,7 +29,7 @@ import {
 } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { isSameAccountSiteOrigin } from "~/services/accounts/utils/siteUrlNormalization"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {

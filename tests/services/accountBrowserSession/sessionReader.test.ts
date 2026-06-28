@@ -8,7 +8,7 @@ import {
   readAccountBrowserSessionFromTab,
   resolveAccountBrowserSession,
 } from "~/services/accountBrowserSession"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 
 const {
   mockGetAllTabs,

@@ -2,7 +2,7 @@ import { union } from "lodash-es"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { AuthTypeEnum } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"

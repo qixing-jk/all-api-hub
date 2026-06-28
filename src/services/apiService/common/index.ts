@@ -12,7 +12,6 @@ import {
   AccessTokenInfo,
   AccountData,
   ApiServiceAccountRequest,
-  ApiServiceRequest,
   CheckInStatus,
   HealthCheckResult,
   LogItem,
@@ -35,6 +34,7 @@ import {
   fetchApiData,
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
 import type {
   CreateTokenRequest,

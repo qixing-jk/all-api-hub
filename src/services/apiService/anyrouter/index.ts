@@ -7,9 +7,9 @@ import {
 import type {
   AccountData,
   ApiServiceAccountRequest,
-  ApiServiceRequest,
   RefreshAccountResult,
 } from "~/services/apiService/common/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"

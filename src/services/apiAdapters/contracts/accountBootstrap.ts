@@ -1,10 +1,10 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type {
   AccessTokenInfo,
-  ApiServiceRequest,
   SiteStatusInfo,
   UserInfo,
 } from "~/services/apiService/common/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 export const ACCOUNT_BOOTSTRAP_ROUTE_KINDS = {
   Login: "login",

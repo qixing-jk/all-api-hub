@@ -1,4 +1,4 @@
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 export type RedeemCodeRequest = {
   request: ApiServiceRequest

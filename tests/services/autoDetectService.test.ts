@@ -7,7 +7,7 @@ import {
 } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { AuthTypeEnum } from "~/types"
 

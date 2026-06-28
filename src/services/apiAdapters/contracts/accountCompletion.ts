@@ -4,11 +4,11 @@ import type {
   AutoDetectCompletionError,
   AutoDetectCompletionRequest,
 } from "~/services/accounts/autoDetectCompletion/types"
+import type { SiteStatusInfo } from "~/services/apiService/common/type"
 import type {
   ApiServiceFetchContext,
   ApiServiceRequest,
-  SiteStatusInfo,
-} from "~/services/apiService/common/type"
+} from "~/services/apiTransport/type"
 
 export type AccountCompletionRuntimeContext = {
   fetchContext?: ApiServiceFetchContext

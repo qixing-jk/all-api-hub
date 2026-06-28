@@ -8,7 +8,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
 import { sub2ApiAccountCompletion } from "~/services/apiAdapters/sub2api/accountCompletion"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const {

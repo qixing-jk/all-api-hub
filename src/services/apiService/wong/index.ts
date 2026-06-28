@@ -19,10 +19,10 @@ import {
 import type {
   AccountData,
   ApiServiceAccountRequest,
-  ApiServiceRequest,
   RefreshAccountResult,
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AuthTypeEnum,
   SiteHealthStatus,

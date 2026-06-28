@@ -15,7 +15,6 @@ import type {
   AccessTokenInfo,
   AccountData,
   ApiServiceAccountRequest,
-  ApiServiceRequest,
   RefreshAccountResult,
   SiteStatusInfo,
   TodayIncomeData,
@@ -23,6 +22,7 @@ import type {
   UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
   CreateTokenRequest,
   CreateTokenResult,

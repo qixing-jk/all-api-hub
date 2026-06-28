@@ -15,7 +15,7 @@ import {
   useAccountDataContext,
 } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { SearchResult } from "~/services/search/accountSearch"
 import type { DisplaySiteData } from "~/types"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"

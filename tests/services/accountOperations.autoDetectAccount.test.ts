@@ -12,7 +12,7 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   AutoDetectErrorType,
 } from "~/services/accounts/utils/autoDetectUtils"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const {

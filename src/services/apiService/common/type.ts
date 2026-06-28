@@ -11,25 +11,6 @@ import {
   type Sub2ApiAuthConfig,
 } from "~/types"
 
-export {
-  API_SERVICE_FETCH_CONTEXT_KINDS,
-  API_TRANSPORT_FETCH_CONTEXT_KINDS,
-  summarizeApiServiceFetchContext,
-  summarizeApiTransportFetchContext,
-  type ApiResponse,
-  type ApiServiceFetchContext,
-  type ApiServiceFetchContextKind,
-  type ApiServiceRequest,
-  type ApiTransportFetchContext,
-  type ApiTransportFetchContextKind,
-  type ApiTransportRequest,
-  type AuthConfig,
-  type FetchApiOptions,
-  type OpenAIAuthParams,
-  type UpstreamModelItem,
-  type UpstreamModelList,
-} from "~/services/apiTransport/type"
-
 // ============= 类型定义 =============
 export interface UserInfo {
   id: AccountIdentity
