@@ -1,0 +1,57 @@
+import type { AccountSiteType } from "~/constants/siteType"
+import {
+  CREATED_TOKEN_SECRET_DECISION_KINDS,
+  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
+  isCreatedApiToken,
+  TOKEN_CREATION_SECRET_RECOVERY,
+  TOKEN_PROVISIONING_BLOCK_REASONS,
+  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
+  type TokenProvisioningCapability,
+} from "~/services/apiAdapters/contracts/tokenProvisioning"
+
+const defaultTokenProvisioningImplementation: TokenProvisioningCapability = {
+  isInventoryTokenUsable: () => true,
+  resolveDefaultTokenCreation: ({ defaultTokenData }) => ({
+    kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+    tokenData: defaultTokenData,
+    oneTimeSecret: false,
+    recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+  }),
+  classifyCreatedToken: ({ result }) => {
+    if (isCreatedApiToken(result)) {
+      return {
+        kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+        token: result,
+        oneTimeSecret: false,
+      }
+    }
+
+    if (result) {
+      return { kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch }
+    }
+
+    return {
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
+    }
+  },
+  getRepairPolicy: () => ({
+    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+  }),
+}
+
+/**
+ * Create token-provisioning policy facts bound to a New API-family site type.
+ */
+export const createTokenProvisioningImplementation = (
+  _siteType: AccountSiteType,
+): TokenProvisioningCapability => ({
+  isInventoryTokenUsable: (params) =>
+    defaultTokenProvisioningImplementation.isInventoryTokenUsable(params),
+  resolveDefaultTokenCreation: (request) =>
+    defaultTokenProvisioningImplementation.resolveDefaultTokenCreation(request),
+  classifyCreatedToken: (params) =>
+    defaultTokenProvisioningImplementation.classifyCreatedToken(params),
+  getRepairPolicy: () =>
+    defaultTokenProvisioningImplementation.getRepairPolicy(),
+})

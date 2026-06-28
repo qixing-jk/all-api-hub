@@ -3,17 +3,27 @@ import { describe, expect, it, vi } from "vitest"
 import { newApiSiteNotice } from "~/services/apiAdapters/newApi/siteNotice"
 import { AuthTypeEnum } from "~/types"
 
-const { fetchSiteNoticeMock } = vi.hoisted(() => ({
-  fetchSiteNoticeMock: vi.fn(),
-}))
+const { commonFetchSiteNoticeMock, newApiFamilyFetchSiteNoticeMock } =
+  vi.hoisted(() => ({
+    commonFetchSiteNoticeMock: vi.fn(() => {
+      throw new Error("common siteNotice helper should not be used directly")
+    }),
+    newApiFamilyFetchSiteNoticeMock: vi.fn(),
+  }))
 
 vi.mock("~/services/apiService/common", () => ({
-  fetchSiteNotice: fetchSiteNoticeMock,
+  fetchSiteNotice: commonFetchSiteNoticeMock,
+}))
+
+vi.mock("~/services/apiService/newApiFamily", () => ({
+  siteNotice: {
+    fetchSiteNotice: newApiFamilyFetchSiteNoticeMock,
+  },
 }))
 
 describe("newApiSiteNotice", () => {
-  it("delegates notice fetches to the existing common fetchSiteNotice helper", async () => {
-    fetchSiteNoticeMock.mockResolvedValueOnce("Notice body")
+  it("delegates notice fetches through the New API-family implementation", async () => {
+    newApiFamilyFetchSiteNoticeMock.mockResolvedValueOnce("Notice body")
 
     const request = {
       baseUrl: "https://example.com",
@@ -25,6 +35,7 @@ describe("newApiSiteNotice", () => {
     }
 
     await expect(newApiSiteNotice.fetch(request)).resolves.toBe("Notice body")
-    expect(fetchSiteNoticeMock).toHaveBeenCalledWith(request)
+    expect(newApiFamilyFetchSiteNoticeMock).toHaveBeenCalledWith(request)
+    expect(commonFetchSiteNoticeMock).not.toHaveBeenCalled()
   })
 })

@@ -30,20 +30,26 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/apiService/newApiFamily", () => ({
-  keyManagement: {
-    createKeyManagementImplementation: () => ({
-      fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-      createApiToken: (...args: any[]) => createApiTokenMock(...args),
-      updateApiToken: vi.fn(async () => true),
-      resolveApiTokenKey: vi.fn(),
-      deleteApiToken: vi.fn(),
-      fetchAccountAvailableModels: (...args: any[]) =>
-        fetchAccountAvailableModelsMock(...args),
-      fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
-    }),
-  },
-}))
+vi.mock("~/services/apiService/newApiFamily", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiService/newApiFamily")>()
+
+  return {
+    ...actual,
+    keyManagement: {
+      createKeyManagementImplementation: () => ({
+        fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+        createApiToken: (...args: any[]) => createApiTokenMock(...args),
+        updateApiToken: vi.fn(async () => true),
+        resolveApiTokenKey: vi.fn(),
+        deleteApiToken: vi.fn(),
+        fetchAccountAvailableModels: (...args: any[]) =>
+          fetchAccountAvailableModelsMock(...args),
+        fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
+      }),
+    },
+  }
+})
 
 vi.mock("~/services/models/utils/modelProviders", async (importOriginal) => {
   const actual =

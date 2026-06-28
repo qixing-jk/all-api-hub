@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixTokenProvisioning } from "~/services/apiAdapters/aihubmix/tokenProvisioning"
@@ -18,6 +18,30 @@ import {
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
+
+const { createTokenProvisioningImplementationMock, tokenProvisioningMock } =
+  vi.hoisted(() => {
+    const tokenProvisioningMock = {
+      isInventoryTokenUsable: vi.fn(),
+      resolveDefaultTokenCreation: vi.fn(),
+      classifyCreatedToken: vi.fn(),
+      getRepairPolicy: vi.fn(),
+    }
+
+    return {
+      createTokenProvisioningImplementationMock: vi.fn(
+        () => tokenProvisioningMock,
+      ),
+      tokenProvisioningMock,
+    }
+  })
+
+vi.mock("~/services/apiService/newApiFamily", () => ({
+  tokenProvisioning: {
+    createTokenProvisioningImplementation:
+      createTokenProvisioningImplementationMock,
+  },
+}))
 
 const defaultTokenData: CreateTokenRequest = {
   name: "Example default token",
@@ -51,10 +75,42 @@ const token = (overrides: Partial<ApiToken> = {}): ApiToken =>
   }) as ApiToken
 
 describe("apiAdapter tokenProvisioning", () => {
-  it("allows New API-family default creation and inventory recovery", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("delegates New API-family token provisioning through the New API-family implementation", () => {
     const provisioning = createNewApiTokenProvisioning(SITE_TYPES.NEW_API)
     const createdToken = token()
     const maskedToken = token({ key: "sk-****abcd" })
+
+    tokenProvisioningMock.resolveDefaultTokenCreation.mockReturnValueOnce({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+      tokenData: defaultTokenData,
+      oneTimeSecret: false,
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+    })
+    tokenProvisioningMock.classifyCreatedToken
+      .mockReturnValueOnce({
+        kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
+      })
+      .mockReturnValueOnce({
+        kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+      })
+      .mockReturnValueOnce({
+        kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+        token: createdToken,
+        oneTimeSecret: false,
+      })
+    tokenProvisioningMock.isInventoryTokenUsable.mockReturnValueOnce(true)
+    tokenProvisioningMock.getRepairPolicy.mockReturnValueOnce({
+      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+    })
+
+    expect(createTokenProvisioningImplementationMock).toHaveBeenCalledWith(
+      SITE_TYPES.NEW_API,
+    )
 
     expect(
       provisioning.resolveDefaultTokenCreation({
@@ -107,6 +163,13 @@ describe("apiAdapter tokenProvisioning", () => {
     expect(provisioning.getRepairPolicy()).toEqual({
       kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
     })
+    expect(tokenProvisioningMock.resolveDefaultTokenCreation).toHaveBeenCalled()
+    expect(tokenProvisioningMock.classifyCreatedToken).toHaveBeenCalled()
+    expect(tokenProvisioningMock.isInventoryTokenUsable).toHaveBeenCalledWith({
+      workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+      token: maskedToken,
+    })
+    expect(tokenProvisioningMock.getRepairPolicy).toHaveBeenCalled()
   })
 
   it("normalizes token provisioning group names", () => {
