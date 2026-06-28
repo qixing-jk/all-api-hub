@@ -810,23 +810,24 @@ test("edits a managed-site channel from row actions", async ({
 
   await expect(page.getByText("Channel updated")).toBeVisible()
   await expect(page.getByText("Production OpenAI Edited")).toBeVisible()
-  expect(updatePayloads).toContainEqual(
-    expect.objectContaining({
-      id: 101,
-      name: "Production OpenAI Edited",
-      base_url: "https://upstream-a.example.com/v1",
-      models: "gpt-4o-mini,gpt-4.1-mini",
-      group: "default,vip",
-      priority: 3,
-      weight: 2,
-      status: 1,
-    }),
+  const editedPayload = updatePayloads.find(
+    (payload): payload is Record<string, unknown> =>
+      typeof payload === "object" &&
+      payload !== null &&
+      "id" in payload &&
+      payload.id === 101,
   )
-  expect(updatePayloads).not.toContainEqual(
-    expect.objectContaining({
-      groups: ["default", "vip"],
-    }),
-  )
+  expect(editedPayload).toMatchObject({
+    id: 101,
+    name: "Production OpenAI Edited",
+    base_url: "https://upstream-a.example.com/v1",
+    models: "gpt-4o-mini,gpt-4.1-mini",
+    group: "default,vip",
+    priority: 3,
+    weight: 2,
+    status: 1,
+  })
+  expect(editedPayload).not.toHaveProperty("groups")
 })
 
 test("loads managed-site channels, deep-links into manual model sync, and runs a selected sync", async ({

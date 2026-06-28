@@ -84,7 +84,6 @@ describe("newApiFamily channel management APIs", () => {
             name: "My Channel",
             channel: {
               name: "inner",
-              groups: ["default", "vip"],
               group: "default,vip",
             },
           }),

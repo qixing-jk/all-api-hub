@@ -64,10 +64,7 @@ export async function createChannel(
   try {
     const payload = {
       ...channelData,
-      channel: {
-        ...channelData.channel,
-        group: channelData?.channel?.groups?.join(","),
-      },
+      channel: serializeChannelGroups(channelData.channel),
     }
 
     return await fetchApi<void>(request, {
