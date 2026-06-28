@@ -74,15 +74,13 @@ describe("Octopus API service", () => {
         base_urls: [{ url: "https://api.example.com/v1" }],
       },
     ])
-    expect(fetchMock).toHaveBeenCalledWith(
+    const [, request] = fetchMock.mock.calls[0]
+    const headers = request.headers as Headers
+    expect(fetchMock.mock.calls[0][0]).toBe(
       "https://octopus.example.com/api/v1/channel/list",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer jwt-token",
-          "Content-Type": "application/json",
-        }),
-      }),
     )
+    expect(headers.get("Authorization")).toBe("Bearer jwt-token")
+    expect(headers.get("Content-Type")).toBe("application/json")
   })
 
   it("filters searched channels by name and upstream URL", async () => {

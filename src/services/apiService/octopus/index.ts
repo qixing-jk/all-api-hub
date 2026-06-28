@@ -34,10 +34,7 @@ async function fetchOctopusApi<T>(
 
   const response = await fetch(url, {
     ...options,
-    headers: {
-      ...buildOctopusAuthHeaders(token),
-      ...(options.headers || {}),
-    },
+    headers: createOctopusRequestHeaders(token, options.headers),
   })
 
   // 检查 HTTP 状态码，处理非成功响应
@@ -302,6 +299,34 @@ export async function fetchGroups(config: OctopusConfig): Promise<string[]> {
 
 export { octopusAuthManager } from "./auth"
 
+const createOctopusRequestHeaders = (
+  token: string,
+  headers?: HeadersInit,
+): Headers => {
+  const requestHeaders = new Headers(buildOctopusAuthHeaders(token))
+  const overrideHeaders = new Headers(headers)
+  for (const [name, value] of overrideHeaders.entries()) {
+    requestHeaders.set(name, value)
+  }
+  return requestHeaders
+}
+
+const getStoredOctopusConfig = async (): Promise<OctopusConfig | null> => {
+  const octopusConfig = (await userPreferences.getPreferences())?.octopus
+  if (
+    !octopusConfig?.baseUrl ||
+    !octopusConfig?.username ||
+    !octopusConfig?.password
+  ) {
+    return null
+  }
+  return {
+    baseUrl: octopusConfig.baseUrl,
+    username: octopusConfig.username,
+    password: octopusConfig.password,
+  }
+}
+
 /**
  * 获取站点分组列表（符合 common API 签名）
  * 使用 Octopus JWT 认证调用 /api/v1/group/list
@@ -311,21 +336,12 @@ export async function fetchSiteUserGroups(
   _request: ApiServiceRequest,
 ): Promise<string[]> {
   try {
-    const prefs = await userPreferences.getPreferences()
-    const octopusConfig = prefs?.octopus
-    if (
-      !octopusConfig?.baseUrl ||
-      !octopusConfig?.username ||
-      !octopusConfig?.password
-    ) {
+    const octopusConfig = await getStoredOctopusConfig()
+    if (!octopusConfig) {
       logger.warn("Octopus config not available, returning empty groups")
       return []
     }
-    return await fetchGroups({
-      baseUrl: octopusConfig.baseUrl,
-      username: octopusConfig.username,
-      password: octopusConfig.password,
-    })
+    return await fetchGroups(octopusConfig)
   } catch (error) {
     logger.error("Failed to fetch site user groups", error)
     return []
@@ -341,21 +357,12 @@ export async function fetchAccountAvailableModels(
   _request: ApiServiceRequest,
 ): Promise<string[]> {
   try {
-    const prefs = await userPreferences.getPreferences()
-    const octopusConfig = prefs?.octopus
-    if (
-      !octopusConfig?.baseUrl ||
-      !octopusConfig?.username ||
-      !octopusConfig?.password
-    ) {
+    const octopusConfig = await getStoredOctopusConfig()
+    if (!octopusConfig) {
       logger.warn("Octopus config not available, returning empty models")
       return []
     }
-    return await fetchAvailableModels({
-      baseUrl: octopusConfig.baseUrl,
-      username: octopusConfig.username,
-      password: octopusConfig.password,
-    })
+    return await fetchAvailableModels(octopusConfig)
   } catch (error) {
     logger.error("Failed to fetch account available models", error)
     return []

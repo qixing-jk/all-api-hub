@@ -1144,10 +1144,10 @@ class AccountStorageService {
 
       // 如果成功获取数据，更新账号信息
       const shouldReEnable = Boolean(
-        options?.reEnableOnSuccess === true && result.success && result.data,
+        options?.reEnableOnSuccess === true && result.success,
       )
 
-      if (result.success && result.data) {
+      if (result.success) {
         const manualBalanceUsd = account.manualBalanceUsd?.trim()
         const manualQuota =
           manualBalanceUsd && manualBalanceUsd.length > 0

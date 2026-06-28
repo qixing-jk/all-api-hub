@@ -29,9 +29,14 @@ export interface AccountData extends TodayStatsData {
   checkIn: CheckInConfig
 }
 
-export interface RefreshAccountResult {
-  success: boolean
-  data?: AccountData
+type RefreshAuthUpdate = {
+  accessToken?: string
+  userId?: AccountIdentity
+  username?: string
+  sub2apiAuth?: Sub2ApiAuthConfig
+}
+
+type RefreshAccountResultBase = {
   healthStatus: HealthCheckResult
   /**
    * Optional auth/identity updates discovered during refresh.
@@ -40,13 +45,18 @@ export interface RefreshAccountResult {
    * browser context (e.g., Sub2API JWT stored in localStorage) without
    * re-authenticating the user.
    */
-  authUpdate?: {
-    accessToken?: string
-    userId?: AccountIdentity
-    username?: string
-    sub2apiAuth?: Sub2ApiAuthConfig
-  }
+  authUpdate?: RefreshAuthUpdate
 }
+
+export type RefreshAccountResult =
+  | (RefreshAccountResultBase & {
+      success: true
+      data: AccountData
+    })
+  | (RefreshAccountResultBase & {
+      success: false
+      data?: never
+    })
 
 export interface HealthCheckResult {
   status: SiteHealthStatus
