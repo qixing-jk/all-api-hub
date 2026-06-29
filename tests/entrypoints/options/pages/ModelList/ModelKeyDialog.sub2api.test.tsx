@@ -11,13 +11,11 @@ import { render, screen, waitFor } from "~~/tests/test-utils/render"
 const {
   fetchAccountTokensMock,
   adapterCreateTokenMock,
-  legacyCreateApiTokenMock,
   toastSuccessMock,
   toastErrorMock,
 } = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
   adapterCreateTokenMock: vi.fn(),
-  legacyCreateApiTokenMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
 }))
@@ -27,15 +25,6 @@ vi.mock("react-hot-toast", () => ({
     success: toastSuccessMock,
     error: toastErrorMock,
   },
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({
-    createApiToken: (...args: any[]) => legacyCreateApiTokenMock(...args),
-    fetchAccountAvailableModels: vi.fn(async () => []),
-    fetchUserGroups: vi.fn(async () => ({})),
-    updateApiToken: vi.fn(async () => true),
-  }),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
@@ -59,7 +48,6 @@ describe("ModelKeyDialog sub2api support", () => {
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     adapterCreateTokenMock.mockReset()
-    legacyCreateApiTokenMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
   })
@@ -98,7 +86,6 @@ describe("ModelKeyDialog sub2api support", () => {
       })
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
     })
-    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
   })
 
   it("refreshes inventory instead of showing one-time UI when Sub2API create returns a token DTO", async () => {
@@ -134,7 +121,6 @@ describe("ModelKeyDialog sub2api support", () => {
       expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
     })
-    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
     expect(
       screen.queryByText("keyManagement:oneTimeKey.title"),
     ).not.toBeInTheDocument()

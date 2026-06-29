@@ -10,7 +10,6 @@ import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagemen
 import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
 import { useAccountData } from "~/hooks/useAccountData"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { getApiService } from "~/services/apiService"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -46,10 +45,6 @@ const {
 
 vi.mock("~/hooks/useAccountData", () => ({
   useAccountData: vi.fn(),
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
@@ -193,8 +188,6 @@ describe("useKeyManagement enabled account filtering", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
       createAdapterWithKeyManagement() as any,
     )
-    vi.mocked(getApiService).mockReset()
-    vi.mocked(getApiService).mockReturnValue({} as any)
   })
 
   it("uses enabledDisplayData from useAccountData for selectors", () => {
@@ -261,7 +254,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -306,7 +298,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -355,7 +346,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(
       () => useKeyManagement({ accountId: "disabled" }),
@@ -416,7 +406,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -508,7 +497,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -567,7 +555,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -629,7 +616,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -679,7 +665,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -731,7 +716,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const allAccountsComplete = vi.fn().mockResolvedValue(undefined)
     const singleAccountComplete = vi.fn().mockResolvedValue(undefined)
@@ -827,7 +811,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -896,7 +879,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -964,7 +946,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const initialRefreshComplete = vi.fn().mockResolvedValue(undefined)
     const retryComplete = vi.fn().mockRejectedValue(new Error("analytics down"))
@@ -1065,7 +1046,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1149,7 +1129,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1223,7 +1202,6 @@ describe("useKeyManagement enabled account filtering", () => {
         resolveTokenKey,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1314,7 +1292,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1383,7 +1360,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1462,7 +1438,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const initialLoadComplete = vi.fn().mockResolvedValue(undefined)
     const manualRefreshComplete = vi
@@ -1529,7 +1504,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1600,7 +1574,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1691,7 +1664,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1821,7 +1793,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1911,7 +1882,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -1981,7 +1951,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
     getManagedSiteTokenChannelStatusMock
       .mockResolvedValueOnce({
         status: managedSiteTokenChannelStatuses.NOT_ADDED,
@@ -2072,7 +2041,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
     getManagedSiteTokenChannelStatusMock
       .mockResolvedValueOnce({
         status: managedSiteTokenChannelStatuses.ADDED,
@@ -2149,7 +2117,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
     getManagedSiteTokenChannelStatusMock
       .mockReturnValueOnce(initialStatus)
       .mockResolvedValueOnce({
@@ -2233,7 +2200,6 @@ describe("useKeyManagement enabled account filtering", () => {
         deleteToken,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
 
@@ -2312,7 +2278,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2380,7 +2345,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2450,7 +2414,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2520,7 +2483,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2577,7 +2539,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(
       () => useKeyManagement({ accountId: account.id }),
@@ -2607,7 +2568,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2655,7 +2615,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2705,7 +2664,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result, rerender } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2764,7 +2722,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2816,7 +2773,6 @@ describe("useKeyManagement enabled account filtering", () => {
         resolveTokenKey,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2869,7 +2825,6 @@ describe("useKeyManagement enabled account filtering", () => {
         resolveTokenKey,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2926,7 +2881,6 @@ describe("useKeyManagement enabled account filtering", () => {
         resolveTokenKey,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -2982,7 +2936,6 @@ describe("useKeyManagement enabled account filtering", () => {
         resolveTokenKey,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3060,7 +3013,6 @@ describe("useKeyManagement enabled account filtering", () => {
         resolveTokenKey,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3122,7 +3074,6 @@ describe("useKeyManagement enabled account filtering", () => {
         resolveTokenKey,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3175,7 +3126,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3221,7 +3171,6 @@ describe("useKeyManagement enabled account filtering", () => {
         fetchTokens: fetchAccountTokens,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3298,7 +3247,6 @@ describe("useKeyManagement enabled account filtering", () => {
         deleteToken,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm")
 
@@ -3355,7 +3303,6 @@ describe("useKeyManagement enabled account filtering", () => {
         deleteToken,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3409,7 +3356,6 @@ describe("useKeyManagement enabled account filtering", () => {
         deleteToken,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3468,7 +3414,6 @@ describe("useKeyManagement enabled account filtering", () => {
         deleteToken,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
 
@@ -3529,7 +3474,6 @@ describe("useKeyManagement enabled account filtering", () => {
         deleteToken,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
 
@@ -3607,7 +3551,6 @@ describe("useKeyManagement enabled account filtering", () => {
         deleteToken,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
       wrapper: createWrapper(),
@@ -3656,7 +3599,6 @@ describe("useKeyManagement enabled account filtering", () => {
         deleteToken,
       }) as any,
     )
-    vi.mocked(getApiService).mockReturnValue({} as any)
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
 

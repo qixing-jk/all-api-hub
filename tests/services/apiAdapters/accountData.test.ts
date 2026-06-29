@@ -11,18 +11,12 @@ const {
   mockAihubmixFetchAccountData,
   mockDoneHubFetchAccountData,
   mockFetchAccountData,
-  mockGetApiService,
   mockSub2ApiFetchAccountData,
 } = vi.hoisted(() => ({
   mockAihubmixFetchAccountData: vi.fn(),
   mockDoneHubFetchAccountData: vi.fn(),
   mockFetchAccountData: vi.fn(),
-  mockGetApiService: vi.fn(),
   mockSub2ApiFetchAccountData: vi.fn(),
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
@@ -33,9 +27,11 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
 
 vi.mock("~/services/apiService/newApiFamily/variants/doneHub", () => ({
   fetchAccountData: mockDoneHubFetchAccountData,
+  refreshAccountData: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/sub2api", () => ({
+vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
+  ...(await importOriginal()),
   fetchAccountData: mockSub2ApiFetchAccountData,
 }))
 
@@ -96,15 +92,12 @@ describe("apiAdapter accountData", () => {
 
     const accountDataCapability = createNewApiAccountData(SITE_TYPES.NEW_API)
 
-    expect(mockGetApiService).not.toHaveBeenCalled()
-
     await expect(accountDataCapability.fetchData(request)).resolves.toBe(
       accountData,
     )
 
     expect(mockFetchAccountData).toHaveBeenCalledOnce()
     expect(mockFetchAccountData).toHaveBeenCalledWith(request)
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it("delegates New API-family site-specific account data through adapter overrides", async () => {
@@ -118,7 +111,6 @@ describe("apiAdapter accountData", () => {
 
     expect(mockDoneHubFetchAccountData).toHaveBeenCalledWith(request)
     expect(mockFetchAccountData).not.toHaveBeenCalled()
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it("delegates Sub2API account data without reshaping disabled check-in or zeroed stats", async () => {
@@ -130,7 +122,6 @@ describe("apiAdapter accountData", () => {
       disabledCheckInAccountData,
     )
 
-    expect(mockGetApiService).not.toHaveBeenCalled()
     expect(mockSub2ApiFetchAccountData).toHaveBeenCalledOnce()
     expect(mockSub2ApiFetchAccountData).toHaveBeenCalledWith(request)
   })
@@ -144,7 +135,6 @@ describe("apiAdapter accountData", () => {
       disabledCheckInAccountData,
     )
 
-    expect(mockGetApiService).not.toHaveBeenCalled()
     expect(mockAihubmixFetchAccountData).toHaveBeenCalledOnce()
     expect(mockAihubmixFetchAccountData).toHaveBeenCalledWith(request)
   })

@@ -118,15 +118,6 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({
-    fetchAccountAvailableModels: (...args: any[]) =>
-      fetchAccountAvailableModelsMock(...args),
-    fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
-    updateApiToken: vi.fn(async () => true),
-  }),
-}))
-
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: () => ({
     account: {

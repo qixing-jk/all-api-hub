@@ -3,10 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { createNewApiRedemption } from "~/services/apiAdapters/newApi/redemption"
 import { AuthTypeEnum } from "~/types"
 
-const { mockGetApiService, mockRedeemCode } = vi.hoisted(() => ({
-  mockGetApiService: vi.fn(() => {
-    throw new Error("legacy apiService facade should not be used")
-  }),
+const { mockRedeemCode } = vi.hoisted(() => ({
   mockRedeemCode: vi.fn(),
 }))
 
@@ -14,10 +11,6 @@ vi.mock("~/services/apiService/newApiFamily/default/redemption", () => ({
   defaultRedemptionImplementation: {
     redeemCode: mockRedeemCode,
   },
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
 }))
 
 const request = {
@@ -49,6 +42,5 @@ describe("createNewApiRedemption", () => {
 
     expect(mockRedeemCode).toHaveBeenCalledOnce()
     expect(mockRedeemCode).toHaveBeenCalledWith(request, "example-code")
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 })

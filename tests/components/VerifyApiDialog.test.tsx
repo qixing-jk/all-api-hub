@@ -31,10 +31,6 @@ const mockResolveTokenKey = vi.fn()
 const mockStartProductAnalyticsAction = vi.fn()
 const mockCompleteProductAnalyticsAction = vi.fn()
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({}),
-}))
-
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: () => ({
     account: {

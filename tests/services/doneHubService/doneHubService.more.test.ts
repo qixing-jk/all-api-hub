@@ -29,15 +29,6 @@ const {
   mockFetchManagedSiteAvailableModels: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
-    searchChannel: mockSearchChannel,
-    createChannel: mockCreateChannel,
-    updateChannel: mockUpdateChannel,
-    deleteChannel: mockDeleteChannel,
-  })),
-}))
-
 vi.mock("~/services/apiService/doneHub", () => ({
   searchChannel: (...args: unknown[]) => mockSearchChannel(...args),
   createChannel: (...args: unknown[]) => mockCreateChannel(...args),

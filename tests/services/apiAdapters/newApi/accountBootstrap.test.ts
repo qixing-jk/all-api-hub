@@ -14,7 +14,6 @@ const {
   mockFetchCheckInSupport,
   mockFetchSiteStatus,
   mockFetchUserInfo,
-  mockGetApiService,
   mockGetOrCreateAccessToken,
   wongFetchSupportCheckIn,
 } = vi.hoisted(() => ({
@@ -23,9 +22,6 @@ const {
   mockFetchCheckInSupport: vi.fn(),
   mockFetchSiteStatus: vi.fn(),
   mockFetchUserInfo: vi.fn(),
-  mockGetApiService: vi.fn(() => {
-    throw new Error("legacy apiService facade should not be used")
-  }),
   mockGetOrCreateAccessToken: vi.fn(),
   wongFetchSupportCheckIn: vi.fn(),
 }))
@@ -38,10 +34,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountBootstrap", () => ({
     fetchUserInfo: mockFetchUserInfo,
     getOrCreateAccessToken: mockGetOrCreateAccessToken,
   },
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
@@ -109,7 +101,6 @@ describe("createNewApiAccountBootstrap", () => {
     expect(mockFetchSiteStatus).toHaveBeenCalledWith(request)
     expect(mockFetchCheckInSupport).toHaveBeenCalledWith(request)
     expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it("keeps account route resolution on the static account route helper", async () => {
@@ -125,8 +116,6 @@ describe("createNewApiAccountBootstrap", () => {
         ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Login,
       ),
     ).resolves.toBe("/login")
-
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it.each([

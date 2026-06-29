@@ -24,6 +24,3 @@ export const defaultModelPricingImplementation: ModelPricingImplementation = {
     }
   },
 }
-
-export const fetchModelPricing =
-  defaultModelPricingImplementation.fetchModelPricing

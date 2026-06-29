@@ -245,15 +245,6 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/apiService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/services/apiService")>()
-
-  return {
-    ...actual,
-    getApiService: vi.fn(() => ({})),
-  }
-})
-
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: () => ({
     account: {

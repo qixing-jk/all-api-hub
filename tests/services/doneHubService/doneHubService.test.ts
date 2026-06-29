@@ -5,13 +5,8 @@ import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 const mockSearchChannel = vi.fn()
 const mockFetchDoneHubChannel = vi.fn()
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
-    searchChannel: mockSearchChannel,
-  })),
-}))
-
 vi.mock("~/services/apiService/doneHub", () => ({
+  searchChannel: (...args: unknown[]) => mockSearchChannel(...args),
   fetchAccountData: vi.fn(),
   fetchChannel: (...args: unknown[]) => mockFetchDoneHubChannel(...args),
   refreshAccountData: vi.fn(),

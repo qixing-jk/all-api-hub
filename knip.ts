@@ -92,8 +92,8 @@ const config: KnipConfig = {
     // currently rely on inference instead of importing the interface.
     "src/hooks/useHorizontalScrollControls.ts": ["types"],
 
-    // Site override modules are wired dynamically through getApiService(), so
-    // many override exports appear unused to static analysis.
+    // Site override modules still expose adapter-specific entrypoints that are
+    // selected by higher-level capability factories.
     "src/services/apiService/aihubmix/index.ts": ["exports"],
     "src/services/apiService/anyrouter/index.ts": ["exports"],
     "src/services/apiService/axonHub/index.ts": ["exports"],

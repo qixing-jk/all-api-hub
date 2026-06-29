@@ -17,6 +17,7 @@ import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
 const {
   fetchAccountDataMock,
   ensureDefaultApiTokenForAccountMock,
+  getSiteTypeCapabilitiesMock,
   toastSuccessMock,
   toastErrorMock,
   toastCustomMock,
@@ -25,6 +26,7 @@ const {
 } = vi.hoisted(() => ({
   fetchAccountDataMock: vi.fn(),
   ensureDefaultApiTokenForAccountMock: vi.fn(),
+  getSiteTypeCapabilitiesMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastCustomMock: vi.fn(),
@@ -42,10 +44,8 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({
-    fetchAccountData: fetchAccountDataMock,
-  }),
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 vi.mock(
@@ -83,6 +83,7 @@ describe("accountOperations auto-provision key on add", () => {
   beforeEach(async () => {
     fetchAccountDataMock.mockReset()
     ensureDefaultApiTokenForAccountMock.mockReset()
+    getSiteTypeCapabilitiesMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     toastCustomMock.mockReset()
@@ -97,6 +98,13 @@ describe("accountOperations auto-provision key on add", () => {
       today_requests_count: 0,
       today_income: 0,
       checkIn: CHECK_IN_DISABLED,
+    })
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: {
+        data: {
+          fetchData: fetchAccountDataMock,
+        },
+      },
     })
 
     ensureDefaultApiTokenForAccountMock.mockResolvedValue({

@@ -30,10 +30,6 @@ function getCliToolCardTestId(toolId: string) {
   return `verify-cli-${toolId}`
 }
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({}),
-}))
-
 vi.mock(
   "~/services/accounts/utils/apiServiceRequest",
   async (importOriginal) => {

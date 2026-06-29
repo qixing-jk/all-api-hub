@@ -7,16 +7,12 @@ import { AuthTypeEnum } from "~/types"
 const {
   anyrouterFetchAccountData,
   mockFetchAccountData,
-  mockGetApiService,
   doneHubFetchAccountData,
   veloeraFetchAccountData,
   wongFetchAccountData,
 } = vi.hoisted(() => ({
   anyrouterFetchAccountData: vi.fn(),
   mockFetchAccountData: vi.fn(),
-  mockGetApiService: vi.fn(() => {
-    throw new Error("legacy apiService facade should not be used")
-  }),
   doneHubFetchAccountData: vi.fn(),
   veloeraFetchAccountData: vi.fn(),
   wongFetchAccountData: vi.fn(),
@@ -26,10 +22,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   defaultAccountDataImplementation: {
     fetchAccountData: mockFetchAccountData,
   },
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
@@ -89,7 +81,6 @@ describe("createNewApiAccountData", () => {
     await expect(capability.fetchData(request)).resolves.toBe(accountData)
 
     expect(mockFetchAccountData).toHaveBeenCalledWith(request)
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it.each([

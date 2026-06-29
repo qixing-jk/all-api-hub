@@ -18,7 +18,6 @@ const {
   mockFetchSiteStatus,
   mockFetchSupportCheckIn,
   mockFetchUserInfo,
-  mockGetApiService,
   mockGetOrCreateAccessToken,
   mockSub2ApiExtractDefaultExchangeRate,
   mockSub2ApiFetchSiteStatus,
@@ -35,7 +34,6 @@ const {
   mockFetchSiteStatus: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
   mockFetchUserInfo: vi.fn(),
-  mockGetApiService: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
   mockSub2ApiExtractDefaultExchangeRate: vi.fn(),
   mockSub2ApiFetchSiteStatus: vi.fn(),
@@ -44,21 +42,23 @@ const {
   mockSub2ApiGetOrCreateAccessToken: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
-}))
-
-vi.mock("~/services/apiService/newApiFamily/default/accountBootstrap", () => ({
-  defaultAccountBootstrapImplementation: {
-    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-    fetchSiteStatus: mockFetchSiteStatus,
+vi.mock(
+  "~/services/apiService/newApiFamily/default/accountBootstrap",
+  async (importOriginal) => ({
+    ...(await importOriginal()),
     fetchSupportCheckIn: mockFetchSupportCheckIn,
-    fetchUserInfo: mockFetchUserInfo,
-    getOrCreateAccessToken: mockGetOrCreateAccessToken,
-  },
-}))
+    defaultAccountBootstrapImplementation: {
+      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+      fetchSiteStatus: mockFetchSiteStatus,
+      fetchSupportCheckIn: mockFetchSupportCheckIn,
+      fetchUserInfo: mockFetchUserInfo,
+      getOrCreateAccessToken: mockGetOrCreateAccessToken,
+    },
+  }),
+)
 
-vi.mock("~/services/apiService/sub2api", () => ({
+vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
+  ...(await importOriginal()),
   extractDefaultExchangeRate: mockSub2ApiExtractDefaultExchangeRate,
   fetchSiteStatus: mockSub2ApiFetchSiteStatus,
   fetchSupportCheckIn: mockSub2ApiFetchSupportCheckIn,
@@ -120,7 +120,6 @@ describe("account bootstrap adapters", () => {
     expect(mockFetchSiteStatus).toHaveBeenCalledWith(request)
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(request)
     expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it("resolves static account route paths from shared route kinds", () => {
@@ -215,7 +214,6 @@ describe("account bootstrap adapters", () => {
     expect(mockSub2ApiExtractDefaultExchangeRate).toHaveBeenCalledWith(
       siteStatus,
     )
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it("delegates AIHubMix bootstrap operations to AIHubMix helpers", async () => {
@@ -257,6 +255,5 @@ describe("account bootstrap adapters", () => {
     expect(mockAihubmixExtractDefaultExchangeRate).toHaveBeenCalledWith(
       siteStatus,
     )
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 })

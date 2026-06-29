@@ -26,7 +26,6 @@ import {
 
 const {
   createApiTokenMock,
-  updateApiTokenMock,
   updateTokenMock,
   fetchAccountAvailableModelsMock,
   fetchUserGroupsMock,
@@ -37,7 +36,6 @@ const {
   createApiCredentialProfileMock,
 } = vi.hoisted(() => ({
   createApiTokenMock: vi.fn(),
-  updateApiTokenMock: vi.fn(),
   updateTokenMock: vi.fn(),
   fetchAccountAvailableModelsMock: vi.fn(),
   fetchUserGroupsMock: vi.fn(),
@@ -53,15 +51,6 @@ vi.mock("react-hot-toast", () => ({
     success: toastSuccessMock,
     error: toastErrorMock,
   },
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({
-    updateApiToken: (...args: any[]) => updateApiTokenMock(...args),
-    fetchAccountAvailableModels: (...args: any[]) =>
-      fetchAccountAvailableModelsMock(...args),
-    fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
-  }),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
@@ -126,7 +115,6 @@ const AIHUBMIX_ACCOUNT = {
 describe("AddTokenDialog prefill", () => {
   beforeEach(() => {
     createApiTokenMock.mockReset()
-    updateApiTokenMock.mockReset()
     updateTokenMock.mockReset()
     fetchAccountAvailableModelsMock.mockReset()
     fetchUserGroupsMock.mockReset()
@@ -327,7 +315,6 @@ describe("AddTokenDialog prefill", () => {
         model_limits: "",
       },
     })
-    expect(updateApiTokenMock).not.toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
@@ -430,7 +417,6 @@ describe("AddTokenDialog prefill", () => {
         "keyManagement:dialog.updateFailed",
       )
     })
-    expect(updateApiTokenMock).not.toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
@@ -489,7 +475,6 @@ describe("AddTokenDialog prefill", () => {
         "keyManagement:dialog.updateFailed",
       )
     })
-    expect(updateApiTokenMock).not.toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
@@ -1044,7 +1029,6 @@ describe("AddTokenDialog prefill", () => {
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalledWith()
     })
-    expect(updateApiTokenMock).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
 
     resolveSuccess()
@@ -1100,7 +1084,6 @@ describe("AddTokenDialog prefill", () => {
       expect(onSuccess).toHaveBeenCalledWith()
       expect(onClose).toHaveBeenCalled()
     })
-    expect(updateApiTokenMock).not.toHaveBeenCalled()
   })
 
   it("closes through the AIHubMix one-time key dialog acknowledgement", async () => {

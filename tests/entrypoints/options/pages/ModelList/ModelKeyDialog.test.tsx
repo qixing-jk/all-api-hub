@@ -19,7 +19,6 @@ import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 const {
   fetchAccountTokensMock,
   adapterCreateTokenMock,
-  legacyCreateApiTokenMock,
   toastSuccessMock,
   toastErrorMock,
   resolveDisplayAccountTokenForSecretMock,
@@ -31,7 +30,6 @@ const {
 } = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
   adapterCreateTokenMock: vi.fn(),
-  legacyCreateApiTokenMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
@@ -63,15 +61,6 @@ vi.mock(
     }
   },
 )
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({
-    createApiToken: (...args: any[]) => legacyCreateApiTokenMock(...args),
-    fetchAccountAvailableModels: vi.fn(async () => []),
-    fetchUserGroups: vi.fn(async () => ({})),
-    updateApiToken: vi.fn(async () => true),
-  }),
-}))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: () => ({
@@ -177,7 +166,6 @@ describe("ModelKeyDialog", () => {
     vi.restoreAllMocks()
     fetchAccountTokensMock.mockReset()
     adapterCreateTokenMock.mockReset()
-    legacyCreateApiTokenMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockReset()
@@ -430,7 +418,6 @@ describe("ModelKeyDialog", () => {
         model_limits_enabled: false,
         model_limits: "",
       })
-      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
       expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
     })
@@ -486,7 +473,6 @@ describe("ModelKeyDialog", () => {
 
     await waitFor(() => {
       expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
         name: "AIHubMix - model-key",
         apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -543,7 +529,6 @@ describe("ModelKeyDialog", () => {
 
     await waitFor(() => {
       expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(writeText).toHaveBeenCalledWith("created-full-secret")
     })
   })
@@ -584,7 +569,6 @@ describe("ModelKeyDialog", () => {
 
     await waitFor(() => {
       expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
     })
 
@@ -640,7 +624,6 @@ describe("ModelKeyDialog", () => {
     ).not.toBeInTheDocument()
     expect(writeText).not.toHaveBeenCalled()
     expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
@@ -683,7 +666,6 @@ describe("ModelKeyDialog", () => {
 
     await waitFor(() => {
       expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
     })
 
@@ -737,7 +719,6 @@ describe("ModelKeyDialog", () => {
         model_limits_enabled: false,
         model_limits: "",
       })
-      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(3)
     })
     setTimeoutSpy.mockRestore()
@@ -779,7 +760,6 @@ describe("ModelKeyDialog", () => {
 
     await waitFor(() => {
       expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(6)
     })
     setTimeoutSpy.mockRestore()
@@ -821,7 +801,6 @@ describe("ModelKeyDialog", () => {
       await screen.findByText("modelList:keyDialog.createFailed"),
     ).toBeInTheDocument()
     expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateCompatibleModelKey,
@@ -1040,7 +1019,6 @@ describe("ModelKeyDialog", () => {
       await screen.findByText("modelList:keyDialog.createFailed"),
     ).toBeInTheDocument()
     expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-    expect(legacyCreateApiTokenMock).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },

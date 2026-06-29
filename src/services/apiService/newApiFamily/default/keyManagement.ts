@@ -16,8 +16,6 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
-export { resolveApiTokenKey } from "~/services/apiService/common/tokenKeyResolver"
-
 const logger = createLogger("NewApiFamilyKeyManagement")
 
 interface KeyManagementImplementation {

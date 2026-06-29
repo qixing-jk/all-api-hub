@@ -15,12 +15,10 @@ import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 
 const {
   fetchAccountDataMock,
-  getApiServiceMock,
   getSiteTypeCapabilitiesMock,
   ensureDefaultApiTokenForAccountMock,
 } = vi.hoisted(() => ({
   fetchAccountDataMock: vi.fn(),
-  getApiServiceMock: vi.fn(),
   getSiteTypeCapabilitiesMock: vi.fn(),
   ensureDefaultApiTokenForAccountMock: vi.fn(),
 }))
@@ -32,10 +30,6 @@ vi.mock("react-hot-toast", () => ({
     error: vi.fn(),
     dismiss: vi.fn(),
   },
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: getApiServiceMock,
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
@@ -86,9 +80,6 @@ describe("accountOperations validateAndSaveAccount", () => {
       ...DEFAULT_PREFERENCES,
       autoProvisionKeyOnAccountAdd: false,
       showTodayCashflow: false,
-    })
-    getApiServiceMock.mockReturnValue({
-      fetchAccountData: fetchAccountDataMock,
     })
     getSiteTypeCapabilitiesMock.mockReturnValue({
       account: {
@@ -234,7 +225,6 @@ describe("accountOperations validateAndSaveAccount", () => {
       today_income: 0,
       checkIn: CHECK_IN_DISABLED,
     })
-    getApiServiceMock.mockClear()
     getSiteTypeCapabilitiesMock.mockClear()
 
     const result = await validateAndUpdateAccount(
@@ -257,7 +247,6 @@ describe("accountOperations validateAndSaveAccount", () => {
     expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(
       SITE_TYPES.AIHUBMIX,
     )
-    expect(getApiServiceMock).not.toHaveBeenCalled()
 
     const saved = await accountStorage.getAccountById(accountId)
     expect(saved?.site_url).toBe("https://console.aihubmix.com")
@@ -843,7 +832,6 @@ describe("accountOperations validateAndSaveAccount", () => {
   })
 
   it("allows New API-family account sites to update non-canonical string user ids", async () => {
-    getApiServiceMock.mockClear()
     getSiteTypeCapabilitiesMock.mockClear()
 
     for (const userId of ["1.5", "1e3", "-1", "0", "001"]) {
@@ -915,7 +903,6 @@ describe("accountOperations validateAndSaveAccount", () => {
     expect(fetchAccountDataMock).toHaveBeenCalledTimes(5)
     expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledTimes(5)
     expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
-    expect(getApiServiceMock).not.toHaveBeenCalled()
   })
 
   it("allows AIHubMix to save a stable username identity", async () => {

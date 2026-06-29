@@ -8,7 +8,6 @@ const {
   anyrouterFetchSupportCheckIn,
   anyrouterRefreshAccountData,
   mockFetchSupportCheckIn,
-  mockGetApiService,
   mockRefreshAccountData,
   doneHubRefreshAccountData,
   veloeraRefreshAccountData,
@@ -18,9 +17,6 @@ const {
   anyrouterFetchSupportCheckIn: vi.fn(),
   anyrouterRefreshAccountData: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
-  mockGetApiService: vi.fn(() => {
-    throw new Error("legacy apiService facade should not be used")
-  }),
   mockRefreshAccountData: vi.fn(),
   doneHubRefreshAccountData: vi.fn(),
   veloeraRefreshAccountData: vi.fn(),
@@ -33,10 +29,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountRefresh", () => ({
     fetchSupportCheckIn: mockFetchSupportCheckIn,
     refreshAccountData: mockRefreshAccountData,
   },
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
@@ -115,7 +107,6 @@ describe("createNewApiAccountRefresh", () => {
 
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
     expect(mockRefreshAccountData).toHaveBeenCalledWith(refreshRequest)
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it.each([

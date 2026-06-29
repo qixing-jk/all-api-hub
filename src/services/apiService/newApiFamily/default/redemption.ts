@@ -27,5 +27,3 @@ export const defaultRedemptionImplementation: RedemptionImplementation = {
     }
   },
 }
-
-export const redeemCode = defaultRedemptionImplementation.redeemCode

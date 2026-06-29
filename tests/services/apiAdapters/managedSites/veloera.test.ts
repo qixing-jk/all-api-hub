@@ -21,14 +21,8 @@ const veloeraApi = vi.hoisted(() => ({
   updateChannelModelMapping: vi.fn(),
 }))
 
-const getApiService = vi.hoisted(() => vi.fn())
-
 vi.mock("~/services/apiService/veloera", () => ({
   ...veloeraApi,
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService,
 }))
 
 describe("Veloera managed-site channel capability", () => {
@@ -109,7 +103,6 @@ describe("Veloera managed-site channel capability", () => {
       JSON.stringify({ "gpt-4o": "gpt-4o" }),
       { signal: expect.any(AbortSignal) },
     )
-    expect(getApiService).not.toHaveBeenCalled()
   })
 
   it("exposes provider config and draft functions", async () => {

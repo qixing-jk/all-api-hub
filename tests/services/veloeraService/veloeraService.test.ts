@@ -26,17 +26,13 @@ const mockUpdateChannel = vi.fn()
 const mockDeleteChannel = vi.fn()
 const mockFetchVeloeraChannel = vi.fn()
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
-    fetchAccountAvailableModels: mockFetchAccountAvailableModels,
-    searchChannel: mockSearchChannel,
-    createChannel: mockCreateChannel,
-    updateChannel: mockUpdateChannel,
-    deleteChannel: mockDeleteChannel,
-  })),
-}))
-
 vi.mock("~/services/apiService/veloera", () => ({
+  fetchAccountAvailableModels: (...args: unknown[]) =>
+    mockFetchAccountAvailableModels(...args),
+  searchChannel: (...args: unknown[]) => mockSearchChannel(...args),
+  createChannel: (...args: unknown[]) => mockCreateChannel(...args),
+  updateChannel: (...args: unknown[]) => mockUpdateChannel(...args),
+  deleteChannel: (...args: unknown[]) => mockDeleteChannel(...args),
   fetchAccountData: vi.fn(),
   fetchChannel: (...args: unknown[]) => mockFetchVeloeraChannel(...args),
   refreshAccountData: vi.fn(),

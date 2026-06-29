@@ -16,24 +16,14 @@ import { AuthTypeEnum } from "~/types"
 const {
   mockFetchAccountData,
   mockFetchSiteStatus,
-  mockGetApiService,
   mockgetSiteTypeCapabilities,
   mockUpdateAccount,
 } = vi.hoisted(() => ({
   mockFetchAccountData: vi.fn(),
   mockFetchSiteStatus: vi.fn(),
-  mockGetApiService: vi.fn(),
   mockgetSiteTypeCapabilities: vi.fn(),
   mockUpdateAccount: vi.fn(),
 }))
-
-vi.mock("~/services/apiService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/services/apiService")>()
-  return {
-    ...actual,
-    getApiService: mockGetApiService,
-  }
-})
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: mockgetSiteTypeCapabilities,
@@ -56,12 +46,8 @@ describe("accountOperations", () => {
   beforeEach(() => {
     mockFetchAccountData.mockReset()
     mockFetchSiteStatus.mockReset()
-    mockGetApiService.mockReset()
     mockgetSiteTypeCapabilities.mockReset()
     mockUpdateAccount.mockReset()
-    mockGetApiService.mockReturnValue({
-      fetchSiteStatus: mockFetchSiteStatus,
-    })
     mockgetSiteTypeCapabilities.mockReturnValue({
       account: {
         data: {

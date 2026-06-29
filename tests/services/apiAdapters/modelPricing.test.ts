@@ -9,19 +9,11 @@ import { AuthTypeEnum } from "~/types"
 const {
   mockAihubmixFetchModelPricing,
   mockFetchModelPricing,
-  mockGetApiService,
   mockOneHubFetchModelPricing,
 } = vi.hoisted(() => ({
   mockAihubmixFetchModelPricing: vi.fn(),
   mockFetchModelPricing: vi.fn(),
-  mockGetApiService: vi.fn(() => {
-    throw new Error("legacy apiService facade should not be used")
-  }),
   mockOneHubFetchModelPricing: vi.fn(),
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: mockGetApiService,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
@@ -81,7 +73,6 @@ describe("apiAdapter modelPricing", () => {
 
     expect(mockFetchModelPricing).toHaveBeenCalledOnce()
     expect(mockFetchModelPricing).toHaveBeenCalledWith(request)
-    expect(mockGetApiService).not.toHaveBeenCalled()
   })
 
   it.each([SITE_TYPES.ONE_HUB, SITE_TYPES.DONE_HUB])(
@@ -107,7 +98,6 @@ describe("apiAdapter modelPricing", () => {
       pricingResponse,
     )
 
-    expect(mockGetApiService).not.toHaveBeenCalled()
     expect(mockAihubmixFetchModelPricing).toHaveBeenCalledOnce()
     expect(mockAihubmixFetchModelPricing).toHaveBeenCalledWith(request)
   })
