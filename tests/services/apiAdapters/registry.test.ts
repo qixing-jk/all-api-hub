@@ -238,4 +238,12 @@ describe("apiAdapters registry", () => {
       ).toBeUndefined()
     }
   })
+
+  it("returns only the site type for unsupported non-account site types", () => {
+    const capabilities = getSiteTypeCapabilities("__unsupported__" as SiteType)
+
+    expect(capabilities).toEqual({
+      siteType: "__unsupported__",
+    })
+  })
 })

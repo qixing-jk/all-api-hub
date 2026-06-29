@@ -13,6 +13,7 @@ const {
   mockUpdateChannel,
   mockDeleteChannel,
   mockFetchDoneHubChannel,
+  mockFetchSiteUserGroups,
   mockGetPreferences,
   mockFetchTokenScopedModels,
   mockResolveDefaultChannelGroups,
@@ -23,6 +24,7 @@ const {
   mockUpdateChannel: vi.fn(),
   mockDeleteChannel: vi.fn(),
   mockFetchDoneHubChannel: vi.fn(),
+  mockFetchSiteUserGroups: vi.fn(),
   mockGetPreferences: vi.fn(),
   mockFetchTokenScopedModels: vi.fn(),
   mockResolveDefaultChannelGroups: vi.fn(),
@@ -35,6 +37,7 @@ vi.mock("~/services/apiService/doneHub", () => ({
   updateChannel: (...args: unknown[]) => mockUpdateChannel(...args),
   deleteChannel: (...args: unknown[]) => mockDeleteChannel(...args),
   fetchChannel: (...args: unknown[]) => mockFetchDoneHubChannel(...args),
+  fetchSiteUserGroups: (...args: unknown[]) => mockFetchSiteUserGroups(...args),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -76,6 +79,7 @@ describe("doneHubService additional flows", () => {
     })
     mockResolveDefaultChannelGroups.mockResolvedValue(["ops", "default"])
     mockFetchManagedSiteAvailableModels.mockResolvedValue(["gpt-4o-mini"])
+    mockFetchSiteUserGroups.mockResolvedValue(["default"])
     mockSearchChannel.mockResolvedValue({
       items: [],
       total: 0,
@@ -116,6 +120,48 @@ describe("doneHubService additional flows", () => {
       groups: ["ops", "default"],
     })
     expect(result.modelPrefillFetchFailed).toBeUndefined()
+  })
+
+  it("passes Done Hub group lookup wiring to the default-group resolver", async () => {
+    const { prepareChannelFormData } = await import(
+      "~/services/managedSites/providers/doneHubService"
+    )
+    const groupError = new Error("groups unavailable")
+    mockResolveDefaultChannelGroups.mockImplementationOnce(async (options) => {
+      const groups = await options.fetchSiteUserGroups({
+        baseUrl: "https://done-hub.example.com",
+        adminToken: "done-hub-token",
+        userId: "100",
+      })
+      options.onError(groupError)
+      return groups
+    })
+    const account = buildDisplaySiteData({
+      name: "Done Hub Account",
+      baseUrl: "https://proxy.example.com",
+    })
+    const token = buildApiToken({
+      key: "done-hub-key",
+      name: "Primary Token",
+    })
+
+    const result = await prepareChannelFormData(account, token)
+
+    expect(mockResolveDefaultChannelGroups).toHaveBeenCalled()
+    expect(mockResolveDefaultChannelGroups.mock.calls[0][0]).toEqual({
+      getConfig: expect.any(Function),
+      fetchSiteUserGroups: expect.any(Function),
+      onError: expect.any(Function),
+    })
+    expect(mockFetchSiteUserGroups).toHaveBeenCalledWith({
+      baseUrl: "https://done-hub.example.com",
+      auth: {
+        authType: "access_token",
+        accessToken: "done-hub-token",
+        userId: "100",
+      },
+    })
+    expect(result.groups).toEqual(["default"])
   })
 
   it("uses the AIHubMix API origin for managed-site channel imports", async () => {

@@ -451,6 +451,36 @@ describe("managedSiteService", () => {
     expect(service).not.toHaveProperty("autoConfigToManagedSite")
   })
 
+  it("throws when managed-site capability groups are incomplete", async () => {
+    const { getManagedSiteServiceForType } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+
+    capabilityFnsBySiteType.set(SITE_TYPES.DONE_HUB, {
+      channels: {
+        search: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+      config: {
+        checkValid: vi.fn(),
+        get: vi.fn(),
+      },
+      queries: undefined,
+      channelDrafts: {
+        fetchAvailableModels: vi.fn(),
+        buildName: vi.fn(),
+        prepareFormData: vi.fn(),
+        buildPayload: vi.fn(),
+      },
+    })
+
+    expect(() => getManagedSiteServiceForType(SITE_TYPES.DONE_HUB)).toThrow(
+      "managedSites capabilities are not implemented for done-hub",
+    )
+  })
+
   it("passes runtime config objects directly to converted providers", async () => {
     const { getManagedSiteServiceForType } = await import(
       "~/services/managedSites/managedSiteService"

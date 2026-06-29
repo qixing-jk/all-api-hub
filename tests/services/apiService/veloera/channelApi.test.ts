@@ -327,6 +327,29 @@ describe("apiService veloera channel APIs", () => {
     )
   })
 
+  it("updateChannelModels should reject failed Veloera responses", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+
+    mockFetchApi.mockResolvedValueOnce({
+      success: false,
+      message: "",
+    })
+
+    await expect(
+      updateChannelModels(request as any, 9, "gpt-4o"),
+    ).rejects.toMatchObject({
+      message: "Failed to update channel",
+      endpoint: "/api/channel",
+    })
+  })
+
   it("updateChannelModelMapping should write models and model_mapping", async () => {
     const request = {
       baseUrl: "https://example.com",
@@ -361,6 +384,29 @@ describe("apiService veloera channel APIs", () => {
       },
       false,
     )
+  })
+
+  it("updateChannelModelMapping should reject failed Veloera responses", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+
+    mockFetchApi.mockResolvedValueOnce({
+      success: false,
+      message: "mapping failed",
+    })
+
+    await expect(
+      updateChannelModelMapping(request as any, 9, "gpt-4o", "{}"),
+    ).rejects.toMatchObject({
+      message: "mapping failed",
+      endpoint: "/api/channel",
+    })
   })
 
   it("createChannel should post flat payload with group string", async () => {
@@ -484,6 +530,23 @@ describe("apiService veloera channel APIs", () => {
         method: "DELETE",
       },
     })
+  })
+
+  it("deleteChannel should report Veloera delete failures", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+
+    mockFetchApi.mockRejectedValueOnce(new Error("delete failed"))
+
+    await expect(deleteChannel(request as any, 9)).rejects.toThrow(
+      "删除渠道失败，请检查网络或 Veloera 配置",
+    )
   })
 
   it("searchChannel should accept object payloads with an items array and normalize them", async () => {

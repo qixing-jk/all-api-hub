@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   buildChannelName,
@@ -19,8 +19,16 @@ const octopusApi = vi.hoisted(() => ({
   fetchAvailableModels: vi.fn(),
 }))
 
+const userPreferences = vi.hoisted(() => ({
+  getPreferences: vi.fn(),
+}))
+
 vi.mock("~/services/apiService/octopus", () => ({
   ...octopusApi,
+}))
+
+vi.mock("~/services/preferences/userPreferences", () => ({
+  userPreferences,
 }))
 
 describe("Octopus managed-site channel capability", () => {
@@ -41,6 +49,13 @@ describe("Octopus managed-site channel capability", () => {
     auto_sync: true,
     auto_group: 0,
   }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    userPreferences.getPreferences.mockResolvedValue({
+      octopus: config,
+    })
+  })
 
   it("normalizes direct Octopus search and list results to managed-site channel list data", async () => {
     octopusApi.searchChannels.mockResolvedValue([octopusChannel])
@@ -82,6 +97,72 @@ describe("Octopus managed-site channel capability", () => {
     })
   })
 
+  it("returns null when Octopus channel search fails", async () => {
+    octopusApi.searchChannels.mockRejectedValue(new Error("search failed"))
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(
+      octopusManagedSiteChannels.search(config, "octopus"),
+    ).resolves.toBeNull()
+  })
+
+  it("maps Octopus create payloads and preserves success messages", async () => {
+    octopusApi.createChannel.mockResolvedValue({
+      success: true,
+      data: { id: 8 },
+      message: "",
+    })
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(
+      octopusManagedSiteChannels.create(config, {
+        mode: "single",
+        channel: {
+          name: "",
+          type: 1,
+          status: 1,
+        },
+      }),
+    ).resolves.toEqual({
+      success: true,
+      data: { id: 8 },
+      message: "success",
+    })
+
+    expect(octopusApi.createChannel).toHaveBeenCalledWith(config, {
+      name: "",
+      type: OctopusOutboundType.OpenAIResponse,
+      enabled: true,
+      base_urls: [{ url: "" }],
+      keys: [{ enabled: true, channel_key: "" }],
+      model: undefined,
+      auto_sync: true,
+      auto_group: 0,
+    })
+  })
+
+  it("returns safe ApiResponse fallbacks for Octopus create failures", async () => {
+    octopusApi.createChannel.mockRejectedValue(new Error("create failed"))
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(
+      octopusManagedSiteChannels.create(config, {
+        mode: "single",
+        channel: { name: "broken", status: 1 },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "create failed",
+    })
+  })
+
   it("exposes provider config and draft functions", async () => {
     const { octopusManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/octopus"
@@ -89,6 +170,9 @@ describe("Octopus managed-site channel capability", () => {
 
     expect(octopusManagedSiteCapabilities.config.checkValid).toBe(
       checkValidOctopusConfig,
+    )
+    await expect(octopusManagedSiteCapabilities.config.get()).resolves.toEqual(
+      config,
     )
     expect(octopusManagedSiteCapabilities.channelDrafts).toEqual({
       fetchAvailableModels,
@@ -121,5 +205,77 @@ describe("Octopus managed-site channel capability", () => {
       base_urls: [{ url: "" }],
       model: undefined,
     })
+  })
+
+  it("maps Octopus update fields and returns safe failure responses", async () => {
+    octopusApi.updateChannel.mockResolvedValueOnce({
+      success: true,
+      data: { id: 7 },
+      message: "",
+    })
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(
+      octopusManagedSiteChannels.update(config, {
+        id: 7,
+        name: "Updated",
+        type: 1,
+        status: 0,
+        models: "gpt-4o",
+      } as Parameters<typeof octopusManagedSiteChannels.update>[1]),
+    ).resolves.toEqual({
+      success: true,
+      data: { id: 7 },
+      message: "success",
+    })
+
+    expect(octopusApi.updateChannel).toHaveBeenLastCalledWith(config, {
+      id: 7,
+      name: "Updated",
+      type: OctopusOutboundType.OpenAIResponse,
+      enabled: false,
+      base_urls: undefined,
+      model: "gpt-4o",
+    })
+
+    octopusApi.updateChannel.mockRejectedValueOnce(new Error("update failed"))
+    await expect(
+      octopusManagedSiteChannels.update(config, { id: 7 }),
+    ).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "update failed",
+    })
+  })
+
+  it("maps Octopus delete responses and failures", async () => {
+    octopusApi.deleteChannel.mockResolvedValueOnce({
+      success: true,
+      data: null,
+      message: "",
+    })
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(octopusManagedSiteChannels.delete(config, 7)).resolves.toEqual(
+      {
+        success: true,
+        data: null,
+        message: "success",
+      },
+    )
+    expect(octopusApi.deleteChannel).toHaveBeenCalledWith(config, 7)
+
+    octopusApi.deleteChannel.mockRejectedValueOnce(new Error("delete failed"))
+    await expect(octopusManagedSiteChannels.delete(config, 7)).resolves.toEqual(
+      {
+        success: false,
+        data: null,
+        message: "delete failed",
+      },
+    )
   })
 })
