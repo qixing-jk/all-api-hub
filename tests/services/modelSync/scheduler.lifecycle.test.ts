@@ -126,6 +126,8 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 
 vi.mock("~/services/apiService/octopus", () => ({
   listChannels: mocks.octopusListChannels,
+  fetchGroups: vi.fn(),
+  fetchAvailableModels: vi.fn(),
 }))
 
 vi.mock("~/services/models/modelSync/octopusModelSync", () => ({
@@ -133,6 +135,11 @@ vi.mock("~/services/models/modelSync/octopusModelSync", () => ({
 }))
 
 vi.mock("~/services/managedSites/providers/octopus", () => ({
+  checkValidOctopusConfig: vi.fn(),
+  fetchAvailableModels: vi.fn(),
+  buildChannelName: vi.fn(),
+  prepareChannelFormData: vi.fn(),
+  buildChannelPayload: vi.fn(),
   octopusChannelToManagedSite: mocks.octopusChannelToManagedSite,
 }))
 

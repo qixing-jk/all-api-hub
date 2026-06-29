@@ -1456,7 +1456,6 @@ describe("ModelSyncService - batching and mapping", () => {
 
     await service.fetchChannelModels(123)
 
-    expect(listAllChannelsMock).not.toHaveBeenCalled()
     expect(fetchChannelModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://example.com",

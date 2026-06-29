@@ -49,6 +49,7 @@ describe("accountOperations", () => {
     mockgetSiteTypeCapabilities.mockReset()
     mockUpdateAccount.mockReset()
     mockgetSiteTypeCapabilities.mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
       account: {
         data: {
           fetchData: mockFetchAccountData,
@@ -498,7 +499,9 @@ describe("accountOperations", () => {
     })
 
     it("falls back to the domain when site-type hint has no bootstrap status probe", async () => {
-      mockgetSiteTypeCapabilities.mockReturnValueOnce({})
+      mockgetSiteTypeCapabilities.mockReturnValueOnce({
+        siteType: SITE_TYPES.NEW_API,
+      })
 
       const result = await getSiteName(
         "https://api.example.com/dashboard",

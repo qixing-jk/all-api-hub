@@ -91,4 +91,18 @@ describe("fetchManagedSiteAvailableModels", () => {
     expect(result).toEqual([])
     expect(mockFetchAccountAvailableModels).not.toHaveBeenCalled()
   })
+
+  it("fails fast when account fallback is enabled without a fallback query", async () => {
+    const { fetchManagedSiteAvailableModels } = await import(
+      "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
+    )
+
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4o-mini"])
+
+    await expect(
+      fetchManagedSiteAvailableModels(createAccount(), createToken()),
+    ).rejects.toThrow(
+      "fetchAccountAvailableModels is required when account fallback is enabled",
+    )
+  })
 })

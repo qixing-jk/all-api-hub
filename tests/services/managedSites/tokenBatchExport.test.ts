@@ -116,6 +116,8 @@ const buildService = (
     updateChannel: vi.fn(),
     deleteChannel: vi.fn(),
     checkValidConfig: vi.fn(),
+    fetchSiteUserGroups: vi.fn().mockResolvedValue([]),
+    fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
     fetchAvailableModels: vi.fn(),
     buildChannelName: vi.fn(),
     ...overrides,

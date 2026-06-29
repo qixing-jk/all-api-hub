@@ -109,8 +109,7 @@ type SiteTypeCapabilities = {
     channels?: ManagedSiteChannelsCapability
     channelDrafts?: ManagedSiteChannelDraftsCapability
     config?: ManagedSiteConfigCapability
-    imports?: ManagedSiteImportCapability
-    modelSync?: ManagedSiteModelSyncCapability
+    queries?: ManagedSiteQueriesCapability
   }
 }
 ```
@@ -213,12 +212,14 @@ type ManagedSiteConfigCapability<TConfig> = {
 
 type ManagedSiteChannelDraftsCapability = {
   buildName(account, token): string
+  fetchAvailableModels(account, token): Promise<string[]>
   prepareFormData(account, token): Promise<ChannelFormData>
   buildPayload(formData, mode?): CreateChannelPayload
 }
 
-type ManagedSiteImportCapability = {
-  autoConfig(account, toastId?): Promise<unknown>
+type ManagedSiteQueriesCapability<TConfig> = {
+  fetchSiteUserGroups(config: TConfig): Promise<string[]>
+  fetchAccountAvailableModels(config: TConfig): Promise<string[]>
 }
 ```
 
@@ -226,10 +227,11 @@ These capabilities still live under `managedSites` because their subject is the
 managed-site workflow, but they are intentionally outside `managedSites.channels`:
 
 - `managedSites.config` owns runtime configuration availability and lookup.
+- `managedSites.queries` owns managed-site-wide lookup helpers such as user
+  groups and account-level model availability.
 - `managedSites.channelDrafts` owns the site-specific mapping from an account
-  token to editable channel form data and create/update payloads.
-- `managedSites.imports` owns legacy direct import compatibility while that
-  flow still exists.
+  token to editable channel form data and create/update payloads, including
+  draft-time available model lookup.
 
 `ManagedSiteService` may remain as the product/use-case Interface that composes
 these capability groups for UI and workflow callers. The implementation should

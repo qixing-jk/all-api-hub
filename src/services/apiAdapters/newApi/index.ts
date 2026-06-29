@@ -1,4 +1,8 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import {
+  ACCOUNT_SITE_ADAPTER_FAMILIES,
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/constants/siteType"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { createNewApiAccountBootstrap } from "./accountBootstrap"
@@ -15,7 +19,7 @@ export const createNewApiCapabilities = (
   siteType: AccountSiteType = SITE_TYPES.NEW_API,
 ): SiteTypeCapabilities => ({
   siteType,
-  family: "newApiFamily",
+  family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
   site: { notice: newApiSiteNotice },
   account: {
     data: createNewApiAccountData(siteType),

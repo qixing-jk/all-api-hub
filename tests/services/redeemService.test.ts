@@ -260,14 +260,14 @@ describe("redeemService.redeemCodeForAccount", () => {
         access_token: "token-sub2api",
       },
     }
-    const redeem = vi.fn()
-
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValueOnce(account)
     ;(
       getSiteTypeCapabilities as unknown as ReturnType<typeof vi.fn>
-    ).mockReturnValue({})
+    ).mockReturnValue({
+      siteType: SITE_TYPES.SUB2API,
+    })
 
     const result = await redeemService.redeemCodeForAccount("sub2api-1", "CODE")
 
@@ -275,7 +275,6 @@ describe("redeemService.redeemCodeForAccount", () => {
       success: false,
       message: "redemptionAssist:messages.redeemFailed",
     })
-    expect(redeem).not.toHaveBeenCalled()
   })
 
   it("returns a local failure for unsupported AIHubMix redemption", async () => {
@@ -290,14 +289,14 @@ describe("redeemService.redeemCodeForAccount", () => {
         access_token: "token-aihubmix",
       },
     }
-    const redeem = vi.fn()
-
     ;(
       accountStorage.getAccountById as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValueOnce(account)
     ;(
       getSiteTypeCapabilities as unknown as ReturnType<typeof vi.fn>
-    ).mockReturnValue({})
+    ).mockReturnValue({
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
 
     const result = await redeemService.redeemCodeForAccount(
       "aihubmix-1",
@@ -308,6 +307,5 @@ describe("redeemService.redeemCodeForAccount", () => {
       success: false,
       message: "redemptionAssist:messages.redeemFailed",
     })
-    expect(redeem).not.toHaveBeenCalled()
   })
 })

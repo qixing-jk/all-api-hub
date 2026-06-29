@@ -3,8 +3,7 @@ import { normalizeList } from "~/utils/core/string"
 
 type ManagedSiteConfig = {
   baseUrl: string
-  token: string
-  adminToken?: string
+  adminToken: string
   userId: string
 }
 

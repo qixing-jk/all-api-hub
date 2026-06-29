@@ -1,5 +1,7 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
 import {
   createChannel as createDoneHubChannel,
   deleteChannel as deleteDoneHubChannel,
@@ -43,6 +45,7 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
  * Unified logger scoped to the Done Hub integration and auto-config flows.
  */
 const logger = createLogger("DoneHubService")
+const keyManagement = createNewApiKeyManagement(SITE_TYPES.DONE_HUB)
 
 const toDoneHubRequestConfig = (config: DoneHubConfig) => ({
   baseUrl: config.baseUrl,
@@ -211,7 +214,7 @@ export async function checkValidDoneHubConfig(): Promise<boolean> {
  */
 export async function getDoneHubConfig(): Promise<{
   baseUrl: string
-  token: string
+  adminToken: string
   userId: string
 } | null> {
   try {
@@ -220,7 +223,7 @@ export async function getDoneHubConfig(): Promise<{
       const { doneHub } = prefs
       return {
         baseUrl: doneHub.baseUrl,
-        token: doneHub.adminToken,
+        adminToken: doneHub.adminToken,
         userId: doneHub.userId,
       }
     }
@@ -239,9 +242,12 @@ export async function fetchAvailableModels(
   token: ApiToken,
   options?: FetchManagedSiteAvailableModelsOptions,
 ): Promise<string[]> {
-  return options
-    ? await fetchManagedSiteAvailableModels(account, token, options)
-    : await fetchManagedSiteAvailableModels(account, token)
+  return await fetchManagedSiteAvailableModels(account, token, {
+    fetchAccountAvailableModels:
+      options?.fetchAccountAvailableModels ??
+      keyManagement.fetchAvailableModels,
+    ...options,
+  })
 }
 
 /**
@@ -278,7 +284,7 @@ export async function prepareChannelFormData(
         baseUrl: config.baseUrl,
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          accessToken: config.token,
+          accessToken: config.adminToken,
           userId: config.userId,
         },
       }),

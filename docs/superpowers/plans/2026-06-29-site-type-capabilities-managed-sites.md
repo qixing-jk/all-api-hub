@@ -119,8 +119,8 @@ export type SiteTypeCapabilities = {
   managedSites?: {
     channels?: ManagedSiteChannelsCapability
     config?: ManagedSiteConfigCapability
+    queries?: ManagedSiteQueriesCapability
     channelDrafts?: ManagedSiteChannelDraftsCapability
-    imports?: ManagedSiteImportCapability
   }
 }
 ```
@@ -252,9 +252,9 @@ Expected test cases:
   - `account` exists.
   - `managedSites` is absent.
 - New API, Veloera, and DoneHub:
-  - `managedSites.channels`, `managedSites.config`, `managedSites.channelDrafts`, and `managedSites.imports` exist.
+  - `managedSites.channels`, `managedSites.config`, `managedSites.queries`, and `managedSites.channelDrafts` exist.
 - Octopus, AxonHub, and Claude Code Hub:
-  - `managedSites.channels`, `managedSites.config`, `managedSites.channelDrafts`, and `managedSites.imports` exist.
+  - `managedSites.channels`, `managedSites.config`, `managedSites.queries`, and `managedSites.channelDrafts` exist.
   - `account` is absent.
 - AxonHub and Claude Code Hub:
   - model-sync methods are absent from `managedSites.channels`.

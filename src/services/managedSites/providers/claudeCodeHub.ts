@@ -481,7 +481,9 @@ export async function fetchAvailableModels(
   account: DisplaySiteData,
   token: ApiToken,
 ): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token)
+  return await fetchManagedSiteAvailableModels(account, token, {
+    includeAccountFallback: false,
+  })
 }
 
 /**

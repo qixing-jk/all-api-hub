@@ -50,8 +50,14 @@ export async function fetchManagedSiteAvailableModels(
   candidateSources.push(tokenScopedModels)
 
   if (includeAccountFallback) {
+    if (!options.fetchAccountAvailableModels) {
+      throw new Error(
+        "fetchAccountAvailableModels is required when account fallback is enabled",
+      )
+    }
+
     try {
-      const fallbackModels = await options.fetchAccountAvailableModels?.({
+      const fallbackModels = await options.fetchAccountAvailableModels({
         baseUrl: account.baseUrl,
         accountId: account.id,
         auth: {

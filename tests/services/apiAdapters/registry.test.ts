@@ -95,6 +95,10 @@ const expectManagedSiteCapabilities = (
     checkValid: expect.any(Function),
     get: expect.any(Function),
   })
+  expect(capabilities.managedSites?.queries).toEqual({
+    fetchSiteUserGroups: expect.any(Function),
+    fetchAccountAvailableModels: expect.any(Function),
+  })
   expect(capabilities.managedSites?.channelDrafts).toEqual({
     fetchAvailableModels: expect.any(Function),
     buildName: expect.any(Function),

@@ -7,7 +7,10 @@ import {
   searchChannel as searchNewApiChannel,
   updateChannel as updateNewApiChannel,
 } from "~/services/apiService/newApiFamily/channelManagement"
-import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
+import {
+  fetchAccountAvailableModels,
+  fetchSiteUserGroups,
+} from "~/services/apiService/newApiFamily/default/keyManagement"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -213,7 +216,7 @@ export async function checkValidNewApiConfig(): Promise<boolean> {
  */
 export async function getNewApiConfig(): Promise<{
   baseUrl: string
-  token: string
+  adminToken: string
   userId: string
 } | null> {
   try {
@@ -222,7 +225,7 @@ export async function getNewApiConfig(): Promise<{
       const { newApi } = prefs
       return {
         baseUrl: newApi.baseUrl,
-        token: newApi.adminToken,
+        adminToken: newApi.adminToken,
         userId: newApi.userId,
       }
     }
@@ -303,9 +306,11 @@ export async function fetchAvailableModels(
   token: ApiToken,
   options?: FetchManagedSiteAvailableModelsOptions,
 ): Promise<string[]> {
-  return options
-    ? await fetchManagedSiteAvailableModels(account, token, options)
-    : await fetchManagedSiteAvailableModels(account, token)
+  return await fetchManagedSiteAvailableModels(account, token, {
+    fetchAccountAvailableModels:
+      options?.fetchAccountAvailableModels ?? fetchAccountAvailableModels,
+    ...options,
+  })
 }
 
 /**
@@ -345,7 +350,7 @@ export async function prepareChannelFormData(
         baseUrl: config.baseUrl,
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          accessToken: config.token,
+          accessToken: config.adminToken,
           userId: config.userId,
         },
       }),

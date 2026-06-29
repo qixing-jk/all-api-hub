@@ -98,4 +98,28 @@ describe("Octopus managed-site channel capability", () => {
     })
     expect(octopusManagedSiteCapabilities).not.toHaveProperty("imports")
   })
+
+  it("preserves an explicit empty base URL update", async () => {
+    octopusApi.updateChannel.mockResolvedValue({
+      success: true,
+      data: null,
+    })
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await octopusManagedSiteChannels.update(config, {
+      id: 7,
+      base_url: "",
+    })
+
+    expect(octopusApi.updateChannel).toHaveBeenCalledWith(config, {
+      id: 7,
+      name: undefined,
+      type: undefined,
+      enabled: undefined,
+      base_urls: [{ url: "" }],
+      model: undefined,
+    })
+  })
 })

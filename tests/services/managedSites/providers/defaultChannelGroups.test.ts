@@ -18,7 +18,7 @@ describe("resolveDefaultChannelGroups", () => {
       fetchSiteUserGroups: mockFetchSiteUserGroups,
       getConfig: async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       }),
     })
@@ -37,7 +37,7 @@ describe("resolveDefaultChannelGroups", () => {
       fetchSiteUserGroups: mockFetchSiteUserGroups,
       getConfig: async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       }),
     })
@@ -56,7 +56,7 @@ describe("resolveDefaultChannelGroups", () => {
       fetchSiteUserGroups: mockFetchSiteUserGroups,
       getConfig: async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       }),
     })
@@ -90,7 +90,7 @@ describe("resolveDefaultChannelGroups", () => {
       fetchSiteUserGroups: mockFetchSiteUserGroups,
       getConfig: async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       }),
       onError,

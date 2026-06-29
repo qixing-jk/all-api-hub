@@ -1,6 +1,9 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
+import {
+  fetchAccountAvailableModels,
+  fetchSiteUserGroups,
+} from "~/services/apiService/newApiFamily/default/keyManagement"
 import {
   createChannel as createVeloeraChannel,
   deleteChannel as deleteVeloeraChannel,
@@ -186,7 +189,7 @@ export async function checkValidVeloeraConfig(): Promise<boolean> {
  */
 export async function getVeloeraConfig(): Promise<{
   baseUrl: string
-  token: string
+  adminToken: string
   userId: string
 } | null> {
   try {
@@ -195,7 +198,7 @@ export async function getVeloeraConfig(): Promise<{
       const { veloera } = prefs
       return {
         baseUrl: veloera.baseUrl,
-        token: veloera.adminToken,
+        adminToken: veloera.adminToken,
         userId: veloera.userId,
       }
     }
@@ -214,9 +217,11 @@ export async function fetchAvailableModels(
   token: ApiToken,
   options?: FetchManagedSiteAvailableModelsOptions,
 ): Promise<string[]> {
-  return options
-    ? await fetchManagedSiteAvailableModels(account, token, options)
-    : await fetchManagedSiteAvailableModels(account, token)
+  return await fetchManagedSiteAvailableModels(account, token, {
+    fetchAccountAvailableModels:
+      options?.fetchAccountAvailableModels ?? fetchAccountAvailableModels,
+    ...options,
+  })
 }
 
 /**
@@ -256,7 +261,7 @@ export async function prepareChannelFormData(
         baseUrl: config.baseUrl,
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          accessToken: config.token,
+          accessToken: config.adminToken,
           userId: config.userId,
         },
       }),

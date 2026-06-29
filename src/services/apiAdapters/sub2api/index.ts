@@ -1,4 +1,4 @@
-import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
 import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
@@ -12,7 +12,7 @@ import { sub2ApiTokenProvisioning } from "./tokenProvisioning"
 
 export const sub2ApiCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.SUB2API,
-  family: "sub2api",
+  family: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
   account: {
     announcements: sub2ApiSiteAnnouncements,
     modelCatalog: sub2ApiModelCatalog,

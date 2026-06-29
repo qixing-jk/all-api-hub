@@ -194,6 +194,43 @@ describe("useChannelForm", () => {
     })
   })
 
+  it("loads groups through Octopus service config", async () => {
+    const octopusConfig = {
+      baseUrl: "https://octopus.example.com",
+      username: "admin",
+      password: "password",
+    }
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: SITE_TYPES.OCTOPUS,
+      checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
+      getConfig: mockGetConfig.mockResolvedValue(octopusConfig),
+      fetchSiteUserGroups: mockFetchSiteUserGroups.mockResolvedValue([
+        "shared",
+      ]),
+      buildChannelPayload: mockBuildChannelPayload,
+      createChannel: mockCreateChannel,
+      updateChannel: mockUpdateChannel,
+    } as any)
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.availableGroups).toEqual([
+        { label: "shared", value: "shared" },
+        { label: "default", value: "default" },
+      ])
+    })
+
+    expect(mockFetchSiteUserGroups).toHaveBeenCalledWith(octopusConfig)
+  })
+
   it("treats handleSubmit as a no-op in view mode", async () => {
     const channel = buildManagedSiteChannel()
     const onClose = vi.fn()

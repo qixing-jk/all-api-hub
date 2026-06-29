@@ -185,12 +185,12 @@ export function getManagedSiteServiceForType(
 export function getManagedSiteServiceForType(
   siteType: typeof SITE_TYPES.NEW_API,
 ): TypedManagedSiteService<typeof SITE_TYPES.NEW_API>
+export function getManagedSiteServiceForType<TSiteType extends ManagedSiteType>(
+  siteType: TSiteType,
+): TypedManagedSiteService<TSiteType>
 export function getManagedSiteServiceForType(
   siteType: ManagedSiteType,
-): ManagedSiteService
-export function getManagedSiteServiceForType(
-  siteType: ManagedSiteType,
-): ManagedSiteService {
+): TypedManagedSiteService<ManagedSiteType> {
   const messagesKey: ManagedSiteMessagesKey =
     getManagedSiteMessagesKeyFromSiteType(siteType)
   const capabilities = requireManagedSiteCapabilities(siteType)

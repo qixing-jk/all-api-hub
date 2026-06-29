@@ -701,7 +701,7 @@ describe("newApiService", () => {
 
       expect(result).toEqual({
         baseUrl: "https://new-api.example.com",
-        token: "admin-token-123",
+        adminToken: "admin-token-123",
         userId: "123",
       })
     })
@@ -1197,6 +1197,30 @@ describe("newApiService", () => {
       expect(result.groups).toEqual(["default"])
       expect(result.key).toBe(token.key)
       expect(result.base_url).toBe(account.baseUrl)
+    })
+
+    it("should use adminToken for default group lookup", async () => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const account = createMockDisplaySiteData()
+      const token = createMockApiToken()
+      const prefs = createMockUserPreferencesWithNewApi()
+
+      mockGetPreferences.mockResolvedValueOnce(prefs)
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
+      mockFetchSiteUserGroups.mockResolvedValueOnce(["default"])
+
+      await prepareChannelFormData(account, token)
+
+      expect(mockFetchSiteUserGroups).toHaveBeenCalledWith({
+        baseUrl: prefs.newApi.baseUrl,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: prefs.newApi.adminToken,
+          userId: prefs.newApi.userId,
+        },
+      })
     })
 
     it("should keep models empty when only token metadata exists and upstream loading fails", async () => {

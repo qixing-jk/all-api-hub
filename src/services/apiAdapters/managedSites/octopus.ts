@@ -89,7 +89,10 @@ const toOctopusUpdateRequest = (channelData: UpdateChannelPayload) => ({
     "status" in channelData && channelData.status !== undefined
       ? channelData.status === 1
       : undefined,
-  base_urls: channelData.base_url ? [{ url: channelData.base_url }] : undefined,
+  base_urls:
+    "base_url" in channelData && channelData.base_url !== undefined
+      ? [{ url: channelData.base_url }]
+      : undefined,
   model: channelData.models,
 })
 

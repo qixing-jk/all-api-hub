@@ -13,7 +13,6 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
-import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
   hasUsableManagedSiteChannelKey,
@@ -36,13 +35,6 @@ const createDefaultChannelGroupOptions = (): CompactMultiSelectOption[] =>
     label: group,
     value: group,
   }))
-
-const isAccessTokenManagedConfig = (
-  config: ManagedSiteConfig,
-): config is Extract<
-  ManagedSiteConfig,
-  { adminToken: string; userId: string }
-> => "adminToken" in config && "userId" in config
 
 export interface UseChannelFormProps {
   mode: DialogMode
@@ -266,9 +258,7 @@ export function useChannelForm({
         return
       }
 
-      const groupsData = isAccessTokenManagedConfig(config)
-        ? await service.fetchSiteUserGroups(config)
-        : []
+      const groupsData = await service.fetchSiteUserGroups(config)
 
       let groupOptions = groupsData.map((group) => ({
         label: group,
