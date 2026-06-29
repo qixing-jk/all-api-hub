@@ -600,6 +600,9 @@ describe("AxonHub managed-site provider", () => {
     expect(mockFetchManagedSiteAvailableModels).toHaveBeenCalledWith(
       account,
       token,
+      {
+        includeAccountFallback: false,
+      },
     )
   })
 })

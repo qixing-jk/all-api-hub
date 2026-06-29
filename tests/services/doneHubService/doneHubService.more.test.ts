@@ -303,6 +303,9 @@ describe("doneHubService additional flows", () => {
     expect(mockFetchManagedSiteAvailableModels).toHaveBeenCalledWith(
       account,
       token,
+      expect.objectContaining({
+        fetchAccountAvailableModels: expect.any(Function),
+      }),
     )
   })
 

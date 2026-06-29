@@ -230,7 +230,7 @@ describe("veloeraService", () => {
       const result = await getVeloeraConfig()
       expect(result).toEqual({
         baseUrl: "https://veloera.example.com",
-        token: "admin-token-123",
+        adminToken: "admin-token-123",
         userId: "123",
       })
     })
