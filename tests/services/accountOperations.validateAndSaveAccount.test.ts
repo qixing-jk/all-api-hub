@@ -16,12 +16,12 @@ import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 const {
   fetchAccountDataMock,
   getApiServiceMock,
-  getSiteAdapterMock,
+  getSiteTypeCapabilitiesMock,
   ensureDefaultApiTokenForAccountMock,
 } = vi.hoisted(() => ({
   fetchAccountDataMock: vi.fn(),
   getApiServiceMock: vi.fn(),
-  getSiteAdapterMock: vi.fn(),
+  getSiteTypeCapabilitiesMock: vi.fn(),
   ensureDefaultApiTokenForAccountMock: vi.fn(),
 }))
 
@@ -39,7 +39,7 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: getSiteAdapterMock,
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 vi.mock(
@@ -90,9 +90,11 @@ describe("accountOperations validateAndSaveAccount", () => {
     getApiServiceMock.mockReturnValue({
       fetchAccountData: fetchAccountDataMock,
     })
-    getSiteAdapterMock.mockReturnValue({
-      accountData: {
-        fetchData: fetchAccountDataMock,
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: {
+        data: {
+          fetchData: fetchAccountDataMock,
+        },
       },
     })
   })
@@ -233,7 +235,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       checkIn: CHECK_IN_DISABLED,
     })
     getApiServiceMock.mockClear()
-    getSiteAdapterMock.mockClear()
+    getSiteTypeCapabilitiesMock.mockClear()
 
     const result = await validateAndUpdateAccount(
       accountId,
@@ -252,7 +254,9 @@ describe("accountOperations validateAndSaveAccount", () => {
     )
 
     expect(result.success).toBe(true)
-    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.AIHUBMIX)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(
+      SITE_TYPES.AIHUBMIX,
+    )
     expect(getApiServiceMock).not.toHaveBeenCalled()
 
     const saved = await accountStorage.getAccountById(accountId)
@@ -317,7 +321,7 @@ describe("accountOperations validateAndSaveAccount", () => {
   })
 
   it("saves warning-only account data when accountData capability is missing", async () => {
-    getSiteAdapterMock.mockReturnValueOnce({})
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({})
 
     const result = await validateAndSaveAccount(
       "https://unsupported.example.invalid",
@@ -384,7 +388,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       },
       last_sync_time: 123,
     })
-    getSiteAdapterMock.mockReturnValue({})
+    getSiteTypeCapabilitiesMock.mockReturnValue({})
 
     const result = await validateAndUpdateAccount(
       accountId,
@@ -642,7 +646,9 @@ describe("accountOperations validateAndSaveAccount", () => {
   })
 
   it("normalizes unsupported site types before saving", async () => {
-    const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
+    const { getSiteTypeCapabilities } = await import(
+      "~/services/apiAdapters/registry"
+    )
     fetchAccountDataMock.mockResolvedValueOnce({
       quota: 12,
       today_prompt_tokens: 0,
@@ -669,7 +675,7 @@ describe("accountOperations validateAndSaveAccount", () => {
     )
 
     expect(result.success).toBe(true)
-    expect(getSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
+    expect(getSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
 
     const saved = await accountStorage.getAccountById(result.accountId!)
     expect(saved?.site_type).toBe(SITE_TYPES.UNKNOWN)
@@ -838,7 +844,7 @@ describe("accountOperations validateAndSaveAccount", () => {
 
   it("allows New API-family account sites to update non-canonical string user ids", async () => {
     getApiServiceMock.mockClear()
-    getSiteAdapterMock.mockClear()
+    getSiteTypeCapabilitiesMock.mockClear()
 
     for (const userId of ["1.5", "1e3", "-1", "0", "001"]) {
       const accountId = await accountStorage.addAccount({
@@ -907,8 +913,8 @@ describe("accountOperations validateAndSaveAccount", () => {
     }
 
     expect(fetchAccountDataMock).toHaveBeenCalledTimes(5)
-    expect(getSiteAdapterMock).toHaveBeenCalledTimes(5)
-    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledTimes(5)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(getApiServiceMock).not.toHaveBeenCalled()
   })
 

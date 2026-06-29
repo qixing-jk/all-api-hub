@@ -13,15 +13,17 @@ import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
-const { getSiteAdapterMock, accountCompletionMock } = vi.hoisted(() => ({
-  getSiteAdapterMock: vi.fn(),
-  accountCompletionMock: {
-    complete: vi.fn(),
-  },
-}))
+const { getSiteTypeCapabilitiesMock, accountCompletionMock } = vi.hoisted(
+  () => ({
+    getSiteTypeCapabilitiesMock: vi.fn(),
+    accountCompletionMock: {
+      complete: vi.fn(),
+    },
+  }),
+)
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: getSiteAdapterMock,
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 const currentTabFetchContext = (origin: string) => ({
@@ -60,9 +62,11 @@ const completedAccountData = {
 describe("auto-detect completion", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    getSiteAdapterMock.mockReturnValue({
+    getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.NEW_API,
-      accountCompletion: accountCompletionMock,
+      account: {
+        completion: accountCompletionMock,
+      },
     })
     accountCompletionMock.complete.mockResolvedValue(completedAccountData)
   })
@@ -86,7 +90,7 @@ describe("auto-detect completion", () => {
       detected,
     })
 
-    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(accountCompletionMock.complete).toHaveBeenCalledTimes(1)
 
     const [adapterRequest, helpers] =
@@ -212,7 +216,7 @@ describe("auto-detect completion", () => {
   })
 
   it("rejects when the adapter does not implement account completion", async () => {
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.NEW_API,
     })
 

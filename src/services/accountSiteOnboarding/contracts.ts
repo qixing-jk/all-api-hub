@@ -1,6 +1,6 @@
 import type { AccountSiteType } from "~/services/accountSiteDefinitions"
 import type {
-  AccountSiteAdapterFamily,
+  AccountSiteBackendFamily,
   AccountSiteDetectionMetadata,
   AccountSiteRouteConfig,
 } from "~/services/accountSiteDefinitions/contracts"
@@ -31,7 +31,7 @@ export type ContentSessionExtractor = {
 
 export type AccountSiteOnboardingMetadata = {
   siteType: AccountSiteType
-  adapterFamily: AccountSiteAdapterFamily
+  adapterFamily: AccountSiteBackendFamily
   detection?: AccountSiteDetectionMetadata
   routes?: AccountSiteRouteConfig
 }

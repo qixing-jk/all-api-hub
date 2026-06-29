@@ -1,0 +1,59 @@
+import { SITE_TYPES } from "~/constants/siteType"
+import type {
+  ManagedSiteChannelDraftsCapability,
+  ManagedSiteChannelsCapability,
+  ManagedSiteConfigCapability,
+  ManagedSiteImportCapability,
+} from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import {
+  autoConfigToClaudeCodeHub,
+  buildChannelName,
+  buildChannelPayload,
+  checkValidClaudeCodeHubConfig,
+  createChannel,
+  deleteChannel,
+  fetchAvailableModels,
+  fetchChannelSecretKey,
+  hydrateComparableChannelKeys,
+  prepareChannelFormData,
+  searchChannel,
+  updateChannel,
+} from "~/services/managedSites/providers/claudeCodeHub"
+import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
+
+import { createManagedSiteConfigCapability } from "./config"
+
+export const claudeCodeHubManagedSiteChannels: ManagedSiteChannelsCapability<ClaudeCodeHubConfig> =
+  {
+    search: searchChannel,
+    create: createChannel,
+    update: updateChannel,
+    delete: deleteChannel,
+    fetchSecretKey: fetchChannelSecretKey,
+    hydrateComparableKeys: hydrateComparableChannelKeys,
+  }
+
+const claudeCodeHubManagedSiteConfig: ManagedSiteConfigCapability<ClaudeCodeHubConfig> =
+  createManagedSiteConfigCapability(
+    SITE_TYPES.CLAUDE_CODE_HUB,
+    checkValidClaudeCodeHubConfig,
+  )
+
+const claudeCodeHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability =
+  {
+    fetchAvailableModels,
+    buildName: buildChannelName,
+    prepareFormData: prepareChannelFormData,
+    buildPayload: buildChannelPayload,
+  }
+
+const claudeCodeHubManagedSiteImports: ManagedSiteImportCapability = {
+  autoConfig: autoConfigToClaudeCodeHub,
+}
+
+export const claudeCodeHubManagedSiteCapabilities = {
+  channels: claudeCodeHubManagedSiteChannels,
+  config: claudeCodeHubManagedSiteConfig,
+  channelDrafts: claudeCodeHubManagedSiteChannelDrafts,
+  imports: claudeCodeHubManagedSiteImports,
+}

@@ -24,7 +24,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Unsupported: "unsupported",
 } as const
 
-export type AccountSiteAdapterFamily =
+export type AccountSiteBackendFamily =
   (typeof ACCOUNT_SITE_ADAPTER_FAMILIES)[keyof typeof ACCOUNT_SITE_ADAPTER_FAMILIES]
 
 export const ACCOUNT_SITE_DEFINITION_SCOPES = {
@@ -58,7 +58,7 @@ export interface AccountSiteDefinitionReadiness {
 export interface AccountSiteDefinition {
   siteType: SiteType
   scopes: readonly AccountSiteDefinitionScope[]
-  adapterFamily: AccountSiteAdapterFamily
+  adapterFamily: AccountSiteBackendFamily
   onboarding?: AccountSiteDefinitionOnboardingMetadata
   productProfile?: AccountSiteProductProfileOverride
   readiness?: AccountSiteDefinitionReadiness

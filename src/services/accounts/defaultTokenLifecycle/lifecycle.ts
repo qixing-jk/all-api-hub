@@ -17,7 +17,7 @@ import {
   type TokenProvisioningCapability,
   type TokenProvisioningWorkflow,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 
@@ -78,12 +78,12 @@ const requireTokenLifecycleCapabilities = (context: AccountApiContext) => {
     return requireTokenLifecycleCapabilityPair(context)
   }
 
-  const adapter = getSiteAdapter(context.siteType)
+  const accountCapabilities = getSiteTypeCapabilities(context.siteType).account
 
   return requireTokenLifecycleCapabilityPair({
     siteType: context.siteType,
-    keyManagement: adapter.keyManagement,
-    tokenProvisioning: adapter.tokenProvisioning,
+    keyManagement: accountCapabilities?.keyManagement,
+    tokenProvisioning: accountCapabilities?.tokenProvisioning,
   })
 }
 

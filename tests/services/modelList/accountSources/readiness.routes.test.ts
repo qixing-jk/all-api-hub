@@ -9,12 +9,11 @@ import {
   ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
 } from "~/services/accounts/accountSiteProfile"
 
-const { getAccountSiteModelListProfileMock, getSiteAdapterMock } = vi.hoisted(
-  () => ({
+const { getAccountSiteModelListProfileMock, getSiteTypeCapabilitiesMock } =
+  vi.hoisted(() => ({
     getAccountSiteModelListProfileMock: vi.fn(),
-    getSiteAdapterMock: vi.fn(),
-  }),
-)
+    getSiteTypeCapabilitiesMock: vi.fn(),
+  }))
 
 vi.mock("~/services/accounts/accountSiteProfile", async (importOriginal) => {
   const actual =
@@ -30,13 +29,13 @@ vi.mock("~/services/accounts/accountSiteProfile", async (importOriginal) => {
 })
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: getSiteAdapterMock,
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 describe("resolveModelListAccountSourceReadiness route fallbacks", () => {
   beforeEach(() => {
     getAccountSiteModelListProfileMock.mockReset()
-    getSiteAdapterMock.mockReset()
+    getSiteTypeCapabilitiesMock.mockReset()
 
     getAccountSiteModelListProfileMock.mockReturnValue({
       directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
@@ -48,7 +47,7 @@ describe("resolveModelListAccountSourceReadiness route fallbacks", () => {
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     })
-    getSiteAdapterMock.mockReturnValue({
+    getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.NEW_API,
     })
   })

@@ -1,5 +1,5 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
 import type {
   SiteAnnouncement,
@@ -122,12 +122,13 @@ export const commonSiteAnnouncementProvider: SiteAnnouncementProvider = {
   ): Promise<SiteAnnouncementProviderResult> {
     const siteKey = createCommonSiteAnnouncementKey(request)
     try {
-      const adapter = getSiteAdapter(request.siteType)
-      if (!adapter.siteNotice) {
+      const noticeCapability = getSiteTypeCapabilities(request.siteType).site
+        ?.notice
+      if (!noticeCapability) {
         throw createMissingSiteNoticeCapabilityError(request.siteType)
       }
 
-      const notice = await adapter.siteNotice.fetch(request.apiRequest)
+      const notice = await noticeCapability.fetch(request.apiRequest)
       const content = normalizeAnnouncementText(notice)
       return {
         providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
@@ -162,12 +163,14 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
   ): Promise<SiteAnnouncementProviderResult> {
     const siteKey = createSub2ApiSiteAnnouncementKey(request)
     try {
-      const adapter = getSiteAdapter(SITE_TYPES.SUB2API)
-      if (!adapter.siteAnnouncements) {
+      const announcementsCapability = getSiteTypeCapabilities(
+        SITE_TYPES.SUB2API,
+      ).account?.announcements
+      if (!announcementsCapability) {
         throw createMissingSiteAnnouncementsCapabilityError(SITE_TYPES.SUB2API)
       }
 
-      const announcements = await adapter.siteAnnouncements
+      const announcements = await announcementsCapability
         .fetch(request.apiRequest, { unreadOnly: true })
         .then((items) =>
           items
@@ -200,14 +203,15 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
       return
     }
 
-    const adapter = getSiteAdapter(SITE_TYPES.SUB2API)
-    if (!adapter.siteAnnouncements) {
+    const announcementsCapability = getSiteTypeCapabilities(SITE_TYPES.SUB2API)
+      .account?.announcements
+    if (!announcementsCapability) {
       throw createMissingSiteAnnouncementsCapabilityError(SITE_TYPES.SUB2API)
     }
 
     const results = await Promise.allSettled(
       ids.map((id) =>
-        adapter.siteAnnouncements!.markRead({
+        announcementsCapability.markRead({
           request: request.apiRequest,
           id,
         }),

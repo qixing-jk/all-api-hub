@@ -12,7 +12,7 @@ import {
   resolveSub2ApiQuickCreateResolution,
 } from "~/services/accounts/accountOperations"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
-import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
+import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
@@ -34,7 +34,7 @@ const {
   fetchUserGroupsMock,
   resolveDefaultTokenCreationMock,
   classifyCreatedTokenMock,
-  getSiteAdapterMock,
+  getSiteTypeCapabilitiesMock,
   toastLoadingMock,
 } = vi.hoisted(() => {
   const fetchAccountTokensMock = vi.fn()
@@ -49,32 +49,35 @@ const {
     fetchUserGroupsMock,
     resolveDefaultTokenCreationMock,
     classifyCreatedTokenMock,
-    getSiteAdapterMock: vi.fn(
-      (): SiteAdapter => ({
+    getSiteTypeCapabilitiesMock: vi.fn(
+      (): SiteTypeCapabilities => ({
         siteType: SITE_TYPES.SUB2API,
-        keyManagement: {
-          fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-          createToken: (...args: unknown[]) => createApiTokenMock(...args),
-          updateToken: vi.fn(),
-          resolveTokenKey: vi.fn(),
-          deleteToken: vi.fn(),
-          fetchAvailableModels: vi.fn(),
-          userGroups: {
-            fetch: (...args: unknown[]) => fetchUserGroupsMock(...args),
+        account: {
+          keyManagement: {
+            fetchTokens: (...args: unknown[]) =>
+              fetchAccountTokensMock(...args),
+            createToken: (...args: unknown[]) => createApiTokenMock(...args),
+            updateToken: vi.fn(),
+            resolveTokenKey: vi.fn(),
+            deleteToken: vi.fn(),
+            fetchAvailableModels: vi.fn(),
+            userGroups: {
+              fetch: (...args: unknown[]) => fetchUserGroupsMock(...args),
+            },
           },
-        },
-        tokenProvisioning: {
-          isInventoryTokenUsable: vi.fn(
-            ({ token }) =>
-              typeof token.key === "string" && !token.key.includes("***"),
-          ),
-          resolveDefaultTokenCreation: (...args: unknown[]) =>
-            resolveDefaultTokenCreationMock(...args),
-          classifyCreatedToken: (...args: unknown[]) =>
-            classifyCreatedTokenMock(...args),
-          getRepairPolicy: vi.fn(() => ({
-            kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-          })),
+          tokenProvisioning: {
+            isInventoryTokenUsable: vi.fn(
+              ({ token }) =>
+                typeof token.key === "string" && !token.key.includes("***"),
+            ),
+            resolveDefaultTokenCreation: (...args: unknown[]) =>
+              resolveDefaultTokenCreationMock(...args),
+            classifyCreatedToken: (...args: unknown[]) =>
+              classifyCreatedTokenMock(...args),
+            getRepairPolicy: vi.fn(() => ({
+              kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+            })),
+          },
         },
       }),
     ),
@@ -99,7 +102,7 @@ vi.mock("~/services/apiService", async (importOriginal) => {
 })
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: getSiteAdapterMock,
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 const createTestAccounts = () => {
@@ -205,7 +208,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     fetchUserGroupsMock.mockReset()
     resolveDefaultTokenCreationMock.mockReset()
     classifyCreatedTokenMock.mockReset()
-    getSiteAdapterMock.mockClear()
+    getSiteTypeCapabilitiesMock.mockClear()
     toastLoadingMock.mockReset()
     resolveDefaultTokenCreationMock.mockImplementation(
       ({ defaultTokenData }) => ({
@@ -532,26 +535,28 @@ describe("accountOperations Sub2API token creation guards", () => {
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
       kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
     })
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.SUB2API,
-      keyManagement: {
-        fetchTokens: vi.fn(),
-        createToken: vi.fn(),
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-        userGroups: undefined,
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(() => true),
-        resolveDefaultTokenCreation: (...args: unknown[]) =>
-          resolveDefaultTokenCreationMock(...args),
-        classifyCreatedToken: (...args: unknown[]) =>
-          classifyCreatedTokenMock(...args),
-        getRepairPolicy: vi.fn(() => ({
-          kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-        })),
+      account: {
+        keyManagement: {
+          fetchTokens: vi.fn(),
+          createToken: vi.fn(),
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+          userGroups: undefined,
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(() => true),
+          resolveDefaultTokenCreation: (...args: unknown[]) =>
+            resolveDefaultTokenCreationMock(...args),
+          classifyCreatedToken: (...args: unknown[]) =>
+            classifyCreatedTokenMock(...args),
+          getRepairPolicy: vi.fn(() => ({
+            kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+          })),
+        },
       },
     })
 
@@ -647,7 +652,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     fetchUserGroupsMock.mockReset()
     resolveDefaultTokenCreationMock.mockReset()
     classifyCreatedTokenMock.mockReset()
-    getSiteAdapterMock.mockClear()
+    getSiteTypeCapabilitiesMock.mockClear()
     toastLoadingMock.mockReset()
     resolveDefaultTokenCreationMock.mockImplementation(
       ({ defaultTokenData }) => ({
@@ -771,7 +776,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
       },
     }
 
-    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
       1,
       expectedStoredRequest,
@@ -910,7 +915,7 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
       ensureAccountApiToken(siteAccount, displayAccount as any),
     ).resolves.toEqual(createdToken)
 
-    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(fetchAccountTokensMock).toHaveBeenCalledWith({
       baseUrl: "https://shared-display.example.invalid",
       accountId: "shared-display-account-id",

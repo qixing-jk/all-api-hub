@@ -92,7 +92,7 @@ vi.mock("~/services/aiApi/openaiCompatible", () => ({
 }))
 
 const mockFetchAccountTokens = vi.fn()
-const mockGetSiteAdapter = vi.fn()
+const mockgetSiteTypeCapabilities = vi.fn()
 const mockResolveApiTokenKey = vi.fn()
 const mockFetchAccountAvailableModels = vi.fn()
 const mockFetchUserGroups = vi.fn()
@@ -100,7 +100,8 @@ const mockEnsureAccountApiToken = vi.fn()
 const mockResolveDefaultTokenQuickCreateResolution = vi.fn()
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: (...args: unknown[]) => mockGetSiteAdapter(...args),
+  getSiteTypeCapabilities: (...args: unknown[]) =>
+    mockgetSiteTypeCapabilities(...args),
 }))
 
 vi.mock("~/services/accounts/accountOperations", () => ({
@@ -207,17 +208,19 @@ describe("KiloCodeExportDialog", () => {
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue(["gpt-4o-mini"])
     mockFetchAccountTokens.mockReset()
-    mockGetSiteAdapter.mockReset()
-    mockGetSiteAdapter.mockReturnValue({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => mockFetchAccountTokens(...args),
-        createToken: vi.fn(),
-        resolveTokenKey: (...args: unknown[]) =>
-          mockResolveApiTokenKey(...args),
-        deleteToken: vi.fn(),
-        fetchUserGroups: (...args: unknown[]) => mockFetchUserGroups(...args),
-        fetchAvailableModels: (...args: unknown[]) =>
-          mockFetchAccountAvailableModels(...args),
+    mockgetSiteTypeCapabilities.mockReset()
+    mockgetSiteTypeCapabilities.mockReturnValue({
+      account: {
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) => mockFetchAccountTokens(...args),
+          createToken: vi.fn(),
+          resolveTokenKey: (...args: unknown[]) =>
+            mockResolveApiTokenKey(...args),
+          deleteToken: vi.fn(),
+          fetchUserGroups: (...args: unknown[]) => mockFetchUserGroups(...args),
+          fetchAvailableModels: (...args: unknown[]) =>
+            mockFetchAccountAvailableModels(...args),
+        },
       },
     })
     mockResolveApiTokenKey.mockReset()

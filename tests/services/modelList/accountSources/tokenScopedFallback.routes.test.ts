@@ -19,12 +19,12 @@ import { AuthTypeEnum } from "~/types"
 const {
   fetchRuntimeModelsMock,
   getAccountSiteModelListProfileMock,
-  getSiteAdapterMock,
+  getSiteTypeCapabilitiesMock,
   resolveDisplayAccountTokenForSecretMock,
 } = vi.hoisted(() => ({
   fetchRuntimeModelsMock: vi.fn(),
   getAccountSiteModelListProfileMock: vi.fn(),
-  getSiteAdapterMock: vi.fn(),
+  getSiteTypeCapabilitiesMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
 }))
 
@@ -42,7 +42,7 @@ vi.mock("~/services/accounts/accountSiteProfile", async (importOriginal) => {
 })
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: getSiteAdapterMock,
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
@@ -54,7 +54,7 @@ describe("loadAccountTokenFallbackPricingResponse routing", () => {
   beforeEach(() => {
     fetchRuntimeModelsMock.mockReset()
     getAccountSiteModelListProfileMock.mockReset()
-    getSiteAdapterMock.mockReset()
+    getSiteTypeCapabilitiesMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockReset()
 
     getAccountSiteModelListProfileMock.mockReturnValue({
@@ -67,10 +67,12 @@ describe("loadAccountTokenFallbackPricingResponse routing", () => {
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     })
-    getSiteAdapterMock.mockReturnValue({
+    getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.SUB2API,
-      modelCatalog: {
-        fetchModels: fetchRuntimeModelsMock,
+      account: {
+        modelCatalog: {
+          fetchModels: fetchRuntimeModelsMock,
+        },
       },
     })
     resolveDisplayAccountTokenForSecretMock.mockImplementation(

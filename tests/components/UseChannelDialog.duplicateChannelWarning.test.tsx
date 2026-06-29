@@ -255,15 +255,17 @@ vi.mock("~/services/apiService", async (importOriginal) => {
 })
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: () => ({
-    keyManagement: {
-      fetchTokens: (...args: any[]) => mockFetchAccountTokens(...args),
-      createToken: vi.fn(),
-      resolveTokenKey: ({ request, token }: any) =>
-        mockResolveApiTokenKey(request, token),
-      deleteToken: vi.fn(),
-      fetchUserGroups: vi.fn(),
-      fetchAvailableModels: vi.fn(),
+  getSiteTypeCapabilities: () => ({
+    account: {
+      keyManagement: {
+        fetchTokens: (...args: any[]) => mockFetchAccountTokens(...args),
+        createToken: vi.fn(),
+        resolveTokenKey: ({ request, token }: any) =>
+          mockResolveApiTokenKey(request, token),
+        deleteToken: vi.fn(),
+        fetchUserGroups: vi.fn(),
+        fetchAvailableModels: vi.fn(),
+      },
     },
   }),
 }))

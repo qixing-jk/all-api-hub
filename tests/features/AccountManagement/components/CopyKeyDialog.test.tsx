@@ -152,19 +152,21 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: () => ({
-    keyManagement: {
-      fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-      createToken: (...args: any[]) => createApiTokenMock(...args),
-      resolveTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
-      deleteToken: vi.fn(),
-      fetchAvailableModels: (...args: any[]) =>
-        fetchAccountAvailableModelsMock(...args),
-      userGroups: {
-        fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+  getSiteTypeCapabilities: () => ({
+    account: {
+      keyManagement: {
+        fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+        createToken: (...args: any[]) => createApiTokenMock(...args),
+        resolveTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
+        deleteToken: vi.fn(),
+        fetchAvailableModels: (...args: any[]) =>
+          fetchAccountAvailableModelsMock(...args),
+        userGroups: {
+          fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+        },
       },
+      tokenProvisioning: createSub2ApiTokenProvisioningMock(),
     },
-    tokenProvisioning: createSub2ApiTokenProvisioningMock(),
   }),
 }))
 

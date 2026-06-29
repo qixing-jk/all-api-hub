@@ -26,7 +26,7 @@ import {
   readAccountBrowserSessionFromTab,
 } from "~/services/accountBrowserSession"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   API_SERVICE_FETCH_CONTEXT_KINDS,
   summarizeApiServiceFetchContext,
@@ -243,7 +243,7 @@ async function combineUserDataAndSiteType(
  * @returns Account-bootstrap capability when supported.
  */
 function getAccountBootstrapForApiFallback(siteType: AccountSiteType) {
-  return getSiteAdapter(siteType).accountBootstrap
+  return getSiteTypeCapabilities(siteType).account?.bootstrap
 }
 
 /**

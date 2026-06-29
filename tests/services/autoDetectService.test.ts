@@ -16,7 +16,7 @@ const {
   mockGetActiveOrAllTabs,
   mockGetActiveTabs,
   mockGetAccountSiteType,
-  mockGetSiteAdapter,
+  mockgetSiteTypeCapabilities,
   mockIsMessageReceiverUnavailableError,
   mockReadAccountBrowserSessionFromTab,
   mockSendRuntimeMessage,
@@ -25,14 +25,14 @@ const {
   mockGetActiveOrAllTabs: vi.fn(),
   mockGetActiveTabs: vi.fn(),
   mockGetAccountSiteType: vi.fn(),
-  mockGetSiteAdapter: vi.fn(),
+  mockgetSiteTypeCapabilities: vi.fn(),
   mockIsMessageReceiverUnavailableError: vi.fn(),
   mockReadAccountBrowserSessionFromTab: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: mockGetSiteAdapter,
+  getSiteTypeCapabilities: mockgetSiteTypeCapabilities,
 }))
 
 vi.mock("~/services/accountBrowserSession", async (importOriginal) => {
@@ -90,9 +90,11 @@ describe("autoDetectSmart", () => {
     mockIsMessageReceiverUnavailableError.mockReturnValue(false)
     mockReadAccountBrowserSessionFromTab.mockResolvedValue(null)
     mockSendRuntimeMessage.mockResolvedValue(null)
-    mockGetSiteAdapter.mockReturnValue({
-      accountBootstrap: {
-        fetchUserInfo: mockFetchUserInfo,
+    mockgetSiteTypeCapabilities.mockReturnValue({
+      account: {
+        bootstrap: {
+          fetchUserInfo: mockFetchUserInfo,
+        },
       },
     })
     mockFetchUserInfo.mockResolvedValue({
@@ -284,7 +286,7 @@ describe("autoDetectSmart", () => {
         },
       },
     })
-    expect(mockGetSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
       baseUrl: "https://example.com/console",
       auth: {
@@ -368,7 +370,7 @@ describe("autoDetectSmart", () => {
 
     expect(result.success).toBe(false)
     expect(result.data).toBeUndefined()
-    expect(mockGetSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
+    expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
     expect(mockFetchUserInfo).toHaveBeenCalledWith(
       expect.objectContaining({
         auth: {
@@ -391,7 +393,7 @@ describe("autoDetectSmart", () => {
 
   it("falls back when the detected site type has no account bootstrap capability", async () => {
     browserAny.runtime = null
-    mockGetSiteAdapter.mockReturnValue({})
+    mockgetSiteTypeCapabilities.mockReturnValue({})
     mockGetActiveOrAllTabs.mockResolvedValue([
       {
         id: 1,
@@ -403,7 +405,7 @@ describe("autoDetectSmart", () => {
     const result = await autoDetectSmart("https://example.com/console")
 
     expect(result.success).toBe(false)
-    expect(mockGetSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
@@ -1007,7 +1009,7 @@ describe("autoDetectSmart", () => {
         },
       },
     })
-    expect(mockGetSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
       baseUrl: "https://example.com/console",
       auth: {

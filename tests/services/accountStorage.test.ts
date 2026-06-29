@@ -36,7 +36,7 @@ const storageHooks: {
 const {
   mockFetchSupportCheckIn,
   mockGetAccountSiteType,
-  mockGetSiteAdapter,
+  mockgetSiteTypeCapabilities,
   mockRefreshAccountData,
   markAccountDisabledInStatusMock,
   markAccountsDisabledInStatusMock,
@@ -44,7 +44,7 @@ const {
 } = vi.hoisted(() => ({
   mockFetchSupportCheckIn: vi.fn(),
   mockGetAccountSiteType: vi.fn(),
-  mockGetSiteAdapter: vi.fn(),
+  mockgetSiteTypeCapabilities: vi.fn(),
   mockRefreshAccountData: vi.fn(),
   markAccountDisabledInStatusMock: vi.fn(),
   markAccountsDisabledInStatusMock: vi.fn(),
@@ -75,7 +75,7 @@ vi.mock("@plasmohq/storage", () => {
 })
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: mockGetSiteAdapter,
+  getSiteTypeCapabilities: mockgetSiteTypeCapabilities,
 }))
 
 vi.mock("~/services/siteDetection/detectSiteType", () => ({
@@ -171,7 +171,7 @@ describe("accountStorage core behaviors", () => {
     storageHooks.beforeRemove = async () => {}
     mockFetchSupportCheckIn.mockReset()
     mockGetAccountSiteType.mockReset()
-    mockGetSiteAdapter.mockReset()
+    mockgetSiteTypeCapabilities.mockReset()
     mockRefreshAccountData.mockReset()
     markAccountDisabledInStatusMock.mockReset()
     markAccountsDisabledInStatusMock.mockReset()
@@ -204,10 +204,13 @@ describe("accountStorage core behaviors", () => {
       },
     }))
 
-    mockGetSiteAdapter.mockReturnValue({
-      accountRefresh: {
-        fetchCheckInSupport: mockFetchSupportCheckIn,
-        refreshAccount: mockRefreshAccountData,
+    mockgetSiteTypeCapabilities.mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      account: {
+        refresh: {
+          fetchCheckInSupport: mockFetchSupportCheckIn,
+          refreshAccount: mockRefreshAccountData,
+        },
       },
     })
   })
@@ -1672,8 +1675,10 @@ describe("accountStorage core behaviors", () => {
     expect(mockGetAccountSiteType).toHaveBeenCalledWith(
       "https://foo.example.com",
     )
-    expect(mockGetSiteAdapter).toHaveBeenCalledWith("one-api")
-    expect(mockGetSiteAdapter).not.toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
+    expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith("one-api")
+    expect(mockgetSiteTypeCapabilities).not.toHaveBeenCalledWith(
+      SITE_TYPES.UNKNOWN,
+    )
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://foo.example.com",
@@ -1710,7 +1715,7 @@ describe("accountStorage core behaviors", () => {
       }),
     )
     expect(mockGetAccountSiteType).not.toHaveBeenCalled()
-    expect(mockGetSiteAdapter).not.toHaveBeenCalled()
+    expect(mockgetSiteTypeCapabilities).not.toHaveBeenCalled()
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockRefreshAccountData).not.toHaveBeenCalled()
   })
@@ -1842,7 +1847,7 @@ describe("accountStorage core behaviors", () => {
     await accountStorage.refreshAccount("known-site", true)
 
     expect(mockGetAccountSiteType).not.toHaveBeenCalled()
-    expect(mockGetSiteAdapter).toHaveBeenCalledWith("one-api")
+    expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith("one-api")
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://bar.example.com",
@@ -1935,7 +1940,7 @@ describe("accountStorage core behaviors", () => {
     })
     seedStorage([account])
 
-    mockGetSiteAdapter.mockReturnValueOnce({
+    mockgetSiteTypeCapabilities.mockReturnValueOnce({
       siteType: SITE_TYPES.ONE_API,
     })
 

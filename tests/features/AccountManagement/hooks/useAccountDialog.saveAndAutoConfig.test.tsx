@@ -2452,12 +2452,14 @@ describe("useAccountDialog save and auto-config flows", () => {
     ).mockReturnValue({
       accountId: savedDisplayData.id,
       siteType: SITE_TYPES.SUB2API,
-      adapter: {
+      capabilities: {
         siteType: SITE_TYPES.SUB2API,
-        keyManagement: {
-          fetchTokens: fetchAccountTokens,
-          createToken: vi.fn(),
-          resolveTokenKey: vi.fn(),
+        account: {
+          keyManagement: {
+            fetchTokens: fetchAccountTokens,
+            createToken: vi.fn(),
+            resolveTokenKey: vi.fn(),
+          },
         },
       } as any,
       keyManagement: {
@@ -2563,12 +2565,14 @@ describe("useAccountDialog save and auto-config flows", () => {
     ).mockReturnValue({
       accountId: savedDisplayData.id,
       siteType: SITE_TYPES.SUB2API,
-      adapter: {
+      capabilities: {
         siteType: SITE_TYPES.SUB2API,
-        keyManagement: {
-          fetchTokens: fetchAccountTokens,
-          createToken: vi.fn(),
-          resolveTokenKey: vi.fn(),
+        account: {
+          keyManagement: {
+            fetchTokens: fetchAccountTokens,
+            createToken: vi.fn(),
+            resolveTokenKey: vi.fn(),
+          },
         },
       } as any,
       keyManagement: {
@@ -2667,12 +2671,14 @@ describe("useAccountDialog save and auto-config flows", () => {
     ).mockReturnValue({
       accountId: savedDisplayData.id,
       siteType: SITE_TYPES.SUB2API,
-      adapter: {
+      capabilities: {
         siteType: SITE_TYPES.SUB2API,
-        keyManagement: {
-          fetchTokens: fetchAccountTokens,
-          createToken: vi.fn(),
-          resolveTokenKey: vi.fn(),
+        account: {
+          keyManagement: {
+            fetchTokens: fetchAccountTokens,
+            createToken: vi.fn(),
+            resolveTokenKey: vi.fn(),
+          },
         },
       } as any,
       keyManagement: {

@@ -65,22 +65,24 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: (siteType: string) => ({
-    keyManagement: {
-      fetchTokens: vi.fn(async () => []),
-      createToken: (...args: any[]) => createApiTokenMock(...args),
-      updateToken: (...args: any[]) => updateTokenMock(...args),
-      resolveTokenKey: async ({ token }: { token: { key: string } }) =>
-        token.key,
-      deleteToken: vi.fn(),
-      fetchAvailableModels: (...args: any[]) =>
-        fetchAccountAvailableModelsMock(...args),
-      userGroups:
-        siteType === SITE_TYPES.AIHUBMIX
-          ? undefined
-          : {
-              fetch: (...args: any[]) => fetchUserGroupsMock(...args),
-            },
+  getSiteTypeCapabilities: (siteType: string) => ({
+    account: {
+      keyManagement: {
+        fetchTokens: vi.fn(async () => []),
+        createToken: (...args: any[]) => createApiTokenMock(...args),
+        updateToken: (...args: any[]) => updateTokenMock(...args),
+        resolveTokenKey: async ({ token }: { token: { key: string } }) =>
+          token.key,
+        deleteToken: vi.fn(),
+        fetchAvailableModels: (...args: any[]) =>
+          fetchAccountAvailableModelsMock(...args),
+        userGroups:
+          siteType === SITE_TYPES.AIHUBMIX
+            ? undefined
+            : {
+                fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+              },
+      },
     },
   }),
 }))

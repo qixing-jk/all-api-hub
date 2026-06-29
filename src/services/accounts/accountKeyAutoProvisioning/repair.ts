@@ -3,7 +3,7 @@ import { Storage } from "@plasmohq/storage"
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { TOKEN_PROVISIONING_REPAIR_POLICY_KINDS } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
@@ -90,9 +90,9 @@ function getOriginKey(siteUrl: string): string {
 function getSkipReason(
   account: SiteAccount,
 ): AccountKeyRepairSkipReason | null {
-  const policy = getSiteAdapter(
+  const policy = getSiteTypeCapabilities(
     account.site_type,
-  ).tokenProvisioning?.getRepairPolicy()
+  ).account?.tokenProvisioning?.getRepairPolicy()
 
   if (policy?.kind === TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped) {
     return policy.skipReason

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
-import { getApiService } from "~/services/apiService"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { matchesProbeFilterRule } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
@@ -16,6 +15,7 @@ import type { ManagedSiteChannel } from "~/types/managedSite"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 
 const {
+  getSiteTypeCapabilitiesMock,
   listAllChannelsMock,
   fetchChannelModelsMock,
   updateChannelModelsMock,
@@ -24,6 +24,7 @@ const {
   getManagedSiteServiceForTypeMock,
   runApiVerificationProbeMock,
 } = vi.hoisted(() => ({
+  getSiteTypeCapabilitiesMock: vi.fn(),
   listAllChannelsMock: vi.fn(),
   fetchChannelModelsMock: vi.fn(),
   updateChannelModelsMock: vi.fn(),
@@ -33,13 +34,8 @@ const {
   runApiVerificationProbeMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
-    listAllChannels: listAllChannelsMock,
-    fetchChannelModels: fetchChannelModelsMock,
-    updateChannelModels: updateChannelModelsMock,
-    updateChannelModelMapping: updateChannelModelMappingMock,
-  })),
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
@@ -290,6 +286,17 @@ const makeChannelConfigs = (
 
 beforeEach(() => {
   vi.clearAllMocks()
+  getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
+    siteType,
+    managedSites: {
+      channels: {
+        list: listAllChannelsMock,
+        fetchModels: fetchChannelModelsMock,
+        updateModels: updateChannelModelsMock,
+        updateModelMapping: updateChannelModelMappingMock,
+      },
+    },
+  }))
   getManagedSiteServiceForTypeMock.mockReturnValue({
     fetchChannelSecretKey: fetchChannelSecretKeyMock,
   })
@@ -353,7 +360,7 @@ describe("ModelSyncService - allowed model filtering", () => {
 })
 
 describe("ModelSyncService - siteType routing", () => {
-  it("forwards runtime config site type to apiService listAllChannels", async () => {
+  it("forwards runtime config site type to managed-site channel capabilities", async () => {
     listAllChannelsMock.mockResolvedValue({
       items: [],
       total: 0,
@@ -373,17 +380,26 @@ describe("ModelSyncService - siteType routing", () => {
 
     await service.listChannels()
 
-    expect(getApiService).toHaveBeenCalledWith(SITE_TYPES.VELOERA)
-    expect(listAllChannelsMock).toHaveBeenCalled()
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.VELOERA)
+    expect(listAllChannelsMock).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      },
+      expect.objectContaining({
+        beforeRequest: expect.any(Function),
+      }),
+    )
   })
 
-  it("derives api-service requests from the stored runtime config at the boundary", async () => {
+  it("uses runtime config object inputs at the channel capability boundary", async () => {
     const runtimeConfig = makeRuntimeConfig({
-      siteType: SITE_TYPES.AXON_HUB,
+      siteType: SITE_TYPES.DONE_HUB,
       config: {
-        baseUrl: "https://axon.example.com",
-        email: "root@example.com",
-        password: "axon-password",
+        baseUrl: "https://done.example.com",
+        adminToken: "admin-token",
+        userId: "2",
       },
     })
     listAllChannelsMock.mockResolvedValue({
@@ -396,57 +412,35 @@ describe("ModelSyncService - siteType routing", () => {
 
     await service.listChannels()
 
-    expect(getApiService).toHaveBeenCalledWith(SITE_TYPES.AXON_HUB)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(
+      SITE_TYPES.DONE_HUB,
+    )
     expect(listAllChannelsMock).toHaveBeenCalledWith(
-      {
-        baseUrl: runtimeConfig.config.baseUrl,
-        auth: {
-          authType: "access_token",
-          accessToken: runtimeConfig.config.password,
-          userId: runtimeConfig.config.email,
-        },
-      },
+      runtimeConfig.config,
       expect.anything(),
     )
   })
 
-  it("derives defensive Octopus and Claude Code Hub auth shapes", async () => {
-    listAllChannelsMock.mockResolvedValue({
-      items: [],
-      total: 0,
-      type_counts: {},
-    })
-    const octopusConfig = makeRuntimeConfig({ siteType: SITE_TYPES.OCTOPUS })
+  it("throws a clear error when channel model-sync methods are missing", async () => {
     const cchConfig = makeRuntimeConfig({
       siteType: SITE_TYPES.CLAUDE_CODE_HUB,
     })
-
-    await new ModelSyncService(octopusConfig).listChannels()
-    await new ModelSyncService(cchConfig).listChannels()
-
-    expect(listAllChannelsMock).toHaveBeenNthCalledWith(
-      1,
-      {
-        baseUrl: octopusConfig.config.baseUrl,
-        auth: {
-          authType: "access_token",
-          accessToken: "",
-          userId: octopusConfig.config.username,
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      managedSites: {
+        channels: {
+          search: vi.fn(),
+          create: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
         },
       },
-      expect.anything(),
-    )
-    expect(listAllChannelsMock).toHaveBeenNthCalledWith(
-      2,
-      {
-        baseUrl: cchConfig.config.baseUrl,
-        auth: {
-          authType: "access_token",
-          accessToken: cchConfig.config.adminToken,
-          userId: "admin",
-        },
-      },
-      expect.anything(),
+    })
+
+    await expect(
+      new ModelSyncService(cchConfig).listChannels(),
+    ).rejects.toThrow(
+      "managed-site model sync is not implemented for claude-code-hub",
     )
   })
 })
@@ -527,7 +521,7 @@ describe("ModelSyncService - global and channel filters", () => {
 describe("ModelSyncService - channel execution", () => {
   it("invokes the configured rate limiter before channel listing callbacks run", async () => {
     const acquire = vi.fn().mockResolvedValue(undefined)
-    listAllChannelsMock.mockImplementation(async (_ctx, options) => {
+    listAllChannelsMock.mockImplementation(async (_config, options) => {
       await options.beforeRequest?.()
       return {
         items: [],
@@ -542,6 +536,17 @@ describe("ModelSyncService - channel execution", () => {
     await service.listChannels()
 
     expect(acquire).toHaveBeenCalledTimes(1)
+    expect(listAllChannelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      }),
+      expect.objectContaining({
+        beforeRequest: expect.any(Function),
+        bypassSiteRequestLimit: true,
+      }),
+    )
   })
 
   it("skips channel updates when the normalized model set is unchanged", async () => {
@@ -608,9 +613,14 @@ describe("ModelSyncService - channel execution", () => {
     const result = await service.runForChannel(channel, 0)
 
     expect(updateChannelModelsMock).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      }),
       7,
-      "claude-3",
+      ["claude-3"],
+      undefined,
     )
     expect(channel.models).toBe("claude-3")
     expect(result).toMatchObject({
@@ -634,9 +644,14 @@ describe("ModelSyncService - channel execution", () => {
     const result = await service.runForChannel(channel, 0)
 
     expect(updateChannelModelsMock).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      }),
       8,
-      "",
+      [],
+      undefined,
     )
     expect(channel.models).toBe("")
     expect(result).toMatchObject({
@@ -746,9 +761,14 @@ describe("ModelSyncService - probe-backed filters", () => {
       abortSignal: expect.any(AbortSignal),
     })
     expect(updateChannelModelsMock).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      }),
       77,
-      "model-a",
+      ["model-a"],
+      undefined,
     )
     expect(result).toMatchObject({
       ok: true,
@@ -861,9 +881,14 @@ describe("ModelSyncService - probe-backed filters", () => {
       newModels: ["model-a"],
     })
     expect(updateChannelModelsMock).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      }),
       99,
-      "model-a",
+      ["model-a"],
+      undefined,
     )
   })
 
@@ -1279,21 +1304,27 @@ describe("ModelSyncService - batching and mapping", () => {
     }
   })
 
-  it("marks managed-site API requests as already rate-limited by model sync", async () => {
+  it("keeps rate limiting in model sync and bypasses the generic site limiter", async () => {
+    const acquire = vi.fn().mockResolvedValue(undefined)
     const service = new ModelSyncService(makeExampleRuntimeConfig(), {
       requestsPerMinute: 120,
       burst: 5,
     })
+    ;(service as any).rateLimiter = { acquire }
 
     fetchChannelModelsMock.mockResolvedValueOnce(["gpt-4o"])
 
     await service.fetchChannelModels(123)
 
+    expect(acquire).toHaveBeenCalledTimes(1)
     expect(fetchChannelModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        bypassSiteRequestLimit: true,
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
       }),
       123,
+      { bypassSiteRequestLimit: true },
     )
   })
 
@@ -1318,22 +1349,59 @@ describe("ModelSyncService - batching and mapping", () => {
     )
 
     expect(fetchChannelModelsMock).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      }),
       123,
       { signal: controller.signal },
     )
     expect(updateChannelModelsMock).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      }),
       123,
-      "gpt-4o",
+      ["gpt-4o"],
       { signal: controller.signal },
     )
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      }),
       123,
-      "gpt-4o",
-      JSON.stringify({ "gpt-4o": "gpt-4o" }),
+      ["gpt-4o"],
+      { "gpt-4o": "gpt-4o" },
       { signal: controller.signal },
+    )
+  })
+
+  it("combines abort signals with generic site-limiter bypass when model sync is rate-limited", async () => {
+    const service = new ModelSyncService(makeExampleRuntimeConfig(), {
+      requestsPerMinute: 120,
+      burst: 5,
+    })
+    const controller = new AbortController()
+
+    fetchChannelModelsMock.mockResolvedValueOnce(["gpt-4o"])
+
+    await service.fetchChannelModels(123, controller.signal)
+
+    expect(fetchChannelModelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      }),
+      123,
+      {
+        signal: controller.signal,
+        bypassSiteRequestLimit: true,
+      },
     )
   })
 
@@ -1381,18 +1449,22 @@ describe("ModelSyncService - batching and mapping", () => {
     expect(updateChannelModelsMock).not.toHaveBeenCalled()
   })
 
-  it("keeps the generic site limiter when model sync has no configured limiter", async () => {
+  it("does not run a model-sync throttle when model sync has no configured limiter", async () => {
     const service = new ModelSyncService(makeExampleRuntimeConfig())
 
     fetchChannelModelsMock.mockResolvedValueOnce(["gpt-4o"])
 
     await service.fetchChannelModels(123)
 
+    expect(listAllChannelsMock).not.toHaveBeenCalled()
     expect(fetchChannelModelsMock).toHaveBeenCalledWith(
-      expect.not.objectContaining({
-        bypassSiteRequestLimit: true,
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
       }),
       123,
+      undefined,
     )
   })
 
@@ -1414,18 +1486,16 @@ describe("ModelSyncService - batching and mapping", () => {
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://example.com",
-        auth: expect.objectContaining({
-          authType: "access_token",
-          accessToken: "token",
-          userId: "1",
-        }),
+        adminToken: "token",
+        userId: "1",
       }),
       3,
-      "gpt-4o,claude-3,deepseek-chat",
-      JSON.stringify({
+      ["gpt-4o", "claude-3", "deepseek-chat"],
+      {
         "gpt-4o": "gpt-4o",
         "deepseek-chat": "deepseek-chat",
-      }),
+      },
+      undefined,
     )
   })
 })

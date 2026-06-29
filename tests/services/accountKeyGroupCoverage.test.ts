@@ -38,27 +38,30 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: vi.fn(() => ({
-    keyManagement: {
-      fetchTokens: (...args: unknown[]) => mocks.fetchAccountTokens(...args),
-      userGroups: {
-        fetch: (...args: unknown[]) => mocks.fetchUserGroups(...args),
+  getSiteTypeCapabilities: vi.fn(() => ({
+    siteType: SITE_TYPES.NEW_API,
+    account: {
+      keyManagement: {
+        fetchTokens: (...args: unknown[]) => mocks.fetchAccountTokens(...args),
+        userGroups: {
+          fetch: (...args: unknown[]) => mocks.fetchUserGroups(...args),
+        },
+        createToken: (...args: unknown[]) => mocks.createApiToken(...args),
+        updateToken: (...args: unknown[]) => mocks.updateApiToken(...args),
+        deleteToken: (...args: unknown[]) => mocks.deleteApiToken(...args),
+        resolveTokenKey: vi.fn(),
+        fetchAvailableModels: vi.fn(),
       },
-      createToken: (...args: unknown[]) => mocks.createApiToken(...args),
-      updateToken: (...args: unknown[]) => mocks.updateApiToken(...args),
-      deleteToken: (...args: unknown[]) => mocks.deleteApiToken(...args),
-      resolveTokenKey: vi.fn(),
-      fetchAvailableModels: vi.fn(),
-    },
-    tokenProvisioning: {
-      isInventoryTokenUsable: vi.fn(() => true),
-      resolveDefaultTokenCreation: (...args: unknown[]) =>
-        mocks.resolveDefaultTokenCreation(...args),
-      classifyCreatedToken: (...args: unknown[]) =>
-        mocks.classifyCreatedToken(...args),
-      getRepairPolicy: vi.fn(() => ({
-        kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-      })),
+      tokenProvisioning: {
+        isInventoryTokenUsable: vi.fn(() => true),
+        resolveDefaultTokenCreation: (...args: unknown[]) =>
+          mocks.resolveDefaultTokenCreation(...args),
+        classifyCreatedToken: (...args: unknown[]) =>
+          mocks.classifyCreatedToken(...args),
+        getRepairPolicy: vi.fn(() => ({
+          kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+        })),
+      },
     },
   })),
 }))
@@ -237,8 +240,10 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       },
     }
 
-    const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
-    expect(getSiteAdapter).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    const { getSiteTypeCapabilities } = await import(
+      "~/services/apiAdapters/registry"
+    )
+    expect(getSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(mocks.fetchAccountTokens).toHaveBeenCalledWith(expectedStoredRequest)
     expect(mocks.fetchUserGroups).toHaveBeenCalledWith(expectedStoredRequest)
     expect(mocks.createApiToken).toHaveBeenCalledWith(
@@ -476,26 +481,32 @@ describe("ensureAccountKeysForAvailableGroups", () => {
     mocks.fetchAccountTokens
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([createdToken])
-    const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
+    const { getSiteTypeCapabilities } = await import(
+      "~/services/apiAdapters/registry"
+    )
     ;(
-      getSiteAdapter as unknown as ReturnType<typeof vi.fn>
+      getSiteTypeCapabilities as unknown as ReturnType<typeof vi.fn>
     ).mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => mocks.fetchAccountTokens(...args),
-        createToken: (...args: unknown[]) => mocks.createApiToken(...args),
-        deleteToken: (...args: unknown[]) => mocks.deleteApiToken(...args),
-        resolveTokenKey: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(() => true),
-        resolveDefaultTokenCreation: (...args: unknown[]) =>
-          mocks.resolveDefaultTokenCreation(...args),
-        classifyCreatedToken: (...args: unknown[]) =>
-          mocks.classifyCreatedToken(...args),
-        getRepairPolicy: vi.fn(() => ({
-          kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-        })),
+      siteType: SITE_TYPES.NEW_API,
+      account: {
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) =>
+            mocks.fetchAccountTokens(...args),
+          createToken: (...args: unknown[]) => mocks.createApiToken(...args),
+          deleteToken: (...args: unknown[]) => mocks.deleteApiToken(...args),
+          resolveTokenKey: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(() => true),
+          resolveDefaultTokenCreation: (...args: unknown[]) =>
+            mocks.resolveDefaultTokenCreation(...args),
+          classifyCreatedToken: (...args: unknown[]) =>
+            mocks.classifyCreatedToken(...args),
+          getRepairPolicy: vi.fn(() => ({
+            kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+          })),
+        },
       },
     })
     mocks.createApiToken.mockResolvedValue(true)

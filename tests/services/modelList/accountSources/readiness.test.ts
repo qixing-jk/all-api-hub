@@ -6,7 +6,7 @@ import {
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
 } from "~/services/accounts/accountSiteProfile"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS,
@@ -14,7 +14,7 @@ import {
 } from "~/services/modelList/accountSources/readiness"
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: vi.fn(),
+  getSiteTypeCapabilities: vi.fn(),
 }))
 
 const modelPricing = {
@@ -31,9 +31,11 @@ describe("resolveModelListAccountSourceReadiness", () => {
   })
 
   it("returns direct pricing when profile policy and adapter capability both support it", () => {
-    vi.mocked(getSiteAdapter).mockReturnValue({
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.NEW_API,
-      modelPricing,
+      account: {
+        modelPricing,
+      },
     } as any)
 
     expect(
@@ -50,7 +52,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
   })
 
   it("returns missing model-pricing capability for compatible accounts without modelPricing", () => {
-    vi.mocked(getSiteAdapter).mockReturnValue({
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.NEW_API,
     } as any)
 
@@ -69,9 +71,11 @@ describe("resolveModelListAccountSourceReadiness", () => {
   })
 
   it("returns token-scoped runtime catalog when profile policy and adapter capability both support it", () => {
-    vi.mocked(getSiteAdapter).mockReturnValue({
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.SUB2API,
-      modelCatalog,
+      account: {
+        modelCatalog,
+      },
     } as any)
 
     expect(
@@ -90,7 +94,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
   })
 
   it("returns missing model-catalog capability for token-scoped profiles without modelCatalog", () => {
-    vi.mocked(getSiteAdapter).mockReturnValue({
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.SUB2API,
     } as any)
 
@@ -109,7 +113,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
   })
 
   it("returns unsupported without throwing for an unmapped account site without adapter support", () => {
-    vi.mocked(getSiteAdapter).mockReturnValue({
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.UNKNOWN,
     } as any)
 
@@ -130,9 +134,11 @@ describe("resolveModelListAccountSourceReadiness", () => {
   })
 
   it("carries profile display capability source for AIHubMix", () => {
-    vi.mocked(getSiteAdapter).mockReturnValue({
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.AIHUBMIX,
-      modelPricing,
+      account: {
+        modelPricing,
+      },
     } as any)
 
     expect(

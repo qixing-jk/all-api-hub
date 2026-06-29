@@ -1,6 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 
-import type { SiteAdapter } from "../contracts/siteAdapter"
+import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { aihubmixAccountBootstrap } from "./accountBootstrap"
 import { aihubmixAccountCompletion } from "./accountCompletion"
 import { aihubmixAccountData } from "./accountData"
@@ -9,13 +9,15 @@ import { aihubmixKeyManagement } from "./keyManagement"
 import { aihubmixModelPricing } from "./modelPricing"
 import { aihubmixTokenProvisioning } from "./tokenProvisioning"
 
-export const aihubmixAdapter: SiteAdapter = {
+export const aihubmixCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.AIHUBMIX,
-  accountData: aihubmixAccountData,
-  accountBootstrap: aihubmixAccountBootstrap,
-  accountCompletion: aihubmixAccountCompletion,
-  keyManagement: aihubmixKeyManagement,
-  tokenProvisioning: aihubmixTokenProvisioning,
-  accountRefresh: aihubmixAccountRefresh,
-  modelPricing: aihubmixModelPricing,
+  account: {
+    data: aihubmixAccountData,
+    bootstrap: aihubmixAccountBootstrap,
+    completion: aihubmixAccountCompletion,
+    keyManagement: aihubmixKeyManagement,
+    tokenProvisioning: aihubmixTokenProvisioning,
+    refresh: aihubmixAccountRefresh,
+    modelPricing: aihubmixModelPricing,
+  },
 }

@@ -57,7 +57,7 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningBlockReason,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -750,7 +750,7 @@ export async function validateAndSaveAccount(
     })
     const accountDataCapability = requireAccountDataCapability(
       normalizedSiteType,
-      getSiteAdapter(normalizedSiteType).accountData,
+      getSiteTypeCapabilities(normalizedSiteType).account?.data,
     )
     const freshAccountData = await withTimeout(
       accountDataCapability.fetchData({
@@ -1060,7 +1060,7 @@ export async function validateAndUpdateAccount(
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
     const accountData = requireAccountDataCapability(
       normalizedSiteType,
-      getSiteAdapter(normalizedSiteType).accountData,
+      getSiteTypeCapabilities(normalizedSiteType).account?.data,
     )
     const freshAccountData = await accountData.fetchData({
       baseUrl: requestBaseUrl,

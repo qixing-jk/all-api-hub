@@ -26,6 +26,7 @@ export {
   SITE_TYPES,
   type AccountSiteType,
   type ManagedSiteType,
+  type SiteType,
 } from "~/services/accountSiteDefinitions/siteTypes"
 
 /**

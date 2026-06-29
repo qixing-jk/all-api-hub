@@ -6,8 +6,6 @@ import {
   isClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import type { ApiResponse } from "~/services/apiTransport/type"
@@ -628,6 +626,10 @@ export async function autoConfigToClaudeCodeHub(
   toastId?: string,
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
+      import("~/services/accounts/accountOperations"),
+      import("~/services/accounts/accountStorage"),
+    ])
     const prefs = await userPreferences.getPreferences()
     if (!hasValidClaudeCodeHubConfig(prefs) || !prefs.claudeCodeHub) {
       return {

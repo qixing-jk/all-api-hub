@@ -21,7 +21,7 @@ const {
   fetchSub2ApiAvailableGroupsMock,
   fetchSub2ApiGroupRatesMock,
   fetchSub2ApiRuntimeModelsMock,
-  getSiteAdapterMock,
+  getSiteTypeCapabilitiesMock,
   loadModelPriceTableMock,
   resolveDisplayAccountTokenForSecretMock,
 } = vi.hoisted(() => ({
@@ -30,7 +30,7 @@ const {
   fetchSub2ApiAvailableGroupsMock: vi.fn(),
   fetchSub2ApiGroupRatesMock: vi.fn(),
   fetchSub2ApiRuntimeModelsMock: vi.fn(),
-  getSiteAdapterMock: vi.fn(),
+  getSiteTypeCapabilitiesMock: vi.fn(),
   loadModelPriceTableMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
 }))
@@ -69,7 +69,7 @@ vi.mock("~/services/apiAdapters/sub2api/dashboardEstimates", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: getSiteAdapterMock,
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 vi.mock(
@@ -125,15 +125,17 @@ const createSub2ApiModelCatalogAdapter = (
 ) => ({
   siteType: SITE_TYPES.SUB2API,
   family: "sub2api" as const,
-  modelCatalog: {
-    fetchModels,
+  account: {
+    modelCatalog: {
+      fetchModels,
+    },
   },
 })
 
 const mockSub2ApiModelCatalogAdapter = (
   fetchModels = fetchSub2ApiRuntimeModelsMock,
 ) => {
-  getSiteAdapterMock.mockReturnValue(
+  getSiteTypeCapabilitiesMock.mockReturnValue(
     createSub2ApiModelCatalogAdapter(fetchModels),
   )
 }
@@ -145,7 +147,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     fetchSub2ApiAvailableGroupsMock.mockReset()
     fetchSub2ApiGroupRatesMock.mockReset()
     fetchSub2ApiRuntimeModelsMock.mockReset()
-    getSiteAdapterMock.mockReset()
+    getSiteTypeCapabilitiesMock.mockReset()
     loadModelPriceTableMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockReset()
     mockSub2ApiModelCatalogAdapter()
@@ -190,7 +192,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
         apiKey: "sk-real-secret",
       }),
     )
-    expect(getSiteAdapterMock).toHaveBeenCalledWith("new-api")
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith("new-api")
     expect(result.data.map((item) => item.model_name)).toEqual([
       "gpt-4o-mini",
       "claude-3-haiku",
@@ -202,10 +204,12 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     const fetchPricingMock = vi
       .fn()
       .mockRejectedValue(new Error("account-scoped pricing should not run"))
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.NEW_API,
-      modelPricing: {
-        fetchPricing: fetchPricingMock,
+      account: {
+        modelPricing: {
+          fetchPricing: fetchPricingMock,
+        },
       },
     })
     resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
@@ -313,10 +317,12 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
       ],
     }
     const fetchPricingMock = vi.fn().mockResolvedValueOnce(aihubmixPricing)
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AIHUBMIX,
-      modelPricing: {
-        fetchPricing: fetchPricingMock,
+      account: {
+        modelPricing: {
+          fetchPricing: fetchPricingMock,
+        },
       },
     })
     resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
@@ -337,7 +343,9 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     })
 
     expect(result).toBe(aihubmixPricing)
-    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.AIHUBMIX)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(
+      SITE_TYPES.AIHUBMIX,
+    )
     expect(fetchPricingMock).toHaveBeenCalledWith({
       baseUrl: "https://aihubmix.com",
       accountId: "account-1",
@@ -353,7 +361,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
   })
 
   it("sanitizes a missing AIHubMix model pricing capability failure", async () => {
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AIHUBMIX,
     })
 
@@ -377,7 +385,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
   })
 
   it("does not use the Sub2API runtime-key fallback for compatible accounts without direct pricing adapters", async () => {
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.NEW_API,
     })
     resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
@@ -447,7 +455,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
         key: "sk-masked-sub2api",
       }),
     )
-    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
     expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://sub2api.example.invalid",
@@ -669,7 +677,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
   })
 
   it("sanitizes a missing Sub2API model catalog capability failure", async () => {
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.SUB2API,
       family: "sub2api",
     })
@@ -731,10 +739,12 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
           "401 for account-token and session=sensitive-cookie at https://example.com/api/pricing",
         ),
       )
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AIHUBMIX,
-      modelPricing: {
-        fetchPricing: fetchPricingMock,
+      account: {
+        modelPricing: {
+          fetchPricing: fetchPricingMock,
+        },
       },
     })
 
@@ -773,10 +783,12 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
       success: true,
       usable_group: {},
     })
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AIHUBMIX,
-      modelPricing: {
-        fetchPricing: fetchPricingMock,
+      account: {
+        modelPricing: {
+          fetchPricing: fetchPricingMock,
+        },
       },
     })
 
@@ -802,10 +814,12 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     abortController.abort(new DOMException("Aborted", "AbortError"))
     const abortError = new DOMException("Aborted", "AbortError")
     const fetchPricingMock = vi.fn().mockRejectedValueOnce(abortError)
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AIHUBMIX,
-      modelPricing: {
-        fetchPricing: fetchPricingMock,
+      account: {
+        modelPricing: {
+          fetchPricing: fetchPricingMock,
+        },
       },
     })
 

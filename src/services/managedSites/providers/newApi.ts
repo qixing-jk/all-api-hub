@@ -2,10 +2,13 @@ import toast from "react-hot-toast"
 
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
-import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import { getApiService } from "~/services/apiService"
+import {
+  createChannel as createNewApiChannel,
+  deleteChannel as deleteNewApiChannel,
+  searchChannel as searchNewApiChannel,
+  updateChannel as updateNewApiChannel,
+} from "~/services/apiService/newApiFamily/channelManagement"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -75,10 +78,7 @@ export async function searchChannel(
   config: NewApiConfig,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
-  return await getApiService(SITE_TYPES.NEW_API).searchChannel(
-    toNewApiRequestConfig(config),
-    keyword,
-  )
+  return await searchNewApiChannel(toNewApiRequestConfig(config), keyword)
 }
 
 /**
@@ -90,10 +90,7 @@ export async function createChannel(
   config: NewApiConfig,
   channelData: CreateChannelPayload,
 ) {
-  return await getApiService(SITE_TYPES.NEW_API).createChannel(
-    toNewApiRequestConfig(config),
-    channelData,
-  )
+  return await createNewApiChannel(toNewApiRequestConfig(config), channelData)
 }
 
 /**
@@ -105,20 +102,14 @@ export async function updateChannel(
   config: NewApiConfig,
   channelData: UpdateChannelPayload,
 ) {
-  return await getApiService(SITE_TYPES.NEW_API).updateChannel(
-    toNewApiRequestConfig(config),
-    channelData,
-  )
+  return await updateNewApiChannel(toNewApiRequestConfig(config), channelData)
 }
 
 /**
  * 删除渠道
  */
 export async function deleteChannel(config: NewApiConfig, channelId: number) {
-  return await getApiService(SITE_TYPES.NEW_API).deleteChannel(
-    toNewApiRequestConfig(config),
-    channelId,
-  )
+  return await deleteNewApiChannel(toNewApiRequestConfig(config), channelId)
 }
 
 /**
@@ -526,6 +517,10 @@ export async function autoConfigToNewApi(
   account: SiteAccount,
   toastId?: string,
 ): Promise<AutoConfigToNewApiResponse<{ token?: ApiToken }>> {
+  const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
+    import("~/services/accounts/accountOperations"),
+    import("~/services/accounts/accountStorage"),
+  ])
   const configValidation = await validateNewApiConfig()
   if (!configValidation.valid) {
     return { success: false, message: configValidation.errors.join(", ") }

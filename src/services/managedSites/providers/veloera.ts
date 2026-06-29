@@ -2,11 +2,14 @@ import toast from "react-hot-toast"
 
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
-import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import { getApiService } from "~/services/apiService"
-import { fetchChannel as fetchVeloeraChannel } from "~/services/apiService/veloera"
+import {
+  createChannel as createVeloeraChannel,
+  deleteChannel as deleteVeloeraChannel,
+  fetchChannel as fetchVeloeraChannel,
+  searchChannel as searchVeloeraChannel,
+  updateChannel as updateVeloeraChannel,
+} from "~/services/apiService/veloera"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -69,10 +72,7 @@ export async function searchChannel(
   config: VeloeraConfig,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
-  return await getApiService(SITE_TYPES.VELOERA).searchChannel(
-    toVeloeraRequestConfig(config),
-    keyword,
-  )
+  return await searchVeloeraChannel(toVeloeraRequestConfig(config), keyword)
 }
 
 /**
@@ -82,10 +82,7 @@ export async function createChannel(
   config: VeloeraConfig,
   channelData: CreateChannelPayload,
 ) {
-  return await getApiService(SITE_TYPES.VELOERA).createChannel(
-    toVeloeraRequestConfig(config),
-    channelData,
-  )
+  return await createVeloeraChannel(toVeloeraRequestConfig(config), channelData)
 }
 
 /**
@@ -95,20 +92,14 @@ export async function updateChannel(
   config: VeloeraConfig,
   channelData: UpdateChannelPayload,
 ) {
-  return await getApiService(SITE_TYPES.VELOERA).updateChannel(
-    toVeloeraRequestConfig(config),
-    channelData,
-  )
+  return await updateVeloeraChannel(toVeloeraRequestConfig(config), channelData)
 }
 
 /**
  * Deletes a channel.
  */
 export async function deleteChannel(config: VeloeraConfig, channelId: number) {
-  return await getApiService(SITE_TYPES.VELOERA).deleteChannel(
-    toVeloeraRequestConfig(config),
-    channelId,
-  )
+  return await deleteVeloeraChannel(toVeloeraRequestConfig(config), channelId)
 }
 
 /**
@@ -434,6 +425,10 @@ export async function autoConfigToVeloera(
   account: SiteAccount,
   toastId?: string,
 ): Promise<AutoConfigToNewApiResponse<{ token?: ApiToken }>> {
+  const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
+    import("~/services/accounts/accountOperations"),
+    import("~/services/accounts/accountStorage"),
+  ])
   const configValidation = await validateVeloeraConfig()
   if (!configValidation.valid) {
     return { success: false, message: configValidation.errors.join(", ") }

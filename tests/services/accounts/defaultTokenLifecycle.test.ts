@@ -20,7 +20,7 @@ import {
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import type { AccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
-import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
+import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
@@ -38,7 +38,7 @@ import { buildSiteAccount } from "~~/tests/test-utils/factories"
 const {
   fetchAccountTokensMock,
   isInventoryTokenUsableMock,
-  getSiteAdapterMock,
+  getSiteTypeCapabilitiesMock,
 } = vi.hoisted(() => {
   const fetchAccountTokensMock = vi.fn()
   const isInventoryTokenUsableMock = vi.fn()
@@ -46,31 +46,45 @@ const {
   return {
     fetchAccountTokensMock,
     isInventoryTokenUsableMock,
-    getSiteAdapterMock: vi.fn<() => Partial<SiteAdapter>>(() => ({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-        createToken: vi.fn(),
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: (...args: unknown[]) =>
-          isInventoryTokenUsableMock(...args),
-        resolveDefaultTokenCreation: vi.fn(),
-        classifyCreatedToken: vi.fn(),
-        getRepairPolicy: vi.fn(() => ({
-          kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-        })),
-      },
-    })),
+    getSiteTypeCapabilitiesMock: vi.fn<() => Partial<SiteTypeCapabilities>>(
+      () => ({
+        siteType: SITE_TYPES.NEW_API,
+        account: {
+          keyManagement: {
+            fetchTokens: (...args: unknown[]) =>
+              fetchAccountTokensMock(...args),
+            createToken: vi.fn(),
+            updateToken: vi.fn(),
+            resolveTokenKey: vi.fn(),
+            deleteToken: vi.fn(),
+            fetchAvailableModels: vi.fn(),
+          },
+          tokenProvisioning: {
+            isInventoryTokenUsable: (...args: unknown[]) =>
+              isInventoryTokenUsableMock(...args),
+            resolveDefaultTokenCreation: vi.fn(),
+            classifyCreatedToken: vi.fn(),
+            getRepairPolicy: vi.fn(() => ({
+              kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+            })),
+          },
+        },
+      }),
+    ),
   }
 })
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: getSiteAdapterMock,
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
+
+const buildAccountCapabilities = (
+  account: NonNullable<SiteTypeCapabilities["account"]>,
+  siteType = SITE_TYPES.NEW_API,
+): Partial<SiteTypeCapabilities> => ({
+  siteType,
+  account,
+})
 
 const buildToken = (overrides: Partial<ApiToken> = {}): ApiToken =>
   ({
@@ -165,7 +179,7 @@ describe("defaultTokenLifecycle inventory helpers", () => {
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     isInventoryTokenUsableMock.mockReset()
-    getSiteAdapterMock.mockClear()
+    getSiteTypeCapabilitiesMock.mockClear()
     isInventoryTokenUsableMock.mockReturnValue(true)
   })
 
@@ -233,7 +247,7 @@ describe("defaultTokenLifecycle inventory helpers", () => {
       hasUsableSecret: true,
     })
 
-    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(fetchAccountTokensMock).toHaveBeenCalledWith(request)
   })
 
@@ -273,7 +287,7 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     isInventoryTokenUsableMock.mockReset()
-    getSiteAdapterMock.mockClear()
+    getSiteTypeCapabilitiesMock.mockClear()
   })
 
   it("fetches user groups only after policy asks for them", async () => {
@@ -292,23 +306,25 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
       vip: { desc: "VIP", ratio: 2 },
     })
 
-    getSiteAdapterMock.mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: vi.fn(),
-        createToken: vi.fn(),
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-        userGroups: { fetch: fetchUserGroupsMock },
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(),
-        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
-        classifyCreatedToken: vi.fn(),
-        getRepairPolicy: vi.fn(),
-      },
-    })
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      buildAccountCapabilities({
+        keyManagement: {
+          fetchTokens: vi.fn(),
+          createToken: vi.fn(),
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+          userGroups: { fetch: fetchUserGroupsMock },
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(),
+          resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+          classifyCreatedToken: vi.fn(),
+          getRepairPolicy: vi.fn(),
+        },
+      }),
+    )
 
     await expect(
       resolveDefaultTokenLifecycleDecision({
@@ -349,23 +365,25 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
       vip: { desc: "VIP", ratio: 2 },
     })
 
-    getSiteAdapterMock.mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: vi.fn(),
-        createToken: vi.fn(),
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-        userGroups: { fetch: fetchUserGroupsMock },
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(),
-        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
-        classifyCreatedToken: vi.fn(),
-        getRepairPolicy: vi.fn(),
-      },
-    })
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      buildAccountCapabilities({
+        keyManagement: {
+          fetchTokens: vi.fn(),
+          createToken: vi.fn(),
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+          userGroups: { fetch: fetchUserGroupsMock },
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(),
+          resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+          classifyCreatedToken: vi.fn(),
+          getRepairPolicy: vi.fn(),
+        },
+      }),
+    )
 
     await expect(
       resolveDefaultTokenLifecycleDecisionWithContext({
@@ -381,24 +399,26 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
   })
 
   it("throws the provided missing-user-groups message when group lookup is unavailable", async () => {
-    getSiteAdapterMock.mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: vi.fn(),
-        createToken: vi.fn(),
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(),
-        resolveDefaultTokenCreation: vi.fn(() => ({
-          kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
-        })),
-        classifyCreatedToken: vi.fn(),
-        getRepairPolicy: vi.fn(),
-      },
-    })
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      buildAccountCapabilities({
+        keyManagement: {
+          fetchTokens: vi.fn(),
+          createToken: vi.fn(),
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(),
+          resolveDefaultTokenCreation: vi.fn(() => ({
+            kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+          })),
+          classifyCreatedToken: vi.fn(),
+          getRepairPolicy: vi.fn(),
+        },
+      }),
+    )
 
     await expect(
       resolveDefaultTokenLifecycleDecision({
@@ -554,7 +574,7 @@ describe("ensureDefaultTokenLifecycle", () => {
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     isInventoryTokenUsableMock.mockReset()
-    getSiteAdapterMock.mockClear()
+    getSiteTypeCapabilitiesMock.mockClear()
     isInventoryTokenUsableMock.mockReturnValue(true)
   })
 
@@ -569,7 +589,7 @@ describe("ensureDefaultTokenLifecycle", () => {
       DEFAULT_TOKEN_LIFECYCLE_ERRORS.QuickCreateSelectionIsDecisionOnly,
     )
 
-    expect(getSiteAdapterMock).not.toHaveBeenCalled()
+    expect(getSiteTypeCapabilitiesMock).not.toHaveBeenCalled()
   })
 
   it("returns Ready for an existing usable inventory token", async () => {
@@ -611,26 +631,28 @@ describe("ensureDefaultTokenLifecycle", () => {
     }))
 
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    getSiteAdapterMock.mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-        createToken: createTokenMock,
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(),
-        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
-        classifyCreatedToken: vi.fn(() => ({
-          kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
-          token: createdToken,
-          oneTimeSecret: false,
-        })),
-        getRepairPolicy: vi.fn(),
-      },
-    })
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      buildAccountCapabilities({
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+          createToken: createTokenMock,
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(),
+          resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+          classifyCreatedToken: vi.fn(() => ({
+            kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+            token: createdToken,
+            oneTimeSecret: false,
+          })),
+          getRepairPolicy: vi.fn(),
+        },
+      }),
+    )
 
     await expect(
       ensureDefaultTokenLifecycleWithContext({
@@ -670,27 +692,29 @@ describe("ensureDefaultTokenLifecycle", () => {
       buildToken({ id: 8, key: "sk-***masked***" }),
     ])
     isInventoryTokenUsableMock.mockReturnValueOnce(false)
-    getSiteAdapterMock.mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-        createToken: createTokenMock,
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: (...args: unknown[]) =>
-          isInventoryTokenUsableMock(...args),
-        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
-        classifyCreatedToken: vi.fn(() => ({
-          kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
-          token: createdToken,
-          oneTimeSecret: true,
-        })),
-        getRepairPolicy: vi.fn(),
-      },
-    })
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      buildAccountCapabilities({
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+          createToken: createTokenMock,
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: (...args: unknown[]) =>
+            isInventoryTokenUsableMock(...args),
+          resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+          classifyCreatedToken: vi.fn(() => ({
+            kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Usable,
+            token: createdToken,
+            oneTimeSecret: true,
+          })),
+          getRepairPolicy: vi.fn(),
+        },
+      }),
+    )
 
     await expect(
       ensureDefaultTokenLifecycle({
@@ -731,23 +755,25 @@ describe("ensureDefaultTokenLifecycle", () => {
       vip: { desc: "VIP", ratio: 2 },
     })
 
-    getSiteAdapterMock.mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-        createToken: vi.fn(),
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-        userGroups: { fetch: fetchUserGroupsMock },
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(),
-        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
-        classifyCreatedToken: vi.fn(),
-        getRepairPolicy: vi.fn(),
-      },
-    } satisfies Partial<SiteAdapter>)
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      buildAccountCapabilities({
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+          createToken: vi.fn(),
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+          userGroups: { fetch: fetchUserGroupsMock },
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(),
+          resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+          classifyCreatedToken: vi.fn(),
+          getRepairPolicy: vi.fn(),
+        },
+      }),
+    )
     fetchAccountTokensMock.mockResolvedValueOnce([])
 
     await expect(
@@ -764,24 +790,26 @@ describe("ensureDefaultTokenLifecycle", () => {
   })
 
   it("returns a lifecycle block when user groups are unavailable", async () => {
-    getSiteAdapterMock.mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-        createToken: vi.fn(),
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(),
-        resolveDefaultTokenCreation: vi.fn(() => ({
-          kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
-        })),
-        classifyCreatedToken: vi.fn(),
-        getRepairPolicy: vi.fn(),
-      },
-    } satisfies Partial<SiteAdapter>)
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      buildAccountCapabilities({
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+          createToken: vi.fn(),
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(),
+          resolveDefaultTokenCreation: vi.fn(() => ({
+            kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+          })),
+          classifyCreatedToken: vi.fn(),
+          getRepairPolicy: vi.fn(),
+        },
+      }),
+    )
     fetchAccountTokensMock.mockResolvedValueOnce([])
 
     await expect(
@@ -805,23 +833,25 @@ describe("ensureDefaultTokenLifecycle", () => {
     }))
     const fetchUserGroupsMock = vi.fn().mockRejectedValueOnce(userGroupsError)
 
-    getSiteAdapterMock.mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-        createToken: vi.fn(),
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-        userGroups: { fetch: fetchUserGroupsMock },
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(),
-        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
-        classifyCreatedToken: vi.fn(),
-        getRepairPolicy: vi.fn(),
-      },
-    } satisfies Partial<SiteAdapter>)
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      buildAccountCapabilities({
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+          createToken: vi.fn(),
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+          userGroups: { fetch: fetchUserGroupsMock },
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(),
+          resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+          classifyCreatedToken: vi.fn(),
+          getRepairPolicy: vi.fn(),
+        },
+      }),
+    )
     fetchAccountTokensMock.mockResolvedValueOnce([])
 
     await expect(
@@ -847,24 +877,26 @@ describe("ensureDefaultTokenLifecycle", () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([existingToken])
       .mockResolvedValueOnce([existingToken, createdToken])
-    getSiteAdapterMock.mockReturnValueOnce({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-        createToken: createTokenMock,
-        updateToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: vi.fn(),
-        resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
-        classifyCreatedToken: vi.fn(() => ({
-          kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
-        })),
-        getRepairPolicy: vi.fn(),
-      },
-    } satisfies Partial<SiteAdapter>)
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      buildAccountCapabilities({
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+          createToken: createTokenMock,
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(),
+          resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
+          classifyCreatedToken: vi.fn(() => ({
+            kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+          })),
+          getRepairPolicy: vi.fn(),
+        },
+      }),
+    )
 
     await expect(
       ensureDefaultTokenLifecycle({

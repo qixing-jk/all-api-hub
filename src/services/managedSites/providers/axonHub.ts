@@ -6,8 +6,6 @@ import {
   DEFAULT_AXON_HUB_CHANNEL_FIELDS,
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as axonHubApi from "~/services/apiService/axonHub"
 import type { ApiResponse } from "~/services/apiTransport/type"
@@ -409,6 +407,10 @@ export async function autoConfigToAxonHub(
   toastId?: string,
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
+      import("~/services/accounts/accountOperations"),
+      import("~/services/accounts/accountStorage"),
+    ])
     const prefs = await userPreferences.getPreferences()
     if (!hasValidAxonHubConfig(prefs) || !prefs.axonHub) {
       return { success: false, message: t("messages:axonhub.configMissing") }

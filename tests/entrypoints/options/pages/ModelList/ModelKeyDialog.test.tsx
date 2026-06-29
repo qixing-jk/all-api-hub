@@ -74,12 +74,14 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: () => ({
-    keyManagement: {
-      fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-      createToken: (...args: any[]) => adapterCreateTokenMock(...args),
-      resolveTokenKey: async ({ token }: { token: { key: string } }) =>
-        token.key,
+  getSiteTypeCapabilities: () => ({
+    account: {
+      keyManagement: {
+        fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+        createToken: (...args: any[]) => adapterCreateTokenMock(...args),
+        resolveTokenKey: async ({ token }: { token: { key: string } }) =>
+          token.key,
+      },
     },
   }),
 }))

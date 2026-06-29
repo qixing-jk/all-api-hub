@@ -36,7 +36,7 @@ const {
   resolveDefaultTokenCreationMock,
   classifyCreatedTokenMock,
   getRepairPolicyMock,
-  getSiteAdapterMock,
+  getSiteTypeCapabilitiesMock,
 } = vi.hoisted(() => {
   const fetchAccountTokensMock = vi.fn()
   const createApiTokenMock = vi.fn()
@@ -54,25 +54,27 @@ const {
     resolveDefaultTokenCreationMock,
     classifyCreatedTokenMock,
     getRepairPolicyMock,
-    getSiteAdapterMock: vi.fn(() => ({
-      keyManagement: {
-        fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
-        createToken: (...args: unknown[]) => createApiTokenMock(...args),
-        resolveTokenKey: vi.fn(),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: vi.fn(),
-        userGroups: {
-          fetch: (...args: unknown[]) => fetchUserGroupsMock(...args),
+    getSiteTypeCapabilitiesMock: vi.fn(() => ({
+      account: {
+        keyManagement: {
+          fetchTokens: (...args: unknown[]) => fetchAccountTokensMock(...args),
+          createToken: (...args: unknown[]) => createApiTokenMock(...args),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+          userGroups: {
+            fetch: (...args: unknown[]) => fetchUserGroupsMock(...args),
+          },
         },
-      },
-      tokenProvisioning: {
-        isInventoryTokenUsable: (...args: unknown[]) =>
-          isInventoryTokenUsableMock(...args),
-        resolveDefaultTokenCreation: (...args: unknown[]) =>
-          resolveDefaultTokenCreationMock(...args),
-        classifyCreatedToken: (...args: unknown[]) =>
-          classifyCreatedTokenMock(...args),
-        getRepairPolicy: (...args: unknown[]) => getRepairPolicyMock(...args),
+        tokenProvisioning: {
+          isInventoryTokenUsable: (...args: unknown[]) =>
+            isInventoryTokenUsableMock(...args),
+          resolveDefaultTokenCreation: (...args: unknown[]) =>
+            resolveDefaultTokenCreationMock(...args),
+          classifyCreatedToken: (...args: unknown[]) =>
+            classifyCreatedTokenMock(...args),
+          getRepairPolicy: (...args: unknown[]) => getRepairPolicyMock(...args),
+        },
       },
     })),
   }
@@ -87,7 +89,7 @@ vi.mock("~/services/apiService", async (importOriginal) => {
 })
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: getSiteAdapterMock,
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 const buildToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
@@ -163,7 +165,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     resolveDefaultTokenCreationMock.mockReset()
     classifyCreatedTokenMock.mockReset()
     getRepairPolicyMock.mockReset()
-    getSiteAdapterMock.mockClear()
+    getSiteTypeCapabilitiesMock.mockClear()
     isInventoryTokenUsableMock.mockImplementation(({ token }) =>
       Boolean(token.key),
     )
@@ -495,7 +497,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       },
     }
 
-    expect(getSiteAdapterMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
+    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(fetchAccountTokensMock).toHaveBeenNthCalledWith(
       1,
       expectedStoredRequest,

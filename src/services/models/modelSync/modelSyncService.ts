@@ -1,10 +1,8 @@
 import { union } from "lodash-es"
 
-import { SITE_TYPES } from "~/constants/siteType"
-import { getApiService } from "~/services/apiService"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { ManagedSiteChannelsCapability } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
-import { AuthTypeEnum } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
@@ -32,6 +30,15 @@ import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
 import { RateLimiter } from "./rateLimiter"
 
 const PROBE_FILTER_TIMEOUT_MS = 30_000
+
+type ModelSyncChannelCapabilities = ManagedSiteChannelsCapability & {
+  list: NonNullable<ManagedSiteChannelsCapability["list"]>
+  fetchModels: NonNullable<ManagedSiteChannelsCapability["fetchModels"]>
+  updateModels: NonNullable<ManagedSiteChannelsCapability["updateModels"]>
+  updateModelMapping: NonNullable<
+    ManagedSiteChannelsCapability["updateModelMapping"]
+  >
+}
 
 /**
  * Unified logger scoped to managed-site model synchronization.
@@ -95,41 +102,6 @@ export class ModelSyncService {
     }
   }
 
-  private createApiServiceRequest(): ApiServiceRequest {
-    const { config, siteType } = this.managedSiteConfig
-    const auth = {
-      authType: AuthTypeEnum.AccessToken,
-      accessToken: "",
-      userId: "",
-    }
-
-    if (siteType === SITE_TYPES.OCTOPUS) {
-      // Octopus model sync is routed through its dedicated scheduler executor;
-      // this fallback shape is retained only for defensive request construction.
-      auth.userId = config.username
-    } else if (siteType === SITE_TYPES.AXON_HUB) {
-      auth.accessToken = config.password
-      auth.userId = config.email
-    } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-      auth.accessToken = config.adminToken
-      auth.userId = "admin"
-    } else {
-      auth.accessToken = config.adminToken
-      auth.userId = config.userId
-    }
-
-    const request: ApiServiceRequest = {
-      baseUrl: config.baseUrl,
-      auth,
-    }
-
-    if (this.rateLimiter) {
-      request.bypassSiteRequestLimit = true
-    }
-
-    return request
-  }
-
   /**
    * Update in-memory channel configs to be used by per-channel filters.
    * @param configs Cached channel configuration map; null clears cache.
@@ -171,6 +143,35 @@ export class ModelSyncService {
     }
   }
 
+  private getChannelCapabilities(): ModelSyncChannelCapabilities {
+    const channels = getSiteTypeCapabilities(this.managedSiteConfig.siteType)
+      .managedSites?.channels
+
+    if (
+      !channels?.list ||
+      !channels.fetchModels ||
+      !channels.updateModels ||
+      !channels.updateModelMapping
+    ) {
+      throw new Error(
+        `managed-site model sync is not implemented for ${this.managedSiteConfig.siteType}`,
+      )
+    }
+
+    return channels as ModelSyncChannelCapabilities
+  }
+
+  private createChannelRequestOptions(abortSignal?: AbortSignal) {
+    if (!abortSignal && !this.rateLimiter) {
+      return undefined
+    }
+
+    return {
+      ...(abortSignal ? { signal: abortSignal } : {}),
+      ...(this.rateLimiter ? { bypassSiteRequestLimit: true } : {}),
+    }
+  }
+
   /**
    * List all channels from New API
    *
@@ -182,13 +183,13 @@ export class ModelSyncService {
    */
   async listChannels(): Promise<ManagedSiteChannelListData> {
     try {
-      return await getApiService(
-        this.managedSiteConfig.siteType,
-      ).listAllChannels(this.createApiServiceRequest(), {
-        beforeRequest: async () => {
-          await this.throttle()
+      return await this.getChannelCapabilities().list(
+        this.managedSiteConfig.config,
+        {
+          beforeRequest: async () => this.throttle(),
+          ...(this.rateLimiter ? { bypassSiteRequestLimit: true } : {}),
         },
-      })
+      )
     } catch (error) {
       logger.error("Failed to list channels", error)
       throw error
@@ -208,13 +209,11 @@ export class ModelSyncService {
       await this.throttle()
       throwIfAborted(abortSignal)
 
-      const service = getApiService(this.managedSiteConfig.siteType)
-      const request = this.createApiServiceRequest()
-      return abortSignal
-        ? await service.fetchChannelModels(request, channelId, {
-            signal: abortSignal,
-          })
-        : await service.fetchChannelModels(request, channelId)
+      return await this.getChannelCapabilities().fetchModels(
+        this.managedSiteConfig.config,
+        channelId,
+        this.createChannelRequestOptions(abortSignal),
+      )
     } catch (error: any) {
       logger.error("Failed to fetch models", { channelId, error })
       throw error
@@ -235,20 +234,12 @@ export class ModelSyncService {
       await this.throttle()
       throwIfAborted(abortSignal)
 
-      const service = getApiService(this.managedSiteConfig.siteType)
-      const request = this.createApiServiceRequest()
-      if (abortSignal) {
-        await service.updateChannelModels(
-          request,
-          channel.id,
-          models.join(","),
-          {
-            signal: abortSignal,
-          },
-        )
-      } else {
-        await service.updateChannelModels(request, channel.id, models.join(","))
-      }
+      await this.getChannelCapabilities().updateModels(
+        this.managedSiteConfig.config,
+        channel.id,
+        models,
+        this.createChannelRequestOptions(abortSignal),
+      )
     } catch (error: any) {
       logger.error("Failed to update channel", { channelId: channel.id, error })
       throw error
@@ -267,30 +258,22 @@ export class ModelSyncService {
   ): Promise<void> {
     try {
       const updateModels = union(
-        channel.models.split(","),
+        channel.models
+          .split(",")
+          .map((model) => model.trim())
+          .filter(Boolean),
         Object.keys(modelMapping),
-      ).join(",")
+      )
       await this.throttle()
       throwIfAborted(abortSignal)
 
-      const service = getApiService(this.managedSiteConfig.siteType)
-      const request = this.createApiServiceRequest()
-      if (abortSignal) {
-        await service.updateChannelModelMapping(
-          request,
-          channel.id,
-          updateModels,
-          JSON.stringify(modelMapping),
-          { signal: abortSignal },
-        )
-      } else {
-        await service.updateChannelModelMapping(
-          request,
-          channel.id,
-          updateModels,
-          JSON.stringify(modelMapping),
-        )
-      }
+      await this.getChannelCapabilities().updateModelMapping(
+        this.managedSiteConfig.config,
+        channel.id,
+        updateModels,
+        modelMapping,
+        this.createChannelRequestOptions(abortSignal),
+      )
     } catch (error) {
       logger.error("Failed to update channel mapping", {
         channelId: channel.id,

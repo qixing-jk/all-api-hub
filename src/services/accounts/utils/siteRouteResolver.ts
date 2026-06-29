@@ -11,7 +11,7 @@ import {
   type AccountBootstrapCapability,
   type AccountBootstrapRouteKind,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
 import { joinUrl } from "~/utils/core/url"
 
@@ -146,7 +146,8 @@ async function resolveAccountSiteRoutePath(
   target: Pick<RouteTarget, "baseUrl" | "siteType">,
   route: SiteRouteKind,
 ): Promise<string> {
-  const accountBootstrap = getSiteAdapter(target.siteType).accountBootstrap
+  const accountBootstrap = getSiteTypeCapabilities(target.siteType).account
+    ?.bootstrap
   const staticPath = accountBootstrap?.resolveRoutePath
     ? await accountBootstrap.resolveRoutePath(target, route)
     : resolveStaticAccountRoutePath(target, route)

@@ -3,7 +3,7 @@ import {
   isAccountSiteType,
   SITE_TYPES,
 } from "~/constants/siteType"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
 
 /**
@@ -96,7 +96,8 @@ export async function getSiteName(
       isAccountSiteType(siteTypeHint)
     ) {
       try {
-        const accountBootstrap = getSiteAdapter(siteTypeHint).accountBootstrap
+        const accountBootstrap =
+          getSiteTypeCapabilities(siteTypeHint).account?.bootstrap
         resolvedSiteStatus = accountBootstrap
           ? await accountBootstrap.fetchSiteStatus({
               baseUrl: hostWithProtocol,

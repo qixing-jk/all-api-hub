@@ -5,7 +5,7 @@ import {
 import { getSiteName } from "~/services/accounts/siteName"
 import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type {
   ApiServiceFetchContext,
@@ -157,15 +157,16 @@ export async function completeAutoDetectedAccount(
   const { url, requestedAuthType, detected, autoDetectContext } = request
   const { siteType } = detected
   const autoDetectFetchContext = getAutoDetectFetchContext(detected)
-  const adapter = getSiteAdapter(siteType)
-  if (!adapter.accountCompletion) {
+  const accountCompletion =
+    getSiteTypeCapabilities(siteType).account?.completion
+  if (!accountCompletion) {
     throw new AutoDetectCompletionError(
       AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
       createMissingAccountCompletionCapabilityError(siteType),
     )
   }
 
-  const completed = await adapter.accountCompletion.complete(
+  const completed = await accountCompletion.complete(
     {
       url,
       requestedAuthType,

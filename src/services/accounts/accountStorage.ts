@@ -13,6 +13,7 @@ import {
   collectDuplicateAccountNameKeys,
   resolveAccountDisplayName,
 } from "~/services/accounts/utils/accountDisplayName"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
@@ -1081,8 +1082,8 @@ class AccountStorageService {
         refreshToken: account.sub2apiAuth?.refreshToken,
         tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
       }
-      const { getSiteAdapter } = await import("~/services/apiAdapters/registry")
-      const accountRefresh = getSiteAdapter(account.site_type).accountRefresh
+      const accountRefresh = getSiteTypeCapabilities(account.site_type).account
+        ?.refresh
 
       // Refresh check-in support status together with account refresh.
       const currentCheckIn = account.checkIn

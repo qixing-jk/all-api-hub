@@ -20,3 +20,5 @@ export type ManagedSiteType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
 export const MANAGED_SITE_TYPES = getManagedSiteTypeValues() as readonly [
   ...typeof MANAGED_SITE_TYPE_ORDER,
 ]
+
+export type SiteType = AccountSiteType | ManagedSiteType

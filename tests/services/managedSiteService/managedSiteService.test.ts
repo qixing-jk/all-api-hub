@@ -3,6 +3,78 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 
 const mockGetPreferences = vi.fn()
+const capabilityFnsBySiteType = new Map()
+
+const getMockRuntimeConfigForType = async (siteType: string) => {
+  const preferences = await mockGetPreferences()
+  if (!preferences) {
+    return null
+  }
+
+  if (siteType === SITE_TYPES.OCTOPUS) {
+    const config = preferences.octopus
+    return config?.baseUrl && config.username && config.password ? config : null
+  }
+
+  if (siteType === SITE_TYPES.AXON_HUB) {
+    const config = preferences.axonHub
+    return config?.baseUrl && config.email && config.password ? config : null
+  }
+
+  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
+    const config = preferences.claudeCodeHub
+    return config?.baseUrl && config.adminToken ? config : null
+  }
+
+  const config =
+    siteType === SITE_TYPES.DONE_HUB
+      ? preferences.doneHub
+      : siteType === SITE_TYPES.VELOERA
+        ? preferences.veloera
+        : preferences.newApi
+
+  return config?.baseUrl && config.adminToken && config.userId ? config : null
+}
+
+const createManagedSiteCapabilities = (
+  siteType: string = SITE_TYPES.NEW_API,
+) => {
+  const channels: Record<string, ReturnType<typeof vi.fn>> = {
+    search: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  }
+
+  if (
+    siteType === SITE_TYPES.NEW_API ||
+    siteType === SITE_TYPES.VELOERA ||
+    siteType === SITE_TYPES.DONE_HUB ||
+    siteType === SITE_TYPES.CLAUDE_CODE_HUB
+  ) {
+    Object.assign(channels, {
+      hydrateComparableKeys: vi.fn(),
+      fetchSecretKey: vi.fn(),
+    })
+  }
+
+  return {
+    channels,
+    config: {
+      checkValid: vi.fn(async () => true),
+      get: vi.fn(async () => await getMockRuntimeConfigForType(siteType)),
+    },
+    channelDrafts: {
+      fetchAvailableModels: vi.fn(),
+      buildName: vi.fn(),
+      prepareFormData: vi.fn(),
+      buildPayload: vi.fn(),
+    },
+    imports: {
+      autoConfig: vi.fn(),
+    },
+  }
+}
 
 const baseService = {
   searchChannel: expect.any(Function),
@@ -32,6 +104,22 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
     },
   }
 })
+
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteTypeCapabilities: vi.fn((siteType) => {
+    if (!capabilityFnsBySiteType.has(siteType)) {
+      capabilityFnsBySiteType.set(
+        siteType,
+        createManagedSiteCapabilities(siteType),
+      )
+    }
+
+    return {
+      siteType,
+      managedSites: capabilityFnsBySiteType.get(siteType),
+    }
+  }),
+}))
 
 vi.mock("~/services/managedSites/providers/newApi", () => ({
   checkValidNewApiConfig: vi.fn(async () => true),
@@ -122,6 +210,7 @@ vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
 describe("managedSiteService", () => {
   beforeEach(() => {
     mockGetPreferences.mockReset()
+    capabilityFnsBySiteType.clear()
   })
 
   it("reports invalid managed-site config when preferences are missing", async () => {
@@ -323,15 +412,54 @@ describe("managedSiteService", () => {
     })
   })
 
+  it("composes explicit services from managed-site capabilities", async () => {
+    const { getManagedSiteServiceForType } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+    const { getSiteTypeCapabilities } = await import(
+      "~/services/apiAdapters/registry"
+    )
+
+    const capabilities = createManagedSiteCapabilities()
+    capabilityFnsBySiteType.set(SITE_TYPES.DONE_HUB, capabilities)
+
+    const service = getManagedSiteServiceForType(SITE_TYPES.DONE_HUB)
+
+    expect(getSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.DONE_HUB)
+    expect(service.searchChannel).toBe(capabilities.channels.search)
+    expect(service.createChannel).toBe(capabilities.channels.create)
+    expect(service.updateChannel).toBe(capabilities.channels.update)
+    expect(service.deleteChannel).toBe(capabilities.channels.delete)
+    expect(service.checkValidConfig).toBe(capabilities.config.checkValid)
+    expect(service.getConfig).toBe(capabilities.config.get)
+    expect(service.fetchAvailableModels).toBe(
+      capabilities.channelDrafts.fetchAvailableModels,
+    )
+    expect(service.buildChannelName).toBe(capabilities.channelDrafts.buildName)
+    expect(service.prepareChannelFormData).toBe(
+      capabilities.channelDrafts.prepareFormData,
+    )
+    expect(service.buildChannelPayload).toBe(
+      capabilities.channelDrafts.buildPayload,
+    )
+    expect(service.hydrateComparableChannelKeys).toBe(
+      capabilities.channels.hydrateComparableKeys,
+    )
+    expect(service.fetchChannelSecretKey).toBe(
+      capabilities.channels.fetchSecretKey,
+    )
+    expect(service.autoConfigToManagedSite).toBe(
+      capabilities.imports.autoConfig,
+    )
+  })
+
   it("passes runtime config objects directly to converted providers", async () => {
     const { getManagedSiteServiceForType } = await import(
       "~/services/managedSites/managedSiteService"
     )
-    const newApiProvider = await import(
-      "~/services/managedSites/providers/newApi"
-    )
 
     const service = getManagedSiteServiceForType(SITE_TYPES.NEW_API)
+    const capabilities = capabilityFnsBySiteType.get(SITE_TYPES.NEW_API)
 
     const newApiConfig = {
       baseUrl: "https://new-api.example.com",
@@ -351,7 +479,7 @@ describe("managedSiteService", () => {
     const invalidConfig: SearchChannelConfig = octopusConfig
     void invalidConfig
 
-    expect(newApiProvider.searchChannel).toHaveBeenCalledWith(
+    expect(capabilities.channels.search).toHaveBeenCalledWith(
       newApiConfig,
       "alpha",
     )

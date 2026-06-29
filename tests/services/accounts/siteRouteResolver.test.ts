@@ -11,15 +11,18 @@ import {
 import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
 import { AuthTypeEnum } from "~/types"
 
-const { mockFetchSiteStatus, mockGetSiteAdapter, mockResolveRoutePath } =
-  vi.hoisted(() => ({
-    mockFetchSiteStatus: vi.fn(),
-    mockGetSiteAdapter: vi.fn(),
-    mockResolveRoutePath: vi.fn(),
-  }))
+const {
+  mockFetchSiteStatus,
+  mockgetSiteTypeCapabilities,
+  mockResolveRoutePath,
+} = vi.hoisted(() => ({
+  mockFetchSiteStatus: vi.fn(),
+  mockgetSiteTypeCapabilities: vi.fn(),
+  mockResolveRoutePath: vi.fn(),
+}))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: mockGetSiteAdapter,
+  getSiteTypeCapabilities: mockgetSiteTypeCapabilities,
 }))
 
 describe("siteRouteResolver", () => {
@@ -27,15 +30,17 @@ describe("siteRouteResolver", () => {
     clearSiteRouteThemeCacheForTests()
     vi.restoreAllMocks()
     mockFetchSiteStatus.mockReset()
-    mockGetSiteAdapter.mockReset()
+    mockgetSiteTypeCapabilities.mockReset()
     mockResolveRoutePath.mockReset()
     mockResolveRoutePath.mockImplementation((target, route) =>
       Promise.resolve(resolveStaticAccountRoutePath(target, route)),
     )
-    mockGetSiteAdapter.mockReturnValue({
-      accountBootstrap: {
-        fetchSiteStatus: mockFetchSiteStatus,
-        resolveRoutePath: mockResolveRoutePath,
+    mockgetSiteTypeCapabilities.mockReturnValue({
+      account: {
+        bootstrap: {
+          fetchSiteStatus: mockFetchSiteStatus,
+          resolveRoutePath: mockResolveRoutePath,
+        },
       },
     })
   })
@@ -123,7 +128,7 @@ describe("siteRouteResolver", () => {
   })
 
   it("falls back to static route config when account bootstrap is missing", async () => {
-    mockGetSiteAdapter.mockReturnValueOnce({})
+    mockgetSiteTypeCapabilities.mockReturnValueOnce({})
 
     await expect(
       resolveAccountSiteRouteUrl(
@@ -134,9 +139,11 @@ describe("siteRouteResolver", () => {
   })
 
   it("falls back to static route config when account bootstrap has no route resolver", async () => {
-    mockGetSiteAdapter.mockReturnValueOnce({
-      accountBootstrap: {
-        fetchSiteStatus: mockFetchSiteStatus,
+    mockgetSiteTypeCapabilities.mockReturnValueOnce({
+      account: {
+        bootstrap: {
+          fetchSiteStatus: mockFetchSiteStatus,
+        },
       },
     })
 

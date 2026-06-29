@@ -1,0 +1,49 @@
+import type { AccountSiteType, ManagedSiteType } from "~/constants/siteType"
+
+import type { AccountBootstrapCapability } from "./accountBootstrap"
+import type { AccountCompletionCapability } from "./accountCompletion"
+import type { AccountDataCapability } from "./accountData"
+import type { AccountRefreshCapability } from "./accountRefresh"
+import type { KeyManagementCapability } from "./keyManagement"
+import type {
+  ManagedSiteChannelDraftsCapability,
+  ManagedSiteChannelsCapability,
+  ManagedSiteConfigCapability,
+  ManagedSiteImportCapability,
+} from "./managedSiteCapabilities"
+import type { ModelCatalogCapability } from "./modelCatalog"
+import type { ModelPricingCapability } from "./modelPricing"
+import type { RedemptionCapability } from "./redemption"
+import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
+import type { SiteNoticeCapability } from "./siteNotice"
+import type { TokenProvisioningCapability } from "./tokenProvisioning"
+
+export type SiteType = AccountSiteType | ManagedSiteType
+
+export type SiteBackendFamily = "newApiFamily" | "sub2api"
+
+export type SiteTypeCapabilities = {
+  siteType: SiteType
+  family?: SiteBackendFamily
+  site?: {
+    notice?: SiteNoticeCapability
+  }
+  account?: {
+    announcements?: SiteAnnouncementsCapability
+    modelCatalog?: ModelCatalogCapability
+    modelPricing?: ModelPricingCapability
+    data?: AccountDataCapability
+    bootstrap?: AccountBootstrapCapability
+    completion?: AccountCompletionCapability
+    keyManagement?: KeyManagementCapability
+    tokenProvisioning?: TokenProvisioningCapability
+    refresh?: AccountRefreshCapability
+    redemption?: RedemptionCapability
+  }
+  managedSites?: {
+    channels?: ManagedSiteChannelsCapability
+    config?: ManagedSiteConfigCapability
+    channelDrafts?: ManagedSiteChannelDraftsCapability
+    imports?: ManagedSiteImportCapability
+  }
+}

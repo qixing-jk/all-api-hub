@@ -16,7 +16,7 @@ import {
   TOKEN_PROVISIONING_ERRORS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
@@ -109,15 +109,15 @@ export async function ensureAccountKeysForAvailableGroups(params: {
   renameAutoTemplateTokens?: boolean
 }): Promise<AccountKeyCoverageResult> {
   const { account, accountName, siteUrlOrigin, abortSignal } = params
-  const adapter = getSiteAdapter(account.site_type)
+  const accountCapabilities = getSiteTypeCapabilities(account.site_type).account
   const capabilitySite = { siteType: account.site_type }
   const keyManagement = requireDisplayAccountKeyManagement(
     capabilitySite,
-    adapter.keyManagement,
+    accountCapabilities?.keyManagement,
   )
   const tokenProvisioning = requireDisplayAccountTokenProvisioning(
     capabilitySite,
-    adapter.tokenProvisioning,
+    accountCapabilities?.tokenProvisioning,
   )
   const accountContext = createAccountApiRequestFromStoredAccount(account)
   const request = abortSignal
@@ -301,10 +301,10 @@ export async function deleteInvalidAccountToken(params: {
   displaySiteData: DisplaySiteData
 }): Promise<AccountKeyRepairDeleteInvalidTokensResult["deleted"][number]> {
   const { token, account } = params
-  const adapter = getSiteAdapter(account.site_type)
+  const accountCapabilities = getSiteTypeCapabilities(account.site_type).account
   const keyManagement = requireDisplayAccountKeyManagement(
     { siteType: account.site_type },
-    adapter.keyManagement,
+    accountCapabilities?.keyManagement,
   )
   const { request } = createAccountApiRequestFromStoredAccount(account)
   await keyManagement.deleteToken({

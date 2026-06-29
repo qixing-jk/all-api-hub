@@ -4,9 +4,9 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
-import type { SiteAdapter } from "~/services/apiAdapters/contracts/siteAdapter"
+import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
@@ -106,7 +106,7 @@ export interface AccountApiContext {
 }
 
 export interface DisplayAccountApiCapabilityContext extends AccountApiContext {
-  adapter: SiteAdapter
+  capabilities: SiteTypeCapabilities
   keyManagement: KeyManagementCapability | undefined
   tokenProvisioning: TokenProvisioningCapability | undefined
 }
@@ -275,14 +275,15 @@ export const createDisplayAccountRequestContext = (
 export const createDisplayAccountApiContext = (
   account: DisplayAccountApiSnapshot,
 ): DisplayAccountApiCapabilityContext => {
-  const adapter = getSiteAdapter(account.siteType)
+  const capabilities = getSiteTypeCapabilities(account.siteType)
   const context = createDisplayAccountRequestContext(account)
+  const accountCapabilities = capabilities.account
 
   return {
     ...context,
-    adapter,
-    keyManagement: adapter.keyManagement,
-    tokenProvisioning: adapter.tokenProvisioning,
+    capabilities,
+    keyManagement: accountCapabilities?.keyManagement,
+    tokenProvisioning: accountCapabilities?.tokenProvisioning,
   }
 }
 

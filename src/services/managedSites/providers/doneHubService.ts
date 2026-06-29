@@ -2,11 +2,14 @@ import toast from "react-hot-toast"
 
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
-import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import { getApiService } from "~/services/apiService"
-import { fetchChannel as fetchDoneHubChannel } from "~/services/apiService/doneHub"
+import {
+  createChannel as createDoneHubChannel,
+  deleteChannel as deleteDoneHubChannel,
+  fetchChannel as fetchDoneHubChannel,
+  searchChannel as searchDoneHubChannel,
+  updateChannel as updateDoneHubChannel,
+} from "~/services/apiService/doneHub"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -85,10 +88,7 @@ export async function searchChannel(
   config: DoneHubConfig,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
-  return await getApiService(SITE_TYPES.DONE_HUB).searchChannel(
-    toDoneHubRequestConfig(config),
-    keyword,
-  )
+  return await searchDoneHubChannel(toDoneHubRequestConfig(config), keyword)
 }
 
 /**
@@ -98,10 +98,7 @@ export async function createChannel(
   config: DoneHubConfig,
   channelData: CreateChannelPayload,
 ) {
-  return await getApiService(SITE_TYPES.DONE_HUB).createChannel(
-    toDoneHubRequestConfig(config),
-    channelData,
-  )
+  return await createDoneHubChannel(toDoneHubRequestConfig(config), channelData)
 }
 
 /**
@@ -111,20 +108,14 @@ export async function updateChannel(
   config: DoneHubConfig,
   channelData: UpdateChannelPayload,
 ) {
-  return await getApiService(SITE_TYPES.DONE_HUB).updateChannel(
-    toDoneHubRequestConfig(config),
-    channelData,
-  )
+  return await updateDoneHubChannel(toDoneHubRequestConfig(config), channelData)
 }
 
 /**
  * Deletes a channel.
  */
 export async function deleteChannel(config: DoneHubConfig, channelId: number) {
-  return await getApiService(SITE_TYPES.DONE_HUB).deleteChannel(
-    toDoneHubRequestConfig(config),
-    channelId,
-  )
+  return await deleteDoneHubChannel(toDoneHubRequestConfig(config), channelId)
 }
 
 /**
@@ -456,6 +447,10 @@ export async function autoConfigToDoneHub(
   account: SiteAccount,
   toastId?: string,
 ): Promise<AutoConfigToNewApiResponse<{ token?: ApiToken }>> {
+  const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
+    import("~/services/accounts/accountOperations"),
+    import("~/services/accounts/accountStorage"),
+  ])
   const configValidation = await validateDoneHubConfig()
   if (!configValidation.valid) {
     return { success: false, message: configValidation.errors.join(", ") }

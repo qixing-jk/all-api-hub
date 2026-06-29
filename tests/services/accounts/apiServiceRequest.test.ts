@@ -13,7 +13,7 @@ import {
   resolveStoredAccountApiContext,
   StoredAccountApiContextError,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
 
 const { mockGetAccountById } = vi.hoisted(() => ({
@@ -21,7 +21,7 @@ const { mockGetAccountById } = vi.hoisted(() => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: vi.fn(),
+  getSiteTypeCapabilities: vi.fn(),
 }))
 
 vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
@@ -98,10 +98,12 @@ describe("fetchDisplayAccountTokens", () => {
       fetch: typeof fetchUserGroups
     }
   }
-  let adapter: {
+  let capabilities: {
     siteType: string
-    keyManagement?: typeof keyManagement
-    tokenProvisioning?: typeof tokenProvisioning
+    account?: {
+      keyManagement?: typeof keyManagement
+      tokenProvisioning?: typeof tokenProvisioning
+    }
   }
 
   beforeEach(() => {
@@ -129,10 +131,13 @@ describe("fetchDisplayAccountTokens", () => {
       classifyCreatedToken: vi.fn(),
       getRepairPolicy: vi.fn(),
     }
-    adapter = { siteType: "new-api", keyManagement, tokenProvisioning }
+    capabilities = {
+      siteType: "new-api",
+      account: { keyManagement, tokenProvisioning },
+    }
 
-    vi.mocked(getSiteAdapter).mockReset()
-    vi.mocked(getSiteAdapter).mockReturnValue(adapter as any)
+    vi.mocked(getSiteTypeCapabilities).mockReset()
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
     mockGetAccountById.mockReset()
   })
 
@@ -145,7 +150,7 @@ describe("fetchDisplayAccountTokens", () => {
     expect(fetchTokens).toHaveBeenCalledWith(expect.objectContaining(REQUEST))
     expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual(
       expect.objectContaining({
-        adapter,
+        capabilities,
         keyManagement,
         tokenProvisioning,
         request: expect.objectContaining(REQUEST),
@@ -616,7 +621,7 @@ describe("fetchDisplayAccountTokens", () => {
   })
 
   it("throws when adapter key management is not implemented", async () => {
-    vi.mocked(getSiteAdapter).mockReturnValue({
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: "unsupported",
     } as any)
 

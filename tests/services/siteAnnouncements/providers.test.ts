@@ -14,12 +14,12 @@ import {
   type SiteAnnouncementProviderRequest,
 } from "~/types/siteAnnouncements"
 
-const { getSiteAdapterMock } = vi.hoisted(() => ({
-  getSiteAdapterMock: vi.fn(),
+const { getSiteTypeCapabilitiesMock } = vi.hoisted(() => ({
+  getSiteTypeCapabilitiesMock: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: getSiteAdapterMock,
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
 const baseRequest: SiteAnnouncementProviderRequest = {
@@ -40,8 +40,10 @@ const baseRequest: SiteAnnouncementProviderRequest = {
 const createNoticeAdapter = (fetch = vi.fn().mockResolvedValue(null)) => ({
   siteType: SITE_TYPES.NEW_API,
   family: "newApiFamily" as const,
-  siteNotice: {
-    fetch,
+  site: {
+    notice: {
+      fetch,
+    },
   },
 })
 
@@ -51,9 +53,11 @@ const createSub2ApiAdapter = (overrides?: {
 }) => ({
   siteType: SITE_TYPES.SUB2API,
   family: "sub2api" as const,
-  siteAnnouncements: {
-    fetch: overrides?.fetch ?? vi.fn().mockResolvedValue([]),
-    markRead: overrides?.markRead ?? vi.fn().mockResolvedValue(true),
+  account: {
+    announcements: {
+      fetch: overrides?.fetch ?? vi.fn().mockResolvedValue([]),
+      markRead: overrides?.markRead ?? vi.fn().mockResolvedValue(true),
+    },
   },
 })
 
@@ -75,7 +79,7 @@ describe("site announcement providers", () => {
   })
 
   it("returns a common announcement for non-empty /api/notice responses", async () => {
-    getSiteAdapterMock.mockReturnValueOnce(
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
       createNoticeAdapter(
         vi.fn().mockResolvedValue(" **Hello** <b>world</b> "),
       ),
@@ -93,7 +97,7 @@ describe("site announcement providers", () => {
   })
 
   it("returns an empty common announcement list for blank notice bodies", async () => {
-    getSiteAdapterMock.mockReturnValueOnce(
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
       createNoticeAdapter(vi.fn().mockResolvedValue("   ")),
     )
 
@@ -106,7 +110,7 @@ describe("site announcement providers", () => {
   })
 
   it("marks common provider failures as unsupported with the upstream error text", async () => {
-    getSiteAdapterMock.mockReturnValueOnce(
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
       createNoticeAdapter(
         vi.fn().mockRejectedValue(new Error("not supported")),
       ),
@@ -122,7 +126,7 @@ describe("site announcement providers", () => {
   })
 
   it("marks common provider missing siteNotice capability as unsupported", async () => {
-    getSiteAdapterMock.mockReturnValueOnce({
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AIHUBMIX,
     })
 
@@ -149,7 +153,7 @@ describe("site announcement providers", () => {
         read_at: "2026-05-07T01:00:00Z",
       },
     ])
-    getSiteAdapterMock.mockReturnValue(
+    getSiteTypeCapabilitiesMock.mockReturnValue(
       createSub2ApiAdapter({ fetch, markRead }),
     )
 
@@ -183,7 +187,7 @@ describe("site announcement providers", () => {
   })
 
   it("normalizes Sub2API announcements from body/message fallbacks and mixed timestamp formats", async () => {
-    getSiteAdapterMock.mockReturnValue(
+    getSiteTypeCapabilitiesMock.mockReturnValue(
       createSub2ApiAdapter({
         fetch: vi.fn().mockResolvedValue([
           {
@@ -240,7 +244,7 @@ describe("site announcement providers", () => {
   })
 
   it("returns an error result when Sub2API announcement fetch fails", async () => {
-    getSiteAdapterMock.mockReturnValue(
+    getSiteTypeCapabilitiesMock.mockReturnValue(
       createSub2ApiAdapter({
         fetch: vi.fn().mockRejectedValue(new Error("denied")),
       }),
@@ -261,7 +265,7 @@ describe("site announcement providers", () => {
   })
 
   it("returns an error result when Sub2API siteAnnouncements capability is missing", async () => {
-    getSiteAdapterMock.mockReturnValue({
+    getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.SUB2API,
     })
 
@@ -284,7 +288,9 @@ describe("site announcement providers", () => {
       .fn()
       .mockRejectedValueOnce(new Error("first failed"))
       .mockResolvedValueOnce(true)
-    getSiteAdapterMock.mockReturnValue(createSub2ApiAdapter({ markRead }))
+    getSiteTypeCapabilitiesMock.mockReturnValue(
+      createSub2ApiAdapter({ markRead }),
+    )
 
     const request = {
       ...baseRequest,
@@ -306,7 +312,9 @@ describe("site announcement providers", () => {
 
   it("throws when every Sub2API mark-read request fails", async () => {
     const markRead = vi.fn().mockRejectedValue(new Error("all failed"))
-    getSiteAdapterMock.mockReturnValue(createSub2ApiAdapter({ markRead }))
+    getSiteTypeCapabilitiesMock.mockReturnValue(
+      createSub2ApiAdapter({ markRead }),
+    )
 
     const request = {
       ...baseRequest,
@@ -325,7 +333,9 @@ describe("site announcement providers", () => {
 
   it("skips mark-read requests when no upstream ids are available", async () => {
     const markRead = vi.fn()
-    getSiteAdapterMock.mockReturnValue(createSub2ApiAdapter({ markRead }))
+    getSiteTypeCapabilitiesMock.mockReturnValue(
+      createSub2ApiAdapter({ markRead }),
+    )
 
     const request = {
       ...baseRequest,
@@ -341,7 +351,9 @@ describe("site announcement providers", () => {
 
   it("wraps non-error full-batch mark-read failures with a safe error instance", async () => {
     const markRead = vi.fn().mockRejectedValue("bad gateway")
-    getSiteAdapterMock.mockReturnValue(createSub2ApiAdapter({ markRead }))
+    getSiteTypeCapabilitiesMock.mockReturnValue(
+      createSub2ApiAdapter({ markRead }),
+    )
 
     const request = {
       ...baseRequest,
@@ -359,7 +371,7 @@ describe("site announcement providers", () => {
   })
 
   it("keeps Sub2API title-only announcements title-only", async () => {
-    getSiteAdapterMock.mockReturnValue(
+    getSiteTypeCapabilitiesMock.mockReturnValue(
       createSub2ApiAdapter({
         fetch: vi.fn().mockResolvedValue([
           {

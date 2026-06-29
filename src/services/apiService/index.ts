@@ -5,7 +5,6 @@ import * as anyrouterAPI from "./anyrouter"
 import * as axonHubAPI from "./axonHub"
 import * as commonAPI from "./common"
 import * as doneHubAPI from "./doneHub"
-import * as newApiFamilyChannelManagement from "./newApiFamily/channelManagement"
 import * as newApiFamilyAccountBootstrap from "./newApiFamily/default/accountBootstrap"
 import * as newApiFamilyAccountData from "./newApiFamily/default/accountData"
 import * as newApiFamilyAccountRefresh from "./newApiFamily/default/accountRefresh"
@@ -59,7 +58,6 @@ const baseAPI = {
   ...commonAPI,
   ...newApiFamilyAccountBootstrapLegacyAPI,
   ...newApiFamilyAccountLifecycleLegacyAPI,
-  ...newApiFamilyChannelManagement,
   ...newApiFamilyKeyManagementLegacyAPI,
   fetchSiteNotice: newApiFamilySiteNotice.fetchSiteNotice,
   fetchModelPricing: newApiFamilyModelPricing.fetchModelPricing,
@@ -82,14 +80,12 @@ const siteOverrideMap = {
   [SITE_TYPES.NEW_API]: [
     newApiFamilyAccountBootstrapLegacyAPI,
     newApiFamilyAccountLifecycleLegacyAPI,
-    newApiFamilyChannelManagement,
     newApiFamilyKeyManagementLegacyAPI,
     commonAPI,
   ],
   [SITE_TYPES.V_API]: [
     newApiFamilyAccountBootstrapLegacyAPI,
     newApiFamilyAccountLifecycleLegacyAPI,
-    newApiFamilyChannelManagement,
     newApiFamilyKeyManagementLegacyAPI,
     commonAPI,
   ],

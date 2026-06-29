@@ -17,7 +17,6 @@ const {
   newApiFamilyFetchTodayIncome,
   newApiFamilyRefreshAccountData,
   newApiFamilyValidateAccountConnection,
-  newApiFamilySearchChannel,
   newApiFamilyFetchAccountAvailableModels,
   newApiFamilyFetchAccountTokens,
   newApiFamilyFetchSiteUserGroups,
@@ -62,7 +61,6 @@ const {
   newApiFamilyFetchTodayIncome: vi.fn(),
   newApiFamilyRefreshAccountData: vi.fn(),
   newApiFamilyValidateAccountConnection: vi.fn(),
-  newApiFamilySearchChannel: vi.fn(),
   newApiFamilyFetchAccountAvailableModels: vi.fn(),
   newApiFamilyFetchAccountTokens: vi.fn(),
   newApiFamilyFetchSiteUserGroups: vi.fn(),
@@ -117,10 +115,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
 vi.mock("~/services/apiService/newApiFamily/default/accountRefresh", () => ({
   refreshAccountData: newApiFamilyRefreshAccountData,
   validateAccountConnection: newApiFamilyValidateAccountConnection,
-}))
-
-vi.mock("~/services/apiService/newApiFamily/channelManagement", () => ({
-  searchChannel: newApiFamilySearchChannel,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({
@@ -323,33 +317,31 @@ describe("apiService index wrapper", () => {
     expect(newApiFamilyResolveApiTokenKey).not.toHaveBeenCalled()
   })
 
-  it("should route New API-family channel calls through the explicit channel module override", async () => {
-    newApiFamilySearchChannel.mockResolvedValue({ items: [], total: 0 })
+  it("should keep migrated managed-channel helpers out of the legacy apiService facade", () => {
+    const helperNames = [
+      "searchChannel",
+      "createChannel",
+      "updateChannel",
+      "deleteChannel",
+      "listAllChannels",
+      "fetchChannelModels",
+      "updateChannelModels",
+      "updateChannelModelMapping",
+    ]
 
-    const request = {
-      baseUrl: "https://new-api.example.com",
-      auth: { authType: "access_token", userId: "1", accessToken: "token" },
+    for (const helperName of helperNames) {
+      expect(helperName in (getApiService(undefined) as any)).toBe(false)
+      expect(helperName in (getApiService(SITE_TYPES.NEW_API) as any)).toBe(
+        false,
+      )
+      expect(helperName in (getApiService(SITE_TYPES.V_API) as any)).toBe(false)
+      expect(helperName in (getApiService(SITE_TYPES.DONE_HUB) as any)).toBe(
+        false,
+      )
+      expect(helperName in (getApiService(SITE_TYPES.VELOERA) as any)).toBe(
+        false,
+      )
     }
-
-    await (getApiService(SITE_TYPES.NEW_API).searchChannel as any)(
-      request,
-      "https://upstream.example.com",
-    )
-    await (getApiService(SITE_TYPES.V_API).searchChannel as any)(
-      request,
-      "https://v-api-upstream.example.com",
-    )
-
-    expect(newApiFamilySearchChannel).toHaveBeenNthCalledWith(
-      1,
-      request,
-      "https://upstream.example.com",
-    )
-    expect(newApiFamilySearchChannel).toHaveBeenNthCalledWith(
-      2,
-      request,
-      "https://v-api-upstream.example.com",
-    )
   })
 
   it("should route New API-family account lifecycle calls through explicit lifecycle module overrides", async () => {

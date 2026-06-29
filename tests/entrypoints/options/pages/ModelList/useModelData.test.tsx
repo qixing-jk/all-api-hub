@@ -13,7 +13,7 @@ import {
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import { InvalidTokenPayloadError } from "~/services/accounts/utils/apiServiceRequest"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
   MODEL_LIST_SOURCE_KINDS,
@@ -64,7 +64,7 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: vi.fn(),
+  getSiteTypeCapabilities: vi.fn(),
 }))
 
 vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
@@ -155,7 +155,7 @@ const createDeferred = <T,>() => {
   return { promise, resolve, reject }
 }
 
-const createMockSiteAdapter = (
+const createMockSiteTypeCapabilities = (
   fetchPricing: ReturnType<typeof vi.fn>,
   overrides: {
     siteType?: DisplaySiteData["siteType"]
@@ -165,22 +165,24 @@ const createMockSiteAdapter = (
 ) =>
   ({
     siteType: overrides.siteType ?? SITE_TYPES.NEW_API,
-    ...(overrides.modelPricing === false
-      ? {}
-      : {
-          modelPricing: {
-            fetchPricing,
-          },
-        }),
-    ...(overrides.siteType === SITE_TYPES.SUB2API &&
-    overrides.modelPricing === false &&
-    overrides.modelCatalog !== false
-      ? {
-          modelCatalog: {
-            fetchModels: vi.fn(),
-          },
-        }
-      : {}),
+    account: {
+      ...(overrides.modelPricing === false
+        ? {}
+        : {
+            modelPricing: {
+              fetchPricing,
+            },
+          }),
+      ...(overrides.siteType === SITE_TYPES.SUB2API &&
+      overrides.modelPricing === false &&
+      overrides.modelCatalog !== false
+        ? {
+            modelCatalog: {
+              fetchModels: vi.fn(),
+            },
+          }
+        : {}),
+    },
   }) as any
 
 const createWrapper = () => {
@@ -303,7 +305,7 @@ describe("useModelData all-accounts loading", () => {
     mockFetchDisplayAccountTokens.mockReset()
     mockLoadAccountTokenFallbackPricingResponse.mockReset()
     mockTrackProductAnalyticsActionCompleted.mockReset()
-    vi.mocked(getSiteAdapter).mockReset()
+    vi.mocked(getSiteTypeCapabilities).mockReset()
   })
 
   it("does not fetch all-account pricing until selectedAccount is 'all'", async () => {
@@ -315,8 +317,10 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: {},
     })
-    const mockedGetSiteAdapter = vi.mocked(getSiteAdapter)
-    mockedGetSiteAdapter.mockReturnValue(createMockSiteAdapter(fetchPricing))
+    const mockedgetSiteTypeCapabilities = vi.mocked(getSiteTypeCapabilities)
+    mockedgetSiteTypeCapabilities.mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
+    )
 
     const accounts = [
       createDisplayAccount({
@@ -354,8 +358,10 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: {},
     })
-    const mockedGetSiteAdapter = vi.mocked(getSiteAdapter)
-    mockedGetSiteAdapter.mockReturnValue(createMockSiteAdapter(fetchPricing))
+    const mockedgetSiteTypeCapabilities = vi.mocked(getSiteTypeCapabilities)
+    mockedgetSiteTypeCapabilities.mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
+    )
 
     const accounts = [
       createDisplayAccount({
@@ -392,8 +398,8 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("fetch should not be called"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.SUB2API,
         modelPricing: false,
       }),
@@ -432,8 +438,8 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("fetch should not be called"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.UNKNOWN,
         modelPricing: false,
       }),
@@ -473,8 +479,8 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("fetch should not be called"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.SUB2API,
         modelPricing: false,
       }),
@@ -526,8 +532,8 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("common pricing should not be called"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.SUB2API,
         modelPricing: false,
       }),
@@ -658,8 +664,8 @@ describe("useModelData all-accounts loading", () => {
 
   it("loads only active Sub2API fallback keys in all-accounts mode", async () => {
     const fetchPricing = vi.fn()
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.SUB2API,
         modelPricing: false,
       }),
@@ -765,8 +771,8 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("fetch should not be called"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.SUB2API,
         modelPricing: false,
       }),
@@ -869,8 +875,8 @@ describe("useModelData all-accounts loading", () => {
 
   it("marks a Sub2API account failed when every fallback key fails", async () => {
     const fetchPricing = vi.fn()
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.SUB2API,
         modelPricing: false,
       }),
@@ -936,8 +942,8 @@ describe("useModelData all-accounts loading", () => {
 
   it("marks mixed Sub2API all-token failures as load failed instead of invalid format", async () => {
     const fetchPricing = vi.fn()
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.SUB2API,
         modelPricing: false,
       }),
@@ -1074,8 +1080,8 @@ describe("useModelData all-accounts loading", () => {
         success: true,
         usable_group: { default: true },
       })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -1182,8 +1188,8 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: { default: true },
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -1235,8 +1241,8 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: {},
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -1299,8 +1305,8 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.reject(new Error("private backend failure"))
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const accounts = [
@@ -1371,8 +1377,8 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.reject(new TypeError("Failed to fetch"))
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const accounts = [
@@ -1448,8 +1454,8 @@ describe("useModelData all-accounts loading", () => {
         usable_group: {},
       })
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const accounts = [
@@ -1517,8 +1523,8 @@ describe("useModelData all-accounts loading", () => {
         usable_group: {},
       })
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const accounts = [
@@ -1681,8 +1687,8 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const fallbackToken = {
@@ -1808,8 +1814,8 @@ describe("useModelData all-accounts loading", () => {
         success: true,
         usable_group: { default: true },
       })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const firstAccount = createDisplayAccount({
@@ -1882,8 +1888,8 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchPricing = vi.fn()
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -1955,7 +1961,7 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("fetch should not be called"))
-    vi.mocked(getSiteAdapter).mockReturnValue({
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.SUB2API,
     } as any)
 
@@ -2035,10 +2041,12 @@ describe("useModelData all-accounts loading", () => {
       usable_group: {},
     }
 
-    vi.mocked(getSiteAdapter).mockReturnValue({
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.SUB2API,
-      modelCatalog: {
-        fetchModels: vi.fn().mockResolvedValue(["runtime-model"]),
+      account: {
+        modelCatalog: {
+          fetchModels: vi.fn().mockResolvedValue(["runtime-model"]),
+        },
       },
     } as any)
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([
@@ -2102,11 +2110,11 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("common pricing should not be called"))
-    const sub2apiAdapter = createMockSiteAdapter(fetchPricing, {
+    const sub2apiAdapter = createMockSiteTypeCapabilities(fetchPricing, {
       siteType: SITE_TYPES.SUB2API,
       modelPricing: false,
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(sub2apiAdapter)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(sub2apiAdapter)
 
     const account = createDisplayAccount({
       id: "sub2api-runtime-fallback-account",
@@ -2271,8 +2279,8 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("direct pricing failed"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
     const account = createDisplayAccount({
       id: "new-api-direct-failure",
@@ -2313,8 +2321,8 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("common pricing should not be called"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.SUB2API,
         modelPricing: false,
       }),
@@ -2419,8 +2427,8 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi
       .fn()
       .mockRejectedValue(new Error("common pricing should not be called"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing, {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.SUB2API,
         modelPricing: false,
       }),
@@ -2537,8 +2545,8 @@ describe("useModelData all-accounts loading", () => {
     const fetchPricing = vi.fn().mockImplementation(({ accountId }) => {
       return accountId === "a" ? firstDeferred.promise : secondDeferred.promise
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const accounts = [
@@ -2622,8 +2630,10 @@ describe("useModelData all-accounts loading", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     const fetchPricing = vi.fn()
-    const mockedGetSiteAdapter = vi.mocked(getSiteAdapter)
-    mockedGetSiteAdapter.mockReturnValue(createMockSiteAdapter(fetchPricing))
+    const mockedgetSiteTypeCapabilities = vi.mocked(getSiteTypeCapabilities)
+    mockedgetSiteTypeCapabilities.mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
+    )
     mockFetchApiCredentialModelIds.mockResolvedValueOnce([
       "gpt-4o-mini",
       "claude-3-5-sonnet",
@@ -2676,8 +2686,8 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -2724,8 +2734,8 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -2847,8 +2857,8 @@ describe("useModelData all-accounts loading", () => {
       .fn()
       .mockRejectedValueOnce(new Error("boom"))
       .mockRejectedValueOnce(new Error("boom"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const account = createDisplayAccount({
@@ -2966,8 +2976,8 @@ describe("useModelData all-accounts loading", () => {
         success: true,
         usable_group: {},
       })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
     mockFetchDisplayAccountTokens.mockReturnValueOnce(deferredTokens.promise)
 
@@ -3050,8 +3060,8 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const fallbackToken = {
@@ -3118,8 +3128,8 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
     mockFetchDisplayAccountTokens.mockRejectedValueOnce(
       new InvalidTokenPayloadError({
@@ -3167,8 +3177,8 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const fallbackToken = {
@@ -3240,8 +3250,8 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
 
     const fetchPricing = vi.fn().mockRejectedValue(new Error("boom"))
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const fallbackToken = {
@@ -3335,8 +3345,8 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.reject(new Error("boom"))
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const accounts = [
@@ -3398,8 +3408,8 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: {},
     })
-    vi.mocked(getSiteAdapter).mockReturnValue(
-      createMockSiteAdapter(fetchPricing),
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
     )
 
     const account = createDisplayAccount({

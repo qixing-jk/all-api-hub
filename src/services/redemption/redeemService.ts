@@ -1,7 +1,7 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { formatMoneyFixed } from "~/utils/core/money"
@@ -45,7 +45,8 @@ class RedeemService {
         }
       }
 
-      const redemption = getSiteAdapter(account.site_type).redemption
+      const redemption = getSiteTypeCapabilities(account.site_type).account
+        ?.redemption
       if (!redemption) {
         return {
           success: false,

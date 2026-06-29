@@ -9,7 +9,7 @@ import {
 } from "~/services/accounts/accountSiteProfile"
 import type { ModelCatalogCapability } from "~/services/apiAdapters/contracts/modelCatalog"
 import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
-import { getSiteAdapter } from "~/services/apiAdapters/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
 export const MODEL_LIST_ACCOUNT_SOURCE_ROUTES = {
   DirectPricing: "direct_pricing",
@@ -53,7 +53,7 @@ export function resolveModelListAccountSourceReadiness(account: {
   siteType: AccountSiteType
 }): ModelListAccountSourceReadiness {
   const profile = getAccountSiteModelListProfile(account.siteType)
-  const adapter = getSiteAdapter(account.siteType)
+  const accountCapabilities = getSiteTypeCapabilities(account.siteType).account
   const base = {
     statusScope: profile.statusScope,
     displayCapabilitiesSource: profile.displayCapabilitiesSource,
@@ -62,11 +62,11 @@ export function resolveModelListAccountSourceReadiness(account: {
   if (
     profile.directPricing === ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Supported
   ) {
-    if (adapter.modelPricing) {
+    if (accountCapabilities?.modelPricing) {
       return {
         ...base,
         route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
-        modelPricing: adapter.modelPricing,
+        modelPricing: accountCapabilities.modelPricing,
       }
     }
 
@@ -87,11 +87,11 @@ export function resolveModelListAccountSourceReadiness(account: {
     profile.tokenScopedCatalogFallback ===
     ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey
   ) {
-    if (adapter.modelCatalog) {
+    if (accountCapabilities?.modelCatalog) {
       return {
         ...base,
         route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
-        modelCatalog: adapter.modelCatalog,
+        modelCatalog: accountCapabilities.modelCatalog,
         dashboardEstimateLoader: profile.dashboardEstimateLoader,
       }
     }

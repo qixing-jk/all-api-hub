@@ -84,28 +84,31 @@ vi.mock("~/services/accounts/accountKeyAutoProvisioning/groupCoverage", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteAdapter: vi.fn((siteType: string) => ({
+  getSiteTypeCapabilities: vi.fn((siteType: string) => ({
     siteType,
-    tokenProvisioning:
-      siteType === SITE_TYPES.SUB2API
-        ? {
-            getRepairPolicy: () => ({
-              kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-              skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
-            }),
-          }
-        : siteType === SITE_TYPES.AIHUBMIX
+    account: {
+      tokenProvisioning:
+        siteType === SITE_TYPES.SUB2API
           ? {
               getRepairPolicy: () => ({
                 kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-                skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
+                skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
               }),
             }
-          : {
-              getRepairPolicy: () => ({
-                kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-              }),
-            },
+          : siteType === SITE_TYPES.AIHUBMIX
+            ? {
+                getRepairPolicy: () => ({
+                  kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
+                  skipReason:
+                    ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
+                }),
+              }
+            : {
+                getRepairPolicy: () => ({
+                  kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+                }),
+              },
+    },
   })),
 }))
 
