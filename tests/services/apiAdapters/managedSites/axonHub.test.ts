@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 const axonHubProvider = vi.hoisted(() => ({
   checkValidAxonHubConfig: vi.fn(),
+  listChannels: vi.fn(),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -41,6 +42,27 @@ describe("AxonHub managed-site channel capability", () => {
     await expect(
       axonHubManagedSiteChannels.search(config, "missing"),
     ).resolves.toBeNull()
+  })
+
+  it("exposes direct channel listing without model-sync write methods", async () => {
+    const listResponse = {
+      items: [{ id: 1, name: "Axon" }],
+      total: 1,
+      type_counts: { openai: 1 },
+    }
+    axonHubProvider.listChannels.mockResolvedValue(listResponse)
+
+    const { axonHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await expect(axonHubManagedSiteChannels.list?.(config)).resolves.toBe(
+      listResponse,
+    )
+    expect(axonHubProvider.listChannels).toHaveBeenCalledWith(config)
+    expect(axonHubManagedSiteChannels.fetchModels).toBeUndefined()
+    expect(axonHubManagedSiteChannels.updateModels).toBeUndefined()
+    expect(axonHubManagedSiteChannels.updateModelMapping).toBeUndefined()
   })
 
   it("returns ApiResponse objects for create, update, and delete", async () => {

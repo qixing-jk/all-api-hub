@@ -126,7 +126,7 @@ describe("AxonHub managed-site provider", () => {
     })
   })
 
-  it("validates saved config, reads config, and searches through passed config", async () => {
+  it("validates saved config, reads config, searches, and lists through passed config", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
 
     await expect(provider.checkValidAxonHubConfig()).resolves.toBe(true)
@@ -139,6 +139,10 @@ describe("AxonHub managed-site provider", () => {
       passedAxonHubConfig,
       "alpha",
     )
+
+    await provider.listChannels(passedAxonHubConfig)
+
+    expect(mockListChannels).toHaveBeenCalledWith(passedAxonHubConfig)
   })
 
   it("returns missing-config fallbacks for saved AxonHub config helpers", async () => {

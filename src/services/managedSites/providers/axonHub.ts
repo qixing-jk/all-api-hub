@@ -168,6 +168,20 @@ export async function searchChannel(
 }
 
 /**
+ * List AxonHub channels using the supplied admin credentials.
+ */
+export async function listChannels(
+  config: AxonHubConfig,
+): Promise<ManagedSiteChannelListData> {
+  try {
+    return await axonHubApi.listChannels(config)
+  } catch (error) {
+    logger.error("Failed to list AxonHub channels", error)
+    throw error
+  }
+}
+
+/**
  * Create an AxonHub channel through the managed-site service contract.
  */
 export async function createChannel(

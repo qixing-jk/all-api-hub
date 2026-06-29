@@ -31,8 +31,11 @@ import { RateLimiter } from "./rateLimiter"
 
 const PROBE_FILTER_TIMEOUT_MS = 30_000
 
-type ModelSyncChannelCapabilities = ManagedSiteChannelsCapability & {
+type ModelSyncChannelListCapability = ManagedSiteChannelsCapability & {
   list: NonNullable<ManagedSiteChannelsCapability["list"]>
+}
+
+type ModelSyncChannelCapabilities = ManagedSiteChannelsCapability & {
   fetchModels: NonNullable<ManagedSiteChannelsCapability["fetchModels"]>
   updateModels: NonNullable<ManagedSiteChannelsCapability["updateModels"]>
   updateModelMapping: NonNullable<
@@ -143,13 +146,25 @@ export class ModelSyncService {
     }
   }
 
-  private getChannelCapabilities(): ModelSyncChannelCapabilities {
+  private getChannelListCapability(): ModelSyncChannelListCapability {
+    const channels = getSiteTypeCapabilities(this.managedSiteConfig.siteType)
+      .managedSites?.channels
+
+    if (!channels?.list) {
+      throw new Error(
+        `managed-site channel listing is not implemented for ${this.managedSiteConfig.siteType}`,
+      )
+    }
+
+    return channels as ModelSyncChannelListCapability
+  }
+
+  private getModelSyncChannelCapabilities(): ModelSyncChannelCapabilities {
     const channels = getSiteTypeCapabilities(this.managedSiteConfig.siteType)
       .managedSites?.channels
 
     if (
-      !channels?.list ||
-      !channels.fetchModels ||
+      !channels?.fetchModels ||
       !channels.updateModels ||
       !channels.updateModelMapping
     ) {
@@ -183,7 +198,7 @@ export class ModelSyncService {
    */
   async listChannels(): Promise<ManagedSiteChannelListData> {
     try {
-      return await this.getChannelCapabilities().list(
+      return await this.getChannelListCapability().list(
         this.managedSiteConfig.config,
         {
           beforeRequest: async () => this.throttle(),
@@ -209,7 +224,7 @@ export class ModelSyncService {
       await this.throttle()
       throwIfAborted(abortSignal)
 
-      return await this.getChannelCapabilities().fetchModels(
+      return await this.getModelSyncChannelCapabilities().fetchModels(
         this.managedSiteConfig.config,
         channelId,
         this.createChannelRequestOptions(abortSignal),
@@ -234,7 +249,7 @@ export class ModelSyncService {
       await this.throttle()
       throwIfAborted(abortSignal)
 
-      await this.getChannelCapabilities().updateModels(
+      await this.getModelSyncChannelCapabilities().updateModels(
         this.managedSiteConfig.config,
         channel.id,
         models,
@@ -267,7 +282,7 @@ export class ModelSyncService {
       await this.throttle()
       throwIfAborted(abortSignal)
 
-      await this.getChannelCapabilities().updateModelMapping(
+      await this.getModelSyncChannelCapabilities().updateModelMapping(
         this.managedSiteConfig.config,
         channel.id,
         updateModels,

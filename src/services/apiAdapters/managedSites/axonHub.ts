@@ -11,6 +11,7 @@ import {
   createChannel,
   deleteChannel,
   fetchAvailableModels,
+  listChannels,
   prepareChannelFormData,
   searchChannel,
   updateChannel,
@@ -23,6 +24,7 @@ import { emptyManagedSiteQueries } from "./unsupportedQueries"
 export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubConfig> =
   {
     search: searchChannel,
+    list: listChannels,
     create: createChannel,
     update: updateChannel,
     delete: deleteChannel,

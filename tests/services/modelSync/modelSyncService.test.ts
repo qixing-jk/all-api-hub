@@ -421,7 +421,41 @@ describe("ModelSyncService - siteType routing", () => {
     )
   })
 
-  it("throws a clear error when channel model-sync methods are missing", async () => {
+  it("lists channels when model-sync write methods are not implemented", async () => {
+    const axonHubConfig = makeRuntimeConfig({
+      siteType: SITE_TYPES.AXON_HUB,
+    })
+    const listResponse = {
+      items: [makeChannel({ id: 1, name: "Axon" })],
+      total: 1,
+      type_counts: { openai: 1 },
+    }
+    listAllChannelsMock.mockResolvedValue(listResponse)
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.AXON_HUB,
+      managedSites: {
+        channels: {
+          list: listAllChannelsMock,
+          search: vi.fn(),
+          create: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+        },
+      },
+    })
+
+    await expect(
+      new ModelSyncService(axonHubConfig).listChannels(),
+    ).resolves.toBe(listResponse)
+    expect(listAllChannelsMock).toHaveBeenCalledWith(
+      axonHubConfig.config,
+      expect.objectContaining({
+        beforeRequest: expect.any(Function),
+      }),
+    )
+  })
+
+  it("throws a clear error when channel listing is missing", async () => {
     const cchConfig = makeRuntimeConfig({
       siteType: SITE_TYPES.CLAUDE_CODE_HUB,
     })
@@ -440,8 +474,30 @@ describe("ModelSyncService - siteType routing", () => {
     await expect(
       new ModelSyncService(cchConfig).listChannels(),
     ).rejects.toThrow(
-      "managed-site model sync is not implemented for claude-code-hub",
+      "managed-site channel listing is not implemented for claude-code-hub",
     )
+  })
+
+  it("throws a clear error when channel model-sync methods are missing", async () => {
+    const axonHubConfig = makeRuntimeConfig({
+      siteType: SITE_TYPES.AXON_HUB,
+    })
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
+      siteType: SITE_TYPES.AXON_HUB,
+      managedSites: {
+        channels: {
+          list: listAllChannelsMock,
+          search: vi.fn(),
+          create: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+        },
+      },
+    })
+
+    await expect(
+      new ModelSyncService(axonHubConfig).fetchChannelModels(1),
+    ).rejects.toThrow("managed-site model sync is not implemented for axonhub")
   })
 })
 
