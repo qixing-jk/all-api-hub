@@ -71,6 +71,9 @@ const toNewApiRequestConfig = (config: NewApiConfig) => ({
   },
 })
 
+const fetchNewApiConfigUserGroups = async (config: NewApiConfig) =>
+  await fetchSiteUserGroups(toNewApiRequestConfig(config))
+
 /**
  * 搜索指定关键词的渠道
  * @param config New API runtime config
@@ -345,15 +348,7 @@ export async function prepareChannelFormData(
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     getConfig: getNewApiConfig,
-    fetchSiteUserGroups: async (config) =>
-      await fetchSiteUserGroups({
-        baseUrl: config.baseUrl,
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          accessToken: config.adminToken,
-          userId: config.userId,
-        },
-      }),
+    fetchSiteUserGroups: fetchNewApiConfigUserGroups,
     onError: (error) => {
       logger.warn("Failed to resolve New API default groups", error)
     },

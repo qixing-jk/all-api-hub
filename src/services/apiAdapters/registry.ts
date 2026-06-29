@@ -1,4 +1,4 @@
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   getAccountSiteDefinition,
@@ -19,6 +19,8 @@ import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
 import { sub2ApiCapabilities } from "./sub2api"
 
+type ManagedSiteCapabilities = NonNullable<SiteTypeCapabilities["managedSites"]>
+
 const managedSitesBySiteType = {
   [SITE_TYPES.NEW_API]: newApiManagedSiteCapabilities,
   [SITE_TYPES.VELOERA]: veloeraManagedSiteCapabilities,
@@ -26,15 +28,14 @@ const managedSitesBySiteType = {
   [SITE_TYPES.OCTOPUS]: octopusManagedSiteCapabilities,
   [SITE_TYPES.AXON_HUB]: axonHubManagedSiteCapabilities,
   [SITE_TYPES.CLAUDE_CODE_HUB]: claudeCodeHubManagedSiteCapabilities,
-} as const
+} satisfies Record<ManagedSiteType, ManagedSiteCapabilities>
 
 const withManagedSites = (
   capabilities: SiteTypeCapabilities,
 ): SiteTypeCapabilities => {
-  const managedSites =
-    managedSitesBySiteType[
-      capabilities.siteType as keyof typeof managedSitesBySiteType
-    ]
+  const managedSites = isManagedSiteCapabilityType(capabilities.siteType)
+    ? managedSitesBySiteType[capabilities.siteType]
+    : undefined
 
   if (!managedSites) {
     return capabilities
@@ -48,6 +49,11 @@ const withManagedSites = (
     },
   }
 }
+
+const isManagedSiteCapabilityType = (
+  siteType: SiteType,
+): siteType is ManagedSiteType =>
+  Object.hasOwn(managedSitesBySiteType, siteType)
 
 /**
  * Returns the capability groups supported by the selected site type.
@@ -68,12 +74,10 @@ export function getSiteTypeCapabilities(
     )
   }
 
-  const managedSites =
-    managedSitesBySiteType[siteType as keyof typeof managedSitesBySiteType]
-  if (managedSites) {
+  if (isManagedSiteCapabilityType(siteType)) {
     return {
       siteType,
-      managedSites,
+      managedSites: managedSitesBySiteType[siteType],
     }
   }
 

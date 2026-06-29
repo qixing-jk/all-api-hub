@@ -12,8 +12,16 @@ const axonHubProvider = vi.hoisted(() => ({
   buildChannelPayload: vi.fn(),
 }))
 
+const userPreferences = vi.hoisted(() => ({
+  getPreferences: vi.fn(),
+}))
+
 vi.mock("~/services/managedSites/providers/axonHub", () => ({
   ...axonHubProvider,
+}))
+
+vi.mock("~/services/preferences/userPreferences", () => ({
+  userPreferences,
 }))
 
 describe("AxonHub managed-site channel capability", () => {
@@ -93,10 +101,16 @@ describe("AxonHub managed-site channel capability", () => {
   })
 
   it("exposes provider config and draft functions", async () => {
+    userPreferences.getPreferences.mockResolvedValue({
+      axonHub: config,
+    })
     const { axonHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/axonHub"
     )
 
+    await expect(axonHubManagedSiteCapabilities.config.get()).resolves.toBe(
+      config,
+    )
     expect(axonHubManagedSiteCapabilities.config.checkValid).toBe(
       axonHubProvider.checkValidAxonHubConfig,
     )

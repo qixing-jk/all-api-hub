@@ -154,6 +154,54 @@ describe("Veloera managed-site channel capability", () => {
     expect(veloeraManagedSiteCapabilities).not.toHaveProperty("imports")
   })
 
+  it("delegates Veloera queries and comparable-key hydration helpers", async () => {
+    const { veloeraManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+    const request = {
+      baseUrl: config.baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: config.adminToken,
+        userId: config.userId,
+      },
+    }
+
+    await veloeraManagedSiteCapabilities.queries.fetchSiteUserGroups(config)
+    await veloeraManagedSiteCapabilities.queries.fetchAccountAvailableModels(
+      config,
+    )
+
+    expect(keyManagement.fetchSiteUserGroups).toHaveBeenCalledWith(request)
+    expect(keyManagement.fetchAccountAvailableModels).toHaveBeenCalledWith(
+      request,
+    )
+
+    veloeraApi.fetchChannel.mockResolvedValueOnce({
+      id: 42,
+      key: "veloera-secret",
+    })
+    await expect(
+      veloeraManagedSiteCapabilities.channels.fetchSecretKey?.(config, 42),
+    ).resolves.toBe("veloera-secret")
+    expect(veloeraApi.fetchChannel).toHaveBeenCalledWith(request, 42)
+
+    veloeraApi.fetchChannel.mockResolvedValueOnce({
+      id: 7,
+      key: "veloera-hydrated",
+    })
+    await expect(
+      veloeraManagedSiteCapabilities.channels.hydrateComparableKeys?.(config, [
+        { id: 1, key: "sk-live" },
+        { id: 7, key: "sk-********" },
+      ] as never),
+    ).resolves.toEqual([
+      { id: 1, key: "sk-live" },
+      { id: 7, key: "veloera-hydrated" },
+    ])
+    expect(veloeraApi.fetchChannel).toHaveBeenCalledWith(request, 7)
+  })
+
   it("injects Veloera account model fallback into the provider draft capability", async () => {
     const { veloeraManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/veloera"

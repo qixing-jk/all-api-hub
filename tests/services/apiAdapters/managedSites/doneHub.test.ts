@@ -149,6 +149,44 @@ describe("DoneHub managed-site channel capability", () => {
     ).toHaveBeenCalledWith(request)
   })
 
+  it("fetches and hydrates DoneHub secret keys for masked comparable channels", async () => {
+    const { doneHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+    const request = {
+      baseUrl: config.baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: config.adminToken,
+        userId: config.userId,
+      },
+    }
+
+    doneHubApi.fetchChannel.mockResolvedValueOnce({
+      id: 42,
+      key: "sk-real",
+    })
+    await expect(
+      doneHubManagedSiteChannels.fetchSecretKey?.(config, 42),
+    ).resolves.toBe("sk-real")
+    expect(doneHubApi.fetchChannel).toHaveBeenCalledWith(request, 42)
+
+    doneHubApi.fetchChannel.mockResolvedValueOnce({
+      id: 7,
+      key: "sk-hydrated",
+    })
+    await expect(
+      doneHubManagedSiteChannels.hydrateComparableKeys?.(config, [
+        { id: 1, key: "sk-live" },
+        { id: 7, key: "sk-********" },
+      ] as never),
+    ).resolves.toEqual([
+      { id: 1, key: "sk-live" },
+      { id: 7, key: "sk-hydrated" },
+    ])
+    expect(doneHubApi.fetchChannel).toHaveBeenCalledWith(request, 7)
+  })
+
   it("exposes provider config and draft functions", async () => {
     const { doneHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/doneHub"
