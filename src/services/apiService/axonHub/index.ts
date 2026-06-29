@@ -177,7 +177,6 @@ const channelListCache = new Map<
 const numericIdToGraphqlId = new Map<number, string>()
 const CHANNEL_LIST_CACHE_TTL_MS = 15_000
 const MAX_LIST_CHANNEL_PAGES = 100
-const AXON_HUB_GRAPHQL_ID_PREFIX = "gid://axonhub/"
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
 
@@ -241,16 +240,16 @@ export async function resolveAxonHubGraphqlIdForMutation(
   config: AxonHubConfig,
   id: number,
 ) {
-  let graphqlId = resolveAxonHubGraphqlId(id)
-  if (graphqlId.startsWith(AXON_HUB_GRAPHQL_ID_PREFIX)) {
+  let graphqlId = numericIdToGraphqlId.get(id)
+  if (graphqlId) {
     return graphqlId
   }
 
   // AxonHub mutations reject bare numeric row ids; hydrate the reversible map
   // from the channel list before sending update/delete mutations.
   await listChannels(config)
-  graphqlId = resolveAxonHubGraphqlId(id)
-  if (graphqlId.startsWith(AXON_HUB_GRAPHQL_ID_PREFIX)) {
+  graphqlId = numericIdToGraphqlId.get(id)
+  if (graphqlId) {
     return graphqlId
   }
 

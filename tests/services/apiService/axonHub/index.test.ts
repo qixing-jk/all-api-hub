@@ -1053,6 +1053,97 @@ describe("AxonHub API service", () => {
     expect(deletedId).toBe(graphqlId)
   })
 
+  it("uses opaque mapped AxonHub GraphQL ids for adapter delete mutations", async () => {
+    const graphqlId = "opaque-channel-id"
+    const rowId = axonHubChannelToManagedSite({
+      id: graphqlId,
+      createdAt: null,
+      updatedAt: null,
+      type: "openai",
+      baseURL: "https://opaque.example.com",
+      name: "opaque",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      credentials: { apiKey: "sk-opaque" },
+      supportedModels: ["gpt-4.1"],
+      manualModels: [],
+      defaultTestModel: null,
+      settings: {},
+      orderingWeight: 0,
+      remark: null,
+      errorMessage: null,
+    }).id
+
+    let deletedId: unknown
+
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "adapter-delete-opaque" }),
+      ),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as {
+          query?: string
+          variables?: { id?: unknown }
+        }
+
+        if (body.query?.includes("mutation DeleteChannel")) {
+          deletedId = body.variables?.id
+          return HttpResponse.json({
+            data: {
+              deleteChannel: true,
+            },
+          })
+        }
+
+        return HttpResponse.json(
+          { errors: [{ message: "Unexpected GraphQL operation" }] },
+          { status: 500 },
+        )
+      }),
+    )
+
+    await expect(deleteChannelAdapter(buildRequest(), rowId)).resolves.toEqual({
+      success: true,
+      data: true,
+      message: "success",
+    })
+
+    expect(deletedId).toBe(graphqlId)
+  })
+
+  it("reports an error when an AxonHub numeric row id cannot be hydrated", async () => {
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "adapter-delete-unmapped" }),
+      ),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as { query?: string }
+
+        if (body.query?.includes("query QueryChannels")) {
+          return HttpResponse.json({
+            data: {
+              queryChannels: {
+                edges: [],
+                pageInfo: { hasNextPage: false, endCursor: null },
+                totalCount: 0,
+              },
+            },
+          })
+        }
+
+        return HttpResponse.json(
+          { errors: [{ message: "Unexpected GraphQL operation" }] },
+          { status: 500 },
+        )
+      }),
+    )
+
+    await expect(deleteChannelAdapter(buildRequest(), 999)).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "Unable to resolve AxonHub GraphQL id for channel 999",
+    })
+  })
+
   it("reuses cached channel lists for repeated searches and invalidates after mutations", async () => {
     let authHits = 0
     let listHits = 0

@@ -147,6 +147,20 @@ describe("AxonHub managed-site provider", () => {
     expect(mockListChannels).toHaveBeenCalledWith(passedAxonHubConfig)
   })
 
+  it("returns null for search failures and rethrows list failures", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+
+    mockSearchChannels.mockRejectedValueOnce(new Error("search failed"))
+    await expect(
+      provider.searchChannel(passedAxonHubConfig, "missing"),
+    ).resolves.toBeNull()
+
+    mockListChannels.mockRejectedValueOnce(new Error("list failed"))
+    await expect(provider.listChannels(passedAxonHubConfig)).rejects.toThrow(
+      "list failed",
+    )
+  })
+
   it("returns missing-config fallbacks for saved AxonHub config helpers", async () => {
     mockGetPreferences.mockResolvedValue(
       buildUserPreferences({

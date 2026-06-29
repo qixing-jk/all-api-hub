@@ -144,4 +144,21 @@ describe("AxonHub managed-site channel capability", () => {
     })
     expect(axonHubManagedSiteCapabilities).not.toHaveProperty("imports")
   })
+
+  it("returns null when AxonHub runtime config is incomplete", async () => {
+    userPreferences.getPreferences.mockResolvedValue({
+      axonHub: {
+        baseUrl: "",
+        email: "",
+        password: "",
+      },
+    })
+    const { axonHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await expect(
+      axonHubManagedSiteCapabilities.config.get(),
+    ).resolves.toBeNull()
+  })
 })
