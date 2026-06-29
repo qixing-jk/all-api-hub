@@ -70,9 +70,6 @@ const createManagedSiteCapabilities = (
       prepareFormData: vi.fn(),
       buildPayload: vi.fn(),
     },
-    imports: {
-      autoConfig: vi.fn(),
-    },
   }
 }
 
@@ -87,7 +84,6 @@ const baseService = {
   buildChannelName: expect.any(Function),
   prepareChannelFormData: expect.any(Function),
   buildChannelPayload: expect.any(Function),
-  autoConfigToManagedSite: expect.any(Function),
 }
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
@@ -133,7 +129,6 @@ vi.mock("~/services/managedSites/providers/newApi", () => ({
   buildChannelPayload: vi.fn(),
   hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
-  autoConfigToNewApi: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/veloera", () => ({
@@ -148,7 +143,6 @@ vi.mock("~/services/managedSites/providers/veloera", () => ({
   buildChannelPayload: vi.fn(),
   hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
-  autoConfigToVeloera: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/doneHubService", () => ({
@@ -163,7 +157,6 @@ vi.mock("~/services/managedSites/providers/doneHubService", () => ({
   buildChannelPayload: vi.fn(),
   hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
-  autoConfigToDoneHub: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/octopus", () => ({
@@ -176,7 +169,6 @@ vi.mock("~/services/managedSites/providers/octopus", () => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  autoConfigToOctopus: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/axonHub", () => ({
@@ -189,7 +181,6 @@ vi.mock("~/services/managedSites/providers/axonHub", () => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  autoConfigToAxonHub: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
@@ -204,7 +195,6 @@ vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
   buildChannelPayload: vi.fn(),
   hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
-  autoConfigToClaudeCodeHub: vi.fn(),
 }))
 
 describe("managedSiteService", () => {
@@ -448,9 +438,7 @@ describe("managedSiteService", () => {
     expect(service.fetchChannelSecretKey).toBe(
       capabilities.channels.fetchSecretKey,
     )
-    expect(service.autoConfigToManagedSite).toBe(
-      capabilities.imports.autoConfig,
-    )
+    expect(service).not.toHaveProperty("autoConfigToManagedSite")
   })
 
   it("passes runtime config objects directly to converted providers", async () => {

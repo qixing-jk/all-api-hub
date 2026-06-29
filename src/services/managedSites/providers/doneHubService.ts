@@ -1,5 +1,3 @@
-import toast from "react-hot-toast"
-
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
@@ -14,14 +12,13 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
   UserPreferences,
   userPreferences,
 } from "~/services/preferences/userPreferences"
-import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
+import { ApiToken, AuthTypeEnum, DisplaySiteData } from "~/types"
 import type { AccountToken } from "~/types"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type {
@@ -32,14 +29,9 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
-import type {
-  AutoConfigToNewApiResponse,
-  ServiceResponse,
-} from "~/types/serviceResponse"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
-import { t } from "~/utils/i18n/core"
 
 import { isManagedSiteAdminUserId } from "../utils/adminUserId"
 import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
@@ -48,13 +40,6 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
  * Unified logger scoped to the Done Hub integration and auto-config flows.
  */
 const logger = createLogger("DoneHubService")
-
-const doneHubImportDuplicateService = {
-  siteType: SITE_TYPES.DONE_HUB,
-  searchChannel,
-  hydrateComparableChannelKeys,
-  fetchChannelSecretKey,
-}
 
 const toDoneHubRequestConfig = (config: DoneHubConfig) => ({
   baseUrl: config.baseUrl,
@@ -330,186 +315,5 @@ export function buildChannelPayload(
       weight: formData.weight,
       status: formData.status,
     },
-  }
-}
-
-/**
- * Imports an account as a channel into Done Hub.
- */
-async function importToDoneHub(
-  account: DisplaySiteData,
-  token: ApiToken,
-): Promise<ServiceResponse<void>> {
-  try {
-    const prefs = await userPreferences.getPreferences()
-
-    if (!hasValidDoneHubConfig(prefs)) {
-      return {
-        success: false,
-        message: t("messages:donehub.configMissing"),
-      }
-    }
-
-    const { doneHub } = prefs
-    const {
-      baseUrl: doneHubBaseUrl,
-      adminToken: doneHubAdminToken,
-      userId: doneHubUserId,
-    } = doneHub
-
-    const formData = await prepareChannelFormData(account, token)
-
-    const managedConfig = {
-      baseUrl: doneHubBaseUrl!,
-      adminToken: doneHubAdminToken!,
-      userId: doneHubUserId!,
-    }
-
-    const existingChannel = await resolveManagedSiteImportDuplicate({
-      service: doneHubImportDuplicateService,
-      managedConfig,
-      formData,
-    })
-
-    if (existingChannel) {
-      return {
-        success: false,
-        message: t("messages:donehub.channelExists", {
-          channelName: existingChannel.name,
-        }),
-      }
-    }
-
-    const payload = buildChannelPayload(formData)
-
-    const createdChannelResponse = await createChannel(managedConfig, payload)
-
-    if (createdChannelResponse.success) {
-      return {
-        success: true,
-        message: t("messages:donehub.importSuccess", {
-          channelName: formData.name,
-        }),
-      }
-    }
-
-    return {
-      success: false,
-      message: createdChannelResponse.message,
-    }
-  } catch (error) {
-    return {
-      success: false,
-      message: getErrorMessage(error) || t("messages:donehub.importFailed"),
-    }
-  }
-}
-
-/**
- * Validates Done Hub configuration and collects error messages.
- */
-async function validateDoneHubConfig(): Promise<{
-  valid: boolean
-  errors: string[]
-}> {
-  const prefs = await userPreferences.getPreferences()
-  const errors: string[] = []
-
-  const baseUrl = prefs.doneHub?.baseUrl
-  const adminToken = prefs.doneHub?.adminToken
-  const userId = prefs.doneHub?.userId
-
-  if (!baseUrl) {
-    errors.push(t("messages:errors.validation.doneHubBaseUrlRequired"))
-  }
-  if (!adminToken) {
-    errors.push(t("messages:errors.validation.doneHubAdminTokenRequired"))
-  }
-  if (!userId) {
-    errors.push(t("messages:errors.validation.doneHubUserIdRequired"))
-  } else if (!isManagedSiteAdminUserId(userId)) {
-    errors.push(t("messages:errors.validation.userIdNumeric"))
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  }
-}
-
-/**
- * Legacy direct-import helper for the managed-site compatibility path.
- * @deprecated Unused by the current runtime flow. Account auto-config now
- * uses `useChannelDialog().openWithAccount()` so users can review generated
- * channel fields before creation. Kept temporarily for compatibility.
- */
-export async function autoConfigToDoneHub(
-  account: SiteAccount,
-  toastId?: string,
-): Promise<AutoConfigToNewApiResponse<{ token?: ApiToken }>> {
-  const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
-    import("~/services/accounts/accountOperations"),
-    import("~/services/accounts/accountStorage"),
-  ])
-  const configValidation = await validateDoneHubConfig()
-  if (!configValidation.valid) {
-    return { success: false, message: configValidation.errors.join(", ") }
-  }
-
-  const displaySiteData = accountStorage.convertToDisplayData(account)
-
-  let lastError: unknown
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const apiToken = await ensureAccountApiToken(
-        account,
-        displaySiteData,
-        toastId,
-      )
-
-      toast.loading(t("messages:accountOperations.importingToDoneHub"), {
-        id: toastId,
-      })
-
-      const importResult = await importToDoneHub(displaySiteData, apiToken)
-
-      if (importResult.success) {
-        toast.success(importResult.message, { id: toastId })
-      } else {
-        throw new Error(importResult.message)
-      }
-
-      return {
-        success: importResult.success,
-        message: importResult.message,
-        data: { token: apiToken },
-      }
-    } catch (error) {
-      lastError = error
-
-      if (
-        error instanceof Error &&
-        (error.message.includes("network") ||
-          error.message.includes("Failed to fetch")) &&
-        attempt < 3
-      ) {
-        toast.error(getErrorMessage(lastError), { id: toastId })
-        toast.loading(
-          t("messages:accountOperations.retrying", { attempt: attempt + 1 }),
-          { id: toastId },
-        )
-        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
-        continue
-      }
-
-      break
-    }
-  }
-
-  toast.error(getErrorMessage(lastError), { id: toastId })
-  return {
-    success: false,
-    message:
-      (lastError as Error | undefined)?.message || t("messages:errors.unknown"),
   }
 }

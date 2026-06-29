@@ -12,12 +12,7 @@ import {
   getManagedSiteAdminConfigForType,
   getManagedSiteMessagesKeyFromSiteType,
 } from "~/services/managedSites/utils/managedSite"
-import type {
-  AccountToken,
-  ApiToken,
-  DisplaySiteData,
-  SiteAccount,
-} from "~/types"
+import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,
@@ -87,17 +82,6 @@ export interface ManagedSiteService<
   ): Promise<ManagedSiteChannel[]>
 
   fetchChannelSecretKey?(config: TConfig, channelId: number): Promise<string>
-
-  /**
-   * Legacy direct-import entrypoint kept on the managed-site service contract.
-   * @deprecated Unused by the current runtime flow. Account auto-config now
-   * routes through `useChannelDialog().openWithAccount()` so users can review
-   * generated channel fields before creation. Kept temporarily for compatibility.
-   */
-  autoConfigToManagedSite(
-    account: SiteAccount,
-    toastId?: string,
-  ): Promise<unknown>
 }
 
 export type TypedManagedSiteService<TSiteType extends ManagedSiteType> =
@@ -109,7 +93,6 @@ type RequiredManagedSiteCapabilities = {
   channels: NonNullable<ManagedSiteCapabilities["channels"]>
   config: NonNullable<ManagedSiteCapabilities["config"]>
   channelDrafts: NonNullable<ManagedSiteCapabilities["channelDrafts"]>
-  imports: NonNullable<ManagedSiteCapabilities["imports"]>
 }
 
 /**
@@ -123,8 +106,7 @@ function requireManagedSiteCapabilities(
   if (
     !managedSites?.channels ||
     !managedSites.config ||
-    !managedSites.channelDrafts ||
-    !managedSites.imports
+    !managedSites.channelDrafts
   ) {
     throw new Error(
       `managedSites capabilities are not implemented for ${siteType}`,
@@ -135,7 +117,6 @@ function requireManagedSiteCapabilities(
     channels: managedSites.channels,
     config: managedSites.config,
     channelDrafts: managedSites.channelDrafts,
-    imports: managedSites.imports,
   }
 }
 
@@ -222,6 +203,5 @@ export function getManagedSiteServiceForType(
     buildChannelPayload: capabilities.channelDrafts.buildPayload,
     hydrateComparableChannelKeys: capabilities.channels.hydrateComparableKeys,
     fetchChannelSecretKey: capabilities.channels.fetchSecretKey,
-    autoConfigToManagedSite: capabilities.imports.autoConfig,
   }
 }

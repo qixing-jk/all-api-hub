@@ -5,13 +5,6 @@
     "autoProvisionFailed": "账号已保存，但自动创建 API 密钥失败。你可以在密钥管理中使用“{{actionLabel}}”重试。",
     "checkingApiKeys": "正在检查 API 密钥...",
     "createTokenFailed": "创建 API 令牌失败",
-    "importingToAxonHub": "正在导入到 AxonHub...",
-    "importingToClaudeCodeHub": "正在导入到 Claude Code Hub...",
-    "importingToDoneHub": "正在导入到 Done Hub...",
-    "importingToNewApi": "正在导入到 New API...",
-    "importingToOctopus": "正在导入到 Octopus...",
-    "importingToVeloera": "正在导入到 Veloera...",
-    "retrying": "出现错误，进行第{{attempt}}次重试",
     "tokenNotFound": "无法创建或找到 API 令牌"
   },
   "aihubmix": {
@@ -64,11 +57,9 @@
     "unableToOpen": "无法打开，请确保已安装 Cherry Studio。"
   },
   "claudecodehub": {
-    "channelExists": "提供商 {{channelName}} 已存在，无需再次导入",
     "configMissing": "请先在设置中配置 Claude Code Hub 地址和管理员令牌",
     "deleteFailed": "删除 Claude Code Hub 提供商失败",
     "importFailed": "导入失败，发生未知错误",
-    "importSuccess": "成功导入新提供商 {{channelName}}",
     "modelsMissing": "请至少填写一个模型",
     "noChannelsToSync": "没有可同步的提供商",
     "realProviderKeyRequired": "Claude Code Hub 创建提供商需要真实上游密钥，空密钥或脱敏密钥不能用于创建。",
@@ -101,10 +92,7 @@
     "waitUserInfoTimeout": "等待用户信息超时，请确保已登录"
   },
   "donehub": {
-    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
     "configMissing": "请先在设置中配置 Done Hub 地址、管理员令牌和用户 ID",
-    "importFailed": "导入失败，发生未知错误",
-    "importSuccess": "成功导入新渠道 {{channelName}}",
     "noChannelsToSync": "没有可同步的渠道"
   },
   "errors": {
@@ -123,19 +111,10 @@
     "validation": {
       "bookmarkNameRequired": "书签名称不能为空",
       "bookmarkUrlRequired": "书签链接不能为空",
-      "doneHubAdminTokenRequired": "Done Hub 管理员令牌未配置",
-      "doneHubBaseUrlRequired": "Done Hub 基础 URL 未配置",
-      "doneHubUserIdRequired": "Done Hub 用户 ID 未配置",
       "incompleteAccountInfo": "请填写完整的账号信息",
-      "newApiAdminTokenRequired": "New API 管理员令牌未配置",
-      "newApiBaseUrlRequired": "New API 基础 URL 未配置",
-      "newApiUserIdRequired": "New API 用户 ID 未配置",
       "updateAccountFailed": "更新账号失败 {{error}}",
       "urlRequired": "站点地址不能为空",
-      "userIdNumeric": "用户 ID 必须是数字",
-      "veloeraAdminTokenRequired": "Veloera 管理员令牌未配置",
-      "veloeraBaseUrlRequired": "Veloera 基础 URL 未配置",
-      "veloeraUserIdRequired": "Veloera 用户 ID 未配置"
+      "userIdNumeric": "用户 ID 必须是数字"
     }
   },
   "newapi": {
@@ -147,11 +126,8 @@
     "noChannelsToSync": "没有可同步的渠道"
   },
   "octopus": {
-    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
     "configMissing": "请先在设置中配置 Octopus 地址、用户名和密码",
     "corsError": "这可能是 CORS 配置问题。请在 Octopus 设置中检查 CORS 白名单配置。",
-    "importFailed": "导入失败，发生未知错误",
-    "importSuccess": "成功导入新渠道 {{channelName}}",
     "noChannelsToSync": "没有可同步的渠道"
   },
   "operations": {
@@ -225,10 +201,7 @@
     "createRequiresGroupSelection": "当前账号有多个可用分组，请先选择要使用的分组，再创建密钥。"
   },
   "veloera": {
-    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
     "configMissing": "请先在设置中配置 Veloera 地址、管理员令牌和用户 ID",
-    "importFailed": "导入失败，发生未知错误",
-    "importSuccess": "成功导入新渠道 {{channelName}}",
     "noChannelsToSync": "没有可同步的渠道"
   },
   "warnings": {

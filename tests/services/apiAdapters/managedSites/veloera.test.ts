@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
-  autoConfigToVeloera,
   buildChannelName,
   buildChannelPayload,
   checkValidVeloeraConfig,
@@ -113,7 +112,7 @@ describe("Veloera managed-site channel capability", () => {
     expect(getApiService).not.toHaveBeenCalled()
   })
 
-  it("exposes provider config, draft, and import workflow functions", async () => {
+  it("exposes provider config and draft functions", async () => {
     const { veloeraManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/veloera"
     )
@@ -127,8 +126,6 @@ describe("Veloera managed-site channel capability", () => {
       prepareFormData: prepareChannelFormData,
       buildPayload: buildChannelPayload,
     })
-    expect(veloeraManagedSiteCapabilities.imports.autoConfig).toBe(
-      autoConfigToVeloera,
-    )
+    expect(veloeraManagedSiteCapabilities).not.toHaveProperty("imports")
   })
 })

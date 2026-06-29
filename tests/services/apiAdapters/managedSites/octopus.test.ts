@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
-  autoConfigToOctopus,
   buildChannelName,
   buildChannelPayload,
   checkValidOctopusConfig,
@@ -81,7 +80,7 @@ describe("Octopus managed-site channel capability", () => {
     })
   })
 
-  it("exposes provider config, draft, and import workflow functions", async () => {
+  it("exposes provider config and draft functions", async () => {
     const { octopusManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/octopus"
     )
@@ -95,8 +94,6 @@ describe("Octopus managed-site channel capability", () => {
       prepareFormData: prepareChannelFormData,
       buildPayload: buildChannelPayload,
     })
-    expect(octopusManagedSiteCapabilities.imports.autoConfig).toBe(
-      autoConfigToOctopus,
-    )
+    expect(octopusManagedSiteCapabilities).not.toHaveProperty("imports")
   })
 })

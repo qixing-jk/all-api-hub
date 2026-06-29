@@ -5,12 +5,7 @@ import type {
 } from "~/services/accounts/utils/autoDetectUtils"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 
-import type {
-  ApiToken,
-  AuthTypeEnum,
-  CheckInConfig,
-  Sub2ApiAuthConfig,
-} from "./index"
+import type { AuthTypeEnum, CheckInConfig, Sub2ApiAuthConfig } from "./index"
 
 /**
  * Unified service response structure
@@ -50,12 +45,4 @@ export interface AccountValidationResponse
 export interface AccountSaveResponse extends ServiceResponse<void> {
   accountId?: string // Present on success
   feedbackLevel?: "success" | "warning"
-}
-
-/**
- * Response for New API operations
- */
-export interface AutoConfigToNewApiResponse<T = void>
-  extends ServiceResponse<T> {
-  token?: ApiToken // Optional, for auto-config operations
 }

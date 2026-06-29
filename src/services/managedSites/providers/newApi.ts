@@ -1,5 +1,3 @@
-import toast from "react-hot-toast"
-
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
@@ -20,7 +18,7 @@ import {
 } from "~/services/managedSites/providers/newApiSession"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
-import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
+import { ApiToken, AuthTypeEnum, DisplaySiteData } from "~/types"
 import type { AccountToken } from "~/types"
 import type {
   ChannelFormData,
@@ -31,10 +29,7 @@ import type {
   UpdateChannelPayload,
 } from "~/types/managedSite"
 import type { NewApiConfig } from "~/types/newApiConfig"
-import type {
-  AutoConfigToNewApiResponse,
-  ServiceResponse,
-} from "~/types/serviceResponse"
+import type { ServiceResponse } from "~/types/serviceResponse"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
@@ -471,111 +466,5 @@ export async function importToNewApi(
       success: false,
       message: getErrorMessage(error) || t("messages:newapi.importFailed"),
     }
-  }
-}
-
-// Helper function to validate New API configuration
-/**
- * Validates New API configuration from user preferences and collects error messages.
- */
-async function validateNewApiConfig(): Promise<{
-  valid: boolean
-  errors: string[]
-}> {
-  const prefs = await userPreferences.getPreferences()
-  const errors = []
-
-  const baseUrl = prefs.newApi?.baseUrl || prefs.newApiBaseUrl
-  const adminToken = prefs.newApi?.adminToken || prefs.newApiAdminToken
-  const userId = prefs.newApi?.userId || prefs.newApiUserId
-
-  if (!baseUrl) {
-    errors.push(t("messages:errors.validation.newApiBaseUrlRequired"))
-  }
-  if (!adminToken) {
-    errors.push(t("messages:errors.validation.newApiAdminTokenRequired"))
-  }
-  if (!userId) {
-    errors.push(t("messages:errors.validation.newApiUserIdRequired"))
-  } else if (!isManagedSiteAdminUserId(userId)) {
-    errors.push(t("messages:errors.validation.userIdNumeric"))
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  }
-}
-
-/**
- * Legacy direct-import helper for the managed-site compatibility path.
- * @deprecated Unused by the current runtime flow. Account auto-config now
- * uses `useChannelDialog().openWithAccount()` so users can review generated
- * channel fields before creation. Kept temporarily for compatibility.
- */
-export async function autoConfigToNewApi(
-  account: SiteAccount,
-  toastId?: string,
-): Promise<AutoConfigToNewApiResponse<{ token?: ApiToken }>> {
-  const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
-    import("~/services/accounts/accountOperations"),
-    import("~/services/accounts/accountStorage"),
-  ])
-  const configValidation = await validateNewApiConfig()
-  if (!configValidation.valid) {
-    return { success: false, message: configValidation.errors.join(", ") }
-  }
-
-  const displaySiteData = accountStorage.convertToDisplayData(account)
-
-  let lastError: any
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const apiToken = await ensureAccountApiToken(
-        account,
-        displaySiteData,
-        toastId,
-      )
-
-      // 3. Import to New API as a channel
-      toast.loading(t("messages:accountOperations.importingToNewApi"), {
-        id: toastId,
-      })
-      const importResult = await importToNewApi(displaySiteData, apiToken)
-
-      if (importResult.success) {
-        toast.success(importResult.message, { id: toastId })
-      } else {
-        throw new Error(importResult.message)
-      }
-
-      return {
-        success: importResult.success,
-        message: importResult.message,
-        data: { token: apiToken },
-      }
-    } catch (error) {
-      lastError = error
-      if (
-        error instanceof Error &&
-        (error.message.includes("network") ||
-          error.message.includes("Failed to fetch")) &&
-        attempt < 3
-      ) {
-        toast.error(getErrorMessage(lastError), { id: toastId })
-        toast.loading(
-          t("messages:accountOperations.retrying", { attempt: attempt + 1 }),
-          { id: toastId },
-        )
-        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
-        continue
-      }
-      break
-    }
-  }
-  toast.error(getErrorMessage(lastError), { id: toastId })
-  return {
-    success: false,
-    message: lastError?.message || t("messages:errors.unknown"),
   }
 }

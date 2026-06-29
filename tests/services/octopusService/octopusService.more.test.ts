@@ -10,15 +10,7 @@ import {
 import {
   buildApiToken,
   buildDisplaySiteData,
-  buildSiteAccount,
 } from "~~/tests/test-utils/factories"
-
-const mockToast = {
-  loading: vi.fn(),
-  success: vi.fn(),
-  error: vi.fn(),
-  dismiss: vi.fn(),
-}
 
 const {
   mockGetPreferences,
@@ -27,8 +19,6 @@ const {
   mockCreateChannelApi,
   mockUpdateChannelApi,
   mockDeleteChannelApi,
-  mockEnsureAccountApiToken,
-  mockConvertToDisplayData,
   mockFetchTokenScopedModels,
   mockFetchManagedSiteAvailableModels,
 } = vi.hoisted(() => ({
@@ -38,8 +28,6 @@ const {
   mockCreateChannelApi: vi.fn(),
   mockUpdateChannelApi: vi.fn(),
   mockDeleteChannelApi: vi.fn(),
-  mockEnsureAccountApiToken: vi.fn(),
-  mockConvertToDisplayData: vi.fn(),
   mockFetchTokenScopedModels: vi.fn(),
   mockFetchManagedSiteAvailableModels: vi.fn(),
 }))
@@ -49,10 +37,6 @@ const passedOctopusConfig = {
   username: "passed-octo-user",
   password: "passed-octo-pass",
 }
-
-vi.mock("react-hot-toast", () => ({
-  default: mockToast,
-}))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
@@ -67,16 +51,6 @@ vi.mock("~/services/apiService/octopus", () => ({
   updateChannel: mockUpdateChannelApi,
   deleteChannel: mockDeleteChannelApi,
   fetchRemoteModels: vi.fn(),
-}))
-
-vi.mock("~/services/accounts/accountOperations", () => ({
-  ensureAccountApiToken: mockEnsureAccountApiToken,
-}))
-
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    convertToDisplayData: mockConvertToDisplayData,
-  },
 }))
 
 vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
@@ -291,99 +265,6 @@ describe("octopus additional flows", () => {
     expect(result.modelPrefillFetchFailed).toBe(true)
   })
 
-  it("returns an existing Octopus channel during auto-config instead of creating a duplicate", async () => {
-    const { autoConfigToOctopus } = await import(
-      "~/services/managedSites/providers/octopus"
-    )
-    const displaySiteData = buildDisplaySiteData({
-      name: "Octopus Site",
-      baseUrl: "https://proxy.example.com",
-    })
-    const apiToken = buildApiToken({
-      key: "octo-key",
-      name: "Primary Token",
-    })
-    const existingChannel: OctopusChannel = {
-      id: 7,
-      name: "Existing Octopus Channel",
-      type: OctopusOutboundType.OpenAIChat,
-      enabled: true,
-      base_urls: [{ url: "https://proxy.example.com/v1" }],
-      keys: [{ enabled: true, channel_key: "octo-key" }],
-      model: "claude-3,gpt-4o",
-      proxy: false,
-      auto_sync: true,
-      auto_group: OctopusAutoGroupType.None,
-    }
-
-    mockConvertToDisplayData.mockReturnValue(displaySiteData)
-    mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)
-    mockSearchChannels.mockResolvedValueOnce([existingChannel])
-
-    const result = await autoConfigToOctopus(buildSiteAccount(), "toast-4")
-
-    expect(result).toEqual({
-      success: false,
-      message: expect.stringContaining("channelExists"),
-    })
-    expect(mockSearchChannels).toHaveBeenCalledTimes(1)
-    expect(mockCreateChannelApi).not.toHaveBeenCalled()
-  })
-
-  it("creates a new Octopus channel and shows a success toast on import", async () => {
-    const { autoConfigToOctopus } = await import(
-      "~/services/managedSites/providers/octopus"
-    )
-    const displaySiteData = buildDisplaySiteData({
-      name: "Octopus Site",
-      baseUrl: "https://proxy.example.com",
-    })
-    const apiToken = buildApiToken({
-      key: "octo-key",
-      name: "Primary Token",
-    })
-
-    mockConvertToDisplayData.mockReturnValue(displaySiteData)
-    mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)
-    mockSearchChannels.mockResolvedValueOnce([])
-
-    const result = await autoConfigToOctopus(buildSiteAccount(), "toast-5")
-
-    expect(mockSearchChannels).toHaveBeenCalledWith(
-      {
-        baseUrl: "https://octopus.example.com",
-        username: "octo-user",
-        password: "octo-pass",
-      },
-      "https://proxy.example.com",
-    )
-    expect(mockCreateChannelApi).toHaveBeenCalledWith(
-      {
-        baseUrl: "https://octopus.example.com",
-        username: "octo-user",
-        password: "octo-pass",
-      },
-      {
-        name: "Octopus Site | Primary Token (auto)",
-        type: OctopusOutboundType.OpenAIChat,
-        enabled: true,
-        base_urls: [{ url: "https://proxy.example.com/v1" }],
-        keys: [{ enabled: true, channel_key: "octo-key" }],
-        model: "gpt-4o,claude-3",
-        auto_sync: true,
-        auto_group: 0,
-      },
-    )
-    expect(mockToast.success).toHaveBeenCalledWith(
-      "messages:octopus.importSuccess",
-      { id: "toast-5" },
-    )
-    expect(result).toEqual({
-      success: true,
-      message: "messages:octopus.importSuccess",
-    })
-  })
-
   it("returns config helper fallbacks when Octopus preferences are missing or unreadable", async () => {
     const { checkValidOctopusConfig, getOctopusConfig, searchChannel } =
       await import("~/services/managedSites/providers/octopus")
@@ -525,61 +406,5 @@ describe("octopus additional flows", () => {
       data: null,
       message: "delete exploded",
     })
-  })
-
-  it("surfaces config-missing and unexpected import failures during Octopus auto-config", async () => {
-    const { autoConfigToOctopus } = await import(
-      "~/services/managedSites/providers/octopus"
-    )
-    const displaySiteData = buildDisplaySiteData({
-      name: "Octopus Site",
-      baseUrl: "https://proxy.example.com",
-    })
-    const apiToken = buildApiToken({
-      key: "octo-key",
-      name: "Primary Token",
-    })
-
-    mockGetPreferences.mockResolvedValueOnce({
-      octopus: {
-        baseUrl: "",
-        username: "",
-        password: "",
-      },
-    })
-    const missingConfig = await autoConfigToOctopus(
-      buildSiteAccount(),
-      "toast-6",
-    )
-    expect(missingConfig).toEqual({
-      success: false,
-      message: "messages:octopus.configMissing",
-    })
-
-    mockGetPreferences.mockResolvedValueOnce({
-      octopus: {
-        baseUrl: "",
-        username: "",
-        password: "",
-      },
-    })
-    mockConvertToDisplayData.mockReturnValue(displaySiteData)
-    mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)
-    mockSearchChannels.mockResolvedValueOnce([])
-    mockCreateChannelApi.mockResolvedValueOnce({
-      success: false,
-      data: null,
-      message: "octopus rejected channel",
-    })
-
-    const rejected = await autoConfigToOctopus(buildSiteAccount(), "toast-7")
-
-    expect(mockSearchChannels).not.toHaveBeenCalled()
-    expect(mockCreateChannelApi).not.toHaveBeenCalled()
-    expect(rejected).toEqual({
-      success: false,
-      message: "messages:octopus.configMissing",
-    })
-    expect(mockToast.error).not.toHaveBeenCalled()
   })
 })

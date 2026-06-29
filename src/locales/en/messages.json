@@ -5,13 +5,6 @@
     "autoProvisionFailed": "Account saved, but failed to auto-create an API key. You can use “{{actionLabel}}” in Key Management to retry.",
     "checkingApiKeys": "Checking API key...",
     "createTokenFailed": "Failed to create API token",
-    "importingToAxonHub": "Importing to AxonHub...",
-    "importingToClaudeCodeHub": "Importing to Claude Code Hub...",
-    "importingToDoneHub": "Importing to Done Hub...",
-    "importingToNewApi": "Importing to New API...",
-    "importingToOctopus": "Importing to Octopus...",
-    "importingToVeloera": "Importing to Veloera...",
-    "retrying": "An error occurred, attempting retry #{{attempt}}",
     "tokenNotFound": "Failed to create or find an API token"
   },
   "aihubmix": {
@@ -64,11 +57,9 @@
     "unableToOpen": "Unable to open, please ensure Cherry Studio is installed"
   },
   "claudecodehub": {
-    "channelExists": "Provider {{channelName}} already exists, no need to import again",
     "configMissing": "Please configure Claude Code Hub address and admin token in basic settings first",
     "deleteFailed": "Failed to delete Claude Code Hub provider",
     "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new provider {{channelName}}",
     "modelsMissing": "Please provide at least one model",
     "noChannelsToSync": "No providers to sync",
     "realProviderKeyRequired": "Claude Code Hub requires a real upstream provider key. Empty or masked keys cannot be used for provider creation.",
@@ -101,10 +92,7 @@
     "waitUserInfoTimeout": "Waiting for user information timeout, please ensure you are logged in"
   },
   "donehub": {
-    "channelExists": "Channel {{channelName}} already exists, no need to import again",
     "configMissing": "Please configure Done Hub address, admin token, and user ID in basic settings first",
-    "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new channel {{channelName}}",
     "noChannelsToSync": "No channels to sync"
   },
   "errors": {
@@ -123,19 +111,10 @@
     "validation": {
       "bookmarkNameRequired": "Bookmark name cannot be empty",
       "bookmarkUrlRequired": "Bookmark URL cannot be empty",
-      "doneHubAdminTokenRequired": "Done Hub admin token not configured",
-      "doneHubBaseUrlRequired": "Done Hub base URL not configured",
-      "doneHubUserIdRequired": "Done Hub user ID not configured",
       "incompleteAccountInfo": "Please fill in all account information",
-      "newApiAdminTokenRequired": "New API admin token not configured",
-      "newApiBaseUrlRequired": "New API base URL not configured",
-      "newApiUserIdRequired": "New API user ID not configured",
       "updateAccountFailed": "Failed to update account {{error}}",
       "urlRequired": "Site URL cannot be empty",
-      "userIdNumeric": "User ID must be a number",
-      "veloeraAdminTokenRequired": "Veloera admin token not configured",
-      "veloeraBaseUrlRequired": "Veloera base URL not configured",
-      "veloeraUserIdRequired": "Veloera user ID not configured"
+      "userIdNumeric": "User ID must be a number"
     }
   },
   "newapi": {
@@ -147,11 +126,8 @@
     "noChannelsToSync": "No channels to sync"
   },
   "octopus": {
-    "channelExists": "Channel {{channelName}} already exists, no need to import again",
     "configMissing": "Please configure Octopus address, username, and password in basic settings first",
     "corsError": "This may be caused by CORS configuration. Please check the CORS whitelist setting in Octopus settings.",
-    "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new channel {{channelName}}",
     "noChannelsToSync": "No channels to sync"
   },
   "operations": {
@@ -229,10 +205,7 @@
     "createRequiresGroupSelection": "This account has multiple available groups. Choose one before creating the key."
   },
   "veloera": {
-    "channelExists": "Channel {{channelName}} already exists, no need to import again",
     "configMissing": "Please configure Veloera address, admin token, and user ID in basic settings first",
-    "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new channel {{channelName}}",
     "noChannelsToSync": "No channels to sync"
   },
   "warnings": {

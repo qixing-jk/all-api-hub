@@ -2,15 +2,11 @@
  * Octopus Service
  * 实现 ManagedSiteService 接口，提供 Octopus 站点的渠道管理功能
  */
-import toast from "react-hot-toast"
-
 import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
-import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as octopusApi from "~/services/apiService/octopus"
 import type { ApiResponse } from "~/services/apiTransport/type"
-import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { getNumericChannelType } from "~/services/managedSites/utils/channelType"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
@@ -19,12 +15,7 @@ import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import type {
-  AccountToken,
-  ApiToken,
-  DisplaySiteData,
-  SiteAccount,
-} from "~/types"
+import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,
@@ -42,14 +33,8 @@ import type { OctopusConfig } from "~/types/octopusConfig"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
-import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("OctopusService")
-
-const octopusImportDuplicateService = {
-  siteType: SITE_TYPES.OCTOPUS,
-  searchChannel,
-}
 
 /**
  * 将 ChannelType (New API 渠道类型 0-55) 映射为 OctopusOutboundType (0-5)
@@ -420,81 +405,5 @@ export function buildChannelPayload(
       weight: formData.weight,
       status: formData.status,
     },
-  }
-}
-
-/**
- * Legacy direct-import helper for the managed-site compatibility path.
- * @deprecated Unused by the current runtime flow. Account auto-config now
- * uses `useChannelDialog().openWithAccount()` so users can review generated
- * channel fields before creation. Kept temporarily for compatibility.
- */
-export async function autoConfigToOctopus(
-  account: SiteAccount,
-  toastId?: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
-      import("~/services/accounts/accountOperations"),
-      import("~/services/accounts/accountStorage"),
-    ])
-    const prefs = await userPreferences.getPreferences()
-    if (!hasValidOctopusConfig(prefs) || !prefs.octopus) {
-      return { success: false, message: t("messages:octopus.configMissing") }
-    }
-    const config = prefs.octopus
-
-    const displaySiteData = accountStorage.convertToDisplayData(account)
-
-    const apiToken = await ensureAccountApiToken(
-      account,
-      displaySiteData,
-      toastId,
-    )
-
-    toast.loading(t("messages:accountOperations.importingToOctopus"), {
-      id: toastId,
-    })
-
-    const formData = await prepareChannelFormData(displaySiteData, apiToken)
-
-    const existingChannel = await resolveManagedSiteImportDuplicate({
-      service: octopusImportDuplicateService,
-      managedConfig: config,
-      formData,
-    })
-
-    if (existingChannel) {
-      return {
-        success: false,
-        message: t("messages:octopus.channelExists", {
-          channelName: existingChannel.name,
-        }),
-      }
-    }
-
-    const payload = buildChannelPayload(formData)
-    const result = await createChannel(config, payload)
-
-    if (result.success) {
-      toast.success(
-        t("messages:octopus.importSuccess", { channelName: formData.name }),
-        {
-          id: toastId,
-        },
-      )
-      return {
-        success: true,
-        message: t("messages:octopus.importSuccess", {
-          channelName: formData.name,
-        }),
-      }
-    }
-
-    throw new Error(result.message)
-  } catch (error) {
-    const message = getErrorMessage(error) || t("messages:octopus.importFailed")
-    toast.error(message, { id: toastId })
-    return { success: false, message }
   }
 }

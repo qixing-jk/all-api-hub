@@ -22,7 +22,6 @@ const newApiProvider = vi.hoisted(() => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  autoConfigToNewApi: vi.fn(),
 }))
 
 const userPreferences = vi.hoisted(() => ({
@@ -170,7 +169,7 @@ describe("newApi managed-site channel capability", () => {
     )
   })
 
-  it("exposes provider draft and import workflow functions", async () => {
+  it("exposes provider config and draft functions", async () => {
     const { newApiManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/newApi"
     )
@@ -184,8 +183,6 @@ describe("newApi managed-site channel capability", () => {
       prepareFormData: newApiProvider.prepareChannelFormData,
       buildPayload: newApiProvider.buildChannelPayload,
     })
-    expect(newApiManagedSiteCapabilities.imports.autoConfig).toBe(
-      newApiProvider.autoConfigToNewApi,
-    )
+    expect(newApiManagedSiteCapabilities).not.toHaveProperty("imports")
   })
 })

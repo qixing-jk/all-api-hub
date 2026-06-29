@@ -3,10 +3,8 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
-  ManagedSiteImportCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
-  autoConfigToClaudeCodeHub,
   buildChannelName,
   buildChannelPayload,
   checkValidClaudeCodeHubConfig,
@@ -47,13 +45,8 @@ const claudeCodeHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability 
     buildPayload: buildChannelPayload,
   }
 
-const claudeCodeHubManagedSiteImports: ManagedSiteImportCapability = {
-  autoConfig: autoConfigToClaudeCodeHub,
-}
-
 export const claudeCodeHubManagedSiteCapabilities = {
   channels: claudeCodeHubManagedSiteChannels,
   config: claudeCodeHubManagedSiteConfig,
   channelDrafts: claudeCodeHubManagedSiteChannelDrafts,
-  imports: claudeCodeHubManagedSiteImports,
 }

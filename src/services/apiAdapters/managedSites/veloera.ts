@@ -3,7 +3,6 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
-  ManagedSiteImportCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   createChannel,
@@ -17,7 +16,6 @@ import {
   updateChannelModels,
 } from "~/services/apiService/veloera"
 import {
-  autoConfigToVeloera,
   buildChannelName,
   buildChannelPayload,
   checkValidVeloeraConfig,
@@ -114,13 +112,8 @@ const veloeraManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const veloeraManagedSiteImports: ManagedSiteImportCapability = {
-  autoConfig: autoConfigToVeloera,
-}
-
 export const veloeraManagedSiteCapabilities = {
   channels: veloeraManagedSiteChannels,
   config: veloeraManagedSiteConfig,
   channelDrafts: veloeraManagedSiteChannelDrafts,
-  imports: veloeraManagedSiteImports,
 }

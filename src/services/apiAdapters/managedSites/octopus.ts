@@ -3,7 +3,6 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
-  ManagedSiteImportCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   createChannel as createOctopusChannel,
@@ -13,7 +12,6 @@ import {
   updateChannel as updateOctopusChannel,
 } from "~/services/apiService/octopus"
 import {
-  autoConfigToOctopus,
   buildChannelName,
   buildChannelPayload,
   checkValidOctopusConfig,
@@ -171,13 +169,8 @@ const octopusManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const octopusManagedSiteImports: ManagedSiteImportCapability = {
-  autoConfig: autoConfigToOctopus,
-}
-
 export const octopusManagedSiteCapabilities = {
   channels: octopusManagedSiteChannels,
   config: octopusManagedSiteConfig,
   channelDrafts: octopusManagedSiteChannelDrafts,
-  imports: octopusManagedSiteImports,
 }

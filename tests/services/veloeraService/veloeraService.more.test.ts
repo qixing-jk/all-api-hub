@@ -3,19 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   buildApiToken,
   buildDisplaySiteData,
-  buildManagedSiteChannel,
-  buildSiteAccount,
 } from "~~/tests/test-utils/factories"
 
-const mockToast = {
-  loading: vi.fn(),
-  success: vi.fn(),
-  error: vi.fn(),
-}
-
 const {
-  mockEnsureAccountApiToken,
-  mockConvertToDisplayData,
   mockSearchChannel,
   mockCreateChannel,
   mockUpdateChannel,
@@ -26,8 +16,6 @@ const {
   mockFetchTokenScopedModels,
   mockResolveDefaultChannelGroups,
 } = vi.hoisted(() => ({
-  mockEnsureAccountApiToken: vi.fn(),
-  mockConvertToDisplayData: vi.fn(),
   mockSearchChannel: vi.fn(),
   mockCreateChannel: vi.fn(),
   mockUpdateChannel: vi.fn(),
@@ -37,20 +25,6 @@ const {
   mockFetchManagedSiteAvailableModels: vi.fn(),
   mockFetchTokenScopedModels: vi.fn(),
   mockResolveDefaultChannelGroups: vi.fn(),
-}))
-
-vi.mock("react-hot-toast", () => ({
-  default: mockToast,
-}))
-
-vi.mock("~/services/accounts/accountOperations", () => ({
-  ensureAccountApiToken: mockEnsureAccountApiToken,
-}))
-
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    convertToDisplayData: mockConvertToDisplayData,
-  },
 }))
 
 vi.mock("~/services/apiService", () => ({
@@ -63,6 +37,10 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/apiService/veloera", () => ({
+  searchChannel: (...args: unknown[]) => mockSearchChannel(...args),
+  createChannel: (...args: unknown[]) => mockCreateChannel(...args),
+  updateChannel: (...args: unknown[]) => mockUpdateChannel(...args),
+  deleteChannel: (...args: unknown[]) => mockDeleteChannel(...args),
   fetchChannel: (...args: unknown[]) => mockFetchVeloeraChannel(...args),
 }))
 
@@ -214,135 +192,6 @@ describe("veloeraService additional flows", () => {
         groups: ["default"],
       }),
     })
-  })
-
-  it("returns validation errors immediately when Veloera config is incomplete", async () => {
-    const { autoConfigToVeloera } = await import(
-      "~/services/managedSites/providers/veloera"
-    )
-    mockGetPreferences.mockResolvedValueOnce({
-      veloera: {
-        baseUrl: "",
-        adminToken: "",
-        userId: "",
-      },
-    })
-
-    const result = await autoConfigToVeloera(buildSiteAccount(), "toast-6")
-
-    expect(result.success).toBe(false)
-    expect(result.message).toContain(
-      "messages:errors.validation.veloeraBaseUrlRequired",
-    )
-    expect(result.message).toContain(
-      "messages:errors.validation.veloeraAdminTokenRequired",
-    )
-    expect(result.message).toContain(
-      "messages:errors.validation.veloeraUserIdRequired",
-    )
-    expect(mockEnsureAccountApiToken).not.toHaveBeenCalled()
-  })
-
-  it("returns a numeric validation error immediately when the Veloera admin user ID is invalid", async () => {
-    const { autoConfigToVeloera } = await import(
-      "~/services/managedSites/providers/veloera"
-    )
-    mockGetPreferences.mockResolvedValueOnce({
-      veloera: {
-        baseUrl: "https://veloera.example.com",
-        adminToken: "veloera-token",
-        userId: "abc",
-      },
-    })
-
-    const result = await autoConfigToVeloera(buildSiteAccount(), "toast-6b")
-
-    expect(result.success).toBe(false)
-    expect(result.message).toContain("messages:errors.validation.userIdNumeric")
-    expect(mockEnsureAccountApiToken).not.toHaveBeenCalled()
-  })
-
-  it("retries transient Veloera import failures and then succeeds", async () => {
-    vi.useFakeTimers()
-
-    const { autoConfigToVeloera } = await import(
-      "~/services/managedSites/providers/veloera"
-    )
-    const displaySiteData = buildDisplaySiteData({
-      name: "Imported Veloera Site",
-      baseUrl: "https://proxy.example.com",
-    })
-    const apiToken = buildApiToken({
-      key: "veloera-key",
-      name: "Imported Token",
-    })
-
-    mockConvertToDisplayData.mockReturnValue(displaySiteData)
-    mockEnsureAccountApiToken
-      .mockRejectedValueOnce(new Error("Failed to fetch"))
-      .mockResolvedValueOnce(apiToken)
-
-    const promise = autoConfigToVeloera(buildSiteAccount(), "toast-7")
-    await vi.runAllTimersAsync()
-    const result = await promise
-
-    expect(mockEnsureAccountApiToken).toHaveBeenCalledTimes(2)
-    expect(mockCreateChannel).toHaveBeenCalled()
-    expect(mockToast.error).toHaveBeenCalledWith("Failed to fetch", {
-      id: "toast-7",
-    })
-    expect(mockToast.loading).toHaveBeenCalledWith(
-      "messages:accountOperations.retrying",
-      { id: "toast-7" },
-    )
-    expect(mockToast.success).toHaveBeenCalledWith(
-      "messages:veloera.importSuccess",
-      { id: "toast-7" },
-    )
-    expect(result).toEqual({
-      success: true,
-      message: "messages:veloera.importSuccess",
-      data: { token: apiToken },
-    })
-  })
-
-  it("stops before creation when a matching Veloera channel already exists", async () => {
-    const { autoConfigToVeloera } = await import(
-      "~/services/managedSites/providers/veloera"
-    )
-    const displaySiteData = buildDisplaySiteData({
-      name: "Existing Veloera Site",
-      baseUrl: "https://proxy.example.com",
-    })
-    const apiToken = buildApiToken({
-      key: "veloera-key",
-      name: "Imported Token",
-    })
-
-    mockConvertToDisplayData.mockReturnValue(displaySiteData)
-    mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)
-    mockSearchChannel.mockResolvedValueOnce({
-      items: [
-        buildManagedSiteChannel({
-          id: 55,
-          name: "Existing Veloera Channel",
-          base_url: "https://proxy.example.com",
-          models: "gpt-4o",
-          key: "veloera-key",
-        }),
-      ],
-      total: 1,
-      type_counts: {},
-    })
-
-    const result = await autoConfigToVeloera(buildSiteAccount(), "toast-8")
-
-    expect(result).toEqual({
-      success: false,
-      message: expect.stringContaining("channelExists"),
-    })
-    expect(mockSearchChannel).toHaveBeenCalledTimes(1)
-    expect(mockCreateChannel).not.toHaveBeenCalled()
   })
 
   it("proxies search, create, update, delete, and available-model fetches with Veloera auth", async () => {
@@ -506,37 +355,5 @@ describe("veloeraService additional flows", () => {
         42,
       ),
     ).rejects.toThrow("veloera_channel_key_missing")
-  })
-
-  it("returns the provider failure message when Veloera channel creation is rejected", async () => {
-    const { autoConfigToVeloera } = await import(
-      "~/services/managedSites/providers/veloera"
-    )
-    const displaySiteData = buildDisplaySiteData({
-      name: "Imported Veloera Site",
-      baseUrl: "https://proxy.example.com",
-    })
-    const apiToken = buildApiToken({
-      key: "veloera-key",
-      name: "Imported Token",
-    })
-
-    mockConvertToDisplayData.mockReturnValue(displaySiteData)
-    mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)
-    mockCreateChannel.mockResolvedValueOnce({
-      success: false,
-      message: "veloera rejected channel",
-    })
-
-    const result = await autoConfigToVeloera(buildSiteAccount(), "toast-9")
-
-    expect(result).toEqual({
-      success: false,
-      message: "veloera rejected channel",
-    })
-    expect(mockToast.error).toHaveBeenCalledWith("veloera rejected channel", {
-      id: "toast-9",
-    })
-    expect(mockToast.success).not.toHaveBeenCalled()
   })
 })

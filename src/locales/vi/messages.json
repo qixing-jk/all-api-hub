@@ -5,13 +5,6 @@
     "autoProvisionFailed": "Tài khoản đã được lưu, nhưng việc tự động tạo API Key thất bại. Bạn có thể sử dụng \"{{actionLabel}}\" trong phần quản lý khóa để thử lại.",
     "checkingApiKeys": "Đang kiểm tra các API Key...",
     "createTokenFailed": "Tạo API token thất bại",
-    "importingToAxonHub": "Đang nhập vào AxonHub...",
-    "importingToClaudeCodeHub": "Đang nhập vào Claude Code Hub...",
-    "importingToDoneHub": "Đang nhập vào Done Hub...",
-    "importingToNewApi": "Đang nhập vào New API...",
-    "importingToOctopus": "Đang nhập vào Octopus...",
-    "importingToVeloera": "Đang nhập vào Veloera...",
-    "retrying": "Đã xảy ra lỗi, đang thử lại lần thứ {{attempt}}",
     "tokenNotFound": "Không thể tạo hoặc tìm thấy API token"
   },
   "aihubmix": {
@@ -64,11 +57,9 @@
     "unableToOpen": "Không thể mở, vui lòng đảm bảo đã cài đặt Cherry Studio."
   },
   "claudecodehub": {
-    "channelExists": "Nhà cung cấp {{channelName}} đã tồn tại, không cần nhập lại",
     "configMissing": "Vui lòng cấu hình địa chỉ Claude Code Hub và token quản trị viên trong phần Cài đặt trước",
     "deleteFailed": "Xóa nhà cung cấp Claude Code Hub thất bại",
     "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
-    "importSuccess": "Đã nhập thành công nhà cung cấp mới {{channelName}}",
     "modelsMissing": "Vui lòng điền ít nhất một mô hình",
     "noChannelsToSync": "Không có nhà cung cấp nào để đồng bộ",
     "realProviderKeyRequired": "Tạo nhà cung cấp trong Claude Code Hub yêu cầu khóa gốc thực, không thể sử dụng khóa trống hoặc khóa đã bị che để tạo.",
@@ -101,10 +92,7 @@
     "waitUserInfoTimeout": "Đợi thông tin người dùng quá thời gian, vui lòng đảm bảo đã đăng nhập"
   },
   "donehub": {
-    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
     "configMissing": "Vui lòng cấu hình địa chỉ Done Hub, token quản trị viên và ID người dùng trong phần Cài đặt trước",
-    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
-    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "errors": {
@@ -123,19 +111,10 @@
     "validation": {
       "bookmarkNameRequired": "Tên dấu trang không được để trống",
       "bookmarkUrlRequired": "Liên kết dấu trang không được để trống",
-      "doneHubAdminTokenRequired": "Chưa cấu hình token quản trị viên của Done Hub",
-      "doneHubBaseUrlRequired": "Chưa cấu hình URL cơ sở của Done Hub",
-      "doneHubUserIdRequired": "Chưa cấu hình ID người dùng của Done Hub",
       "incompleteAccountInfo": "Vui lòng điền đầy đủ thông tin tài khoản",
-      "newApiAdminTokenRequired": "Chưa cấu hình token quản trị viên của New API",
-      "newApiBaseUrlRequired": "Chưa cấu hình URL cơ sở của New API",
-      "newApiUserIdRequired": "Chưa cấu hình ID người dùng của New API",
       "updateAccountFailed": "Cập nhật tài khoản thất bại {{error}}",
       "urlRequired": "Địa chỉ trang web không được để trống",
-      "userIdNumeric": "ID người dùng phải là số",
-      "veloeraAdminTokenRequired": "Chưa cấu hình token quản trị viên của Veloera",
-      "veloeraBaseUrlRequired": "Chưa cấu hình URL cơ sở của Veloera",
-      "veloeraUserIdRequired": "Chưa cấu hình ID người dùng của Veloera"
+      "userIdNumeric": "ID người dùng phải là số"
     }
   },
   "newapi": {
@@ -147,11 +126,8 @@
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "octopus": {
-    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
     "configMissing": "Vui lòng cấu hình địa chỉ Octopus, tên người dùng và mật khẩu trong phần Cài đặt trước",
     "corsError": "Đây có thể là vấn đề cấu hình CORS. Vui lòng kiểm tra cấu hình danh sách trắng CORS trong phần cài đặt Octopus.",
-    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
-    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "operations": {
@@ -225,10 +201,7 @@
     "createRequiresGroupSelection": "Tài khoản hiện tại có nhiều nhóm khả dụng, vui lòng chọn nhóm muốn sử dụng trước khi tạo khóa."
   },
   "veloera": {
-    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
     "configMissing": "Vui lòng cấu hình địa chỉ Veloera, token quản trị viên và ID người dùng trong phần Cài đặt trước",
-    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
-    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "warnings": {

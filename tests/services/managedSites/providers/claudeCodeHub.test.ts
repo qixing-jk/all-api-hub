@@ -11,7 +11,6 @@ import {
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
 import {
-  autoConfigToClaudeCodeHub,
   buildChannelPayload,
   buildClaudeCodeHubCreatePayloadFromFormData,
   buildClaudeCodeHubUpdatePayloadFromChannelData,
@@ -38,11 +37,6 @@ const mockUpdateProvider = vi.fn()
 const mockDeleteProvider = vi.fn()
 const mockGetUnmaskedProviderKey = vi.fn()
 const mockGetPreferences = vi.fn()
-const mockConvertToDisplayData = vi.fn()
-const mockEnsureAccountApiToken = vi.fn()
-const toastLoading = vi.fn()
-const toastSuccess = vi.fn()
-const toastError = vi.fn()
 
 vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
   fetchTokenScopedModels: (...args: unknown[]) =>
@@ -75,28 +69,8 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    convertToDisplayData: (...args: unknown[]) =>
-      mockConvertToDisplayData(...args),
-  },
-}))
-
-vi.mock("~/services/accounts/accountOperations", () => ({
-  ensureAccountApiToken: (...args: unknown[]) =>
-    mockEnsureAccountApiToken(...args),
-}))
-
 vi.mock("~/utils/i18n/core", () => ({
   t: (key: string) => key,
-}))
-
-vi.mock("react-hot-toast", () => ({
-  default: {
-    loading: (...args: unknown[]) => toastLoading(...args),
-    success: (...args: unknown[]) => toastSuccess(...args),
-    error: (...args: unknown[]) => toastError(...args),
-  },
 }))
 
 describe("Claude Code Hub managed-site provider", () => {
@@ -120,11 +94,6 @@ describe("Claude Code Hub managed-site provider", () => {
     mockDeleteProvider.mockReset()
     mockGetUnmaskedProviderKey.mockReset()
     mockGetPreferences.mockReset()
-    mockConvertToDisplayData.mockReset()
-    mockEnsureAccountApiToken.mockReset()
-    toastLoading.mockReset()
-    toastSuccess.mockReset()
-    toastError.mockReset()
   })
 
   it("normalizes provider display records into managed-site channels", () => {
@@ -694,83 +663,5 @@ describe("Claude Code Hub managed-site provider", () => {
       }),
     ])
     expect(mockGetUnmaskedProviderKey).not.toHaveBeenCalled()
-  })
-
-  it("auto-imports tokens into Claude Code Hub and reports duplicate or runtime failures", async () => {
-    const displayAccount = {
-      id: "account-1",
-      name: "Account",
-      baseUrl: "https://api.example.com",
-    }
-    const apiToken = { id: 1, name: "Token", key: "sk-real-key" }
-
-    mockGetPreferences.mockResolvedValue({
-      claudeCodeHub: {
-        baseUrl: "https://cch.example.com",
-        adminToken: "admin-token",
-      },
-    })
-    mockConvertToDisplayData.mockReturnValue(displayAccount)
-    mockEnsureAccountApiToken.mockResolvedValue(apiToken)
-    mockFetchTokenScopedModels.mockResolvedValue({
-      models: ["gpt-4o"],
-      fetchFailed: false,
-    })
-    mockSearchProviders.mockResolvedValueOnce([])
-    mockCreateProvider.mockResolvedValue({ ok: true })
-
-    await expect(
-      autoConfigToClaudeCodeHub({ id: "account-1" } as any, "toast-id"),
-    ).resolves.toEqual({
-      success: true,
-      message: "messages:claudecodehub.importSuccess",
-    })
-    expect(mockSearchProviders).toHaveBeenNthCalledWith(
-      1,
-      {
-        baseUrl: "https://cch.example.com",
-        adminToken: "admin-token",
-      },
-      "https://api.example.com",
-    )
-    expect(toastLoading).toHaveBeenCalledWith(
-      "messages:accountOperations.importingToClaudeCodeHub",
-      { id: "toast-id" },
-    )
-    expect(toastSuccess).toHaveBeenCalledWith(
-      "messages:claudecodehub.importSuccess",
-      { id: "toast-id" },
-    )
-
-    mockSearchProviders.mockResolvedValueOnce([
-      {
-        id: 2,
-        name: "Existing Provider",
-        providerType: "openai-compatible",
-        url: "https://api.example.com",
-        maskedKey: "sk-real-key",
-        allowedModels: ["gpt-4o"],
-      },
-    ])
-    await expect(
-      autoConfigToClaudeCodeHub({ id: "account-1" } as any, "toast-id"),
-    ).resolves.toEqual({
-      success: false,
-      message: expect.stringContaining("channelExists"),
-    })
-    expect(mockSearchProviders).toHaveBeenCalledTimes(2)
-    expect(toastError).toHaveBeenCalledWith(
-      expect.stringContaining("channelExists"),
-      { id: "toast-id" },
-    )
-
-    mockEnsureAccountApiToken.mockRejectedValueOnce(new Error("token failed"))
-    await expect(
-      autoConfigToClaudeCodeHub({ id: "account-1" } as any, "toast-id"),
-    ).resolves.toEqual({
-      success: false,
-      message: "token failed",
-    })
-    expect(toastError).toHaveBeenCalledWith("token failed", { id: "toast-id" })
   })
 })

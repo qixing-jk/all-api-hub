@@ -101,9 +101,7 @@ const expectManagedSiteCapabilities = (
     prepareFormData: expect.any(Function),
     buildPayload: expect.any(Function),
   })
-  expect(capabilities.managedSites?.imports).toEqual({
-    autoConfig: expect.any(Function),
-  })
+  expect(capabilities.managedSites).not.toHaveProperty("imports")
 }
 
 describe("apiAdapters registry", () => {

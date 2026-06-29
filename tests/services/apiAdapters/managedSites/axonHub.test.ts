@@ -10,7 +10,6 @@ const axonHubProvider = vi.hoisted(() => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  autoConfigToAxonHub: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/axonHub", () => ({
@@ -93,7 +92,7 @@ describe("AxonHub managed-site channel capability", () => {
     expect(axonHubManagedSiteChannels.updateModelMapping).toBeUndefined()
   })
 
-  it("exposes provider config, draft, and import workflow functions", async () => {
+  it("exposes provider config and draft functions", async () => {
     const { axonHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/axonHub"
     )
@@ -107,8 +106,6 @@ describe("AxonHub managed-site channel capability", () => {
       prepareFormData: axonHubProvider.prepareChannelFormData,
       buildPayload: axonHubProvider.buildChannelPayload,
     })
-    expect(axonHubManagedSiteCapabilities.imports.autoConfig).toBe(
-      axonHubProvider.autoConfigToAxonHub,
-    )
+    expect(axonHubManagedSiteCapabilities).not.toHaveProperty("imports")
   })
 })

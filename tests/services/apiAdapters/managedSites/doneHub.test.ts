@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
-  autoConfigToDoneHub,
   buildChannelName,
   buildChannelPayload,
   checkValidDoneHubConfig,
@@ -103,7 +102,7 @@ describe("DoneHub managed-site channel capability", () => {
     expect(getApiService).not.toHaveBeenCalled()
   })
 
-  it("exposes provider config, draft, and import workflow functions", async () => {
+  it("exposes provider config and draft functions", async () => {
     const { doneHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/doneHub"
     )
@@ -117,8 +116,6 @@ describe("DoneHub managed-site channel capability", () => {
       prepareFormData: prepareChannelFormData,
       buildPayload: buildChannelPayload,
     })
-    expect(doneHubManagedSiteCapabilities.imports.autoConfig).toBe(
-      autoConfigToDoneHub,
-    )
+    expect(doneHubManagedSiteCapabilities).not.toHaveProperty("imports")
   })
 })

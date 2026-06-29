@@ -1,5 +1,3 @@
-import toast from "react-hot-toast"
-
 import {
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
@@ -17,12 +15,7 @@ import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import type {
-  AccountToken,
-  ApiToken,
-  DisplaySiteData,
-  SiteAccount,
-} from "~/types"
+import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   AxonHubCreateChannelInput,
   AxonHubUpdateChannelInput,
@@ -396,46 +389,5 @@ export async function importToAxonHub(
       success: false,
       message: getErrorMessage(error) || t("messages:axonhub.importFailed"),
     }
-  }
-}
-
-/**
- * Auto-provision an account token and import it into AxonHub.
- */
-export async function autoConfigToAxonHub(
-  account: SiteAccount,
-  toastId?: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
-      import("~/services/accounts/accountOperations"),
-      import("~/services/accounts/accountStorage"),
-    ])
-    const prefs = await userPreferences.getPreferences()
-    if (!hasValidAxonHubConfig(prefs) || !prefs.axonHub) {
-      return { success: false, message: t("messages:axonhub.configMissing") }
-    }
-    const displaySiteData = accountStorage.convertToDisplayData(account)
-    const apiToken = await ensureAccountApiToken(
-      account,
-      displaySiteData,
-      toastId,
-    )
-
-    toast.loading(t("messages:accountOperations.importingToAxonHub"), {
-      id: toastId,
-    })
-
-    const result = await importToAxonHub(displaySiteData, apiToken)
-    if (result.success) {
-      toast.success(result.message, { id: toastId })
-    } else {
-      toast.error(result.message, { id: toastId })
-    }
-    return result
-  } catch (error) {
-    const message = getErrorMessage(error) || t("messages:axonhub.importFailed")
-    toast.error(message, { id: toastId })
-    return { success: false, message }
   }
 }

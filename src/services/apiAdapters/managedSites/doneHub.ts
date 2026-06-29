@@ -3,7 +3,6 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
-  ManagedSiteImportCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   createChannel,
@@ -17,7 +16,6 @@ import {
   updateChannelModels,
 } from "~/services/apiService/doneHub"
 import {
-  autoConfigToDoneHub,
   buildChannelName,
   buildChannelPayload,
   checkValidDoneHubConfig,
@@ -117,13 +115,8 @@ const doneHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const doneHubManagedSiteImports: ManagedSiteImportCapability = {
-  autoConfig: autoConfigToDoneHub,
-}
-
 export const doneHubManagedSiteCapabilities = {
   channels: doneHubManagedSiteChannels,
   config: doneHubManagedSiteConfig,
   channelDrafts: doneHubManagedSiteChannelDrafts,
-  imports: doneHubManagedSiteImports,
 }

@@ -1,11 +1,8 @@
-import toast from "react-hot-toast"
-
 import {
   CLAUDE_CODE_HUB_PROVIDER_TYPE,
   DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS,
   isClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
-import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import type { ApiResponse } from "~/services/apiTransport/type"
@@ -13,7 +10,6 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
@@ -22,12 +18,7 @@ import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import type {
-  AccountToken,
-  ApiToken,
-  DisplaySiteData,
-  SiteAccount,
-} from "~/types"
+import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   ClaudeCodeHubAllowedModel,
   ClaudeCodeHubChannelWithData,
@@ -52,13 +43,6 @@ import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("ClaudeCodeHubService")
 const DEFAULT_GROUP_TAG = "default"
-
-const claudeCodeHubImportDuplicateService = {
-  siteType: SITE_TYPES.CLAUDE_CODE_HUB,
-  searchChannel,
-  hydrateComparableChannelKeys,
-  fetchChannelSecretKey,
-}
 
 /**
  * Checks whether preferences contain a usable Claude Code Hub admin config.
@@ -563,102 +547,5 @@ export function buildChannelPayload(
       weight: payload.weight ?? 1,
       status: formData.status,
     },
-  }
-}
-
-/**
- * Imports a site account token into Claude Code Hub as a provider channel.
- */
-async function importToClaudeCodeHub(
-  account: DisplaySiteData,
-  token: ApiToken,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const prefs = await userPreferences.getPreferences()
-    if (!hasValidClaudeCodeHubConfig(prefs) || !prefs.claudeCodeHub) {
-      return {
-        success: false,
-        message: t("messages:claudecodehub.configMissing"),
-      }
-    }
-    const config = prefs.claudeCodeHub
-
-    const formData = await prepareChannelFormData(account, token)
-    const existingChannel = await resolveManagedSiteImportDuplicate({
-      service: claudeCodeHubImportDuplicateService,
-      managedConfig: config,
-      formData,
-    })
-
-    if (existingChannel) {
-      return {
-        success: false,
-        message: t("messages:claudecodehub.channelExists", {
-          channelName: existingChannel.name,
-        }),
-      }
-    }
-
-    const result = await createChannel(config, buildChannelPayload(formData))
-
-    return result.success
-      ? {
-          success: true,
-          message: t("messages:claudecodehub.importSuccess", {
-            channelName: formData.name,
-          }),
-        }
-      : { success: false, message: result.message }
-  } catch (error) {
-    return {
-      success: false,
-      message:
-        getErrorMessage(error) || t("messages:claudecodehub.importFailed"),
-    }
-  }
-}
-
-/**
- * Auto-imports a site account into Claude Code Hub with toast feedback.
- */
-export async function autoConfigToClaudeCodeHub(
-  account: SiteAccount,
-  toastId?: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const [{ ensureAccountApiToken }, { accountStorage }] = await Promise.all([
-      import("~/services/accounts/accountOperations"),
-      import("~/services/accounts/accountStorage"),
-    ])
-    const prefs = await userPreferences.getPreferences()
-    if (!hasValidClaudeCodeHubConfig(prefs) || !prefs.claudeCodeHub) {
-      return {
-        success: false,
-        message: t("messages:claudecodehub.configMissing"),
-      }
-    }
-    const displaySiteData = accountStorage.convertToDisplayData(account)
-    const apiToken = await ensureAccountApiToken(
-      account,
-      displaySiteData,
-      toastId,
-    )
-
-    toast.loading(t("messages:accountOperations.importingToClaudeCodeHub"), {
-      id: toastId,
-    })
-
-    const result = await importToClaudeCodeHub(displaySiteData, apiToken)
-    if (result.success) {
-      toast.success(result.message, { id: toastId })
-    } else {
-      toast.error(result.message, { id: toastId })
-    }
-    return result
-  } catch (error) {
-    const message =
-      getErrorMessage(error) || t("messages:claudecodehub.importFailed")
-    toast.error(message, { id: toastId })
-    return { success: false, message }
   }
 }

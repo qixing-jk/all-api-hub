@@ -3,10 +3,8 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
-  ManagedSiteImportCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
-  autoConfigToAxonHub,
   buildChannelName,
   buildChannelPayload,
   checkValidAxonHubConfig,
@@ -42,13 +40,8 @@ const axonHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const axonHubManagedSiteImports: ManagedSiteImportCapability = {
-  autoConfig: autoConfigToAxonHub,
-}
-
 export const axonHubManagedSiteCapabilities = {
   channels: axonHubManagedSiteChannels,
   config: axonHubManagedSiteConfig,
   channelDrafts: axonHubManagedSiteChannelDrafts,
-  imports: axonHubManagedSiteImports,
 }

@@ -41,7 +41,6 @@ const createManagedSiteServiceStub = (
     hydrateComparableChannelKeys: vi.fn(
       async (_config, candidates) => candidates,
     ),
-    autoConfigToManagedSite: vi.fn(),
     ...overrides,
   }) as any
 

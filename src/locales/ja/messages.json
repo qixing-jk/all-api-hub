@@ -5,13 +5,6 @@
     "autoProvisionFailed": "アカウントは保存されましたが、API キーの自動作成に失敗しました。キー管理の「{{actionLabel}}」から再試行できます。",
     "checkingApiKeys": "API キーを確認中...",
     "createTokenFailed": "API トークンの作成に失敗しました",
-    "importingToAxonHub": "AxonHub にインポート中...",
-    "importingToClaudeCodeHub": "Claude Code Hub にインポート中...",
-    "importingToDoneHub": "Done Hub にインポート中...",
-    "importingToNewApi": "New API にインポート中...",
-    "importingToOctopus": "Octopus にインポート中...",
-    "importingToVeloera": "Veloera にインポート中...",
-    "retrying": "エラーが発生したため、再試行 #{{attempt}} を行います",
     "tokenNotFound": "API トークンの作成または検索に失敗しました"
   },
   "aihubmix": {
@@ -64,11 +57,9 @@
     "unableToOpen": "開けません。Cherry Studio がインストールされているか確認してください"
   },
   "claudecodehub": {
-    "channelExists": "プロバイダー {{channelName}} は既に存在するため、再インポートは不要です",
     "configMissing": "先に設定で Claude Code Hub のアドレスと管理者トークンを設定してください",
     "deleteFailed": "Claude Code Hub プロバイダーの削除に失敗しました",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
-    "importSuccess": "新しいプロバイダー {{channelName}} をインポートしました",
     "modelsMissing": "少なくとも 1 つのモデルを指定してください",
     "noChannelsToSync": "同期できるプロバイダーがありません",
     "realProviderKeyRequired": "Claude Code Hub でプロバイダーを作成するには実際の上流キーが必要です。空またはマスク済みのキーは作成に使用できません。",
@@ -101,10 +92,7 @@
     "waitUserInfoTimeout": "ユーザー情報待機がタイムアウトしました。ログイン済みか確認してください"
   },
   "donehub": {
-    "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
     "configMissing": "先に設定で Done Hub のアドレス、管理者トークン、ユーザー ID を設定してください",
-    "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
-    "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "errors": {
@@ -123,19 +111,10 @@
     "validation": {
       "bookmarkNameRequired": "ブックマーク名は空にできません",
       "bookmarkUrlRequired": "ブックマーク URL は空にできません",
-      "doneHubAdminTokenRequired": "Done Hub 管理者トークンが設定されていません",
-      "doneHubBaseUrlRequired": "Done Hub Base URL が設定されていません",
-      "doneHubUserIdRequired": "Done Hub ユーザー ID が設定されていません",
       "incompleteAccountInfo": "アカウント情報をすべて入力してください",
-      "newApiAdminTokenRequired": "New API 管理者トークンが設定されていません",
-      "newApiBaseUrlRequired": "New API Base URL が設定されていません",
-      "newApiUserIdRequired": "New API ユーザー ID が設定されていません",
       "updateAccountFailed": "アカウントの更新に失敗しました {{error}}",
       "urlRequired": "サイト URL は空にできません",
-      "userIdNumeric": "ユーザー ID は数値である必要があります",
-      "veloeraAdminTokenRequired": "Veloera 管理者トークンが設定されていません",
-      "veloeraBaseUrlRequired": "Veloera Base URL が設定されていません",
-      "veloeraUserIdRequired": "Veloera ユーザー ID が設定されていません"
+      "userIdNumeric": "ユーザー ID は数値である必要があります"
     }
   },
   "newapi": {
@@ -147,11 +126,8 @@
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "octopus": {
-    "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
     "configMissing": "先に設定で Octopus のアドレス、ユーザー名、パスワードを設定してください",
     "corsError": "これは CORS 設定が原因の可能性があります。Octopus 設定の CORS ホワイトリストを確認してください。",
-    "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
-    "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "operations": {
@@ -225,10 +201,7 @@
     "createRequiresGroupSelection": "このアカウントには利用可能なグループが複数あります。キーを作成する前に 1 つ選択してください。"
   },
   "veloera": {
-    "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
     "configMissing": "先に設定で Veloera のアドレス、管理者トークン、ユーザー ID を設定してください",
-    "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
-    "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "warnings": {

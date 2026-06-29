@@ -12,7 +12,6 @@ const claudeCodeHubProvider = vi.hoisted(() => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  autoConfigToClaudeCodeHub: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
@@ -55,7 +54,7 @@ describe("Claude Code Hub managed-site channel capability", () => {
     expect(claudeCodeHubManagedSiteChannels.updateModelMapping).toBeUndefined()
   })
 
-  it("exposes provider config, draft, and import workflow functions", async () => {
+  it("exposes provider config and draft functions", async () => {
     const { claudeCodeHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/claudeCodeHub"
     )
@@ -69,8 +68,6 @@ describe("Claude Code Hub managed-site channel capability", () => {
       prepareFormData: claudeCodeHubProvider.prepareChannelFormData,
       buildPayload: claudeCodeHubProvider.buildChannelPayload,
     })
-    expect(claudeCodeHubManagedSiteCapabilities.imports.autoConfig).toBe(
-      claudeCodeHubProvider.autoConfigToClaudeCodeHub,
-    )
+    expect(claudeCodeHubManagedSiteCapabilities).not.toHaveProperty("imports")
   })
 })

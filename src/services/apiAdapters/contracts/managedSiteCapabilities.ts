@@ -1,11 +1,6 @@
 import type { ApiResponse } from "~/services/apiTransport/type"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
-import type {
-  AccountToken,
-  ApiToken,
-  DisplaySiteData,
-  SiteAccount,
-} from "~/types"
+import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,
@@ -88,8 +83,4 @@ export type ManagedSiteChannelDraftsCapability = {
     formData: ChannelFormData,
     mode?: ChannelMode,
   ): CreateChannelPayload
-}
-
-export type ManagedSiteImportCapability = {
-  autoConfig(account: SiteAccount, toastId?: string): Promise<unknown>
 }

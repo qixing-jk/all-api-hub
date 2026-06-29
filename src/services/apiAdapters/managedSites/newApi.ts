@@ -3,7 +3,6 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
-  ManagedSiteImportCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   createChannel,
@@ -16,7 +15,6 @@ import {
   updateChannelModels,
 } from "~/services/apiService/newApiFamily/channelManagement"
 import {
-  autoConfigToNewApi,
   buildChannelName,
   buildChannelPayload,
   checkValidNewApiConfig,
@@ -82,13 +80,8 @@ const newApiManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const newApiManagedSiteImports: ManagedSiteImportCapability = {
-  autoConfig: autoConfigToNewApi,
-}
-
 export const newApiManagedSiteCapabilities = {
   channels: newApiManagedSiteChannels,
   config: newApiManagedSiteConfig,
   channelDrafts: newApiManagedSiteChannelDrafts,
-  imports: newApiManagedSiteImports,
 }

@@ -9,7 +9,6 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
-  ManagedSiteImportCapability,
 } from "./managedSiteCapabilities"
 import type { ModelCatalogCapability } from "./modelCatalog"
 import type { ModelPricingCapability } from "./modelPricing"
@@ -44,6 +43,5 @@ export type SiteTypeCapabilities = {
     channels?: ManagedSiteChannelsCapability
     config?: ManagedSiteConfigCapability
     channelDrafts?: ManagedSiteChannelDraftsCapability
-    imports?: ManagedSiteImportCapability
   }
 }
