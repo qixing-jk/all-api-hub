@@ -1015,7 +1015,9 @@ describe("newApiService", () => {
 
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4o-mini"])
 
-      const result = await fetchAvailableModels(account, token)
+      const result = await fetchAvailableModels(account, token, {
+        fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+      })
 
       expect(result).toEqual(["gpt-4o-mini"])
     })
@@ -1032,7 +1034,9 @@ describe("newApiService", () => {
         "gpt-3.5-turbo",
       ])
 
-      const result = await fetchAvailableModels(account, token)
+      const result = await fetchAvailableModels(account, token, {
+        fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+      })
 
       expect(result).toContain("gpt-4")
       expect(result).toContain("gpt-3.5-turbo")
@@ -1050,7 +1054,9 @@ describe("newApiService", () => {
       )
       mockFetchAccountAvailableModels.mockResolvedValueOnce(["claude-3-opus"])
 
-      const result = await fetchAvailableModels(account, token)
+      const result = await fetchAvailableModels(account, token, {
+        fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+      })
 
       expect(result).toContain("claude-3-opus")
     })
@@ -1068,7 +1074,9 @@ describe("newApiService", () => {
       ])
       mockFetchAccountAvailableModels.mockResolvedValueOnce(["gpt-4o", "gpt-4"])
 
-      const result = await fetchAvailableModels(account, token)
+      const result = await fetchAvailableModels(account, token, {
+        fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+      })
 
       const uniqueModels = new Set(result)
       expect(uniqueModels.size).toBe(result.length) // No duplicates

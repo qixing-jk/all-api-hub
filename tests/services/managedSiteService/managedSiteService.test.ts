@@ -64,6 +64,10 @@ const createManagedSiteCapabilities = (
       checkValid: vi.fn(async () => true),
       get: vi.fn(async () => await getMockRuntimeConfigForType(siteType)),
     },
+    queries: {
+      fetchSiteUserGroups: vi.fn(),
+      fetchAccountAvailableModels: vi.fn(),
+    },
     channelDrafts: {
       fetchAvailableModels: vi.fn(),
       buildName: vi.fn(),
@@ -422,6 +426,12 @@ describe("managedSiteService", () => {
     expect(service.deleteChannel).toBe(capabilities.channels.delete)
     expect(service.checkValidConfig).toBe(capabilities.config.checkValid)
     expect(service.getConfig).toBe(capabilities.config.get)
+    expect(service.fetchSiteUserGroups).toBe(
+      capabilities.queries.fetchSiteUserGroups,
+    )
+    expect(service.fetchAccountAvailableModels).toBe(
+      capabilities.queries.fetchAccountAvailableModels,
+    )
     expect(service.fetchAvailableModels).toBe(
       capabilities.channelDrafts.fetchAvailableModels,
     )

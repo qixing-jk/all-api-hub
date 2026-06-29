@@ -117,8 +117,14 @@ const veloeraManagedSiteQueries: ManagedSiteQueriesCapability<VeloeraConfig> = {
     await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
 }
 
+const fetchVeloeraManagedSiteAvailableModels: ManagedSiteChannelDraftsCapability["fetchAvailableModels"] =
+  async (account, token) =>
+    await fetchAvailableModels(account, token, {
+      fetchAccountAvailableModels,
+    })
+
 const veloeraManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
-  fetchAvailableModels,
+  fetchAvailableModels: fetchVeloeraManagedSiteAvailableModels,
   buildName: buildChannelName,
   prepareFormData: prepareChannelFormData,
   buildPayload: buildChannelPayload,

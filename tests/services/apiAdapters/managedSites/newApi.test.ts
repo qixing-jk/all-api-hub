@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vitest"
 
 import { AuthTypeEnum } from "~/types"
 import type { CreateChannelPayload } from "~/types/managedSite"
+import {
+  buildApiToken,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 
 const channelManagement = vi.hoisted(() => ({
   searchChannel: vi.fn(),
@@ -15,6 +19,15 @@ const channelManagement = vi.hoisted(() => ({
 }))
 
 const keyManagement = vi.hoisted(() => ({
+  defaultKeyManagementImplementation: {
+    fetchAccountTokens: vi.fn(),
+    createApiToken: vi.fn(),
+    updateApiToken: vi.fn(),
+    resolveApiTokenKey: vi.fn(),
+    deleteApiToken: vi.fn(),
+    fetchUserGroups: vi.fn(),
+    fetchAccountAvailableModels: vi.fn(),
+  },
   fetchSiteUserGroups: vi.fn(),
   fetchAccountAvailableModels: vi.fn(),
 }))
@@ -204,11 +217,40 @@ describe("newApi managed-site channel capability", () => {
       newApiProvider.checkValidNewApiConfig,
     )
     expect(newApiManagedSiteCapabilities.channelDrafts).toEqual({
-      fetchAvailableModels: newApiProvider.fetchAvailableModels,
+      fetchAvailableModels: expect.any(Function),
       buildName: newApiProvider.buildChannelName,
       prepareFormData: newApiProvider.prepareChannelFormData,
       buildPayload: newApiProvider.buildChannelPayload,
     })
     expect(newApiManagedSiteCapabilities).not.toHaveProperty("imports")
+  })
+
+  it("injects account model fallback into the provider draft capability", async () => {
+    const { newApiManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+    const account = buildDisplaySiteData({
+      id: "1",
+      siteType: "new-api",
+      baseUrl: config.baseUrl,
+    })
+    const token = buildApiToken({
+      id: 10,
+      name: "token",
+      key: "token-key",
+    })
+
+    await newApiManagedSiteCapabilities.channelDrafts.fetchAvailableModels(
+      account,
+      token,
+    )
+
+    expect(newApiProvider.fetchAvailableModels).toHaveBeenCalledWith(
+      account,
+      token,
+      {
+        fetchAccountAvailableModels: keyManagement.fetchAccountAvailableModels,
+      },
+    )
   })
 })

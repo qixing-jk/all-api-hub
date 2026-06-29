@@ -11,6 +11,7 @@ const {
   mockUpdateChannel,
   mockDeleteChannel,
   mockFetchVeloeraChannel,
+  mockFetchAccountAvailableModels,
   mockGetPreferences,
   mockFetchManagedSiteAvailableModels,
   mockFetchTokenScopedModels,
@@ -21,6 +22,7 @@ const {
   mockUpdateChannel: vi.fn(),
   mockDeleteChannel: vi.fn(),
   mockFetchVeloeraChannel: vi.fn(),
+  mockFetchAccountAvailableModels: vi.fn(),
   mockGetPreferences: vi.fn(),
   mockFetchManagedSiteAvailableModels: vi.fn(),
   mockFetchTokenScopedModels: vi.fn(),
@@ -33,6 +35,8 @@ vi.mock("~/services/apiService/veloera", () => ({
   updateChannel: (...args: unknown[]) => mockUpdateChannel(...args),
   deleteChannel: (...args: unknown[]) => mockDeleteChannel(...args),
   fetchChannel: (...args: unknown[]) => mockFetchVeloeraChannel(...args),
+  fetchAccountAvailableModels: (...args: unknown[]) =>
+    mockFetchAccountAvailableModels(...args),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({

@@ -1,4 +1,4 @@
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
@@ -18,8 +18,11 @@ type FetchManagedSiteAvailableModelsAccount = Pick<
   | "cookieAuthSessionCookie"
 >
 
-type FetchManagedSiteAvailableModelsOptions = {
+export type FetchManagedSiteAvailableModelsOptions = {
   includeAccountFallback?: boolean
+  fetchAccountAvailableModels?: (
+    request: ApiServiceRequest,
+  ) => Promise<string[]>
 }
 
 /**
@@ -48,10 +51,7 @@ export async function fetchManagedSiteAvailableModels(
 
   if (includeAccountFallback) {
     try {
-      const fetchAvailableModels = getSiteTypeCapabilities(account.siteType)
-        .account?.keyManagement?.fetchAvailableModels
-
-      const fallbackModels = await fetchAvailableModels?.({
+      const fallbackModels = await options.fetchAccountAvailableModels?.({
         baseUrl: account.baseUrl,
         accountId: account.id,
         auth: {

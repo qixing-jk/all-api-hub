@@ -4,10 +4,13 @@ import {
   buildChannelName,
   buildChannelPayload,
   checkValidVeloeraConfig,
-  fetchAvailableModels,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/veloera"
 import { AuthTypeEnum } from "~/types"
+import {
+  buildApiToken,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 
 const veloeraApi = vi.hoisted(() => ({
   searchChannel: vi.fn(),
@@ -21,9 +24,38 @@ const veloeraApi = vi.hoisted(() => ({
   updateChannelModelMapping: vi.fn(),
 }))
 
+const keyManagement = vi.hoisted(() => ({
+  defaultKeyManagementImplementation: {
+    fetchAccountTokens: vi.fn(),
+    createApiToken: vi.fn(),
+    updateApiToken: vi.fn(),
+    resolveApiTokenKey: vi.fn(),
+    deleteApiToken: vi.fn(),
+    fetchUserGroups: vi.fn(),
+    fetchAccountAvailableModels: vi.fn(),
+  },
+  fetchAccountAvailableModels: vi.fn(),
+  fetchSiteUserGroups: vi.fn(),
+}))
+
+const managedSiteModels = vi.hoisted(() => ({
+  fetchManagedSiteAvailableModels: vi.fn(),
+}))
+
 vi.mock("~/services/apiService/veloera", () => ({
   ...veloeraApi,
 }))
+
+vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({
+  ...keyManagement,
+}))
+
+vi.mock(
+  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
+  () => ({
+    ...managedSiteModels,
+  }),
+)
 
 describe("Veloera managed-site channel capability", () => {
   const config = {
@@ -114,11 +146,38 @@ describe("Veloera managed-site channel capability", () => {
       checkValidVeloeraConfig,
     )
     expect(veloeraManagedSiteCapabilities.channelDrafts).toEqual({
-      fetchAvailableModels,
+      fetchAvailableModels: expect.any(Function),
       buildName: buildChannelName,
       prepareFormData: prepareChannelFormData,
       buildPayload: buildChannelPayload,
     })
     expect(veloeraManagedSiteCapabilities).not.toHaveProperty("imports")
+  })
+
+  it("injects Veloera account model fallback into the provider draft capability", async () => {
+    const { veloeraManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+    const account = buildDisplaySiteData({
+      id: "1",
+      siteType: "Veloera",
+      baseUrl: config.baseUrl,
+    })
+    const token = buildApiToken({
+      id: 10,
+      name: "token",
+      key: "token-key",
+    })
+
+    await veloeraManagedSiteCapabilities.channelDrafts.fetchAvailableModels(
+      account,
+      token,
+    )
+
+    expect(
+      managedSiteModels.fetchManagedSiteAvailableModels,
+    ).toHaveBeenCalledWith(account, token, {
+      fetchAccountAvailableModels: keyManagement.fetchAccountAvailableModels,
+    })
   })
 })

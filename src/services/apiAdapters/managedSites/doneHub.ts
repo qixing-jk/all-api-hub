@@ -122,8 +122,14 @@ const doneHubManagedSiteQueries: ManagedSiteQueriesCapability<DoneHubConfig> = {
     ),
 }
 
+const fetchDoneHubManagedSiteAvailableModels: ManagedSiteChannelDraftsCapability["fetchAvailableModels"] =
+  async (account, token) =>
+    await fetchAvailableModels(account, token, {
+      fetchAccountAvailableModels: doneHubKeyManagement.fetchAvailableModels,
+    })
+
 const doneHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
-  fetchAvailableModels,
+  fetchAvailableModels: fetchDoneHubManagedSiteAvailableModels,
   buildName: buildChannelName,
   prepareFormData: prepareChannelFormData,
   buildPayload: buildChannelPayload,

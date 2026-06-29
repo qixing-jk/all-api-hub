@@ -17,7 +17,10 @@ import {
   fetchNewApiChannelKey,
   NewApiChannelKeyRequirementError,
 } from "~/services/managedSites/providers/newApiSession"
-import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
+import {
+  fetchManagedSiteAvailableModels,
+  type FetchManagedSiteAvailableModelsOptions,
+} from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { ApiToken, AuthTypeEnum, DisplaySiteData } from "~/types"
 import type { AccountToken } from "~/types"
@@ -298,8 +301,11 @@ const getNewApiManagedSessionConfig = async (
 export async function fetchAvailableModels(
   account: DisplaySiteData,
   token: ApiToken,
+  options?: FetchManagedSiteAvailableModelsOptions,
 ): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token)
+  return options
+    ? await fetchManagedSiteAvailableModels(account, token, options)
+    : await fetchManagedSiteAvailableModels(account, token)
 }
 
 /**

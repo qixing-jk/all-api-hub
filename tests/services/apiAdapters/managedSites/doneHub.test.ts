@@ -4,10 +4,13 @@ import {
   buildChannelName,
   buildChannelPayload,
   checkValidDoneHubConfig,
-  fetchAvailableModels,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/doneHubService"
 import { AuthTypeEnum } from "~/types"
+import {
+  buildApiToken,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 
 const doneHubApi = vi.hoisted(() => ({
   searchChannel: vi.fn(),
@@ -33,6 +36,10 @@ const newApiKeyManagement = vi.hoisted(() => {
   }
 })
 
+const managedSiteModels = vi.hoisted(() => ({
+  fetchManagedSiteAvailableModels: vi.fn(),
+}))
+
 vi.mock("~/services/apiService/doneHub", () => ({
   ...doneHubApi,
 }))
@@ -40,6 +47,13 @@ vi.mock("~/services/apiService/doneHub", () => ({
 vi.mock("~/services/apiAdapters/newApi/keyManagement", () => ({
   ...newApiKeyManagement,
 }))
+
+vi.mock(
+  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
+  () => ({
+    ...managedSiteModels,
+  }),
+)
 
 describe("DoneHub managed-site channel capability", () => {
   const config = {
@@ -144,11 +158,39 @@ describe("DoneHub managed-site channel capability", () => {
       checkValidDoneHubConfig,
     )
     expect(doneHubManagedSiteCapabilities.channelDrafts).toEqual({
-      fetchAvailableModels,
+      fetchAvailableModels: expect.any(Function),
       buildName: buildChannelName,
       prepareFormData: prepareChannelFormData,
       buildPayload: buildChannelPayload,
     })
     expect(doneHubManagedSiteCapabilities).not.toHaveProperty("imports")
+  })
+
+  it("injects DoneHub account model fallback into the provider draft capability", async () => {
+    const { doneHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+    const account = buildDisplaySiteData({
+      id: "1",
+      siteType: "done-hub",
+      baseUrl: config.baseUrl,
+    })
+    const token = buildApiToken({
+      id: 10,
+      name: "token",
+      key: "token-key",
+    })
+
+    await doneHubManagedSiteCapabilities.channelDrafts.fetchAvailableModels(
+      account,
+      token,
+    )
+
+    expect(
+      managedSiteModels.fetchManagedSiteAvailableModels,
+    ).toHaveBeenCalledWith(account, token, {
+      fetchAccountAvailableModels:
+        newApiKeyManagement.doneHubKeyManagement.fetchAvailableModels,
+    })
   })
 })

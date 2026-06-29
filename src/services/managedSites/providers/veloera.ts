@@ -12,7 +12,10 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
+import {
+  fetchManagedSiteAvailableModels,
+  type FetchManagedSiteAvailableModelsOptions,
+} from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { ApiToken, AuthTypeEnum, DisplaySiteData } from "~/types"
 import type { AccountToken } from "~/types"
@@ -209,8 +212,11 @@ export async function getVeloeraConfig(): Promise<{
 export async function fetchAvailableModels(
   account: DisplaySiteData,
   token: ApiToken,
+  options?: FetchManagedSiteAvailableModelsOptions,
 ): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token)
+  return options
+    ? await fetchManagedSiteAvailableModels(account, token, options)
+    : await fetchManagedSiteAvailableModels(account, token)
 }
 
 /**

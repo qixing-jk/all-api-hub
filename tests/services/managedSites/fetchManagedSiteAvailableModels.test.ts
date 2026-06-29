@@ -5,16 +5,6 @@ import { AuthTypeEnum } from "~/types"
 const mockFetchAccountAvailableModels = vi.fn()
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 
-vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteTypeCapabilities: vi.fn(() => ({
-    account: {
-      keyManagement: {
-        fetchAvailableModels: mockFetchAccountAvailableModels,
-      },
-    },
-  })),
-}))
-
 vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: mockFetchOpenAICompatibleModelIds,
 }))
@@ -50,6 +40,9 @@ describe("fetchManagedSiteAvailableModels", () => {
     const result = await fetchManagedSiteAvailableModels(
       createAccount(),
       createToken({ models: "declared-a,declared-b" }),
+      {
+        fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+      },
     )
 
     expect(result).toEqual(["gpt-4o-mini"])
@@ -68,6 +61,9 @@ describe("fetchManagedSiteAvailableModels", () => {
     const result = await fetchManagedSiteAvailableModels(
       createAccount(),
       createToken({ models: "declared-only-model" }),
+      {
+        fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+      },
     )
 
     expect(result).toEqual(["claude-3-opus"])
@@ -88,6 +84,7 @@ describe("fetchManagedSiteAvailableModels", () => {
       createToken({ models: "declared-only-model" }),
       {
         includeAccountFallback: false,
+        fetchAccountAvailableModels: mockFetchAccountAvailableModels,
       },
     )
 

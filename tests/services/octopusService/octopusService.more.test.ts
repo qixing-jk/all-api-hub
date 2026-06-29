@@ -19,6 +19,8 @@ const {
   mockCreateChannelApi,
   mockUpdateChannelApi,
   mockDeleteChannelApi,
+  mockFetchGroups,
+  mockFetchOctopusAvailableModels,
   mockFetchTokenScopedModels,
   mockFetchManagedSiteAvailableModels,
 } = vi.hoisted(() => ({
@@ -28,6 +30,8 @@ const {
   mockCreateChannelApi: vi.fn(),
   mockUpdateChannelApi: vi.fn(),
   mockDeleteChannelApi: vi.fn(),
+  mockFetchGroups: vi.fn(),
+  mockFetchOctopusAvailableModels: vi.fn(),
   mockFetchTokenScopedModels: vi.fn(),
   mockFetchManagedSiteAvailableModels: vi.fn(),
 }))
@@ -50,6 +54,8 @@ vi.mock("~/services/apiService/octopus", () => ({
   createChannel: mockCreateChannelApi,
   updateChannel: mockUpdateChannelApi,
   deleteChannel: mockDeleteChannelApi,
+  fetchGroups: mockFetchGroups,
+  fetchAvailableModels: mockFetchOctopusAvailableModels,
   fetchRemoteModels: vi.fn(),
 }))
 

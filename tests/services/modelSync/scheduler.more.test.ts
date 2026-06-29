@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   listChannels: vi.fn(),
   runBatch: vi.fn(),
   octopusListChannels: vi.fn(),
+  octopusFetchGroups: vi.fn(),
+  octopusFetchAvailableModels: vi.fn(),
   runOctopusBatch: vi.fn(),
   saveLastExecution: vi.fn(),
   getLastExecution: vi.fn(),
@@ -94,6 +96,8 @@ vi.mock("~/services/models/modelSync/modelCollection", () => ({
 
 vi.mock("~/services/apiService/octopus", () => ({
   listChannels: mocks.octopusListChannels,
+  fetchGroups: mocks.octopusFetchGroups,
+  fetchAvailableModels: mocks.octopusFetchAvailableModels,
 }))
 
 vi.mock("~/services/models/modelSync/octopusModelSync", () => ({
@@ -102,6 +106,7 @@ vi.mock("~/services/models/modelSync/octopusModelSync", () => ({
 
 describe("modelSyncScheduler additional scheduler flows", () => {
   beforeEach(() => {
+    vi.resetModules()
     vi.clearAllMocks()
     mocks.hasAlarmsAPI.mockReturnValue(true)
     mocks.getPreferences.mockResolvedValue({
@@ -229,6 +234,7 @@ describe("modelSyncScheduler additional scheduler flows", () => {
 
 describe("model sync operation helpers additional actions", () => {
   beforeEach(() => {
+    vi.resetModules()
     vi.clearAllMocks()
     mocks.hasAlarmsAPI.mockReturnValue(true)
     mocks.getStoredPreferences.mockResolvedValue({ enabled: true })

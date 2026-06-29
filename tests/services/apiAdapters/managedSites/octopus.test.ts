@@ -15,6 +15,8 @@ const octopusApi = vi.hoisted(() => ({
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
   deleteChannel: vi.fn(),
+  fetchGroups: vi.fn(),
+  fetchAvailableModels: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/octopus", () => ({

@@ -85,8 +85,14 @@ const newApiManagedSiteQueries: ManagedSiteQueriesCapability<NewApiConfig> = {
     await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
 }
 
+const fetchNewApiManagedSiteAvailableModels: ManagedSiteChannelDraftsCapability["fetchAvailableModels"] =
+  async (account, token) =>
+    await fetchAvailableModels(account, token, {
+      fetchAccountAvailableModels,
+    })
+
 const newApiManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
-  fetchAvailableModels,
+  fetchAvailableModels: fetchNewApiManagedSiteAvailableModels,
   buildName: buildChannelName,
   prepareFormData: prepareChannelFormData,
   buildPayload: buildChannelPayload,
