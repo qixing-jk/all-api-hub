@@ -232,7 +232,10 @@ export async function updateChannel(
   channelData: UpdateChannelPayload & { status?: number },
 ): Promise<ApiResponse<unknown>> {
   try {
-    const graphqlId = axonHubApi.resolveAxonHubGraphqlId(channelData.id)
+    const graphqlId = await axonHubApi.resolveAxonHubGraphqlIdForMutation(
+      config,
+      channelData.id,
+    )
     const updated = await axonHubApi.updateAxonHubChannel(
       config,
       graphqlId,
@@ -265,10 +268,11 @@ export async function deleteChannel(
   channelId: number,
 ): Promise<ApiResponse<unknown>> {
   try {
-    const deleted = await axonHubApi.deleteAxonHubChannel(
+    const graphqlId = await axonHubApi.resolveAxonHubGraphqlIdForMutation(
       config,
-      axonHubApi.resolveAxonHubGraphqlId(channelId),
+      channelId,
     )
+    const deleted = await axonHubApi.deleteAxonHubChannel(config, graphqlId)
     return {
       success: deleted,
       data: deleted,

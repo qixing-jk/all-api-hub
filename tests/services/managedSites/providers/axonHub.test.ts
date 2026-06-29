@@ -20,7 +20,7 @@ const {
   mockFetchTokenScopedModels,
   mockGetPreferences,
   mockListChannels,
-  mockResolveAxonHubGraphqlId,
+  mockResolveAxonHubGraphqlIdForMutation,
   mockSearchChannels,
   mockSignIn,
   mockUpdateAxonHubChannel,
@@ -32,7 +32,9 @@ const {
   mockFetchTokenScopedModels: vi.fn(),
   mockGetPreferences: vi.fn(),
   mockListChannels: vi.fn(),
-  mockResolveAxonHubGraphqlId: vi.fn((id: number) => `gid-${id}`),
+  mockResolveAxonHubGraphqlIdForMutation: vi.fn(
+    (_config: unknown, id: number) => Promise.resolve(`gid-${id}`),
+  ),
   mockSearchChannels: vi.fn(),
   mockSignIn: vi.fn(),
   mockUpdateAxonHubChannel: vi.fn(),
@@ -56,7 +58,7 @@ vi.mock("~/services/apiService/axonHub", () => ({
   createAxonHubChannel: mockCreateAxonHubChannel,
   deleteAxonHubChannel: mockDeleteAxonHubChannel,
   listChannels: mockListChannels,
-  resolveAxonHubGraphqlId: mockResolveAxonHubGraphqlId,
+  resolveAxonHubGraphqlIdForMutation: mockResolveAxonHubGraphqlIdForMutation,
   searchChannels: mockSearchChannels,
   signIn: mockSignIn,
   updateAxonHubChannel: mockUpdateAxonHubChannel,
@@ -281,7 +283,10 @@ describe("AxonHub managed-site provider", () => {
       message: "success",
     })
 
-    expect(mockResolveAxonHubGraphqlId).toHaveBeenCalledWith(42)
+    expect(mockResolveAxonHubGraphqlIdForMutation).toHaveBeenCalledWith(
+      passedAxonHubConfig,
+      42,
+    )
     expect(mockUpdateAxonHubChannel).toHaveBeenCalledWith(
       passedAxonHubConfig,
       "gid-42",

@@ -177,6 +177,7 @@ const channelListCache = new Map<
 const numericIdToGraphqlId = new Map<number, string>()
 const CHANNEL_LIST_CACHE_TTL_MS = 15_000
 const MAX_LIST_CHANNEL_PAGES = 100
+const AXON_HUB_GRAPHQL_ID_PREFIX = "gid://axonhub/"
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
 
@@ -232,6 +233,29 @@ const numericIdFromGraphqlId = (id: string): number => {
 
 export const resolveAxonHubGraphqlId = (id: number) =>
   numericIdToGraphqlId.get(id) ?? String(id)
+
+/**
+ * Resolve the GraphQL global id required by AxonHub channel mutations.
+ */
+export async function resolveAxonHubGraphqlIdForMutation(
+  config: AxonHubConfig,
+  id: number,
+) {
+  let graphqlId = resolveAxonHubGraphqlId(id)
+  if (graphqlId.startsWith(AXON_HUB_GRAPHQL_ID_PREFIX)) {
+    return graphqlId
+  }
+
+  // AxonHub mutations reject bare numeric row ids; hydrate the reversible map
+  // from the channel list before sending update/delete mutations.
+  await listChannels(config)
+  graphqlId = resolveAxonHubGraphqlId(id)
+  if (graphqlId.startsWith(AXON_HUB_GRAPHQL_ID_PREFIX)) {
+    return graphqlId
+  }
+
+  throw new Error(`Unable to resolve AxonHub GraphQL id for channel ${id}`)
+}
 
 const toSafeErrorMessage = (error: unknown, fallback: string) => {
   const message = getErrorMessage(error)
@@ -686,7 +710,7 @@ export async function updateChannel(
   try {
     const config = extractRequestConfig(request)
     const { id, status, ...input } = channelData
-    const graphqlId = resolveAxonHubGraphqlId(id)
+    const graphqlId = await resolveAxonHubGraphqlIdForMutation(config, id)
     const updated = await updateAxonHubChannel(config, graphqlId, input)
 
     if (status !== undefined) {
@@ -718,9 +742,10 @@ export async function deleteChannel(
   channelId: number,
 ): Promise<ApiResponse<unknown>> {
   try {
+    const config = extractRequestConfig(request)
     const deleted = await deleteAxonHubChannel(
-      extractRequestConfig(request),
-      resolveAxonHubGraphqlId(channelId),
+      config,
+      await resolveAxonHubGraphqlIdForMutation(config, channelId),
     )
 
     return {

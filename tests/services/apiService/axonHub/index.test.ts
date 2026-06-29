@@ -718,6 +718,24 @@ describe("AxonHub API service", () => {
   })
 
   it("updates status zero through the adapter wrapper and returns a failure message when delete returns false", async () => {
+    const graphqlId = "gid://axonhub/Channel/7"
+    const rowId = axonHubChannelToManagedSite({
+      id: graphqlId,
+      createdAt: null,
+      updatedAt: null,
+      type: "openai",
+      baseURL: "https://adapter.example.com/v1",
+      name: "Adapter Channel",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      credentials: { apiKey: "sk-adapter" },
+      supportedModels: ["gpt-4.1"],
+      manualModels: [],
+      defaultTestModel: null,
+      settings: {},
+      orderingWeight: 0,
+      remark: null,
+      errorMessage: null,
+    }).id
     let statusHits = 0
     let deleteHits = 0
 
@@ -726,11 +744,36 @@ describe("AxonHub API service", () => {
       http.post(GRAPHQL_URL, async ({ request }) => {
         const body = (await request.json()) as { query?: string }
 
+        if (body.query?.includes("query QueryChannels")) {
+          return HttpResponse.json({
+            data: {
+              queryChannels: {
+                edges: [
+                  {
+                    node: {
+                      id: graphqlId,
+                      type: "openai",
+                      baseURL: "https://adapter.example.com/v1",
+                      name: "Adapter Channel",
+                      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                      credentials: { apiKey: "sk-adapter" },
+                      supportedModels: ["gpt-4.1"],
+                      manualModels: [],
+                    },
+                  },
+                ],
+                pageInfo: { hasNextPage: false, endCursor: null },
+                totalCount: 1,
+              },
+            },
+          })
+        }
+
         if (body.query?.includes("mutation UpdateChannel(")) {
           return HttpResponse.json({
             data: {
               updateChannel: {
-                id: "7",
+                id: graphqlId,
                 type: "openai",
                 baseURL: "https://adapter.example.com/v1",
                 name: "Adapter Channel",
@@ -753,7 +796,7 @@ describe("AxonHub API service", () => {
           return HttpResponse.json({
             data: {
               updateChannelStatus: {
-                id: "7",
+                id: graphqlId,
                 status: AXON_HUB_CHANNEL_STATUS.DISABLED,
               },
             },
@@ -778,7 +821,7 @@ describe("AxonHub API service", () => {
 
     await expect(
       updateChannelAdapter(buildRequest(), {
-        id: 7,
+        id: rowId,
         name: "Adapter Channel",
         status: CHANNEL_STATUS.Unknown,
       }),
@@ -788,7 +831,7 @@ describe("AxonHub API service", () => {
     })
     expect(statusHits).toBe(1)
 
-    await expect(deleteChannelAdapter(buildRequest(), 7)).resolves.toEqual({
+    await expect(deleteChannelAdapter(buildRequest(), rowId)).resolves.toEqual({
       success: false,
       data: false,
       message: "Failed to delete AxonHub channel",
@@ -797,11 +840,55 @@ describe("AxonHub API service", () => {
   })
 
   it("returns safe adapter errors for update/delete failures and exposes the groupless contract", async () => {
+    const graphqlId = "gid://axonhub/Channel/9"
+    const rowId = axonHubChannelToManagedSite({
+      id: graphqlId,
+      createdAt: null,
+      updatedAt: null,
+      type: "openai",
+      baseURL: "https://broken.example.com/v1",
+      name: "Broken update",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      credentials: { apiKey: "sk-broken" },
+      supportedModels: ["gpt-4.1"],
+      manualModels: [],
+      defaultTestModel: null,
+      settings: {},
+      orderingWeight: 0,
+      remark: null,
+      errorMessage: null,
+    }).id
+
     server.use(
       http.post(AUTH_URL, () => HttpResponse.json({ token: "adapter-fail" })),
       http.post(GRAPHQL_URL, async ({ request }) => {
         const body = (await request.json()) as {
           query?: string
+        }
+
+        if (body.query?.includes("query QueryChannels")) {
+          return HttpResponse.json({
+            data: {
+              queryChannels: {
+                edges: [
+                  {
+                    node: {
+                      id: graphqlId,
+                      type: "openai",
+                      baseURL: "https://broken.example.com/v1",
+                      name: "Broken update",
+                      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                      credentials: { apiKey: "sk-broken" },
+                      supportedModels: ["gpt-4.1"],
+                      manualModels: [],
+                    },
+                  },
+                ],
+                pageInfo: { hasNextPage: false, endCursor: null },
+                totalCount: 1,
+              },
+            },
+          })
         }
 
         if (body.query?.includes("mutation UpdateChannel(")) {
@@ -827,7 +914,7 @@ describe("AxonHub API service", () => {
 
     await expect(
       updateChannelAdapter(buildRequest(), {
-        id: 9,
+        id: rowId,
         name: "Broken update",
       }),
     ).resolves.toEqual({
@@ -836,7 +923,7 @@ describe("AxonHub API service", () => {
       message: "update exploded",
     })
 
-    await expect(deleteChannelAdapter(buildRequest(), 9)).resolves.toEqual({
+    await expect(deleteChannelAdapter(buildRequest(), rowId)).resolves.toEqual({
       success: false,
       data: null,
       message: "delete exploded",
@@ -878,6 +965,92 @@ describe("AxonHub API service", () => {
       total: 1,
       items: [expect.objectContaining({ id: 1, name: "alpha" })],
     })
+  })
+
+  it("hydrates AxonHub GraphQL ids before adapter delete mutations", async () => {
+    const graphqlId = "gid://axonhub/Channel/7"
+    const rowId = axonHubChannelToManagedSite({
+      id: graphqlId,
+      createdAt: null,
+      updatedAt: null,
+      type: "openai",
+      baseURL: "https://alpha.example.com",
+      name: "alpha",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      credentials: { apiKey: "sk-alpha" },
+      supportedModels: ["gpt-4.1"],
+      manualModels: [],
+      defaultTestModel: null,
+      settings: {},
+      orderingWeight: 0,
+      remark: null,
+      errorMessage: null,
+    }).id
+    __resetCachesForTesting()
+
+    let listHits = 0
+    let deletedId: unknown
+
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "adapter-delete-gid" }),
+      ),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as {
+          query?: string
+          variables?: { id?: unknown }
+        }
+
+        if (body.query?.includes("query QueryChannels")) {
+          listHits += 1
+          return HttpResponse.json({
+            data: {
+              queryChannels: {
+                edges: [
+                  {
+                    node: {
+                      id: graphqlId,
+                      type: "openai",
+                      baseURL: "https://alpha.example.com",
+                      name: "alpha",
+                      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                      credentials: { apiKey: "sk-alpha" },
+                      supportedModels: ["gpt-4.1"],
+                      manualModels: [],
+                    },
+                  },
+                ],
+                pageInfo: { hasNextPage: false, endCursor: null },
+                totalCount: 1,
+              },
+            },
+          })
+        }
+
+        if (body.query?.includes("mutation DeleteChannel")) {
+          deletedId = body.variables?.id
+          return HttpResponse.json({
+            data: {
+              deleteChannel: true,
+            },
+          })
+        }
+
+        return HttpResponse.json(
+          { errors: [{ message: "Unexpected GraphQL operation" }] },
+          { status: 500 },
+        )
+      }),
+    )
+
+    await expect(deleteChannelAdapter(buildRequest(), rowId)).resolves.toEqual({
+      success: true,
+      data: true,
+      message: "success",
+    })
+
+    expect(listHits).toBe(1)
+    expect(deletedId).toBe(graphqlId)
   })
 
   it("reuses cached channel lists for repeated searches and invalidates after mutations", async () => {
