@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ModelRedirectSettings from "~/features/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import {
+  getManagedSiteServiceForType,
+  hasValidManagedSiteConfig,
+} from "~/services/managedSites/managedSiteService"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -21,13 +24,10 @@ vi.mock("~/contexts/UserPreferencesContext", async () => {
 })
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
-  hasValidManagedSiteConfig: vi.fn(),
-}))
-
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
+  getManagedSiteServiceForType: vi.fn(() => ({
     fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
   })),
+  hasValidManagedSiteConfig: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/utils/managedSite", () => ({
@@ -57,6 +57,8 @@ const mockedUseUserPreferencesContext =
   useUserPreferencesContext as unknown as ReturnType<typeof vi.fn>
 const mockedHasValidManagedSiteConfig =
   hasValidManagedSiteConfig as unknown as ReturnType<typeof vi.fn>
+const mockedGetManagedSiteServiceForType =
+  getManagedSiteServiceForType as unknown as ReturnType<typeof vi.fn>
 const mockedModelRedirectService = ModelRedirectService as unknown as {
   listManagedSiteChannels: ReturnType<typeof vi.fn>
   clearChannelModelMappings: ReturnType<typeof vi.fn>
@@ -69,6 +71,9 @@ describe("Model redirect bulk clear flow", () => {
     vi.clearAllMocks()
 
     mockedHasValidManagedSiteConfig.mockReturnValue(true)
+    mockedGetManagedSiteServiceForType.mockReturnValue({
+      fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
+    })
     mockedUseUserPreferencesContext.mockReturnValue({
       preferences: {
         managedSiteType: "new-api",

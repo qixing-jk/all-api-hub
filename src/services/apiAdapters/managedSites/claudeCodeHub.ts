@@ -3,6 +3,7 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
+  ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   buildChannelName,
@@ -37,6 +38,12 @@ const claudeCodeHubManagedSiteConfig: ManagedSiteConfigCapability<ClaudeCodeHubC
     checkValidClaudeCodeHubConfig,
   )
 
+const claudeCodeHubManagedSiteQueries: ManagedSiteQueriesCapability<ClaudeCodeHubConfig> =
+  {
+    fetchSiteUserGroups: async () => [],
+    fetchAccountAvailableModels: async () => [],
+  }
+
 const claudeCodeHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability =
   {
     fetchAvailableModels,
@@ -48,5 +55,6 @@ const claudeCodeHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability 
 export const claudeCodeHubManagedSiteCapabilities = {
   channels: claudeCodeHubManagedSiteChannels,
   config: claudeCodeHubManagedSiteConfig,
+  queries: claudeCodeHubManagedSiteQueries,
   channelDrafts: claudeCodeHubManagedSiteChannelDrafts,
 }

@@ -19,16 +19,26 @@ const doneHubApi = vi.hoisted(() => ({
   fetchChannelModels: vi.fn(),
   updateChannelModels: vi.fn(),
   updateChannelModelMapping: vi.fn(),
+  fetchSiteUserGroups: vi.fn(),
 }))
 
-const getApiService = vi.hoisted(() => vi.fn())
+const newApiKeyManagement = vi.hoisted(() => {
+  const doneHubKeyManagement = {
+    fetchAvailableModels: vi.fn(),
+  }
+
+  return {
+    doneHubKeyManagement,
+    createNewApiKeyManagement: vi.fn(() => doneHubKeyManagement),
+  }
+})
 
 vi.mock("~/services/apiService/doneHub", () => ({
   ...doneHubApi,
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService,
+vi.mock("~/services/apiAdapters/newApi/keyManagement", () => ({
+  ...newApiKeyManagement,
 }))
 
 describe("DoneHub managed-site channel capability", () => {
@@ -99,7 +109,30 @@ describe("DoneHub managed-site channel capability", () => {
       JSON.stringify({ "model-a": "upstream-model-a" }),
       undefined,
     )
-    expect(getApiService).not.toHaveBeenCalled()
+  })
+
+  it("delegates managed-site query helpers to direct DoneHub-compatible helpers", async () => {
+    const { doneHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+    const request = {
+      baseUrl: config.baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: config.adminToken,
+        userId: config.userId,
+      },
+    }
+
+    await doneHubManagedSiteCapabilities.queries.fetchSiteUserGroups(config)
+    await doneHubManagedSiteCapabilities.queries.fetchAccountAvailableModels(
+      config,
+    )
+
+    expect(doneHubApi.fetchSiteUserGroups).toHaveBeenCalledWith(request)
+    expect(
+      newApiKeyManagement.doneHubKeyManagement.fetchAvailableModels,
+    ).toHaveBeenCalledWith(request)
   })
 
   it("exposes provider config and draft functions", async () => {

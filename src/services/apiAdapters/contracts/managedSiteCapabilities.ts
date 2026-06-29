@@ -69,6 +69,13 @@ export type ManagedSiteConfigCapability<
   get(): Promise<TConfig | null>
 }
 
+export type ManagedSiteQueriesCapability<
+  TConfig = ManagedSiteRuntimeConfigValue,
+> = {
+  fetchSiteUserGroups(config: TConfig): Promise<string[]>
+  fetchAccountAvailableModels(config: TConfig): Promise<string[]>
+}
+
 export type ManagedSiteChannelDraftsCapability = {
   fetchAvailableModels(
     account: DisplaySiteData,

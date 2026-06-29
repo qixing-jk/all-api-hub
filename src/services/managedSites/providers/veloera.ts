@@ -1,6 +1,6 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
 import {
   createChannel as createVeloeraChannel,
   deleteChannel as deleteVeloeraChannel,
@@ -244,8 +244,16 @@ export async function prepareChannelFormData(
     availableModels.length > 0 ? availableModels : tokenModelList
 
   const resolvedGroups = await resolveDefaultChannelGroups({
-    siteType: SITE_TYPES.VELOERA,
     getConfig: getVeloeraConfig,
+    fetchSiteUserGroups: async (config) =>
+      await fetchSiteUserGroups({
+        baseUrl: config.baseUrl,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: config.token,
+          userId: config.userId,
+        },
+      }),
     onError: (error) => {
       logger.warn("Failed to resolve Veloera default groups", error)
     },

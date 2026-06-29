@@ -3,6 +3,7 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
+  ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   createChannel,
@@ -14,6 +15,10 @@ import {
   updateChannelModelMapping,
   updateChannelModels,
 } from "~/services/apiService/newApiFamily/channelManagement"
+import {
+  fetchAccountAvailableModels,
+  fetchSiteUserGroups,
+} from "~/services/apiService/newApiFamily/default/keyManagement"
 import {
   buildChannelName,
   buildChannelPayload,
@@ -73,6 +78,13 @@ export const newApiManagedSiteChannels: ManagedSiteChannelsCapability<NewApiConf
 const newApiManagedSiteConfig: ManagedSiteConfigCapability<NewApiConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.NEW_API, checkValidNewApiConfig)
 
+const newApiManagedSiteQueries: ManagedSiteQueriesCapability<NewApiConfig> = {
+  fetchSiteUserGroups: async (config) =>
+    await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
+  fetchAccountAvailableModels: async (config) =>
+    await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
+}
+
 const newApiManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   fetchAvailableModels,
   buildName: buildChannelName,
@@ -83,5 +95,6 @@ const newApiManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 export const newApiManagedSiteCapabilities = {
   channels: newApiManagedSiteChannels,
   config: newApiManagedSiteConfig,
+  queries: newApiManagedSiteQueries,
   channelDrafts: newApiManagedSiteChannelDrafts,
 }

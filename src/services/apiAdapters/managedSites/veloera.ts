@@ -3,7 +3,12 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
+  ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import {
+  fetchAccountAvailableModels,
+  fetchSiteUserGroups,
+} from "~/services/apiService/newApiFamily/default/keyManagement"
 import {
   createChannel,
   deleteChannel,
@@ -105,6 +110,13 @@ export const veloeraManagedSiteChannels: ManagedSiteChannelsCapability<VeloeraCo
 const veloeraManagedSiteConfig: ManagedSiteConfigCapability<VeloeraConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.VELOERA, checkValidVeloeraConfig)
 
+const veloeraManagedSiteQueries: ManagedSiteQueriesCapability<VeloeraConfig> = {
+  fetchSiteUserGroups: async (config) =>
+    await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
+  fetchAccountAvailableModels: async (config) =>
+    await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
+}
+
 const veloeraManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   fetchAvailableModels,
   buildName: buildChannelName,
@@ -115,5 +127,6 @@ const veloeraManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 export const veloeraManagedSiteCapabilities = {
   channels: veloeraManagedSiteChannels,
   config: veloeraManagedSiteConfig,
+  queries: veloeraManagedSiteQueries,
   channelDrafts: veloeraManagedSiteChannelDrafts,
 }

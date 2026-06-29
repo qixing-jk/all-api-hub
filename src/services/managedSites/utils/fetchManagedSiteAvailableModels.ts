@@ -1,4 +1,4 @@
-import { getApiService } from "~/services/apiService"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
@@ -48,9 +48,10 @@ export async function fetchManagedSiteAvailableModels(
 
   if (includeAccountFallback) {
     try {
-      const fallbackModels = await getApiService(
-        account.siteType,
-      ).fetchAccountAvailableModels({
+      const fetchAvailableModels = getSiteTypeCapabilities(account.siteType)
+        .account?.keyManagement?.fetchAvailableModels
+
+      const fallbackModels = await fetchAvailableModels?.({
         baseUrl: account.baseUrl,
         accountId: account.id,
         auth: {

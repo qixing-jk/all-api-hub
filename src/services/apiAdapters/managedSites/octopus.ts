@@ -3,10 +3,13 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
+  ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   createChannel as createOctopusChannel,
   deleteChannel as deleteOctopusChannel,
+  fetchGroups,
+  fetchAvailableModels as fetchOctopusAvailableModels,
   listChannels,
   searchChannels,
   updateChannel as updateOctopusChannel,
@@ -162,6 +165,11 @@ export const octopusManagedSiteChannels: ManagedSiteChannelsCapability<OctopusCo
 const octopusManagedSiteConfig: ManagedSiteConfigCapability<OctopusConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.OCTOPUS, checkValidOctopusConfig)
 
+const octopusManagedSiteQueries: ManagedSiteQueriesCapability<OctopusConfig> = {
+  fetchSiteUserGroups: fetchGroups,
+  fetchAccountAvailableModels: fetchOctopusAvailableModels,
+}
+
 const octopusManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   fetchAvailableModels,
   buildName: buildChannelName,
@@ -172,5 +180,6 @@ const octopusManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 export const octopusManagedSiteCapabilities = {
   channels: octopusManagedSiteChannels,
   config: octopusManagedSiteConfig,
+  queries: octopusManagedSiteQueries,
   channelDrafts: octopusManagedSiteChannelDrafts,
 }

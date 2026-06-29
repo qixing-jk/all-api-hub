@@ -5,9 +5,13 @@ import { AuthTypeEnum } from "~/types"
 const mockFetchAccountAvailableModels = vi.fn()
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 
-vi.mock("~/services/apiService", () => ({
-  getApiService: vi.fn(() => ({
-    fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteTypeCapabilities: vi.fn(() => ({
+    account: {
+      keyManagement: {
+        fetchAvailableModels: mockFetchAccountAvailableModels,
+      },
+    },
   })),
 }))
 

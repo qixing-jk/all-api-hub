@@ -3,6 +3,7 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
+  ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   buildChannelName,
@@ -33,6 +34,11 @@ const axonHubManagedSiteConfig: ManagedSiteConfigCapability<AxonHubConfig> =
     checkValidAxonHubConfig,
   )
 
+const axonHubManagedSiteQueries: ManagedSiteQueriesCapability<AxonHubConfig> = {
+  fetchSiteUserGroups: async () => [],
+  fetchAccountAvailableModels: async () => [],
+}
+
 const axonHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   fetchAvailableModels,
   buildName: buildChannelName,
@@ -43,5 +49,6 @@ const axonHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 export const axonHubManagedSiteCapabilities = {
   channels: axonHubManagedSiteChannels,
   config: axonHubManagedSiteConfig,
+  queries: axonHubManagedSiteQueries,
   channelDrafts: axonHubManagedSiteChannelDrafts,
 }

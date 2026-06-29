@@ -1,10 +1,10 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import {
   createChannel as createDoneHubChannel,
   deleteChannel as deleteDoneHubChannel,
   fetchChannel as fetchDoneHubChannel,
+  fetchSiteUserGroups,
   searchChannel as searchDoneHubChannel,
   updateChannel as updateDoneHubChannel,
 } from "~/services/apiService/doneHub"
@@ -266,8 +266,16 @@ export async function prepareChannelFormData(
   )
 
   const resolvedGroups = await resolveDefaultChannelGroups({
-    siteType: SITE_TYPES.DONE_HUB,
     getConfig: getDoneHubConfig,
+    fetchSiteUserGroups: async (config) =>
+      await fetchSiteUserGroups({
+        baseUrl: config.baseUrl,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: config.token,
+          userId: config.userId,
+        },
+      }),
     onError: (error) => {
       logger.warn("Failed to resolve Done Hub default groups", error)
     },

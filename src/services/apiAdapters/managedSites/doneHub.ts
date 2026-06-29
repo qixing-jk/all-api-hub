@@ -3,12 +3,15 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
+  ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
 import {
   createChannel,
   deleteChannel,
   fetchChannel,
   fetchChannelModels,
+  fetchSiteUserGroups,
   listAllChannels,
   searchChannel,
   updateChannel,
@@ -108,6 +111,17 @@ const doneHubManagedSiteConfig: ManagedSiteConfigCapability<DoneHubConfig> =
     checkValidDoneHubConfig,
   )
 
+const doneHubKeyManagement = createNewApiKeyManagement(SITE_TYPES.DONE_HUB)
+
+const doneHubManagedSiteQueries: ManagedSiteQueriesCapability<DoneHubConfig> = {
+  fetchSiteUserGroups: async (config) =>
+    await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
+  fetchAccountAvailableModels: async (config) =>
+    await doneHubKeyManagement.fetchAvailableModels(
+      toManagedSiteApiServiceRequest(config),
+    ),
+}
+
 const doneHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   fetchAvailableModels,
   buildName: buildChannelName,
@@ -118,5 +132,6 @@ const doneHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 export const doneHubManagedSiteCapabilities = {
   channels: doneHubManagedSiteChannels,
   config: doneHubManagedSiteConfig,
+  queries: doneHubManagedSiteQueries,
   channelDrafts: doneHubManagedSiteChannelDrafts,
 }

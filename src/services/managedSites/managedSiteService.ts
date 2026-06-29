@@ -59,6 +59,10 @@ export interface ManagedSiteService<
   checkValidConfig(): Promise<boolean>
   getConfig(): Promise<TConfig | null>
 
+  fetchSiteUserGroups(config: TConfig): Promise<string[]>
+
+  fetchAccountAvailableModels(config: TConfig): Promise<string[]>
+
   fetchAvailableModels(
     account: DisplaySiteData,
     token: ApiToken,
@@ -92,6 +96,7 @@ type ManagedSiteCapabilities = NonNullable<
 type RequiredManagedSiteCapabilities = {
   channels: NonNullable<ManagedSiteCapabilities["channels"]>
   config: NonNullable<ManagedSiteCapabilities["config"]>
+  queries: NonNullable<ManagedSiteCapabilities["queries"]>
   channelDrafts: NonNullable<ManagedSiteCapabilities["channelDrafts"]>
 }
 
@@ -106,6 +111,7 @@ function requireManagedSiteCapabilities(
   if (
     !managedSites?.channels ||
     !managedSites.config ||
+    !managedSites.queries ||
     !managedSites.channelDrafts
   ) {
     throw new Error(
@@ -116,6 +122,7 @@ function requireManagedSiteCapabilities(
   return {
     channels: managedSites.channels,
     config: managedSites.config,
+    queries: managedSites.queries,
     channelDrafts: managedSites.channelDrafts,
   }
 }
@@ -197,6 +204,9 @@ export function getManagedSiteServiceForType(
     deleteChannel: capabilities.channels.delete,
     checkValidConfig: capabilities.config.checkValid,
     getConfig: capabilities.config.get,
+    fetchSiteUserGroups: capabilities.queries.fetchSiteUserGroups,
+    fetchAccountAvailableModels:
+      capabilities.queries.fetchAccountAvailableModels,
     fetchAvailableModels: capabilities.channelDrafts.fetchAvailableModels,
     buildChannelName: capabilities.channelDrafts.buildName,
     prepareChannelFormData: capabilities.channelDrafts.prepareFormData,

@@ -7,6 +7,7 @@ import {
   searchChannel as searchNewApiChannel,
   updateChannel as updateNewApiChannel,
 } from "~/services/apiService/newApiFamily/channelManagement"
+import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -332,8 +333,16 @@ export async function prepareChannelFormData(
   )
 
   const resolvedGroups = await resolveDefaultChannelGroups({
-    siteType: SITE_TYPES.NEW_API,
     getConfig: getNewApiConfig,
+    fetchSiteUserGroups: async (config) =>
+      await fetchSiteUserGroups({
+        baseUrl: config.baseUrl,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: config.token,
+          userId: config.userId,
+        },
+      }),
     onError: (error) => {
       logger.warn("Failed to resolve New API default groups", error)
     },

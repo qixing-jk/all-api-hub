@@ -1,17 +1,16 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { getApiService, type ApiOverrideSite } from "~/services/apiService"
-import { AuthTypeEnum } from "~/types"
 import { normalizeList } from "~/utils/core/string"
 
 type ManagedSiteConfig = {
   baseUrl: string
   token: string
+  adminToken?: string
   userId: string
 }
 
 type ResolveDefaultChannelGroupsParams = {
-  siteType: ApiOverrideSite
   getConfig: () => Promise<ManagedSiteConfig | null>
+  fetchSiteUserGroups: (config: ManagedSiteConfig) => Promise<string[]>
   onError?: (error: unknown) => void
 }
 
@@ -23,8 +22,8 @@ type ResolveDefaultChannelGroupsParams = {
  * otherwise fall back to the first available site group.
  */
 export async function resolveDefaultChannelGroups({
-  siteType,
   getConfig,
+  fetchSiteUserGroups,
   onError,
 }: ResolveDefaultChannelGroupsParams): Promise<string[]> {
   const fallbackGroups = [...DEFAULT_CHANNEL_FIELDS.groups]
@@ -35,16 +34,7 @@ export async function resolveDefaultChannelGroups({
       return fallbackGroups
     }
 
-    const siteGroups = normalizeList(
-      await getApiService(siteType).fetchSiteUserGroups({
-        baseUrl: config.baseUrl,
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          accessToken: config.token,
-          userId: config.userId,
-        },
-      }),
-    )
+    const siteGroups = normalizeList(await fetchSiteUserGroups(config))
     const siteGroupsByNormalizedName = new Map<string, string>()
 
     for (const siteGroup of siteGroups) {

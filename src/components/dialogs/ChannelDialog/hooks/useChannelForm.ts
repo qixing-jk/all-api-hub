@@ -12,14 +12,12 @@ import { DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS } from "~/constants/claudeCodeHu
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
-import { getApiService } from "~/services/apiService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
   hasUsableManagedSiteChannelKey,
 } from "~/services/managedSites/utils/managedSite"
-import { AuthTypeEnum } from "~/types"
 import type {
   ChannelFormData,
   ManagedSiteChannel,
@@ -268,18 +266,9 @@ export function useChannelForm({
         return
       }
 
-      const groupsData = await getApiService(
-        service.siteType,
-      ).fetchSiteUserGroups({
-        baseUrl: config.baseUrl,
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          userId: isAccessTokenManagedConfig(config) ? config.userId : "",
-          accessToken: isAccessTokenManagedConfig(config)
-            ? config.adminToken
-            : "",
-        },
-      })
+      const groupsData = isAccessTokenManagedConfig(config)
+        ? await service.fetchSiteUserGroups(config)
+        : []
 
       let groupOptions = groupsData.map((group) => ({
         label: group,

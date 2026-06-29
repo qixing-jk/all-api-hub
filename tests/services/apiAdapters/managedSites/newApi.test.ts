@@ -14,7 +14,10 @@ const channelManagement = vi.hoisted(() => ({
   updateChannelModelMapping: vi.fn(),
 }))
 
-const getApiService = vi.hoisted(() => vi.fn())
+const keyManagement = vi.hoisted(() => ({
+  fetchSiteUserGroups: vi.fn(),
+  fetchAccountAvailableModels: vi.fn(),
+}))
 
 const newApiProvider = vi.hoisted(() => ({
   checkValidNewApiConfig: vi.fn(),
@@ -32,8 +35,8 @@ vi.mock("~/services/apiService/newApiFamily/channelManagement", () => ({
   ...channelManagement,
 }))
 
-vi.mock("~/services/apiService", () => ({
-  getApiService,
+vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({
+  ...keyManagement,
 }))
 
 vi.mock("~/services/managedSites/providers/newApi", () => ({
@@ -125,7 +128,30 @@ describe("newApi managed-site channel capability", () => {
       JSON.stringify({ "gpt-4o": "upstream-gpt-4o" }),
       undefined,
     )
-    expect(getApiService).not.toHaveBeenCalled()
+  })
+
+  it("delegates managed-site query helpers to direct New API family helpers", async () => {
+    const { newApiManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+    const request = {
+      baseUrl: config.baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: config.adminToken,
+        userId: config.userId,
+      },
+    }
+
+    await newApiManagedSiteCapabilities.queries.fetchSiteUserGroups(config)
+    await newApiManagedSiteCapabilities.queries.fetchAccountAvailableModels(
+      config,
+    )
+
+    expect(keyManagement.fetchSiteUserGroups).toHaveBeenCalledWith(request)
+    expect(keyManagement.fetchAccountAvailableModels).toHaveBeenCalledWith(
+      request,
+    )
   })
 
   it("propagates model-sync request options to direct New API helpers", async () => {

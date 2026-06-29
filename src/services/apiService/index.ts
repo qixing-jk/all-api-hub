@@ -99,7 +99,7 @@ const siteOverrideMap = {
 // 添加类型定义
 type SiteOverrideMap = typeof siteOverrideMap
 
-export type ApiOverrideSite = keyof SiteOverrideMap
+type ApiOverrideSite = keyof SiteOverrideMap
 
 const strictOverrideSites = new Set<ApiOverrideSite>([
   SITE_TYPES.AIHUBMIX,

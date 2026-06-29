@@ -6,11 +6,12 @@ import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardContent, CompactMultiSelect } from "~/components/ui"
 import { Switch } from "~/components/ui/Switch"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { getApiService } from "~/services/apiService"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import {
+  getManagedSiteServiceForType,
+  hasValidManagedSiteConfig,
+} from "~/services/managedSites/managedSiteService"
 import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
-import { AuthTypeEnum } from "~/types"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
 import { createLogger } from "~/utils/core/logger"
 
@@ -55,16 +56,9 @@ export default function ModelRedirectSettings() {
         return
       }
 
-      return await getApiService(
+      return await getManagedSiteServiceForType(
         preferences.managedSiteType,
-      ).fetchAccountAvailableModels({
-        baseUrl: managedConfig.baseUrl,
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          userId: managedConfig.userId,
-          accessToken: managedConfig.adminToken,
-        },
-      })
+      ).fetchAccountAvailableModels(managedConfig)
     }
 
     ;(async () => {
