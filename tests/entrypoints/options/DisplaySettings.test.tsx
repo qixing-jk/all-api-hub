@@ -58,11 +58,11 @@ describe("DisplaySettings", () => {
 
     await waitFor(() => {
       expect(updateCurrencyType).toHaveBeenCalledWith("CNY")
+      expect(showUpdateToast).toHaveBeenCalledWith(
+        writeResult,
+        "settings:display.currencyUnit",
+      )
     })
-    expect(showUpdateToast).toHaveBeenCalledWith(
-      writeResult,
-      "settings:display.currencyUnit",
-    )
   })
 
   it("does not save the hidden cashflow tab while today cashflow is disabled", async () => {

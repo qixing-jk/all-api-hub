@@ -229,12 +229,12 @@ describe("NewApiManagedVerificationDialog", () => {
     )
 
     expect(updateNewApiUsernameMock).toHaveBeenCalledWith("admin")
-    expect(updateNewApiPasswordMock).not.toHaveBeenCalled()
-    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
-    expect(props.onRetry).not.toHaveBeenCalled()
     expect(
       await screen.findByText("dialog.messages.quickConfigSaveFailed"),
     ).toBeInTheDocument()
+    expect(updateNewApiPasswordMock).not.toHaveBeenCalled()
+    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
+    expect(props.onRetry).not.toHaveBeenCalled()
   })
 
   it("shows base-url save failures without retrying verification", async () => {
@@ -270,11 +270,11 @@ describe("NewApiManagedVerificationDialog", () => {
     expect(updateNewApiBaseUrlMock).toHaveBeenCalledWith(
       "https://changed.example",
     )
-    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
-    expect(props.onRetry).not.toHaveBeenCalled()
     expect(
       await screen.findByText("dialog.messages.quickConfigSaveFailed"),
     ).toBeInTheDocument()
+    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
+    expect(props.onRetry).not.toHaveBeenCalled()
   })
 
   it("shows password save failures without retrying verification", async () => {
@@ -300,11 +300,11 @@ describe("NewApiManagedVerificationDialog", () => {
 
     expect(updateNewApiUsernameMock).toHaveBeenCalledWith("admin")
     expect(updateNewApiPasswordMock).toHaveBeenCalledWith("secret")
-    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
-    expect(props.onRetry).not.toHaveBeenCalled()
     expect(
       await screen.findByText("dialog.messages.quickConfigSaveFailed"),
     ).toBeInTheDocument()
+    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
+    expect(props.onRetry).not.toHaveBeenCalled()
   })
 
   it("patches stale request config even when storage already has the same values", async () => {

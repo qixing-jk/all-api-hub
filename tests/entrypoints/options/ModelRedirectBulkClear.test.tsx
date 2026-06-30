@@ -132,10 +132,10 @@ describe("Model redirect bulk clear flow", () => {
 
     await waitFor(() => {
       expect(updateModelRedirect).toHaveBeenCalledWith({ enabled: true })
+      expect(toast.error).toHaveBeenCalledWith(
+        "modelRedirect:messages.updateFailed",
+      )
     })
-    expect(toast.error).toHaveBeenCalledWith(
-      "modelRedirect:messages.updateFailed",
-    )
   })
 
   it("does not clear when confirmation is canceled", async () => {

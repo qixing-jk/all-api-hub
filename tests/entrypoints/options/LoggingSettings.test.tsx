@@ -51,10 +51,10 @@ describe("LoggingSettings", () => {
 
     await waitFor(() => {
       expect(updateLoggingConsoleEnabled).toHaveBeenCalledWith(false)
+      expect(showUpdateToast).toHaveBeenCalledWith(
+        writeResult,
+        "settings:logging.consoleEnabled",
+      )
     })
-    expect(showUpdateToast).toHaveBeenCalledWith(
-      writeResult,
-      "settings:logging.consoleEnabled",
-    )
   })
 })
