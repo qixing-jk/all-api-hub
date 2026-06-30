@@ -5,7 +5,9 @@ import { useTranslation } from "react-i18next"
 
 import { BodySmall, Button, Heading3 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/core/logger"
+import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 
 /**
  * Unified logger scoped to shared settings section UI primitives.
@@ -15,7 +17,7 @@ const logger = createLogger("SettingSection")
 interface SettingSectionProps {
   title: string
   description?: string
-  onReset?: () => Promise<boolean>
+  onReset?: () => Promise<PreferenceWriteResult>
   resetButtonLabel?: string
   children: ReactNode
   id?: string
@@ -48,12 +50,16 @@ export function SettingSection({
 
     try {
       setIsResetting(true)
-      const success = await onReset()
+      const result = await onReset()
 
-      if (success) {
+      if (result.ok) {
         toast.success(t("messages.resetSuccess", { name: title }))
       } else {
-        toast.error(t("messages.resetFailed", { name: title }))
+        toast.error(
+          getPreferenceWriteFailureMessage(result.reason, {
+            fallback: t("messages.resetFailed", { name: title }),
+          }),
+        )
       }
     } catch (error) {
       logger.error("Failed to reset setting section", { title, error })

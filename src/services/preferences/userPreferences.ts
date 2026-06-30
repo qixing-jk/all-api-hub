@@ -519,6 +519,29 @@ export interface UserPreferences {
   webdavSyncStrategy?: WebDAVSyncStrategy
 }
 
+export type PreferenceWriteConflict = {
+  type: "stale"
+  expectedLastUpdated: number
+  actualLastUpdated: number
+}
+
+export type PreferenceWriteFailure =
+  | PreferenceWriteConflict
+  | {
+      type: "storage-error"
+      error: unknown
+    }
+
+export type PreferenceWriteResult =
+  | {
+      ok: true
+      preferences: UserPreferences
+    }
+  | {
+      ok: false
+      reason: PreferenceWriteFailure
+    }
+
 // Stable template used for field-level defaults.
 // Use `createDefaultPreferences()` when a fresh preference object is required.
 
@@ -683,60 +706,86 @@ class UserPreferencesService {
   }
 
   /**
-   * Save partial user preferences (deep merge) and return the stamped snapshot.
+   * Save partial user preferences (deep merge) and return a typed write result.
    */
   async savePreferencesWithResult(
     preferences: DeepPartial<UserPreferences>,
     options?: {
       expectedLastUpdated?: number
     },
-  ): Promise<UserPreferences | null> {
-    const updatedPreferences = await this.withStorageWriteLock(async () => {
-      const currentPreferences = await this.getPreferences()
-      if (
-        typeof options?.expectedLastUpdated === "number" &&
-        Number.isFinite(options.expectedLastUpdated) &&
-        currentPreferences.lastUpdated !== options.expectedLastUpdated
-      ) {
-        return null
+  ): Promise<PreferenceWriteResult> {
+    try {
+      const writeResult = await this.withStorageWriteLock(async () => {
+        const currentPreferences = await this.getPreferences()
+        if (
+          typeof options?.expectedLastUpdated === "number" &&
+          Number.isFinite(options.expectedLastUpdated) &&
+          currentPreferences.lastUpdated !== options.expectedLastUpdated
+        ) {
+          return {
+            ok: false,
+            reason: {
+              type: "stale",
+              expectedLastUpdated: options.expectedLastUpdated,
+              actualLastUpdated: currentPreferences.lastUpdated,
+            },
+          } satisfies PreferenceWriteResult
+        }
+
+        const timestamp = Date.now()
+        const sharedPreferencesLastUpdated = patchTouchesSharedPreferences(
+          preferences,
+        )
+          ? timestamp
+          : getSharedPreferencesLastUpdated(currentPreferences)
+
+        const nextPreferences = stampPreferencesMetadata(
+          deepOverride(currentPreferences, preferences),
+          {
+            lastUpdated: timestamp,
+            sharedPreferencesLastUpdated,
+          },
+        )
+
+        await this.storage.set(
+          USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+          nextPreferences,
+        )
+
+        return {
+          ok: true,
+          preferences: nextPreferences,
+        } satisfies PreferenceWriteResult
+      })
+
+      if (!writeResult.ok && writeResult.reason.type === "stale") {
+        logger.debug("跳过过期的偏好设置写入", {
+          expectedLastUpdated: writeResult.reason.expectedLastUpdated,
+          actualLastUpdated: writeResult.reason.actualLastUpdated,
+        })
+        return writeResult
       }
 
-      const timestamp = Date.now()
-      const sharedPreferencesLastUpdated = patchTouchesSharedPreferences(
-        preferences,
-      )
-        ? timestamp
-        : getSharedPreferencesLastUpdated(currentPreferences)
+      if (writeResult.ok) {
+        logger.debug("偏好设置保存成功", {
+          lastUpdated: writeResult.preferences.lastUpdated,
+          sharedPreferencesLastUpdated:
+            writeResult.preferences.sharedPreferencesLastUpdated,
+          preferencesVersion: writeResult.preferences.preferencesVersion,
+        })
+      }
 
-      const nextPreferences = stampPreferencesMetadata(
-        deepOverride(currentPreferences, preferences),
-        {
-          lastUpdated: timestamp,
-          sharedPreferencesLastUpdated,
+      return writeResult
+    } catch (error) {
+      logger.error("保存偏好设置失败", error)
+      return {
+        ok: false,
+        reason: {
+          type: "storage-error",
+          error,
         },
-      )
-
-      await this.storage.set(
-        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-        nextPreferences,
-      )
-
-      return nextPreferences
-    })
-    if (!updatedPreferences) {
-      logger.debug("跳过过期的偏好设置写入", {
-        expectedLastUpdated: options?.expectedLastUpdated,
-      })
-      return null
+      }
     }
-
-    logger.debug("偏好设置保存成功", {
-      lastUpdated: updatedPreferences.lastUpdated,
-      sharedPreferencesLastUpdated:
-        updatedPreferences.sharedPreferencesLastUpdated,
-      preferencesVersion: updatedPreferences.preferencesVersion,
-    })
-    return updatedPreferences
   }
 
   /**
@@ -747,23 +796,16 @@ class UserPreferencesService {
     options?: {
       expectedLastUpdated?: number
     },
-  ): Promise<boolean> {
-    try {
-      const updatedPreferences = await this.savePreferencesWithResult(
-        preferences,
-        options,
-      )
-      return updatedPreferences !== null
-    } catch (error) {
-      logger.error("保存偏好设置失败", error)
-      return false
-    }
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferencesWithResult(preferences, options)
   }
 
   /**
    * Update active tab preference.
    */
-  async updateActiveTab(activeTab: DashboardTabType): Promise<boolean> {
+  async updateActiveTab(
+    activeTab: DashboardTabType,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ activeTab })
   }
 
@@ -771,7 +813,9 @@ class UserPreferencesService {
    * Enable/disable automatically showing the inline update log after updates.
    * @param enabled - When true, shows the update log on first UI open after update.
    */
-  async updateOpenChangelogOnUpdate(enabled: boolean): Promise<boolean> {
+  async updateOpenChangelogOnUpdate(
+    enabled: boolean,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ openChangelogOnUpdate: enabled })
   }
 
@@ -780,7 +824,9 @@ class UserPreferencesService {
    * successfully adding an account.
    * @param enabled - When true, runs token provisioning after account add.
    */
-  async updateAutoProvisionKeyOnAccountAdd(enabled: boolean): Promise<boolean> {
+  async updateAutoProvisionKeyOnAccountAdd(
+    enabled: boolean,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ autoProvisionKeyOnAccountAdd: enabled })
   }
 
@@ -791,7 +837,7 @@ class UserPreferencesService {
    */
   async updateAutoFillCurrentSiteUrlOnAccountAdd(
     enabled: boolean,
-  ): Promise<boolean> {
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ autoFillCurrentSiteUrlOnAccountAdd: enabled })
   }
 
@@ -800,14 +846,18 @@ class UserPreferencesService {
    * @param enabled - When true, adding an account whose site URL already exists
    * prompts for confirmation.
    */
-  async updateWarnOnDuplicateAccountAdd(enabled: boolean): Promise<boolean> {
+  async updateWarnOnDuplicateAccountAdd(
+    enabled: boolean,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ warnOnDuplicateAccountAdd: enabled })
   }
 
   /**
    * Update currency preference.
    */
-  async updateCurrencyType(currencyType: CurrencyType): Promise<boolean> {
+  async updateCurrencyType(
+    currencyType: CurrencyType,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ currencyType })
   }
 
@@ -817,7 +867,9 @@ class UserPreferencesService {
    * When disabled, expensive log pagination requests are skipped and today fields
    * are treated as zero during refresh.
    */
-  async updateShowTodayCashflow(showTodayCashflow: boolean): Promise<boolean> {
+  async updateShowTodayCashflow(
+    showTodayCashflow: boolean,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ showTodayCashflow })
   }
 
@@ -827,14 +879,16 @@ class UserPreferencesService {
   async updateSortConfig(
     sortField: ActiveSortField,
     sortOrder: SortOrder,
-  ): Promise<boolean> {
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ sortField, sortOrder })
   }
 
   /**
    * Toggle health status visibility.
    */
-  async updateShowHealthStatus(showHealthStatus: boolean): Promise<boolean> {
+  async updateShowHealthStatus(
+    showHealthStatus: boolean,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ showHealthStatus })
   }
 
@@ -848,7 +902,7 @@ class UserPreferencesService {
     backupEncryptionEnabled?: boolean
     backupEncryptionPassword?: string
     syncData?: WebDAVSettings["syncData"]
-  }): Promise<boolean> {
+  }): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       webdav: settings,
     })
@@ -861,7 +915,7 @@ class UserPreferencesService {
     autoSync?: boolean
     syncInterval?: number
     syncStrategy?: WebDAVSettings["syncStrategy"]
-  }): Promise<boolean> {
+  }): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       webdav: settings,
     })
@@ -870,26 +924,36 @@ class UserPreferencesService {
   /**
    * Reset all preferences to defaults.
    */
-  async resetToDefaults(): Promise<boolean> {
+  async resetToDefaults(): Promise<PreferenceWriteResult> {
     try {
+      const nextPreferences = createDefaultPreferences()
       await this.withStorageWriteLock(async () => {
         await this.storage.set(
           USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-          createDefaultPreferences(),
+          nextPreferences,
         )
       })
       logger.info("已重置为默认设置")
-      return true
+      return {
+        ok: true,
+        preferences: nextPreferences,
+      }
     } catch (error) {
       logger.error("重置设置失败", error)
-      return false
+      return {
+        ok: false,
+        reason: {
+          type: "storage-error",
+          error,
+        },
+      }
     }
   }
 
   /**
    * Clear stored preferences (removes key).
    */
-  async clearPreferences(): Promise<boolean> {
+  async clearPreferences(): Promise<PreferenceWriteResult> {
     try {
       await this.withStorageWriteLock(async () => {
         await this.storage.remove(
@@ -897,10 +961,19 @@ class UserPreferencesService {
         )
       })
       logger.info("偏好设置已清空")
-      return true
+      return {
+        ok: true,
+        preferences: createDefaultPreferences(),
+      }
     } catch (error) {
       logger.error("清空偏好设置失败", error)
-      return false
+      return {
+        ok: false,
+        reason: {
+          type: "storage-error",
+          error,
+        },
+      }
     }
   }
 
@@ -925,9 +998,9 @@ class UserPreferencesService {
     options?: {
       preserveWebdav?: boolean
     },
-  ): Promise<boolean> {
+  ): Promise<PreferenceWriteResult> {
     try {
-      await this.withStorageWriteLock(async () => {
+      const importedPreferences = await this.withStorageWriteLock(async () => {
         const migratedPreferences = migrateAndNormalizePreferences(preferences)
 
         const currentPreferences = options?.preserveWebdav
@@ -951,19 +1024,31 @@ class UserPreferencesService {
             : importedAt
           : importedAt
 
+        const nextPreferences = stampPreferencesMetadata(preferencesToStore, {
+          lastUpdated: importedAt,
+          sharedPreferencesLastUpdated,
+        })
+
         await this.storage.set(
           USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-          stampPreferencesMetadata(preferencesToStore, {
-            lastUpdated: importedAt,
-            sharedPreferencesLastUpdated,
-          }),
+          nextPreferences,
         )
+        return nextPreferences
       })
       logger.info("偏好设置导入成功，已迁移至最新版本")
-      return true
+      return {
+        ok: true,
+        preferences: importedPreferences,
+      }
     } catch (error) {
       logger.error("导入偏好设置失败", error)
-      return false
+      return {
+        ok: false,
+        reason: {
+          type: "storage-error",
+          error,
+        },
+      }
     }
   }
 
@@ -975,12 +1060,12 @@ class UserPreferencesService {
 
   async setSortingPriorityConfig(
     config: SortingPriorityConfig,
-  ): Promise<boolean> {
+  ): Promise<PreferenceWriteResult> {
     config.lastModified = Date.now()
     return this.savePreferences({ sortingPriorityConfig: config })
   }
 
-  async resetSortingPriorityConfig(): Promise<boolean> {
+  async resetSortingPriorityConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       sortingPriorityConfig: createDefaultSortingPriorityConfig(),
     })
@@ -997,7 +1082,7 @@ class UserPreferencesService {
   /**
    * Set language preference.
    */
-  async setLanguage(language: string): Promise<boolean> {
+  async setLanguage(language: string): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       language: normalizeAppLanguage(language) ?? language,
     })
@@ -1016,14 +1101,14 @@ class UserPreferencesService {
    */
   async updateLoggingPreferences(
     updates: Partial<LoggingPreferences>,
-  ): Promise<boolean> {
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ logging: updates })
   }
 
   /**
    * Reset display settings (currency + active tab).
    */
-  async resetDisplaySettings(): Promise<boolean> {
+  async resetDisplaySettings(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       activeTab: DEFAULT_PREFERENCES.activeTab,
       currencyType: DEFAULT_PREFERENCES.currencyType,
@@ -1034,7 +1119,7 @@ class UserPreferencesService {
   /**
    * Reset auto refresh config.
    */
-  async resetAutoRefreshConfig(): Promise<boolean> {
+  async resetAutoRefreshConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       accountAutoRefresh: DEFAULT_PREFERENCES.accountAutoRefresh,
     })
@@ -1043,7 +1128,7 @@ class UserPreferencesService {
   /**
    * Reset New API config.
    */
-  async resetNewApiConfig(): Promise<boolean> {
+  async resetNewApiConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       newApi: DEFAULT_PREFERENCES.newApi,
     })
@@ -1052,7 +1137,9 @@ class UserPreferencesService {
   /**
    * Update Veloera config.
    */
-  async updateVeloeraConfig(config: Partial<VeloeraConfig>): Promise<boolean> {
+  async updateVeloeraConfig(
+    config: Partial<VeloeraConfig>,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       veloera: config,
     })
@@ -1061,7 +1148,9 @@ class UserPreferencesService {
   /**
    * Update Done Hub config.
    */
-  async updateDoneHubConfig(config: Partial<DoneHubConfig>): Promise<boolean> {
+  async updateDoneHubConfig(
+    config: Partial<DoneHubConfig>,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       doneHub: config,
     })
@@ -1070,7 +1159,7 @@ class UserPreferencesService {
   /**
    * Reset Veloera config.
    */
-  async resetVeloeraConfig(): Promise<boolean> {
+  async resetVeloeraConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       veloera: DEFAULT_PREFERENCES.veloera,
     })
@@ -1079,7 +1168,7 @@ class UserPreferencesService {
   /**
    * Reset Done Hub config.
    */
-  async resetDoneHubConfig(): Promise<boolean> {
+  async resetDoneHubConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       doneHub: DEFAULT_DONE_HUB_CONFIG,
     })
@@ -1088,7 +1177,9 @@ class UserPreferencesService {
   /**
    * Update Octopus config.
    */
-  async updateOctopusConfig(config: Partial<OctopusConfig>): Promise<boolean> {
+  async updateOctopusConfig(
+    config: Partial<OctopusConfig>,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       octopus: config,
     })
@@ -1097,7 +1188,9 @@ class UserPreferencesService {
   /**
    * Update AxonHub config.
    */
-  async updateAxonHubConfig(config: Partial<AxonHubConfig>): Promise<boolean> {
+  async updateAxonHubConfig(
+    config: Partial<AxonHubConfig>,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       axonHub: config,
     })
@@ -1108,7 +1201,7 @@ class UserPreferencesService {
    */
   async updateClaudeCodeHubConfig(
     config: Partial<ClaudeCodeHubConfig>,
-  ): Promise<boolean> {
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       claudeCodeHub: config,
     })
@@ -1117,7 +1210,7 @@ class UserPreferencesService {
   /**
    * Reset Octopus config.
    */
-  async resetOctopusConfig(): Promise<boolean> {
+  async resetOctopusConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       octopus: DEFAULT_PREFERENCES.octopus,
     })
@@ -1126,7 +1219,7 @@ class UserPreferencesService {
   /**
    * Reset AxonHub config.
    */
-  async resetAxonHubConfig(): Promise<boolean> {
+  async resetAxonHubConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       axonHub: DEFAULT_PREFERENCES.axonHub,
     })
@@ -1135,7 +1228,7 @@ class UserPreferencesService {
   /**
    * Reset Claude Code Hub config.
    */
-  async resetClaudeCodeHubConfig(): Promise<boolean> {
+  async resetClaudeCodeHubConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       claudeCodeHub: DEFAULT_PREFERENCES.claudeCodeHub,
     })
@@ -1144,7 +1237,9 @@ class UserPreferencesService {
   /**
    * Update managed site type (new-api, veloera, done-hub, or octopus).
    */
-  async updateManagedSiteType(siteType: ManagedSiteType): Promise<boolean> {
+  async updateManagedSiteType(
+    siteType: ManagedSiteType,
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       managedSiteType: siteType,
     })
@@ -1191,23 +1286,23 @@ class UserPreferencesService {
   /**
    * Reset New API Model Sync config.
    */
-  async resetNewApiModelSyncConfig(): Promise<boolean> {
+  async resetNewApiModelSyncConfig(): Promise<PreferenceWriteResult> {
     return this.resetManagedSiteModelSyncConfig()
   }
 
-  async resetManagedSiteModelSyncConfig(): Promise<boolean> {
+  async resetManagedSiteModelSyncConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       managedSiteModelSync: DEFAULT_PREFERENCES.managedSiteModelSync,
     })
   }
 
-  async resetCliProxyConfig(): Promise<boolean> {
+  async resetCliProxyConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       cliProxy: DEFAULT_PREFERENCES.cliProxy,
     })
   }
 
-  async resetClaudeCodeRouterConfig(): Promise<boolean> {
+  async resetClaudeCodeRouterConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       claudeCodeRouter: DEFAULT_PREFERENCES.claudeCodeRouter,
     })
@@ -1216,7 +1311,7 @@ class UserPreferencesService {
   /**
    * Reset auto check-in config.
    */
-  async resetAutoCheckinConfig(): Promise<boolean> {
+  async resetAutoCheckinConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       autoCheckin: DEFAULT_PREFERENCES.autoCheckin,
     })
@@ -1225,7 +1320,7 @@ class UserPreferencesService {
   /**
    * Reset model redirect config.
    */
-  async resetModelRedirectConfig(): Promise<boolean> {
+  async resetModelRedirectConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       modelRedirect: DEFAULT_PREFERENCES.modelRedirect,
     })
@@ -1234,7 +1329,7 @@ class UserPreferencesService {
   /**
    * Reset redemption assist config.
    */
-  async resetRedemptionAssist(): Promise<boolean> {
+  async resetRedemptionAssist(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       redemptionAssist: DEFAULT_PREFERENCES.redemptionAssist,
     })
@@ -1243,7 +1338,7 @@ class UserPreferencesService {
   /**
    * Reset Web AI API Check config.
    */
-  async resetWebAiApiCheck(): Promise<boolean> {
+  async resetWebAiApiCheck(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       webAiApiCheck: DEFAULT_PREFERENCES.webAiApiCheck,
     })
@@ -1254,7 +1349,7 @@ class UserPreferencesService {
    */
   async updateWebAiApiCheck(
     updates: DeepPartial<WebAiApiCheckPreferences>,
-  ): Promise<boolean> {
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       webAiApiCheck: updates,
     })
@@ -1263,7 +1358,7 @@ class UserPreferencesService {
   /**
    * Reset WebDAV config.
    */
-  async resetWebdavConfig(): Promise<boolean> {
+  async resetWebdavConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       webdav: DEFAULT_PREFERENCES.webdav,
     })
@@ -1274,7 +1369,7 @@ class UserPreferencesService {
    */
   async updateTaskNotifications(
     updates: Partial<TaskNotificationPreferences>,
-  ): Promise<boolean> {
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       taskNotifications: updates,
     })
@@ -1283,7 +1378,7 @@ class UserPreferencesService {
   /**
    * Reset task-notification preferences.
    */
-  async resetTaskNotifications(): Promise<boolean> {
+  async resetTaskNotifications(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
     })
@@ -1294,7 +1389,7 @@ class UserPreferencesService {
    */
   async updateSiteAnnouncementNotifications(
     updates: Partial<SiteAnnouncementPreferences>,
-  ): Promise<boolean> {
+  ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       siteAnnouncementNotifications: updates,
     })

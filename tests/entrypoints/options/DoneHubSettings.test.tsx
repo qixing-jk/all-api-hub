@@ -7,12 +7,29 @@ import DoneHubSettings from "~/features/BasicSettings/components/tabs/ManagedSit
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
+const { showUpdateToastMock } = vi.hoisted(() => ({
+  showUpdateToastMock: vi.fn(),
+}))
+
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
 }))
 
 vi.mock("~/utils/core/toastHelpers", () => ({
-  showUpdateToast: vi.fn(),
+  runPreferenceUpdateWithToast: async ({
+    expectedLastUpdated,
+    setting,
+    update,
+  }: {
+    expectedLastUpdated: number
+    setting: string
+    update: (options: { expectedLastUpdated: number }) => Promise<any>
+  }) => {
+    const result = await update({ expectedLastUpdated })
+    showUpdateToastMock(result, setting)
+    return result
+  },
+  showUpdateToast: showUpdateToastMock,
 }))
 
 describe("DoneHubSettings", () => {
@@ -28,16 +45,24 @@ describe("DoneHubSettings", () => {
     )
 
   it("trims the base URL before persisting", async () => {
-    const updateDoneHubBaseUrl = vi.fn().mockResolvedValue(true)
+    const updateDoneHubBaseUrl = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 1 },
       doneHubBaseUrl: "https://api.example.com",
       doneHubAdminToken: "",
       doneHubUserId: "",
       updateDoneHubBaseUrl,
-      updateDoneHubAdminToken: vi.fn().mockResolvedValue(true),
-      updateDoneHubUserId: vi.fn().mockResolvedValue(true),
-      resetDoneHubConfig: vi.fn().mockResolvedValue(true),
+      updateDoneHubAdminToken: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateDoneHubUserId: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      resetDoneHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
@@ -62,16 +87,24 @@ describe("DoneHubSettings", () => {
   })
 
   it("skips persisting when the trimmed base URL is unchanged", () => {
-    const updateDoneHubBaseUrl = vi.fn().mockResolvedValue(true)
+    const updateDoneHubBaseUrl = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 1 },
       doneHubBaseUrl: "https://donehub.example.com",
       doneHubAdminToken: "",
       doneHubUserId: "",
       updateDoneHubBaseUrl,
-      updateDoneHubAdminToken: vi.fn().mockResolvedValue(true),
-      updateDoneHubUserId: vi.fn().mockResolvedValue(true),
-      resetDoneHubConfig: vi.fn().mockResolvedValue(true),
+      updateDoneHubAdminToken: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateDoneHubUserId: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      resetDoneHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
@@ -90,16 +123,24 @@ describe("DoneHubSettings", () => {
   })
 
   it("shows an inline error and skips persisting when the admin user ID is not numeric", async () => {
-    const updateDoneHubUserId = vi.fn().mockResolvedValue(true)
+    const updateDoneHubUserId = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 1 },
       doneHubBaseUrl: "https://donehub.example.com",
       doneHubAdminToken: "",
       doneHubUserId: "100",
-      updateDoneHubBaseUrl: vi.fn().mockResolvedValue(true),
-      updateDoneHubAdminToken: vi.fn().mockResolvedValue(true),
+      updateDoneHubBaseUrl: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateDoneHubAdminToken: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
       updateDoneHubUserId,
-      resetDoneHubConfig: vi.fn().mockResolvedValue(true),
+      resetDoneHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
@@ -119,17 +160,25 @@ describe("DoneHubSettings", () => {
   })
 
   it("persists admin token and numeric user ID updates with the current preferences version", async () => {
-    const updateDoneHubAdminToken = vi.fn().mockResolvedValue(true)
-    const updateDoneHubUserId = vi.fn().mockResolvedValue(true)
+    const updateDoneHubAdminToken = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
+    const updateDoneHubUserId = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 2 },
       doneHubBaseUrl: "https://donehub.example.com",
       doneHubAdminToken: "old-token",
       doneHubUserId: "100",
-      updateDoneHubBaseUrl: vi.fn().mockResolvedValue(true),
+      updateDoneHubBaseUrl: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
       updateDoneHubAdminToken,
       updateDoneHubUserId,
-      resetDoneHubConfig: vi.fn().mockResolvedValue(true),
+      resetDoneHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
@@ -157,11 +206,11 @@ describe("DoneHubSettings", () => {
     })
 
     expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:doneHub.fields.adminTokenLabel",
     )
     expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:doneHub.fields.userIdLabel",
     )
   })
@@ -172,10 +221,18 @@ describe("DoneHubSettings", () => {
       doneHubBaseUrl: "https://donehub.example.com",
       doneHubAdminToken: "same-token",
       doneHubUserId: "100",
-      updateDoneHubBaseUrl: vi.fn().mockResolvedValue(true),
-      updateDoneHubAdminToken: vi.fn().mockResolvedValue(true),
-      updateDoneHubUserId: vi.fn().mockResolvedValue(true),
-      resetDoneHubConfig: vi.fn().mockResolvedValue(true),
+      updateDoneHubBaseUrl: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateDoneHubAdminToken: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateDoneHubUserId: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      resetDoneHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any
     vi.mocked(useUserPreferencesContext).mockReturnValue(contextValue)
 

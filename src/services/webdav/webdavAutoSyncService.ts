@@ -62,6 +62,7 @@ import { withExtensionStorageWriteLock } from "../core/storageWriteLock"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"
 import {
   userPreferences,
+  type PreferenceWriteFailure,
   type UserPreferences,
 } from "../preferences/userPreferences"
 import { WebdavAutoSyncMessageTypes } from "../runtimeMessaging/messageTypes"
@@ -98,7 +99,7 @@ type UpdateWebdavAutoSyncSettingsResult =
     }
   | {
       ok: false
-      reason: "conflict" | "error"
+      reason: PreferenceWriteFailure
     }
 
 /**
@@ -1015,11 +1016,11 @@ class WebdavAutoSyncService {
   }
 
   private async importPreferencesOrThrow(preferences: UserPreferences) {
-    const imported = await userPreferences.importPreferences(preferences, {
+    const writeResult = await userPreferences.importPreferences(preferences, {
       preserveWebdav: true,
     })
 
-    if (!imported) {
+    if (!writeResult.ok) {
       throw new Error("Failed to import WebDAV preferences")
     }
   }
@@ -1566,16 +1567,16 @@ class WebdavAutoSyncService {
     options?: { expectedLastUpdated?: number },
   ): Promise<UpdateWebdavAutoSyncSettingsResult> {
     try {
-      const savedPreferences = await userPreferences.savePreferencesWithResult(
+      const writeResult = await userPreferences.savePreferencesWithResult(
         {
           webdav: settings,
         },
         options,
       )
-      if (!savedPreferences) {
+      if (!writeResult.ok) {
         return {
           ok: false,
-          reason: "conflict",
+          reason: writeResult.reason,
         }
       }
 
@@ -1583,13 +1584,16 @@ class WebdavAutoSyncService {
       logger.info("设置已更新", settings)
       return {
         ok: true,
-        savedPreferences,
+        savedPreferences: writeResult.preferences,
       }
     } catch (error) {
       logger.error("更新设置失败", error)
       return {
         ok: false,
-        reason: "error",
+        reason: {
+          type: "storage-error",
+          error,
+        },
       }
     }
   }
@@ -1754,7 +1758,7 @@ export async function resolveWebdavAutoSyncUpdateSettingsMessage(
       : {
           success: false,
           error:
-            result.reason === "conflict"
+            result.reason.type === "stale"
               ? t("settings:messages.preferencesChangedExternally")
               : t("settings:messages.saveSettingsFailed"),
         }

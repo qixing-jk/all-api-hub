@@ -235,12 +235,12 @@ async function importV1Backup(
   if (preferencesRequested) {
     const preferencesData = data.preferences || data.data?.preferences
     if (preferencesData) {
-      const success = options?.preserveWebdav
+      const writeResult = options?.preserveWebdav
         ? await userPreferences.importPreferences(preferencesData, {
             preserveWebdav: true,
           })
         : await userPreferences.importPreferences(preferencesData)
-      if (success) {
+      if (writeResult.ok) {
         preferencesImported = true
       } else {
         logger.error("Failed to import user preferences from legacy backup")
@@ -540,12 +540,12 @@ async function importV2Backup(
 
   if (preferencesRequested) {
     const { preferences } = data as BackupFullV2 | BackupPreferencesPartialV2
-    const success = options?.preserveWebdav
+    const writeResult = options?.preserveWebdav
       ? await userPreferences.importPreferences(preferences, {
           preserveWebdav: true,
         })
       : await userPreferences.importPreferences(preferences)
-    if (success) {
+    if (writeResult.ok) {
       preferencesImported = true
     } else {
       logger.error("Failed to import user preferences from V2 backup")

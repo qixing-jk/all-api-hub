@@ -1,3 +1,4 @@
+import type { PreferenceWriteFailure } from "~/services/preferences/userPreferences"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   type ProductAnalyticsActionContext,
@@ -19,9 +20,12 @@ export const webDavSettingsSurface =
  * distinguish save-before-action failures from remote WebDAV execution.
  */
 export class PersistWebdavConfigError extends Error {
-  constructor(cause?: unknown) {
+  readonly preferenceFailure?: PreferenceWriteFailure
+
+  constructor(cause?: unknown, options?: { failure?: PreferenceWriteFailure }) {
     super("Failed to persist WebDAV settings", { cause })
     this.name = "PersistWebdavConfigError"
+    this.preferenceFailure = options?.failure
     ;(this as Error & { cause?: unknown }).cause = cause
   }
 }

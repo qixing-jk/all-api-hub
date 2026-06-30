@@ -72,8 +72,8 @@ export function UpdateLogDialog({
 
     setIsSavingAutoOpen(true)
     try {
-      const success = await updateOpenChangelogOnUpdate(enabled)
-      if (success) {
+      const result = await updateOpenChangelogOnUpdate(enabled)
+      if (result.ok) {
         setAutoOpenOverride(enabled)
       }
     } catch (error) {

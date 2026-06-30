@@ -51,15 +51,15 @@ export default function LoggingSettings() {
   } = useUserPreferencesContext()
 
   const handleConsoleToggle = async (enabled: boolean) => {
-    const success = await updateLoggingConsoleEnabled(enabled)
-    showUpdateToast(success, t("logging.consoleEnabled"))
+    const writeResult = await updateLoggingConsoleEnabled(enabled)
+    showUpdateToast(writeResult, t("logging.consoleEnabled"))
   }
 
   const handleLevelChange = async (level: string) => {
     const nextLevel = level as LogLevel
     if (nextLevel === loggingLevel) return
-    const success = await updateLoggingLevel(nextLevel)
-    showUpdateToast(success, t("logging.minLevel"))
+    const writeResult = await updateLoggingLevel(nextLevel)
+    showUpdateToast(writeResult, t("logging.minLevel"))
   }
 
   return (

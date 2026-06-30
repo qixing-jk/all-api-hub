@@ -186,22 +186,22 @@ export function NewApiManagedVerificationDialog(
 
     try {
       if (needsBaseUrl && nextBaseUrl !== newApiBaseUrl) {
-        const success = await updateNewApiBaseUrl(nextBaseUrl)
-        if (!success) {
+        const writeResult = await updateNewApiBaseUrl(nextBaseUrl)
+        if (!writeResult.ok) {
           throw new Error(t("dialog.messages.quickConfigSaveFailed"))
         }
       }
 
       if (needsCredentials && nextUsername !== newApiUsername) {
-        const success = await updateNewApiUsername(nextUsername)
-        if (!success) {
+        const writeResult = await updateNewApiUsername(nextUsername)
+        if (!writeResult.ok) {
           throw new Error(t("dialog.messages.quickConfigSaveFailed"))
         }
       }
 
       if (needsCredentials && quickPassword !== newApiPassword) {
-        const success = await updateNewApiPassword(quickPassword)
-        if (!success) {
+        const writeResult = await updateNewApiPassword(quickPassword)
+        if (!writeResult.ok) {
           throw new Error(t("dialog.messages.quickConfigSaveFailed"))
         }
       }

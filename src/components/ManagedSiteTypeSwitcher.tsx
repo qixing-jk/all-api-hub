@@ -84,8 +84,8 @@ export default function ManagedSiteTypeSwitcher({
     const siteType = value as ManagedSiteType
     if (siteType === managedSiteType) return
 
-    const success = await updateManagedSiteType(siteType)
-    showUpdateToast(success, t("managedSite.siteTypeLabel"))
+    const writeResult = await updateManagedSiteType(siteType)
+    showUpdateToast(writeResult, t("managedSite.siteTypeLabel"))
   }
 
   return (

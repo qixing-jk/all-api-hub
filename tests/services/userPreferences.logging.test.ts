@@ -42,10 +42,10 @@ describe("userPreferences logging preferences", () => {
       logging: { consoleEnabled: true, level: "info" },
     })
 
-    const success = await userPreferences.updateLoggingPreferences({
+    const writeResult = await userPreferences.updateLoggingPreferences({
       level: "error",
     })
-    expect(success).toBe(true)
+    expect(writeResult.ok).toBe(true)
 
     const logging = await userPreferences.getLoggingPreferences()
     expect(logging.consoleEnabled).toBe(true)

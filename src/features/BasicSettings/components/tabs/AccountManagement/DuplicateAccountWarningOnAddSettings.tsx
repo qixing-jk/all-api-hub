@@ -16,8 +16,8 @@ export default function DuplicateAccountWarningOnAddSettings() {
     useUserPreferencesContext()
 
   const handleToggle = async (enabled: boolean) => {
-    const success = await updateWarnOnDuplicateAccountAdd(enabled)
-    showUpdateToast(success, t("duplicateAccountWarningOnAdd.toggleLabel"))
+    const writeResult = await updateWarnOnDuplicateAccountAdd(enabled)
+    showUpdateToast(writeResult, t("duplicateAccountWarningOnAdd.toggleLabel"))
   }
 
   return (

@@ -43,13 +43,13 @@ export default function RefreshSettings() {
   }, [minRefreshInterval])
 
   const handleAutoRefreshChange = async (value: boolean) => {
-    const success = await updateAutoRefresh(value)
-    showUpdateToast(success, t("refresh.autoRefresh"))
+    const writeResult = await updateAutoRefresh(value)
+    showUpdateToast(writeResult, t("refresh.autoRefresh"))
   }
 
   const handleRefreshOnOpenChange = async (value: boolean) => {
-    const success = await updateRefreshOnOpen(value)
-    showUpdateToast(success, t("refresh.refreshOnOpen"))
+    const writeResult = await updateRefreshOnOpen(value)
+    showUpdateToast(writeResult, t("refresh.refreshOnOpen"))
   }
 
   const handleRefreshIntervalBlur = async () => {
@@ -65,8 +65,8 @@ export default function RefreshSettings() {
     }
     if (value === refreshInterval) return
 
-    const success = await updateRefreshInterval(value)
-    showUpdateToast(success, t("refresh.refreshInterval"))
+    const writeResult = await updateRefreshInterval(value)
+    showUpdateToast(writeResult, t("refresh.refreshInterval"))
   }
 
   const handleMinRefreshIntervalBlur = async () => {
@@ -84,8 +84,8 @@ export default function RefreshSettings() {
     }
     if (value === minRefreshInterval) return
 
-    const success = await updateMinRefreshInterval(value)
-    showUpdateToast(success, t("refresh.minRefreshInterval"))
+    const writeResult = await updateMinRefreshInterval(value)
+    showUpdateToast(writeResult, t("refresh.minRefreshInterval"))
   }
 
   return (

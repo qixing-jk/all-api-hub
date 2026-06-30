@@ -70,8 +70,8 @@ export default function ModelRedirectSettings() {
   const handleUpdate = async (updates: Record<string, unknown>) => {
     try {
       setIsUpdating(true)
-      const success = await updateModelRedirect(updates)
-      if (!success) {
+      const writeResult = await updateModelRedirect(updates)
+      if (!writeResult.ok) {
         toast.error(t("messages.updateFailed"))
         return
       }

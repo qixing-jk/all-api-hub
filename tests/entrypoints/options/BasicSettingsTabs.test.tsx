@@ -56,6 +56,22 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 })
 
 vi.mock("~/utils/core/toastHelpers", () => ({
+  createVersionedPreferenceSaveOptions: (expectedLastUpdated: number) => ({
+    expectedLastUpdated,
+  }),
+  runPreferenceUpdateWithToast: async ({
+    expectedLastUpdated,
+    setting,
+    update,
+  }: {
+    expectedLastUpdated: number
+    setting: string
+    update: (options: { expectedLastUpdated: number }) => Promise<any>
+  }) => {
+    const result = await update({ expectedLastUpdated })
+    showUpdateToastMock(result, setting)
+    return result
+  },
   showUpdateToast: (...args: unknown[]) => showUpdateToastMock(...args),
 }))
 
@@ -88,13 +104,21 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
   newApiUsername: "admin",
   newApiPassword: "secret-password",
   newApiTotpSecret: "JBSWY3DPEHPK3PXP",
-  updateNewApiBaseUrl: vi.fn().mockResolvedValue(true),
-  updateNewApiAdminToken: vi.fn().mockResolvedValue(true),
-  updateNewApiUserId: vi.fn().mockResolvedValue(true),
-  updateNewApiUsername: vi.fn().mockResolvedValue(true),
-  updateNewApiPassword: vi.fn().mockResolvedValue(true),
-  updateNewApiTotpSecret: vi.fn().mockResolvedValue(true),
-  resetNewApiConfig: vi.fn().mockResolvedValue(true),
+  updateNewApiBaseUrl: vi.fn().mockResolvedValue({ ok: true, preferences: {} }),
+  updateNewApiAdminToken: vi
+    .fn()
+    .mockResolvedValue({ ok: true, preferences: {} }),
+  updateNewApiUserId: vi.fn().mockResolvedValue({ ok: true, preferences: {} }),
+  updateNewApiUsername: vi
+    .fn()
+    .mockResolvedValue({ ok: true, preferences: {} }),
+  updateNewApiPassword: vi
+    .fn()
+    .mockResolvedValue({ ok: true, preferences: {} }),
+  updateNewApiTotpSecret: vi
+    .fn()
+    .mockResolvedValue({ ok: true, preferences: {} }),
+  resetNewApiConfig: vi.fn().mockResolvedValue({ ok: true, preferences: {} }),
   ...overrides,
 })
 
@@ -257,15 +281,15 @@ describe("BasicSettings tab layout", () => {
 
     expect(adminTokenInput).toHaveAttribute("type", "text")
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:newApi.fields.baseUrlLabel",
     )
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:newApi.fields.adminTokenLabel",
     )
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:newApi.fields.userIdLabel",
     )
   })

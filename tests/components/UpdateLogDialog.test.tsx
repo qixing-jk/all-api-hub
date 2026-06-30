@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { UpdateLogDialog } from "~/components/dialogs/UpdateLogDialog"
 import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/components/dialogs/UpdateLogDialog/testIds"
+import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import * as browserApi from "~/utils/browser/browserApi"
 import * as docsLinks from "~/utils/navigation/docsLinks"
@@ -21,13 +22,12 @@ describe("UpdateLogDialog", () => {
   })
 
   it("toggles the open-changelog-on-update preference from the dialog", async () => {
-    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(
-      buildUserPreferences({ openChangelogOnUpdate: true }),
-    )
+    const preferences = buildUserPreferences({ openChangelogOnUpdate: true })
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(preferences)
 
     const updateSpy = vi
       .spyOn(userPreferences, "updateOpenChangelogOnUpdate")
-      .mockResolvedValue(true)
+      .mockResolvedValue({ ok: true, preferences })
 
     render(<UpdateLogDialog isOpen onClose={() => {}} version="2.39.0" />)
 
@@ -71,7 +71,13 @@ describe("UpdateLogDialog", () => {
 
     const updateSpy = vi
       .spyOn(userPreferences, "updateOpenChangelogOnUpdate")
-      .mockResolvedValue(false)
+      .mockResolvedValue({
+        ok: false,
+        reason: {
+          type: "storage-error",
+          error: new Error("save failed"),
+        },
+      })
 
     render(<UpdateLogDialog isOpen onClose={() => {}} version="2.39.0" />)
 
@@ -201,7 +207,8 @@ describe("UpdateLogDialog", () => {
       buildUserPreferences({ openChangelogOnUpdate: true }),
     )
 
-    let resolveUpdate: ((value: boolean) => void) | undefined
+    const preferences = buildUserPreferences({ openChangelogOnUpdate: false })
+    let resolveUpdate: ((value: PreferenceWriteResult) => void) | undefined
     const updateSpy = vi
       .spyOn(userPreferences, "updateOpenChangelogOnUpdate")
       .mockImplementation(
@@ -224,7 +231,7 @@ describe("UpdateLogDialog", () => {
     expect(updateSpy).toHaveBeenCalledWith(false)
     expect(toggleButton).toBeDisabled()
 
-    resolveUpdate?.(true)
+    resolveUpdate?.({ ok: true, preferences })
 
     await waitFor(() => {
       expect(toggleButton).not.toBeDisabled()

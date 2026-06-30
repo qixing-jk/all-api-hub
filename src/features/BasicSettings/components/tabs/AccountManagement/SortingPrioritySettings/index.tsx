@@ -96,13 +96,13 @@ export default function SortingPrioritySettings() {
 
       // 立即保存
       if (initialConfig) {
-        const success = await updateSortingPriorityConfig({
+        const writeResult = await updateSortingPriorityConfig({
           ...initialConfig,
           criteria: updatedItems,
           lastModified: Date.now(),
         })
-        if (success) {
-          showUpdateToast(success, t("sorting.title"))
+        if (writeResult.ok) {
+          showUpdateToast(writeResult, t("sorting.title"))
         }
       }
     }
@@ -117,13 +117,13 @@ export default function SortingPrioritySettings() {
 
     // 立即保存
     if (initialConfig) {
-      const success = await updateSortingPriorityConfig({
+      const writeResult = await updateSortingPriorityConfig({
         ...initialConfig,
         criteria: updatedItems,
         lastModified: Date.now(),
       })
-      if (success) {
-        showUpdateToast(success, t("sorting.title"))
+      if (writeResult.ok) {
+        showUpdateToast(writeResult, t("sorting.title"))
       }
     }
   }

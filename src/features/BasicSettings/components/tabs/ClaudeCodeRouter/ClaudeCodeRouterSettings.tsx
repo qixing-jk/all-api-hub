@@ -5,7 +5,7 @@ import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings section for configuring Claude Code Router admin API connection.
@@ -42,18 +42,20 @@ export default function ClaudeCodeRouterSettings() {
 
   const handleBaseUrlChange = async (url: string) => {
     if (url === claudeCodeRouterBaseUrl) return
-    const success = await updateClaudeCodeRouterBaseUrl(url, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("settings:claudeCodeRouter.baseUrlLabel"),
+      update: (options) => updateClaudeCodeRouterBaseUrl(url, options),
     })
-    showUpdateToast(success, t("settings:claudeCodeRouter.baseUrlLabel"))
   }
 
   const handleKeyChange = async (key: string) => {
     if (key === claudeCodeRouterApiKey) return
-    const success = await updateClaudeCodeRouterApiKey(key, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("settings:claudeCodeRouter.apiKeyLabel"),
+      update: (options) => updateClaudeCodeRouterApiKey(key, options),
     })
-    showUpdateToast(success, t("settings:claudeCodeRouter.apiKeyLabel"))
   }
 
   return (

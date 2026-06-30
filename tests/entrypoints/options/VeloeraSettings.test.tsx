@@ -7,12 +7,29 @@ import VeloeraSettings from "~/features/BasicSettings/components/tabs/ManagedSit
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
+const { showUpdateToastMock } = vi.hoisted(() => ({
+  showUpdateToastMock: vi.fn(),
+}))
+
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
 }))
 
 vi.mock("~/utils/core/toastHelpers", () => ({
-  showUpdateToast: vi.fn(),
+  runPreferenceUpdateWithToast: async ({
+    expectedLastUpdated,
+    setting,
+    update,
+  }: {
+    expectedLastUpdated: number
+    setting: string
+    update: (options: { expectedLastUpdated: number }) => Promise<any>
+  }) => {
+    const result = await update({ expectedLastUpdated })
+    showUpdateToastMock(result, setting)
+    return result
+  },
+  showUpdateToast: showUpdateToastMock,
 }))
 
 describe("VeloeraSettings", () => {
@@ -26,10 +43,18 @@ describe("VeloeraSettings", () => {
       veloeraBaseUrl: "https://veloera.example.com",
       veloeraAdminToken: "stored-token",
       veloeraUserId: "200",
-      updateVeloeraBaseUrl: vi.fn().mockResolvedValue(true),
-      updateVeloeraAdminToken: vi.fn().mockResolvedValue(true),
-      updateVeloeraUserId: vi.fn().mockResolvedValue(true),
-      resetVeloeraConfig: vi.fn().mockResolvedValue(true),
+      updateVeloeraBaseUrl: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateVeloeraAdminToken: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateVeloeraUserId: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      resetVeloeraConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
       ...overrides,
     }) as any
 
@@ -41,7 +66,9 @@ describe("VeloeraSettings", () => {
     )
 
   it("shows an inline error and skips persisting when the admin user ID is not numeric", async () => {
-    const updateVeloeraUserId = vi.fn().mockResolvedValue(true)
+    const updateVeloeraUserId = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue(
       createContextValue({
         veloeraAdminToken: "",
@@ -66,8 +93,12 @@ describe("VeloeraSettings", () => {
   })
 
   it("trims the base URL and admin token before persisting", async () => {
-    const updateVeloeraBaseUrl = vi.fn().mockResolvedValue(true)
-    const updateVeloeraAdminToken = vi.fn().mockResolvedValue(true)
+    const updateVeloeraBaseUrl = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
+    const updateVeloeraAdminToken = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue(
       createContextValue({
         updateVeloeraBaseUrl,
@@ -101,7 +132,9 @@ describe("VeloeraSettings", () => {
   })
 
   it("skips persisting the admin user ID when only legacy whitespace differs", () => {
-    const updateVeloeraUserId = vi.fn().mockResolvedValue(true)
+    const updateVeloeraUserId = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue(
       createContextValue({
         veloeraUserId: " 200 ",
@@ -126,7 +159,9 @@ describe("VeloeraSettings", () => {
   })
 
   it("trims and persists a changed admin user ID", async () => {
-    const updateVeloeraUserId = vi.fn().mockResolvedValue(true)
+    const updateVeloeraUserId = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue(
       createContextValue({
         updateVeloeraUserId,
@@ -151,7 +186,7 @@ describe("VeloeraSettings", () => {
         expectedLastUpdated: 1,
       })
       expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
-        true,
+        expect.objectContaining({ ok: true }),
         "settings:veloera.fields.userIdLabel",
       )
     })

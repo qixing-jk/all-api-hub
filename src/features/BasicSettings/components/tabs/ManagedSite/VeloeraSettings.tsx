@@ -14,7 +14,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
 import { joinUrl } from "~/utils/core/url"
 
 /**
@@ -59,10 +59,11 @@ export default function VeloeraSettings() {
     setLocalConfig((prev) => ({ ...prev, baseUrl: trimmedUrl }))
 
     if (trimmedUrl === veloeraBaseUrl.trim()) return
-    const success = await updateVeloeraBaseUrl(trimmedUrl, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("veloera.fields.baseUrlLabel"),
+      update: (options) => updateVeloeraBaseUrl(trimmedUrl, options),
     })
-    showUpdateToast(success, t("veloera.fields.baseUrlLabel"))
   }
 
   const handleVeloeraAdminTokenChange = async (token: string) => {
@@ -70,10 +71,11 @@ export default function VeloeraSettings() {
     setLocalConfig((prev) => ({ ...prev, adminToken: trimmedToken }))
 
     if (trimmedToken === veloeraAdminToken.trim()) return
-    const success = await updateVeloeraAdminToken(trimmedToken, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("veloera.fields.adminTokenLabel"),
+      update: (options) => updateVeloeraAdminToken(trimmedToken, options),
     })
-    showUpdateToast(success, t("veloera.fields.adminTokenLabel"))
   }
 
   const handleVeloeraUserIdChange = async (id: string) => {
@@ -82,10 +84,11 @@ export default function VeloeraSettings() {
 
     setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
     if (trimmedId === veloeraUserId.trim()) return
-    const success = await updateVeloeraUserId(trimmedId, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("veloera.fields.userIdLabel"),
+      update: (options) => updateVeloeraUserId(trimmedId, options),
     })
-    showUpdateToast(success, t("veloera.fields.userIdLabel"))
   }
 
   const trimmedBaseUrl = localBaseUrl.trim()

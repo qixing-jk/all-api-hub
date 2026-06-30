@@ -72,13 +72,13 @@ describe("userPreferences shared preference timestamps", () => {
 
     vi.setSystemTime(localOnlyUpdateTimestamp)
 
-    const success = await userPreferences.savePreferences({
+    const result = await userPreferences.savePreferences({
       accountAutoRefresh: {
         interval: DEFAULT_PREFERENCES.accountAutoRefresh.interval + 60,
       },
     })
 
-    expect(success).toBe(true)
+    expect(result).toMatchObject({ ok: true })
 
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
@@ -104,13 +104,13 @@ describe("userPreferences shared preference timestamps", () => {
 
     vi.setSystemTime(localOnlyUpdateTimestamp)
 
-    const success = await userPreferences.savePreferences({
+    const result = await userPreferences.savePreferences({
       accountAutoRefresh: {
         enabled: false,
       },
     })
 
-    expect(success).toBe(true)
+    expect(result).toMatchObject({ ok: true })
 
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
@@ -131,11 +131,11 @@ describe("userPreferences shared preference timestamps", () => {
 
     vi.setSystemTime(sharedUpdateTimestamp)
 
-    const success = await userPreferences.savePreferences({
+    const result = await userPreferences.savePreferences({
       themeMode: "dark",
     })
 
-    expect(success).toBe(true)
+    expect(result).toMatchObject({ ok: true })
 
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
@@ -156,14 +156,14 @@ describe("userPreferences shared preference timestamps", () => {
 
     vi.setSystemTime(mixedUpdateTimestamp)
 
-    const success = await userPreferences.savePreferences({
+    const result = await userPreferences.savePreferences({
       themeMode: "dark",
       accountAutoRefresh: {
         enabled: false,
       },
     })
 
-    expect(success).toBe(true)
+    expect(result).toMatchObject({ ok: true })
 
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
@@ -172,7 +172,7 @@ describe("userPreferences shared preference timestamps", () => {
     expect(storedAfter.sharedPreferencesLastUpdated).toBe(mixedUpdateTimestamp)
   })
 
-  it("skips stale guarded saves after a newer write wins", async () => {
+  it("returns a typed stale result for guarded saves after a newer write wins", async () => {
     const initialTimestamp = 6100
     const newerUpdateTimestamp = 6200
     const staleAttemptTimestamp = 6300
@@ -185,14 +185,20 @@ describe("userPreferences shared preference timestamps", () => {
     })
 
     vi.setSystemTime(newerUpdateTimestamp)
-    const newerWriteSuccess = await userPreferences.savePreferences({
+    const newerWriteResult = await userPreferences.savePreferences({
       activeTab: DATA_TYPE_CASHFLOW,
     })
 
-    expect(newerWriteSuccess).toBe(true)
+    expect(newerWriteResult).toMatchObject({
+      ok: true,
+      preferences: {
+        activeTab: DATA_TYPE_CASHFLOW,
+        lastUpdated: newerUpdateTimestamp,
+      },
+    })
 
     vi.setSystemTime(staleAttemptTimestamp)
-    const staleWriteSuccess = await userPreferences.savePreferences(
+    const staleWriteResult = await userPreferences.savePreferences(
       {
         activeTab: DATA_TYPE_BALANCE,
       },
@@ -201,7 +207,14 @@ describe("userPreferences shared preference timestamps", () => {
       },
     )
 
-    expect(staleWriteSuccess).toBe(false)
+    expect(staleWriteResult).toEqual({
+      ok: false,
+      reason: {
+        type: "stale",
+        expectedLastUpdated: initialTimestamp,
+        actualLastUpdated: newerUpdateTimestamp,
+      },
+    })
 
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
@@ -210,7 +223,7 @@ describe("userPreferences shared preference timestamps", () => {
     expect(storedAfter.activeTab).toBe(DATA_TYPE_CASHFLOW)
   })
 
-  it("rethrows storage failures from savePreferencesWithResult and keeps savePreferences as a safe boolean wrapper", async () => {
+  it("returns typed storage failures from preference writes", async () => {
     await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
       ...DEFAULT_PREFERENCES,
       themeMode: "system",
@@ -223,17 +236,17 @@ describe("userPreferences shared preference timestamps", () => {
       .mockRejectedValue(new Error("save failed"))
 
     try {
-      await expect(
-        userPreferences.savePreferencesWithResult({
-          themeMode: "dark",
-        }),
-      ).rejects.toThrow("save failed")
+      const writeResult = await userPreferences.savePreferences({
+        themeMode: "dark",
+      })
 
-      await expect(
-        userPreferences.savePreferences({
-          themeMode: "dark",
-        }),
-      ).resolves.toBe(false)
+      expect(writeResult).toMatchObject({
+        ok: false,
+        reason: {
+          type: "storage-error",
+          error: expect.any(Error),
+        },
+      })
 
       const storedAfter = (await storage.get(
         USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
@@ -251,14 +264,14 @@ describe("userPreferences shared preference timestamps", () => {
 
     vi.setSystemTime(importedAt)
 
-    const success = await userPreferences.importPreferences({
+    const result = await userPreferences.importPreferences({
       ...DEFAULT_PREFERENCES,
       themeMode: "dark",
       lastUpdated: backupTimestamp,
       sharedPreferencesLastUpdated: backupTimestamp,
     })
 
-    expect(success).toBe(true)
+    expect(result).toMatchObject({ ok: true })
 
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
@@ -292,7 +305,7 @@ describe("userPreferences shared preference timestamps", () => {
 
     vi.setSystemTime(importedAt)
 
-    const success = await userPreferences.importPreferences(
+    const result = await userPreferences.importPreferences(
       {
         ...DEFAULT_PREFERENCES,
         themeMode: "dark",
@@ -315,7 +328,7 @@ describe("userPreferences shared preference timestamps", () => {
       },
     )
 
-    expect(success).toBe(true)
+    expect(result).toMatchObject({ ok: true })
 
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
@@ -348,14 +361,14 @@ describe("userPreferences shared preference timestamps", () => {
     delete legacyImportedPreferences.lastUpdated
     delete legacyImportedPreferences.sharedPreferencesLastUpdated
 
-    const success = await userPreferences.importPreferences(
+    const result = await userPreferences.importPreferences(
       legacyImportedPreferences,
       {
         preserveWebdav: true,
       },
     )
 
-    expect(success).toBe(true)
+    expect(result).toMatchObject({ ok: true })
 
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,

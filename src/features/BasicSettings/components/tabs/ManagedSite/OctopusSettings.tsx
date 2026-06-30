@@ -7,7 +7,11 @@ import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { octopusAuthManager } from "~/services/apiService/octopus/auth"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import {
+  createVersionedPreferenceSaveOptions,
+  getPreferenceWriteFailureMessage,
+  runPreferenceUpdateWithToast,
+} from "~/utils/core/toastHelpers"
 
 /**
  * Settings panel for configuring Octopus connection credentials (base URL, username, password).
@@ -49,30 +53,33 @@ export default function OctopusSettings() {
   const localPassword = localConfig.password
 
   const handleBaseUrlChange = async (url: string) => {
-    url = url.trim()
-    if (url === octopusBaseUrl) return
-    const success = await updateOctopusBaseUrl(url, {
+    const trimmedUrl = url.trim()
+    if (trimmedUrl === octopusBaseUrl) return
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("octopus.fields.baseUrlLabel"),
+      update: (options) => updateOctopusBaseUrl(trimmedUrl, options),
     })
-    showUpdateToast(success, t("octopus.fields.baseUrlLabel"))
   }
 
   const handleUsernameChange = async (username: string) => {
-    username = username.trim()
-    if (username === octopusUsername) return
-    const success = await updateOctopusUsername(username, {
+    const trimmedUsername = username.trim()
+    if (trimmedUsername === octopusUsername) return
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("octopus.fields.usernameLabel"),
+      update: (options) => updateOctopusUsername(trimmedUsername, options),
     })
-    showUpdateToast(success, t("octopus.fields.usernameLabel"))
   }
 
   const handlePasswordChange = async (password: string) => {
-    password = password.trim()
-    if (password === octopusPassword) return
-    const success = await updateOctopusPassword(password, {
+    const trimmedPassword = password.trim()
+    if (trimmedPassword === octopusPassword) return
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("octopus.fields.passwordLabel"),
+      update: (options) => updateOctopusPassword(trimmedPassword, options),
     })
-    showUpdateToast(success, t("octopus.fields.passwordLabel"))
   }
 
   const handleValidateConfig = async () => {
@@ -85,7 +92,6 @@ export default function OctopusSettings() {
       return
     }
 
-    // Persist trimmed values to ensure stored inputs match validated values
     setLocalConfig((prev) => ({
       ...prev,
       baseUrl: trimmedUrl,
@@ -102,22 +108,19 @@ export default function OctopusSettings() {
       })
 
       if (result.success) {
-        // Persist validated config to storage
-        const success = await updateOctopusConfig(
+        const saveResult = await updateOctopusConfig(
           {
             baseUrl: trimmedUrl,
             username: trimmedUsername,
             password: trimmedPassword,
           },
-          {
-            expectedLastUpdated,
-          },
+          createVersionedPreferenceSaveOptions(expectedLastUpdated),
         )
 
-        if (success) {
+        if (saveResult.ok) {
           toast.success(t("octopus.validation.success"))
         } else {
-          toast.error(t("settings:messages.updateFailed"))
+          toast.error(getPreferenceWriteFailureMessage(saveResult.reason))
         }
       } else {
         toast.error(result.error || t("octopus.validation.failed"))

@@ -6,7 +6,10 @@ import { Button, Card, CardItem, CardList, Input, Link } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
-import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
+import {
+  runPreferenceUpdateWithToast,
+  showResultToast,
+} from "~/utils/core/toastHelpers"
 
 const CLI_PROXY_MANAGEMENT_DOC_URL = "https://help.router-for.me/management/api"
 
@@ -77,12 +80,13 @@ export default function CliProxySettings() {
     setLocalConfig((prev) => ({ ...prev, baseUrl: trimmedUrl }))
 
     if (trimmedUrl === cliProxyBaseUrl.trim()) return
-    const success = await updateCliProxyBaseUrl(trimmedUrl, {
+    const writeResult = await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("cliProxy.baseUrlLabel"),
+      update: (options) => updateCliProxyBaseUrl(trimmedUrl, options),
     })
-    showUpdateToast(success, t("cliProxy.baseUrlLabel"))
 
-    if (success && trimmedUrl && localKey.trim()) {
+    if (writeResult.ok && trimmedUrl && localKey.trim()) {
       await runConnectionCheckWithToast({
         baseUrl: trimmedUrl,
         managementKey: localKey,
@@ -95,12 +99,13 @@ export default function CliProxySettings() {
     setLocalConfig((prev) => ({ ...prev, managementKey: trimmedKey }))
 
     if (trimmedKey === cliProxyManagementKey.trim()) return
-    const success = await updateCliProxyManagementKey(trimmedKey, {
+    const writeResult = await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("cliProxy.managementKeyLabel"),
+      update: (options) => updateCliProxyManagementKey(trimmedKey, options),
     })
-    showUpdateToast(success, t("cliProxy.managementKeyLabel"))
 
-    if (success && localBaseUrl.trim() && trimmedKey) {
+    if (writeResult.ok && localBaseUrl.trim() && trimmedKey) {
       await runConnectionCheckWithToast({
         baseUrl: localBaseUrl,
         managementKey: trimmedKey,

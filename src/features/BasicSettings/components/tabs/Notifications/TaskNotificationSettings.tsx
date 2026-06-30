@@ -258,17 +258,17 @@ export default function TaskNotificationSettings() {
   }, [refreshPermissionStatus])
 
   const handleGlobalToggle = async (enabled: boolean) => {
-    const success = await updateTaskNotifications({ enabled })
-    showUpdateToast(success, t("taskNotifications.enable"))
+    const writeResult = await updateTaskNotifications({ enabled })
+    showUpdateToast(writeResult, t("taskNotifications.enable"))
   }
 
   const handleChannelUpdate = async (
     channels: TaskNotificationChannelPreferences,
     label: string,
   ) => {
-    const success = await updateTaskNotifications({ channels })
-    showUpdateToast(success, label)
-    return success
+    const result = await updateTaskNotifications({ channels })
+    showUpdateToast(result, label)
+    return result.ok
   }
 
   const handleBrowserChannelToggle = async (enabled: boolean) => {
@@ -495,20 +495,20 @@ export default function TaskNotificationSettings() {
     task: TaskNotificationTask,
     enabled: boolean,
   ) => {
-    const success = await updateTaskNotifications({
+    const result = await updateTaskNotifications({
       tasks: {
         ...taskNotifications.tasks,
         [task]: enabled,
       },
     })
-    showUpdateToast(success, t("taskNotifications.tasksLabel"))
+    showUpdateToast(result, t("taskNotifications.tasksLabel"))
   }
 
   const handleSiteAnnouncementToggle = async (enabled: boolean) => {
-    const success = await updateSiteAnnouncementNotifications({
+    const response = await updateSiteAnnouncementNotifications({
       notificationEnabled: enabled,
     })
-    showUpdateToast(success, t("taskNotifications.siteAnnouncements.enable"))
+    showUpdateToast(response, t("taskNotifications.siteAnnouncements.enable"))
   }
 
   const saveChannelDraftBeforeTest = async (

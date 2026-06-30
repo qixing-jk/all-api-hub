@@ -34,6 +34,18 @@ import {
   setupMockPreferencePersistence,
 } from "~~/tests/test-utils/mockPreferencePersistence"
 
+const createStalePreferenceWriteResult = (
+  expectedLastUpdated: number,
+  actualLastUpdated = expectedLastUpdated + 1,
+) => ({
+  ok: false as const,
+  reason: {
+    type: "stale" as const,
+    expectedLastUpdated,
+    actualLastUpdated,
+  },
+})
+
 const {
   mockApplyPreferenceLanguage,
   mockUserPreferences,
@@ -305,7 +317,10 @@ describe("WebDAVSettings", () => {
           preferencePersistence.getPersistedPreferences().lastUpdated !==
             expectedLastUpdated
         ) {
-          return null
+          return createStalePreferenceWriteResult(
+            expectedLastUpdated,
+            preferencePersistence.getPersistedPreferences().lastUpdated,
+          )
         }
 
         return await savePreferencesWithResult?.(updates, options)
@@ -408,7 +423,9 @@ describe("WebDAVSettings", () => {
   })
 
   it("completes WebDAV config save analytics as unknown failure when persistence rejects the update", async () => {
-    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
+    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(
+      createStalePreferenceWriteResult(1, 2),
+    )
 
     render(<WebDAVSettings />)
 
@@ -485,7 +502,9 @@ describe("WebDAVSettings", () => {
   })
 
   it("completes WebDAV connection test analytics as failure when validation fails", async () => {
-    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
+    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(
+      createStalePreferenceWriteResult(1, 2),
+    )
 
     render(<WebDAVSettings />)
 
@@ -1365,8 +1384,10 @@ describe("WebDAVSettings", () => {
     )
   })
 
-  it("surfaces the save failure message when saving the WebDAV config fails", async () => {
-    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
+  it("surfaces stale preference guidance when saving the WebDAV config is rejected by the version guard", async () => {
+    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(
+      createStalePreferenceWriteResult(1, 2),
+    )
 
     render(<WebDAVSettings />)
 
@@ -1379,7 +1400,9 @@ describe("WebDAVSettings", () => {
     )
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("settings:messages.updateFailed")
+      expect(toast.error).toHaveBeenCalledWith(
+        "settings:messages.preferencesChangedExternally",
+      )
     })
     expect(loggerMocks.error).toHaveBeenCalledWith(
       "Failed to save WebDAV settings",
@@ -1387,8 +1410,10 @@ describe("WebDAVSettings", () => {
     )
   })
 
-  it("shows a local save failure when persisting settings before connection test fails", async () => {
-    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
+  it("shows stale preference guidance when persisting settings before connection test is rejected by the version guard", async () => {
+    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(
+      createStalePreferenceWriteResult(1, 2),
+    )
 
     render(<WebDAVSettings />)
 
@@ -1401,14 +1426,16 @@ describe("WebDAVSettings", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "settings:messages.saveSettingsFailed",
+        "settings:messages.preferencesChangedExternally",
       )
     })
     expect(mockTestWebdavConnection).not.toHaveBeenCalled()
   })
 
-  it("shows a local save failure when persisting settings before upload fails", async () => {
-    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
+  it("shows stale preference guidance when persisting settings before upload is rejected by the version guard", async () => {
+    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(
+      createStalePreferenceWriteResult(1, 2),
+    )
 
     render(<WebDAVSettings />)
 
@@ -1421,7 +1448,7 @@ describe("WebDAVSettings", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "settings:messages.saveSettingsFailed",
+        "settings:messages.preferencesChangedExternally",
       )
     })
     expect(mockUploadBackup).not.toHaveBeenCalled()
@@ -1833,7 +1860,7 @@ describe("WebDAVSettings", () => {
     })
   })
 
-  it("shows both import success and save-settings failure when persisting the decrypt password fails", async () => {
+  it("shows both import success and stale preference guidance when persisting the decrypt password is rejected by the version guard", async () => {
     mockDownloadBackupRaw.mockResolvedValueOnce("encrypted-payload")
     mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(
       ENCRYPTED_BACKUP_ENVELOPE,
@@ -1843,7 +1870,9 @@ describe("WebDAVSettings", () => {
     mockUserPreferences.savePreferencesWithResult.mockImplementationOnce(
       defaultSavePreferencesWithResult!,
     )
-    mockUserPreferences.savePreferencesWithResult.mockResolvedValueOnce(null)
+    mockUserPreferences.savePreferencesWithResult.mockResolvedValueOnce(
+      createStalePreferenceWriteResult(1, 2),
+    )
 
     render(<WebDAVSettings />)
 
@@ -1876,7 +1905,7 @@ describe("WebDAVSettings", () => {
         "importExport:import.importSuccess",
       )
       expect(toast.error).toHaveBeenCalledWith(
-        "settings:messages.saveSettingsFailed",
+        "settings:messages.preferencesChangedExternally",
       )
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,

@@ -142,17 +142,26 @@ describe("webdavAutoSyncService lifecycle", () => {
     mocks.savePreferences.mockResolvedValue(true)
     mocks.savePreferencesWithResult.mockImplementation(
       async (updates, options) => {
-        const success = await mocks.savePreferences(updates, options)
-        return success
+        const writeResult = await mocks.savePreferences(updates, options)
+        return writeResult
           ? {
-              lastUpdated: 1,
-              webdav: {
-                autoSync: false,
-                syncInterval: 3600,
-                syncStrategy: "merge",
+              ok: true,
+              preferences: {
+                lastUpdated: 1,
+                webdav: {
+                  autoSync: false,
+                  syncInterval: 3600,
+                  syncStrategy: "merge",
+                },
               },
             }
-          : null
+          : {
+              ok: false,
+              reason: {
+                type: "storage-error",
+                error: new Error("save failed"),
+              },
+            }
       },
     )
   })
@@ -503,7 +512,14 @@ describe("webdavAutoSyncService lifecycle", () => {
       .spyOn(service, "setupAutoSync")
       .mockResolvedValue(undefined)
 
-    mocks.savePreferencesWithResult.mockResolvedValueOnce(null)
+    mocks.savePreferencesWithResult.mockResolvedValueOnce({
+      ok: false,
+      reason: {
+        type: "stale",
+        expectedLastUpdated: 7,
+        actualLastUpdated: 8,
+      },
+    })
 
     await expect(
       service.updateSettings(
@@ -512,7 +528,11 @@ describe("webdavAutoSyncService lifecycle", () => {
       ),
     ).resolves.toEqual({
       ok: false,
-      reason: "conflict",
+      reason: {
+        type: "stale",
+        expectedLastUpdated: 7,
+        actualLastUpdated: 8,
+      },
     })
 
     expect(setupSpy).not.toHaveBeenCalled()
@@ -534,11 +554,18 @@ describe("webdavAutoSyncService lifecycle", () => {
       .spyOn(webdavAutoSyncService, "updateSettings")
       .mockResolvedValueOnce({
         ok: false,
-        reason: "conflict",
+        reason: {
+          type: "stale",
+          expectedLastUpdated: 7,
+          actualLastUpdated: 8,
+        },
       } as any)
       .mockResolvedValueOnce({
         ok: false,
-        reason: "error",
+        reason: {
+          type: "storage-error",
+          error: new Error("save failed"),
+        },
       } as any)
 
     const conflictResponse = await resolveWebdavAutoSyncTestMessage({
@@ -615,9 +642,11 @@ describe("webdavAutoSyncService lifecycle", () => {
 
     await expect(
       service.updateSettings({ autoSync: false, syncInterval: 900 }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       ok: false,
-      reason: "error",
+      reason: {
+        type: "storage-error",
+      },
     })
 
     expect(setupSpy).not.toHaveBeenCalled()

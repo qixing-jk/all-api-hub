@@ -21,7 +21,7 @@ import {
 } from "~/services/accounts/utils/siteRouteResolver"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings panel for configuring New API connection credentials (base URL, admin token, user ID).
@@ -82,18 +82,20 @@ export default function NewApiSettings() {
 
   const handleNewApiBaseUrlChange = async (url: string) => {
     if (url === newApiBaseUrl) return
-    const success = await updateNewApiBaseUrl(url, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("newApi.fields.baseUrlLabel"),
+      update: (options) => updateNewApiBaseUrl(url, options),
     })
-    showUpdateToast(success, t("newApi.fields.baseUrlLabel"))
   }
 
   const handleNewApiAdminTokenChange = async (token: string) => {
     if (token === newApiAdminToken) return
-    const success = await updateNewApiAdminToken(token, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("newApi.fields.adminTokenLabel"),
+      update: (options) => updateNewApiAdminToken(token, options),
     })
-    showUpdateToast(success, t("newApi.fields.adminTokenLabel"))
   }
 
   const handleNewApiUserIdChange = async (id: string) => {
@@ -102,38 +104,42 @@ export default function NewApiSettings() {
 
     setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
     if (trimmedId === newApiUserId) return
-    const success = await updateNewApiUserId(trimmedId, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("newApi.fields.userIdLabel"),
+      update: (options) => updateNewApiUserId(trimmedId, options),
     })
-    showUpdateToast(success, t("newApi.fields.userIdLabel"))
   }
 
   const handleNewApiUsernameChange = async (username: string) => {
     const trimmedUsername = username.trim()
     setLocalConfig((prev) => ({ ...prev, username: trimmedUsername }))
     if (trimmedUsername === newApiUsername) return
-    const success = await updateNewApiUsername(trimmedUsername, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("newApi.fields.usernameLabel"),
+      update: (options) => updateNewApiUsername(trimmedUsername, options),
     })
-    showUpdateToast(success, t("newApi.fields.usernameLabel"))
   }
 
   const handleNewApiPasswordChange = async (password: string) => {
     if (password === newApiPassword) return
-    const success = await updateNewApiPassword(password, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("newApi.fields.passwordLabel"),
+      update: (options) => updateNewApiPassword(password, options),
     })
-    showUpdateToast(success, t("newApi.fields.passwordLabel"))
   }
 
   const handleNewApiTotpSecretChange = async (totpSecret: string) => {
     const trimmedTotpSecret = totpSecret.trim()
     setLocalConfig((prev) => ({ ...prev, totpSecret: trimmedTotpSecret }))
     if (trimmedTotpSecret === newApiTotpSecret) return
-    const success = await updateNewApiTotpSecret(trimmedTotpSecret, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("newApi.fields.totpSecretLabel"),
+      update: (options) => updateNewApiTotpSecret(trimmedTotpSecret, options),
     })
-    showUpdateToast(success, t("newApi.fields.totpSecretLabel"))
   }
 
   const trimmedBaseUrl = localBaseUrl.trim()

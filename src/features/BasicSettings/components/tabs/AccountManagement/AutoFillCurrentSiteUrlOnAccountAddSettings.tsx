@@ -18,9 +18,9 @@ export default function AutoFillCurrentSiteUrlOnAccountAddSettings() {
   } = useUserPreferencesContext()
 
   const handleToggle = async (enabled: boolean) => {
-    const success = await updateAutoFillCurrentSiteUrlOnAccountAdd(enabled)
+    const writeResult = await updateAutoFillCurrentSiteUrlOnAccountAdd(enabled)
     showUpdateToast(
-      success,
+      writeResult,
       t("autoFillCurrentSiteUrlOnAccountAdd.toggleLabel"),
     )
   }

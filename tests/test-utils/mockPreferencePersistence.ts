@@ -2,6 +2,7 @@ import { vi } from "vitest"
 
 import {
   DEFAULT_PREFERENCES,
+  type PreferenceWriteResult,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import type { DeepPartial } from "~/types/utils"
@@ -35,18 +36,21 @@ export function setupMockPreferencePersistence(
     persistedPreferences = structuredClone(nextPreferences)
   }
 
+  const createSuccessResult = (
+    preferences = getPersistedPreferences(),
+  ): PreferenceWriteResult => ({
+    ok: true,
+    preferences,
+  })
+
   mocks.getPreferences.mockImplementation(async () => getPersistedPreferences())
   mocks.savePreferencesWithResult.mockImplementation(async (updates) => {
     persistedPreferences = deepOverride(persistedPreferences, updates)
     persistedPreferences.lastUpdated += 1
-    return getPersistedPreferences()
+    return createSuccessResult()
   })
   mocks.savePreferences.mockImplementation(async (updates, options) => {
-    const savedPreferences = await mocks.savePreferencesWithResult(
-      updates,
-      options,
-    )
-    return savedPreferences !== null
+    return await mocks.savePreferencesWithResult(updates, options)
   })
 
   return {

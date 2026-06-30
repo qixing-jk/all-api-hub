@@ -139,9 +139,9 @@ export default function WebAiApiCheckSettings() {
   const saveSettings = async (updates: Partial<WebAiApiCheckPreferences>) => {
     try {
       setIsSaving(true)
-      const success = await updateWebAiApiCheck(updates)
+      const writeResult = await updateWebAiApiCheck(updates)
 
-      if (success) {
+      if (writeResult.ok) {
         toast.success(t("webAiApiCheck:messages.success.settingsSaved"))
       } else {
         toast.error(t("settings:messages.saveSettingsFailed"))
@@ -161,7 +161,7 @@ export default function WebAiApiCheckSettings() {
       description={t("webAiApiCheck:settings.description")}
       onReset={async () => {
         const result = await resetWebAiApiCheckConfig()
-        if (result) setIsSaving(false)
+        if (result.ok) setIsSaving(false)
         return result
       }}
     >

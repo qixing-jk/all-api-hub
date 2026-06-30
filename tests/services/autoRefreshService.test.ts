@@ -24,6 +24,13 @@ import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 
+const preferenceWriteSuccess = (
+  preferences: Partial<UserPreferences> = {},
+) => ({
+  ok: true as const,
+  preferences: preferences as UserPreferences,
+})
+
 const { mockOnAutoRefreshMessage } = vi.hoisted(() => ({
   mockOnAutoRefreshMessage: vi.fn(() => vi.fn()),
 }))
@@ -383,7 +390,9 @@ describe("AutoRefreshService", () => {
     it("should save preferences and reconfigure timer", async () => {
       const updates = { accountAutoRefresh: { enabled: false, interval: 600 } }
 
-      vi.mocked(userPreferences.savePreferences).mockResolvedValue(true)
+      vi.mocked(userPreferences.savePreferences).mockResolvedValue(
+        preferenceWriteSuccess(),
+      )
       vi.mocked(userPreferences.getPreferences).mockResolvedValue({
         accountAutoRefresh: {
           ...DEFAULT_ACCOUNT_AUTO_REFRESH,
@@ -587,7 +596,9 @@ describe("auto-refresh typed message resolvers", () => {
   describe("autoRefresh:updateSettings action", () => {
     it("should update settings and send success response", async () => {
       const settings = { accountAutoRefresh: { enabled: false, interval: 600 } }
-      vi.mocked(userPreferences.savePreferences).mockResolvedValue(true)
+      vi.mocked(userPreferences.savePreferences).mockResolvedValue(
+        preferenceWriteSuccess(),
+      )
       vi.mocked(userPreferences.getPreferences).mockResolvedValue({
         accountAutoRefresh: {
           ...DEFAULT_ACCOUNT_AUTO_REFRESH,

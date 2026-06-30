@@ -452,7 +452,13 @@ describe("useAccountDialog duplicate account warning", () => {
   it("keeps the duplicate warning open when disabling future warnings fails", async () => {
     const updatePreferenceSpy = vi
       .spyOn(userPreferences, "updateWarnOnDuplicateAccountAdd")
-      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce({
+        ok: false,
+        reason: {
+          type: "storage-error",
+          error: new Error("save failed"),
+        },
+      })
 
     try {
       await accountStorage.addAccount(

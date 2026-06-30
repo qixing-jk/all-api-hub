@@ -16,8 +16,8 @@ export default function AutoProvisionKeyOnAccountAddSettings() {
     useUserPreferencesContext()
 
   const handleToggle = async (enabled: boolean) => {
-    const success = await updateAutoProvisionKeyOnAccountAdd(enabled)
-    showUpdateToast(success, t("autoProvisionKeyOnAccountAdd.toggleLabel"))
+    const writeResult = await updateAutoProvisionKeyOnAccountAdd(enabled)
+    showUpdateToast(writeResult, t("autoProvisionKeyOnAccountAdd.toggleLabel"))
   }
 
   return (

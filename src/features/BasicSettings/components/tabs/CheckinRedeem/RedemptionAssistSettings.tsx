@@ -57,9 +57,9 @@ export default function RedemptionAssistSettings() {
   ) => {
     try {
       setIsSaving(true)
-      const success = await updateRedemptionAssist(updates)
+      const writeResult = await updateRedemptionAssist(updates)
 
-      if (success) {
+      if (writeResult.ok) {
         toast.success(t("redemptionAssist:messages.success.settingsSaved"))
       } else {
         toast.error(t("settings:messages.saveSettingsFailed"))
@@ -83,7 +83,7 @@ export default function RedemptionAssistSettings() {
       description={t("redemptionAssist:settings.description")}
       onReset={async () => {
         const result = await resetRedemptionAssistConfig()
-        if (result) {
+        if (result.ok) {
           setIsSaving(false)
         }
         return result

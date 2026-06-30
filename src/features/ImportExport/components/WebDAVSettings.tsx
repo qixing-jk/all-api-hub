@@ -70,6 +70,7 @@ import {
   type WebDAVSyncDataSelection,
 } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
+import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 import { t as translate } from "~/utils/i18n/core"
 
@@ -108,6 +109,16 @@ class ExistingWebdavBackupMalformedError extends Error {
     this.name = "ExistingWebdavBackupMalformedError"
     ;(this as Error & { cause?: unknown }).cause = cause
   }
+}
+
+const getPersistWebdavConfigErrorMessage = (error: unknown, t: TFunction) => {
+  if (error instanceof PersistWebdavConfigError && error.preferenceFailure) {
+    return getPreferenceWriteFailureMessage(error.preferenceFailure, {
+      fallback: t("settings:messages.saveSettingsFailed"),
+    })
+  }
+
+  return t("settings:messages.saveSettingsFailed")
 }
 
 class WebdavRebuildConfirmationRequired extends Error {
@@ -260,17 +271,19 @@ export default function WebDAVSettings() {
       return
     }
 
-    let success: boolean
+    let result
     try {
-      success = await updateWebdavSettings(updates, {
+      result = await updateWebdavSettings(updates, {
         expectedLastUpdated:
           options?.expectedLastUpdated ?? preferences.lastUpdated,
       })
     } catch (error) {
       throw new PersistWebdavConfigError(error)
     }
-    if (!success) {
-      throw new PersistWebdavConfigError()
+    if (!result.ok) {
+      throw new PersistWebdavConfigError(undefined, {
+        failure: result.reason,
+      })
     }
   }
 
@@ -291,9 +304,11 @@ export default function WebDAVSettings() {
     } catch (e) {
       logger.error("Failed to save WebDAV settings", e)
       toast.error(
-        t("settings:messages.updateFailed", {
-          name: t("webdav.title"),
-        }),
+        e instanceof PersistWebdavConfigError
+          ? getPersistWebdavConfigErrorMessage(e, t)
+          : t("settings:messages.updateFailed", {
+              name: t("webdav.title"),
+            }),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
@@ -323,7 +338,7 @@ export default function WebDAVSettings() {
       logger.error("WebDAV connection test failed", e)
       toast.error(
         e instanceof PersistWebdavConfigError
-          ? t("settings:messages.saveSettingsFailed")
+          ? getPersistWebdavConfigErrorMessage(e, t)
           : e?.message || t("webdav.testFailed"),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -471,7 +486,7 @@ export default function WebDAVSettings() {
       logger.error("Failed to upload backup to WebDAV", e)
       toast.error(
         e instanceof PersistWebdavConfigError
-          ? t("settings:messages.saveSettingsFailed")
+          ? getPersistWebdavConfigErrorMessage(e, t)
           : e?.message || t("webdav.uploadFailed"),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -634,7 +649,7 @@ export default function WebDAVSettings() {
       logger.error("Failed to download/import WebDAV backup", e)
       toast.error(
         e instanceof PersistWebdavConfigError
-          ? t("settings:messages.saveSettingsFailed")
+          ? getPersistWebdavConfigErrorMessage(e, t)
           : e?.message || t("importExport:import.downloadImportFailed"),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -737,7 +752,7 @@ export default function WebDAVSettings() {
           }))
         } catch (error) {
           logger.error("Failed to persist WebDAV decrypt password", error)
-          toast.error(t("settings:messages.saveSettingsFailed"))
+          toast.error(getPersistWebdavConfigErrorMessage(error, t))
           decryptPasswordPersistFailed = true
           decryptPasswordPersistError = error
         }

@@ -8,7 +8,11 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
 import { getErrorMessage } from "~/utils/core/error"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import {
+  createVersionedPreferenceSaveOptions,
+  getPreferenceWriteFailureMessage,
+  runPreferenceUpdateWithToast,
+} from "~/utils/core/toastHelpers"
 
 /**
  * Renders Claude Code Hub settings fields and a config validation action.
@@ -45,19 +49,21 @@ export default function ClaudeCodeHubSettings() {
   const handleBaseUrlChange = async (url: string) => {
     const trimmedUrl = url.trim()
     if (trimmedUrl === claudeCodeHubBaseUrl) return
-    const success = await updateClaudeCodeHubBaseUrl(trimmedUrl, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("claudeCodeHub.fields.baseUrlLabel"),
+      update: (options) => updateClaudeCodeHubBaseUrl(trimmedUrl, options),
     })
-    showUpdateToast(success, t("claudeCodeHub.fields.baseUrlLabel"))
   }
 
   const handleTokenChange = async (token: string) => {
     const trimmedToken = token.trim()
     if (trimmedToken === claudeCodeHubAdminToken) return
-    const success = await updateClaudeCodeHubAdminToken(trimmedToken, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("claudeCodeHub.fields.adminTokenLabel"),
+      update: (options) => updateClaudeCodeHubAdminToken(trimmedToken, options),
     })
-    showUpdateToast(success, t("claudeCodeHub.fields.adminTokenLabel"))
   }
 
   const handleValidateConfig = async () => {
@@ -82,21 +88,25 @@ export default function ClaudeCodeHubSettings() {
         adminToken,
       })
 
-      const success = await updateClaudeCodeHubConfig(
+      const saveResult = await updateClaudeCodeHubConfig(
         {
           baseUrl: trimmedUrl,
           adminToken,
         },
-        {
-          expectedLastUpdated,
-        },
+        createVersionedPreferenceSaveOptions(expectedLastUpdated),
       )
 
-      toast[success ? "success" : "error"](
-        success
-          ? t("claudeCodeHub.validation.success")
-          : t("messages.updateFailed", { name: t("claudeCodeHub.title") }),
-      )
+      if (saveResult.ok) {
+        toast.success(t("claudeCodeHub.validation.success"))
+      } else {
+        toast.error(
+          getPreferenceWriteFailureMessage(saveResult.reason, {
+            fallback: t("messages.updateFailed", {
+              name: t("claudeCodeHub.title"),
+            }),
+          }),
+        )
+      }
     } catch (error) {
       toast.error(
         t("claudeCodeHub.validation.failed", {

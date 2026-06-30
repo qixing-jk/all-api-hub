@@ -127,7 +127,7 @@ describe("userPreferences", () => {
             enhanced: { enabled: false },
           },
         }),
-      ).resolves.toBe(true)
+      ).resolves.toMatchObject({ ok: true })
 
       const preferences = await userPreferences.getPreferences()
 

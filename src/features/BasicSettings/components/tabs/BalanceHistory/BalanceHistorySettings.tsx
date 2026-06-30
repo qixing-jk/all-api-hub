@@ -71,14 +71,14 @@ export default function BalanceHistorySettings() {
     let toastId: string | undefined
     try {
       toastId = toast.loading(t("messages.loading.savingSettings"))
-      const success = await updateBalanceHistory({
+      const writeResult = await updateBalanceHistory({
         enabled,
         endOfDayCapture: { enabled: endOfDayCaptureEnabled },
         estimatedTodayIncome: { enabled: estimatedTodayIncomeEnabled },
         retentionDays: safeRetentionDays,
       })
 
-      if (!success) {
+      if (!writeResult.ok) {
         toast.error(t("settings:messages.saveSettingsFailed"), { id: toastId })
         return
       }

@@ -16,8 +16,8 @@ export default function ChangelogOnUpdateSettings() {
     useUserPreferencesContext()
 
   const handleToggle = async (enabled: boolean) => {
-    const success = await updateOpenChangelogOnUpdate(enabled)
-    showUpdateToast(success, t("changelogOnUpdate.toggleLabel"))
+    const writeResult = await updateOpenChangelogOnUpdate(enabled)
+    showUpdateToast(writeResult, t("changelogOnUpdate.toggleLabel"))
   }
 
   return (

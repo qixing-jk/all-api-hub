@@ -14,7 +14,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
 import { joinUrl } from "~/utils/core/url"
 
 /**
@@ -57,18 +57,20 @@ export default function DoneHubSettings() {
   const handleBaseUrlChange = async (url: string) => {
     const clean = url.trim()
     if (clean === doneHubBaseUrl) return
-    const success = await updateDoneHubBaseUrl(clean, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("doneHub.fields.baseUrlLabel"),
+      update: (options) => updateDoneHubBaseUrl(clean, options),
     })
-    showUpdateToast(success, t("doneHub.fields.baseUrlLabel"))
   }
 
   const handleAdminTokenChange = async (token: string) => {
     if (token === doneHubAdminToken) return
-    const success = await updateDoneHubAdminToken(token, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("doneHub.fields.adminTokenLabel"),
+      update: (options) => updateDoneHubAdminToken(token, options),
     })
-    showUpdateToast(success, t("doneHub.fields.adminTokenLabel"))
   }
 
   const handleUserIdChange = async (id: string) => {
@@ -77,10 +79,11 @@ export default function DoneHubSettings() {
 
     setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
     if (trimmedId === doneHubUserId) return
-    const success = await updateDoneHubUserId(trimmedId, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("doneHub.fields.userIdLabel"),
+      update: (options) => updateDoneHubUserId(trimmedId, options),
     })
-    showUpdateToast(success, t("doneHub.fields.userIdLabel"))
   }
 
   const trimmedBaseUrl = localBaseUrl.trim()

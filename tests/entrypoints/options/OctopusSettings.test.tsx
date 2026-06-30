@@ -14,6 +14,7 @@ const {
   mockUpdateOctopusUsername,
   mockUpdateOctopusPassword,
   mockResetOctopusConfig,
+  showUpdateToastMock,
 } = vi.hoisted(() => ({
   mockedUseUserPreferencesContext: vi.fn(),
   mockUpdateOctopusBaseUrl: vi.fn(),
@@ -21,6 +22,7 @@ const {
   mockUpdateOctopusUsername: vi.fn(),
   mockUpdateOctopusPassword: vi.fn(),
   mockResetOctopusConfig: vi.fn(),
+  showUpdateToastMock: vi.fn(),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
@@ -42,7 +44,30 @@ vi.mock("~/services/apiService/octopus/auth", () => ({
 }))
 
 vi.mock("~/utils/core/toastHelpers", () => ({
-  showUpdateToast: vi.fn(),
+  createVersionedPreferenceSaveOptions: (expectedLastUpdated: number) => ({
+    expectedLastUpdated,
+  }),
+  runPreferenceUpdateWithToast: async ({
+    expectedLastUpdated,
+    setting,
+    update,
+  }: {
+    expectedLastUpdated: number
+    setting: string
+    update: (options: { expectedLastUpdated: number }) => Promise<any>
+  }) => {
+    const result = await update({ expectedLastUpdated })
+    showUpdateToastMock(result, setting)
+    return result
+  },
+  getPreferenceWriteFailureMessage: (
+    failure: { type: string },
+    options?: { fallback?: string },
+  ) =>
+    failure.type === "stale"
+      ? "settings:messages.preferencesChangedExternally"
+      : options?.fallback ?? "settings:messages.updateFailed",
+  showUpdateToast: showUpdateToastMock,
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -62,7 +87,7 @@ vi.mock("~/components/SettingSection", () => ({
     children: ReactNode
     title: string
     description: string
-    onReset?: () => Promise<boolean>
+    onReset?: () => Promise<any>
   }) => (
     <section>
       <h2>{title}</h2>
@@ -199,11 +224,11 @@ describe("OctopusSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockUpdateOctopusBaseUrl.mockResolvedValue(true)
-    mockUpdateOctopusConfig.mockResolvedValue(true)
-    mockUpdateOctopusUsername.mockResolvedValue(true)
-    mockUpdateOctopusPassword.mockResolvedValue(true)
-    mockResetOctopusConfig.mockResolvedValue(true)
+    mockUpdateOctopusBaseUrl.mockResolvedValue({ ok: true, preferences: {} })
+    mockUpdateOctopusConfig.mockResolvedValue({ ok: true, preferences: {} })
+    mockUpdateOctopusUsername.mockResolvedValue({ ok: true, preferences: {} })
+    mockUpdateOctopusPassword.mockResolvedValue({ ok: true, preferences: {} })
+    mockResetOctopusConfig.mockResolvedValue({ ok: true, preferences: {} })
     mockedValidateConfig.mockResolvedValue({ success: true })
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
   })
@@ -229,7 +254,7 @@ describe("OctopusSettings", () => {
     })
 
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:octopus.fields.baseUrlLabel",
     )
 
@@ -254,7 +279,7 @@ describe("OctopusSettings", () => {
     })
 
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:octopus.fields.passwordLabel",
     )
 
@@ -312,7 +337,10 @@ describe("OctopusSettings", () => {
       preferences: { lastUpdated: 10 },
     })
     mockedUseUserPreferencesContext.mockImplementation(() => contextValue)
-    mockUpdateOctopusBaseUrl.mockResolvedValue(false)
+    mockUpdateOctopusBaseUrl.mockResolvedValue({
+      ok: false,
+      reason: { type: "storage-error", error: new Error("save failed") },
+    })
 
     const { rerender } = render(<OctopusSettings />)
 
@@ -352,7 +380,7 @@ describe("OctopusSettings", () => {
     })
 
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-      false,
+      expect.objectContaining({ ok: false }),
       "settings:octopus.fields.baseUrlLabel",
     )
   })
@@ -559,13 +587,16 @@ describe("OctopusSettings", () => {
     expect(mockUpdateOctopusBaseUrl).not.toHaveBeenCalled()
     expect(mockUpdateOctopusPassword).not.toHaveBeenCalled()
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:octopus.fields.usernameLabel",
     )
   })
 
   it("shows the generic update failure when validation passes but persistence is rejected", async () => {
-    mockUpdateOctopusConfig.mockResolvedValue(false)
+    mockUpdateOctopusConfig.mockResolvedValue({
+      ok: false,
+      reason: { type: "storage-error", error: new Error("save failed") },
+    })
 
     render(<OctopusSettings />)
 

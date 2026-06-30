@@ -59,8 +59,8 @@ export default function SiteAnnouncementNotificationSettings() {
   }, [siteAnnouncementNotifications.intervalMinutes])
 
   const handleToggle = async (enabled: boolean) => {
-    const success = await updateSiteAnnouncementNotifications({ enabled })
-    showUpdateToast(success, t("siteAnnouncementNotifications.polling.enable"))
+    const response = await updateSiteAnnouncementNotifications({ enabled })
+    showUpdateToast(response, t("siteAnnouncementNotifications.polling.enable"))
   }
 
   const handleIntervalBlur = async () => {
@@ -75,19 +75,19 @@ export default function SiteAnnouncementNotificationSettings() {
       return
     }
 
-    let success = false
+    let response = { success: false }
     try {
-      success = await updateSiteAnnouncementNotifications({
+      response = await updateSiteAnnouncementNotifications({
         intervalMinutes,
       })
     } catch {
-      success = false
+      response = { success: false }
     }
-    if (!success) {
+    if (!response.success) {
       setIntervalInput(String(siteAnnouncementNotifications.intervalMinutes))
     }
     showUpdateToast(
-      success,
+      response,
       t("siteAnnouncementNotifications.polling.interval"),
     )
   }

@@ -12,6 +12,10 @@ import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 
+const expectSuccessfulWrite = async (write: Promise<{ ok: boolean }>) => {
+  await expect(write).resolves.toMatchObject({ ok: true })
+}
+
 describe("userPreferences settings helpers", () => {
   const storage = new Storage({ area: "local" })
 
@@ -31,14 +35,16 @@ describe("userPreferences settings helpers", () => {
       structuredClone(DEFAULT_PREFERENCES),
     )
 
-    expect(await userPreferences.updateActiveTab(DATA_TYPE_BALANCE)).toBe(true)
-    expect(await userPreferences.updateCurrencyType("CNY")).toBe(true)
-    expect(await userPreferences.updateShowTodayCashflow(false)).toBe(true)
-    expect(await userPreferences.updateSortConfig("name", "asc")).toBe(true)
-    expect(await userPreferences.updateShowHealthStatus(false)).toBe(true)
-    expect(await userPreferences.setLanguage("ja")).toBe(true)
-    expect(
-      await userPreferences.updateWebdavSettings({
+    await expectSuccessfulWrite(
+      userPreferences.updateActiveTab(DATA_TYPE_BALANCE),
+    )
+    await expectSuccessfulWrite(userPreferences.updateCurrencyType("CNY"))
+    await expectSuccessfulWrite(userPreferences.updateShowTodayCashflow(false))
+    await expectSuccessfulWrite(userPreferences.updateSortConfig("name", "asc"))
+    await expectSuccessfulWrite(userPreferences.updateShowHealthStatus(false))
+    await expectSuccessfulWrite(userPreferences.setLanguage("ja"))
+    await expectSuccessfulWrite(
+      userPreferences.updateWebdavSettings({
         url: "https://dav.example.com",
         username: "alice",
         password: "secret",
@@ -49,14 +55,14 @@ describe("userPreferences settings helpers", () => {
           accounts: false,
         },
       }),
-    ).toBe(true)
-    expect(
-      await userPreferences.updateWebdavAutoSyncSettings({
+    )
+    await expectSuccessfulWrite(
+      userPreferences.updateWebdavAutoSyncSettings({
         autoSync: true,
         syncInterval: 7200,
         syncStrategy: WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY,
       }),
-    ).toBe(true)
+    )
 
     const preferences = await userPreferences.getPreferences()
     const exportedPreferences = await userPreferences.exportPreferences()
@@ -99,15 +105,15 @@ describe("userPreferences settings helpers", () => {
       structuredClone(DEFAULT_PREFERENCES),
     )
 
-    expect(
-      await userPreferences.updateTaskNotifications({
+    await expectSuccessfulWrite(
+      userPreferences.updateTaskNotifications({
         enabled: false,
         tasks: {
           ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
           usageHistorySync: false,
         },
       }),
-    ).toBe(true)
+    )
 
     let preferences = await userPreferences.getPreferences()
     expect(preferences.taskNotifications).toEqual({
@@ -119,7 +125,7 @@ describe("userPreferences settings helpers", () => {
       channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
     })
 
-    expect(await userPreferences.resetTaskNotifications()).toBe(true)
+    await expectSuccessfulWrite(userPreferences.resetTaskNotifications())
 
     preferences = await userPreferences.getPreferences()
     expect(preferences.taskNotifications).toEqual(
@@ -203,10 +209,10 @@ describe("userPreferences settings helpers", () => {
       },
     })
 
-    expect(await userPreferences.resetDisplaySettings()).toBe(true)
-    expect(await userPreferences.resetAutoRefreshConfig()).toBe(true)
-    expect(await userPreferences.resetNewApiConfig()).toBe(true)
-    expect(await userPreferences.resetNewApiModelSyncConfig()).toBe(true)
+    await expectSuccessfulWrite(userPreferences.resetDisplaySettings())
+    await expectSuccessfulWrite(userPreferences.resetAutoRefreshConfig())
+    await expectSuccessfulWrite(userPreferences.resetNewApiConfig())
+    await expectSuccessfulWrite(userPreferences.resetNewApiModelSyncConfig())
 
     await userPreferences.savePreferences({
       managedSiteModelSync: {
@@ -216,14 +222,16 @@ describe("userPreferences settings helpers", () => {
       },
     })
 
-    expect(await userPreferences.resetManagedSiteModelSyncConfig()).toBe(true)
-    expect(await userPreferences.resetCliProxyConfig()).toBe(true)
-    expect(await userPreferences.resetClaudeCodeRouterConfig()).toBe(true)
-    expect(await userPreferences.resetAutoCheckinConfig()).toBe(true)
-    expect(await userPreferences.resetModelRedirectConfig()).toBe(true)
-    expect(await userPreferences.resetRedemptionAssist()).toBe(true)
-    expect(await userPreferences.resetWebAiApiCheck()).toBe(true)
-    expect(await userPreferences.resetWebdavConfig()).toBe(true)
+    await expectSuccessfulWrite(
+      userPreferences.resetManagedSiteModelSyncConfig(),
+    )
+    await expectSuccessfulWrite(userPreferences.resetCliProxyConfig())
+    await expectSuccessfulWrite(userPreferences.resetClaudeCodeRouterConfig())
+    await expectSuccessfulWrite(userPreferences.resetAutoCheckinConfig())
+    await expectSuccessfulWrite(userPreferences.resetModelRedirectConfig())
+    await expectSuccessfulWrite(userPreferences.resetRedemptionAssist())
+    await expectSuccessfulWrite(userPreferences.resetWebAiApiCheck())
+    await expectSuccessfulWrite(userPreferences.resetWebdavConfig())
 
     const preferences = await userPreferences.getPreferences()
 
@@ -263,7 +271,7 @@ describe("userPreferences settings helpers", () => {
     const resetTimestamp = new Date("2026-03-30T10:00:00.000Z")
     vi.setSystemTime(resetTimestamp)
 
-    expect(await userPreferences.resetToDefaults()).toBe(true)
+    expect((await userPreferences.resetToDefaults()).ok).toBe(true)
 
     const resetPreferences = await userPreferences.getPreferences()
     expect(resetPreferences.activeTab).toBe(DEFAULT_PREFERENCES.activeTab)
@@ -274,7 +282,7 @@ describe("userPreferences settings helpers", () => {
       resetTimestamp.getTime(),
     )
 
-    expect(await userPreferences.clearPreferences()).toBe(true)
+    expect((await userPreferences.clearPreferences()).ok).toBe(true)
 
     const storedAfterClear = await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,

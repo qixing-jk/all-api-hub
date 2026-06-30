@@ -8,6 +8,10 @@ import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
+const { showUpdateToastMock } = vi.hoisted(() => ({
+  showUpdateToastMock: vi.fn(),
+}))
+
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
 }))
@@ -17,7 +21,23 @@ vi.mock("~/services/apiService/claudeCodeHub", () => ({
 }))
 
 vi.mock("~/utils/core/toastHelpers", () => ({
-  showUpdateToast: vi.fn(),
+  createVersionedPreferenceSaveOptions: (expectedLastUpdated: number) => ({
+    expectedLastUpdated,
+  }),
+  runPreferenceUpdateWithToast: async ({
+    expectedLastUpdated,
+    setting,
+    update,
+  }: {
+    expectedLastUpdated: number
+    setting: string
+    update: (options: { expectedLastUpdated: number }) => Promise<any>
+  }) => {
+    const result = await update({ expectedLastUpdated })
+    showUpdateToastMock(result, setting)
+    return result
+  },
+  showUpdateToast: showUpdateToastMock,
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -44,15 +64,23 @@ describe("ClaudeCodeHubSettings", () => {
     )
 
   it("trims the base URL before persisting", async () => {
-    const updateClaudeCodeHubBaseUrl = vi.fn().mockResolvedValue(true)
+    const updateClaudeCodeHubBaseUrl = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 1 },
       claudeCodeHubBaseUrl: "https://cch.example.com",
       claudeCodeHubAdminToken: "admin-token",
       updateClaudeCodeHubBaseUrl,
-      updateClaudeCodeHubAdminToken: vi.fn().mockResolvedValue(true),
-      updateClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
-      resetClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
+      updateClaudeCodeHubAdminToken: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateClaudeCodeHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      resetClaudeCodeHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
@@ -76,21 +104,29 @@ describe("ClaudeCodeHubSettings", () => {
     })
 
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:claudeCodeHub.fields.baseUrlLabel",
     )
   })
 
   it("trims the admin token before persisting and skips unchanged trimmed values", async () => {
-    const updateClaudeCodeHubAdminToken = vi.fn().mockResolvedValue(true)
+    const updateClaudeCodeHubAdminToken = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 2 },
       claudeCodeHubBaseUrl: "https://cch.example.com",
       claudeCodeHubAdminToken: "same-token",
-      updateClaudeCodeHubBaseUrl: vi.fn().mockResolvedValue(true),
+      updateClaudeCodeHubBaseUrl: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
       updateClaudeCodeHubAdminToken,
-      updateClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
-      resetClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
+      updateClaudeCodeHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      resetClaudeCodeHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
@@ -115,7 +151,7 @@ describe("ClaudeCodeHubSettings", () => {
     expect(updateClaudeCodeHubAdminToken).toHaveBeenCalledTimes(1)
     expect(mockedShowUpdateToast).toHaveBeenCalledTimes(1)
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:claudeCodeHub.fields.adminTokenLabel",
     )
   })
@@ -127,10 +163,18 @@ describe("ClaudeCodeHubSettings", () => {
       preferences: { lastUpdated: 3 },
       claudeCodeHubBaseUrl: "",
       claudeCodeHubAdminToken: "",
-      updateClaudeCodeHubBaseUrl: vi.fn().mockResolvedValue(true),
-      updateClaudeCodeHubAdminToken: vi.fn().mockResolvedValue(true),
-      updateClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
-      resetClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
+      updateClaudeCodeHubBaseUrl: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateClaudeCodeHubAdminToken: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateClaudeCodeHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      resetClaudeCodeHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
@@ -168,17 +212,28 @@ describe("ClaudeCodeHubSettings", () => {
 
   it("validates and persists trimmed Claude Code Hub config values", async () => {
     const toast = await import("react-hot-toast")
-    const updateClaudeCodeHubConfig = vi.fn().mockResolvedValue(true)
+    const updateClaudeCodeHubConfig = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
 
-    mockedValidateClaudeCodeHubConfig.mockResolvedValue(true)
+    mockedValidateClaudeCodeHubConfig.mockResolvedValue({
+      ok: true,
+      preferences: {},
+    })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 4 },
       claudeCodeHubBaseUrl: "https://cch.example.com",
       claudeCodeHubAdminToken: "admin-token",
-      updateClaudeCodeHubBaseUrl: vi.fn().mockResolvedValue(true),
-      updateClaudeCodeHubAdminToken: vi.fn().mockResolvedValue(true),
+      updateClaudeCodeHubBaseUrl: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateClaudeCodeHubAdminToken: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
       updateClaudeCodeHubConfig,
-      resetClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
+      resetClaudeCodeHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
@@ -237,10 +292,18 @@ describe("ClaudeCodeHubSettings", () => {
       preferences: { lastUpdated: 5 },
       claudeCodeHubBaseUrl: "https://cch.example.com",
       claudeCodeHubAdminToken: "admin-token",
-      updateClaudeCodeHubBaseUrl: vi.fn().mockResolvedValue(true),
-      updateClaudeCodeHubAdminToken: vi.fn().mockResolvedValue(true),
-      updateClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
-      resetClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
+      updateClaudeCodeHubBaseUrl: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateClaudeCodeHubAdminToken: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateClaudeCodeHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      resetClaudeCodeHubConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()

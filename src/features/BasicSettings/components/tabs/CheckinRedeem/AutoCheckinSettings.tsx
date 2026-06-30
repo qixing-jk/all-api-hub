@@ -79,9 +79,9 @@ export default function AutoCheckinSettings() {
   const savePreferences = async (updates: Partial<AutoCheckinPreferences>) => {
     try {
       setIsSaving(true)
-      const success = await updateAutoCheckin(updates)
+      const writeResult = await updateAutoCheckin(updates)
 
-      if (success) {
+      if (writeResult.ok) {
         toast.success(t("autoCheckin:messages.success.settingsSaved"))
       } else {
         toast.error(t("settings:messages.saveSettingsFailed"))
@@ -170,7 +170,7 @@ export default function AutoCheckinSettings() {
       description={t("autoCheckin:description")}
       onReset={async () => {
         const result = await resetAutoCheckinConfig()
-        if (result) {
+        if (result.ok) {
           setIsSaving(false)
         }
         return result

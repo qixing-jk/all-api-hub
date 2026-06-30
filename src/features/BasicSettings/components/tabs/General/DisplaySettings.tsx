@@ -30,20 +30,20 @@ export default function DisplaySettings() {
 
   const handleCurrencyChange = async (currency: CurrencyType) => {
     if (currency === currencyType) return
-    const success = await updateCurrencyType(currency)
-    showUpdateToast(success, t("display.currencyUnit"))
+    const writeResult = await updateCurrencyType(currency)
+    showUpdateToast(writeResult, t("display.currencyUnit"))
   }
 
   const handleDefaultTabChange = async (tab: DashboardTabType) => {
     if (!showTodayCashflow && tab === DATA_TYPE_CASHFLOW) return
     if (tab === activeTab) return
-    const success = await updateDefaultTab(tab)
-    showUpdateToast(success, t("display.defaultTab"))
+    const writeResult = await updateDefaultTab(tab)
+    showUpdateToast(writeResult, t("display.defaultTab"))
   }
 
   const handleTodayCashflowToggle = async (enabled: boolean) => {
-    const success = await updateShowTodayCashflow(enabled)
-    showUpdateToast(success, t("display.todayCashflowEnabled"))
+    const writeResult = await updateShowTodayCashflow(enabled)
+    showUpdateToast(writeResult, t("display.todayCashflowEnabled"))
   }
 
   return (

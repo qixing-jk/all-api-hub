@@ -34,9 +34,9 @@ describe("userPreferences sortingPriorityConfig", () => {
     })
 
     vi.setSystemTime(new Date("2026-03-30T01:00:05.000Z"))
-    const success = await userPreferences.resetSortingPriorityConfig()
+    const writeResult = await userPreferences.resetSortingPriorityConfig()
 
-    expect(success).toBe(true)
+    expect(writeResult.ok).toBe(true)
 
     const preferences = await userPreferences.getPreferences()
     expect(preferences.sortingPriorityConfig).toEqual({

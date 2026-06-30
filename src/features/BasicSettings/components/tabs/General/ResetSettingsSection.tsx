@@ -35,8 +35,8 @@ export default function ResetSettingsSection() {
   const handleResetConfirm = async () => {
     setIsResetting(true)
     try {
-      const success = await resetToDefaults()
-      showResetToast(success)
+      const result = await resetToDefaults()
+      showResetToast(result.ok)
     } finally {
       setIsResetting(false)
       setIsConfirmDialogOpen(false)

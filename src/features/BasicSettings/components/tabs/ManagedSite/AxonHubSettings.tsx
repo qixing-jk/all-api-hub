@@ -8,7 +8,11 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { signIn } from "~/services/apiService/axonHub"
 import { getErrorMessage } from "~/utils/core/error"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import {
+  createVersionedPreferenceSaveOptions,
+  getPreferenceWriteFailureMessage,
+  runPreferenceUpdateWithToast,
+} from "~/utils/core/toastHelpers"
 
 const isLikelyCorsSetupError = (message: string) =>
   /cors|failed to fetch|network|http 403|forbidden/i.test(message)
@@ -51,27 +55,30 @@ export default function AxonHubSettings() {
   const handleBaseUrlChange = async (url: string) => {
     const trimmedUrl = url.trim()
     if (trimmedUrl === axonHubBaseUrl) return
-    const success = await updateAxonHubBaseUrl(trimmedUrl, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("axonHub.fields.baseUrlLabel"),
+      update: (options) => updateAxonHubBaseUrl(trimmedUrl, options),
     })
-    showUpdateToast(success, t("axonHub.fields.baseUrlLabel"))
   }
 
   const handleEmailChange = async (email: string) => {
     const trimmedEmail = email.trim()
     if (trimmedEmail === axonHubEmail) return
-    const success = await updateAxonHubEmail(trimmedEmail, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("axonHub.fields.emailLabel"),
+      update: (options) => updateAxonHubEmail(trimmedEmail, options),
     })
-    showUpdateToast(success, t("axonHub.fields.emailLabel"))
   }
 
   const handlePasswordChange = async (password: string) => {
     if (password === axonHubPassword) return
-    const success = await updateAxonHubPassword(password, {
+    await runPreferenceUpdateWithToast({
       expectedLastUpdated,
+      setting: t("axonHub.fields.passwordLabel"),
+      update: (options) => updateAxonHubPassword(password, options),
     })
-    showUpdateToast(success, t("axonHub.fields.passwordLabel"))
   }
 
   const handleValidateConfig = async () => {
@@ -97,22 +104,24 @@ export default function AxonHubSettings() {
         password: localConfig.password,
       })
 
-      const success = await updateAxonHubConfig(
+      const saveResult = await updateAxonHubConfig(
         {
           baseUrl: trimmedUrl,
           email: trimmedEmail,
           password: localConfig.password,
         },
-        {
-          expectedLastUpdated,
-        },
+        createVersionedPreferenceSaveOptions(expectedLastUpdated),
       )
 
-      toast[success ? "success" : "error"](
-        success
-          ? t("axonHub.validation.success")
-          : t("messages.updateFailed", { name: t("axonHub.title") }),
-      )
+      if (saveResult.ok) {
+        toast.success(t("axonHub.validation.success"))
+      } else {
+        toast.error(
+          getPreferenceWriteFailureMessage(saveResult.reason, {
+            fallback: t("messages.updateFailed", { name: t("axonHub.title") }),
+          }),
+        )
+      }
     } catch (error) {
       const errorMessage = getErrorMessage(error)
       toast.error(

@@ -57,9 +57,9 @@ export default function PopupInterruptionHintBanner({
   const handleUseSidepanel = async () => {
     setIsApplying(true)
     try {
-      const success = await updateActionClickBehavior("sidepanel")
-      if (!success) {
-        showUpdateToast(false, t("popupInterruption.settingName"))
+      const writeResult = await updateActionClickBehavior("sidepanel")
+      if (!writeResult.ok) {
+        showUpdateToast(writeResult, t("popupInterruption.settingName"))
         return
       }
 

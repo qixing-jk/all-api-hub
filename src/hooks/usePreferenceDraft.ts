@@ -23,6 +23,13 @@ function defaultIsEqual<T>(left: T, right: T) {
 }
 
 /**
+ * Check whether a value can be reconciled field-by-field.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+/**
  * Manage a local settings draft against a persisted preference snapshot.
  *
  * Clean drafts rehydrate automatically from storage refreshes. Dirty drafts keep
@@ -51,8 +58,36 @@ export function usePreferenceDraft<T>({
     if (isEqual(draft, savedValue)) {
       setBaselineValue(savedValue)
       setBaselineVersion(savedVersion)
+      return
     }
-  }, [draft, isDirty, isEqual, savedValue, savedVersion])
+
+    if (savedVersion <= baselineVersion) {
+      return
+    }
+
+    if (!isRecord(savedValue) || !isRecord(baselineValue) || !isRecord(draft)) {
+      return
+    }
+
+    const savedChangesMatchDraft = Object.entries(savedValue).every(
+      ([key, value]) =>
+        defaultIsEqual(value, baselineValue[key]) ||
+        defaultIsEqual(draft[key], value),
+    )
+
+    if (savedChangesMatchDraft) {
+      setBaselineValue(savedValue)
+      setBaselineVersion(savedVersion)
+    }
+  }, [
+    baselineValue,
+    baselineVersion,
+    draft,
+    isDirty,
+    isEqual,
+    savedValue,
+    savedVersion,
+  ])
 
   return {
     draft,

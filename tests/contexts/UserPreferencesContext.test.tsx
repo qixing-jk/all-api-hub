@@ -20,6 +20,7 @@ import {
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
+  type PreferenceWriteResult,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
@@ -207,6 +208,14 @@ let preferencePersistence = setupMockPreferencePersistence(
   mockedUserPreferences as any,
 )
 
+const preferenceWriteFailure: PreferenceWriteResult = {
+  ok: false,
+  reason: {
+    type: "storage-error",
+    error: new Error("save failed"),
+  },
+}
+
 const createDeferred = <T,>() => {
   let resolve!: (value: T | PromiseLike<T>) => void
   let reject!: (reason?: unknown) => void
@@ -216,6 +225,13 @@ const createDeferred = <T,>() => {
   })
 
   return { promise, resolve, reject }
+}
+
+const expectFailedWrite = (result: PreferenceWriteResult) => {
+  expect(result).toMatchObject({
+    ok: false,
+    reason: { type: "storage-error" },
+  })
 }
 
 const Probe = ({ children }: { children?: ReactNode }) => {
@@ -265,14 +281,17 @@ describe("UserPreferencesContext", () => {
     )
     const applyPersistedUpdate = (
       updates: Partial<UserPreferences> | Record<string, unknown>,
-    ) => {
+    ): PreferenceWriteResult => {
       const nextPreferences = deepOverride(
         preferencePersistence.getPersistedPreferences(),
         updates,
       )
       nextPreferences.lastUpdated += 1
       preferencePersistence.setPersistedPreferences(nextPreferences)
-      return true
+      return {
+        ok: true,
+        preferences: nextPreferences,
+      }
     }
     mockedUserPreferences.updateActiveTab.mockImplementation(
       async (activeTab) => applyPersistedUpdate({ activeTab }),
@@ -313,7 +332,10 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.updateTaskNotifications.mockImplementation(
       async (updates) => applyPersistedUpdate({ taskNotifications: updates }),
     )
-    mockedUserPreferences.resetToDefaults.mockResolvedValue(true)
+    mockedUserPreferences.resetToDefaults.mockResolvedValue({
+      ok: true,
+      preferences: clonePreferences(),
+    })
     mockedUserPreferences.resetDisplaySettings.mockImplementation(async () =>
       applyPersistedUpdate({
         activeTab: DEFAULT_PREFERENCES.activeTab,
@@ -402,7 +424,10 @@ describe("UserPreferencesContext", () => {
         webdav: DEFAULT_PREFERENCES.webdav,
       }),
     )
-    mockedUserPreferences.resetSortingPriorityConfig.mockResolvedValue(true)
+    mockedUserPreferences.resetSortingPriorityConfig.mockResolvedValue({
+      ok: true,
+      preferences: clonePreferences(),
+    })
     mockedUserPreferences.resetTaskNotifications.mockImplementation(async () =>
       applyPersistedUpdate({
         taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
@@ -859,7 +884,7 @@ describe("UserPreferencesContext", () => {
     const context = await renderProvider(preferences)
 
     await act(async () => {
-      expect(await context.updateActiveTab(DATA_TYPE_CASHFLOW)).toBe(true)
+      expect((await context.updateActiveTab(DATA_TYPE_CASHFLOW)).ok).toBe(true)
     })
 
     expect(mockedUserPreferences.updateActiveTab).toHaveBeenCalledWith(
@@ -873,7 +898,7 @@ describe("UserPreferencesContext", () => {
     )
 
     await act(async () => {
-      expect(await context.updateDefaultTab(DATA_TYPE_BALANCE)).toBe(true)
+      expect((await context.updateDefaultTab(DATA_TYPE_BALANCE)).ok).toBe(true)
     })
 
     expect(mockedUserPreferences.updateActiveTab).toHaveBeenLastCalledWith(
@@ -912,9 +937,9 @@ describe("UserPreferencesContext", () => {
     updatedConfig.lastModified = 1_700_000_000_000
 
     await act(async () => {
-      expect(await context.updateSortingPriorityConfig(updatedConfig)).toBe(
-        true,
-      )
+      expect(
+        (await context.updateSortingPriorityConfig(updatedConfig)).ok,
+      ).toBe(true)
     })
 
     expect(mockedUserPreferences.setSortingPriorityConfig).toHaveBeenCalledWith(
@@ -1363,92 +1388,104 @@ describe("UserPreferencesContext", () => {
     preferences.themeMode = "system"
     preferences.managedSiteType = SITE_TYPES.VELOERA
 
-    mockedUserPreferences.updateActiveTab.mockResolvedValue(false)
-    mockedUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
-    mockedUserPreferences.updateCurrencyType.mockResolvedValue(false)
-    mockedUserPreferences.updateSortConfig.mockResolvedValue(false)
-    mockedUserPreferences.setSortingPriorityConfig.mockResolvedValue(false)
-    mockedUserPreferences.updateOpenChangelogOnUpdate.mockResolvedValue(false)
+    mockedUserPreferences.updateActiveTab.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.savePreferencesWithResult.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.updateCurrencyType.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.updateSortConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.setSortingPriorityConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.updateOpenChangelogOnUpdate.mockResolvedValue(
+      preferenceWriteFailure,
+    )
     mockedUserPreferences.updateAutoProvisionKeyOnAccountAdd.mockResolvedValue(
-      false,
+      preferenceWriteFailure,
     )
     mockedUserPreferences.updateAutoFillCurrentSiteUrlOnAccountAdd.mockResolvedValue(
-      false,
+      preferenceWriteFailure,
     )
     mockedUserPreferences.updateWarnOnDuplicateAccountAdd.mockResolvedValue(
-      false,
+      preferenceWriteFailure,
     )
-    mockedUserPreferences.updateManagedSiteType.mockResolvedValue(false)
-    mockedUserPreferences.updateLoggingPreferences.mockResolvedValue(false)
+    mockedUserPreferences.updateManagedSiteType.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.updateLoggingPreferences.mockResolvedValue(
+      preferenceWriteFailure,
+    )
 
     const context = await renderProvider(preferences)
 
     await act(async () => {
-      expect(await context.updateActiveTab(DATA_TYPE_CASHFLOW)).toBe(false)
-      expect(await context.updateActionClickBehavior("sidepanel")).toBe(false)
-      expect(await context.updateOpenChangelogOnUpdate(false)).toBe(false)
-      expect(await context.updateAutoProvisionKeyOnAccountAdd(true)).toBe(false)
-      expect(await context.updateAutoFillCurrentSiteUrlOnAccountAdd(true)).toBe(
-        false,
+      expectFailedWrite(await context.updateActiveTab(DATA_TYPE_CASHFLOW))
+      expectFailedWrite(await context.updateActionClickBehavior("sidepanel"))
+      expectFailedWrite(await context.updateOpenChangelogOnUpdate(false))
+      expectFailedWrite(await context.updateAutoProvisionKeyOnAccountAdd(true))
+      expectFailedWrite(
+        await context.updateAutoFillCurrentSiteUrlOnAccountAdd(true),
       )
-      expect(await context.updateWarnOnDuplicateAccountAdd(false)).toBe(false)
-      expect(await context.updateDefaultTab(DATA_TYPE_CASHFLOW)).toBe(false)
-      expect(await context.updateCurrencyType("CNY")).toBe(false)
-      expect(await context.updateShowTodayCashflow(false)).toBe(false)
-      expect(await context.updateSortConfig(DATA_TYPE_INCOME, "asc")).toBe(
-        false,
-      )
-      expect(
+      expectFailedWrite(await context.updateWarnOnDuplicateAccountAdd(false))
+      expectFailedWrite(await context.updateDefaultTab(DATA_TYPE_CASHFLOW))
+      expectFailedWrite(await context.updateCurrencyType("CNY"))
+      expectFailedWrite(await context.updateShowTodayCashflow(false))
+      expectFailedWrite(await context.updateSortConfig(DATA_TYPE_INCOME, "asc"))
+      expectFailedWrite(
         await context.updateSortingPriorityConfig(
           DEFAULT_SORTING_PRIORITY_CONFIG,
         ),
-      ).toBe(false)
-      expect(await context.updateAutoRefresh(true)).toBe(false)
-      expect(await context.updateRefreshInterval(60_000)).toBe(false)
-      expect(await context.updateMinRefreshInterval(15_000)).toBe(false)
-      expect(await context.updateRefreshOnOpen(true)).toBe(false)
-      expect(await context.updateNewApiBaseUrl("https://new-api.example")).toBe(
-        false,
       )
-      expect(
+      expectFailedWrite(await context.updateAutoRefresh(true))
+      expectFailedWrite(await context.updateRefreshInterval(60_000))
+      expectFailedWrite(await context.updateMinRefreshInterval(15_000))
+      expectFailedWrite(await context.updateRefreshOnOpen(true))
+      expectFailedWrite(
+        await context.updateNewApiBaseUrl("https://new-api.example"),
+      )
+      expectFailedWrite(
         await context.updateDoneHubBaseUrl("https://donehub.example"),
-      ).toBe(false)
-      expect(
+      )
+      expectFailedWrite(
         await context.updateVeloeraBaseUrl("https://veloera.example"),
-      ).toBe(false)
-      expect(
+      )
+      expectFailedWrite(
         await context.updateOctopusBaseUrl("https://octopus.example"),
-      ).toBe(false)
-      expect(await context.updateManagedSiteType(SITE_TYPES.VELOERA)).toBe(
-        false,
       )
-      expect(await context.updateThemeMode("dark")).toBe(false)
-      expect(await context.updateLoggingConsoleEnabled(false)).toBe(false)
-      expect(await context.updateLoggingLevel("warn")).toBe(false)
-      expect(await context.updateAutoCheckin({ globalEnabled: false })).toBe(
-        false,
+      expectFailedWrite(await context.updateManagedSiteType(SITE_TYPES.VELOERA))
+      expectFailedWrite(await context.updateThemeMode("dark"))
+      expectFailedWrite(await context.updateLoggingConsoleEnabled(false))
+      expectFailedWrite(await context.updateLoggingLevel("warn"))
+      expectFailedWrite(
+        await context.updateAutoCheckin({ globalEnabled: false }),
       )
-      expect(await context.updateBalanceHistory({ enabled: true })).toBe(false)
-      expect(await context.updateNewApiModelSync({ enabled: true })).toBe(false)
-      expect(await context.updateModelRedirect({ enabled: true })).toBe(false)
-      expect(await context.updateRedemptionAssist({ enabled: false })).toBe(
-        false,
+      expectFailedWrite(await context.updateBalanceHistory({ enabled: true }))
+      expectFailedWrite(await context.updateNewApiModelSync({ enabled: true }))
+      expectFailedWrite(await context.updateModelRedirect({ enabled: true }))
+      expectFailedWrite(
+        await context.updateRedemptionAssist({ enabled: false }),
       )
-      expect(await context.updateWebAiApiCheck({ enabled: false })).toBe(false)
-      expect(await context.updateTempWindowFallback({ enabled: false })).toBe(
-        false,
+      expectFailedWrite(await context.updateWebAiApiCheck({ enabled: false }))
+      expectFailedWrite(
+        await context.updateTempWindowFallback({ enabled: false }),
       )
-      expect(
+      expectFailedWrite(
         await context.updateTempWindowFallbackReminder({ dismissed: true }),
-      ).toBe(false)
-      expect(await context.updateCliProxyBaseUrl("https://cli.example")).toBe(
-        false,
       )
-      expect(await context.updateCliProxyManagementKey("cli-key")).toBe(false)
-      expect(
+      expectFailedWrite(
+        await context.updateCliProxyBaseUrl("https://cli.example"),
+      )
+      expectFailedWrite(await context.updateCliProxyManagementKey("cli-key"))
+      expectFailedWrite(
         await context.updateClaudeCodeRouterBaseUrl("https://ccr.example"),
-      ).toBe(false)
-      expect(await context.updateClaudeCodeRouterApiKey("ccr-key")).toBe(false)
+      )
+      expectFailedWrite(await context.updateClaudeCodeRouterApiKey("ccr-key"))
     })
 
     expect((latestContext as any)?.activeTab).toBe(DATA_TYPE_BALANCE)
@@ -1466,6 +1503,36 @@ describe("UserPreferencesContext", () => {
     expect(mockedSendRedemptionAssistMessage).not.toHaveBeenCalled()
     expect(mockedSendSiteAnnouncementsMessage).not.toHaveBeenCalled()
     expect(mockedSendWebdavAutoSyncMessage).not.toHaveBeenCalled()
+  })
+
+  it("returns a stale preference write result when the saved snapshot is stale", async () => {
+    const preferences = clonePreferences()
+    preferences.lastUpdated = 7
+    mockedUserPreferences.savePreferencesWithResult.mockResolvedValue({
+      ok: false,
+      reason: {
+        type: "stale",
+        expectedLastUpdated: preferences.lastUpdated,
+        actualLastUpdated: preferences.lastUpdated + 1,
+      },
+    })
+
+    const context = await renderProvider(preferences)
+
+    await act(async () => {
+      expect(
+        await context.updateCliProxyBaseUrl("https://cli.example.invalid", {
+          expectedLastUpdated: preferences.lastUpdated,
+        }),
+      ).toEqual({
+        ok: false,
+        reason: {
+          type: "stale",
+          expectedLastUpdated: preferences.lastUpdated,
+          actualLastUpdated: preferences.lastUpdated + 1,
+        },
+      })
+    })
   })
 
   it("keeps stored backend credentials untouched when credential writes fail", async () => {
@@ -1494,43 +1561,43 @@ describe("UserPreferencesContext", () => {
       password: "stored-octopus-password",
     }
 
-    mockedUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
+    mockedUserPreferences.savePreferencesWithResult.mockResolvedValue(
+      preferenceWriteFailure,
+    )
 
     const context = await renderProvider(preferences)
 
     await act(async () => {
-      expect(await context.updateNewApiAdminToken("next-new-api-admin")).toBe(
-        false,
+      expectFailedWrite(
+        await context.updateNewApiAdminToken("next-new-api-admin"),
       )
-      expect(await context.updateNewApiUserId("next-new-api-user-id")).toBe(
-        false,
+      expectFailedWrite(
+        await context.updateNewApiUserId("next-new-api-user-id"),
       )
-      expect(await context.updateNewApiUsername("next-new-api-user")).toBe(
-        false,
+      expectFailedWrite(await context.updateNewApiUsername("next-new-api-user"))
+      expectFailedWrite(
+        await context.updateNewApiPassword("next-new-api-password"),
       )
-      expect(await context.updateNewApiPassword("next-new-api-password")).toBe(
-        false,
+      expectFailedWrite(
+        await context.updateNewApiTotpSecret("next-new-api-totp"),
       )
-      expect(await context.updateNewApiTotpSecret("next-new-api-totp")).toBe(
-        false,
+      expectFailedWrite(
+        await context.updateDoneHubAdminToken("next-donehub-admin"),
       )
-      expect(await context.updateDoneHubAdminToken("next-donehub-admin")).toBe(
-        false,
+      expectFailedWrite(
+        await context.updateDoneHubUserId("next-donehub-user-id"),
       )
-      expect(await context.updateDoneHubUserId("next-donehub-user-id")).toBe(
-        false,
+      expectFailedWrite(
+        await context.updateVeloeraAdminToken("next-veloera-admin"),
       )
-      expect(await context.updateVeloeraAdminToken("next-veloera-admin")).toBe(
-        false,
+      expectFailedWrite(
+        await context.updateVeloeraUserId("next-veloera-user-id"),
       )
-      expect(await context.updateVeloeraUserId("next-veloera-user-id")).toBe(
-        false,
+      expectFailedWrite(
+        await context.updateOctopusUsername("next-octopus-user"),
       )
-      expect(await context.updateOctopusUsername("next-octopus-user")).toBe(
-        false,
-      )
-      expect(await context.updateOctopusPassword("next-octopus-password")).toBe(
-        false,
+      expectFailedWrite(
+        await context.updateOctopusPassword("next-octopus-password"),
       )
     })
 
@@ -1598,48 +1665,86 @@ describe("UserPreferencesContext", () => {
       lastModified: Date.now(),
     }
 
-    mockedUserPreferences.resetToDefaults.mockResolvedValue(false)
-    mockedUserPreferences.resetDisplaySettings.mockResolvedValue(false)
-    mockedUserPreferences.resetAutoRefreshConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetNewApiConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetDoneHubConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetVeloeraConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetOctopusConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetClaudeCodeHubConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetNewApiModelSyncConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetCliProxyConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetClaudeCodeRouterConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetAutoCheckinConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetRedemptionAssist.mockResolvedValue(false)
-    mockedUserPreferences.resetWebAiApiCheck.mockResolvedValue(false)
-    mockedUserPreferences.resetModelRedirectConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetWebdavConfig.mockResolvedValue(false)
-    mockedUserPreferences.updateLoggingPreferences.mockResolvedValue(false)
-    mockedUserPreferences.resetSortingPriorityConfig.mockResolvedValue(false)
-    mockedUserPreferences.resetTaskNotifications.mockResolvedValue(false)
+    mockedUserPreferences.resetToDefaults.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetDisplaySettings.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetAutoRefreshConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetNewApiConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetDoneHubConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetVeloeraConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetOctopusConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetClaudeCodeHubConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetNewApiModelSyncConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetCliProxyConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetClaudeCodeRouterConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetAutoCheckinConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetRedemptionAssist.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetWebAiApiCheck.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetModelRedirectConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetWebdavConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.updateLoggingPreferences.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetSortingPriorityConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    mockedUserPreferences.resetTaskNotifications.mockResolvedValue(
+      preferenceWriteFailure,
+    )
 
     const context = await renderProvider(preferences)
 
     await act(async () => {
-      expect(await context.resetToDefaults()).toBe(false)
-      expect(await context.resetDisplaySettings()).toBe(false)
-      expect(await context.resetAutoRefreshConfig()).toBe(false)
-      expect(await context.resetNewApiConfig()).toBe(false)
-      expect(await context.resetDoneHubConfig()).toBe(false)
-      expect(await context.resetVeloeraConfig()).toBe(false)
-      expect(await context.resetOctopusConfig()).toBe(false)
-      expect(await context.resetClaudeCodeHubConfig()).toBe(false)
-      expect(await context.resetNewApiModelSyncConfig()).toBe(false)
-      expect(await context.resetCliProxyConfig()).toBe(false)
-      expect(await context.resetClaudeCodeRouterConfig()).toBe(false)
-      expect(await context.resetAutoCheckinConfig()).toBe(false)
-      expect(await context.resetRedemptionAssistConfig()).toBe(false)
-      expect(await context.resetWebAiApiCheckConfig()).toBe(false)
-      expect(await context.resetModelRedirectConfig()).toBe(false)
-      expect(await context.resetWebdavConfig()).toBe(false)
-      expect(await context.resetLoggingSettings()).toBe(false)
-      expect(await context.resetSortingPriorityConfig()).toBe(false)
-      expect(await context.resetTaskNotifications()).toBe(false)
+      expectFailedWrite(await context.resetToDefaults())
+      expectFailedWrite(await context.resetDisplaySettings())
+      expectFailedWrite(await context.resetAutoRefreshConfig())
+      expectFailedWrite(await context.resetNewApiConfig())
+      expectFailedWrite(await context.resetDoneHubConfig())
+      expectFailedWrite(await context.resetVeloeraConfig())
+      expectFailedWrite(await context.resetOctopusConfig())
+      expectFailedWrite(await context.resetClaudeCodeHubConfig())
+      expectFailedWrite(await context.resetNewApiModelSyncConfig())
+      expectFailedWrite(await context.resetCliProxyConfig())
+      expectFailedWrite(await context.resetClaudeCodeRouterConfig())
+      expectFailedWrite(await context.resetAutoCheckinConfig())
+      expectFailedWrite(await context.resetRedemptionAssistConfig())
+      expectFailedWrite(await context.resetWebAiApiCheckConfig())
+      expectFailedWrite(await context.resetModelRedirectConfig())
+      expectFailedWrite(await context.resetWebdavConfig())
+      expectFailedWrite(await context.resetLoggingSettings())
+      expectFailedWrite(await context.resetSortingPriorityConfig())
+      expectFailedWrite(await context.resetTaskNotifications())
     })
 
     expect((latestContext as any)?.preferences).toEqual(preferences)
@@ -2068,7 +2173,10 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.getPreferences
       .mockResolvedValueOnce(initialPreferences)
       .mockReturnValueOnce(deferredPreferences.promise)
-    mockedUserPreferences.updateTaskNotifications.mockResolvedValueOnce(true)
+    mockedUserPreferences.updateTaskNotifications.mockResolvedValueOnce({
+      ok: true,
+      preferences: clonePreferences(),
+    })
 
     const context = await renderProvider(initialPreferences)
 
@@ -2084,9 +2192,11 @@ describe("UserPreferencesContext", () => {
 
     await act(async () => {
       expect(
-        await context.updateTaskNotifications({
-          enabled: false,
-        }),
+        (
+          await context.updateTaskNotifications({
+            enabled: false,
+          })
+        ).ok,
       ).toBe(true)
     })
 
@@ -2110,7 +2220,10 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.getPreferences
       .mockResolvedValueOnce(initialPreferences)
       .mockReturnValueOnce(deferredPreferences.promise)
-    mockedUserPreferences.resetTaskNotifications.mockResolvedValueOnce(true)
+    mockedUserPreferences.resetTaskNotifications.mockResolvedValueOnce({
+      ok: true,
+      preferences: clonePreferences(),
+    })
 
     const context = await renderProvider(initialPreferences)
 
@@ -2125,7 +2238,7 @@ describe("UserPreferencesContext", () => {
     })
 
     await act(async () => {
-      expect(await context.resetTaskNotifications()).toBe(true)
+      expect((await context.resetTaskNotifications()).ok).toBe(true)
     })
 
     expect((latestContext as any)?.preferences.taskNotifications).toEqual(
@@ -2307,14 +2420,16 @@ describe("UserPreferencesContext", () => {
 
     const context = await renderProvider(preferences)
 
-    let success = true
+    let response: { success: boolean; data?: unknown; error?: string } = {
+      success: true,
+    }
     await act(async () => {
-      success = await context.updateSiteAnnouncementNotifications({
+      response = await context.updateSiteAnnouncementNotifications({
         enabled: false,
       })
     })
 
-    expect(success).toBe(false)
+    expect(response.success).toBe(false)
     expect(mockedSendSiteAnnouncementsMessage).toHaveBeenCalledWith(
       "siteAnnouncements:updatePreferences",
       {

@@ -73,8 +73,8 @@ describe("userPreferences openChangelogOnUpdate", () => {
       openChangelogOnUpdate: true,
     })
 
-    const success = await userPreferences.updateOpenChangelogOnUpdate(false)
-    expect(success).toBe(true)
+    const writeResult = await userPreferences.updateOpenChangelogOnUpdate(false)
+    expect(writeResult.ok).toBe(true)
 
     const prefs = await userPreferences.getPreferences()
     expect(prefs.openChangelogOnUpdate).toBe(false)
@@ -84,8 +84,8 @@ describe("userPreferences openChangelogOnUpdate", () => {
     const storage = new Storage({ area: "local" })
     await storage.remove(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES)
 
-    const success = await userPreferences.updateOpenChangelogOnUpdate(false)
-    expect(success).toBe(true)
+    const writeResult = await userPreferences.updateOpenChangelogOnUpdate(false)
+    expect(writeResult.ok).toBe(true)
 
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,

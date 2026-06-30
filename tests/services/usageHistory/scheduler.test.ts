@@ -106,7 +106,13 @@ describe("usageHistoryScheduler", () => {
       ...DEFAULT_PREFERENCES,
       usageHistory: createUsageHistoryConfig(),
     })
-    vi.mocked(userPreferences.savePreferences).mockResolvedValue(true)
+    vi.mocked(userPreferences.savePreferences).mockResolvedValue({
+      ok: true,
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        usageHistory: createUsageHistoryConfig(),
+      },
+    })
     vi.mocked(hasAlarmsAPI).mockReturnValue(true)
     vi.mocked(getAlarm).mockResolvedValue(undefined)
     vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([

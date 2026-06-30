@@ -25,9 +25,9 @@ export default function ActionClickBehaviorSettings() {
 
   const handleChange = async (behavior: ToolbarActionClickBehavior) => {
     if (behavior === actionClickBehavior) return
-    const success = await updateActionClickBehavior(behavior)
-    if (!success) {
-      showUpdateToast(false, t("actionClick.title"))
+    const writeResult = await updateActionClickBehavior(behavior)
+    if (!writeResult.ok) {
+      showUpdateToast(writeResult, t("actionClick.title"))
       return
     }
 
@@ -39,7 +39,7 @@ export default function ActionClickBehaviorSettings() {
       return
     }
 
-    showUpdateToast(true, t("actionClick.title"))
+    showUpdateToast(writeResult, t("actionClick.title"))
   }
 
   return (
