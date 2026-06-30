@@ -45,6 +45,7 @@ import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSy
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
+import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import { MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID } from "./managedSiteModelSyncTargetIds"
@@ -265,7 +266,11 @@ export default function ManagedSiteModelSyncSettings() {
 
       if (!writeResult.ok) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
-        toast.error(t("settings:messages.saveSettingsFailed"))
+        toast.error(
+          getPreferenceWriteFailureMessage(writeResult.reason, {
+            fallback: t("settings:messages.saveSettingsFailed"),
+          }),
+        )
         return false
       } else if (!updates.globalChannelModelFilters) {
         // Avoid double toast when saving from the global filters dialog,

@@ -27,6 +27,7 @@ import {
   AutoCheckinPreferences,
 } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
+import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 /**
@@ -84,7 +85,11 @@ export default function AutoCheckinSettings() {
       if (writeResult.ok) {
         toast.success(t("autoCheckin:messages.success.settingsSaved"))
       } else {
-        toast.error(t("settings:messages.saveSettingsFailed"))
+        toast.error(
+          getPreferenceWriteFailureMessage(writeResult.reason, {
+            fallback: t("settings:messages.saveSettingsFailed"),
+          }),
+        )
       }
     } catch (error) {
       logger.error("Failed to save preferences", error)

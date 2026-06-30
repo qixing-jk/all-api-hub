@@ -14,6 +14,7 @@ import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managed
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
 import { createLogger } from "~/utils/core/logger"
+import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 
 import { ClearModelRedirectMappingsDialog } from "../../dialogs/ClearModelRedirectMappingsDialog"
 
@@ -72,7 +73,11 @@ export default function ModelRedirectSettings() {
       setIsUpdating(true)
       const writeResult = await updateModelRedirect(updates)
       if (!writeResult.ok) {
-        toast.error(t("messages.updateFailed"))
+        toast.error(
+          getPreferenceWriteFailureMessage(writeResult.reason, {
+            fallback: t("messages.updateFailed"),
+          }),
+        )
         return
       }
       toast.success(t("messages.updateSuccess"))

@@ -72,6 +72,14 @@ export default function SortingPrioritySettings() {
   } = useUserPreferencesContext()
   const [items, setItems] = useState<SortingFieldConfig[]>([])
 
+  const resetItemsFromInitialConfig = () => {
+    setItems(
+      initialConfig?.criteria
+        ? [...initialConfig.criteria].sort((a, b) => a.priority - b.priority)
+        : [],
+    )
+  }
+
   useEffect(() => {
     if (initialConfig?.criteria) {
       // Sort items based on priority for consistent display
@@ -101,8 +109,9 @@ export default function SortingPrioritySettings() {
           criteria: updatedItems,
           lastModified: Date.now(),
         })
-        if (writeResult.ok) {
-          showUpdateToast(writeResult, t("sorting.title"))
+        showUpdateToast(writeResult, t("sorting.title"))
+        if (!writeResult.ok) {
+          resetItemsFromInitialConfig()
         }
       }
     }
@@ -122,8 +131,9 @@ export default function SortingPrioritySettings() {
         criteria: updatedItems,
         lastModified: Date.now(),
       })
-      if (writeResult.ok) {
-        showUpdateToast(writeResult, t("sorting.title"))
+      showUpdateToast(writeResult, t("sorting.title"))
+      if (!writeResult.ok) {
+        resetItemsFromInitialConfig()
       }
     }
   }

@@ -6,6 +6,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { getDocsChangelogUrl } from "~/utils/navigation/docsLinks"
 
 import { UPDATE_LOG_DIALOG_TEST_IDS } from "../testIds"
@@ -75,6 +76,8 @@ export function UpdateLogDialog({
       const result = await updateOpenChangelogOnUpdate(enabled)
       if (result.ok) {
         setAutoOpenOverride(enabled)
+      } else {
+        showUpdateToast(result, t("ui:dialog.updateLog.autoOpenSetting"))
       }
     } catch (error) {
       const logger = createLogger("UpdateLogDialog")

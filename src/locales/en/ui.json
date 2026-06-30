@@ -309,6 +309,7 @@
       "titleWithCookieInterceptor": "Enable protection bypass for requests"
     },
     "updateLog": {
+      "autoOpenSetting": "Update log auto-open",
       "disableAutoOpen": "Don't show after updates",
       "enableAutoOpen": "Re-enable after updates",
       "loading": "Loading changelog…",

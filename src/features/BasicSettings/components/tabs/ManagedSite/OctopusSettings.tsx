@@ -120,7 +120,11 @@ export default function OctopusSettings() {
         if (saveResult.ok) {
           toast.success(t("octopus.validation.success"))
         } else {
-          toast.error(getPreferenceWriteFailureMessage(saveResult.reason))
+          toast.error(
+            getPreferenceWriteFailureMessage(saveResult.reason, {
+              fallback: t("octopus.validation.failed"),
+            }),
+          )
         }
       } else {
         toast.error(result.error || t("octopus.validation.failed"))

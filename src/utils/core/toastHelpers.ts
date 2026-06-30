@@ -9,6 +9,7 @@ import type {
   PreferenceWriteFailure,
   PreferenceWriteResult,
 } from "~/services/preferences/userPreferences"
+import { PREFERENCE_WRITE_FAILURE_TYPES } from "~/services/preferences/userPreferences"
 import { t } from "~/utils/i18n/core"
 
 type ToastResultObject = {
@@ -93,7 +94,7 @@ export function getPreferenceWriteFailureMessage(
     fallback?: string
   },
 ): string {
-  if (failure.type === "stale") {
+  if (failure.type === PREFERENCE_WRITE_FAILURE_TYPES.Stale) {
     return t("settings:messages.preferencesChangedExternally")
   }
 

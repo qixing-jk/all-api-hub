@@ -139,4 +139,30 @@ describe("userPreferences", () => {
       expect(preferences.webAiApiCheck?.enabled).toBe(true)
     })
   })
+
+  describe("write failures", () => {
+    it("returns a storage-error result when a guarded write cannot read the current snapshot", async () => {
+      const storage = (userPreferences as any).storage as {
+        get: ReturnType<typeof vi.fn>
+        set: ReturnType<typeof vi.fn>
+      }
+      const readError = new Error("read failed")
+
+      vi.spyOn(storage, "get").mockRejectedValueOnce(readError)
+      const setSpy = vi.spyOn(storage, "set")
+
+      const result = await userPreferences.savePreferencesWithResult({
+        currencyType: "CNY",
+      })
+
+      expect(result).toEqual({
+        ok: false,
+        reason: {
+          type: "storage-error",
+          error: readError,
+        },
+      })
+      expect(setSpy).not.toHaveBeenCalled()
+    })
+  })
 })

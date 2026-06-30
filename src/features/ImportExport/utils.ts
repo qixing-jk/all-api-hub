@@ -49,6 +49,8 @@ export async function importFromBackupObject(
       switch (error.code) {
         case "FORMAT_NOT_CORRECT":
           throw new Error(t("importExport:import.formatNotCorrect"))
+        case "IMPORT_FAILED":
+          throw new Error(t("importExport:import.importFailed"))
         case "NO_IMPORTABLE_DATA":
           throw new Error(t("importExport:import.noImportableData"))
       }

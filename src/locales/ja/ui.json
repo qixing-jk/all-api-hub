@@ -304,6 +304,7 @@
       "titleWithCookieInterceptor": "リクエスト用の保護回避を有効にする"
     },
     "updateLog": {
+      "autoOpenSetting": "更新ログの自動表示",
       "disableAutoOpen": "更新後に表示しない",
       "enableAutoOpen": "更新後の自動表示を再有効化",
       "loading": "更新ログを読み込み中…",

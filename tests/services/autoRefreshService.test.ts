@@ -28,7 +28,10 @@ const preferenceWriteSuccess = (
   preferences: Partial<UserPreferences> = {},
 ) => ({
   ok: true as const,
-  preferences: preferences as UserPreferences,
+  preferences: {
+    accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
+    ...preferences,
+  } as UserPreferences,
 })
 
 const { mockOnAutoRefreshMessage } = vi.hoisted(() => ({

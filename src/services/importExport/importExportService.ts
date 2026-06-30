@@ -18,7 +18,10 @@ import { createLogger } from "~/utils/core/logger"
  */
 const logger = createLogger("ImportExportService")
 
-type ImportExportErrorCode = "FORMAT_NOT_CORRECT" | "NO_IMPORTABLE_DATA"
+type ImportExportErrorCode =
+  | "FORMAT_NOT_CORRECT"
+  | "IMPORT_FAILED"
+  | "NO_IMPORTABLE_DATA"
 
 export class ImportExportError extends Error {
   readonly code: ImportExportErrorCode
@@ -244,6 +247,7 @@ async function importV1Backup(
         preferencesImported = true
       } else {
         logger.error("Failed to import user preferences from legacy backup")
+        throw new ImportExportError("IMPORT_FAILED")
       }
     }
   }

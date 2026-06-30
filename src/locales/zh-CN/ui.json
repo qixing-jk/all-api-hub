@@ -304,6 +304,7 @@
       "titleWithCookieInterceptor": "启用过盾流程以完成网络请求"
     },
     "updateLog": {
+      "autoOpenSetting": "更新日志自动打开",
       "disableAutoOpen": "不再自动打开",
       "enableAutoOpen": "重新启用自动打开",
       "loading": "正在加载更新日志…",

@@ -15,10 +15,22 @@ import {
   waitFor,
 } from "~~/tests/test-utils/render"
 
+const { toastErrorMock } = vi.hoisted(() => ({
+  toastErrorMock: vi.fn(),
+}))
+
+vi.mock("react-hot-toast", () => ({
+  default: {
+    error: toastErrorMock,
+    success: vi.fn(),
+  },
+}))
+
 describe("UpdateLogDialog", () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    toastErrorMock.mockReset()
   })
 
   it("toggles the open-changelog-on-update preference from the dialog", async () => {
@@ -27,7 +39,14 @@ describe("UpdateLogDialog", () => {
 
     const updateSpy = vi
       .spyOn(userPreferences, "updateOpenChangelogOnUpdate")
-      .mockResolvedValue({ ok: true, preferences })
+      .mockImplementation(async (enabled) => ({
+        ok: true,
+        preferences: {
+          ...preferences,
+          openChangelogOnUpdate: enabled,
+          lastUpdated: preferences.lastUpdated + 1,
+        },
+      }))
 
     render(<UpdateLogDialog isOpen onClose={() => {}} version="2.39.0" />)
 
@@ -64,7 +83,7 @@ describe("UpdateLogDialog", () => {
     })
   })
 
-  it("keeps the current auto-open label when saving the toggle fails", async () => {
+  it("keeps the current auto-open label and surfaces feedback when saving the toggle fails", async () => {
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(
       buildUserPreferences({ openChangelogOnUpdate: true }),
     )
@@ -93,6 +112,9 @@ describe("UpdateLogDialog", () => {
 
     expect(toggleButton).toHaveTextContent(
       "ui:dialog.updateLog.disableAutoOpen",
+    )
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "settings:messages.updateFailed",
     )
   })
 

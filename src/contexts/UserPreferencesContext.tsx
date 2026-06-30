@@ -591,29 +591,25 @@ export const UserPreferencesProvider = ({
    * Persist the currently visible balance tab and mirror it in React state.
    * @param activeTab - Consumption vs balance tab identifier.
    */
-  const updateActiveTab = useCallback(async (activeTab: DashboardTabType) => {
-    const result = await userPreferences.updateActiveTab(activeTab)
-    if (result.ok) {
-      setPreferences((prev) => (prev ? { ...prev, activeTab } : null))
-    }
-    return result
-  }, [])
+  const updateActiveTab = useCallback(
+    async (activeTab: DashboardTabType) => {
+      const result = await userPreferences.updateActiveTab(activeTab)
+      applySuccessfulPreferenceWrite(result, { activeTab })
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
 
   const updateActionClickBehavior = useCallback(
     async (behavior: ToolbarActionClickBehavior) => {
       const result = await userPreferences.savePreferences({
         actionClickBehavior: behavior,
       })
-      if (result.ok) {
-        setPreferences((prev) =>
-          prev
-            ? {
-                ...prev,
-                actionClickBehavior: behavior,
-              }
-            : prev,
-        )
-
+      if (
+        applySuccessfulPreferenceWrite(result, {
+          actionClickBehavior: behavior,
+        })
+      ) {
         await sendPreferencesMessage(
           PreferencesMessageTypes.UpdateActionClickBehavior,
           {
@@ -623,22 +619,21 @@ export const UserPreferencesProvider = ({
       }
       return result
     },
-    [],
+    [applySuccessfulPreferenceWrite],
   )
 
   /**
    * Enable/disable automatically showing the inline update log after updates.
    * @param enabled - When true, shows the update log on first UI open after update.
    */
-  const updateOpenChangelogOnUpdate = useCallback(async (enabled: boolean) => {
-    const result = await userPreferences.updateOpenChangelogOnUpdate(enabled)
-    if (result.ok) {
-      setPreferences((prev) =>
-        prev ? { ...prev, openChangelogOnUpdate: enabled } : prev,
-      )
-    }
-    return result
-  }, [])
+  const updateOpenChangelogOnUpdate = useCallback(
+    async (enabled: boolean) => {
+      const result = await userPreferences.updateOpenChangelogOnUpdate(enabled)
+      applySuccessfulPreferenceWrite(result, { openChangelogOnUpdate: enabled })
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
 
   /**
    * Enable/disable automatically provisioning a default API key (token) after
@@ -649,19 +644,12 @@ export const UserPreferencesProvider = ({
     async (enabled: boolean) => {
       const result =
         await userPreferences.updateAutoProvisionKeyOnAccountAdd(enabled)
-      if (result.ok) {
-        const updates: Partial<UserPreferences> = {
-          autoProvisionKeyOnAccountAdd: enabled,
-        }
-        if (preferences) {
-          const next = { ...preferences, ...updates }
-          setPreferences(next)
-          trackOptionsSettingsSnapshots(next, updates)
-        }
-      }
+      applySuccessfulPreferenceWrite(result, {
+        autoProvisionKeyOnAccountAdd: enabled,
+      })
       return result
     },
-    [preferences],
+    [applySuccessfulPreferenceWrite],
   )
 
   /**
@@ -673,19 +661,12 @@ export const UserPreferencesProvider = ({
     async (enabled: boolean) => {
       const result =
         await userPreferences.updateAutoFillCurrentSiteUrlOnAccountAdd(enabled)
-      if (result.ok) {
-        const updates: Partial<UserPreferences> = {
-          autoFillCurrentSiteUrlOnAccountAdd: enabled,
-        }
-        if (preferences) {
-          const next = { ...preferences, ...updates }
-          setPreferences(next)
-          trackOptionsSettingsSnapshots(next, updates)
-        }
-      }
+      applySuccessfulPreferenceWrite(result, {
+        autoFillCurrentSiteUrlOnAccountAdd: enabled,
+      })
       return result
     },
-    [preferences],
+    [applySuccessfulPreferenceWrite],
   )
 
   /**
@@ -696,19 +677,12 @@ export const UserPreferencesProvider = ({
     async (enabled: boolean) => {
       const result =
         await userPreferences.updateWarnOnDuplicateAccountAdd(enabled)
-      if (result.ok) {
-        const updates: Partial<UserPreferences> = {
-          warnOnDuplicateAccountAdd: enabled,
-        }
-        if (preferences) {
-          const next = { ...preferences, ...updates }
-          setPreferences(next)
-          trackOptionsSettingsSnapshots(next, updates)
-        }
-      }
+      applySuccessfulPreferenceWrite(result, {
+        warnOnDuplicateAccountAdd: enabled,
+      })
       return result
     },
-    [preferences],
+    [applySuccessfulPreferenceWrite],
   )
 
   const resetClaudeCodeRouterConfig = useCallback(async () => {
@@ -777,46 +751,33 @@ export const UserPreferencesProvider = ({
 
   const updateTempWindowFallbackReminder = useCallback(
     async (updates: Partial<TempWindowFallbackReminderPreferences>) => {
-      const result = await userPreferences.savePreferences({
+      const preferenceUpdates = {
         tempWindowFallbackReminder: updates,
-      })
-      if (result.ok) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const merged: TempWindowFallbackReminderPreferences = {
-            ...(DEFAULT_PREFERENCES.tempWindowFallbackReminder ?? {
-              dismissed: false,
-            }),
-            ...(prev.tempWindowFallbackReminder ?? {}),
-            ...updates,
-          }
-          return {
-            ...prev,
-            tempWindowFallbackReminder: merged,
-            lastUpdated: Date.now(),
-          }
-        })
       }
+      const result = await userPreferences.savePreferences(preferenceUpdates)
+      applySuccessfulPreferenceWrite(result, preferenceUpdates)
       return result
     },
-    [],
+    [applySuccessfulPreferenceWrite],
   )
 
-  const updateDefaultTab = useCallback(async (activeTab: DashboardTabType) => {
-    const result = await userPreferences.updateActiveTab(activeTab)
-    if (result.ok) {
-      setPreferences((prev) => (prev ? { ...prev, activeTab } : null))
-    }
-    return result
-  }, [])
+  const updateDefaultTab = useCallback(
+    async (activeTab: DashboardTabType) => {
+      const result = await userPreferences.updateActiveTab(activeTab)
+      applySuccessfulPreferenceWrite(result, { activeTab })
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
 
-  const updateCurrencyType = useCallback(async (currencyType: CurrencyType) => {
-    const result = await userPreferences.updateCurrencyType(currencyType)
-    if (result.ok) {
-      setPreferences((prev) => (prev ? { ...prev, currencyType } : null))
-    }
-    return result
-  }, [])
+  const updateCurrencyType = useCallback(
+    async (currencyType: CurrencyType) => {
+      const result = await userPreferences.updateCurrencyType(currencyType)
+      applySuccessfulPreferenceWrite(result, { currencyType })
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
 
   /**
    * Toggle whether today cashflow statistics are shown and fetched.
@@ -853,14 +814,10 @@ export const UserPreferencesProvider = ({
       }
 
       const result = await userPreferences.savePreferences(updates)
-      if (result.ok && preferences) {
-        const next = deepOverride(preferences, updates)
-        setPreferences(next)
-        trackOptionsSettingsSnapshots(next, updates)
-      }
+      applySuccessfulPreferenceWrite(result, updates)
       return result
     },
-    [preferences],
+    [applySuccessfulPreferenceWrite, preferences],
   )
 
   const updateSortConfig = useCallback(
@@ -869,33 +826,22 @@ export const UserPreferencesProvider = ({
         sortField,
         sortOrder,
       )
-      if (result.ok) {
-        setPreferences((prev) =>
-          prev ? { ...prev, sortField, sortOrder } : null,
-        )
-      }
+      applySuccessfulPreferenceWrite(result, { sortField, sortOrder })
       return result
     },
-    [],
+    [applySuccessfulPreferenceWrite],
   )
 
   const updateSortingPriorityConfig = useCallback(
     async (sortingPriority: SortingPriorityConfig) => {
       const result =
         await userPreferences.setSortingPriorityConfig(sortingPriority)
-      if (result.ok) {
-        setPreferences((prev) =>
-          prev
-            ? {
-                ...prev,
-                sortingPriorityConfig: sortingPriority,
-              }
-            : null,
-        )
-      }
+      applySuccessfulPreferenceWrite(result, {
+        sortingPriorityConfig: sortingPriority,
+      })
       return result
     },
-    [],
+    [applySuccessfulPreferenceWrite],
   )
 
   const updateAutoRefresh = useCallback(
@@ -1250,43 +1196,42 @@ export const UserPreferencesProvider = ({
   const updateManagedSiteType = useCallback(
     async (siteType: ManagedSiteType) => {
       const result = await userPreferences.updateManagedSiteType(siteType)
-      if (result.ok) {
-        setPreferences((prev) =>
-          prev ? { ...prev, managedSiteType: siteType } : null,
-        )
-      }
+      applySuccessfulPreferenceWrite(result, { managedSiteType: siteType })
       return result
     },
-    [],
+    [applySuccessfulPreferenceWrite],
   )
 
-  const updateThemeMode = useCallback(async (themeMode: ThemeMode) => {
-    const result = await userPreferences.savePreferences({ themeMode })
-    if (result.ok) {
-      setPreferences((prev) => (prev ? { ...prev, themeMode } : null))
-    }
-    return result
-  }, [])
+  const updateThemeMode = useCallback(
+    async (themeMode: ThemeMode) => {
+      const result = await userPreferences.savePreferences({ themeMode })
+      applySuccessfulPreferenceWrite(result, { themeMode })
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
 
-  const updateLoggingConsoleEnabled = useCallback(async (enabled: boolean) => {
-    const updates = { logging: { consoleEnabled: enabled } }
-    const result = await userPreferences.updateLoggingPreferences({
-      consoleEnabled: enabled,
-    })
-    if (result.ok) {
-      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-    }
-    return result
-  }, [])
+  const updateLoggingConsoleEnabled = useCallback(
+    async (enabled: boolean) => {
+      const updates = { logging: { consoleEnabled: enabled } }
+      const result = await userPreferences.updateLoggingPreferences({
+        consoleEnabled: enabled,
+      })
+      applySuccessfulPreferenceWrite(result, updates)
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
 
-  const updateLoggingLevel = useCallback(async (level: LogLevel) => {
-    const updates = { logging: { level } }
-    const result = await userPreferences.updateLoggingPreferences({ level })
-    if (result.ok) {
-      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-    }
-    return result
-  }, [])
+  const updateLoggingLevel = useCallback(
+    async (level: LogLevel) => {
+      const updates = { logging: { level } }
+      const result = await userPreferences.updateLoggingPreferences({ level })
+      applySuccessfulPreferenceWrite(result, updates)
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
 
   const updateAutoCheckin = useCallback(
     async (updates: Partial<AutoCheckinPreferences>) => {
@@ -1617,52 +1562,29 @@ export const UserPreferencesProvider = ({
   const resetDisplaySettings = useCallback(async () => {
     const result = await userPreferences.resetDisplaySettings()
     if (result.ok) {
-      const now = Date.now()
-      setPreferences((prev) =>
-        prev
-          ? {
-              ...prev,
-              activeTab: DEFAULT_PREFERENCES.activeTab,
-              currencyType: DEFAULT_PREFERENCES.currencyType,
-              lastUpdated: now,
-            }
-          : prev,
-      )
-      trackOptionsSettingsSnapshots(
-        { ...DEFAULT_PREFERENCES, lastUpdated: now },
-        {
-          activeTab: DEFAULT_PREFERENCES.activeTab,
-          currencyType: DEFAULT_PREFERENCES.currencyType,
-          showTodayCashflow: DEFAULT_PREFERENCES.showTodayCashflow,
-        },
-      )
+      applySuccessfulPreferenceWrite(result, {
+        activeTab: DEFAULT_PREFERENCES.activeTab,
+        currencyType: DEFAULT_PREFERENCES.currencyType,
+        showTodayCashflow: DEFAULT_PREFERENCES.showTodayCashflow,
+      })
     }
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   const resetAutoRefreshConfig = useCallback(async () => {
     const result = await userPreferences.resetAutoRefreshConfig()
-    if (result.ok) {
+    if (
+      applySuccessfulPreferenceWrite(result, {
+        accountAutoRefresh: DEFAULT_PREFERENCES.accountAutoRefresh,
+      })
+    ) {
       const defaults = DEFAULT_PREFERENCES.accountAutoRefresh
-
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              accountAutoRefresh: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
       void sendAutoRefreshMessage(AutoRefreshMessageTypes.UpdateSettings, {
         settings: { accountAutoRefresh: defaults },
       })
-      trackOptionsSettingsSnapshots(
-        deepOverride(DEFAULT_PREFERENCES, { accountAutoRefresh: defaults }),
-        { accountAutoRefresh: defaults },
-      )
     }
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   const resetNewApiConfig = useCallback(async () => {
     const result = await userPreferences.resetNewApiConfig()
@@ -1726,28 +1648,20 @@ export const UserPreferencesProvider = ({
 
   const resetNewApiModelSyncConfig = useCallback(async () => {
     const result = await userPreferences.resetNewApiModelSyncConfig()
-    if (result.ok) {
+    if (
+      applySuccessfulPreferenceWrite(result, {
+        managedSiteModelSync: DEFAULT_PREFERENCES.managedSiteModelSync,
+      })
+    ) {
       const defaults = DEFAULT_PREFERENCES.managedSiteModelSync
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              managedSiteModelSync: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
       if (defaults) {
         void sendModelSyncMessage(ModelSyncMessageTypes.UpdateSettings, {
           settings: defaults,
         })
       }
-      trackOptionsSettingsSnapshots(
-        deepOverride(DEFAULT_PREFERENCES, { managedSiteModelSync: defaults }),
-        { managedSiteModelSync: defaults },
-      )
     }
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   const resetCliProxyConfig = useCallback(async () => {
     const result = await userPreferences.resetCliProxyConfig()
@@ -1761,41 +1675,29 @@ export const UserPreferencesProvider = ({
 
   const resetAutoCheckinConfig = useCallback(async () => {
     const result = await userPreferences.resetAutoCheckinConfig()
-    if (result.ok) {
+    if (
+      applySuccessfulPreferenceWrite(result, {
+        autoCheckin: DEFAULT_PREFERENCES.autoCheckin,
+      })
+    ) {
       const defaults = DEFAULT_PREFERENCES.autoCheckin
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              autoCheckin: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
       if (defaults) {
         void sendAutoCheckinMessage(AutoCheckinMessageTypes.UpdateSettings, {
           settings: defaults,
         })
       }
-      trackOptionsSettingsSnapshots(
-        deepOverride(DEFAULT_PREFERENCES, { autoCheckin: defaults }),
-        { autoCheckin: defaults },
-      )
     }
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   const resetRedemptionAssistConfig = useCallback(async () => {
     const result = await userPreferences.resetRedemptionAssist()
-    if (result.ok) {
+    if (
+      applySuccessfulPreferenceWrite(result, {
+        redemptionAssist: DEFAULT_PREFERENCES.redemptionAssist,
+      })
+    ) {
       const defaults = DEFAULT_PREFERENCES.redemptionAssist
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              redemptionAssist: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
       if (defaults) {
         void sendRedemptionAssistMessage(
           RedemptionAssistMessageTypes.UpdateSettings,
@@ -1804,53 +1706,25 @@ export const UserPreferencesProvider = ({
           },
         )
       }
-      trackOptionsSettingsSnapshots(
-        deepOverride(DEFAULT_PREFERENCES, { redemptionAssist: defaults }),
-        { redemptionAssist: defaults },
-      )
     }
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   const resetWebAiApiCheckConfig = useCallback(async () => {
     const result = await userPreferences.resetWebAiApiCheck()
-    if (result.ok) {
-      const defaults = DEFAULT_PREFERENCES.webAiApiCheck
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              webAiApiCheck: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
-      trackOptionsSettingsSnapshots(
-        deepOverride(DEFAULT_PREFERENCES, { webAiApiCheck: defaults }),
-        { webAiApiCheck: defaults },
-      )
-    }
+    applySuccessfulPreferenceWrite(result, {
+      webAiApiCheck: DEFAULT_PREFERENCES.webAiApiCheck,
+    })
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   const resetModelRedirectConfig = useCallback(async () => {
     const result = await userPreferences.resetModelRedirectConfig()
-    if (result.ok) {
-      const defaults = DEFAULT_PREFERENCES.modelRedirect
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              modelRedirect: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
-      trackOptionsSettingsSnapshots(
-        deepOverride(DEFAULT_PREFERENCES, { modelRedirect: defaults }),
-        { modelRedirect: defaults },
-      )
-    }
+    applySuccessfulPreferenceWrite(result, {
+      modelRedirect: DEFAULT_PREFERENCES.modelRedirect,
+    })
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   const resetWebdavConfig = useCallback(async () => {
     const result = await userPreferences.resetWebdavConfig()
@@ -1865,52 +1739,25 @@ export const UserPreferencesProvider = ({
   const resetLoggingSettings = useCallback(async () => {
     const defaults = DEFAULT_PREFERENCES.logging
     const result = await userPreferences.updateLoggingPreferences(defaults)
-    if (result.ok) {
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, { logging: defaults, lastUpdated: Date.now() })
-          : prev,
-      )
-    }
+    applySuccessfulPreferenceWrite(result, { logging: defaults })
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   const resetSortingPriorityConfig = useCallback(async () => {
     const result = await userPreferences.resetSortingPriorityConfig()
-    if (result.ok) {
-      setPreferences((prev) =>
-        prev
-          ? {
-              ...prev,
-              sortingPriorityConfig: undefined,
-              lastUpdated: Date.now(),
-            }
-          : prev,
-      )
-    }
+    applySuccessfulPreferenceWrite(result, {
+      sortingPriorityConfig: DEFAULT_PREFERENCES.sortingPriorityConfig,
+    })
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   const resetTaskNotifications = useCallback(async () => {
     const result = await userPreferences.resetTaskNotifications()
-    if (result.ok) {
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
-      trackOptionsSettingsSnapshots(
-        deepOverride(DEFAULT_PREFERENCES, {
-          taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
-        }),
-        { taskNotifications: DEFAULT_PREFERENCES.taskNotifications },
-      )
-    }
+    applySuccessfulPreferenceWrite(result, {
+      taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
+    })
     return result
-  }, [])
+  }, [applySuccessfulPreferenceWrite])
 
   useEffect(() => {
     if (!preferences) return
@@ -1932,11 +1779,9 @@ export const UserPreferencesProvider = ({
 
     void (async () => {
       const result = await userPreferences.savePreferences(updates)
-      if (result.ok) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
+      applySuccessfulPreferenceWrite(result, updates)
     })()
-  }, [preferences])
+  }, [applySuccessfulPreferenceWrite, preferences])
 
   if (!preferences) {
     return null

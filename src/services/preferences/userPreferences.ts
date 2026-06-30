@@ -519,8 +519,16 @@ export interface UserPreferences {
   webdavSyncStrategy?: WebDAVSyncStrategy
 }
 
+export const PREFERENCE_WRITE_FAILURE_TYPES = {
+  Stale: "stale",
+  StorageError: "storage-error",
+} as const
+
+export type PreferenceWriteFailureType =
+  (typeof PREFERENCE_WRITE_FAILURE_TYPES)[keyof typeof PREFERENCE_WRITE_FAILURE_TYPES]
+
 export type PreferenceWriteConflict = {
-  type: "stale"
+  type: typeof PREFERENCE_WRITE_FAILURE_TYPES.Stale
   expectedLastUpdated: number
   actualLastUpdated: number
 }
@@ -528,7 +536,7 @@ export type PreferenceWriteConflict = {
 export type PreferenceWriteFailure =
   | PreferenceWriteConflict
   | {
-      type: "storage-error"
+      type: typeof PREFERENCE_WRITE_FAILURE_TYPES.StorageError
       error: unknown
     }
 
@@ -685,20 +693,24 @@ class UserPreferencesService {
     return withExtensionStorageWriteLock(STORAGE_LOCKS.USER_PREFERENCES, work)
   }
 
+  private async readPreferencesSnapshot(): Promise<UserPreferences> {
+    const storedPreferences = (await this.storage.get(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+    )) as UserPreferences | undefined
+    const defaultPreferences = createReadOnlyDefaultPreferences()
+    const preferences = storedPreferences ?? defaultPreferences
+
+    const migratedPreferences = migrateAndNormalizePreferences(preferences)
+
+    return deepOverride(defaultPreferences, migratedPreferences)
+  }
+
   /**
    * Get user preferences (with migration + defaults merged) without mutating storage.
    */
   async getPreferences(): Promise<UserPreferences> {
     try {
-      const storedPreferences = (await this.storage.get(
-        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-      )) as UserPreferences | undefined
-      const defaultPreferences = createReadOnlyDefaultPreferences()
-      const preferences = storedPreferences ?? defaultPreferences
-
-      const migratedPreferences = migrateAndNormalizePreferences(preferences)
-
-      return deepOverride(defaultPreferences, migratedPreferences)
+      return await this.readPreferencesSnapshot()
     } catch (error) {
       logger.error("获取用户偏好设置失败", error)
       return createReadOnlyDefaultPreferences()
@@ -716,7 +728,7 @@ class UserPreferencesService {
   ): Promise<PreferenceWriteResult> {
     try {
       const writeResult = await this.withStorageWriteLock(async () => {
-        const currentPreferences = await this.getPreferences()
+        const currentPreferences = await this.readPreferencesSnapshot()
         if (
           typeof options?.expectedLastUpdated === "number" &&
           Number.isFinite(options.expectedLastUpdated) &&
@@ -725,7 +737,7 @@ class UserPreferencesService {
           return {
             ok: false,
             reason: {
-              type: "stale",
+              type: PREFERENCE_WRITE_FAILURE_TYPES.Stale,
               expectedLastUpdated: options.expectedLastUpdated,
               actualLastUpdated: currentPreferences.lastUpdated,
             },
@@ -781,7 +793,7 @@ class UserPreferencesService {
       return {
         ok: false,
         reason: {
-          type: "storage-error",
+          type: PREFERENCE_WRITE_FAILURE_TYPES.StorageError,
           error,
         },
       }
@@ -943,7 +955,7 @@ class UserPreferencesService {
       return {
         ok: false,
         reason: {
-          type: "storage-error",
+          type: PREFERENCE_WRITE_FAILURE_TYPES.StorageError,
           error,
         },
       }
@@ -970,7 +982,7 @@ class UserPreferencesService {
       return {
         ok: false,
         reason: {
-          type: "storage-error",
+          type: PREFERENCE_WRITE_FAILURE_TYPES.StorageError,
           error,
         },
       }
@@ -1004,7 +1016,7 @@ class UserPreferencesService {
         const migratedPreferences = migrateAndNormalizePreferences(preferences)
 
         const currentPreferences = options?.preserveWebdav
-          ? await this.getPreferences()
+          ? await this.readPreferencesSnapshot()
           : null
         const importedAt = Date.now()
 
@@ -1045,7 +1057,7 @@ class UserPreferencesService {
       return {
         ok: false,
         reason: {
-          type: "storage-error",
+          type: PREFERENCE_WRITE_FAILURE_TYPES.StorageError,
           error,
         },
       }

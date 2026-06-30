@@ -19,6 +19,7 @@ import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 
 const logger = createLogger("BalanceHistorySettings")
 
@@ -79,7 +80,12 @@ export default function BalanceHistorySettings() {
       })
 
       if (!writeResult.ok) {
-        toast.error(t("settings:messages.saveSettingsFailed"), { id: toastId })
+        toast.error(
+          getPreferenceWriteFailureMessage(writeResult.reason, {
+            fallback: t("settings:messages.saveSettingsFailed"),
+          }),
+          { id: toastId },
+        )
         return
       }
 

@@ -2,7 +2,10 @@ import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import SortingPrioritySettings from "~/features/BasicSettings/components/tabs/AccountManagement/SortingPrioritySettings"
-import { SortingCriteriaType } from "~/types/sorting"
+import {
+  SortingCriteriaType,
+  type SortingPriorityConfig,
+} from "~/types/sorting"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -18,7 +21,7 @@ const {
 
 const preferenceWriteSuccess = () => ({
   ok: true,
-  preferences: {},
+  preferences: {} as any,
 })
 
 const preferenceWriteFailure = () => ({
@@ -52,7 +55,7 @@ vi.mock("~/components/SettingSection", () => ({
     children: ReactNode
     title: string
     description: string
-    onReset?: () => Promise<boolean>
+    onReset?: () => Promise<any>
   }) => (
     <section>
       <h2>{title}</h2>
@@ -128,7 +131,9 @@ vi.mock(
 
 const mockedShowUpdateToast = showUpdateToast as ReturnType<typeof vi.fn>
 
-const createConfig = (criteria?: any[]) => ({
+const createConfig = (
+  criteria?: SortingPriorityConfig["criteria"],
+): SortingPriorityConfig => ({
   criteria: criteria ?? [
     {
       id: SortingCriteriaType.PINNED,
@@ -144,7 +149,7 @@ const createConfig = (criteria?: any[]) => ({
       id: "custom-unknown-rule",
       enabled: true,
       priority: 2,
-    },
+    } as any,
   ],
   lastModified: 123,
 })
@@ -268,7 +273,7 @@ describe("SortingPrioritySettings", () => {
     expect(mockedShowUpdateToast).not.toHaveBeenCalled()
   })
 
-  it("toggles a criterion and keeps the UI updated even when saving fails", async () => {
+  it("toggles a criterion, reports failed saves, and restores persisted order", async () => {
     mockUpdateSortingPriorityConfig.mockResolvedValue(preferenceWriteFailure())
 
     render(<SortingPrioritySettings />)
@@ -305,8 +310,11 @@ describe("SortingPrioritySettings", () => {
 
     expect(
       screen.getByTestId(`sorting-item-${SortingCriteriaType.USER_SORT_FIELD}`),
-    ).toHaveTextContent("enabled:true")
-    expect(mockedShowUpdateToast).not.toHaveBeenCalled()
+    ).toHaveTextContent("enabled:false")
+    expect(mockedShowUpdateToast).toHaveBeenCalledWith(
+      expect.objectContaining({ ok: false }),
+      "settings:sorting.title",
+    )
   })
 
   it("resets through SettingSection", async () => {

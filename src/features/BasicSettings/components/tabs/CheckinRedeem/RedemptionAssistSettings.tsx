@@ -16,6 +16,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 
 /**
  * Unified logger scoped to the Basic Settings redemption assist section.
@@ -62,7 +63,11 @@ export default function RedemptionAssistSettings() {
       if (writeResult.ok) {
         toast.success(t("redemptionAssist:messages.success.settingsSaved"))
       } else {
-        toast.error(t("settings:messages.saveSettingsFailed"))
+        toast.error(
+          getPreferenceWriteFailureMessage(writeResult.reason, {
+            fallback: t("settings:messages.saveSettingsFailed"),
+          }),
+        )
       }
     } catch (error) {
       const msg = getErrorMessage(error)

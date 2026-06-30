@@ -304,6 +304,7 @@
       "titleWithCookieInterceptor": "啟用過盾流程以完成網路請求"
     },
     "updateLog": {
+      "autoOpenSetting": "更新日誌自動開啟",
       "disableAutoOpen": "不再自動開啟",
       "enableAutoOpen": "重新啟用自動開啟",
       "loading": "正在載入更新日誌…",

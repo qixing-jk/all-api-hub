@@ -304,6 +304,7 @@
       "titleWithCookieInterceptor": "Bật quy trình vượt khiên để hoàn thành yêu cầu mạng"
     },
     "updateLog": {
+      "autoOpenSetting": "Tự động mở nhật ký cập nhật",
       "disableAutoOpen": "Không tự động mở nữa",
       "enableAutoOpen": "Bật lại tự động mở",
       "loading": "Đang tải nhật ký cập nhật...",

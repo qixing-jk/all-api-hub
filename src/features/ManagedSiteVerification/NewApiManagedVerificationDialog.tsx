@@ -21,6 +21,7 @@ import {
   type OpenNewApiManagedVerificationParams,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { getErrorMessage } from "~/utils/core/error"
+import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 
 const NEW_API_VERIFICATION_CODE_LENGTH = 6
 
@@ -188,21 +189,33 @@ export function NewApiManagedVerificationDialog(
       if (needsBaseUrl && nextBaseUrl !== newApiBaseUrl) {
         const writeResult = await updateNewApiBaseUrl(nextBaseUrl)
         if (!writeResult.ok) {
-          throw new Error(t("dialog.messages.quickConfigSaveFailed"))
+          throw new Error(
+            getPreferenceWriteFailureMessage(writeResult.reason, {
+              fallback: t("dialog.messages.quickConfigSaveFailed"),
+            }),
+          )
         }
       }
 
       if (needsCredentials && nextUsername !== newApiUsername) {
         const writeResult = await updateNewApiUsername(nextUsername)
         if (!writeResult.ok) {
-          throw new Error(t("dialog.messages.quickConfigSaveFailed"))
+          throw new Error(
+            getPreferenceWriteFailureMessage(writeResult.reason, {
+              fallback: t("dialog.messages.quickConfigSaveFailed"),
+            }),
+          )
         }
       }
 
       if (needsCredentials && quickPassword !== newApiPassword) {
         const writeResult = await updateNewApiPassword(quickPassword)
         if (!writeResult.ok) {
-          throw new Error(t("dialog.messages.quickConfigSaveFailed"))
+          throw new Error(
+            getPreferenceWriteFailureMessage(writeResult.reason, {
+              fallback: t("dialog.messages.quickConfigSaveFailed"),
+            }),
+          )
         }
       }
 
