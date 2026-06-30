@@ -1222,9 +1222,12 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.preferences.webdav).toEqual(
       expect.objectContaining(DEFAULT_PREFERENCES.webdav),
     )
-    expect((latestContext as any)?.preferences.sortingPriorityConfig).toBe(
-      undefined,
-    )
+    expect(
+      (latestContext as any)?.preferences.sortingPriorityConfig.criteria,
+    ).toEqual(DEFAULT_SORTING_PRIORITY_CONFIG.criteria)
+    expect(
+      (latestContext as any)?.preferences.sortingPriorityConfig.lastModified,
+    ).toEqual(expect.any(Number))
     expect((latestContext as any)?.preferences.taskNotifications).toEqual(
       DEFAULT_PREFERENCES.taskNotifications,
     )

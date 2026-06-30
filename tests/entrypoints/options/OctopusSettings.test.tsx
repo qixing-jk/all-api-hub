@@ -592,7 +592,7 @@ describe("OctopusSettings", () => {
     )
   })
 
-  it("shows the generic update failure when validation passes but persistence is rejected", async () => {
+  it("shows the validation failure fallback when validation passes but persistence is rejected", async () => {
     mockUpdateOctopusConfig.mockResolvedValue({
       ok: false,
       reason: { type: "storage-error", error: new Error("save failed") },
@@ -617,7 +617,9 @@ describe("OctopusSettings", () => {
           expectedLastUpdated: 1,
         },
       )
-      expect(toast.error).toHaveBeenCalledWith("settings:messages.updateFailed")
+      expect(toast.error).toHaveBeenCalledWith(
+        "settings:octopus.validation.failed",
+      )
     })
   })
 })

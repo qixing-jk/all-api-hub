@@ -127,7 +127,7 @@ describe("BalanceHistorySettings", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "settings:messages.saveSettingsFailed",
+        "balanceHistory:messages.error.settingsSaveFailed",
         { id: "toast-id" },
       )
     })
