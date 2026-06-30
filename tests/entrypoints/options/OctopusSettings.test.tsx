@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings"
 import { octopusAuthManager } from "~/services/apiService/octopus/auth"
+import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -87,7 +88,7 @@ vi.mock("~/components/SettingSection", () => ({
     children: ReactNode
     title: string
     description: string
-    onReset?: () => Promise<any>
+    onReset?: () => Promise<PreferenceWriteResult>
   }) => (
     <section>
       <h2>{title}</h2>

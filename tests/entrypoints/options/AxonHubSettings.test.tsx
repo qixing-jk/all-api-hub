@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import AxonHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/AxonHubSettings"
 import { signIn } from "~/services/apiService/axonHub"
+import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -84,7 +85,7 @@ vi.mock("~/components/SettingSection", () => ({
   }: {
     children: ReactNode
     description: string
-    onReset?: () => Promise<any>
+    onReset?: () => Promise<PreferenceWriteResult>
     title: string
   }) => (
     <section>

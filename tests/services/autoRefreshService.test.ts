@@ -21,7 +21,10 @@ import {
 } from "~/services/accounts/autoRefreshService"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
-import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+} from "~/services/preferences/userPreferences"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 
 const preferenceWriteSuccess = (
@@ -29,9 +32,10 @@ const preferenceWriteSuccess = (
 ) => ({
   ok: true as const,
   preferences: {
+    ...DEFAULT_PREFERENCES,
     accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
     ...preferences,
-  } as UserPreferences,
+  },
 })
 
 const { mockOnAutoRefreshMessage } = vi.hoisted(() => ({
@@ -52,12 +56,20 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/services/preferences/userPreferences", () => ({
-  userPreferences: {
-    getPreferences: vi.fn(),
-    savePreferences: vi.fn(),
-  },
-}))
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
+
+  return {
+    ...actual,
+    userPreferences: {
+      getPreferences: vi.fn(),
+      savePreferences: vi.fn(),
+    },
+  }
+})
 
 vi.mock("~/services/history/usageHistory/scheduler", () => ({
   usageHistoryScheduler: {

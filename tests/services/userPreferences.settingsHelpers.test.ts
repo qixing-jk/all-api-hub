@@ -7,13 +7,17 @@ import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
+  type PreferenceWriteResult,
 } from "~/services/preferences/userPreferences"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 
-const expectSuccessfulWrite = async (write: Promise<{ ok: boolean }>) => {
-  await expect(write).resolves.toMatchObject({ ok: true })
+const expectSuccessfulWrite = async (write: Promise<PreferenceWriteResult>) => {
+  await expect(write).resolves.toMatchObject({
+    ok: true,
+    preferences: expect.any(Object),
+  })
 }
 
 describe("userPreferences settings helpers", () => {

@@ -10,6 +10,7 @@ import {
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
 } from "~/types/accountAutoRefresh"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -197,5 +198,33 @@ describe("RefreshSettings (min refresh interval)", () => {
       )
     })
     expect(vi.mocked(toast).error).not.toHaveBeenCalled()
+  })
+
+  it("shows result-aware feedback after toggling refresh on open", async () => {
+    const writeResult = { ok: true as const }
+    const updateRefreshOnOpen = vi.fn().mockResolvedValue(writeResult)
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      autoRefresh: true,
+      refreshOnOpen: false,
+      refreshInterval: 360,
+      minRefreshInterval: 60,
+      updateAutoRefresh: vi.fn().mockResolvedValue({ ok: true }),
+      updateRefreshOnOpen,
+      updateRefreshInterval: vi.fn().mockResolvedValue({ ok: true }),
+      updateMinRefreshInterval: vi.fn().mockResolvedValue({ ok: true }),
+      resetAutoRefreshConfig: vi.fn().mockResolvedValue({ ok: true }),
+    } as any)
+
+    renderSubject()
+
+    fireEvent.click(screen.getAllByRole("switch", { name: "Toggle" })[1])
+
+    await waitFor(() => {
+      expect(updateRefreshOnOpen).toHaveBeenCalledWith(true)
+    })
+    expect(showUpdateToast).toHaveBeenCalledWith(
+      writeResult,
+      "settings:refresh.refreshOnOpen",
+    )
   })
 })

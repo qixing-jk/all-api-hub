@@ -610,12 +610,14 @@ export const UserPreferencesProvider = ({
           actionClickBehavior: behavior,
         })
       ) {
-        await sendPreferencesMessage(
+        void sendPreferencesMessage(
           PreferencesMessageTypes.UpdateActionClickBehavior,
           {
             behavior,
           },
-        )
+        ).catch((error) => {
+          logger.warn("Failed to notify action click behavior update", error)
+        })
       }
       return result
     },

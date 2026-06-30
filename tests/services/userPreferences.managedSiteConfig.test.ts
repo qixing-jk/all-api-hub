@@ -7,14 +7,18 @@ import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
+  type PreferenceWriteResult,
 } from "~/services/preferences/userPreferences"
 import { DEFAULT_AXON_HUB_CONFIG } from "~/types/axonHubConfig"
 import { DEFAULT_CLAUDE_CODE_HUB_CONFIG } from "~/types/claudeCodeHubConfig"
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 
-const expectSuccessfulWrite = async (write: Promise<{ ok: boolean }>) => {
-  await expect(write).resolves.toMatchObject({ ok: true })
+const expectSuccessfulWrite = async (write: Promise<PreferenceWriteResult>) => {
+  await expect(write).resolves.toMatchObject({
+    ok: true,
+    preferences: expect.any(Object),
+  })
 }
 
 describe("userPreferences managed-site helpers", () => {
