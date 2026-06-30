@@ -71,10 +71,13 @@ describe("Context menu visibility toggles", () => {
     const savePreferencesSpy = vi
       .spyOn(userPreferences, "savePreferencesWithResult")
       .mockResolvedValue({
-        ...structuredClone(DEFAULT_PREFERENCES),
-        webAiApiCheck: {
-          ...structuredClone(DEFAULT_PREFERENCES.webAiApiCheck!),
-          contextMenu: { enabled: false },
+        ok: true,
+        preferences: {
+          ...structuredClone(DEFAULT_PREFERENCES),
+          webAiApiCheck: {
+            ...structuredClone(DEFAULT_PREFERENCES.webAiApiCheck!),
+            contextMenu: { enabled: false },
+          },
         },
       } as any)
 
@@ -118,10 +121,13 @@ describe("Context menu visibility toggles", () => {
     const savePreferencesSpy = vi
       .spyOn(userPreferences, "savePreferencesWithResult")
       .mockResolvedValue({
-        ...structuredClone(DEFAULT_PREFERENCES),
-        redemptionAssist: {
-          ...structuredClone(DEFAULT_PREFERENCES.redemptionAssist!),
-          contextMenu: { enabled: false },
+        ok: true,
+        preferences: {
+          ...structuredClone(DEFAULT_PREFERENCES),
+          redemptionAssist: {
+            ...structuredClone(DEFAULT_PREFERENCES.redemptionAssist!),
+            contextMenu: { enabled: false },
+          },
         },
       } as any)
 

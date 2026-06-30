@@ -16,6 +16,16 @@ const {
   mockResetSortingPriorityConfig: vi.fn(),
 }))
 
+const preferenceWriteSuccess = () => ({
+  ok: true,
+  preferences: {},
+})
+
+const preferenceWriteFailure = () => ({
+  ok: false,
+  reason: { type: "storage-error", error: new Error("save failed") },
+})
+
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
     (await importOriginal()) as typeof import("~/contexts/UserPreferencesContext")
@@ -154,8 +164,8 @@ describe("SortingPrioritySettings", () => {
       new Date("2026-03-30T07:10:00.000Z").getTime(),
     )
 
-    mockUpdateSortingPriorityConfig.mockResolvedValue(true)
-    mockResetSortingPriorityConfig.mockResolvedValue(true)
+    mockUpdateSortingPriorityConfig.mockResolvedValue(preferenceWriteSuccess())
+    mockResetSortingPriorityConfig.mockResolvedValue(preferenceWriteSuccess())
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
   })
 
@@ -241,7 +251,7 @@ describe("SortingPrioritySettings", () => {
     })
 
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:sorting.title",
     )
     expect(
@@ -259,7 +269,7 @@ describe("SortingPrioritySettings", () => {
   })
 
   it("toggles a criterion and keeps the UI updated even when saving fails", async () => {
-    mockUpdateSortingPriorityConfig.mockResolvedValue(false)
+    mockUpdateSortingPriorityConfig.mockResolvedValue(preferenceWriteFailure())
 
     render(<SortingPrioritySettings />)
 

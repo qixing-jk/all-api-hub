@@ -41,9 +41,9 @@ describe("userPreferences autoProvisionKeyOnAccountAdd", () => {
       autoProvisionKeyOnAccountAdd: true,
     })
 
-    const success =
+    const result =
       await userPreferences.updateAutoProvisionKeyOnAccountAdd(false)
-    expect(success).toBe(true)
+    expect(result.ok).toBe(true)
 
     const prefs = await userPreferences.getPreferences()
     expect(prefs.autoProvisionKeyOnAccountAdd).toBe(false)

@@ -105,6 +105,16 @@ const mockApiCredentialProfilesMergeConfig =
   apiCredentialProfilesStorage.mergeConfig as unknown as ReturnType<
     typeof vi.fn
   >
+
+const preferenceWriteSuccess = () => ({
+  ok: true,
+  preferences: {},
+})
+
+const preferenceWriteFailure = () => ({
+  ok: false,
+  reason: { type: "storage-error", error: new Error("import failed") },
+})
 const mockApiCredentialProfilesExportConfig =
   apiCredentialProfilesStorage.exportConfig as unknown as ReturnType<
     typeof vi.fn
@@ -205,7 +215,7 @@ describe("parseBackupSummary", () => {
 describe("importFromBackupObject", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUserPreferencesImport.mockResolvedValue(true)
+    mockUserPreferencesImport.mockResolvedValue(preferenceWriteSuccess())
     mockEnsureLegacyMigration.mockResolvedValue({
       migratedAccountCount: 0,
       createdTagCount: 0,
@@ -560,7 +570,7 @@ describe("importFromBackupObject", () => {
   })
 
   it("returns partial success when V2 preference import fails but other sections import", async () => {
-    mockUserPreferencesImport.mockResolvedValue(false)
+    mockUserPreferencesImport.mockResolvedValue(preferenceWriteFailure())
 
     const backup: BackupFullV2 = {
       version: BACKUP_VERSION,

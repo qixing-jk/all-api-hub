@@ -55,6 +55,19 @@ const {
   updateTaskNotificationsMock: vi.fn(),
 }))
 
+const preferenceWriteSuccess = () => ({
+  ok: true,
+  preferences: {},
+})
+
+const preferenceWriteFailure = () => ({
+  ok: false,
+  reason: {
+    type: "storage-error",
+    error: new Error("save failed"),
+  },
+})
+
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
     siteAnnouncementNotifications: DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
@@ -110,7 +123,7 @@ describe("TaskNotificationSettings", () => {
       DEFAULT_TASK_NOTIFICATION_PREFERENCES,
     )
     updateSiteAnnouncementNotificationsMock.mockResolvedValue(true)
-    updateTaskNotificationsMock.mockResolvedValue(true)
+    updateTaskNotificationsMock.mockResolvedValue(preferenceWriteSuccess())
   })
 
   it("renders permission controls and requests notification permission", async () => {
@@ -1061,7 +1074,7 @@ describe("TaskNotificationSettings", () => {
   })
 
   it("does not send a webhook test notification when saving the draft fails", async () => {
-    updateTaskNotificationsMock.mockResolvedValueOnce(false)
+    updateTaskNotificationsMock.mockResolvedValueOnce(preferenceWriteFailure())
     taskNotificationsMock.current = {
       ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
       channels: {
@@ -1296,11 +1309,11 @@ describe("TaskNotificationSettings", () => {
       notificationEnabled: false,
     })
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:taskNotifications.enable",
     )
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:taskNotifications.tasksLabel",
     )
     expect(showUpdateToastMock).toHaveBeenCalledWith(

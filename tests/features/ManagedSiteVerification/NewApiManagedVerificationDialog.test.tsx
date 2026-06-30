@@ -19,6 +19,11 @@ let currentNewApiBaseUrl = "https://managed.example"
 let currentNewApiUsername = ""
 let currentNewApiPassword = ""
 
+const preferenceWriteSuccess = () => ({
+  ok: true,
+  preferences: {},
+})
+
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
     newApiBaseUrl: currentNewApiBaseUrl,
@@ -146,9 +151,9 @@ describe("NewApiManagedVerificationDialog", () => {
     updateNewApiBaseUrlMock.mockReset()
     updateNewApiUsernameMock.mockReset()
     updateNewApiPasswordMock.mockReset()
-    updateNewApiBaseUrlMock.mockResolvedValue(true)
-    updateNewApiUsernameMock.mockResolvedValue(true)
-    updateNewApiPasswordMock.mockResolvedValue(true)
+    updateNewApiBaseUrlMock.mockResolvedValue(preferenceWriteSuccess())
+    updateNewApiUsernameMock.mockResolvedValue(preferenceWriteSuccess())
+    updateNewApiPasswordMock.mockResolvedValue(preferenceWriteSuccess())
   })
 
   it("shows inline quick-config fields when login-assist settings are missing", () => {

@@ -1021,7 +1021,11 @@ class WebdavAutoSyncService {
     })
 
     if (!writeResult.ok) {
-      throw new Error("Failed to import WebDAV preferences")
+      throw new Error(
+        writeResult.reason.type === "storage-error"
+          ? getErrorMessage(writeResult.reason.error)
+          : "Failed to import WebDAV preferences",
+      )
     }
   }
 

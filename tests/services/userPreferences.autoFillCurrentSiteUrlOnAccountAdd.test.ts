@@ -38,9 +38,9 @@ describe("userPreferences autoFillCurrentSiteUrlOnAccountAdd", () => {
       autoFillCurrentSiteUrlOnAccountAdd: false,
     })
 
-    const success =
+    const result =
       await userPreferences.updateAutoFillCurrentSiteUrlOnAccountAdd(true)
-    expect(success).toBe(true)
+    expect(result.ok).toBe(true)
 
     const prefs = await userPreferences.getPreferences()
     expect(prefs.autoFillCurrentSiteUrlOnAccountAdd).toBe(true)

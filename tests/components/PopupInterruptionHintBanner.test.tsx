@@ -6,6 +6,7 @@ import {
   clearPopupInterruptionHint,
   POPUP_CRITICAL_FLOWS,
 } from "~/services/popupInterruptionHint"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { openSidePanelPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -64,7 +65,10 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 describe("PopupInterruptionHintBanner", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUpdateActionClickBehavior.mockResolvedValue(true)
+    mockUpdateActionClickBehavior.mockResolvedValue({
+      ok: true,
+      preferences: DEFAULT_PREFERENCES,
+    })
     mockOpenSidePanelPage.mockResolvedValue(undefined)
     mockClearPopupInterruptionHint.mockResolvedValue(undefined)
   })
@@ -114,7 +118,11 @@ describe("PopupInterruptionHintBanner", () => {
 
   it("keeps the hint visible when saving the sidepanel preference fails", async () => {
     const user = userEvent.setup()
-    mockUpdateActionClickBehavior.mockResolvedValue(false)
+    const writeFailure = {
+      ok: false,
+      reason: { type: "storage-error", error: new Error("save failed") },
+    }
+    mockUpdateActionClickBehavior.mockResolvedValue(writeFailure)
     mockGetPopupInterruptionHint.mockResolvedValue({
       flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
       status: "pending",
@@ -133,7 +141,7 @@ describe("PopupInterruptionHintBanner", () => {
     expect(mockClearPopupInterruptionHint).not.toHaveBeenCalled()
     expect(mockOpenSidePanelPage).not.toHaveBeenCalled()
     expect(mockShowUpdateToast).toHaveBeenCalledWith(
-      false,
+      writeFailure,
       "ui:popupInterruption.settingName",
     )
     expect(screen.getByText("ui:popupInterruption.title")).toBeVisible()

@@ -35,6 +35,19 @@ const mockSavePreferences = vi.fn()
 const mockExportPreferences = vi.fn()
 const mockImportPreferences = vi.fn()
 
+const preferenceWriteSuccess = () => ({
+  ok: true,
+  preferences: {},
+})
+
+const preferenceWriteFailure = () => ({
+  ok: false,
+  reason: {
+    type: "storage-error",
+    error: new Error("Failed to import WebDAV preferences"),
+  },
+})
+
 vi.mock(
   import("~/services/preferences/userPreferences"),
   async (importOriginal) => {
@@ -897,7 +910,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     mockChannelConfigImport.mockResolvedValue(undefined)
     mockApiCredentialProfilesImport.mockResolvedValue(undefined)
     mockTagStoreImport.mockResolvedValue(undefined)
-    mockImportPreferences.mockResolvedValue(true)
+    mockImportPreferences.mockResolvedValue(preferenceWriteSuccess())
 
     mockTagStoreExport.mockResolvedValue({ version: 1, tagsById: {} })
     mockExportPreferences.mockResolvedValue({ lastUpdated: 1 } as any)
@@ -1747,7 +1760,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       return await accountDeferred.promise
     })
     mockTagStoreImport.mockResolvedValue(undefined)
-    mockImportPreferences.mockResolvedValue(true)
+    mockImportPreferences.mockResolvedValue(preferenceWriteSuccess())
     mockChannelConfigImport.mockResolvedValue(undefined)
     mockApiCredentialProfilesImport.mockResolvedValue(undefined)
 
@@ -1947,7 +1960,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
     mockChannelConfigImport.mockResolvedValue(undefined)
     mockApiCredentialProfilesImport.mockResolvedValue(undefined)
     mockTagStoreImport.mockResolvedValue(undefined)
-    mockImportPreferences.mockResolvedValue(true)
+    mockImportPreferences.mockResolvedValue(preferenceWriteSuccess())
 
     mockAccountStorageExportData.mockResolvedValue({
       accounts: [{ id: "local-account", created_at: 1, updated_at: 10 }],
@@ -2058,7 +2071,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
     })
     mockImportPreferences.mockImplementation(async () => {
       callOrder.push("preferences")
-      return true
+      return preferenceWriteSuccess()
     })
     mockChannelConfigImport.mockImplementation(async () => {
       callOrder.push("channel")
@@ -2098,7 +2111,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
 
     mockAccountStorageImportData.mockResolvedValue({ migratedCount: 0 })
     mockTagStoreImport.mockResolvedValue(undefined)
-    mockImportPreferences.mockResolvedValue(true)
+    mockImportPreferences.mockResolvedValue(preferenceWriteSuccess())
     mockChannelConfigImport.mockRejectedValueOnce(new Error("channel failed"))
 
     await expect(service.syncWithWebdav()).rejects.toThrow("channel failed")
@@ -2126,7 +2139,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
 
     mockAccountStorageImportData.mockResolvedValue({ migratedCount: 0 })
     mockTagStoreImport.mockResolvedValue(undefined)
-    mockImportPreferences.mockResolvedValue(true)
+    mockImportPreferences.mockResolvedValue(preferenceWriteSuccess())
     mockChannelConfigImport.mockResolvedValue(undefined)
     mockApiCredentialProfilesImport.mockRejectedValueOnce(
       new Error("profile import failed"),
@@ -2148,7 +2161,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
 
   it("throws when importing synced preferences fails and rolls account metadata back to empty defaults", async () => {
     const service = createService()
-    mockImportPreferences.mockResolvedValue(false)
+    mockImportPreferences.mockResolvedValue(preferenceWriteFailure())
 
     await expect(
       (service as any).applyLocalSyncResult({

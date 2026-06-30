@@ -430,7 +430,14 @@ describe("typed runtime messaging setup", () => {
         ok: true,
         savedPreferences: { lastUpdated: 3 } as any,
       })
-      .mockResolvedValueOnce({ ok: false, reason: "conflict" } as any)
+      .mockResolvedValueOnce({
+        ok: false,
+        reason: {
+          type: "stale",
+          expectedLastUpdated: 7,
+          actualLastUpdated: 9,
+        },
+      })
     vi.spyOn(service.webdavAutoSyncService, "getStatus")
       .mockReturnValueOnce({
         isRunning: true,

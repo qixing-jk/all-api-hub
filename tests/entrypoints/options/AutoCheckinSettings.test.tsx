@@ -35,6 +35,16 @@ const {
 
 const pushWithinOptionsPageMock = vi.fn()
 
+const preferenceWriteSuccess = () => ({
+  ok: true,
+  preferences: {},
+})
+
+const preferenceWriteFailure = () => ({
+  ok: false,
+  reason: { type: "storage-error", error: new Error("save failed") },
+})
+
 vi.mock("react-hot-toast", () => ({
   default: toastMocks,
 }))
@@ -99,8 +109,8 @@ describe("AutoCheckinSettings", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    updateAutoCheckin.mockResolvedValue(true)
-    resetAutoCheckinConfig.mockResolvedValue(true)
+    updateAutoCheckin.mockResolvedValue(preferenceWriteSuccess())
+    resetAutoCheckinConfig.mockResolvedValue(preferenceWriteSuccess())
     useUserPreferencesContextMock.mockReturnValue({
       preferences: {
         autoCheckin: createPreferences(),
@@ -217,9 +227,9 @@ describe("AutoCheckinSettings", () => {
   })
 
   it("disables schedule mode changes while preferences are saving", async () => {
-    let resolveSave: (value: boolean) => void
+    let resolveSave: (value: ReturnType<typeof preferenceWriteSuccess>) => void
     updateAutoCheckin.mockReturnValueOnce(
-      new Promise<boolean>((resolve) => {
+      new Promise<ReturnType<typeof preferenceWriteSuccess>>((resolve) => {
         resolveSave = resolve
       }),
     )
@@ -248,7 +258,7 @@ describe("AutoCheckinSettings", () => {
     expect(updateAutoCheckin).toHaveBeenCalledTimes(1)
     expect(updateAutoCheckin).toHaveBeenCalledWith({ globalEnabled: false })
 
-    resolveSave!(true)
+    resolveSave!(preferenceWriteSuccess())
 
     await waitFor(() => {
       expect(
@@ -293,7 +303,7 @@ describe("AutoCheckinSettings", () => {
   })
 
   it("reports invalid retry numbers and save failures", async () => {
-    updateAutoCheckin.mockResolvedValue(false)
+    updateAutoCheckin.mockResolvedValue(preferenceWriteFailure())
 
     render(<AutoCheckinSettings />, {
       withUserPreferencesProvider: false,
