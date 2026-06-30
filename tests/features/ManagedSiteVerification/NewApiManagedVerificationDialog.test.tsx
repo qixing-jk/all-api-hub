@@ -237,6 +237,76 @@ describe("NewApiManagedVerificationDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows base-url save failures without retrying verification", async () => {
+    const user = userEvent.setup()
+    updateNewApiBaseUrlMock.mockResolvedValue(preferenceWriteFailure())
+    const props = createProps({
+      step: NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
+      request: {
+        ...BASE_REQUEST,
+        config: {
+          ...BASE_REQUEST.config,
+          baseUrl: "",
+        },
+      },
+      errorMessage: "newApiManagedVerification:dialog.messages.missingBaseUrl",
+    })
+
+    render(<NewApiManagedVerificationDialog {...props} />)
+
+    await user.clear(
+      screen.getByLabelText("settings:newApi.fields.baseUrlLabel"),
+    )
+    await user.type(
+      screen.getByLabelText("settings:newApi.fields.baseUrlLabel"),
+      "https://changed.example",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "dialog.actions.saveAndRetry",
+      }),
+    )
+
+    expect(updateNewApiBaseUrlMock).toHaveBeenCalledWith(
+      "https://changed.example",
+    )
+    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
+    expect(props.onRetry).not.toHaveBeenCalled()
+    expect(
+      await screen.findByText("dialog.messages.quickConfigSaveFailed"),
+    ).toBeInTheDocument()
+  })
+
+  it("shows password save failures without retrying verification", async () => {
+    const user = userEvent.setup()
+    updateNewApiPasswordMock.mockResolvedValue(preferenceWriteFailure())
+    const props = createProps()
+
+    render(<NewApiManagedVerificationDialog {...props} />)
+
+    await user.type(
+      screen.getByLabelText("settings:newApi.fields.usernameLabel"),
+      "admin",
+    )
+    await user.type(
+      screen.getByLabelText("settings:newApi.fields.passwordLabel"),
+      "secret",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "dialog.actions.saveAndRetry",
+      }),
+    )
+
+    expect(updateNewApiUsernameMock).toHaveBeenCalledWith("admin")
+    expect(updateNewApiPasswordMock).toHaveBeenCalledWith("secret")
+    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
+    expect(props.onRetry).not.toHaveBeenCalled()
+    expect(
+      await screen.findByText("dialog.messages.quickConfigSaveFailed"),
+    ).toBeInTheDocument()
+  })
+
   it("patches stale request config even when storage already has the same values", async () => {
     const user = userEvent.setup()
     currentNewApiUsername = "admin"

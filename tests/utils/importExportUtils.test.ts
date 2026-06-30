@@ -525,6 +525,21 @@ describe("importFromBackupObject", () => {
     expect(result.allImported).toBe(true)
   })
 
+  it("throws when legacy preference import cannot be persisted", async () => {
+    mockUserPreferencesImport.mockResolvedValue(preferenceWriteFailure())
+    const payload: RawBackupData = {
+      version: "3.0",
+      timestamp: Date.now(),
+      preferences: {
+        themeMode: "dark",
+      },
+    }
+
+    await expect(importFromBackupObject(payload)).rejects.toThrow(
+      "importExport:import.importFailed",
+    )
+  })
+
   it("preserves webdav config when preserveWebdav option is provided", async () => {
     const backup: BackupPreferencesPartialV2 = {
       version: BACKUP_VERSION,

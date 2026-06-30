@@ -877,6 +877,30 @@ describe("UserPreferencesContext", () => {
     )
   })
 
+  it("keeps action behavior writes successful when the runtime notification fails", async () => {
+    const notifyError = new Error("runtime closed")
+    mockedSendPreferencesMessage.mockRejectedValueOnce(notifyError)
+    const context = await renderProvider()
+
+    await act(async () => {
+      await expect(
+        context.updateActionClickBehavior("sidepanel"),
+      ).resolves.toMatchObject({ ok: true })
+    })
+
+    expect((latestContext as any)?.actionClickBehavior).toBe("sidepanel")
+    expect(mockedSendPreferencesMessage).toHaveBeenCalledWith(
+      "preferences:updateActionClickBehavior",
+      { behavior: "sidepanel" },
+    )
+    await waitFor(() => {
+      expect(loggerMocks.warn).toHaveBeenCalledWith(
+        "Failed to notify action click behavior update",
+        notifyError,
+      )
+    })
+  })
+
   it("persists active tab changes through both tab update helpers", async () => {
     const preferences = clonePreferences()
     preferences.activeTab = DATA_TYPE_BALANCE
