@@ -5,8 +5,8 @@ import {
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { fetchApiCredentialModelIds } from "~/services/apiCredentialProfiles/modelCatalog"
 import { resolveApiCredentialTelemetryEndpoint } from "~/services/apiCredentialProfiles/telemetryConfig"
-import { fetchApi } from "~/services/apiService/common/utils"
 import { ApiError } from "~/services/apiTransport/errors"
+import { fetchApi } from "~/services/apiTransport/request"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type {

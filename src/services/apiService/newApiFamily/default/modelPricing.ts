@@ -1,4 +1,4 @@
-import { fetchApi } from "~/services/apiService/common/utils"
+import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
 import { createLogger } from "~/utils/core/logger"

@@ -49,10 +49,13 @@ vi.mock("~/services/apiTransport/constant", () => ({
   },
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
+  fetchApiData: mockFetchApiData,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/default/accountDataUtils", () => ({
   aggregateUsageData: mockAggregateUsageData,
   extractAmount: mockExtractAmount,
-  fetchApiData: mockFetchApiData,
   getTodayTimestampRange: mockGetTodayTimestampRange,
 }))
 

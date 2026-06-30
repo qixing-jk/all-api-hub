@@ -41,31 +41,12 @@ const {
   mockFetchTodayUsage: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApiData: mockFetchApiData,
   fetchApi: mockFetchApi,
-  aggregateUsageData: vi.fn((items: any[]) => ({
-    today_quota_consumption: items.reduce(
-      (sum, item) => sum + (item.quota ?? 0),
-      0,
-    ),
-    today_prompt_tokens: items.reduce(
-      (sum, item) => sum + (item.prompt_tokens ?? 0),
-      0,
-    ),
-    today_completion_tokens: items.reduce(
-      (sum, item) => sum + (item.completion_tokens ?? 0),
-      0,
-    ),
-  })),
-  extractAmount: vi.fn(),
-  getTodayTimestampRange: vi.fn(() => ({
-    start: 111,
-    end: 222,
-  })),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
+vi.mock("~/services/accounts/accountHealth", () => ({
   determineHealthStatus: mockDetermineHealthStatus,
 }))
 

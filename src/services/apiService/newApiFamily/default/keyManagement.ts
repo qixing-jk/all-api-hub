@@ -1,17 +1,17 @@
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import {
+  invalidateResolvedApiTokenKeyCache,
+  resolveApiTokenKey,
+  syncResolvedApiTokenKeyCache,
+} from "~/services/accountTokens/tokenKeyResolver"
 import type {
   CreateTokenRequest,
   CreateTokenResult,
   PaginatedTokenResponse,
   UserGroupInfo,
 } from "~/services/accountTokens/tokenProvisioningModel"
-import {
-  invalidateResolvedApiTokenKeyCache,
-  resolveApiTokenKey,
-  syncResolvedApiTokenKeyCache,
-} from "~/services/apiService/common/tokenKeyResolver"
-import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { ApiError } from "~/services/apiTransport/errors"
+import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"

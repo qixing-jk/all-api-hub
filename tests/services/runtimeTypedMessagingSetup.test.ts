@@ -737,7 +737,7 @@ describe("typed runtime messaging setup", () => {
       items: [{ id: "site-1" }],
     })
 
-    vi.doMock("~/services/apiService/common/utils", () => ({
+    vi.doMock("~/services/apiTransport/request", () => ({
       fetchApi,
     }))
     vi.doMock("~/services/integrations/ldohSiteLookup/runtime", async () => {

@@ -37,15 +37,12 @@ const { mockFetchApi } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApiData: mockFetchApiData,
   fetchApi: mockFetchApi,
-  aggregateUsageData: vi.fn(),
-  extractAmount: vi.fn(),
-  getTodayTimestampRange: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
+vi.mock("~/services/accounts/accountHealth", () => ({
   determineHealthStatus: (...args: unknown[]) =>
     mockDetermineHealthStatus(...args),
 }))

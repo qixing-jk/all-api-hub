@@ -25,7 +25,7 @@ const {
   mockT: vi.fn((key: string) => `translated:${key}`),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
+vi.mock("~/services/accounts/accountHealth", () => ({
   determineHealthStatus: mockDetermineHealthStatus,
 }))
 

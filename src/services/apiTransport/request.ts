@@ -43,10 +43,13 @@ import { joinUrl } from "~/utils/core/url"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
 
-export {
-  extractDataFromApiResponseBody,
-  isHttpUrl,
-} from "~/services/apiTransport/response"
+type JsonFetchApiOptions = Omit<FetchApiOptions, "responseType"> & {
+  responseType?: "json"
+}
+
+type NonJsonFetchApiOptions = Omit<FetchApiOptions, "responseType"> & {
+  responseType: Exclude<TempWindowResponseType, "json">
+}
 
 type NormalizedAuthContext = AuthConfig
 
@@ -606,6 +609,16 @@ export function fetchApi<T>(
   request: ApiTransportRequest,
   options: FetchApiOptions,
   _normalResponseType: true,
+): Promise<T>
+export function fetchApi<T>(
+  request: ApiTransportRequest,
+  options: JsonFetchApiOptions,
+  _normalResponseType?: false,
+): Promise<ApiResponse<T>>
+export function fetchApi<T>(
+  request: ApiTransportRequest,
+  options: NonJsonFetchApiOptions,
+  _normalResponseType?: false,
 ): Promise<T>
 export function fetchApi<T>(
   request: ApiTransportRequest,

@@ -1,52 +1,5 @@
 import type { TodayUsageData } from "~/services/accounts/accountDataModel"
-import {
-  fetchApi as transportFetchApi,
-  fetchApiData as transportFetchApiData,
-} from "~/services/apiTransport/request"
-import type {
-  ApiResponse,
-  ApiServiceRequest,
-  FetchApiOptions,
-} from "~/services/apiTransport/type"
 import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
-
-/**
- * Fetch account-site API data.
- * @param request Account-site request DTO.
- * @param options Fetch options.
- * @returns Extracted response data.
- */
-export async function fetchApiData<T>(
-  request: ApiServiceRequest,
-  options: FetchApiOptions,
-): Promise<T> {
-  return await transportFetchApiData(request, options)
-}
-
-/**
- * Fetch account-site API responses.
- * @param request Account-site request DTO.
- * @param options Fetch options.
- * @param _normalResponseType Whether to unwrap normal response envelopes.
- * @returns API response envelope or unwrapped payload.
- */
-export function fetchApi<T>(
-  request: ApiServiceRequest,
-  options: FetchApiOptions,
-  _normalResponseType: true,
-): Promise<T>
-export function fetchApi<T>(
-  request: ApiServiceRequest,
-  options: FetchApiOptions,
-  _normalResponseType?: false,
-): Promise<ApiResponse<T>>
-export async function fetchApi<T>(
-  request: ApiServiceRequest,
-  options: FetchApiOptions,
-  _normalResponseType?: boolean,
-): Promise<T | ApiResponse<T>> {
-  return await transportFetchApi(request, options, _normalResponseType as true)
-}
 
 /**
  * Compute today's start/end unix timestamps (seconds).

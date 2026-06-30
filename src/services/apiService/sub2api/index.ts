@@ -11,7 +11,9 @@ import type {
   TodayIncomeData,
   TodayUsageData,
 } from "~/services/accounts/accountDataModel"
+import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import { resolveApiTokenKeyWithFetcher } from "~/services/accountTokens/tokenKeyResolver"
 import type {
   CreateTokenRequest,
   CreateTokenResult,
@@ -22,11 +24,9 @@ import type {
   SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { determineHealthStatus } from "~/services/apiService/common"
-import { resolveApiTokenKeyWithFetcher } from "~/services/apiService/common/tokenKeyResolver"
-import { fetchApi } from "~/services/apiService/common/utils"
 import { extractDefaultExchangeRate as extractNewApiFamilyDefaultExchangeRate } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AuthTypeEnum,

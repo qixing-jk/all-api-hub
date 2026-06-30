@@ -1,6 +1,5 @@
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
-import { fetchApiData } from "~/services/apiService/common/utils"
 import {
   transformModelPricing,
   transformUserGroup,
@@ -11,6 +10,7 @@ import type {
   OneHubUserGroupsResponse,
   PaginatedTokenDate,
 } from "~/services/apiService/oneHub/type"
+import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
 import type { ApiToken } from "~/types"

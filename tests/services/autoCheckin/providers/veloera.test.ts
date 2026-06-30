@@ -4,7 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
 }))
 
@@ -75,7 +75,7 @@ describe("veloeraProvider", () => {
 
   describe("checkIn", () => {
     it("returns the fallback success message key when the backend omits a message", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
         data: { quota_awarded: 2 },
@@ -96,7 +96,7 @@ describe("veloeraProvider", () => {
     })
 
     it("returns success on successful check-in", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
         data: null,
@@ -108,7 +108,7 @@ describe("veloeraProvider", () => {
     })
 
     it("returns already_checked when already checked in", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
         data: null,
@@ -120,7 +120,7 @@ describe("veloeraProvider", () => {
     })
 
     it("returns the fallback failure key when the backend fails without a message", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: false,
         data: { code: 500 },
@@ -142,7 +142,7 @@ describe("veloeraProvider", () => {
     })
 
     it("maps 404-style error messages to endpoint-not-supported", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockRejectedValueOnce(new Error("404 Not found"))
 
       const result = await veloeraProvider.checkIn(mockAccount)
@@ -154,7 +154,7 @@ describe("veloeraProvider", () => {
     })
 
     it("handles errors gracefully", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockRejectedValueOnce(new Error("Network error"))
 
       const result = await veloeraProvider.checkIn(mockAccount)

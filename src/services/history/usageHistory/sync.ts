@@ -1,8 +1,8 @@
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
-import { fetchApiData } from "~/services/apiService/common/utils"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
+import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type {

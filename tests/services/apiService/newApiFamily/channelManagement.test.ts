@@ -26,12 +26,9 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {},
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: mockFetchApi,
   fetchApiData: mockFetchApiData,
-  aggregateUsageData: vi.fn(),
-  extractAmount: vi.fn(),
-  getTodayTimestampRange: vi.fn(),
 }))
 
 const baseRequest = {

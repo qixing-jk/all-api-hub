@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   extractItemsFromArrayOrItemsPayload,
   fetchAllItems,
-} from "~/services/apiService/common/pagination"
+} from "~/services/apiTransport/pagination"
 
 const { mockLoggerWarn } = vi.hoisted(() => ({
   mockLoggerWarn: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock("~/utils/core/logger", () => ({
   })),
 }))
 
-describe("apiService common pagination helpers", () => {
+describe("API transport pagination helpers", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

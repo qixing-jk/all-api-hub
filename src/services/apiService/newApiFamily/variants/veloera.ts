@@ -3,8 +3,7 @@ import type {
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
-import { determineHealthStatus } from "~/services/apiService/common"
-import { fetchApiData } from "~/services/apiService/common/utils"
+import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import {
   fetchAccountQuota,
   fetchTodayIncome,
@@ -12,6 +11,7 @@ import {
   resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { ApiError } from "~/services/apiTransport/errors"
+import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { CheckInConfig, SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"

@@ -8,7 +8,7 @@ const { fetchApiMock, loggerWarnMock } = vi.hoisted(() => ({
   loggerWarnMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: fetchApiMock,
 }))
 

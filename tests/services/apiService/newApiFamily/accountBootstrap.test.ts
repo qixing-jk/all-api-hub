@@ -15,7 +15,7 @@ const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApiData: mockFetchApiData,
 }))
 

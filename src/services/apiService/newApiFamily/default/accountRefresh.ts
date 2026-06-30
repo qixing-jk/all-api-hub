@@ -2,7 +2,7 @@ import type {
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
-import { determineHealthStatus } from "~/services/apiService/common"
+import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import {
   fetchAccountData,

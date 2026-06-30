@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { determineHealthStatus } from "~/services/apiService/common"
+import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { SiteHealthStatus, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 
@@ -19,7 +19,7 @@ vi.mock("~/utils/i18n/core", () => ({
   ),
 }))
 
-describe("apiService common helpers", () => {
+describe("account health helpers", () => {
   beforeEach(() => {
     vi.useRealTimers()
   })

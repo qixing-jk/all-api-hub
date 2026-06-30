@@ -24,7 +24,7 @@ const {
   newApiFamilyFetchAccountQuota: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
+vi.mock("~/services/accounts/accountHealth", () => ({
   determineHealthStatus: commonDetermineHealthStatus,
 }))
 

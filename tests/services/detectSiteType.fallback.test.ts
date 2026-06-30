@@ -25,7 +25,7 @@ vi.mock("~/utils/browser/tempWindowFetch", () => ({
   tempWindowFetch: mocks.tempWindowFetch,
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: mocks.fetchApi,
   fetchApiData: mocks.fetchApiData,
 }))

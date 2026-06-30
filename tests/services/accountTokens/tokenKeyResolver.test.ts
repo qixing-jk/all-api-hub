@@ -16,8 +16,8 @@ import {
   resolveApiTokenKey,
   resolveApiTokenKeyWithFetcher,
   syncResolvedApiTokenKeyCache,
-} from "~/services/apiService/common/tokenKeyResolver"
-import { fetchApiData } from "~/services/apiService/common/utils"
+} from "~/services/accountTokens/tokenKeyResolver"
+import { fetchApiData } from "~/services/apiTransport/request"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({
@@ -33,17 +33,14 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {},
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: mockFetchApi,
   fetchApiData: mockFetchApiData,
-  aggregateUsageData: vi.fn(),
-  extractAmount: vi.fn(),
-  getTodayTimestampRange: vi.fn(),
 }))
 
 const mockedFetchApiData = fetchApiData as unknown as ReturnType<typeof vi.fn>
 
-describe("apiService common token APIs", () => {
+describe("token key resolver", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedFetchApiData.mockReset()

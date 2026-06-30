@@ -3,74 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   aggregateUsageData,
   extractAmount,
-  fetchApi,
-  fetchApiData,
   getTodayTimestampRange,
-} from "~/services/apiService/common/utils"
+} from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
-import { AuthTypeEnum } from "~/types"
 
-const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({
-  mockFetchApi: vi.fn(),
-  mockFetchApiData: vi.fn(),
-}))
-
-vi.mock("~/services/apiTransport/request", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/services/apiTransport/request")>()
-  return {
-    ...actual,
-    fetchApi: mockFetchApi,
-    fetchApiData: mockFetchApiData,
-  }
-})
-
-describe("API Service Common Utils", () => {
+describe("New API family account data utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  describe("fetchApiData", () => {
-    it("passes requests directly to transport without account-aware lookup", async () => {
-      const request = {
-        baseUrl: "https://example.invalid",
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          accessToken: "token",
-          userId: "123",
-        },
-      }
-      const options = { endpoint: "/api/test" }
-      mockFetchApiData.mockResolvedValueOnce({ ok: true })
-
-      await expect(fetchApiData(request, options)).resolves.toEqual({
-        ok: true,
-      })
-
-      expect(mockFetchApiData).toHaveBeenCalledWith(request, options)
-    })
-  })
-
-  describe("fetchApi", () => {
-    it("passes response requests directly to transport without account-aware lookup", async () => {
-      const request = {
-        baseUrl: "https://example.invalid",
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          accessToken: "token",
-          userId: "123",
-        },
-      }
-      const options = { endpoint: "/api/test" }
-      mockFetchApi.mockResolvedValueOnce({ success: true, data: { ok: true } })
-
-      await expect(fetchApi(request, options, true)).resolves.toEqual({
-        success: true,
-        data: { ok: true },
-      })
-
-      expect(mockFetchApi).toHaveBeenCalledWith(request, options, true)
-    })
   })
 
   describe("getTodayTimestampRange", () => {

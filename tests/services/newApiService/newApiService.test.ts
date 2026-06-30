@@ -31,7 +31,7 @@ vi.mock("react-hot-toast", () => ({
 // Mock API service functions
 const mockFetchApi = vi.fn()
 const mockFetchApiData = vi.fn()
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: mockFetchApi,
   fetchApiData: mockFetchApiData,
 }))

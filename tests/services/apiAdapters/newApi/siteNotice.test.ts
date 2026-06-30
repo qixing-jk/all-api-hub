@@ -11,7 +11,7 @@ const { commonFetchSiteNoticeMock, newApiFamilyFetchSiteNoticeMock } =
     newApiFamilyFetchSiteNoticeMock: vi.fn(),
   }))
 
-vi.mock("~/services/apiService/common", () => ({
+vi.mock("~/services/accounts/accountHealth", () => ({
   fetchSiteNotice: commonFetchSiteNoticeMock,
 }))
 

@@ -12,8 +12,8 @@ import { server } from "~~/tests/msw/server"
 
 let fetchApiData: typeof import("~/services/apiTransport/request").fetchApiData
 let fetchApi: typeof import("~/services/apiTransport/request").fetchApi
-let extractDataFromApiResponseBody: typeof import("~/services/apiTransport/request").extractDataFromApiResponseBody
-let isHttpUrl: typeof import("~/services/apiTransport/request").isHttpUrl
+let extractDataFromApiResponseBody: typeof import("~/services/apiTransport/response").extractDataFromApiResponseBody
+let isHttpUrl: typeof import("~/services/apiTransport/response").isHttpUrl
 let ApiError: typeof import("~/services/apiTransport/errors").ApiError
 let ApiErrorCodes: typeof import("~/services/apiTransport/errors").API_ERROR_CODES
 
@@ -123,8 +123,12 @@ describe("apiTransport request helpers", () => {
     >("~/services/apiTransport/request")
     fetchApiData = request.fetchApiData
     fetchApi = request.fetchApi
-    extractDataFromApiResponseBody = request.extractDataFromApiResponseBody
-    isHttpUrl = request.isHttpUrl
+
+    const response = await vi.importActual<
+      typeof import("~/services/apiTransport/response")
+    >("~/services/apiTransport/response")
+    extractDataFromApiResponseBody = response.extractDataFromApiResponseBody
+    isHttpUrl = response.isHttpUrl
 
     const errors = await vi.importActual<
       typeof import("~/services/apiTransport/errors")

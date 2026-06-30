@@ -27,7 +27,7 @@ const {
   mockT: vi.fn((key: string) => `translated:${key}`),
 }))
 
-vi.mock("~/services/apiService/common", () => ({
+vi.mock("~/services/accounts/accountHealth", () => ({
   determineHealthStatus: mockDetermineHealthStatus,
 }))
 
@@ -49,7 +49,7 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
         },
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: mockFetchApi,
   fetchApiData: mockFetchApiData,
 }))

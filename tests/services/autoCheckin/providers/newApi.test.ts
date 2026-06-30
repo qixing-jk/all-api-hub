@@ -7,7 +7,7 @@ import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
   fetchApiData: vi.fn(),
 }))
@@ -125,7 +125,7 @@ describe("newApiProvider", () => {
   describe("checkIn", () => {
     it("uses native page check-in for narrow dynamic signature failures", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
         await import("~/utils/browser/tempWindowFetch")
@@ -187,7 +187,7 @@ describe("newApiProvider", () => {
 
     it("uses native page check-in for generic check-in API failures", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
         await import("~/utils/browser/tempWindowFetch")
@@ -215,7 +215,7 @@ describe("newApiProvider", () => {
 
     it("does not treat unrelated authority errors as auth blocks for native fallback", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTriggerCheckinPageAction } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -243,7 +243,7 @@ describe("newApiProvider", () => {
 
     it("keeps native page action request ids scoped to each provider attempt", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTriggerCheckinPageAction } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -291,7 +291,7 @@ describe("newApiProvider", () => {
     ])(
       "does not use native page check-in for blocked failure message: %s",
       async (message) => {
-        const { fetchApi } = await import("~/services/apiService/common/utils")
+        const { fetchApi } = await import("~/services/apiTransport/request")
         const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
           await import("~/utils/browser/tempWindowFetch")
 
@@ -319,7 +319,7 @@ describe("newApiProvider", () => {
     )
 
     it("refuses native page check-in when temp page identity is missing", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTriggerCheckinPageAction } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -346,7 +346,7 @@ describe("newApiProvider", () => {
     })
 
     it("refuses native page check-in when temp page identity does not match", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTriggerCheckinPageAction } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -377,7 +377,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns manual-required messaging when native page trigger target is missing", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTriggerCheckinPageAction } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -418,7 +418,7 @@ describe("newApiProvider", () => {
     })
 
     it("maps throttled native page actions to trigger failure messaging", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTriggerCheckinPageAction } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -449,7 +449,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns native trigger failure messaging when native page action rejects after response signature failure", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTriggerCheckinPageAction } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -478,7 +478,7 @@ describe("newApiProvider", () => {
 
       try {
         const { fetchApi, fetchApiData } = await import(
-          "~/services/apiService/common/utils"
+          "~/services/apiTransport/request"
         )
         const { tempWindowTriggerCheckinPageAction } = await import(
           "~/utils/browser/tempWindowFetch"
@@ -528,7 +528,7 @@ describe("newApiProvider", () => {
     })
 
     it("does not add native page identity matching to Turnstile replay failures", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
         await import("~/utils/browser/tempWindowFetch")
       const { isAllowedIncognitoAccess } = await import(
@@ -556,7 +556,7 @@ describe("newApiProvider", () => {
 
     it("uses native page check-in for thrown dynamic signature errors", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTriggerCheckinPageAction } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -581,7 +581,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns native trigger failure messaging when native page action rejects after thrown signature error", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTriggerCheckinPageAction } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -602,7 +602,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns the default success message key when the upstream check-in succeeds without a message", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
@@ -621,7 +621,7 @@ describe("newApiProvider", () => {
     })
 
     it("treats upstream already-checked responses as already_checked results", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: false,
@@ -639,7 +639,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses an incognito Turnstile temp context first for access-token accounts", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -693,7 +693,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses the theme-aware New API route for Turnstile-assisted verification pages", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -736,7 +736,7 @@ describe("newApiProvider", () => {
     })
 
     it("falls back to normal Turnstile temp context when access-token incognito access is unavailable", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -772,7 +772,7 @@ describe("newApiProvider", () => {
     })
 
     it("defaults missing authType to AccessToken for direct check-in requests", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
@@ -797,10 +797,8 @@ describe("newApiProvider", () => {
     })
 
     it("uses cookie-auth temp-context options when Turnstile assistance runs for cookie-auth accounts", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
-      const { fetchApiData } = await import(
-        "~/services/apiService/common/utils"
-      )
+      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApiData } = await import("~/services/apiTransport/request")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -864,10 +862,8 @@ describe("newApiProvider", () => {
     })
 
     it("returns manual-required messaging with the site check-in URL when Turnstile token cannot be obtained", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
-      const { fetchApiData } = await import(
-        "~/services/apiService/common/utils"
-      )
+      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApiData } = await import("~/services/apiTransport/request")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -909,7 +905,7 @@ describe("newApiProvider", () => {
 
     it("returns already-checked when Turnstile token is missing but status confirms checked_in_today", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -941,7 +937,7 @@ describe("newApiProvider", () => {
 
     it("returns manual-required when Turnstile assistance succeeds but still cannot obtain a usable token", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -986,7 +982,7 @@ describe("newApiProvider", () => {
 
     it("returns already-checked when assisted success payload still shows a non-token-obtained Turnstile status", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -1029,7 +1025,7 @@ describe("newApiProvider", () => {
 
     it("surfaces the assisted backend failure when Turnstile replay returns a concrete rejection without widget status", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -1069,7 +1065,7 @@ describe("newApiProvider", () => {
 
     it("falls back to the generic failure key when assisted replay returns no usable payload", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -1100,7 +1096,7 @@ describe("newApiProvider", () => {
     })
 
     it("falls back to a generic failure when assisted Turnstile fetch fails after token capture without an explicit error", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -1130,7 +1126,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses the assisted error directly when token capture succeeds but replay still fails", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -1163,7 +1159,7 @@ describe("newApiProvider", () => {
 
     it("falls back to the normal temp context when an incognito-first Turnstile attempt cannot obtain a token", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -1219,7 +1215,7 @@ describe("newApiProvider", () => {
 
     it("falls back to manual verification when the incognito retry still cannot complete the assisted request", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -1268,7 +1264,7 @@ describe("newApiProvider", () => {
 
     it("prompts to enable incognito access when incognito retry is needed but extension is not allowed in incognito", async () => {
       const { fetchApi, fetchApiData } = await import(
-        "~/services/apiService/common/utils"
+        "~/services/apiTransport/request"
       )
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
@@ -1308,7 +1304,7 @@ describe("newApiProvider", () => {
     })
 
     it("does not trigger Turnstile flow for non-Turnstile failures", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
         await import("~/utils/browser/tempWindowFetch")
 
@@ -1331,7 +1327,7 @@ describe("newApiProvider", () => {
     })
 
     it("does not treat every Turnstile mention as a Turnstile-required failure", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -1358,7 +1354,7 @@ describe("newApiProvider", () => {
     })
 
     it("maps endpoint-style errors from the direct request to endpoint-not-supported", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
 
       vi.mocked(fetchApi).mockRejectedValueOnce({
         statusCode: 404,
@@ -1374,7 +1370,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns a generic failed result when the Turnstile-assisted fetch cannot start", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
       )
@@ -1397,7 +1393,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses the generic failure key when the direct request fails without any upstream message", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import("~/services/apiTransport/request")
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: false,

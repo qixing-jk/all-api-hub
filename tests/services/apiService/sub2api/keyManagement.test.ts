@@ -35,7 +35,7 @@ const {
   persistAuthUpdateMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: (...args: any[]) => fetchApiMock(...args),
 }))
 

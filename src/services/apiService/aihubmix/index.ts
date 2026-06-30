@@ -7,6 +7,7 @@ import type {
   TodayIncomeData,
   TodayUsageData,
 } from "~/services/accounts/accountDataModel"
+import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   hasUsableApiTokenKey,
@@ -23,9 +24,8 @@ import type {
   SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { determineHealthStatus } from "~/services/apiService/common"
-import { fetchApiData } from "~/services/apiService/common/utils"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { fetchApiData } from "~/services/apiTransport/request"
 import type {
   ApiResponse,
   ApiServiceRequest,

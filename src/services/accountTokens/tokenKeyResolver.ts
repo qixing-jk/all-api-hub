@@ -3,7 +3,7 @@ import {
   isMaskedApiTokenKey,
   normalizeApiTokenKeyValue,
 } from "~/services/accountTokens/apiTokenKey"
-import { fetchApiData } from "~/services/apiService/common/utils"
+import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 

@@ -4,7 +4,7 @@
  * Endpoint: POST `/api/user/check_in`.
  */
 
-import { fetchApi } from "~/services/apiService/common/utils"
+import { fetchApi } from "~/services/apiTransport/request"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,

@@ -5,15 +5,15 @@ import type {
   TodayIncomeData,
   TodayUsageData,
 } from "~/services/accounts/accountDataModel"
+import type { NewApiCheckInStatus } from "~/services/apiService/newApiFamily/checkInDto"
 import {
   aggregateUsageData,
   extractAmount,
-  fetchApiData,
   getTodayTimestampRange,
-} from "~/services/apiService/common/utils"
-import type { NewApiCheckInStatus } from "~/services/apiService/newApiFamily/checkInDto"
+} from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
+import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type {

@@ -27,13 +27,13 @@ const {
   mockSyncResolvedApiTokenKeyCache: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common/tokenKeyResolver", () => ({
+vi.mock("~/services/accountTokens/tokenKeyResolver", () => ({
   invalidateResolvedApiTokenKeyCache: mockInvalidateResolvedApiTokenKeyCache,
   resolveApiTokenKey: mockResolveApiTokenKey,
   syncResolvedApiTokenKeyCache: mockSyncResolvedApiTokenKeyCache,
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: mockFetchApi,
   fetchApiData: mockFetchApiData,
 }))

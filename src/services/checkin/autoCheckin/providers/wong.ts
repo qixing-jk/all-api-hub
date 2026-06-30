@@ -8,11 +8,11 @@
  * - Normalize backend variations (success flags, `checked_in`, and message strings)
  *   into the project-wide `CheckinResultStatus` shape.
  */
-import { fetchApi } from "~/services/apiService/common/utils"
 import type {
   WongCheckinApiResponse,
   WongCheckinStatusData,
 } from "~/services/apiService/wong"
+import { fetchApi } from "~/services/apiTransport/request"
 import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
