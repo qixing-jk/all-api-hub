@@ -3,16 +3,8 @@ import { describe, expect, it, vi } from "vitest"
 import { newApiSiteNotice } from "~/services/apiAdapters/newApi/siteNotice"
 import { AuthTypeEnum } from "~/types"
 
-const { commonFetchSiteNoticeMock, newApiFamilyFetchSiteNoticeMock } =
-  vi.hoisted(() => ({
-    commonFetchSiteNoticeMock: vi.fn(() => {
-      throw new Error("common siteNotice helper should not be used directly")
-    }),
-    newApiFamilyFetchSiteNoticeMock: vi.fn(),
-  }))
-
-vi.mock("~/services/accounts/accountHealth", () => ({
-  fetchSiteNotice: commonFetchSiteNoticeMock,
+const { newApiFamilyFetchSiteNoticeMock } = vi.hoisted(() => ({
+  newApiFamilyFetchSiteNoticeMock: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/siteNotice", () => ({
@@ -34,6 +26,5 @@ describe("newApiSiteNotice", () => {
 
     await expect(newApiSiteNotice.fetch(request)).resolves.toBe("Notice body")
     expect(newApiFamilyFetchSiteNoticeMock).toHaveBeenCalledWith(request)
-    expect(commonFetchSiteNoticeMock).not.toHaveBeenCalled()
   })
 })
