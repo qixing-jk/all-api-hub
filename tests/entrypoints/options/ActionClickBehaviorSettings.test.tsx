@@ -32,6 +32,11 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showUpdateToast: vi.fn(),
 }))
 
+const preferenceWriteSuccess = () => ({
+  ok: true,
+  preferences: {},
+})
+
 describe("ActionClickBehaviorSettings (side panel fallback)", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -77,7 +82,9 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
     } satisfies SidePanelSupport
     vi.mocked(getSidePanelSupport).mockReturnValue(sidePanelSupport)
 
-    const updateActionClickBehavior = vi.fn().mockResolvedValue(true)
+    const updateActionClickBehavior = vi
+      .fn()
+      .mockResolvedValue(preferenceWriteSuccess())
     const userPreferencesContext = {
       actionClickBehavior: "popup",
       updateActionClickBehavior,
@@ -113,7 +120,9 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
       kind: "chromium-side-panel",
     } satisfies SidePanelSupport)
 
-    const updateActionClickBehavior = vi.fn().mockResolvedValue(true)
+    const updateActionClickBehavior = vi
+      .fn()
+      .mockResolvedValue(preferenceWriteSuccess())
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       actionClickBehavior: "popup",
       updateActionClickBehavior,
@@ -132,7 +141,7 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
     })
 
     expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
-      true,
+      expect.objectContaining({ ok: true }),
       "settings:actionClick.title",
     )
     expect(vi.mocked(showResultToast)).not.toHaveBeenCalled()

@@ -352,12 +352,22 @@ const createDeferred = <T,>() => {
   return { promise, resolve, reject }
 }
 
+const preferenceWriteSuccess = () => ({
+  ok: true,
+  preferences: {},
+})
+
+const preferenceWriteFailure = () => ({
+  ok: false,
+  reason: { type: "storage-error", error: new Error("save failed") },
+})
+
 describe("ManagedSiteModelSyncSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockUpdateNewApiModelSync.mockResolvedValue(true)
-    mockResetNewApiModelSyncConfig.mockResolvedValue(true)
+    mockUpdateNewApiModelSync.mockResolvedValue(preferenceWriteSuccess())
+    mockResetNewApiModelSyncConfig.mockResolvedValue(preferenceWriteSuccess())
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
 
     mockedSendModelSyncMessage.mockResolvedValue({
@@ -713,7 +723,7 @@ describe("ManagedSiteModelSyncSettings", () => {
   })
 
   it("shows a save error when preference updates return false", async () => {
-    mockUpdateNewApiModelSync.mockResolvedValue(false)
+    mockUpdateNewApiModelSync.mockResolvedValue(preferenceWriteFailure())
 
     render(<ManagedSiteModelSyncSettings />)
 
@@ -952,7 +962,7 @@ describe("ManagedSiteModelSyncSettings", () => {
   })
 
   it("keeps the global filters dialog open when saving preferences fails", async () => {
-    mockUpdateNewApiModelSync.mockResolvedValue(false)
+    mockUpdateNewApiModelSync.mockResolvedValue(preferenceWriteFailure())
 
     render(<ManagedSiteModelSyncSettings />)
 
@@ -1278,7 +1288,8 @@ describe("ManagedSiteModelSyncSettings", () => {
   })
 
   it("keeps the dialog open when close is requested during an in-flight save", async () => {
-    const deferredSave = createDeferred<boolean>()
+    const deferredSave =
+      createDeferred<ReturnType<typeof preferenceWriteSuccess>>()
     mockUpdateNewApiModelSync.mockReturnValue(deferredSave.promise)
 
     render(<ManagedSiteModelSyncSettings />)
@@ -1312,7 +1323,7 @@ describe("ManagedSiteModelSyncSettings", () => {
 
     expect(screen.getByRole("dialog")).toBeInTheDocument()
 
-    deferredSave.resolve(true)
+    deferredSave.resolve(preferenceWriteSuccess())
 
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()

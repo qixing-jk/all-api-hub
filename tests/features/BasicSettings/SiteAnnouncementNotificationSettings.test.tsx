@@ -41,7 +41,7 @@ vi.mock("~/utils/navigation", () => ({
 describe("SiteAnnouncementNotificationSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    updateSiteAnnouncementNotificationsMock.mockResolvedValue(true)
+    updateSiteAnnouncementNotificationsMock.mockResolvedValue({ success: true })
   })
 
   it("updates the polling preference through the preferences context", async () => {
@@ -70,13 +70,15 @@ describe("SiteAnnouncementNotificationSettings", () => {
     })
 
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      true,
+      { success: true },
       "settings:siteAnnouncementNotifications.polling.enable",
     )
   })
 
   it("shows failure feedback when the polling preference update fails", async () => {
-    updateSiteAnnouncementNotificationsMock.mockResolvedValue(false)
+    updateSiteAnnouncementNotificationsMock.mockResolvedValue({
+      success: false,
+    })
 
     render(<SiteAnnouncementNotificationSettings />, {
       withUserPreferencesProvider: false,
@@ -104,7 +106,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
     })
 
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      false,
+      { success: false },
       "settings:siteAnnouncementNotifications.polling.enable",
     )
     expect(pollingSwitch).toHaveAttribute("aria-checked", "true")
@@ -147,7 +149,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
     })
 
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      true,
+      { success: true },
       "settings:siteAnnouncementNotifications.polling.interval",
     )
   })
@@ -230,7 +232,9 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("resets the polling interval input when the update fails", async () => {
-    updateSiteAnnouncementNotificationsMock.mockResolvedValue(false)
+    updateSiteAnnouncementNotificationsMock.mockResolvedValue({
+      success: false,
+    })
 
     render(<SiteAnnouncementNotificationSettings />, {
       withUserPreferencesProvider: false,
@@ -251,7 +255,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
     })
 
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      false,
+      { success: false },
       "settings:siteAnnouncementNotifications.polling.interval",
     )
     expect(intervalInput).toHaveValue(360)
@@ -281,7 +285,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
     })
 
     expect(showUpdateToastMock).toHaveBeenCalledWith(
-      false,
+      { success: false },
       "settings:siteAnnouncementNotifications.polling.interval",
     )
     expect(intervalInput).toHaveValue(360)
