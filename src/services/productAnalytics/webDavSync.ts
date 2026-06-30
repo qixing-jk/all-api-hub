@@ -1,7 +1,6 @@
 import { WEBDAV_SYNC_STRATEGIES, type WebDAVSyncStrategy } from "~/types/webdav"
 
 import type { ProductAnalyticsActionDiagnostics } from "./actions"
-import { buildActionFailureDiagnostics } from "./diagnosticsError"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_MODE_IDS,
@@ -10,7 +9,8 @@ import {
   type ProductAnalyticsFailureStage,
   type ProductAnalyticsModeId,
   type ProductAnalyticsSourceKind,
-} from "./events"
+} from "./contracts"
+import { buildActionFailureDiagnostics } from "./diagnosticsError"
 
 type BuildWebDavSyncDiagnosticsOptions = {
   mode?: ProductAnalyticsModeId

@@ -8,7 +8,7 @@ import {
   type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
   type ProductAnalyticsSourceKind,
-} from "./events"
+} from "./contracts"
 
 type BuildManagedSiteModelSyncDiagnosticsOptions = {
   managedSiteType: ProductAnalyticsManagedSiteType

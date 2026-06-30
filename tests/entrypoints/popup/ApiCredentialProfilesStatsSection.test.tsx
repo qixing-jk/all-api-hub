@@ -6,7 +6,7 @@ import {
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -36,9 +36,11 @@ vi.mock(
   }),
 )
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
 
   return {
     ...actual,

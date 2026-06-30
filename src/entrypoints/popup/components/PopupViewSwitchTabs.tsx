@@ -8,7 +8,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   type ProductAnalyticsActionId,
   type ProductAnalyticsFeatureId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 import { POPUP_TEST_IDS } from "../testIds"
 

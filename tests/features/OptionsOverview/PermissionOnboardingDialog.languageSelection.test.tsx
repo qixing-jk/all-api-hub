@@ -19,7 +19,7 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const permissionMocks = vi.hoisted(() => ({
@@ -76,9 +76,11 @@ vi.mock("~/services/permissions/permissionManager", () => {
   }
 })
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
   return {
     ...actual,
     trackProductAnalyticsEvent: analyticsMocks.trackProductAnalyticsEvent,

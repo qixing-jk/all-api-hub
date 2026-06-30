@@ -18,7 +18,6 @@ import {
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_SETTING_IDS,
-  trackProductAnalyticsEvent,
   type ProductAnalyticsAutoCheckinRunKind,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsErrorCategory,
@@ -28,7 +27,8 @@ import {
   type ProductAnalyticsRequestedAuthMode,
   type ProductAnalyticsSiteType,
   type ProductAnalyticsSourceKind,
-} from "./events"
+} from "./contracts"
+import { trackProductAnalyticsEvent } from "./dispatch"
 
 type AutoCheckinRunAnalyticsParams = {
   runKind: ProductAnalyticsAutoCheckinRunKind

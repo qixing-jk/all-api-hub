@@ -36,7 +36,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { sanitizeProductAnalyticsEvent } from "~/services/productAnalytics/privacy"
 import { AuthTypeEnum } from "~/types"
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { PRODUCT_ANALYTICS_MANAGED_SITE_TYPES } from "~/services/productAnalytics/events"
+import { PRODUCT_ANALYTICS_MANAGED_SITE_TYPES } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 
 describe("product analytics managed-site helpers", () => {

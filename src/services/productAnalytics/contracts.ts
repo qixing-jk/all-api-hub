@@ -15,12 +15,6 @@ import {
   SITE_TYPES,
   type ManagedSiteType,
 } from "~/constants/siteType"
-import {
-  ProductAnalyticsMessageTypes,
-  sendProductAnalyticsMessage,
-  type ProductAnalyticsTrackRequest,
-  type ProductAnalyticsTrackRequestDiscriminated,
-} from "~/services/productAnalytics/messaging"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import {
   AuthTypeEnum,
@@ -31,10 +25,6 @@ import {
 } from "~/types"
 import type { LogLevel } from "~/types/logging"
 import type { ThemeMode } from "~/types/theme"
-import { isExtensionBackground } from "~/utils/browser"
-import { createLogger } from "~/utils/core/logger"
-
-const logger = createLogger("ProductAnalyticsEvents")
 
 export const PRODUCT_ANALYTICS_EVENTS = {
   AppOpened: "app_opened",
@@ -1268,64 +1258,3 @@ export type ProductAnalyticsEventPayloadMap = {
 export type ProductAnalyticsEventPayload<
   TEventName extends ProductAnalyticsEventName,
 > = ProductAnalyticsEventPayloadMap[TEventName]
-
-/**
- * Sends a typed product analytics event to the background runtime handler.
- * Telemetry dispatch is best-effort and must not block product flows.
- */
-export async function trackProductAnalyticsEvent<
-  TEventName extends ProductAnalyticsEventName,
->(
-  eventName: TEventName,
-  properties: ProductAnalyticsEventPayload<TEventName>,
-): Promise<boolean> {
-  try {
-    const request = {
-      eventName,
-      properties,
-    } satisfies ProductAnalyticsTrackRequest<TEventName>
-
-    if (isExtensionBackground()) {
-      void import("~/services/productAnalytics/runtime")
-        .then(({ handleProductAnalyticsMessage }) =>
-          handleProductAnalyticsMessage(
-            ProductAnalyticsMessageTypes.TrackEvent,
-            request as ProductAnalyticsTrackRequestDiscriminated,
-          ),
-        )
-        .then((response) => {
-          if (response.success === false) {
-            logger.warn("Product analytics event dispatch was rejected")
-          }
-        })
-        .catch((error) => {
-          logger.warn("Product analytics event dispatch failed", error)
-        })
-      return true
-    }
-
-    void Promise.resolve(
-      sendProductAnalyticsMessage(
-        ProductAnalyticsMessageTypes.TrackEvent,
-        request as ProductAnalyticsTrackRequestDiscriminated,
-      ),
-    )
-      .then((response) => {
-        if (
-          response &&
-          typeof response === "object" &&
-          "success" in response &&
-          response.success === false
-        ) {
-          logger.warn("Product analytics event dispatch was rejected")
-        }
-      })
-      .catch((error) => {
-        logger.warn("Product analytics event dispatch failed", error)
-      })
-    return true
-  } catch (error) {
-    logger.warn("Product analytics event dispatch failed", error)
-    return false
-  }
-}

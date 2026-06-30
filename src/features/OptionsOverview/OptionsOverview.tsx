@@ -18,8 +18,8 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
-  trackProductAnalyticsEvent,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { PRODUCT_ANNOUNCEMENT_SEVERITIES } from "~/services/productAnnouncements/constants"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 

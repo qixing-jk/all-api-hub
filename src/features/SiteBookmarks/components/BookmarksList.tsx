@@ -38,7 +38,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import type { SiteBookmark } from "~/types"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"

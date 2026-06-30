@@ -3,7 +3,7 @@ import {
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsFeatureId,
   type ProductAnalyticsSurfaceId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { isDevBuild } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 

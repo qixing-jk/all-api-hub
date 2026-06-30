@@ -2,10 +2,10 @@ import { useEffect, useRef } from "react"
 
 import {
   PRODUCT_ANALYTICS_EVENTS,
-  trackProductAnalyticsEvent,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsPageId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { isDevBuild } from "~/utils/core/environment"
 
 interface UseProductAnalyticsPageViewParams {

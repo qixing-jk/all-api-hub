@@ -8,7 +8,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsActionId,
   type ProductAnalyticsFeatureId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {

@@ -5,7 +5,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   type AutoCheckinPreferences,
@@ -74,9 +74,11 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     trackProductAnalyticsActionStartedMock(...args),
 }))
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
 
   return {
     ...actual,

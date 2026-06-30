@@ -3,15 +3,10 @@ import { createLogger } from "~/utils/core/logger"
 import { API_ERROR_CODES } from "../apiService/common/errors"
 import type { ProductAnalyticsActionContext } from "./actionConfig"
 import {
-  resolveProductAnalyticsCategoryFromFailureReason,
-  resolveProductAnalyticsFailureReasonFromLocalMessage,
-} from "./errorPatternDiagnostics"
-import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_RESULTS,
-  trackProductAnalyticsEvent,
   type ProductAnalyticsAccountAutoDetectFailureReason,
   type ProductAnalyticsAccountAutoDetectFetchContextKind,
   type ProductAnalyticsAccountAutoDetectStrategy,
@@ -30,7 +25,12 @@ import {
   type ProductAnalyticsTargetKind,
   type ProductAnalyticsTargetState,
   type ProductAnalyticsTelemetrySource,
-} from "./events"
+} from "./contracts"
+import { trackProductAnalyticsEvent } from "./dispatch"
+import {
+  resolveProductAnalyticsCategoryFromFailureReason,
+  resolveProductAnalyticsFailureReasonFromLocalMessage,
+} from "./errorPatternDiagnostics"
 
 export {
   resolveProductAnalyticsActionContext,

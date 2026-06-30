@@ -1,4 +1,4 @@
-import type { ProductAnalyticsErrorCategory } from "~/services/productAnalytics/events"
+import type { ProductAnalyticsErrorCategory } from "~/services/productAnalytics/contracts"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,

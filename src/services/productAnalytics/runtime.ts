@@ -18,7 +18,8 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   type ProductAnalyticsEventName,
-} from "./events"
+} from "./contracts"
+import { registerProductAnalyticsBackgroundHandler } from "./dispatch"
 import {
   onProductAnalyticsMessage,
   ProductAnalyticsMessageTypes,
@@ -183,6 +184,8 @@ export async function handleProductAnalyticsMessage(
     return { success: false, error: getErrorMessage(error) }
   }
 }
+
+registerProductAnalyticsBackgroundHandler(handleProductAnalyticsMessage)
 
 /**
  * Background listeners for typed product analytics messaging.

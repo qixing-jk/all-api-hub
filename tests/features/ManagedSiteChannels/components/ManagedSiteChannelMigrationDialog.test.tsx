@@ -19,7 +19,7 @@ import {
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_RESULTS,
   type ProductAnalyticsResult,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,

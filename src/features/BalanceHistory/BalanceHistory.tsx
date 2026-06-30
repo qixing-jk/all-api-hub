@@ -61,7 +61,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { listTagsSorted } from "~/services/tags/tagStoreUtils"

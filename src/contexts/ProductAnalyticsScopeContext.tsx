@@ -4,7 +4,7 @@ import type {
   ProductAnalyticsEntrypoint,
   ProductAnalyticsFeatureId,
   ProductAnalyticsSurfaceId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 type ProductAnalyticsScopeValue = {
   entrypoint?: ProductAnalyticsEntrypoint

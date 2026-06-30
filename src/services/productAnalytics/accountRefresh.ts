@@ -1,5 +1,4 @@
 import type { ProductAnalyticsActionDiagnostics } from "./actions"
-import { buildActionFailureDiagnostics } from "./diagnosticsError"
 import type {
   ProductAnalyticsErrorCategory,
   ProductAnalyticsFailureReason,
@@ -8,8 +7,9 @@ import type {
   ProductAnalyticsRequestedAuthMode,
   ProductAnalyticsSiteType,
   ProductAnalyticsSourceKind,
-} from "./events"
-import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "./events"
+} from "./contracts"
+import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "./contracts"
+import { buildActionFailureDiagnostics } from "./diagnosticsError"
 
 type BuildAccountRefreshDiagnosticsOptions = {
   sourceKind?: ProductAnalyticsSourceKind

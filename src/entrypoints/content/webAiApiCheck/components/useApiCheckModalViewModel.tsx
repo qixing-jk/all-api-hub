@@ -11,7 +11,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_RESULTS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import {
   API_TYPES,
   type ApiVerificationApiType,

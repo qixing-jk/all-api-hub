@@ -16,7 +16,7 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { AuthTypeEnum } from "~/types"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
@@ -28,9 +28,9 @@ const { trackProductAnalyticsEventMock } = vi.hoisted(() => ({
   trackProductAnalyticsEventMock: vi.fn(),
 }))
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => ({
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => ({
   ...(await importOriginal<
-    typeof import("~/services/productAnalytics/events")
+    typeof import("~/services/productAnalytics/dispatch")
   >()),
   trackProductAnalyticsEvent: trackProductAnalyticsEventMock,
 }))

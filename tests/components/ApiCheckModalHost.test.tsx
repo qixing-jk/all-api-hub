@@ -35,7 +35,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
 import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
 import {

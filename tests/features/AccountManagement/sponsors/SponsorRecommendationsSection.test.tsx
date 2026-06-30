@@ -15,7 +15,7 @@ import {
   type SponsorRecommendation,
 } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/events"
+import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/contracts"
 import { AuthTypeEnum } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -26,9 +26,11 @@ const { recordSponsorSummaryMock, trackProductAnalyticsEventMock } = vi.hoisted(
   }),
 )
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
 
   return {
     ...actual,

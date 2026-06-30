@@ -6,7 +6,7 @@ import { createDefaultPreferences } from "~/services/preferences/userPreferences
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
 import {
   handleProductAnalyticsMessage,

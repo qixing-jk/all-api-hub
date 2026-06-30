@@ -12,8 +12,8 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  trackProductAnalyticsEvent,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { SiteHealthStatus } from "~/types"
 import { formatTelemetryMoney } from "~/utils/core/money"
 

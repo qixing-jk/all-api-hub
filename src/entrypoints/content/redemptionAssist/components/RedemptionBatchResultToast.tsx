@@ -19,7 +19,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsErrorCategory,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { createLogger } from "~/utils/core/logger"
 
 /**

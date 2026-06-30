@@ -18,7 +18,6 @@ import {
   startProductAnalyticsAction,
   type ProductAnalyticsActionContext,
 } from "~/services/productAnalytics/actions"
-import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -30,7 +29,8 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

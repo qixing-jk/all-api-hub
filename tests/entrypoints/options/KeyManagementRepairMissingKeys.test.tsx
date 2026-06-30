@@ -8,7 +8,7 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import {
   ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
   ACCOUNT_KEY_REPAIR_JOB_STATES,

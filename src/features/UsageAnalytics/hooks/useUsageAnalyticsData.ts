@@ -10,7 +10,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import type { SiteAccount } from "~/types"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 import { createLogger } from "~/utils/core/logger"

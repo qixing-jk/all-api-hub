@@ -9,7 +9,7 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { act, fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 const { openKeysPageMock, trackProductAnalyticsActionCompletedMock } =

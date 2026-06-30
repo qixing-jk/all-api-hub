@@ -12,8 +12,8 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  trackProductAnalyticsEvent,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { productAnalyticsPreferences } from "~/services/productAnalytics/preferences"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 

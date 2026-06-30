@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import { API_ERROR_CODES } from "~/services/apiService/common/errors"
-import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 
 describe("product analytics action failure diagnostics", () => {
   it("maps bounded local error messages to fixed failure reasons", () => {

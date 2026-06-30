@@ -34,8 +34,8 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  trackProductAnalyticsEvent,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
 import {
   clearAlarm,
@@ -119,9 +119,11 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionCompleted: vi.fn(),
 }))
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
   return {
     ...actual,
     trackProductAnalyticsEvent: vi.fn(),

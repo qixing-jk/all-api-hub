@@ -31,7 +31,7 @@ import {
   type ProductAnalyticsSourceKind,
   type ProductAnalyticsStatusKind,
   type ProductAnalyticsTelemetrySource,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   API_TYPES,

@@ -7,7 +7,7 @@ import {
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_PAGE_IDS,
   type ProductAnalyticsPageId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { act, render, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { analyticsNow, trackProductAnalyticsEventMock } = vi.hoisted(() => ({
@@ -15,9 +15,11 @@ const { analyticsNow, trackProductAnalyticsEventMock } = vi.hoisted(() => ({
   trackProductAnalyticsEventMock: vi.fn(),
 }))
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
   return {
     ...actual,
     trackProductAnalyticsEvent: trackProductAnalyticsEventMock,

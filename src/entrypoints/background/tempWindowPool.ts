@@ -25,7 +25,7 @@ import {
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsResult,
   type ProductAnalyticsStatusKind,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import {
   recordShieldBypassTempWindowFetchResult,
   recordShieldBypassTempWindowTurnstileFetchResult,

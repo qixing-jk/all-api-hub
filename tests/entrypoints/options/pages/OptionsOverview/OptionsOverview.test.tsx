@@ -17,8 +17,8 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
-  trackProductAnalyticsEvent,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 import { act, render, screen } from "~~/tests/test-utils/render"
 
@@ -51,9 +51,11 @@ vi.mock("~/services/permissions/optionalPermissionState", () => ({
   setLastSeenOptionalPermissions: setLastSeenOptionalPermissionsMock,
 }))
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
 
   return {
     ...actual,

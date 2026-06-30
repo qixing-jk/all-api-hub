@@ -11,12 +11,12 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
-  trackProductAnalyticsEvent,
   type ProductAnalyticsPermissionFailureReason,
   type ProductAnalyticsPermissionId,
   type ProductAnalyticsPermissionOperation,
   type ProductAnalyticsPermissionOutcome,
-} from "./events"
+} from "./contracts"
+import { trackProductAnalyticsEvent } from "./dispatch"
 
 const PRODUCT_ANALYTICS_PERMISSION_ID_BY_OPTIONAL_PERMISSION: Record<
   ManifestOptionalPermissions,

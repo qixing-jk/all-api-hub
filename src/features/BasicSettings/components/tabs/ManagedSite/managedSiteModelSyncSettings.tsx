@@ -34,7 +34,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsActionId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {

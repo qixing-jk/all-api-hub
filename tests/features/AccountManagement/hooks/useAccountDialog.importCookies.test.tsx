@@ -15,7 +15,7 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -82,9 +82,11 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   })),
 }))
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
   return {
     ...actual,
     trackProductAnalyticsEvent: mockTrackProductAnalyticsEvent,

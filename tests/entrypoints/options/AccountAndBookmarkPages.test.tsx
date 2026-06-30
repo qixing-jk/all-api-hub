@@ -14,7 +14,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsActionId,
   type ProductAnalyticsFeatureId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { openSettingsTab } from "~/utils/navigation"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 

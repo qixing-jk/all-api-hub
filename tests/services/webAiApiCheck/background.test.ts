@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/events"
+import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/contracts"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
 import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
 

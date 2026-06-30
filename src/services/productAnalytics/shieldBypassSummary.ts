@@ -5,7 +5,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "./events"
+} from "./contracts"
 import {
   productAnalyticsState,
   type ProductAnalyticsShieldBypassSummaryPatch,

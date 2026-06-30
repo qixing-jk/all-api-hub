@@ -18,7 +18,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 // Verifies account action flows through the public context API, including
 // refresh, enable/disable, copy URL, custom check-in state, and external

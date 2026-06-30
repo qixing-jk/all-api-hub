@@ -23,7 +23,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 const { trackMock } = vi.hoisted(() => ({
   trackMock: vi.fn(),
@@ -34,9 +34,11 @@ const { loggerDebugSpy, loggerWarnSpy } = vi.hoisted(() => ({
   loggerWarnSpy: vi.fn(),
 }))
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
   return {
     ...actual,
     trackProductAnalyticsEvent: trackMock,

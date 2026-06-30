@@ -19,7 +19,7 @@ import {
   type ProductAnalyticsActionId,
   type ProductAnalyticsFeatureId,
   type ProductAnalyticsPageId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import {
   isExtensionPopup,
   isExtensionSidePanel,

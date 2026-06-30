@@ -18,13 +18,13 @@ import {
   PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
   PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  trackProductAnalyticsEvent,
   type ProductAnalyticsActionId,
   type ProductAnalyticsSponsorActionAvailability,
   type ProductAnalyticsSponsorCatalogSource,
   type ProductAnalyticsSponsorSupportStatus,
   type ProductAnalyticsSurfaceId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { recordSponsorRecommendationsSummary } from "~/services/productAnalytics/sponsorRecommendationsSummary"
 
 export const SPONSOR_RECOMMENDATION_ACTION_KINDS = {

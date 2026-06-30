@@ -15,7 +15,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsErrorCategory,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import type { RedemptionAssistShouldPromptResponse } from "~/services/redemption/redemptionAssist"
 import {
   RedemptionAssistMessageTypes,

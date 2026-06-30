@@ -18,7 +18,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { formatTokenCount } from "~/utils/core/formatters"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 

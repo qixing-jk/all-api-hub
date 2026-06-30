@@ -43,7 +43,7 @@ import {
   type WebAiApiCheckPreferences,
 } from "~/services/preferences/userPreferences"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
-import { PRODUCT_ANALYTICS_ENTRYPOINTS } from "~/services/productAnalytics/events"
+import { PRODUCT_ANALYTICS_ENTRYPOINTS } from "~/services/productAnalytics/contracts"
 import { trackSettingsSnapshotEvents } from "~/services/productAnalytics/settings"
 import {
   RedemptionAssistMessageTypes,

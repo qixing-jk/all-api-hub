@@ -7,7 +7,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,

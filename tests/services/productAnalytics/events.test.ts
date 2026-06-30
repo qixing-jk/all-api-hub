@@ -17,8 +17,11 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
+import {
+  registerProductAnalyticsBackgroundHandler,
   trackProductAnalyticsEvent,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/dispatch"
 import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
 import { setLoggingPreferences } from "~/utils/core/logger"
 
@@ -44,11 +47,11 @@ vi.mock("~/services/productAnalytics/messaging", async (importOriginal) => ({
   sendProductAnalyticsMessage: sendProductAnalyticsMessageMock,
 }))
 
-vi.mock("~/services/productAnalytics/runtime", () => ({
-  handleProductAnalyticsMessage: handleProductAnalyticsMessageMock,
-}))
+let cleanupBackgroundHandler: (() => void) | undefined
 
 beforeEach(() => {
+  cleanupBackgroundHandler?.()
+  cleanupBackgroundHandler = undefined
   vi.clearAllMocks()
   setLoggingPreferences({ consoleEnabled: false, level: "debug" })
   isExtensionBackgroundMock.mockReturnValue(false)
@@ -393,8 +396,11 @@ describe("trackProductAnalyticsEvent", () => {
     )
   })
 
-  it("captures directly through the product analytics runtime in background contexts", async () => {
+  it("captures directly through the registered product analytics runtime in background contexts", async () => {
     isExtensionBackgroundMock.mockReturnValue(true)
+    cleanupBackgroundHandler = registerProductAnalyticsBackgroundHandler(
+      handleProductAnalyticsMessageMock,
+    )
 
     await expect(
       trackProductAnalyticsEvent(
@@ -434,6 +440,9 @@ describe("trackProductAnalyticsEvent", () => {
       setLoggingPreferences({ consoleEnabled: true, level: "debug" })
       isExtensionBackgroundMock.mockReturnValue(true)
       handleProductAnalyticsMessageMock.mockResolvedValue({ success: false })
+      cleanupBackgroundHandler = registerProductAnalyticsBackgroundHandler(
+        handleProductAnalyticsMessageMock,
+      )
 
       await expect(
         trackProductAnalyticsEvent(
@@ -467,6 +476,9 @@ describe("trackProductAnalyticsEvent", () => {
       setLoggingPreferences({ consoleEnabled: true, level: "debug" })
       isExtensionBackgroundMock.mockReturnValue(true)
       handleProductAnalyticsMessageMock.mockRejectedValue(error)
+      cleanupBackgroundHandler = registerProductAnalyticsBackgroundHandler(
+        handleProductAnalyticsMessageMock,
+      )
 
       await expect(
         trackProductAnalyticsEvent(

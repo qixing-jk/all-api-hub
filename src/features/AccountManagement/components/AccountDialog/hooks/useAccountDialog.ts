@@ -88,7 +88,6 @@ import {
   startProductAnalyticsAction,
   type ProductAnalyticsActionInsights,
 } from "~/services/productAnalytics/actions"
-import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -102,7 +101,8 @@ import {
   type ProductAnalyticsActionId,
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsSiteType,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
 import {
   AuthTypeEnum,

@@ -15,7 +15,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsActionId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 import type { ChannelRow, RowActionsLabels } from "../types"
 

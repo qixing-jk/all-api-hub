@@ -27,7 +27,7 @@ import {
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { navigateWithinOptionsPage, openSettingsTab } from "~/utils/navigation"
 import {
   fireEvent,

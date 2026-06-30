@@ -16,7 +16,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
   type ProductAnalyticsEntrypoint,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { act, render, renderHook } from "~~/tests/test-utils/render"

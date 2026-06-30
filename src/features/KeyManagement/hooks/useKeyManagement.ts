@@ -27,7 +27,7 @@ import {
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsErrorCategory,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import type { AccountToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

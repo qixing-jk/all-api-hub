@@ -58,7 +58,7 @@ import {
   type ProductAnalyticsFailureStage,
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { buildModelListDiagnostics } from "~/services/productAnalytics/modelListDiagnostics"
 import {
   isAbortError,

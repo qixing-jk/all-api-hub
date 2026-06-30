@@ -26,7 +26,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { createTab } from "~/utils/browser/browserApi"
 import { isProdBuild } from "~/utils/core/environment"

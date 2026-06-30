@@ -7,7 +7,7 @@ import { createLogger } from "~/utils/core/logger"
 import type {
   ProductAnalyticsEventName,
   ProductAnalyticsEventPayload,
-} from "./events"
+} from "./contracts"
 
 export const ProductAnalyticsMessageTypes = {
   TrackEvent: "productAnalytics:trackEvent",

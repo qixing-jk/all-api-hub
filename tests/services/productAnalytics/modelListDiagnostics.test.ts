@@ -6,7 +6,7 @@ import {
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import {
   buildModelListDiagnostics,
   buildModelListFailureDiagnostics,

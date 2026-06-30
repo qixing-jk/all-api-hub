@@ -8,7 +8,7 @@ import {
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import { resolveProductAnalyticsErrorCategoryFromError } from "~/services/productAnalytics/actions"
-import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/events"
+import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/contracts"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   API_TYPES,

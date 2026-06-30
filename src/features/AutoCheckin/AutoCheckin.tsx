@@ -38,7 +38,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
   type ProductAnalyticsResult,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { DisplaySiteData } from "~/types"
 import {

@@ -7,7 +7,7 @@ import { useProductAnnouncements } from "~/features/ProductAnnouncements/hooks/u
 import { ProductAnnouncementBanner } from "~/features/ProductAnnouncements/ProductAnnouncementBanner"
 import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
 import { PRODUCT_ANNOUNCEMENT_TEST_IDS } from "~/features/ProductAnnouncements/testIds"
-import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/events"
+import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/contracts"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 import { ProductAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -97,9 +97,11 @@ vi.mock("~/services/productAnnouncements/messaging", () => ({
     sendMessageMock(...args),
 }))
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
 
   return {
     ...actual,

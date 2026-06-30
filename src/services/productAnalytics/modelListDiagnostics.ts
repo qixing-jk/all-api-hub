@@ -4,10 +4,6 @@ import {
   type ProductAnalyticsActionDiagnostics,
 } from "./actions"
 import {
-  resolveProductAnalyticsCategoryFromFailureReason,
-  resolveProductAnalyticsFailureReasonFromLocalMessage,
-} from "./errorPatternDiagnostics"
-import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
@@ -18,7 +14,11 @@ import {
   type ProductAnalyticsRequestedAuthMode,
   type ProductAnalyticsSiteType,
   type ProductAnalyticsSourceKind,
-} from "./events"
+} from "./contracts"
+import {
+  resolveProductAnalyticsCategoryFromFailureReason,
+  resolveProductAnalyticsFailureReasonFromLocalMessage,
+} from "./errorPatternDiagnostics"
 
 type StructuredModelListError = {
   statusCode?: unknown

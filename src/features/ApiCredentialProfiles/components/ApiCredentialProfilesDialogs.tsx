@@ -10,7 +10,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"

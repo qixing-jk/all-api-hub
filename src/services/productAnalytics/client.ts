@@ -10,7 +10,7 @@ import i18n from "~/utils/i18n/core"
 import {
   PRODUCT_ANALYTICS_EVENTS,
   type ProductAnalyticsEventName,
-} from "./events"
+} from "./contracts"
 import { productAnalyticsPreferences } from "./preferences"
 import { sanitizeProductAnalyticsEvent } from "./privacy"
 

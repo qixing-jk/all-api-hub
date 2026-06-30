@@ -6,11 +6,11 @@ import {
   PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_ACTION_KINDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  trackProductAnalyticsEvent,
   type ProductAnalyticsActionId,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsSurfaceId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 
 import type { ProductAnnouncementButtonSurface } from "./ProductAnnouncementButton"

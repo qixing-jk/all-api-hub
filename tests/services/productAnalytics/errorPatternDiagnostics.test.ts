@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+} from "~/services/productAnalytics/contracts"
+import {
   resolveProductAnalyticsCategoryFromFailureReason,
   resolveProductAnalyticsFailureReasonFromLocalMessage,
 } from "~/services/productAnalytics/errorPatternDiagnostics"
-import {
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FAILURE_REASONS,
-} from "~/services/productAnalytics/events"
 
 describe("product analytics error pattern diagnostics", () => {
   it("maps bounded local messages to fixed failure reasons", () => {

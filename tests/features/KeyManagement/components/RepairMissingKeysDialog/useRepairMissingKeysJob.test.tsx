@@ -14,7 +14,7 @@ import {
 import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import type { DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"

@@ -10,7 +10,7 @@ import {
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 export const webDavSettingsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavSettings

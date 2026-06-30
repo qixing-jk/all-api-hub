@@ -11,7 +11,7 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { USAGE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/usageHistory"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 

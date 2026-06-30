@@ -1,17 +1,17 @@
 import { API_ERROR_CODES } from "../apiService/common/errors"
 import type { ProductAnalyticsActionDiagnostics } from "./actions"
 import {
-  resolveProductAnalyticsCategoryFromFailureReason,
-  resolveProductAnalyticsFailureReasonFromLocalMessage,
-} from "./errorPatternDiagnostics"
-import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsFailureReason,
   type ProductAnalyticsFailureStage,
-} from "./events"
+} from "./contracts"
+import {
+  resolveProductAnalyticsCategoryFromFailureReason,
+  resolveProductAnalyticsFailureReasonFromLocalMessage,
+} from "./errorPatternDiagnostics"
 
 type StructuredDiagnosticsError = {
   statusCode?: unknown

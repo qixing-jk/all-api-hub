@@ -7,7 +7,7 @@ import {
   type ProductAnalyticsScopedActionConfig,
 } from "~/services/productAnalytics/actionConfig"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
-import type { ProductAnalyticsActionId } from "~/services/productAnalytics/events"
+import type { ProductAnalyticsActionId } from "~/services/productAnalytics/contracts"
 
 type ProductAnalyticsActionTrackingParams = {
   analyticsAction?: ProductAnalyticsScopedActionConfig

@@ -4,7 +4,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 const { captureMock, stateMocks } = vi.hoisted(() => ({
   captureMock: vi.fn(),

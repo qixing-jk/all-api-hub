@@ -4,7 +4,7 @@ import { resolveProductAnalyticsErrorCategoryFromError } from "./actions"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   type ProductAnalyticsErrorCategory,
-} from "./events"
+} from "./contracts"
 
 /**
  * Maps structured API verification diagnostics without reading provider text.

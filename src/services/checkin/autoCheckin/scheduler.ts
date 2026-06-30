@@ -30,7 +30,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsResult,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import {

@@ -10,7 +10,7 @@ import {
   PRODUCT_ANALYTICS_SITE_TYPES,
   type ProductAnalyticsEventPayload,
   type ProductAnalyticsSiteType,
-} from "./events"
+} from "./contracts"
 
 export const SITE_ECOSYSTEM_SNAPSHOT_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000
 

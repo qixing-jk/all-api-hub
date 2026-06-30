@@ -31,12 +31,12 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SORT_FIELDS,
-  trackProductAnalyticsEvent,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsEventPayload,
   type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
-} from "./events"
+} from "./contracts"
+import { trackProductAnalyticsEvent } from "./dispatch"
 import { getWebdavSyncStrategyMode } from "./webDavSync"
 
 type SettingChangedPayload = ProductAnalyticsEventPayload<

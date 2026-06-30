@@ -13,7 +13,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { testI18n } from "~~/tests/test-utils/i18n"
 

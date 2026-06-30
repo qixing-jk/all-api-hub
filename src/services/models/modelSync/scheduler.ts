@@ -25,7 +25,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsManagedSiteType,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"

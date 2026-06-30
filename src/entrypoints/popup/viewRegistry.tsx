@@ -17,7 +17,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   type ProductAnalyticsActionId,
   type ProductAnalyticsFeatureId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 import BalanceSection from "./components/BalanceSection"
 import type { PopupViewType } from "./components/PopupViewSwitchTabs"

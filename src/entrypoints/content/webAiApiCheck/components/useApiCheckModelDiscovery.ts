@@ -10,7 +10,7 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { buildModelListDiagnostics } from "~/services/productAnalytics/modelListDiagnostics"
 import {
   API_TYPES,

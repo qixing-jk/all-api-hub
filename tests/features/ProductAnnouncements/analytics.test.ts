@@ -4,14 +4,16 @@ import {
   PRODUCT_ANNOUNCEMENT_ANALYTICS_ACTION_KINDS,
   trackProductAnnouncementAction,
 } from "~/features/ProductAnnouncements/analytics"
-import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/events"
+import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/contracts"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 
 const trackProductAnalyticsEventMock = vi.hoisted(() => vi.fn())
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
 
   return {
     ...actual,

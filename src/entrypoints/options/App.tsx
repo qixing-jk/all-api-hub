@@ -11,7 +11,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_PAGE_IDS,
   type ProductAnalyticsPageId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"

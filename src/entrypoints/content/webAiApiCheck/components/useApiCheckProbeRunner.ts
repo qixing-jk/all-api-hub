@@ -12,7 +12,7 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   type ProductAnalyticsErrorCategory,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   getApiVerificationProbeDefinitions,

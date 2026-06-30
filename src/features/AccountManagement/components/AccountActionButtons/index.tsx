@@ -67,7 +67,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_STATES,
   type ProductAnalyticsResult,
   type ProductAnalyticsStatusKind,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"

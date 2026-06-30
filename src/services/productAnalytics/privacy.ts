@@ -51,7 +51,7 @@ import {
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
   PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type ProductAnalyticsEventName,
-} from "./events"
+} from "./contracts"
 
 type SanitizedProperties = Record<string, string | boolean | number>
 

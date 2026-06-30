@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { requestProductAnnouncementPopoverOpen } from "~/features/ProductAnnouncements/events"
 import { useProductAnnouncements } from "~/features/ProductAnnouncements/hooks/useProductAnnouncements"
 import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
-import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/events"
+import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/contracts"
 import { ProductAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { render, renderHook, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -142,9 +142,11 @@ vi.mock("~/services/productAnnouncements/messaging", () => ({
     sendMessageMock(...args),
 }))
 
-vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
 
   return {
     ...actual,

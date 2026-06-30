@@ -3,7 +3,7 @@ import {
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsFailureReason,
-} from "./events"
+} from "./contracts"
 
 type ErrorMessageInput = {
   message?: unknown

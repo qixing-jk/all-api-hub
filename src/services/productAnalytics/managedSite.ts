@@ -1,7 +1,7 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 
-import { PRODUCT_ANALYTICS_MANAGED_SITE_TYPES } from "./events"
-import type { ProductAnalyticsManagedSiteType } from "./events"
+import { PRODUCT_ANALYTICS_MANAGED_SITE_TYPES } from "./contracts"
+import type { ProductAnalyticsManagedSiteType } from "./contracts"
 
 const MANAGED_SITE_TYPE_TO_PRODUCT_ANALYTICS_TYPE = {
   [PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi]:

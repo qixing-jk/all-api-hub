@@ -8,7 +8,7 @@ import {
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 
 describe("WebDAV analytics classifiers", () => {
   it("classifies persistence failures by their wrapped cause without exposing raw details", () => {

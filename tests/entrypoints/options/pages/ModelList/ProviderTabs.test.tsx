@@ -14,7 +14,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({

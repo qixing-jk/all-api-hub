@@ -29,7 +29,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { isExtensionSidePanel } from "~/utils/browser"
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"

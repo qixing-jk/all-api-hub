@@ -16,7 +16,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsActionId,
   type ProductAnalyticsFeatureId,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { isExtensionSidePanel } from "~/utils/browser"
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import {

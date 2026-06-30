@@ -16,7 +16,7 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { buildOverviewShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { getErrorMessage } from "~/utils/core/error"
 import {

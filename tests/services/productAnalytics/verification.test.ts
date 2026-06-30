@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   type ProductAnalyticsErrorCategory,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 
 describe("product analytics verification helpers", () => {

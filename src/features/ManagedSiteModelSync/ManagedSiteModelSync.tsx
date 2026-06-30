@@ -39,7 +39,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   type ProductAnalyticsResult,
   type ProductAnalyticsStatusKind,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { buildManagedSiteModelSyncDiagnostics } from "~/services/productAnalytics/managedSiteModelSync"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ManagedSiteChannel } from "~/types/managedSite"

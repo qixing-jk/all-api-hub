@@ -10,7 +10,7 @@ import { OPTIONS_TEST_IDS } from "~/entrypoints/options/testIds"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_PAGE_IDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const {

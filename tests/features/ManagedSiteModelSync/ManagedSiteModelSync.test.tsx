@@ -22,7 +22,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
-} from "~/services/productAnalytics/events"
+} from "~/services/productAnalytics/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
