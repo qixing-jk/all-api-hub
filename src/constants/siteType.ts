@@ -1,5 +1,4 @@
 // 站点名称常量
-// eslint-disable-next-line import/extensions
 import merge from "lodash-es/merge.js"
 
 import {

@@ -148,9 +148,6 @@ const customRenderHook = <Result, Props>(
   })
 }
 
-// eslint-disable-next-line import/export
 export * from "@testing-library/react"
-// eslint-disable-next-line import/export
 export { customRender as render }
-// eslint-disable-next-line import/export
 export { customRenderHook as renderHook }

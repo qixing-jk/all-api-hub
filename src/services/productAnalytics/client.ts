@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-named-as-default
 import posthog, { type Properties } from "posthog-js/dist/module.no-external"
 
 import { getExtensionVersion } from "~/utils/browser/browserApi"

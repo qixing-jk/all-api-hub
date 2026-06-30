@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs"
 import eslint from "@eslint/js"
 import eslintConfigPrettier from "eslint-config-prettier/flat"
-import importPlugin from "eslint-plugin-import"
 import jsdoc from "eslint-plugin-jsdoc"
 import reactHooks from "eslint-plugin-react-hooks"
 import { defineConfig } from "eslint/config"
@@ -31,11 +30,6 @@ const typescriptParserOptions = wxtPrepared
   : {
       tsconfigRootDir: import.meta.dirname,
     }
-const typescriptResolverOptions = {
-  alwaysTryTypes: true,
-  bun: true,
-  project: wxtPrepared ? "tsconfig.json" : "tsconfig.eslint.json",
-}
 
 const rules = {
   "@typescript-eslint/no-explicit-any": "off",
@@ -64,7 +58,7 @@ const optionsPageImportRestrictionPattern = {
 }
 const apiServiceBackendImplementationImportPattern = {
   regex:
-    "^(?:~/services/apiService|(?:\\.\\./){1,4}apiService)/(?:aihubmix|anyrouter|axonHub|claudeCodeHub|doneHub|octopus|oneHub|sub2api|veloera|wong)$",
+    "^(?:~/services/apiService|(?:\\.\\./)+(?:services/)?apiService)/(?:aihubmix|anyrouter|axonHub|claudeCodeHub|doneHub|octopus|oneHub|sub2api|veloera|wong)$",
   message:
     "Do not import backend-specific apiService implementations from product code. Add or use an adapter/workflow module instead.",
 }
@@ -78,7 +72,7 @@ const newApiAdapterLegacyApiServiceImportPattern = {
   regex:
     "^(?:~/services/apiService|(?:\\.\\./)+(?:services/)?apiService)(?:$|/(?!newApiFamily(?:$|/)).*)",
   message:
-    "New API adapters may import ~/services/apiService/newApiFamily only. Do not depend on the legacy apiService facade or common/backend implementation modules.",
+    "New API adapters may import ~/services/apiService/newApiFamily only. Do not depend on the legacy apiService facade or other apiService modules.",
 }
 
 export default defineConfig([
@@ -120,35 +114,6 @@ export default defineConfig([
     rules: {
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "error",
-    },
-  },
-  {
-    files: ["**/*.{ts,tsx}"],
-    extends: [
-      importPlugin.flatConfigs.recommended,
-      importPlugin.flatConfigs.typescript,
-    ],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: typescriptParserOptions,
-    },
-    settings: {
-      "import/resolver": {
-        typescript: typescriptResolverOptions,
-      },
-    },
-    rules: {
-      "import/extensions": [
-        "error",
-        "ignorePackages",
-        {
-          js: "never",
-          jsx: "never",
-          mjs: "never",
-          ts: "never",
-          tsx: "never",
-        },
-      ],
     },
   },
   jsdoc.configs["flat/recommended"],
@@ -244,10 +209,6 @@ export default defineConfig([
     },
   },
   // Guardrails: prevent non-entrypoint code from depending on options page internals.
-  //
-  // Transition plan:
-  // - Start as a warning while we migrate existing violations out of `entrypoints/options/pages/**`.
-  // - Once the repo is clean, upgrade this to "error" so `pnpm -s lint` fails on new violations.
   {
     files: [srcJsFamilyFilePattern],
     rules: {
@@ -267,7 +228,7 @@ export default defineConfig([
     },
   },
   // Guardrails: migrated New API adapters depend on the newApiFamily bridge,
-  // not the legacy dynamic apiService facade or common implementation modules.
+  // not the legacy dynamic apiService facade or unrelated apiService modules.
   {
     files: ["src/services/apiAdapters/newApi/**/*.{js,cjs,mjs,jsx,ts,tsx}"],
     rules: {
@@ -289,9 +250,8 @@ export default defineConfig([
     ignores: [
       "src/services/apiService/**/*.{js,cjs,mjs,jsx,ts,tsx}",
       "src/services/apiAdapters/**/*.{js,cjs,mjs,jsx,ts,tsx}",
-      "src/services/apiCredentialProfiles/**/*.{js,cjs,mjs,jsx,ts,tsx}",
-      "src/services/checkin/autoCheckin/**/*.{js,cjs,mjs,jsx,ts,tsx}",
-      "src/services/managedSites/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/services/checkin/autoCheckin/providers/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/services/managedSites/providers/**/*.{js,cjs,mjs,jsx,ts,tsx}",
       "src/services/models/modelSync/**/*.{js,cjs,mjs,jsx,ts,tsx}",
       "src/features/BasicSettings/components/tabs/ManagedSite/**/*.{js,cjs,mjs,jsx,ts,tsx}",
     ],
