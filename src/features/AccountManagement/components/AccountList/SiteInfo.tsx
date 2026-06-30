@@ -517,14 +517,18 @@ export default function SiteInfo({
                 {t("list.site.disabled")}
               </Badge>
             )}
-            <Badge
-              variant="outline"
-              size="sm"
-              className="max-w-[10rem] shrink-0 truncate border-sky-200/80 bg-sky-50/70 whitespace-nowrap text-sky-700 dark:border-sky-700/50 dark:bg-sky-900/20 dark:text-sky-200"
-              title={`${siteTypeLabel}: ${site.siteType}`}
+            <Tooltip
+              content={`${siteTypeLabel}: ${site.siteType}`}
+              position="top"
             >
-              {site.siteType}
-            </Badge>
+              <Badge
+                variant="outline"
+                size="sm"
+                className="max-w-[10rem] shrink-0 truncate border-sky-200/80 bg-sky-50/70 whitespace-nowrap text-sky-700 dark:border-sky-700/50 dark:bg-sky-900/20 dark:text-sky-200"
+              >
+                {site.siteType}
+              </Badge>
+            </Tooltip>
           </div>
 
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">

@@ -68,6 +68,21 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
+vi.mock("~/components/Tooltip", () => ({
+  default: ({
+    children,
+    content,
+  }: {
+    children: ReactNode
+    content: ReactNode
+  }) => (
+    <div data-tooltip-content={typeof content === "string" ? content : ""}>
+      {children}
+      {typeof content === "string" ? null : content}
+    </div>
+  ),
+}))
+
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     detectedAccount: null,
@@ -167,7 +182,13 @@ describe("SiteInfo", () => {
   it("shows the raw site type in the account row", () => {
     render(<SiteInfo site={buildSite({ siteType: SITE_TYPES.SUB2API })} />)
 
-    expect(screen.getByText(SITE_TYPES.SUB2API)).toBeVisible()
+    const siteTypeBadge = screen.getByText(SITE_TYPES.SUB2API)
+
+    expect(siteTypeBadge).toBeVisible()
+    expect(siteTypeBadge.parentElement).toHaveAttribute(
+      "data-tooltip-content",
+      `account:list.site.siteType: ${SITE_TYPES.SUB2API}`,
+    )
   })
 
   it("renders a formatted created-time row", () => {
