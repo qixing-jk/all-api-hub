@@ -24,6 +24,14 @@ const preferenceWriteSuccess = () => ({
   preferences: {},
 })
 
+const preferenceWriteFailure = () => ({
+  ok: false,
+  reason: {
+    type: "storage-error",
+    error: new Error("save failed"),
+  },
+})
+
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
     newApiBaseUrl: currentNewApiBaseUrl,
@@ -197,6 +205,36 @@ describe("NewApiManagedVerificationDialog", () => {
       password: "secret",
     })
     expect(props.onRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows quick-config save failures without retrying verification", async () => {
+    const user = userEvent.setup()
+    updateNewApiUsernameMock.mockResolvedValue(preferenceWriteFailure())
+    const props = createProps()
+
+    render(<NewApiManagedVerificationDialog {...props} />)
+
+    await user.type(
+      screen.getByLabelText("settings:newApi.fields.usernameLabel"),
+      "admin",
+    )
+    await user.type(
+      screen.getByLabelText("settings:newApi.fields.passwordLabel"),
+      "secret",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "dialog.actions.saveAndRetry",
+      }),
+    )
+
+    expect(updateNewApiUsernameMock).toHaveBeenCalledWith("admin")
+    expect(updateNewApiPasswordMock).not.toHaveBeenCalled()
+    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
+    expect(props.onRetry).not.toHaveBeenCalled()
+    expect(
+      await screen.findByText("dialog.messages.quickConfigSaveFailed"),
+    ).toBeInTheDocument()
   })
 
   it("patches stale request config even when storage already has the same values", async () => {

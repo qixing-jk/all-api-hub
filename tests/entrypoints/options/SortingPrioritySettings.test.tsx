@@ -273,6 +273,29 @@ describe("SortingPrioritySettings", () => {
     expect(mockedShowUpdateToast).not.toHaveBeenCalled()
   })
 
+  it("reports failed reorder saves and restores persisted order", async () => {
+    mockUpdateSortingPriorityConfig.mockResolvedValue(preferenceWriteFailure())
+
+    render(<SortingPrioritySettings />)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "reorder-user-before-pinned" }),
+    )
+
+    await waitFor(() => {
+      expect(mockedShowUpdateToast).toHaveBeenCalledWith(
+        expect.objectContaining({ ok: false }),
+        "settings:sorting.title",
+      )
+    })
+    expect(
+      screen.getByTestId(`sorting-item-${SortingCriteriaType.USER_SORT_FIELD}`),
+    ).toHaveTextContent("priority:0")
+    expect(
+      screen.getByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+    ).toHaveTextContent("priority:1")
+  })
+
   it("toggles a criterion, reports failed saves, and restores persisted order", async () => {
     mockUpdateSortingPriorityConfig.mockResolvedValue(preferenceWriteFailure())
 

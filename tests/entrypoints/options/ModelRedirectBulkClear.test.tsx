@@ -106,6 +106,38 @@ describe("Model redirect bulk clear flow", () => {
 
   const renderSubject = () => render(<ModelRedirectSettings />)
 
+  it("shows the preference write failure message when enabling redirects fails", async () => {
+    const updateModelRedirect = vi.fn().mockResolvedValue({
+      ok: false,
+      reason: {
+        type: "storage-error",
+        error: new Error("save failed"),
+      },
+    })
+    mockedUseUserPreferencesContext.mockReturnValue({
+      preferences: {
+        managedSiteType: "new-api",
+        modelRedirect: {
+          enabled: false,
+          standardModels: [],
+        },
+      },
+      updateModelRedirect,
+      resetModelRedirectConfig: vi.fn(),
+    })
+
+    renderSubject()
+
+    fireEvent.click(await screen.findByRole("switch", { name: "Toggle" }))
+
+    await waitFor(() => {
+      expect(updateModelRedirect).toHaveBeenCalledWith({ enabled: true })
+    })
+    expect(toast.error).toHaveBeenCalledWith(
+      "modelRedirect:messages.updateFailed",
+    )
+  })
+
   it("does not clear when confirmation is canceled", async () => {
     renderSubject()
 
