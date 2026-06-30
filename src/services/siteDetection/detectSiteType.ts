@@ -4,9 +4,9 @@ import {
   getAccountSiteDomainRules,
   getAccountSiteTitleRules,
 } from "~/services/accountSiteOnboarding/registry"
-import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
+import { ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import {
   canUseTempWindowFetch,

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ApiError } from "~/services/apiService/common/errors"
 import {
   createChannel,
   deleteChannel,
@@ -15,6 +14,7 @@ import {
   updateChannelModelMapping,
   updateChannelModels,
 } from "~/services/apiService/veloera"
+import { ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 const {

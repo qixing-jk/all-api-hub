@@ -1,7 +1,7 @@
-import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
-import { ApiError } from "~/services/apiService/common/errors"
 import { fetchAllItems } from "~/services/apiService/common/pagination"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
+import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
   CreateChannelPayload,

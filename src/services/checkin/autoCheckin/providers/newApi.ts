@@ -4,15 +4,15 @@ import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
-import { buildCompatUserIdHeaders } from "~/services/apiService/common/compatHeaders"
-import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
-import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import type {
   NewApiCheckInRecord,
   NewApiCheckInResponse,
   NewApiCheckInStatus,
 } from "~/services/apiService/newApiFamily/checkInDto"
+import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
+import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
+import { ApiError } from "~/services/apiTransport/errors"
 import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,

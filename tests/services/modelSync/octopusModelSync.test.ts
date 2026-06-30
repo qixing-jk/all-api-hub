@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ApiError } from "~/services/apiService/common/errors"
+import { ApiError } from "~/services/apiTransport/errors"
 import { runOctopusBatch } from "~/services/models/modelSync/octopusModelSync"
 import type { OctopusChannelWithData } from "~/types/managedSite"
 

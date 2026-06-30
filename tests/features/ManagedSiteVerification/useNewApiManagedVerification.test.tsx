@@ -6,7 +6,7 @@ import {
   NEW_API_MANAGED_VERIFICATION_STEPS,
   useNewApiManagedVerification,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSession"
 
 const {

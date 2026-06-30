@@ -6,7 +6,7 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   API_ERROR_CODES,
   type ApiErrorCode,
-} from "~/services/apiService/common/errors"
+} from "~/services/apiTransport/errors"
 import {
   DEFAULT_PREFERENCES,
   TempWindowFallbackPreferences,

@@ -5,8 +5,6 @@ import type {
   TodayIncomeData,
   TodayUsageData,
 } from "~/services/accounts/accountDataModel"
-import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
-import { ApiError } from "~/services/apiService/common/errors"
 import {
   aggregateUsageData,
   extractAmount,
@@ -14,6 +12,8 @@ import {
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
 import type { NewApiCheckInStatus } from "~/services/apiService/newApiFamily/checkInDto"
+import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
+import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type {

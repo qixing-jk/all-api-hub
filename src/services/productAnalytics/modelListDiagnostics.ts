@@ -1,4 +1,4 @@
-import { API_ERROR_CODES } from "../apiService/common/errors"
+import { API_ERROR_CODES } from "../apiTransport/errors"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   type ProductAnalyticsActionDiagnostics,

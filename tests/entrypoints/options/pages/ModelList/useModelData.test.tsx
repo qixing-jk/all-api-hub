@@ -14,7 +14,7 @@ import {
 } from "~/features/ModelList/modelManagementSources"
 import { InvalidTokenPayloadError } from "~/services/accounts/utils/apiServiceRequest"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,

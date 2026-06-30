@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_REASONS,

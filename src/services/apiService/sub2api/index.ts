@@ -23,10 +23,10 @@ import type {
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { determineHealthStatus } from "~/services/apiService/common"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { resolveApiTokenKeyWithFetcher } from "~/services/apiService/common/tokenKeyResolver"
 import { fetchApi } from "~/services/apiService/common/utils"
 import { extractDefaultExchangeRate as extractNewApiFamilyDefaultExchangeRate } from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AuthTypeEnum,

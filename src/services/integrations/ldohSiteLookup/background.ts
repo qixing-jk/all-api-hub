@@ -1,5 +1,5 @@
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { fetchApi } from "~/services/apiService/common/utils"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { writeLdohSiteListCache } from "~/services/integrations/ldohSiteLookup/cache"
 import {

@@ -5,13 +5,13 @@ import type {
   PaginatedTokenResponse,
   UserGroupInfo,
 } from "~/services/accountTokens/tokenProvisioningModel"
-import { ApiError } from "~/services/apiService/common/errors"
 import {
   invalidateResolvedApiTokenKeyCache,
   resolveApiTokenKey,
   syncResolvedApiTokenKeyCache,
 } from "~/services/apiService/common/tokenKeyResolver"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"

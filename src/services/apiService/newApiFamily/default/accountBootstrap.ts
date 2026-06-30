@@ -4,8 +4,8 @@ import type {
   SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApiData } from "~/services/apiService/common/utils"
+import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"

@@ -1,5 +1,5 @@
 import type { HealthCheckResult } from "~/services/accounts/accountDataModel"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { SiteHealthStatus, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import { t } from "~/utils/i18n/core"
 

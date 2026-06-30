@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 
 const { fetchNewApiChannelKeyMock } = vi.hoisted(() => ({
   fetchNewApiChannelKeyMock: vi.fn(),

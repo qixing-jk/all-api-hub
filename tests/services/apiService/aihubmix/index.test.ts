@@ -28,7 +28,7 @@ import {
   updateApiToken,
   validateAccountConnection,
 } from "~/services/apiService/aihubmix"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import { AuthTypeEnum } from "~/types"

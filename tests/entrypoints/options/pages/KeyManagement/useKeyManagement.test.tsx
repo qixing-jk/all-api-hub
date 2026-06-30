@@ -10,7 +10,7 @@ import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagemen
 import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
 import { useAccountData } from "~/hooks/useAccountData"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

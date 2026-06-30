@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
-import { ApiError } from "~/services/apiService/common/errors"
 import {
   createApiToken,
   fetchAccountAvailableModels,
@@ -20,6 +19,7 @@ import {
   translateSub2ApiCreateTokenRequest,
   translateSub2ApiUpdateTokenRequest,
 } from "~/services/apiService/sub2api/parsing"
+import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 

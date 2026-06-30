@@ -24,8 +24,8 @@ import type {
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { determineHealthStatus } from "~/services/apiService/common"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { fetchApiData } from "~/services/apiService/common/utils"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type {
   ApiResponse,
   ApiServiceRequest,

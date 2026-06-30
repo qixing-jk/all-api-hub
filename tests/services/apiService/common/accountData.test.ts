@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { determineHealthStatus } from "~/services/apiService/common"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { SiteHealthStatus, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 
 vi.mock("~/utils/core/logger", () => ({

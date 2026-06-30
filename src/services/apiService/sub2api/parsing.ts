@@ -4,8 +4,8 @@ import type {
   CreateTokenRequest,
   UserGroupInfo,
 } from "~/services/accountTokens/tokenProvisioningModel"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { extractItemsFromArrayOrItemsPayload } from "~/services/apiService/common/pagination"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiToken } from "~/types"
 import { t } from "~/utils/i18n/core"
 

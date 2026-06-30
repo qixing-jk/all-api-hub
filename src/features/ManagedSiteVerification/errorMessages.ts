@@ -1,7 +1,7 @@
 import {
   ApiError,
   isTempWindowUnsupportedErrorCode,
-} from "~/services/apiService/common/errors"
+} from "~/services/apiTransport/errors"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 

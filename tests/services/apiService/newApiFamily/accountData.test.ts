@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ApiError } from "~/services/apiService/common/errors"
 import {
   defaultAccountDataImplementation,
   fetchAccountData,
@@ -10,6 +9,7 @@ import {
   fetchTodayUsage,
   resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
+import { ApiError } from "~/services/apiTransport/errors"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import { AuthTypeEnum } from "~/types"
 
@@ -42,7 +42,7 @@ vi.mock("~/constants/ui", () => ({
   },
 }))
 
-vi.mock("~/services/apiService/common/constant", () => ({
+vi.mock("~/services/apiTransport/constant", () => ({
   REQUEST_CONFIG: {
     DEFAULT_PAGE_SIZE: 2,
     MAX_PAGES: 2,

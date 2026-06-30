@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { API_ERROR_CODES } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { matchesTempWindowFallbackAllowlist } from "~/utils/browser/tempWindowFetch"
 
 describe("matchesTempWindowFallbackAllowlist", () => {

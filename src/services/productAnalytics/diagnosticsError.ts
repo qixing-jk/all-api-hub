@@ -1,4 +1,4 @@
-import { API_ERROR_CODES } from "../apiService/common/errors"
+import { API_ERROR_CODES } from "../apiTransport/errors"
 import type { ProductAnalyticsActionDiagnostics } from "./actions"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,

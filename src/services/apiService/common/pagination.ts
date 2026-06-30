@@ -2,9 +2,8 @@
  * Pagination utilities for API calls
  */
 
+import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { createLogger } from "~/utils/core/logger"
-
-import { REQUEST_CONFIG } from "./constant"
 
 const logger = createLogger("ApiPagination")
 

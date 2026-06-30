@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { getNewApiManagedVerificationErrorMessage } from "~/features/ManagedSiteVerification/errorMessages"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 
 vi.mock("~/utils/i18n/core", () => ({
   t: vi.fn((key: string) => key),

@@ -2,10 +2,7 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import {
-  API_ERROR_CODES,
-  type ApiError,
-} from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, type ApiError } from "~/services/apiTransport/errors"
 import {
   clearNewApiManagedSessionState,
   ensureNewApiManagedSession,

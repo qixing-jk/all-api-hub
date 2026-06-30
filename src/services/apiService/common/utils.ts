@@ -1,7 +1,5 @@
 import type { TodayUsageData } from "~/services/accounts/accountDataModel"
 import {
-  extractDataFromApiResponseBody,
-  isHttpUrl,
   fetchApi as transportFetchApi,
   fetchApiData as transportFetchApiData,
 } from "~/services/apiTransport/request"
@@ -11,8 +9,6 @@ import type {
   FetchApiOptions,
 } from "~/services/apiTransport/type"
 import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
-
-export { extractDataFromApiResponseBody, isHttpUrl }
 
 /**
  * Fetch account-site API data.

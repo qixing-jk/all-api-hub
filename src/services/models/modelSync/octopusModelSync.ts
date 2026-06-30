@@ -2,8 +2,8 @@
  * Octopus 模型同步服务
  * 实现 Octopus 站点的模型同步功能
  */
-import { ApiError } from "~/services/apiService/common/errors"
 import * as octopusApi from "~/services/apiService/octopus"
+import { ApiError } from "~/services/apiTransport/errors"
 import type {
   ManagedSiteChannel,
   OctopusChannelWithData,

@@ -4,7 +4,6 @@ import type {
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/apiService/common"
-import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import {
   fetchAccountQuota,
@@ -12,6 +11,7 @@ import {
   fetchTodayUsage,
   resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
+import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { CheckInConfig, SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
