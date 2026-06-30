@@ -132,6 +132,7 @@ export default function SiteInfo({
   const customCheckInUrl = site.checkIn?.customCheckIn?.url
   const customRedeemUrl = site.checkIn?.customCheckIn?.redeemUrl
   const createdAtLabel = t("account:list.header.createdAt")
+  const siteTypeLabel = t("list.site.siteType")
   const createdAtText = formatLocaleDateTime(
     site.created_at,
     t("common:labels.notAvailable"),
@@ -491,19 +492,40 @@ export default function SiteInfo({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center">
-          {detectedAccountIdSet.has(site.id) && (
-            <Tooltip content={t("list.site.currentSiteExists")} position="top">
-              <Badge variant="warning" size="sm" className="whitespace-nowrap">
-                {t("list.site.currentSite")}
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {detectedAccountIdSet.has(site.id) && (
+              <Tooltip
+                content={t("list.site.currentSiteExists")}
+                position="top"
+              >
+                <Badge
+                  variant="warning"
+                  size="sm"
+                  className="whitespace-nowrap"
+                >
+                  {t("list.site.currentSite")}
+                </Badge>
+              </Tooltip>
+            )}
+            {isAccountDisabled && (
+              <Badge
+                variant="secondary"
+                size="sm"
+                className="whitespace-nowrap"
+              >
+                {t("list.site.disabled")}
               </Badge>
-            </Tooltip>
-          )}
-          {isAccountDisabled && (
-            <Badge variant="secondary" size="sm" className="whitespace-nowrap">
-              {t("list.site.disabled")}
+            )}
+            <Badge
+              variant="outline"
+              size="sm"
+              className="max-w-[10rem] shrink-0 truncate border-sky-200/80 bg-sky-50/70 whitespace-nowrap text-sky-700 dark:border-sky-700/50 dark:bg-sky-900/20 dark:text-sky-200"
+              title={`${siteTypeLabel}: ${site.siteType}`}
+            >
+              {site.siteType}
             </Badge>
-          )}
+          </div>
 
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
             {/* Keep the site URL clickable even when the account is disabled so users can still open the provider site. */}

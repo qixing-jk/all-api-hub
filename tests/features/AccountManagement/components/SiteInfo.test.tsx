@@ -164,6 +164,12 @@ describe("SiteInfo", () => {
     )
   })
 
+  it("shows the raw site type in the account row", () => {
+    render(<SiteInfo site={buildSite({ siteType: SITE_TYPES.SUB2API })} />)
+
+    expect(screen.getByText(SITE_TYPES.SUB2API)).toBeVisible()
+  })
+
   it("renders a formatted created-time row", () => {
     const createdAt = new Date(2026, 0, 2, 3, 4, 5).getTime()
     const expected = formatLocaleDateTime(

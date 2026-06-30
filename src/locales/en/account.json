@@ -150,6 +150,7 @@
       "notCheckedInToday": "Not checked in today, click to go",
       "reason": "Reason",
       "refreshHealthStatus": "Click to refresh health status",
+      "siteType": "Site type",
       "status": "Status",
       "unknown": "Unknown"
     },

@@ -141,6 +141,7 @@
       "notCheckedInToday": "今日未签到，点我去签到",
       "reason": "原因",
       "refreshHealthStatus": "点击刷新健康状态",
+      "siteType": "站点类型",
       "status": "状态",
       "unknown": "未知"
     },

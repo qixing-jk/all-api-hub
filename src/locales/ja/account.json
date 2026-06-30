@@ -141,6 +141,7 @@
       "notCheckedInToday": "本日は未チェックイン、クリックして移動",
       "reason": "理由",
       "refreshHealthStatus": "クリックして健全性を更新",
+      "siteType": "サイトタイプ",
       "status": "状態",
       "unknown": "不明"
     },

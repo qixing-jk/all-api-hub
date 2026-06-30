@@ -141,6 +141,7 @@
       "notCheckedInToday": "Hôm nay chưa điểm danh, nhấp vào tôi để điểm danh",
       "reason": "Lý do",
       "refreshHealthStatus": "Nhấp để làm mới trạng thái sức khỏe",
+      "siteType": "Loại trang",
       "status": "Trạng thái",
       "unknown": "Không rõ"
     },
