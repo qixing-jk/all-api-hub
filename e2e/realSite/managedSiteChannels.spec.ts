@@ -91,11 +91,10 @@ if (selectedManagedSiteTarget && selectedManagedSiteTargets.length === 0) {
 
 test.describe.configure({
   mode: selectedManagedSiteTarget ? "parallel" : "serial",
+  timeout: 600_000,
 })
 
 test.describe("real-site E2E: managed-site channel management", () => {
-  test.setTimeout(600_000)
-
   test.beforeEach(async ({ context, page }) => {
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)

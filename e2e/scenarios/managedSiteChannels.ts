@@ -458,10 +458,11 @@ async function submitChannelDialogAndWaitForClose(page: Page) {
   const submitButton = page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton)
 
   await expect(submitButton).toBeEnabled({ timeout: 30_000 })
-  const submittedButton = await submitButton.elementHandle()
-
   await submitButton.click()
-  await submittedButton?.waitForElementState("hidden", { timeout: 60_000 })
+  await expect(submitButton)
+    .toBeDisabled({ timeout: 5_000 })
+    .catch(() => undefined)
+  await expect(submitButton).not.toBeVisible({ timeout: 30_000 })
 }
 
 async function fillModelInput(page: Page, model: string) {
