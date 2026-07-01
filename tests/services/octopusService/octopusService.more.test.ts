@@ -42,6 +42,19 @@ const passedOctopusConfig = {
   password: "passed-octo-pass",
 }
 
+const octopusChannelFixture: OctopusChannel = {
+  id: 1,
+  name: " Octopus Channel ",
+  type: OctopusOutboundType.Gemini,
+  enabled: true,
+  base_urls: [{ url: "https://proxy.example.com/v1" }],
+  keys: [{ enabled: true, channel_key: "octo-key" }],
+  model: "gemini-2.5-pro",
+  proxy: false,
+  auto_sync: true,
+  auto_group: OctopusAutoGroupType.None,
+}
+
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: mockGetPreferences,
@@ -83,12 +96,17 @@ describe("octopus additional flows", () => {
     })
     mockCreateChannelApi.mockResolvedValue({
       success: true,
-      data: { id: 1 },
+      data: octopusChannelFixture,
       message: "created",
     })
     mockUpdateChannelApi.mockResolvedValue({
       success: true,
-      data: { id: 1 },
+      data: {
+        ...octopusChannelFixture,
+        name: "Updated Octopus Channel",
+        enabled: false,
+        model: "claude-3.7-sonnet",
+      },
       message: "updated",
     })
     mockDeleteChannelApi.mockResolvedValue({
@@ -158,6 +176,17 @@ describe("octopus additional flows", () => {
     } as any)
 
     expect(created.success).toBe(true)
+    expect(created.data).toMatchObject({
+      id: 1,
+      name: " Octopus Channel ",
+      base_url: "https://proxy.example.com/v1",
+      key: "octo-key",
+      models: "gemini-2.5-pro",
+      status: 1,
+      priority: 0,
+      weight: 0,
+      group: "",
+    })
     expect(mockCreateChannelApi).toHaveBeenCalledWith(
       {
         baseUrl: "https://passed-octopus.example.com",
@@ -186,6 +215,15 @@ describe("octopus additional flows", () => {
     } as any)
 
     expect(updated.success).toBe(true)
+    expect(updated.data).toMatchObject({
+      id: 1,
+      name: "Updated Octopus Channel",
+      models: "claude-3.7-sonnet",
+      status: 2,
+      priority: 0,
+      weight: 0,
+      group: "",
+    })
     expect(mockUpdateChannelApi).toHaveBeenCalledWith(
       {
         baseUrl: "https://passed-octopus.example.com",

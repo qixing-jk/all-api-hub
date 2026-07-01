@@ -257,7 +257,7 @@ export async function createChannel(
     const result = await octopusApi.createChannel(config, request)
     return {
       success: result.success,
-      data: result.data,
+      data: result.data ? octopusChannelToManagedSite(result.data) : null,
       message: result.message || "success",
     }
   } catch (error) {
@@ -297,7 +297,7 @@ export async function updateChannel(
 
     return {
       success: result.success,
-      data: result.data,
+      data: result.data ? octopusChannelToManagedSite(result.data) : null,
       message: result.message || "success",
     }
   } catch (error) {

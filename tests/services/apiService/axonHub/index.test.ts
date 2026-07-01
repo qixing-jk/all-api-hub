@@ -720,6 +720,79 @@ describe("AxonHub API service", () => {
     })
   })
 
+  it("invalidates cached channel lists after adapter mutations", async () => {
+    let listHits = 0
+
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({ token: "mutation-cache" })),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as { query?: string }
+
+        if (body.query?.includes("query QueryChannels")) {
+          listHits += 1
+          return HttpResponse.json({
+            data: {
+              queryChannels: {
+                edges: [],
+                pageInfo: { hasNextPage: false, endCursor: null },
+                totalCount: 0,
+              },
+            },
+          })
+        }
+
+        if (body.query?.includes("mutation CreateChannel")) {
+          return HttpResponse.json({
+            data: {
+              createChannel: {
+                id: "13",
+                type: "openai",
+                baseURL: "https://created.example.com/v1",
+                name: "Created Channel",
+                status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                credentials: { apiKeys: ["sk-created"] },
+                supportedModels: ["gpt-4.1"],
+                manualModels: ["gpt-4.1"],
+                defaultTestModel: "gpt-4.1",
+                settings: { modelMappings: [] },
+                orderingWeight: 5,
+                remark: null,
+              },
+            },
+          })
+        }
+
+        return HttpResponse.json(
+          { errors: [{ message: "Unexpected GraphQL operation" }] },
+          { status: 500 },
+        )
+      }),
+    )
+
+    await listChannels(config)
+    await listChannels(config)
+    expect(listHits).toBe(1)
+
+    await expect(
+      createChannelAdapter(buildRequest(), {
+        channel: {
+          type: "openai",
+          name: "Created Channel",
+          baseURL: "https://created.example.com/v1",
+          credentials: { apiKeys: ["sk-created"] },
+          supportedModels: ["gpt-4.1"],
+          manualModels: ["gpt-4.1"],
+          defaultTestModel: "gpt-4.1",
+          settings: {},
+          orderingWeight: 5,
+        },
+      }),
+    ).resolves.toMatchObject({ success: true })
+
+    await listChannels(config)
+    expect(listHits).toBe(2)
+  })
+
   it("updates status zero through the adapter wrapper and returns a failure message when delete returns false", async () => {
     const graphqlId = "gid://axonhub/Channel/7"
     const rowId = axonHubChannelToManagedSite({

@@ -691,6 +691,7 @@ export async function createChannel(
       await updateAxonHubChannelStatus(config, created.id, axonHubStatus)
       finalChannel.status = axonHubStatus
     }
+    invalidateChannelListCache(config)
 
     return {
       success: true,
@@ -726,6 +727,7 @@ export async function updateChannel(
       await updateAxonHubChannelStatus(config, graphqlId, axonHubStatus)
       finalChannel.status = axonHubStatus
     }
+    invalidateChannelListCache(config)
 
     return {
       success: true,
@@ -755,6 +757,9 @@ export async function deleteChannel(
       config,
       await resolveAxonHubGraphqlIdForMutation(config, channelId),
     )
+    if (deleted) {
+      invalidateChannelListCache(config)
+    }
 
     return {
       success: deleted,
