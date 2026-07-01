@@ -128,7 +128,7 @@ export async function runManagedSiteChannelsCrudScenario<
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
       .fill(editedChannelName)
     await fillModelInput(context.page, CRUD_UPDATED_MODEL)
-    await context.page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton).click()
+    await submitChannelDialogAndWaitForClose(context.page)
 
     await expect(channelRowByName(context.page, editedChannelName)).toBeVisible(
       {
@@ -223,9 +223,7 @@ export async function runManagedSiteTokenChannelStatusScenario<
     await keyManagementPage
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
       .fill(channelName)
-    await keyManagementPage
-      .getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton)
-      .click()
+    await submitChannelDialogAndWaitForClose(keyManagementPage)
 
     await expectManagedSiteImportStatusAfterChannelCreate(row)
     await openManagedSiteChannelsAndExpectRow({
@@ -340,6 +338,20 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
     )
     await expect(refreshButton).toBeEnabled({ timeout: 10_000 })
     await refreshButton.click()
+    await expect(refreshButton)
+      .toHaveAttribute(
+        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+        MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading,
+        { timeout: 5_000 },
+      )
+      .catch(() => undefined)
+    await expect(refreshButton).toHaveAttribute(
+      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+      MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
+      {
+        timeout: 30_000,
+      },
+    )
     await expect(row).toBeVisible({ timeout: 20_000 })
   }).toPass({
     intervals: [1_000, 3_000, 5_000],
@@ -439,7 +451,15 @@ async function createManagedSiteChannelFromUi(
     .getByTestId(CHANNEL_DIALOG_TEST_IDS.baseUrlInput)
     .fill(params.baseUrl)
   await fillModelInput(page, params.model)
-  await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton).click()
+  await submitChannelDialogAndWaitForClose(page)
+}
+
+async function submitChannelDialogAndWaitForClose(page: Page) {
+  const submitButton = page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton)
+
+  await expect(submitButton).toBeEnabled({ timeout: 30_000 })
+  await submitButton.click()
+  await expect(submitButton).toBeHidden({ timeout: 60_000 })
 }
 
 async function fillModelInput(page: Page, model: string) {
