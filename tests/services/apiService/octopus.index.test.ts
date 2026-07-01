@@ -316,6 +316,7 @@ describe("Octopus API service", () => {
       expect(requestSignal?.aborted).toBe(true)
       await expectation
     } finally {
+      vi.useRealTimers()
       if (originalAny) {
         Object.defineProperty(AbortSignal, "any", originalAny)
       } else {
@@ -327,6 +328,36 @@ describe("Octopus API service", () => {
         Reflect.deleteProperty(AbortSignal, "timeout")
       }
     }
+  })
+
+  it("uses one bounded signal for Octopus auth and the API request", async () => {
+    const callerSignal = new AbortController().signal
+    let fetchSignal: AbortSignal | undefined
+    mockGetValidToken.mockResolvedValueOnce("jwt-token")
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) => {
+        fetchSignal = init?.signal ?? undefined
+        return Promise.resolve(
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }),
+    )
+
+    await expect(
+      listChannels(config, { signal: callerSignal, timeoutMs: 25 }),
+    ).resolves.toEqual([])
+
+    expect(mockGetValidToken).toHaveBeenCalledWith(config, {
+      signal: expect.any(AbortSignal),
+    })
+    const authSignal = mockGetValidToken.mock.calls[0][1]?.signal
+    expect(authSignal).toBe(fetchSignal)
+    expect(authSignal).not.toBe(callerSignal)
   })
 
   it("surfaces raw JSON bodies when an error response cannot be parsed", async () => {

@@ -34,12 +34,6 @@ async function fetchOctopusApi<T>(
 ): Promise<OctopusApiResponse<T>> {
   const { timeoutMs, ...requestOptions } = options
   const callerSignal = requestOptions.signal ?? undefined
-  const token = await octopusAuthManager.getValidToken(config, {
-    signal: callerSignal,
-    timeoutMs,
-  })
-  const baseUrl = normalizeBaseUrl(config.baseUrl)
-  const url = `${baseUrl}${endpoint}`
   const requestSignal = buildTimedRequestSignal({
     signal: callerSignal,
     timeoutMs,
@@ -47,6 +41,12 @@ async function fetchOctopusApi<T>(
 
   let response: Response
   try {
+    const token = await octopusAuthManager.getValidToken(config, {
+      signal: requestSignal.signal,
+    })
+    const baseUrl = normalizeBaseUrl(config.baseUrl)
+    const url = `${baseUrl}${endpoint}`
+
     response = await fetch(url, {
       ...requestOptions,
       signal: requestSignal.signal,

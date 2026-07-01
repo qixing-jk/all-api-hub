@@ -186,6 +186,7 @@ const channelListCache = new Map<
 const numericIdToGraphqlId = new Map<number, string>()
 const CHANNEL_LIST_CACHE_TTL_MS = 15_000
 const MAX_LIST_CHANNEL_PAGES = 100
+const AXON_HUB_SIGN_IN_TIMEOUT_MESSAGE = "AxonHub sign-in request timed out"
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
 
@@ -313,7 +314,7 @@ export async function signIn(
     return data.token
   } catch (error) {
     if (requestSignal.isTimedOut()) {
-      throw new Error("AxonHub sign-in request timed out")
+      throw new Error(AXON_HUB_SIGN_IN_TIMEOUT_MESSAGE)
     }
     throw new Error(toSafeErrorMessage(error, "AxonHub sign-in failed"))
   } finally {
@@ -327,18 +328,29 @@ const getSessionToken = async (
   options?: TimedRequestSignalOptions,
 ) => {
   const key = cacheKeyForConfig(config)
+  const hasCallerCancellation = Boolean(
+    options?.signal || options?.timeoutMs != null,
+  )
   if (!forceRefresh) {
     const cachedToken = tokenCache.get(key)
     if (cachedToken) return cachedToken
 
     const inflightSignIn = inflightSignIns.get(key)
     if (inflightSignIn) {
-      return inflightSignIn
+      return hasCallerCancellation
+        ? awaitSignInWithCallerCancellation(inflightSignIn, options)
+        : inflightSignIn
     }
   }
 
   tokenCache.delete(key)
-  inflightSignIns.delete(key)
+  if (!hasCallerCancellation || forceRefresh) {
+    inflightSignIns.delete(key)
+  }
+
+  if (hasCallerCancellation) {
+    return signIn(config, options)
+  }
 
   const pendingSignIn = signIn(config, options).finally(() => {
     inflightSignIns.delete(key)
@@ -346,6 +358,45 @@ const getSessionToken = async (
 
   inflightSignIns.set(key, pendingSignIn)
   return pendingSignIn
+}
+
+const awaitSignInWithCallerCancellation = async (
+  pendingSignIn: Promise<string>,
+  options?: TimedRequestSignalOptions,
+) => {
+  const requestSignal = buildTimedRequestSignal(options)
+  if (!requestSignal.signal) {
+    return pendingSignIn
+  }
+  const callerSignal = requestSignal.signal
+
+  try {
+    return await Promise.race([
+      pendingSignIn,
+      new Promise<string>((_resolve, reject) => {
+        const abort = () => {
+          if (requestSignal.isTimedOut()) {
+            reject(new Error(AXON_HUB_SIGN_IN_TIMEOUT_MESSAGE))
+            return
+          }
+
+          reject(
+            callerSignal.reason ??
+              new DOMException("The operation was aborted", "AbortError"),
+          )
+        }
+
+        if (callerSignal.aborted) {
+          abort()
+          return
+        }
+
+        callerSignal.addEventListener("abort", abort, { once: true })
+      }),
+    ])
+  } finally {
+    requestSignal.cleanup()
+  }
 }
 
 const isUnauthorized = (

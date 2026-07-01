@@ -88,8 +88,9 @@ describe("Veloera managed-site channel capability", () => {
     })
     await veloeraManagedSiteChannels.update(config, { id: 1 })
     await veloeraManagedSiteChannels.delete(config, 1)
+    const fetchModelsSignal = new AbortController().signal
     await veloeraManagedSiteChannels.fetchModels?.(config, 1, {
-      signal: new AbortController().signal,
+      signal: fetchModelsSignal,
     })
     await veloeraManagedSiteChannels.updateModels?.(
       config,
@@ -119,17 +120,22 @@ describe("Veloera managed-site channel capability", () => {
     })
     expect(veloeraApi.updateChannel).toHaveBeenCalledWith(request, { id: 1 })
     expect(veloeraApi.deleteChannel).toHaveBeenCalledWith(request, 1)
-    expect(veloeraApi.fetchChannelModels).toHaveBeenCalledWith(request, 1, {
-      signal: expect.any(AbortSignal),
-    })
+    expect(veloeraApi.fetchChannelModels).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      1,
+      { signal: fetchModelsSignal },
+    )
+    expect(veloeraApi.fetchChannelModels.mock.calls[0][0].signal).toBe(
+      fetchModelsSignal,
+    )
     expect(veloeraApi.updateChannelModels).toHaveBeenCalledWith(
-      request,
+      expect.objectContaining(request),
       1,
       "gpt-4o,claude-3",
       { signal: expect.any(AbortSignal) },
     )
     expect(veloeraApi.updateChannelModelMapping).toHaveBeenCalledWith(
-      request,
+      expect.objectContaining(request),
       1,
       "gpt-4o,claude-3",
       JSON.stringify({ "gpt-4o": "gpt-4o" }),

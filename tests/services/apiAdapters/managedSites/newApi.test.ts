@@ -188,9 +188,12 @@ describe("newApi managed-site channel capability", () => {
     })
 
     expect(channelManagement.fetchChannelModels).toHaveBeenCalledWith(
-      request,
+      expect.objectContaining(request),
       1,
       { signal, bypassSiteRequestLimit: true },
+    )
+    expect(channelManagement.fetchChannelModels.mock.calls[0][0].signal).toBe(
+      signal,
     )
   })
 

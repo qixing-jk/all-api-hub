@@ -969,6 +969,78 @@ describe("ManagedSiteChannels", () => {
     await waitForRowText("Beta")
   })
 
+  it("ignores a late fulfilled manual refresh after a newer refresh supersedes it", async () => {
+    const user = userEvent.setup()
+    let firstRefreshSignal: AbortSignal | undefined
+    let resolveFirstRefresh: ((value: { items: any[] }) => void) | undefined
+    let resolveSecondRefresh: ((value: { items: any[] }) => void) | undefined
+
+    const service = mockChannels([])
+    service.listChannels
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 1, name: "Alpha", base_url: "https://alpha.example" },
+        ]),
+      )
+      .mockImplementationOnce((_config: unknown, options?: RequestInit) => {
+        firstRefreshSignal = options?.signal ?? undefined
+        return new Promise((resolve) => {
+          resolveFirstRefresh = resolve as typeof resolveFirstRefresh
+        })
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSecondRefresh = resolve as typeof resolveSecondRefresh
+          }),
+      )
+
+    const { rerender } = render(<ManagedSiteChannels refreshKey={0} />)
+
+    await waitForRowText("Alpha")
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(service.listChannels).toHaveBeenCalledTimes(2)
+    })
+
+    rerender(<ManagedSiteChannels refreshKey={1} />)
+
+    await waitFor(() => {
+      expect(firstRefreshSignal?.aborted).toBe(true)
+      expect(service.listChannels).toHaveBeenCalledTimes(3)
+    })
+
+    resolveSecondRefresh?.({
+      items: [{ id: 3, name: "Gamma", base_url: "https://gamma.example" }],
+    })
+
+    await waitForRowText("Gamma")
+
+    resolveFirstRefresh?.({
+      items: [{ id: 2, name: "Beta", base_url: "https://beta.example" }],
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText("Beta")).not.toBeInTheDocument()
+      expect(screen.getByText("Gamma")).toBeInTheDocument()
+    })
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+        },
+      },
+    )
+  })
+
   it("completes manual refresh analytics with the refreshed channel count", async () => {
     const user = userEvent.setup()
 

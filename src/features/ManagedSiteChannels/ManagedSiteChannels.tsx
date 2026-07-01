@@ -166,6 +166,20 @@ type RefreshAnalyticsCompletion = {
   completed: boolean
 }
 
+const REFRESH_ABORT_SOURCES = {
+  User: "user",
+  Superseded: "superseded",
+  Cleanup: "cleanup",
+} as const
+
+type RefreshAbortSource =
+  (typeof REFRESH_ABORT_SOURCES)[keyof typeof REFRESH_ABORT_SOURCES]
+
+type ActiveRefresh = {
+  controller: AbortController
+  abortSource: RefreshAbortSource | null
+}
+
 /**
  * Checks whether a mutation response already contains a table-ready channel row.
  */
@@ -324,7 +338,7 @@ export default function ManagedSiteChannels({
   const [isMigrationDialogOpen, setIsMigrationDialogOpen] = useState(false)
   const [isMigrationMode, setIsMigrationMode] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
-  const refreshAbortControllerRef = useRef<AbortController | null>(null)
+  const activeRefreshRef = useRef<ActiveRefresh | null>(null)
   const refreshAnalyticsCompletionRef =
     useRef<RefreshAnalyticsCompletion | null>(null)
   const verification = useNewApiManagedVerification()
@@ -380,9 +394,16 @@ export default function ManagedSiteChannels({
         return
       }
 
-      refreshAbortControllerRef.current?.abort()
+      if (activeRefreshRef.current) {
+        activeRefreshRef.current.abortSource = REFRESH_ABORT_SOURCES.Superseded
+        activeRefreshRef.current.controller.abort()
+      }
       const refreshAbortController = new AbortController()
-      refreshAbortControllerRef.current = refreshAbortController
+      const activeRefresh: ActiveRefresh = {
+        controller: refreshAbortController,
+        abortSource: null,
+      }
+      activeRefreshRef.current = activeRefresh
 
       setIsLoading(true)
       setError(null)
@@ -399,6 +420,20 @@ export default function ManagedSiteChannels({
           signal: refreshAbortController.signal,
         })
         const items = response.items ?? []
+        if (
+          activeRefreshRef.current !== activeRefresh ||
+          refreshAbortController.signal.aborted
+        ) {
+          completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+            insights: {
+              failureReason:
+                PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
+              managedSiteType: managedSiteAnalyticsType,
+            },
+          })
+          return
+        }
+
         setChannels(items)
         completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
@@ -410,7 +445,10 @@ export default function ManagedSiteChannels({
         if (refreshAbortController.signal.aborted) {
           completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
             insights: {
-              failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
+              failureReason:
+                activeRefresh.abortSource === REFRESH_ABORT_SOURCES.User
+                  ? PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser
+                  : PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
               managedSiteType: managedSiteAnalyticsType,
             },
           })
@@ -427,8 +465,8 @@ export default function ManagedSiteChannels({
           },
         })
       } finally {
-        if (refreshAbortControllerRef.current === refreshAbortController) {
-          refreshAbortControllerRef.current = null
+        if (activeRefreshRef.current === activeRefresh) {
+          activeRefreshRef.current = null
           setIsLoading(false)
         }
         if (
@@ -443,8 +481,12 @@ export default function ManagedSiteChannels({
   )
 
   const cancelRefresh = useCallback(() => {
-    refreshAbortControllerRef.current?.abort()
-    refreshAbortControllerRef.current = null
+    const activeRefresh = activeRefreshRef.current
+    if (activeRefresh) {
+      activeRefresh.abortSource = REFRESH_ABORT_SOURCES.User
+      activeRefresh.controller.abort()
+      activeRefreshRef.current = null
+    }
     const completion = refreshAnalyticsCompletionRef.current
     if (completion && !completion.completed) {
       completion.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
@@ -467,7 +509,10 @@ export default function ManagedSiteChannels({
   useEffect(() => {
     void refreshChannels()
     return () => {
-      refreshAbortControllerRef.current?.abort()
+      if (activeRefreshRef.current) {
+        activeRefreshRef.current.abortSource = REFRESH_ABORT_SOURCES.Cleanup
+        activeRefreshRef.current.controller.abort()
+      }
     }
   }, [managedSiteType, refreshChannels])
 

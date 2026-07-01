@@ -375,6 +375,119 @@ describe("AxonHub API service", () => {
     expect(graphQlHits).toBe(2)
   })
 
+  it("lets a caller time out independently while waiting for an uncancellable shared sign-in", async () => {
+    vi.useFakeTimers()
+    let authHits = 0
+    let resolveAuth:
+      | ((response: Response | PromiseLike<Response>) => void)
+      | undefined
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/admin/auth/signin")) {
+          authHits += 1
+          return new Promise<Response>((resolve) => {
+            resolveAuth = resolve
+          })
+        }
+
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { ping: "pong" } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }),
+    )
+
+    const firstRequest = graphqlRequest<{ ping: string }>(
+      { ...config, email: "shared-timeout@example.com" },
+      "query PingOne",
+    )
+
+    const timedRequest = graphqlRequest<{ ping: string }>(
+      { ...config, email: "shared-timeout@example.com" },
+      "query PingTwo",
+      undefined,
+      { timeoutMs: 25 },
+    )
+    const expectation = expect(timedRequest).rejects.toThrow(
+      "AxonHub sign-in request timed out",
+    )
+
+    await vi.advanceTimersByTimeAsync(25)
+
+    await expectation
+    expect(authHits).toBe(1)
+
+    resolveAuth?.(
+      new Response(JSON.stringify({ token: "shared-token" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
+    await expect(firstRequest).resolves.toEqual({ ping: "pong" })
+  })
+
+  it("does not share a signal-bound sign-in with later callers", async () => {
+    let authHits = 0
+    let graphQlHits = 0
+    const firstController = new AbortController()
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) => {
+        if (url.endsWith("/admin/auth/signin")) {
+          authHits += 1
+          if (authHits === 1) {
+            return new Promise((_resolve, reject) => {
+              init?.signal?.addEventListener("abort", () => {
+                reject(
+                  new DOMException("The operation was aborted", "AbortError"),
+                )
+              })
+            })
+          }
+
+          return Promise.resolve(
+            new Response(JSON.stringify({ token: "independent-token" }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          )
+        }
+
+        graphQlHits += 1
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { ping: "pong" } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }),
+    )
+
+    const firstRequest = graphqlRequest<{ ping: string }>(
+      { ...config, email: "signal-bound@example.com" },
+      "query PingOne",
+      undefined,
+      { signal: firstController.signal },
+    )
+
+    const secondRequest = graphqlRequest<{ ping: string }>(
+      { ...config, email: "signal-bound@example.com" },
+      "query PingTwo",
+    )
+
+    firstController.abort()
+
+    await expect(firstRequest).rejects.toThrow(/aborted/i)
+    await expect(secondRequest).resolves.toEqual({ ping: "pong" })
+    expect(authHits).toBe(2)
+    expect(graphQlHits).toBe(1)
+  })
+
   it("normalizes AxonHub channel data into the managed-site channel shape", () => {
     const result = axonHubChannelToManagedSite({
       id: "channel_opaque_id",
