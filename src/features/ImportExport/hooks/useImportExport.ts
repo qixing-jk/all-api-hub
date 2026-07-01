@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
+  IMPORT_SECTION_KEYS,
   IMPORT_SECTION_STRATEGIES,
   type ImportPlan,
 } from "~/services/importExport/importExportService"
@@ -31,10 +32,10 @@ const logger = createLogger("ImportExportHook")
 export type ManualImportPlan = Required<ImportPlan>
 
 const DEFAULT_IMPORT_PLAN: ManualImportPlan = {
-  accounts: IMPORT_SECTION_STRATEGIES.Skip,
-  apiCredentialProfiles: IMPORT_SECTION_STRATEGIES.Skip,
-  channelConfigs: IMPORT_SECTION_STRATEGIES.Skip,
-  preferences: IMPORT_SECTION_STRATEGIES.Skip,
+  [IMPORT_SECTION_KEYS.Accounts]: IMPORT_SECTION_STRATEGIES.Skip,
+  [IMPORT_SECTION_KEYS.ApiCredentialProfiles]: IMPORT_SECTION_STRATEGIES.Skip,
+  [IMPORT_SECTION_KEYS.ChannelConfigs]: IMPORT_SECTION_STRATEGIES.Skip,
+  [IMPORT_SECTION_KEYS.Preferences]: IMPORT_SECTION_STRATEGIES.Skip,
 }
 
 /**
@@ -47,16 +48,17 @@ function createDefaultImportPlan(summary: {
   hasApiCredentialProfiles?: boolean
 }): ManualImportPlan {
   return {
-    accounts: summary.hasAccounts
+    [IMPORT_SECTION_KEYS.Accounts]: summary.hasAccounts
       ? IMPORT_SECTION_STRATEGIES.Merge
       : IMPORT_SECTION_STRATEGIES.Skip,
-    apiCredentialProfiles: summary.hasApiCredentialProfiles
+    [IMPORT_SECTION_KEYS.ApiCredentialProfiles]:
+      summary.hasApiCredentialProfiles
+        ? IMPORT_SECTION_STRATEGIES.Merge
+        : IMPORT_SECTION_STRATEGIES.Skip,
+    [IMPORT_SECTION_KEYS.ChannelConfigs]: summary.hasChannelConfigs
       ? IMPORT_SECTION_STRATEGIES.Merge
       : IMPORT_SECTION_STRATEGIES.Skip,
-    channelConfigs: summary.hasChannelConfigs
-      ? IMPORT_SECTION_STRATEGIES.Merge
-      : IMPORT_SECTION_STRATEGIES.Skip,
-    preferences: IMPORT_SECTION_STRATEGIES.Skip,
+    [IMPORT_SECTION_KEYS.Preferences]: IMPORT_SECTION_STRATEGIES.Skip,
   }
 }
 

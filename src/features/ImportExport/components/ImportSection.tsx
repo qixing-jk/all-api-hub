@@ -17,7 +17,10 @@ import {
   ToggleButton,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { IMPORT_SECTION_STRATEGIES } from "~/services/importExport/importExportService"
+import {
+  IMPORT_SECTION_KEYS,
+  IMPORT_SECTION_STRATEGIES,
+} from "~/services/importExport/importExportService"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -74,7 +77,7 @@ const ImportSection = ({
     }>
   }> = [
     {
-      key: "accounts",
+      key: IMPORT_SECTION_KEYS.Accounts,
       visible: Boolean(validation?.hasAccounts),
       title: t("import.sections.accounts.title"),
       description: t("import.sections.accounts.description"),
@@ -94,7 +97,7 @@ const ImportSection = ({
       ],
     },
     {
-      key: "apiCredentialProfiles",
+      key: IMPORT_SECTION_KEYS.ApiCredentialProfiles,
       visible: Boolean(validation?.hasApiCredentialProfiles),
       title: t("import.sections.apiCredentialProfiles.title"),
       description: t("import.sections.apiCredentialProfiles.description"),
@@ -115,7 +118,7 @@ const ImportSection = ({
       ],
     },
     {
-      key: "preferences",
+      key: IMPORT_SECTION_KEYS.Preferences,
       visible: Boolean(validation?.hasPreferences),
       title: t("import.sections.preferences.title"),
       description: t("import.sections.preferences.description"),
@@ -135,7 +138,7 @@ const ImportSection = ({
       ],
     },
     {
-      key: "channelConfigs",
+      key: IMPORT_SECTION_KEYS.ChannelConfigs,
       visible: Boolean(validation?.hasChannelConfigs),
       title: t("import.sections.channelConfigs.title"),
       description: t("import.sections.channelConfigs.description"),

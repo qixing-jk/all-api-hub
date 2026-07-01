@@ -132,8 +132,16 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:import.sections.label",
     744.55,
     {
-      descriptionKey: "importExport:import.sections.accounts.description",
-      keywords: ["import", "append", "merge", "overwrite", "restore"],
+      descriptionKey: "importExport:import.description",
+      keywords: [
+        "import",
+        "append",
+        "merge",
+        "replace",
+        "skip",
+        "overwrite",
+        "restore",
+      ],
     },
   ),
   buildPageControlDefinition(

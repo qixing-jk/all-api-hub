@@ -154,6 +154,13 @@ export const IMPORT_SECTION_STRATEGIES = {
   Skip: "skip",
 } as const
 
+export const IMPORT_SECTION_KEYS = {
+  Accounts: "accounts",
+  ApiCredentialProfiles: "apiCredentialProfiles",
+  ChannelConfigs: "channelConfigs",
+  Preferences: "preferences",
+} as const
+
 export type ImportSectionStrategy =
   (typeof IMPORT_SECTION_STRATEGIES)[keyof typeof IMPORT_SECTION_STRATEGIES]
 export type ImportMergeStrategy = typeof IMPORT_SECTION_STRATEGIES.Merge
@@ -171,10 +178,10 @@ export interface ImportFromBackupOptions {
 }
 
 export interface ImportPlan {
-  accounts?: ImportSectionStrategy
-  preferences?: ImportPreferenceStrategy
-  channelConfigs?: ImportSectionStrategy
-  apiCredentialProfiles?: ImportSectionStrategy
+  [IMPORT_SECTION_KEYS.Accounts]?: ImportSectionStrategy
+  [IMPORT_SECTION_KEYS.Preferences]?: ImportPreferenceStrategy
+  [IMPORT_SECTION_KEYS.ChannelConfigs]?: ImportSectionStrategy
+  [IMPORT_SECTION_KEYS.ApiCredentialProfiles]?: ImportSectionStrategy
 }
 
 /**
@@ -268,7 +275,10 @@ async function importV1Backup(
   const plan = options?.plan
 
   // accounts: support both legacy partial exports and older full exports
-  if (accountsRequested && shouldImportSection(plan, "accounts")) {
+  if (
+    accountsRequested &&
+    shouldImportSection(plan, IMPORT_SECTION_KEYS.Accounts)
+  ) {
     const rawTagStore = (data as any).tagStore ?? (data.data as any)?.tagStore
     if (rawTagStore) {
       await tagStorage.importTagStore(rawTagStore)
@@ -290,7 +300,10 @@ async function importV1Backup(
   }
 
   // preferences
-  if (preferencesRequested && shouldImportSection(plan, "preferences")) {
+  if (
+    preferencesRequested &&
+    shouldImportSection(plan, IMPORT_SECTION_KEYS.Preferences)
+  ) {
     const preferencesData = data.preferences || data.data?.preferences
     if (preferencesData) {
       const writeResult = options?.preserveWebdav
@@ -308,7 +321,10 @@ async function importV1Backup(
   }
 
   // channel configs: best-effort support if present in V1 backups
-  if (channelConfigsRequested && shouldImportSection(plan, "channelConfigs")) {
+  if (
+    channelConfigsRequested &&
+    shouldImportSection(plan, IMPORT_SECTION_KEYS.ChannelConfigs)
+  ) {
     const channelConfigsData = data.channelConfigs || data.data?.channelConfigs
     if (channelConfigsData) {
       await channelConfigStorage.importConfigs(channelConfigsData)
@@ -798,7 +814,10 @@ function mergeChannelConfigs(
 }
 
 /** Merges V2 accounts/bookmarks into the current account storage. */
-async function importV2AccountsWithMerge(data: BackupV2) {
+async function importV2AccountsWithMerge(
+  data: BackupV2,
+  remoteApiCredentialProfiles: ApiCredentialProfilesConfig["profiles"] = [],
+) {
   const [localAccountsConfig, localTagStore] = await Promise.all([
     accountStorage.exportData(),
     tagStorage.exportTagStore(),
@@ -813,7 +832,7 @@ async function importV2AccountsWithMerge(data: BackupV2) {
     localBookmarks: localAccountsConfig.bookmarks,
     remoteBookmarks: normalizedRemote.bookmarks,
     localTaggables: [],
-    remoteTaggables: [],
+    remoteTaggables: remoteApiCredentialProfiles,
   })
 
   const accounts = mergeByLatestUpdatedAt(
@@ -849,6 +868,9 @@ async function importV2AccountsWithMerge(data: BackupV2) {
     },
   })
   await tagStorage.ensureLegacyMigration()
+  return {
+    remoteApiCredentialProfiles: tagMerge.remoteTaggables,
+  }
 }
 
 /** Merges V2 channel configuration into current channel configuration. */
@@ -864,14 +886,31 @@ async function importV2ChannelConfigsWithMerge(data: BackupV2) {
 async function importV2ApiCredentialProfiles(
   data: BackupV2,
   strategy: ImportWriteStrategy,
-  accountsRequested: boolean,
+  options: {
+    reconcileTags: boolean
+    remoteApiCredentialProfiles?: ApiCredentialProfilesConfig["profiles"]
+  },
 ) {
   const incoming = coerceApiCredentialProfilesConfig(
     (data as BackupFullV2).apiCredentialProfiles,
   )
 
+  if (options.remoteApiCredentialProfiles) {
+    const config = {
+      ...incoming,
+      profiles: options.remoteApiCredentialProfiles,
+    }
+
+    if (strategy === IMPORT_SECTION_STRATEGIES.Replace) {
+      await apiCredentialProfilesStorage.importConfig(config)
+    } else {
+      await apiCredentialProfilesStorage.mergeConfig(config)
+    }
+    return
+  }
+
   if (
-    !accountsRequested &&
+    options.reconcileTags &&
     "tagStore" in (data as any) &&
     (data as any).tagStore
   ) {
@@ -930,12 +969,24 @@ async function importV2BackupWithPlan(
   const preferenceStrategy = plan.preferences
   const channelConfigStrategy = plan.channelConfigs
   const apiCredentialProfilesStrategy = plan.apiCredentialProfiles
+  const apiCredentialProfilesConfig = apiCredentialProfilesRequested
+    ? coerceApiCredentialProfilesConfig(
+        (data as BackupFullV2).apiCredentialProfiles,
+      )
+    : null
+  let remappedApiCredentialProfiles:
+    | ApiCredentialProfilesConfig["profiles"]
+    | undefined
 
   if (accountsRequested && hasWriteStrategy(accountStrategy)) {
     if (accountStrategy === IMPORT_SECTION_STRATEGIES.Replace) {
       await importV2AccountsWithReplace(data)
     } else {
-      await importV2AccountsWithMerge(data)
+      const mergeResult = await importV2AccountsWithMerge(
+        data,
+        apiCredentialProfilesConfig?.profiles ?? [],
+      )
+      remappedApiCredentialProfiles = mergeResult.remoteApiCredentialProfiles
     }
     accountsImported = true
   }
@@ -961,7 +1012,12 @@ async function importV2BackupWithPlan(
     await importV2ApiCredentialProfiles(
       data,
       toWriteStrategy(apiCredentialProfilesStrategy),
-      accountsRequested,
+      {
+        reconcileTags:
+          !accountsImported ||
+          accountStrategy !== IMPORT_SECTION_STRATEGIES.Replace,
+        remoteApiCredentialProfiles: remappedApiCredentialProfiles,
+      },
     )
     apiCredentialProfilesImported = true
   }

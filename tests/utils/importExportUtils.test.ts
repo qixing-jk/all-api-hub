@@ -492,7 +492,7 @@ describe("importFromBackupObject", () => {
       localBookmarks: [],
       remoteBookmarks: [],
       localTaggables: [],
-      remoteTaggables: [],
+      remoteTaggables: [{ id: "backup-profile" }],
     })
 
     const backup: BackupFullV2 = {
@@ -556,6 +556,311 @@ describe("importFromBackupObject", () => {
         apiCredentialProfiles: true,
       },
     })
+  })
+
+  it("remaps API credential profile tags when account merge reconciles the backup tag store", async () => {
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      deletedEntryRecords: {},
+      last_updated: 10,
+    })
+    mockTagStoreExport.mockResolvedValue({
+      version: 1,
+      tagsById: {
+        local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 1 },
+      },
+    })
+    mockMergeTagStoresForSync.mockReturnValue({
+      tagStore: {
+        version: 2,
+        tagsById: {
+          local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 2 },
+        },
+      },
+      localAccounts: [],
+      remoteAccounts: [],
+      localBookmarks: [],
+      remoteBookmarks: [],
+      localTaggables: [],
+      remoteTaggables: [
+        {
+          id: "backup-profile",
+          tagIds: ["local"],
+        },
+      ],
+    })
+
+    const backup = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      accounts: {
+        accounts: [],
+        last_updated: 20,
+      } as any,
+      tagStore: {
+        version: 1,
+        tagsById: {
+          remote: { id: "remote", name: "Shared", createdAt: 2, updatedAt: 2 },
+        },
+      },
+      apiCredentialProfiles: {
+        version: 1,
+        profiles: [
+          {
+            id: "backup-profile",
+            tagIds: ["remote"],
+          },
+        ],
+        lastUpdated: 20,
+      } as any,
+    } satisfies RawBackupData
+
+    await importFromBackupObject(backup, {
+      plan: {
+        accounts: "merge",
+        apiCredentialProfiles: "merge",
+      },
+    })
+
+    expect(mockMergeTagStoresForSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        remoteTagStore: backup.tagStore,
+        remoteTaggables: backup.apiCredentialProfiles?.profiles,
+      }),
+    )
+    expect(mockTagStoreImport).toHaveBeenCalledWith({
+      version: 2,
+      tagsById: {
+        local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 2 },
+      },
+    })
+    expect(mockApiCredentialProfilesMergeConfig).toHaveBeenCalledWith({
+      ...backup.apiCredentialProfiles,
+      profiles: [
+        {
+          id: "backup-profile",
+          tagIds: ["local"],
+        },
+      ],
+    })
+  })
+
+  it("applies planned preference replacement and reports a selected import", async () => {
+    const backup = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      preferences: { themeMode: "dark" } as any,
+    } satisfies RawBackupData
+
+    const result = await importFromBackupObject(backup, {
+      plan: {
+        preferences: "replace",
+      },
+      preserveWebdav: true,
+    })
+
+    expect(mockUserPreferencesImport).toHaveBeenCalledWith(
+      { themeMode: "dark" },
+      { preserveWebdav: true },
+    )
+    expect(result).toEqual({
+      allImported: true,
+      sections: {
+        accounts: false,
+        preferences: true,
+        channelConfigs: false,
+        apiCredentialProfiles: false,
+      },
+    })
+  })
+
+  it("reconciles profile-only tag stores before replacing API credential profiles", async () => {
+    mockTagStoreExport.mockResolvedValue({
+      version: 1,
+      tagsById: {
+        local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 1 },
+      },
+    })
+    mockMergeTagStoresForSync.mockReturnValue({
+      tagStore: {
+        version: 2,
+        tagsById: {
+          local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 2 },
+        },
+      },
+      localAccounts: [],
+      remoteAccounts: [],
+      localBookmarks: [],
+      remoteBookmarks: [],
+      localTaggables: [],
+      remoteTaggables: [
+        {
+          id: "backup-profile",
+          tagIds: ["local"],
+        },
+      ],
+    })
+
+    const backup = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      tagStore: {
+        version: 1,
+        tagsById: {
+          remote: { id: "remote", name: "Shared", createdAt: 2, updatedAt: 2 },
+        },
+      },
+      apiCredentialProfiles: {
+        version: 1,
+        profiles: [
+          {
+            id: "backup-profile",
+            tagIds: ["remote"],
+          },
+        ],
+        lastUpdated: 20,
+      } as any,
+    } satisfies RawBackupData
+
+    await importFromBackupObject(backup, {
+      plan: {
+        apiCredentialProfiles: "replace",
+      },
+    })
+
+    expect(mockMergeTagStoresForSync).toHaveBeenCalledWith({
+      localTagStore: {
+        version: 1,
+        tagsById: {
+          local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 1 },
+        },
+      },
+      remoteTagStore: backup.tagStore,
+      localAccounts: [],
+      remoteAccounts: [],
+      localBookmarks: [],
+      remoteBookmarks: [],
+      localTaggables: [],
+      remoteTaggables: backup.apiCredentialProfiles?.profiles,
+    })
+    expect(mockTagStoreImport).toHaveBeenCalledWith({
+      version: 2,
+      tagsById: {
+        local: { id: "local", name: "Shared", createdAt: 1, updatedAt: 2 },
+      },
+    })
+    expect(mockApiCredentialProfilesImportConfig).toHaveBeenCalledWith({
+      ...backup.apiCredentialProfiles,
+      profiles: [
+        {
+          id: "backup-profile",
+          tagIds: ["local"],
+        },
+      ],
+    })
+  })
+
+  it("applies replace accounts with merged channel configs and profile merge fallback", async () => {
+    mockChannelConfigExport.mockResolvedValue({
+      1: { channelId: 1, updatedAt: 10 },
+      2: { channelId: 2, updatedAt: 30 },
+    })
+
+    const backup = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      accounts: {
+        accounts: [{ id: "backup-account" } as any],
+        bookmarks: [{ id: "backup-bookmark" } as any],
+        pinnedAccountIds: ["backup-account"],
+        orderedAccountIds: ["backup-account", "backup-bookmark"],
+        deletedEntryRecords: {
+          removed: {
+            kind: "account",
+            deletedAt: 30,
+            entryUpdatedAt: 20,
+          },
+        },
+        last_updated: 20,
+      } as any,
+      channelConfigs: {
+        2: { channelId: 2, updatedAt: 20 },
+        3: { channelId: 3, updatedAt: 40 },
+      } as any,
+      apiCredentialProfiles: {
+        version: 1,
+        profiles: [{ id: "backup-profile" }],
+        lastUpdated: 20,
+      } as any,
+    } satisfies RawBackupData
+
+    const result = await importFromBackupObject(backup, {
+      plan: {
+        accounts: "replace",
+        channelConfigs: "merge",
+        apiCredentialProfiles: "merge",
+      },
+    })
+
+    expect(mockAccountStorageImportData).toHaveBeenCalledWith({
+      accounts: [{ id: "backup-account" }],
+      bookmarks: [{ id: "backup-bookmark" }],
+      pinnedAccountIds: ["backup-account"],
+      orderedAccountIds: ["backup-account", "backup-bookmark"],
+      deletedEntryRecords: backup.accounts.deletedEntryRecords,
+    })
+    expect(mockChannelConfigImport).toHaveBeenCalledWith({
+      1: { channelId: 1, updatedAt: 10 },
+      2: { channelId: 2, updatedAt: 30 },
+      3: { channelId: 3, updatedAt: 40 },
+    })
+    expect(mockApiCredentialProfilesMergeConfig).toHaveBeenCalledWith(
+      backup.apiCredentialProfiles,
+    )
+    expect(result).toEqual({
+      allImported: true,
+      sections: {
+        accounts: true,
+        preferences: false,
+        channelConfigs: true,
+        apiCredentialProfiles: true,
+      },
+    })
+  })
+
+  it("throws when a plan skips every section present in the backup", async () => {
+    const backup: BackupFullV2 = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      accounts: { accounts: [] } as any,
+      preferences: { themeMode: "dark" } as any,
+      channelConfigs: { 1: { channelId: 1 } } as any,
+      apiCredentialProfiles: {
+        version: 1,
+        profiles: [],
+        lastUpdated: 1,
+      } as any,
+    }
+
+    await expect(
+      importFromBackupObject(backup as BackupV2, {
+        plan: {
+          accounts: "skip",
+          preferences: "skip",
+          channelConfigs: "skip",
+          apiCredentialProfiles: "skip",
+        },
+      }),
+    ).rejects.toThrow("importExport:import.noImportableData")
+
+    expect(mockAccountStorageImportData).not.toHaveBeenCalled()
+    expect(mockUserPreferencesImport).not.toHaveBeenCalled()
+    expect(mockChannelConfigImport).not.toHaveBeenCalled()
+    expect(mockApiCredentialProfilesMergeConfig).not.toHaveBeenCalled()
+    expect(mockApiCredentialProfilesImportConfig).not.toHaveBeenCalled()
   })
 
   it("imports legacy V2 account arrays without deletion marker metadata", async () => {
