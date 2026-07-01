@@ -15,6 +15,7 @@ export const ACCOUNT_DIALOG_FORM_SOURCES = {
   DETECTED: "detected",
   EXISTING_ACCOUNT: "existing-account",
   SPONSOR: "sponsor",
+  BOOKMARK_IMPORT: "bookmark-import",
 } as const
 
 export type AccountDialogFormSource =

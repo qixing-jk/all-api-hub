@@ -21,6 +21,8 @@
     "enableAccount": "Enable account",
     "fetchKeyInfoFailed": "Failed to fetch key info",
     "fetchKeyListFailed": "Failed to fetch key list: {{errorMessage}}",
+    "importFromBookmarks": "Batch import from bookmarks",
+    "importFromBookmarksHint": "Batch scan browser bookmarks for account sites instead of adding them one by one",
     "keyCopied": "Key copied to clipboard",
     "keyList": "Key List",
     "keyManagement": "Key Management",

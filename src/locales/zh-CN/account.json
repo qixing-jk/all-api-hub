@@ -21,6 +21,8 @@
     "enableAccount": "启用账号",
     "fetchKeyInfoFailed": "获取密钥信息失败",
     "fetchKeyListFailed": "获取密钥列表失败: {{errorMessage}}",
+    "importFromBookmarks": "从书签批量导入",
+    "importFromBookmarksHint": "批量扫描浏览器书签中的账号站点，避免逐个添加",
     "keyCopied": "密钥已复制到剪贴板",
     "keyList": "密钥列表",
     "keyManagement": "密钥管理",

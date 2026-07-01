@@ -31,6 +31,10 @@
     "title": "Tạo AIHubMix API Key mặc định?",
     "warningTitle": "Toàn bộ API Key chỉ hiển thị một lần"
   },
+  "bookmarkImportBatch": {
+    "action": "Nhap hang loat tu dau trang",
+    "prompt": "Da luu nhieu trang trong dau trang trinh duyet?"
+  },
   "form": {
     "accessToken": "Access Token",
     "autoCheckInEnabled": "Bật tự động điểm danh hàng ngày",

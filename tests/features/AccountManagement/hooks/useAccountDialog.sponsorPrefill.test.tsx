@@ -5,6 +5,7 @@ import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { ACCOUNT_DIALOG_FORM_SOURCES } from "~/features/AccountManagement/components/AccountDialog/models"
+import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -194,6 +195,28 @@ describe("useAccountDialog sponsor prefill", () => {
       expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
       expect(result.current.state.formSource).toBe(
         ACCOUNT_DIALOG_FORM_SOURCES.SPONSOR,
+      )
+    })
+  })
+
+  it("initializes add mode from bookmark import prefill with a normalized origin", async () => {
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      prefill: {
+        source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+        siteUrl: "https://prefill.example.invalid/path?token=private",
+      },
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://prefill.example.invalid")
+      expect(result.current.state.siteType).toBe(SITE_TYPES.UNKNOWN)
+      expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
+      expect(result.current.state.formSource).toBe(
+        ACCOUNT_DIALOG_FORM_SOURCES.BOOKMARK_IMPORT,
       )
     })
   })

@@ -31,6 +31,10 @@
     "title": "创建 AIHubMix 默认密钥？",
     "warningTitle": "完整密钥只显示一次"
   },
+  "bookmarkImportBatch": {
+    "action": "从书签批量导入",
+    "prompt": "收藏了多个站点？可以从书签批量导入。"
+  },
   "form": {
     "accessToken": "访问令牌",
     "autoCheckInEnabled": "启用每日自动签到",

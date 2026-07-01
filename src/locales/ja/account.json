@@ -21,6 +21,8 @@
     "enableAccount": "アカウントを有効化",
     "fetchKeyInfoFailed": "キー情報の取得に失敗しました",
     "fetchKeyListFailed": "キー一覧の取得に失敗しました: {{errorMessage}}",
+    "importFromBookmarks": "ブックマークから一括インポート",
+    "importFromBookmarksHint": "ブラウザのブックマークからアカウントサイトを一括スキャンし、1件ずつ追加する手間を省きます",
     "keyCopied": "キーをクリップボードにコピーしました",
     "keyList": "キー一覧",
     "keyManagement": "キー管理",

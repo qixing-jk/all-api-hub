@@ -11,13 +11,15 @@ import { DialogStateProvider } from "./DialogStateContext"
 export const AccountManagementProvider = ({
   children,
   refreshKey,
+  onOpenBookmarkImport,
 }: {
   children: ReactNode
   refreshKey?: number
+  onOpenBookmarkImport?: () => void
 }) => {
   return (
     <AccountDataProvider refreshKey={refreshKey}>
-      <DialogStateProvider>
+      <DialogStateProvider onOpenBookmarkImport={onOpenBookmarkImport}>
         <BookmarkDialogStateProvider>
           <AccountActionsProvider>
             <LdohSiteLookupProvider>{children}</LdohSiteLookupProvider>

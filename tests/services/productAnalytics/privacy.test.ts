@@ -22,6 +22,7 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_PAGE_IDS,
   PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_PERMISSION_IDS,
   PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
@@ -458,6 +459,46 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps bookmark import action counts and drops bookmark and account details", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountsFromBookmarks,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementHeader,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        item_count: 4,
+        success_count: 2,
+        failure_count: 1,
+        skipped_count: 1,
+        bookmark_title: "Private account bookmark",
+        bookmark_url: "https://private.example.invalid/console",
+        bookmark_folder_path: "Bookmarks Bar/Private Providers",
+        raw_account_name: "Private Account",
+        accountName: "Private Account",
+        baseUrl: "https://api.example.invalid/v1",
+        url: "https://console.example.invalid/account",
+        accessToken: "sk-private-token",
+        cookie: "session=private",
+        backend_message: "private backend validation message",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountsFromBookmarks,
+      surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementHeader,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      item_count: 4,
+      success_count: 2,
+      failure_count: 1,
+      skipped_count: 1,
+    })
+  })
+
   it("keeps Managed Site Model Sync fixed action enums and drops raw UI text", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
@@ -782,6 +823,38 @@ describe("product analytics privacy filtering", () => {
       failure_reason: PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.UserDenied,
       was_granted_before: false,
       was_granted_after: false,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("allows bookmarks permission telemetry and drops raw bookmark context", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Bookmarks,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Granted,
+        was_granted_before: false,
+        was_granted_after: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        bookmark_title: "Private account bookmark",
+        bookmark_url: "https://private.example.invalid/console",
+        bookmark_folder_path: "Bookmarks Bar/Private Providers",
+        raw_account_name: "Private Account",
+        baseUrl: "https://api.example.invalid/v1",
+        accessToken: "sk-private-token",
+        cookie: "session=private",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Bookmarks,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+      outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Granted,
+      was_granted_before: false,
+      was_granted_after: true,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
   })

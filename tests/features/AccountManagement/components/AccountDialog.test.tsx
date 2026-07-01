@@ -567,6 +567,35 @@ describe("AccountDialog", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("offers bookmark batch import in the add-account entry phase", async () => {
+    const user = userEvent.setup()
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+    const handleOpenBookmarkImport = vi.fn()
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+        onOpenBookmarkImport={handleOpenBookmarkImport}
+      />,
+    )
+
+    expect(
+      await screen.findByText("accountDialog:bookmarkImportBatch.prompt"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:bookmarkImportBatch.action",
+      }),
+    )
+
+    expect(handleOpenBookmarkImport).toHaveBeenCalledTimes(1)
+  })
+
   it("disables sponsor recommendations outside the add-account entry phase", () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
     mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.DETECTED

@@ -19,6 +19,8 @@ export type SponsorCatalogSource =
   (typeof SPONSOR_CATALOG_SOURCES)[keyof typeof SPONSOR_CATALOG_SOURCES]
 
 export const SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE = "sponsor" as const
+export const BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE =
+  "bookmark-import" as const
 
 export interface SponsorBookmarkFallbackPrefill {
   name: string
@@ -114,10 +116,21 @@ export interface SponsorCatalogNormalizationResult {
   errors: string[]
 }
 
-export interface AddAccountPrefill {
+export interface SponsorAddAccountPrefill {
   source: typeof SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE
   sponsorId: string
   siteType: AccountSiteType
   siteUrl: string
   authType?: AuthTypeEnum
 }
+
+export interface BookmarkImportAddAccountPrefill {
+  source: typeof BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE
+  siteUrl: string
+  siteType?: AccountSiteType
+  authType?: AuthTypeEnum
+}
+
+export type AddAccountPrefill =
+  | SponsorAddAccountPrefill
+  | BookmarkImportAddAccountPrefill

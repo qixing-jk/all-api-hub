@@ -10,8 +10,10 @@ import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { createLogger } from "~/utils/core/logger"
 
 import {
+  BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
   SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE,
   type AddAccountPrefill,
+  type SponsorAddAccountPrefill,
 } from "./types"
 
 const logger = createLogger("SponsorAddAccountIntent")
@@ -29,7 +31,7 @@ type PendingSponsorAddAccountPrefillSignal = () => void
 export async function setPendingSponsorAddAccountPrefill(
   prefill: AddAccountPrefill,
 ): Promise<void> {
-  const normalized = normalizeSponsorAddAccountPrefill(prefill)
+  const normalized = normalizeAddAccountPrefill(prefill)
   if (!normalized) return
 
   try {
@@ -86,8 +88,15 @@ export function watchPendingSponsorAddAccountPrefill(
 /** Identifies validated sponsor add-account prefill values while ignoring UI events. */
 export function isSponsorAddAccountPrefill(
   value: unknown,
-): value is AddAccountPrefill {
+): value is SponsorAddAccountPrefill {
   return normalizeSponsorAddAccountPrefillPayload(value) !== null
+}
+
+/** Identifies validated add-account prefill values while ignoring UI events. */
+export function isAddAccountPrefill(
+  value: unknown,
+): value is AddAccountPrefill {
+  return normalizeAddAccountPrefillPayload(value) !== null
 }
 
 /**
@@ -104,17 +113,45 @@ function normalizePendingEnvelope(value: unknown): AddAccountPrefill | null {
     return null
   }
 
-  return normalizeSponsorAddAccountPrefillPayload(value.prefill)
+  return normalizeAddAccountPrefillPayload(value.prefill)
 }
 
 /**
- * Validates the sponsor prefill payload before it is written into an envelope.
+ * Validates the add-account prefill payload before it is written into an envelope.
  */
-export function normalizeSponsorAddAccountPrefill(
+export function normalizeAddAccountPrefill(
   value: unknown,
 ): AddAccountPrefill | null {
   const envelopePrefill = normalizePendingEnvelope(value)
   if (envelopePrefill) return envelopePrefill
+
+  return normalizeAddAccountPrefillPayload(value)
+}
+
+/**
+ * Backward-compatible sponsor helper name for callers that predate the general prefill contract.
+ */
+export function normalizeSponsorAddAccountPrefill(
+  value: unknown,
+): SponsorAddAccountPrefill | null {
+  const envelopePrefill = normalizePendingEnvelope(value)
+  if (envelopePrefill?.source === SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE) {
+    return envelopePrefill
+  }
+
+  return normalizeSponsorAddAccountPrefillPayload(value)
+}
+
+/**
+ * Validates a raw add-account prefill payload without accepting storage envelopes.
+ */
+function normalizeAddAccountPrefillPayload(
+  value: unknown,
+): AddAccountPrefill | null {
+  if (!isRecord(value)) return null
+  if (value.source === BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE) {
+    return normalizeBookmarkImportAddAccountPrefillPayload(value)
+  }
 
   return normalizeSponsorAddAccountPrefillPayload(value)
 }
@@ -124,7 +161,7 @@ export function normalizeSponsorAddAccountPrefill(
  */
 function normalizeSponsorAddAccountPrefillPayload(
   value: unknown,
-): AddAccountPrefill | null {
+): SponsorAddAccountPrefill | null {
   if (!isRecord(value)) return null
   if (value.source !== SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE) return null
   if (typeof value.sponsorId !== "string" || !value.sponsorId.trim()) {
@@ -154,6 +191,34 @@ function normalizeSponsorAddAccountPrefillPayload(
       authType:
         normalizedAuthType ??
         resolveAccountSiteDefaultAuthType({ siteType, url: siteUrl }),
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Validates a raw bookmark-import prefill and strips path/query data before it reaches the dialog.
+ */
+function normalizeBookmarkImportAddAccountPrefillPayload(
+  value: Record<string, unknown>,
+): AddAccountPrefill | null {
+  if (typeof value.siteUrl !== "string") return null
+  const normalizedAuthType = normalizeOptionalAccountAuthType(value.authType)
+  if (normalizedAuthType === false) return null
+  const siteType = isAccountSiteType(value.siteType)
+    ? value.siteType
+    : SITE_TYPES.UNKNOWN
+
+  try {
+    const url = new URL(value.siteUrl)
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null
+
+    return {
+      source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+      siteUrl: url.origin,
+      ...(siteType !== SITE_TYPES.UNKNOWN ? { siteType } : {}),
+      ...(normalizedAuthType ? { authType: normalizedAuthType } : {}),
     }
   } catch {
     return null

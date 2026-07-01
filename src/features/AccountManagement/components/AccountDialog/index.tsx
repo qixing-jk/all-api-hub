@@ -48,6 +48,7 @@ interface AccountDialogProps {
   prefill?: AddAccountPrefill | null
   onSuccess: (data: any) => void
   onError: (error: any) => void
+  onOpenBookmarkImport?: () => void
 }
 
 /**
@@ -60,6 +61,7 @@ interface AccountDialogProps {
  * @param props.prefill Optional add-mode account prefill.
  * @param props.onSuccess Callback fired with saved data.
  * @param props.onError Callback fired when submission fails.
+ * @param props.onOpenBookmarkImport Optional handler for switching to batch bookmark import.
  */
 export default function AccountDialog({
   isOpen,
@@ -69,8 +71,10 @@ export default function AccountDialog({
   prefill,
   onSuccess,
   onError,
+  onOpenBookmarkImport,
 }: AccountDialogProps) {
   const { t } = useTranslation("messages")
+  const { t: tAccountDialog } = useTranslation("accountDialog")
   const {
     displayData,
     detectedSiteAccounts,
@@ -245,6 +249,23 @@ export default function AccountDialog({
 
             <div className="grid gap-3">
               <SiteInfoInput {...siteInfoInputProps} />
+              {showEntryAuthTypeSelector && onOpenBookmarkImport ? (
+                <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary flex flex-col gap-2 rounded-lg border border-blue-100 bg-blue-50/70 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-blue-800 dark:text-blue-200">
+                    {tAccountDialog("bookmarkImportBatch.prompt")}
+                  </span>
+                  <button
+                    type="button"
+                    className="text-left text-sm font-medium text-blue-700 underline-offset-4 hover:underline sm:text-right dark:text-blue-300"
+                    onClick={onOpenBookmarkImport}
+                    data-testid={
+                      ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportFromAddDialogButton
+                    }
+                  >
+                    {tAccountDialog("bookmarkImportBatch.action")}
+                  </button>
+                </div>
+              ) : null}
               {selectedSponsorPostClickNote ? (
                 <div
                   className="flex items-start gap-2 rounded-md bg-blue-50 p-2 text-xs leading-5 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"

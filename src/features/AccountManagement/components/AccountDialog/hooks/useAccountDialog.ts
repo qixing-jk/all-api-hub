@@ -21,7 +21,8 @@ import {
   shouldOpenSub2ApiTokenDialogForAccountDialogSite,
   type AccountDialogSitePolicy,
 } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
-import { normalizeSponsorAddAccountPrefill } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
+import { normalizeAddAccountPrefill } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
+import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import {
   isAccountAuthType,
   resolveDefaultAccountAuthType,
@@ -326,7 +327,7 @@ interface AihubmixPostSaveKeyPromptState {
  * @param props Hook configuration supporting add/edit modes and callbacks.
  * @param props.mode Current dialog mode (add or edit).
  * @param props.account Account record to edit when in edit mode.
- * @param props.prefill Optional add-mode sponsor prefill.
+ * @param props.prefill Optional add-mode prefill.
  * @param props.isOpen Whether the dialog is currently open.
  * @param props.onClose Handler invoked when dialog closes.
  * @param props.onPostSaveAccountRefresh Optional handler invoked after deferred account refresh completes.
@@ -962,9 +963,7 @@ export function useAccountDialog({
       const nextFlowState = getInitialFlowState(mode)
       setPhase(nextFlowState.phase)
       setFormSource(
-        nextPrefill
-          ? ACCOUNT_DIALOG_FORM_SOURCES.SPONSOR
-          : nextFlowState.formSource,
+        resolvePrefillFormSource(nextPrefill, nextFlowState.formSource),
       )
       setShowAccessToken(false)
       setDetectionError(null)
@@ -1124,9 +1123,7 @@ export function useAccountDialog({
   useEffect(() => {
     if (isOpen) {
       const nextPrefill =
-        mode === DIALOG_MODES.ADD
-          ? normalizeSponsorAddAccountPrefill(prefill)
-          : null
+        mode === DIALOG_MODES.ADD ? normalizeAddAccountPrefill(prefill) : null
       resetForm(nextPrefill)
       if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
@@ -2866,6 +2863,21 @@ function getInitialFlowState(mode: DialogMode): {
         phase: ACCOUNT_DIALOG_PHASES.SITE_INPUT,
         formSource: ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
       }
+}
+
+/**
+ * Maps normalized add-account prefill sources to account-dialog form provenance.
+ */
+function resolvePrefillFormSource(
+  prefill: AddAccountPrefill | null | undefined,
+  fallback: AccountDialogFormSource,
+): AccountDialogFormSource {
+  if (!prefill) return fallback
+  if (prefill.source === BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE) {
+    return ACCOUNT_DIALOG_FORM_SOURCES.BOOKMARK_IMPORT
+  }
+
+  return ACCOUNT_DIALOG_FORM_SOURCES.SPONSOR
 }
 
 /**

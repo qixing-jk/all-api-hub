@@ -15,7 +15,7 @@ import AccountDialog from "~/features/AccountManagement/components/AccountDialog
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import {
   getAndClearPendingSponsorAddAccountPrefill,
-  isSponsorAddAccountPrefill,
+  isAddAccountPrefill,
   watchPendingSponsorAddAccountPrefill,
 } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
@@ -53,7 +53,13 @@ const DialogStateContext = createContext<DialogStateContextType | undefined>(
   undefined,
 )
 
-export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
+export const DialogStateProvider = ({
+  children,
+  onOpenBookmarkImport,
+}: {
+  children: ReactNode
+  onOpenBookmarkImport?: () => void
+}) => {
   const { loadAccountData } = useAccountDataContext()
   const [dialogState, setDialogState] = useState<DialogState>({
     isOpen: false,
@@ -84,6 +90,11 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
     loadAccountData()
   }
 
+  const handleOpenBookmarkImport = useCallback(() => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }))
+    onOpenBookmarkImport?.()
+  }, [onOpenBookmarkImport])
+
   const handleSuccess = (data: any) => {
     promiseRef.current?.resolve(data)
     handleClose()
@@ -104,7 +115,7 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
   const openAddAccount = useCallback(
     (prefillOrEvent?: AddAccountPrefill | MouseEvent | null) => {
       const prefill =
-        prefillOrEvent && isSponsorAddAccountPrefill(prefillOrEvent)
+        prefillOrEvent && isAddAccountPrefill(prefillOrEvent)
           ? prefillOrEvent
           : null
 
@@ -180,6 +191,7 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
           prefill={dialogState.prefill}
           onSuccess={handleSuccess}
           onError={handleError}
+          onOpenBookmarkImport={handleOpenBookmarkImport}
         />
       )}
     </DialogStateContext.Provider>

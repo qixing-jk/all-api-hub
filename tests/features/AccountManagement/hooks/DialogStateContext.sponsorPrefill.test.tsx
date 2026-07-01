@@ -7,6 +7,7 @@ import {
   DialogStateProvider,
   useDialogStateContext,
 } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const accountDialogProps = vi.hoisted(() => ({
@@ -19,12 +20,20 @@ const loadAccountDataMock = vi.hoisted(() => vi.fn())
 const {
   getAndClearPendingSponsorAddAccountPrefillMock,
   isExtensionSidePanelMock,
+  isAddAccountPrefillMock,
   isSponsorAddAccountPrefillMock,
   stopWatchingPendingSponsorAddAccountPrefillMock,
   watchPendingSponsorAddAccountPrefillMock,
 } = vi.hoisted(() => ({
   getAndClearPendingSponsorAddAccountPrefillMock: vi.fn(),
   isExtensionSidePanelMock: vi.fn(() => false),
+  isAddAccountPrefillMock: vi.fn((value: unknown) => {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      ["sponsor", "bookmark-import"].includes((value as any).source)
+    )
+  }),
   isSponsorAddAccountPrefillMock: vi.fn((value: unknown) => {
     return (
       typeof value === "object" &&
@@ -68,6 +77,7 @@ vi.mock(
   () => ({
     getAndClearPendingSponsorAddAccountPrefill:
       getAndClearPendingSponsorAddAccountPrefillMock,
+    isAddAccountPrefill: isAddAccountPrefillMock,
     isSponsorAddAccountPrefill: isSponsorAddAccountPrefillMock,
     watchPendingSponsorAddAccountPrefill:
       watchPendingSponsorAddAccountPrefillMock,
@@ -113,6 +123,13 @@ describe("DialogStateContext sponsor prefill", () => {
     accountDialogProps.renderCount = 0
     vi.clearAllMocks()
     isExtensionSidePanelMock.mockReturnValue(false)
+    isAddAccountPrefillMock.mockImplementation((value: unknown) => {
+      return (
+        typeof value === "object" &&
+        value !== null &&
+        ["sponsor", "bookmark-import"].includes((value as any).source)
+      )
+    })
     isSponsorAddAccountPrefillMock.mockImplementation((value: unknown) => {
       return (
         typeof value === "object" &&
@@ -149,6 +166,48 @@ describe("DialogStateContext sponsor prefill", () => {
       sponsorId: "aihubmix",
     })
     expect(screen.getByTestId("account-dialog")).toHaveTextContent("aihubmix")
+  })
+
+  it("threads bookmark-import prefill through openAddAccount into AccountDialog", async () => {
+    const user = userEvent.setup()
+
+    function BookmarkImportHarness() {
+      const { openAddAccount } = useDialogStateContext()
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            openAddAccount({
+              source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+              siteUrl: "https://prefill.example.invalid",
+            })
+          }
+        >
+          recover
+        </button>
+      )
+    }
+
+    render(
+      <DialogStateProvider>
+        <BookmarkImportHarness />
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+
+    await user.click(screen.getByRole("button", { name: "recover" }))
+
+    expect(accountDialogProps.current).toMatchObject({
+      mode: DIALOG_MODES.ADD,
+      prefill: {
+        source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+        siteUrl: "https://prefill.example.invalid",
+      },
+    })
   })
 
   it("opens add account without sponsor prefill when invoked from a click event", async () => {

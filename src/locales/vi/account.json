@@ -21,6 +21,8 @@
     "enableAccount": "Kích hoạt tài khoản",
     "fetchKeyInfoFailed": "Lấy thông tin API Key thất bại",
     "fetchKeyListFailed": "Lấy danh sách API Key thất bại: {{errorMessage}}",
+    "importFromBookmarks": "Nhap hang loat tu dau trang",
+    "importFromBookmarksHint": "Quet hang loat dau trang trinh duyet de tim trang tai khoan, khong can them tung muc",
     "keyCopied": "API Key đã được sao chép vào khay nhớ tạm",
     "keyList": "Danh sách API Key",
     "keyManagement": "Quản lý API Key",

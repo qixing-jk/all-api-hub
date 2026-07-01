@@ -31,6 +31,10 @@
     "title": "Create an AIHubMix default key?",
     "warningTitle": "The full key is shown only once"
   },
+  "bookmarkImportBatch": {
+    "action": "Batch import from bookmarks",
+    "prompt": "Saved multiple sites as browser bookmarks?"
+  },
   "form": {
     "accessToken": "Access Token",
     "autoCheckInEnabled": "Enable daily automatic check-in",

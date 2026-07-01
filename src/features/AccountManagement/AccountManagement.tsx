@@ -1,5 +1,5 @@
 import { ArrowPathIcon } from "@heroicons/react/24/outline"
-import { CalendarCheck2, Search, UserRound } from "lucide-react"
+import { BookmarkPlus, CalendarCheck2, Search, UserRound } from "lucide-react"
 import { useCallback, useState, type MouseEvent } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -9,6 +9,7 @@ import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import AccountList from "~/features/AccountManagement/components/AccountList"
+import BookmarkAccountImportDialog from "~/features/AccountManagement/components/BookmarkAccountImportDialog"
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -36,10 +37,23 @@ const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const headerSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementHeader
 
+/** Props used to coordinate account-management page actions with provider-owned dialogs. */
+interface AccountManagementContentProps {
+  searchQuery?: string
+  isBookmarkImportDialogOpen: boolean
+  onOpenBookmarkImport: () => void
+  onCloseBookmarkImport: () => void
+}
+
 /**
  * Renders the Account Management page body: header with CTA and account list.
  */
-function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
+function AccountManagementContent({
+  searchQuery,
+  isBookmarkImportDialogOpen,
+  onOpenBookmarkImport,
+  onCloseBookmarkImport,
+}: AccountManagementContentProps) {
   const { t } = useTranslation(["account", "common"])
   const { openAddAccount } = useDialogStateContext()
   const {
@@ -283,6 +297,18 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
                 </ProductAnalyticsScope>
               )}
               <Button
+                onClick={onOpenBookmarkImport}
+                variant="secondary"
+                leftIcon={<BookmarkPlus className="h-4 w-4" />}
+                title={t("account:actions.importFromBookmarksHint")}
+                data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportButton}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountsFromBookmarks
+                }
+              >
+                {t("account:actions.importFromBookmarks")}
+              </Button>
+              <Button
                 onClick={() => setIsDedupeDialogOpen(true)}
                 variant="secondary"
                 leftIcon={<Search className="h-4 w-4" />}
@@ -316,6 +342,9 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         isOpen={isDedupeDialogOpen}
         onClose={() => setIsDedupeDialogOpen(false)}
       />
+      {isBookmarkImportDialogOpen && (
+        <BookmarkAccountImportDialog isOpen onClose={onCloseBookmarkImport} />
+      )}
     </div>
   )
 }
@@ -332,9 +361,23 @@ function AccountManagement({
   refreshKey,
   routeParams,
 }: AccountManagementProps) {
+  const [isBookmarkImportDialogOpen, setIsBookmarkImportDialogOpen] =
+    useState(false)
+  const openBookmarkImportDialog = useCallback(() => {
+    setIsBookmarkImportDialogOpen(true)
+  }, [])
+
   return (
-    <AccountManagementProvider refreshKey={refreshKey}>
-      <AccountManagementContent searchQuery={routeParams?.search} />
+    <AccountManagementProvider
+      refreshKey={refreshKey}
+      onOpenBookmarkImport={openBookmarkImportDialog}
+    >
+      <AccountManagementContent
+        searchQuery={routeParams?.search}
+        isBookmarkImportDialogOpen={isBookmarkImportDialogOpen}
+        onOpenBookmarkImport={openBookmarkImportDialog}
+        onCloseBookmarkImport={() => setIsBookmarkImportDialogOpen(false)}
+      />
     </AccountManagementProvider>
   )
 }

@@ -31,6 +31,10 @@
     "title": "AIHubMix の既定キーを作成しますか？",
     "warningTitle": "完全なキーは一度だけ表示されます"
   },
+  "bookmarkImportBatch": {
+    "action": "ブックマークから一括インポート",
+    "prompt": "複数のサイトをブラウザのブックマークに保存していますか？"
+  },
   "form": {
     "accessToken": "Access Token",
     "autoCheckInEnabled": "毎日の自動チェックインを有効化",

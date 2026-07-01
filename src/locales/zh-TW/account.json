@@ -21,6 +21,8 @@
     "enableAccount": "啟用帳號",
     "fetchKeyInfoFailed": "獲取金鑰資訊失敗",
     "fetchKeyListFailed": "獲取金鑰列表失敗: {{errorMessage}}",
+    "importFromBookmarks": "從書籤批量匯入",
+    "importFromBookmarksHint": "批量掃描瀏覽器書籤中的帳號站點，避免逐個新增",
     "keyCopied": "金鑰已複製到剪貼簿",
     "keyList": "金鑰列表",
     "keyManagement": "金鑰管理",
