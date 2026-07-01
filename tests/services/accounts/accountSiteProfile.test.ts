@@ -156,7 +156,7 @@ describe("accountSiteProfile", () => {
     )
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
     expect(profile.auth.supportsCookieAuth).toBe(false)
-    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(true)
+    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(false)
     expect(profile.modelList.displayCapabilitiesSource).toBe(
       ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
     )

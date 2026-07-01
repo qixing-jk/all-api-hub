@@ -453,7 +453,7 @@ describe("account site definition registry", () => {
         defaultAuthType: AuthTypeEnum.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: true,
+        supportsBuiltInCheckInDetection: false,
       },
       createdToken: {
         secretHandling:
