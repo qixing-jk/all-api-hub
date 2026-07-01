@@ -151,18 +151,17 @@ describe("AccountDialog AccountForm", () => {
     expect(
       screen.getByText("accountDialog:sections.checkInConfig.title"),
     ).toBeInTheDocument()
-    const checkInStatusDescription = screen.getByText(
-      "accountDialog:form.checkInStatusDesc",
-    )
-    expect(checkInStatusDescription).toHaveAttribute(
-      "id",
-      "supports-check-in-description",
-    )
     expect(
-      screen.getByRole("switch", {
+      screen.getByText("accountDialog:form.checkInStatus"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:form.checkInStatusDesc"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("switch", {
         name: "accountDialog:form.checkInStatus",
       }),
-    ).toHaveAccessibleDescription("accountDialog:form.checkInStatusDesc")
+    ).not.toBeInTheDocument()
     expect(
       screen.getByText("accountDialog:sections.balanceAndStats.title"),
     ).toBeInTheDocument()
@@ -545,13 +544,18 @@ describe("AccountDialog AccountForm", () => {
       ),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("accountDialog:form.sub2apiCheckInUnsupported"),
+      screen.getByText("accountDialog:form.checkInStatusUnsupported", {
+        exact: false,
+      }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("switch", {
+      screen.queryByText("accountDialog:form.checkInStatusDesc"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("switch", {
         name: "accountDialog:form.checkInStatus",
       }),
-    ).toBeDisabled()
+    ).not.toBeInTheDocument()
     expect(screen.getByDisplayValue("formatted-expiry")).toBeDisabled()
 
     const refreshTokenInput = screen.getByDisplayValue("refresh-secret")
@@ -588,45 +592,22 @@ describe("AccountDialog AccountForm", () => {
     ).toBeDisabled()
   })
 
-  it("updates check-in toggles and custom check-in config with the expected fallback defaults", async () => {
+  it("updates auto check-in and custom check-in config with the expected fallback defaults", async () => {
     const user = userEvent.setup()
     const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      enableDetection: true,
+      autoCheckInEnabled: false,
+    })
     const onCheckInChange = vi.mocked(props.onCheckInChange)
 
     const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
-    await user.click(
-      await screen.findByRole("switch", {
-        name: "accountDialog:form.checkInStatus",
-      }),
+    await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
     )
-    expect(onCheckInChange).toHaveBeenCalledWith({
-      ...props.draft.checkIn,
-      enableDetection: true,
-      autoCheckInEnabled: true,
-    })
 
-    onCheckInChange.mockClear()
-    const explicitFalseCheckIn = createCheckIn({
-      enableDetection: false,
-      autoCheckInEnabled: false,
-    })
-    props.draft.checkIn = explicitFalseCheckIn
-
-    rerender(<AccountForm {...withSitePolicy(props)} />)
-
-    await user.click(
-      screen.getByRole("switch", {
-        name: "accountDialog:form.checkInStatus",
-      }),
-    )
-    expect(onCheckInChange).toHaveBeenCalledWith({
-      ...explicitFalseCheckIn,
-      enableDetection: true,
-      autoCheckInEnabled: false,
-    })
-
-    onCheckInChange.mockClear()
     fireEvent.change(screen.getByPlaceholderText("https://cdk.example.com/"), {
       target: { value: "https://check.example.com/" },
     })

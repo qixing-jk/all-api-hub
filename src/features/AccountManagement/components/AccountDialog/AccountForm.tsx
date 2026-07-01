@@ -1,8 +1,4 @@
 import {
-  Description as HeadlessDescription,
-  Switch as HeadlessSwitch,
-} from "@headlessui/react"
-import {
   ArrowDownTrayIcon,
   CalendarDaysIcon,
   CurrencyDollarIcon,
@@ -153,6 +149,8 @@ export default function AccountForm({
   const isAuthTypeLocked = sitePolicy.forceAccessTokenAuth
   const canUseCookieAuth = sitePolicy.allowCookieAuthSession
   const canUseBuiltInCheckInDetection = sitePolicy.allowBuiltInCheckInDetection
+  const showBuiltInAutoCheckIn =
+    canUseBuiltInCheckInDetection && checkIn.enableDetection
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
 
   return (
@@ -482,54 +480,24 @@ export default function AccountForm({
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["check-in"]}
         testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
       >
-        <HeadlessSwitch.Group
-          as="div"
-          className="flex w-full items-center justify-between gap-4"
-        >
-          <div className="flex-1">
-            <label
-              htmlFor="supports-check-in"
-              className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
-            >
-              {t("form.checkInStatus")}
-            </label>
-            <HeadlessDescription
-              as="p"
-              id="supports-check-in-description"
-              className="mt-1 text-xs text-gray-500 dark:text-gray-400"
-            >
+        <div className="space-y-1">
+          <p className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+            {t("form.checkInStatus")}
+          </p>
+          {canUseBuiltInCheckInDetection ? (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {t("form.checkInStatusDesc")}
-            </HeadlessDescription>
-            {!canUseBuiltInCheckInDetection && (
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {t("form.sub2apiCheckInUnsupported")}
-              </p>
-            )}
-          </div>
-          <Switch
-            checked={checkIn.enableDetection}
-            onChange={(enableDetection) =>
-              onCheckInChange({
-                ...checkIn,
-                enableDetection,
-                // When detection turns on, default auto check-in to true unless
-                // the user has explicitly disabled it with false; turning
-                // detection off leaves the last preference untouched.
-                autoCheckInEnabled:
-                  enableDetection && checkIn.autoCheckInEnabled !== false
-                    ? checkIn.autoCheckInEnabled ?? true
-                    : checkIn.autoCheckInEnabled,
-              })
-            }
-            id="supports-check-in"
-            disabled={!canUseBuiltInCheckInDetection}
-            className={`${
-              checkIn.enableDetection ? "bg-green-600" : "bg-gray-200"
-            } focus:ring-green-500`}
-          />
-        </HeadlessSwitch.Group>
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t("form.checkInStatusUnsupported", {
+                siteType,
+              })}
+            </p>
+          )}
+        </div>
 
-        {checkIn.enableDetection && (
+        {showBuiltInAutoCheckIn && (
           <div className="flex w-full items-center justify-between gap-4">
             <div className="flex-1">
               <label
