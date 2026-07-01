@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.50.0](https://github.com/qixing-jk/all-api-hub/compare/v3.49.1...v3.50.0) (2026-07-01)
+
+
+### Features
+
+* **account:** import accounts from browser bookmarks ([#1106](https://github.com/qixing-jk/all-api-hub/issues/1106)) ([740feb2](https://github.com/qixing-jk/all-api-hub/commit/740feb2814c7690e2eca8aa11750f1d75d35654e))
+* **account:** show site type in account rows ([#1096](https://github.com/qixing-jk/all-api-hub/issues/1096)) ([2e6142d](https://github.com/qixing-jk/all-api-hub/commit/2e6142dae36c2d0298561834cca692ee2f155d3c))
+
+
+### Bug Fixes
+
+* **account:** clarify check-in status settings ([#1101](https://github.com/qixing-jk/all-api-hub/issues/1101)) ([6567ecc](https://github.com/qixing-jk/all-api-hub/commit/6567ecc0c4f9eaada7003a9e9a77595e5c2b8fe0))
+* **account:** disable AIHubMix built-in check-in ([#1102](https://github.com/qixing-jk/all-api-hub/issues/1102)) ([73e33e1](https://github.com/qixing-jk/all-api-hub/commit/73e33e1c032d50becde5f5c8a071ecb79a436ad2))
+* **api-credentials:** export profile credentials without account context ([#1105](https://github.com/qixing-jk/all-api-hub/issues/1105)) ([d9902ed](https://github.com/qixing-jk/all-api-hub/commit/d9902edbcec5b96f73311d833f7ff9b69abff213))
+* **managed-sites:** stabilize real-site channel flow ([#1107](https://github.com/qixing-jk/all-api-hub/issues/1107)) ([f09c2ec](https://github.com/qixing-jk/all-api-hub/commit/f09c2ec7c4c22d28a7bcf18b386a3ea54854cc18))
+* **onboarding:** group permission intro separately ([#1108](https://github.com/qixing-jk/all-api-hub/issues/1108)) ([3f610af](https://github.com/qixing-jk/all-api-hub/commit/3f610af8f4057c71f3c25be1e8fba657464a2b40))
+* **settings:** prevent stale preference update failures ([#1090](https://github.com/qixing-jk/all-api-hub/issues/1090)) ([d22e2f3](https://github.com/qixing-jk/all-api-hub/commit/d22e2f3c9820fc53699d9bb563c810fbf48e2e30))
+
 ## [3.49.1](https://github.com/qixing-jk/all-api-hub/compare/v3.49.0...v3.49.1) (2026-06-27)
 
 
