@@ -226,6 +226,7 @@
   },
   "toolbar": {
     "addChannel": "チャネルを追加",
+    "cancelRefresh": "更新を停止",
     "clearSearch": "検索をクリア",
     "columns": "列",
     "deleteSelected": "選択項目を削除",

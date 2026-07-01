@@ -316,6 +316,26 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
     const refreshButton = params.page.getByTestId(
       MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton,
     )
+    await expect(refreshButton).toHaveAttribute(
+      "data-refresh-state",
+      /idle|loading/,
+      { timeout: 10_000 },
+    )
+    if (
+      (await refreshButton.getAttribute("data-refresh-state")) === "loading"
+    ) {
+      await refreshButton.click()
+      await expect(refreshButton).toHaveAttribute(
+        "data-refresh-state",
+        "idle",
+        {
+          timeout: 10_000,
+        },
+      )
+    }
+    await expect(refreshButton).toHaveAttribute("data-refresh-state", "idle", {
+      timeout: 10_000,
+    })
     await expect(refreshButton).toBeEnabled({ timeout: 10_000 })
     await refreshButton.click()
     await expect(row).toBeVisible({ timeout: 20_000 })

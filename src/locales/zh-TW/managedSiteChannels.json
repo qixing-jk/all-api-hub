@@ -226,6 +226,7 @@
   },
   "toolbar": {
     "addChannel": "新增渠道",
+    "cancelRefresh": "停止重新整理",
     "clearSearch": "清除搜尋",
     "columns": "顯示列",
     "deleteSelected": "刪除所選",

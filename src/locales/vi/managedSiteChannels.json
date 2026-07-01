@@ -226,6 +226,7 @@
   },
   "toolbar": {
     "addChannel": "Thêm kênh",
+    "cancelRefresh": "Dừng làm mới",
     "clearSearch": "Xóa tìm kiếm",
     "columns": "Hiển thị cột",
     "deleteSelected": "Xóa mục đã chọn",

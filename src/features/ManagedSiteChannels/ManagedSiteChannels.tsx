@@ -79,6 +79,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
+import { Spinner } from "~/components/ui/spinner"
 import {
   Table,
   TableBody,
@@ -121,6 +122,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -158,6 +160,11 @@ const channelsToolbarSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar
 const channelsRowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
+
+type RefreshAnalyticsCompletion = {
+  complete: ReturnType<typeof startProductAnalyticsAction>["complete"]
+  completed: boolean
+}
 
 /**
  * Checks whether a mutation response already contains a table-ready channel row.
@@ -318,6 +325,8 @@ export default function ManagedSiteChannels({
   const [isMigrationMode, setIsMigrationMode] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const refreshAbortControllerRef = useRef<AbortController | null>(null)
+  const refreshAnalyticsCompletionRef =
+    useRef<RefreshAnalyticsCompletion | null>(null)
   const verification = useNewApiManagedVerification()
   const { openNewApiManagedVerification } = verification
 
@@ -338,6 +347,25 @@ export default function ManagedSiteChannels({
       const tracker = analyticsContext
         ? startProductAnalyticsAction(analyticsContext)
         : null
+      const analyticsCompletion: RefreshAnalyticsCompletion | null = tracker
+        ? {
+            complete: tracker.complete,
+            completed: false,
+          }
+        : null
+      refreshAnalyticsCompletionRef.current = analyticsCompletion
+
+      const completeAnalytics = (
+        result: Parameters<RefreshAnalyticsCompletion["complete"]>[0],
+        options: Parameters<RefreshAnalyticsCompletion["complete"]>[1],
+      ) => {
+        if (!analyticsCompletion || analyticsCompletion.completed) {
+          return
+        }
+
+        analyticsCompletion.complete(result, options)
+        analyticsCompletion.completed = true
+      }
 
       if (isConfigMissing) {
         setChannels([])
@@ -372,7 +400,7 @@ export default function ManagedSiteChannels({
         })
         const items = response.items ?? []
         setChannels(items)
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             itemCount: items.length,
             managedSiteType: managedSiteAnalyticsType,
@@ -380,13 +408,19 @@ export default function ManagedSiteChannels({
         })
       } catch (err) {
         if (refreshAbortController.signal.aborted) {
+          completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+            insights: {
+              failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
+              managedSiteType: managedSiteAnalyticsType,
+            },
+          })
           return
         }
 
         const message = getErrorMessage(err)
         setError(message)
         toast.error(t("alerts.loadError.description", { error: message }))
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             managedSiteType: managedSiteAnalyticsType,
@@ -397,10 +431,33 @@ export default function ManagedSiteChannels({
           refreshAbortControllerRef.current = null
           setIsLoading(false)
         }
+        if (
+          refreshAnalyticsCompletionRef.current === analyticsCompletion &&
+          analyticsCompletion?.completed
+        ) {
+          refreshAnalyticsCompletionRef.current = null
+        }
       }
     },
     [isConfigMissing, managedSiteAnalyticsType, t],
   )
+
+  const cancelRefresh = useCallback(() => {
+    refreshAbortControllerRef.current?.abort()
+    refreshAbortControllerRef.current = null
+    const completion = refreshAnalyticsCompletionRef.current
+    if (completion && !completion.completed) {
+      completion.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+        insights: {
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
+          managedSiteType: managedSiteAnalyticsType,
+        },
+      })
+      completion.completed = true
+      refreshAnalyticsCompletionRef.current = null
+    }
+    setIsLoading(false)
+  }, [managedSiteAnalyticsType])
 
   useLayoutEffect(() => {
     setChannels([])
@@ -1295,7 +1352,13 @@ export default function ManagedSiteChannels({
                   <Button
                     variant="outline"
                     data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton}
-                    onClick={() =>
+                    data-refresh-state={isLoading ? "loading" : "idle"}
+                    onClick={() => {
+                      if (isLoading) {
+                        cancelRefresh()
+                        return
+                      }
+
                       void refreshChannels({
                         featureId:
                           PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
@@ -1304,11 +1367,22 @@ export default function ManagedSiteChannels({
                         surfaceId: channelsToolbarSurface,
                         entrypoint: optionsEntrypoint,
                       })
+                    }}
+                    leftIcon={
+                      isLoading ? (
+                        <Spinner
+                          aria-hidden="true"
+                          size="sm"
+                          variant="primary"
+                        />
+                      ) : (
+                        <RefreshCcw className="h-4 w-4" />
+                      )
                     }
-                    loading={isLoading && channels.length > 0}
-                    leftIcon={<RefreshCcw className="h-4 w-4" />}
                   >
-                    {t("toolbar.refresh")}
+                    {isLoading
+                      ? t("toolbar.cancelRefresh")
+                      : t("toolbar.refresh")}
                   </Button>
                   {supportsChannelMigration &&
                   (hasMigrationTargets || isMigrationMode) ? (

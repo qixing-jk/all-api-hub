@@ -16,6 +16,7 @@ import {
   isChannelRowLike,
   upsertChannelRow,
 } from "~/features/ManagedSiteChannels/ManagedSiteChannels"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 import type { ChannelRow } from "~/features/ManagedSiteChannels/types"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
 import {
@@ -33,6 +34,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_RESULTS,
@@ -878,6 +880,13 @@ describe("ManagedSiteChannels", () => {
 
     expect(screen.getByText("Alpha")).toBeInTheDocument()
 
+    expect(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton),
+    ).toBeEnabled()
+    expect(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton),
+    ).toHaveAttribute("data-refresh-state", "loading")
+
     resolveRefresh?.({
       items: [{ id: 2, name: "Beta", base_url: "https://beta.example" }],
     })
@@ -888,8 +897,42 @@ describe("ManagedSiteChannels", () => {
     expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
   })
 
-  it("aborts the previous local channel listing request before starting a new refresh", async () => {
+  it("allows the user to cancel the current channel list loading request", async () => {
     const user = userEvent.setup()
+    let signal: AbortSignal | undefined
+    const service = mockChannels([])
+    service.listChannels.mockImplementationOnce(
+      (_config: unknown, options?: RequestInit) => {
+        signal = options?.signal ?? undefined
+        return new Promise(() => {})
+      },
+    )
+
+    render(<ManagedSiteChannels />)
+
+    await waitFor(() => {
+      expect(service.listChannels).toHaveBeenCalledTimes(1)
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.cancelRefresh",
+      }),
+    )
+
+    expect(signal?.aborted).toBe(true)
+    expect(service.listChannels).toHaveBeenCalledTimes(1)
+
+    await waitFor(() => {
+      const refreshButton = screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      })
+      expect(refreshButton).toBeEnabled()
+      expect(refreshButton).toHaveAttribute("data-refresh-state", "idle")
+    })
+  })
+
+  it("aborts the previous local channel listing request when an external refresh replaces it", async () => {
     let firstSignal: AbortSignal | undefined
     let resolveSecondRefresh: ((value: { items: any[] }) => void) | undefined
     const service = mockChannels([])
@@ -905,18 +948,14 @@ describe("ManagedSiteChannels", () => {
           }),
       )
 
-    render(<ManagedSiteChannels />)
+    const { rerender } = render(<ManagedSiteChannels refreshKey={0} />)
 
     await waitFor(() => {
       expect(service.listChannels).toHaveBeenCalledTimes(1)
     })
     expect(firstSignal?.aborted).toBe(false)
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "managedSiteChannels:toolbar.refresh",
-      }),
-    )
+    rerender(<ManagedSiteChannels refreshKey={1} />)
 
     await waitFor(() => {
       expect(firstSignal?.aborted).toBe(true)
@@ -998,6 +1037,42 @@ describe("ManagedSiteChannels", () => {
         {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
+            managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+          },
+        },
+      )
+    })
+  })
+
+  it("completes manual refresh analytics as cancelled when the user stops loading", async () => {
+    const user = userEvent.setup()
+    const service = mockChannels([])
+    service.listChannels
+      .mockResolvedValueOnce(buildChannelListData([]))
+      .mockImplementationOnce(() => new Promise(() => {}))
+
+    render(<ManagedSiteChannels />)
+
+    await waitForChannelsRefreshIdle()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.cancelRefresh",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+        {
+          insights: {
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
             managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
           },
         },

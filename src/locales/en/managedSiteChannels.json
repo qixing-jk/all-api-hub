@@ -228,6 +228,7 @@
   },
   "toolbar": {
     "addChannel": "Add channel",
+    "cancelRefresh": "Stop refresh",
     "clearSearch": "Clear search",
     "columns": "Columns",
     "deleteSelected": "Delete selected",
