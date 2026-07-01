@@ -13,6 +13,7 @@ import {
   resolveStoredAccountApiContext,
   StoredAccountApiContextError,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
 
@@ -618,6 +619,49 @@ describe("fetchDisplayAccountTokens", () => {
     )
 
     expect(result).toBe(token)
+  })
+
+  it("uses an already usable export token without resolving the account context", async () => {
+    const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
+
+    const result = await resolveExportTokenForSecret(
+      { ...ACCOUNT, siteType: "Veloera" } as any,
+      token as any,
+    )
+
+    expect(result).toEqual({
+      id: 1,
+      key: "sk-plain-secret",
+      status: 1,
+      name: "Plain",
+    })
+    expect(resolveTokenKey).not.toHaveBeenCalled()
+  })
+
+  it("resolves export tokens when the current key is masked", async () => {
+    const token = {
+      id: 1,
+      key: "sk-abcd************wxyz",
+      status: 1,
+      name: "Masked",
+    }
+    resolveTokenKey.mockResolvedValue("sk-real")
+
+    const result = await resolveExportTokenForSecret(
+      ACCOUNT as any,
+      token as any,
+    )
+
+    expect(result).toEqual({
+      id: 1,
+      key: "sk-real",
+      status: 1,
+      name: "Masked",
+    })
+    expect(resolveTokenKey).toHaveBeenCalledWith({
+      request: expect.objectContaining(REQUEST),
+      token,
+    })
   })
 
   it("throws when adapter key management is not implemented", async () => {

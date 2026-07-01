@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
@@ -288,10 +288,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
           providerType,
           baseUrl: resolvedProviderBaseUrl,
           apiKey: (
-            await resolveDisplayAccountTokenForSecret(
-              modelSuggestionsAccount,
-              token,
-            )
+            await resolveExportTokenForSecret(modelSuggestionsAccount, token)
           ).key,
         })
 
@@ -369,10 +366,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
 
       try {
         setIsSubmitting(true)
-        const resolvedToken = await resolveDisplayAccountTokenForSecret(
-          account,
-          token,
-        )
+        const resolvedToken = await resolveExportTokenForSecret(account, token)
 
         const normalizedModels = models
           .map((item) => {

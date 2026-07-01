@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import {
+  createExportAccount,
+  createExportToken,
+} from "~/features/ApiCredentialProfiles/utils/exportShims"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -10,6 +14,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
@@ -498,12 +503,66 @@ describe("CCSwitchExportDialog", () => {
     })
   })
 
+  it("exports profile-backed credentials without requiring account API context", async () => {
+    const user = userEvent.setup()
+    const profile: ApiCredentialProfile = {
+      id: "profile-1",
+      name: "Profile Provider",
+      apiType: "openai-compatible",
+      baseUrl: "https://profile.example.com/v1",
+      apiKey: "sk-profile",
+      tagIds: [],
+      notes: "profile note",
+      createdAt: 1,
+      updatedAt: 2,
+    }
+    mockResolveDisplayAccountTokenForSecret.mockRejectedValue(
+      new Error("account_api_context_missing_user_id"),
+    )
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4o"])
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={createExportAccount(profile)}
+        token={createExportToken(profile)}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://profile.example.com",
+        apiKey: "sk-profile",
+      })
+    })
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.ccswitch.actions.export",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockOpenInCCSwitch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: expect.objectContaining({
+            id: "api-credential-profile:profile-1",
+            userId: "",
+          }),
+          token: expect.objectContaining({ key: "sk-profile" }),
+        }),
+      )
+    })
+    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+  })
+
   it("tracks thrown CC Switch submissions as unknown failures", async () => {
     const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
-    mockResolveDisplayAccountTokenForSecret
-      .mockResolvedValueOnce({ id: "tok", key: "sk-test" })
-      .mockRejectedValueOnce(new Error("secret unavailable"))
+    mockResolveDisplayAccountTokenForSecret.mockRejectedValue(
+      new Error("secret unavailable"),
+    )
 
     render(
       <CCSwitchExportDialog
@@ -512,7 +571,7 @@ describe("CCSwitchExportDialog", () => {
         account={
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
         }
-        token={{ id: "tok", key: "sk-test" } as any}
+        token={{ id: "tok", key: "sk-abcd************wxyz" } as any}
       />,
     )
 

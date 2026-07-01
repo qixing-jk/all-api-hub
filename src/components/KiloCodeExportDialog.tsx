@@ -30,8 +30,8 @@ import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDis
 import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
-  resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
@@ -360,10 +360,7 @@ export function KiloCodeExportDialog({
       }))
 
       try {
-        const resolvedToken = await resolveDisplayAccountTokenForSecret(
-          site,
-          token,
-        )
+        const resolvedToken = await resolveExportTokenForSecret(site, token)
         const modelIds = await fetchOpenAICompatibleModelIds({
           baseUrl: stripTrailingOpenAIV1(site.baseUrl),
           apiKey: resolvedToken.key,
@@ -654,10 +651,7 @@ export function KiloCodeExportDialog({
         )
         if (!token) continue
 
-        const resolvedToken = await resolveDisplayAccountTokenForSecret(
-          site,
-          token,
-        )
+        const resolvedToken = await resolveExportTokenForSecret(site, token)
         const tokenSelectionKey = getTokenSelectionKey(siteId, token.id)
 
         selections.push({

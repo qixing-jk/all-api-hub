@@ -63,14 +63,14 @@ describe("BatchCliProxyExportDialog", () => {
     accountId: account.id,
     accountName: account.name,
     name: "Token 1",
-    key: "masked-1",
+    key: "sk-token-1************masked",
   })
   const token2 = createToken({
     id: 2,
     accountId: account.id,
     accountName: account.name,
     name: "Token 2",
-    key: "masked-2",
+    key: "sk-token-2************masked",
   })
 
   beforeEach(() => {

@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import {
+  createExportAccount,
+  createExportToken,
+} from "~/features/ApiCredentialProfiles/utils/exportShims"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -11,6 +15,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -528,5 +533,58 @@ describe("ClaudeCodeRouterImportDialog", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       })
     })
+  })
+
+  it("imports profile-backed credentials without requiring account API context", async () => {
+    const user = userEvent.setup()
+    const profile: ApiCredentialProfile = {
+      id: "profile-1",
+      name: "Profile Provider",
+      apiType: "openai-compatible",
+      baseUrl: "https://profile.example.com/v1",
+      apiKey: "sk-profile",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 2,
+    }
+    mockResolveDisplayAccountTokenForSecret.mockRejectedValue(
+      new Error("account_api_context_missing_user_id"),
+    )
+    mockFetchOpenAICompatibleModels.mockResolvedValueOnce([{ id: "gpt-4o" }])
+
+    render(
+      <ClaudeCodeRouterImportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={createExportAccount(profile)}
+        token={createExportToken(profile)}
+        routerBaseUrl="https://router.example.com"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModels).toHaveBeenCalledWith({
+        baseUrl: "https://profile.example.com/v1",
+        apiKey: "sk-profile",
+      })
+    })
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToClaudeCodeRouter).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: expect.objectContaining({
+            id: "api-credential-profile:profile-1",
+            userId: "",
+          }),
+          token: expect.objectContaining({ key: "sk-profile" }),
+        }),
+      )
+    })
+    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
   })
 })

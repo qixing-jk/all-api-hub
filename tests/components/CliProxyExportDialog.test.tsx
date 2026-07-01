@@ -3,6 +3,10 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import {
+  createExportAccount,
+  createExportToken,
+} from "~/features/ApiCredentialProfiles/utils/exportShims"
 import { CLI_PROXY_PROVIDER_TYPES } from "~/services/integrations/cliProxyProviderTypes"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -13,6 +17,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -632,6 +637,58 @@ describe("CliProxyExportDialog", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       })
     })
+  })
+
+  it("exports profile-backed credentials without requiring account API context", async () => {
+    const user = userEvent.setup()
+    const profile: ApiCredentialProfile = {
+      id: "profile-1",
+      name: "Profile Provider",
+      apiType: "openai-compatible",
+      baseUrl: "https://profile.example.com/v1",
+      apiKey: "sk-profile",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 2,
+    }
+    mockResolveDisplayAccountTokenForSecret.mockRejectedValue(
+      new Error("account_api_context_missing_user_id"),
+    )
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4o"])
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={createExportAccount(profile)}
+        token={createExportToken(profile)}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://profile.example.com",
+        apiKey: "sk-profile",
+      })
+    })
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToCliProxy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: expect.objectContaining({
+            id: "api-credential-profile:profile-1",
+            userId: "",
+          }),
+          token: expect.objectContaining({ key: "sk-profile" }),
+        }),
+      )
+    })
+    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
   })
 
   it("tracks thrown CLI Proxy submissions as unknown failures", async () => {

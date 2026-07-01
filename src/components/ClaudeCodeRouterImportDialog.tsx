@@ -9,7 +9,7 @@ import {
   Input,
   Modal,
 } from "~/components/ui"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { fetchOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
 import {
@@ -131,7 +131,7 @@ export function ClaudeCodeRouterImportDialog(
       void (async () => {
         try {
           setIsLoadingModels(true)
-          const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          const resolvedToken = await resolveExportTokenForSecret(
             account,
             token,
           )
@@ -188,10 +188,7 @@ export function ClaudeCodeRouterImportDialog(
 
       try {
         setIsSubmitting(true)
-        const resolvedToken = await resolveDisplayAccountTokenForSecret(
-          account,
-          token,
-        )
+        const resolvedToken = await resolveExportTokenForSecret(account, token)
         const result = await importToClaudeCodeRouter({
           account,
           token: resolvedToken,

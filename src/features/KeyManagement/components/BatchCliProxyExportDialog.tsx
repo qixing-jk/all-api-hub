@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import {
   buildDefaultCliProxyProviderBaseUrl,
   CLI_PROXY_PROVIDER_TYPES,
@@ -235,7 +235,7 @@ export function BatchCliProxyExportDialog({
       }))
 
       try {
-        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        const resolvedToken = await resolveExportTokenForSecret(
           item.account,
           item.token,
         )

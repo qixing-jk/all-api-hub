@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   CCSWITCH_APPS,
@@ -160,7 +160,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       void (async () => {
         try {
           setIsLoadingModels(true)
-          const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          const resolvedToken = await resolveExportTokenForSecret(
             account,
             token,
           )
@@ -211,10 +211,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       )
 
       try {
-        const resolvedToken = await resolveDisplayAccountTokenForSecret(
-          account,
-          token,
-        )
+        const resolvedToken = await resolveExportTokenForSecret(account, token)
         const opened = openInCCSwitch({
           account,
           token: resolvedToken,
