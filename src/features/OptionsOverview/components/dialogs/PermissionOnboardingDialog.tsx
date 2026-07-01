@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next"
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { Modal } from "~/components/ui"
 import { Alert, AlertDescription } from "~/components/ui/Alert"
-import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card"
 import { BodySmall, Heading3, Link } from "~/components/ui/Typography"
@@ -214,25 +213,23 @@ export function PermissionOnboardingDialog({
           </Alert>
         )}
 
-        <Card padding="none" className="overflow-hidden">
+        <Card
+          padding="none"
+          className="overflow-hidden"
+          data-testid={
+            OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingIntroSection
+          }
+        >
           <CardHeader bordered padding="sm">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Sparkles className="h-5 w-5" />
-              {t("permissionsOnboarding.permissionListTitle")}
+              <Sparkles className="h-5 w-5 text-amber-500" />
+              {t("permissionsOnboarding.openSourceBadge")}
             </CardTitle>
             <BodySmall className="dark:text-dark-text-secondary mt-1 text-gray-500">
-              {t("permissionsOnboarding.permissionListDescription")}
+              {t("permissionsOnboarding.intro")}
             </BodySmall>
           </CardHeader>
-          <CardContent padding="sm" spacing="sm" className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge variant="info">
-                {t("permissionsOnboarding.openSourceBadge")}
-              </Badge>
-              <BodySmall className="dark:text-dark-text-secondary text-gray-500">
-                {t("permissionsOnboarding.intro")}
-              </BodySmall>
-            </div>
+          <CardContent padding="sm" spacing="sm" className="space-y-3">
             <BodySmall className="dark:text-dark-text-secondary text-gray-500">
               {t("permissionsOnboarding.analyticsDisclosure")}
             </BodySmall>
@@ -258,6 +255,24 @@ export function PermissionOnboardingDialog({
               </AlertDescription>
             </Alert>
           </CardContent>
+        </Card>
+
+        <Card
+          padding="none"
+          className="overflow-hidden"
+          data-testid={
+            OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingPermissionsSection
+          }
+        >
+          <CardHeader bordered padding="sm">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Sparkles className="h-5 w-5 text-emerald-500" />
+              {t("permissionsOnboarding.permissionListTitle")}
+            </CardTitle>
+            <BodySmall className="dark:text-dark-text-secondary mt-1 text-gray-500">
+              {t("permissionsOnboarding.permissionListDescription")}
+            </BodySmall>
+          </CardHeader>
           <CardContent padding="none" spacing="none">
             <PermissionList
               items={permissionItems.map((permission) => ({

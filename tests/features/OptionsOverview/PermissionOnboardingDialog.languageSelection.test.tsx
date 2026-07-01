@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { SupportedUiLanguage } from "~/constants/i18n"
 import GeneralTab from "~/features/BasicSettings/components/tabs/General/GeneralTab"
 import { PermissionOnboardingDialog } from "~/features/OptionsOverview/components/dialogs/PermissionOnboardingDialog"
+import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import enSettings from "~/locales/en/settings.json"
 import jaSettings from "~/locales/ja/settings.json"
 import zhCnSettings from "~/locales/zh-CN/settings.json"
@@ -991,5 +992,46 @@ describe("PermissionOnboardingDialog language selection", () => {
     expect(
       screen.getByText(i18n.t("permissionsOnboarding.analyticsDisclosure")),
     ).toHaveClass("text-gray-500")
+  })
+
+  it("separates introduction copy from the permissions section and keeps permission guidance adjacent to the list", async () => {
+    const i18n = await createSettingsI18n("en")
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
+
+    const introSection = await screen.findByTestId(
+      OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingIntroSection,
+    )
+    const permissionsSection = screen.getByTestId(
+      OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingPermissionsSection,
+    )
+
+    expect(
+      within(introSection).getByText(i18n.t("permissionsOnboarding.intro")),
+    ).toBeInTheDocument()
+    expect(
+      within(introSection).queryByText(
+        i18n.t("permissionsOnboarding.permissionListDescription"),
+      ),
+    ).not.toBeInTheDocument()
+
+    expect(
+      within(permissionsSection).getByText(
+        i18n.t("permissionsOnboarding.permissionListTitle"),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(permissionsSection).getByText(
+        i18n.t("permissionsOnboarding.permissionListDescription"),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(permissionsSection).getByText(
+        i18n.t("permissions.items.cookies.title"),
+      ),
+    ).toBeInTheDocument()
+
+    const order = introSection.compareDocumentPosition(permissionsSection)
+    expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
