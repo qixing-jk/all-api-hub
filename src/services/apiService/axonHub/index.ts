@@ -686,12 +686,12 @@ export async function createChannel(
     const { status, ...input } = channelData.channel
     const created = await createAxonHubChannel(config, input)
     const finalChannel = { ...created }
+    invalidateChannelListCache(config)
     if (status === CHANNEL_STATUS.Enable) {
       const axonHubStatus = toAxonHubStatus(status)
       await updateAxonHubChannelStatus(config, created.id, axonHubStatus)
       finalChannel.status = axonHubStatus
     }
-    invalidateChannelListCache(config)
 
     return {
       success: true,
@@ -721,13 +721,13 @@ export async function updateChannel(
     const graphqlId = await resolveAxonHubGraphqlIdForMutation(config, id)
     const updated = await updateAxonHubChannel(config, graphqlId, input)
     const finalChannel = { ...updated }
+    invalidateChannelListCache(config)
 
     if (status !== undefined) {
       const axonHubStatus = toAxonHubStatus(status)
       await updateAxonHubChannelStatus(config, graphqlId, axonHubStatus)
       finalChannel.status = axonHubStatus
     }
-    invalidateChannelListCache(config)
 
     return {
       success: true,

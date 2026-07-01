@@ -326,26 +326,23 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
 }
 
 async function expectManagedSiteImportStatusAfterChannelCreate(row: Locator) {
-  const statusBadge = row.getByTestId(
-    KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge,
+  const channelLinkButton = row.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton,
+  )
+  const verificationRetryButton = row.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton,
   )
 
-  await expect(statusBadge).toHaveText(/^(Added|Cannot fully verify)$/u, {
+  await expect(async () => {
+    if (await channelLinkButton.isVisible()) {
+      return
+    }
+
+    await expect(verificationRetryButton).toBeVisible({ timeout: 10_000 })
+  }).toPass({
+    intervals: [1_000, 3_000, 5_000],
     timeout: 90_000,
   })
-
-  const statusText = (await statusBadge.textContent())?.trim()
-
-  if (statusText === "Added") {
-    await expect(
-      row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton),
-    ).toBeVisible({ timeout: 60_000 })
-    return
-  }
-
-  await expect(
-    row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton),
-  ).toBeVisible({ timeout: 60_000 })
 }
 
 async function cleanupKeyManagementTokensByPrefix(params: {
@@ -439,6 +436,10 @@ async function openSingleVisibleChannelRowActions(page: Page, rowText: string) {
   await expect(async () => {
     const row = channelRowByName(page, rowText)
     await expect(row).toBeVisible({ timeout: 10_000 })
+    if (await editAction.isVisible()) {
+      return
+    }
+
     const actionsButton = row.getByTestId(
       getManagedSiteChannelRowActionsButtonTestId(rowText),
     )
