@@ -203,28 +203,36 @@ describe("AxonHub API service", () => {
 
         graphqlSignal = init?.signal ?? undefined
         return new Promise((_resolve, reject) => {
-          if (!init?.signal) {
+          const signal = init?.signal
+          if (!signal) {
             reject(new Error("missing abort signal"))
             return
           }
 
-          init.signal.addEventListener("abort", () => {
-            reject(new DOMException("The operation was aborted", "AbortError"))
+          signal.addEventListener("abort", () => {
+            reject(
+              signal.reason ??
+                new DOMException("The operation was aborted", "AbortError"),
+            )
           })
         })
       }),
     )
 
+    const abortReason = new Error("caller cancelled")
+    abortReason.name = "AbortError"
     const request = graphqlRequest(
       { ...config, email: "graphql-abort@example.com" },
       "query Ping",
       undefined,
       { retryAuth: false, signal: controller.signal },
     )
-    const expectation = expect(request).rejects.toThrow(/aborted/i)
+    const expectation = expect(request).rejects.toMatchObject({
+      message: abortReason.message,
+    })
 
     await vi.waitFor(() => expect(graphqlSignal).toBe(controller.signal))
-    controller.abort()
+    controller.abort(abortReason)
 
     expect(graphqlSignal?.aborted).toBe(true)
     await expectation
@@ -383,9 +391,11 @@ describe("AxonHub API service", () => {
       undefined,
       { signal: controller.signal },
     )
-    const expectation = expect(timedRequest).rejects.toThrow(/aborted/i)
+    const abortReason = new Error("caller cancelled")
+    abortReason.name = "AbortError"
+    const expectation = expect(timedRequest).rejects.toBe(abortReason)
 
-    controller.abort()
+    controller.abort(abortReason)
 
     await expectation
     expect(authHits).toBe(1)
@@ -397,6 +407,167 @@ describe("AxonHub API service", () => {
       }),
     )
     await expect(firstRequest).resolves.toEqual({ ping: "pong" })
+  })
+
+  it("rejects immediately when a caller waits on shared sign-in with an already-aborted signal", async () => {
+    const controller = new AbortController()
+    const abortReason = new Error("already cancelled")
+    controller.abort(abortReason)
+    let authHits = 0
+    let resolveAuth:
+      | ((response: Response | PromiseLike<Response>) => void)
+      | undefined
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/admin/auth/signin")) {
+          authHits += 1
+          return new Promise<Response>((resolve) => {
+            resolveAuth = resolve
+          })
+        }
+
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { ping: "pong" } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }),
+    )
+
+    const firstRequest = graphqlRequest<{ ping: string }>(
+      { ...config, email: "already-aborted-shared@example.com" },
+      "query PingOne",
+    )
+    await vi.waitFor(() => expect(authHits).toBe(1))
+
+    await expect(
+      graphqlRequest<{ ping: string }>(
+        { ...config, email: "already-aborted-shared@example.com" },
+        "query PingTwo",
+        undefined,
+        { signal: controller.signal },
+      ),
+    ).rejects.toBe(abortReason)
+
+    resolveAuth?.(
+      new Response(JSON.stringify({ token: "shared-token" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
+    await expect(firstRequest).resolves.toEqual({ ping: "pong" })
+  })
+
+  it("uses a default AbortError when an already-aborted caller has no reason", async () => {
+    let authHits = 0
+    let resolveAuth:
+      | ((response: Response | PromiseLike<Response>) => void)
+      | undefined
+    const signalWithoutReason = {
+      aborted: true,
+      reason: undefined,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as AbortSignal
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/admin/auth/signin")) {
+          authHits += 1
+          return new Promise<Response>((resolve) => {
+            resolveAuth = resolve
+          })
+        }
+
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { ping: "pong" } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }),
+    )
+
+    const firstRequest = graphqlRequest<{ ping: string }>(
+      { ...config, email: "default-abort-error@example.com" },
+      "query PingOne",
+    )
+    await vi.waitFor(() => expect(authHits).toBe(1))
+
+    await expect(
+      graphqlRequest<{ ping: string }>(
+        { ...config, email: "default-abort-error@example.com" },
+        "query PingTwo",
+        undefined,
+        { signal: signalWithoutReason },
+      ),
+    ).rejects.toMatchObject({
+      message: "The operation was aborted",
+      name: "AbortError",
+    })
+    expect(signalWithoutReason.addEventListener).not.toHaveBeenCalled()
+
+    resolveAuth?.(
+      new Response(JSON.stringify({ token: "shared-token" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
+    await expect(firstRequest).resolves.toEqual({ ping: "pong" })
+  })
+
+  it("waits for the shared sign-in when the later caller has no cancellation signal", async () => {
+    let authHits = 0
+    let resolveAuth:
+      | ((response: Response | PromiseLike<Response>) => void)
+      | undefined
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/admin/auth/signin")) {
+          authHits += 1
+          return new Promise<Response>((resolve) => {
+            resolveAuth = resolve
+          })
+        }
+
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { ping: "pong" } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }),
+    )
+
+    const firstRequest = graphqlRequest<{ ping: string }>(
+      { ...config, email: "shared-no-signal@example.com" },
+      "query PingOne",
+    )
+    await vi.waitFor(() => expect(authHits).toBe(1))
+
+    const secondRequest = graphqlRequest<{ ping: string }>(
+      { ...config, email: "shared-no-signal@example.com" },
+      "query PingTwo",
+    )
+
+    resolveAuth?.(
+      new Response(JSON.stringify({ token: "shared-token" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
+
+    await expect(Promise.all([firstRequest, secondRequest])).resolves.toEqual([
+      { ping: "pong" },
+      { ping: "pong" },
+    ])
+    expect(authHits).toBe(1)
   })
 
   it("does not share a signal-bound sign-in with later callers", async () => {

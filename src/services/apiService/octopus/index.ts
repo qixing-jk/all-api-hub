@@ -28,14 +28,16 @@ async function fetchOctopusApi<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<OctopusApiResponse<T>> {
+  const signal = options.signal ?? undefined
   const token = await octopusAuthManager.getValidToken(config, {
-    signal: options.signal ?? undefined,
+    signal,
   })
   const baseUrl = normalizeBaseUrl(config.baseUrl)
   const url = `${baseUrl}${endpoint}`
 
   const response = await fetch(url, {
     ...options,
+    signal,
     headers: createOctopusRequestHeaders(token, options.headers),
   })
 
@@ -176,7 +178,7 @@ export async function updateChannel(
       {
         method: "POST",
         body: JSON.stringify(data),
-        signal: options?.signal ?? undefined,
+        signal: options?.signal,
       },
     )
     logger.info("Channel updated", { id: data.id })
@@ -225,7 +227,7 @@ export async function fetchRemoteModels(
       {
         method: "POST",
         body: JSON.stringify(channelData),
-        signal: options?.signal ?? undefined,
+        signal: options?.signal,
       },
     )
     return result.data || []

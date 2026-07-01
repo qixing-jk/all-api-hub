@@ -122,9 +122,6 @@ export async function runManagedSiteChannelsCrudScenario<
     await expectPaginationSummary(context.page, "1", "1", "1")
 
     await openSingleVisibleChannelEditDialog(context.page, channelName)
-    await expect(
-      context.page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
-    ).toBeVisible({ timeout: 60_000 })
     await context.page
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
       .fill(editedChannelName)

@@ -932,6 +932,19 @@ describe("ManagedSiteChannels", () => {
     })
   })
 
+  it("reports the configured site message when refresh starts without config", async () => {
+    const service = mockChannels([])
+    service.getConfig.mockResolvedValueOnce(null)
+
+    render(<ManagedSiteChannels />)
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "managedSiteChannels:alerts.loadError.description",
+      )
+    })
+  })
+
   it("aborts the previous local channel listing request when an external refresh replaces it", async () => {
     let firstSignal: AbortSignal | undefined
     let resolveSecondRefresh: ((value: { items: any[] }) => void) | undefined
@@ -1039,6 +1052,89 @@ describe("ManagedSiteChannels", () => {
         },
       },
     )
+  })
+
+  it("classifies an aborted superseded refresh rejection as stale", async () => {
+    const user = userEvent.setup()
+    let firstRefreshSignal: AbortSignal | undefined
+    let rejectFirstRefresh: ((reason?: unknown) => void) | undefined
+    let resolveSecondRefresh: ((value: { items: any[] }) => void) | undefined
+
+    const service = mockChannels([])
+    service.listChannels
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 1, name: "Alpha", base_url: "https://alpha.example" },
+        ]),
+      )
+      .mockImplementationOnce((_config: unknown, options?: RequestInit) => {
+        firstRefreshSignal = options?.signal ?? undefined
+        return new Promise((_resolve, reject) => {
+          rejectFirstRefresh = reject
+        })
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSecondRefresh = resolve as typeof resolveSecondRefresh
+          }),
+      )
+
+    const { rerender } = render(<ManagedSiteChannels refreshKey={0} />)
+
+    await waitForRowText("Alpha")
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    )
+    await waitFor(() => {
+      expect(service.listChannels).toHaveBeenCalledTimes(2)
+    })
+
+    rerender(<ManagedSiteChannels refreshKey={1} />)
+
+    await waitFor(() => {
+      expect(firstRefreshSignal?.aborted).toBe(true)
+      expect(service.listChannels).toHaveBeenCalledTimes(3)
+    })
+    rejectFirstRefresh?.(new DOMException("aborted", "AbortError"))
+    resolveSecondRefresh?.({
+      items: [{ id: 3, name: "Gamma", base_url: "https://gamma.example" }],
+    })
+
+    await waitForRowText("Gamma")
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      {
+        insights: {
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+        },
+      },
+    )
+  })
+
+  it("aborts the current refresh during cleanup", async () => {
+    let signal: AbortSignal | undefined
+    const service = mockChannels([])
+    service.listChannels.mockImplementationOnce(
+      (_config: unknown, options?: RequestInit) => {
+        signal = options?.signal ?? undefined
+        return new Promise(() => {})
+      },
+    )
+
+    const { unmount } = render(<ManagedSiteChannels />)
+
+    await waitFor(() => {
+      expect(service.listChannels).toHaveBeenCalledTimes(1)
+    })
+
+    unmount()
+
+    expect(signal?.aborted).toBe(true)
   })
 
   it("completes manual refresh analytics with the refreshed channel count", async () => {

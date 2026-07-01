@@ -106,13 +106,17 @@ describe("Octopus auth manager", () => {
       vi.fn((_url: string, init?: RequestInit) => {
         loginSignal = init?.signal ?? undefined
         return new Promise((_resolve, reject) => {
-          if (!init?.signal) {
+          const signal = init?.signal
+          if (!signal) {
             reject(new Error("missing abort signal"))
             return
           }
 
-          init.signal.addEventListener("abort", () => {
-            reject(new DOMException("The operation was aborted", "AbortError"))
+          signal.addEventListener("abort", () => {
+            reject(
+              signal.reason ??
+                new DOMException("The operation was aborted", "AbortError"),
+            )
           })
         })
       }),
@@ -126,10 +130,12 @@ describe("Octopus auth manager", () => {
       },
       { signal: controller.signal },
     )
-    const expectation = expect(login).rejects.toThrow(/aborted/i)
+    const abortReason = new Error("caller cancelled")
+    abortReason.name = "AbortError"
+    const expectation = expect(login).rejects.toBe(abortReason)
 
     await vi.waitFor(() => expect(loginSignal).toBe(controller.signal))
-    controller.abort()
+    controller.abort(abortReason)
 
     expect(loginSignal?.aborted).toBe(true)
     await expectation
