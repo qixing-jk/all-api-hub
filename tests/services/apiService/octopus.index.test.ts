@@ -268,6 +268,67 @@ describe("Octopus API service", () => {
     ).rejects.toThrow("upstream rejected channel")
   })
 
+  it("aborts hung Octopus API requests with a bounded timeout", async () => {
+    vi.useFakeTimers()
+    const originalAny = Object.getOwnPropertyDescriptor(AbortSignal, "any")
+    const originalTimeout = Object.getOwnPropertyDescriptor(
+      AbortSignal,
+      "timeout",
+    )
+    let requestSignal: AbortSignal | undefined
+
+    Object.defineProperty(AbortSignal, "any", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(AbortSignal, "timeout", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) => {
+        requestSignal = init?.signal ?? undefined
+        return new Promise((_resolve, reject) => {
+          if (!init?.signal) {
+            reject(new Error("missing abort signal"))
+            return
+          }
+
+          init.signal.addEventListener("abort", () => {
+            reject(new DOMException("The operation was aborted", "AbortError"))
+          })
+        })
+      }),
+    )
+
+    try {
+      const request = listChannels(config, { timeoutMs: 25 })
+      const expectation = expect(request).rejects.toThrow(
+        "Octopus API request timed out",
+      )
+
+      await vi.advanceTimersByTimeAsync(25)
+
+      expect(requestSignal?.aborted).toBe(true)
+      await expectation
+    } finally {
+      if (originalAny) {
+        Object.defineProperty(AbortSignal, "any", originalAny)
+      } else {
+        Reflect.deleteProperty(AbortSignal, "any")
+      }
+      if (originalTimeout) {
+        Object.defineProperty(AbortSignal, "timeout", originalTimeout)
+      } else {
+        Reflect.deleteProperty(AbortSignal, "timeout")
+      }
+    }
+  })
+
   it("surfaces raw JSON bodies when an error response cannot be parsed", async () => {
     vi.stubGlobal(
       "fetch",

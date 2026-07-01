@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
 import {
@@ -80,6 +80,11 @@ describe("AxonHub API service", () => {
   beforeEach(() => {
     __resetCachesForTesting()
     server.resetHandlers()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it("signs in against the normalized admin endpoint and returns the token", async () => {
@@ -178,6 +183,81 @@ describe("AxonHub API service", () => {
 
     expect(authHits).toBe(1)
     expect(graphQlHits).toBe(1)
+  })
+
+  it("aborts hung AxonHub GraphQL requests with a bounded timeout", async () => {
+    vi.useFakeTimers()
+    const originalAny = Object.getOwnPropertyDescriptor(AbortSignal, "any")
+    const originalTimeout = Object.getOwnPropertyDescriptor(
+      AbortSignal,
+      "timeout",
+    )
+    let graphqlSignal: AbortSignal | undefined
+
+    Object.defineProperty(AbortSignal, "any", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(AbortSignal, "timeout", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) => {
+        if (url.endsWith("/admin/auth/signin")) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ token: "timeout-token" }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          )
+        }
+
+        graphqlSignal = init?.signal ?? undefined
+        return new Promise((_resolve, reject) => {
+          if (!init?.signal) {
+            reject(new Error("missing abort signal"))
+            return
+          }
+
+          init.signal.addEventListener("abort", () => {
+            reject(new DOMException("The operation was aborted", "AbortError"))
+          })
+        })
+      }),
+    )
+
+    try {
+      const request = graphqlRequest(
+        { ...config, email: "graphql-timeout@example.com" },
+        "query Ping",
+        undefined,
+        { retryAuth: false, timeoutMs: 25 },
+      )
+      const expectation = expect(request).rejects.toThrow(
+        "AxonHub GraphQL request timed out",
+      )
+
+      await vi.advanceTimersByTimeAsync(25)
+
+      expect(graphqlSignal?.aborted).toBe(true)
+      await expectation
+    } finally {
+      if (originalAny) {
+        Object.defineProperty(AbortSignal, "any", originalAny)
+      } else {
+        Reflect.deleteProperty(AbortSignal, "any")
+      }
+      if (originalTimeout) {
+        Object.defineProperty(AbortSignal, "timeout", originalTimeout)
+      } else {
+        Reflect.deleteProperty(AbortSignal, "timeout")
+      }
+    }
   })
 
   it("retries a GraphQL request once with a fresh token when the cached token is unauthorized", async () => {

@@ -1,4 +1,8 @@
 import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
+import {
+  buildTimedRequestSignal,
+  type TimedRequestSignalOptions,
+} from "~/services/apiService/requestTimeout"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -270,12 +274,17 @@ const toSafeErrorMessage = (error: unknown, fallback: string) => {
 /**
  * Sign in to AxonHub admin and cache the returned session token.
  */
-export async function signIn(config: AxonHubConfig): Promise<string> {
+export async function signIn(
+  config: AxonHubConfig,
+  options?: TimedRequestSignalOptions,
+): Promise<string> {
   const baseUrl = normalizeBaseUrl(config.baseUrl)
+  const requestSignal = buildTimedRequestSignal(options)
 
   try {
     const response = await fetch(`${baseUrl}/admin/auth/signin`, {
       method: "POST",
+      signal: requestSignal.signal,
       headers: {
         "Content-Type": "application/json",
       },
@@ -303,11 +312,20 @@ export async function signIn(config: AxonHubConfig): Promise<string> {
     tokenCache.set(cacheKeyForConfig(config), data.token)
     return data.token
   } catch (error) {
+    if (requestSignal.isTimedOut()) {
+      throw new Error("AxonHub sign-in request timed out")
+    }
     throw new Error(toSafeErrorMessage(error, "AxonHub sign-in failed"))
+  } finally {
+    requestSignal.cleanup()
   }
 }
 
-const getSessionToken = async (config: AxonHubConfig, forceRefresh = false) => {
+const getSessionToken = async (
+  config: AxonHubConfig,
+  forceRefresh = false,
+  options?: TimedRequestSignalOptions,
+) => {
   const key = cacheKeyForConfig(config)
   if (!forceRefresh) {
     const cachedToken = tokenCache.get(key)
@@ -322,7 +340,7 @@ const getSessionToken = async (config: AxonHubConfig, forceRefresh = false) => {
   tokenCache.delete(key)
   inflightSignIns.delete(key)
 
-  const pendingSignIn = signIn(config).finally(() => {
+  const pendingSignIn = signIn(config, options).finally(() => {
     inflightSignIns.delete(key)
   })
 
@@ -351,24 +369,37 @@ export async function graphqlRequest<T>(
   config: AxonHubConfig,
   query: string,
   variables?: Record<string, unknown>,
-  options?: { retryAuth?: boolean },
+  options?: { retryAuth?: boolean } & TimedRequestSignalOptions,
 ): Promise<T> {
   const baseUrl = normalizeBaseUrl(config.baseUrl)
   const retryAuth = options?.retryAuth ?? true
-  const token = await getSessionToken(config)
+  const token = await getSessionToken(config, false, options)
 
   const execute = async (
     sessionToken: string,
     allowAuthRetry: boolean,
   ): Promise<T | null> => {
-    const response = await fetch(`${baseUrl}/admin/graphql`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${sessionToken}`,
-      },
-      body: JSON.stringify({ query, variables }),
-    })
+    const requestSignal = buildTimedRequestSignal(options)
+    let response: Response
+
+    try {
+      response = await fetch(`${baseUrl}/admin/graphql`, {
+        method: "POST",
+        signal: requestSignal.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ query, variables }),
+      })
+    } catch (error) {
+      if (requestSignal.isTimedOut()) {
+        throw new Error("AxonHub GraphQL request timed out")
+      }
+      throw error
+    } finally {
+      requestSignal.cleanup()
+    }
 
     const payload = (await response
       .json()
@@ -400,7 +431,7 @@ export async function graphqlRequest<T>(
 
     // Cached admin JWTs are session-scoped and may expire while the extension
     // page remains open; retry once with fresh credentials before surfacing.
-    const refreshedToken = await getSessionToken(config, true)
+    const refreshedToken = await getSessionToken(config, true, options)
     const secondAttempt = await execute(refreshedToken, false)
     if (!secondAttempt) {
       throw new Error("AxonHub GraphQL request failed without data")

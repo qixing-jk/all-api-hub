@@ -2,6 +2,10 @@
  * Octopus API 服务
  * 提供与 Octopus 后端的所有 API 交互
  */
+import {
+  buildTimedRequestSignal,
+  type TimedRequestSignalOptions,
+} from "~/services/apiService/requestTimeout"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
@@ -26,16 +30,36 @@ const logger = createLogger("OctopusAPI")
 async function fetchOctopusApi<T>(
   config: OctopusConfig,
   endpoint: string,
-  options: RequestInit = {},
+  options: RequestInit & TimedRequestSignalOptions = {},
 ): Promise<OctopusApiResponse<T>> {
-  const token = await octopusAuthManager.getValidToken(config)
+  const { timeoutMs, ...requestOptions } = options
+  const callerSignal = requestOptions.signal ?? undefined
+  const token = await octopusAuthManager.getValidToken(config, {
+    signal: callerSignal,
+    timeoutMs,
+  })
   const baseUrl = normalizeBaseUrl(config.baseUrl)
   const url = `${baseUrl}${endpoint}`
-
-  const response = await fetch(url, {
-    ...options,
-    headers: createOctopusRequestHeaders(token, options.headers),
+  const requestSignal = buildTimedRequestSignal({
+    signal: callerSignal,
+    timeoutMs,
   })
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      ...requestOptions,
+      signal: requestSignal.signal,
+      headers: createOctopusRequestHeaders(token, requestOptions.headers),
+    })
+  } catch (error) {
+    if (requestSignal.isTimedOut()) {
+      throw new Error("Octopus API request timed out")
+    }
+    throw error
+  } finally {
+    requestSignal.cleanup()
+  }
 
   // 检查 HTTP 状态码，处理非成功响应
   if (!response.ok) {
@@ -102,11 +126,13 @@ async function fetchOctopusApi<T>(
  */
 export async function listChannels(
   config: OctopusConfig,
+  options?: TimedRequestSignalOptions,
 ): Promise<OctopusChannel[]> {
   try {
     const result = await fetchOctopusApi<OctopusChannel[]>(
       config,
       "/api/v1/channel/list",
+      options,
     )
     return result.data || []
   } catch (error) {
@@ -172,7 +198,7 @@ export async function updateChannel(
       {
         method: "POST",
         body: JSON.stringify(data),
-        signal: options?.signal,
+        signal: options?.signal ?? undefined,
       },
     )
     logger.info("Channel updated", { id: data.id })
@@ -221,7 +247,7 @@ export async function fetchRemoteModels(
       {
         method: "POST",
         body: JSON.stringify(channelData),
-        signal: options?.signal,
+        signal: options?.signal ?? undefined,
       },
     )
     return result.data || []

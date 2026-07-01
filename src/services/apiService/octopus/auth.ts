@@ -7,6 +7,11 @@ import type { OctopusConfig } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
+import {
+  buildTimedRequestSignal,
+  type TimedRequestSignalOptions,
+} from "../requestTimeout"
+
 const logger = createLogger("OctopusAuth")
 
 /**
@@ -46,14 +51,27 @@ class OctopusAuthManager {
   async login(
     baseUrl: string,
     credentials: OctopusLoginRequest,
+    options?: TimedRequestSignalOptions,
   ): Promise<OctopusLoginResponse> {
     const url = `${baseUrl.replace(/\/$/, "")}/api/v1/user/login`
+    const requestSignal = buildTimedRequestSignal(options)
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(credentials),
-    })
+    let response: Response
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        signal: requestSignal.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      })
+    } catch (error) {
+      if (requestSignal.isTimedOut()) {
+        throw new Error("Octopus login request timed out")
+      }
+      throw error
+    } finally {
+      requestSignal.cleanup()
+    }
 
     if (!response.ok) {
       // Read body once as text, then try to parse as JSON
@@ -96,7 +114,10 @@ class OctopusAuthManager {
    * 注意：Token 仅缓存在内存中，不持久化到存储。
    * Octopus 默认 token 有效期为 15 分钟，可通过登录时的 expire 参数自定义。
    */
-  async getValidToken(config: OctopusConfig): Promise<string> {
+  async getValidToken(
+    config: OctopusConfig,
+    options?: TimedRequestSignalOptions,
+  ): Promise<string> {
     if (!config.baseUrl || !config.username || !config.password) {
       throw new Error("Octopus config is incomplete")
     }
@@ -112,10 +133,14 @@ class OctopusAuthManager {
 
     // 自动登录获取新 Token
     logger.info("Auto-login to Octopus", { baseUrl: config.baseUrl })
-    const response = await this.login(config.baseUrl, {
-      username: config.username,
-      password: config.password,
-    })
+    const response = await this.login(
+      config.baseUrl,
+      {
+        username: config.username,
+        password: config.password,
+      },
+      options,
+    )
 
     // 解析过期时间，验证有效性
     const parsedExpireAt = new Date(response.expire_at).getTime()

@@ -14,6 +14,7 @@ describe("Octopus auth manager", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
+    vi.useRealTimers()
     octopusAuthManager.clearAllCache()
   })
 
@@ -94,6 +95,74 @@ describe("Octopus auth manager", () => {
         password: "secret",
       }),
     ).rejects.toThrow("HTTP 500 - gateway down")
+  })
+
+  it("aborts hung Octopus login requests with a bounded timeout", async () => {
+    vi.useFakeTimers()
+    const originalAny = Object.getOwnPropertyDescriptor(AbortSignal, "any")
+    const originalTimeout = Object.getOwnPropertyDescriptor(
+      AbortSignal,
+      "timeout",
+    )
+    let loginSignal: AbortSignal | undefined
+
+    Object.defineProperty(AbortSignal, "any", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(AbortSignal, "timeout", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) => {
+        loginSignal = init?.signal ?? undefined
+        return new Promise((_resolve, reject) => {
+          if (!init?.signal) {
+            reject(new Error("missing abort signal"))
+            return
+          }
+
+          init.signal.addEventListener("abort", () => {
+            reject(new DOMException("The operation was aborted", "AbortError"))
+          })
+        })
+      }),
+    )
+
+    try {
+      const login = octopusAuthManager.login(
+        "https://octopus.example.com",
+        {
+          username: "alice",
+          password: "secret",
+        },
+        { timeoutMs: 25 },
+      )
+      const expectation = expect(login).rejects.toThrow(
+        "Octopus login request timed out",
+      )
+
+      await vi.advanceTimersByTimeAsync(25)
+
+      expect(loginSignal?.aborted).toBe(true)
+      await expectation
+    } finally {
+      if (originalAny) {
+        Object.defineProperty(AbortSignal, "any", originalAny)
+      } else {
+        Reflect.deleteProperty(AbortSignal, "any")
+      }
+      if (originalTimeout) {
+        Object.defineProperty(AbortSignal, "timeout", originalTimeout)
+      } else {
+        Reflect.deleteProperty(AbortSignal, "timeout")
+      }
+    }
   })
 
   it("uses the upstream login message when a 200 response still reports login failure", async () => {
