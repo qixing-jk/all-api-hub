@@ -16,7 +16,11 @@ import {
   isChannelRowLike,
   upsertChannelRow,
 } from "~/features/ManagedSiteChannels/ManagedSiteChannels"
-import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
+import {
+  MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+  MANAGED_SITE_CHANNELS_REFRESH_STATES,
+  MANAGED_SITE_CHANNELS_TEST_IDS,
+} from "~/features/ManagedSiteChannels/testIds"
 import type { ChannelRow } from "~/features/ManagedSiteChannels/types"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
 import {
@@ -885,7 +889,10 @@ describe("ManagedSiteChannels", () => {
     ).toBeEnabled()
     expect(
       screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton),
-    ).toHaveAttribute("data-refresh-state", "loading")
+    ).toHaveAttribute(
+      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+      MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading,
+    )
 
     resolveRefresh?.({
       items: [{ id: 2, name: "Beta", base_url: "https://beta.example" }],
@@ -928,7 +935,10 @@ describe("ManagedSiteChannels", () => {
         name: "managedSiteChannels:toolbar.refresh",
       })
       expect(refreshButton).toBeEnabled()
-      expect(refreshButton).toHaveAttribute("data-refresh-state", "idle")
+      expect(refreshButton).toHaveAttribute(
+        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+        MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
+      )
     })
   })
 
@@ -1114,6 +1124,57 @@ describe("ManagedSiteChannels", () => {
         },
       },
     )
+  })
+
+  it("classifies a stopped manual refresh rejection as user cancellation", async () => {
+    const user = userEvent.setup()
+    let manualRefreshSignal: AbortSignal | undefined
+    let rejectManualRefresh: ((reason?: unknown) => void) | undefined
+
+    const service = mockChannels([])
+    service.listChannels
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 1, name: "Alpha", base_url: "https://alpha.example" },
+        ]),
+      )
+      .mockImplementationOnce((_config: unknown, options?: RequestInit) => {
+        manualRefreshSignal = options?.signal ?? undefined
+        return new Promise((_resolve, reject) => {
+          rejectManualRefresh = reject
+        })
+      })
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+
+    const refreshButton = screen.getByRole("button", {
+      name: "managedSiteChannels:toolbar.refresh",
+    })
+    await user.click(refreshButton)
+
+    await waitFor(() => {
+      expect(service.listChannels).toHaveBeenCalledTimes(2)
+    })
+    await user.click(refreshButton)
+
+    await waitFor(() => {
+      expect(manualRefreshSignal?.aborted).toBe(true)
+    })
+    rejectManualRefresh?.(new DOMException("aborted", "AbortError"))
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+        {
+          insights: {
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
+            managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+          },
+        },
+      )
+    })
   })
 
   it("aborts the current refresh during cleanup", async () => {

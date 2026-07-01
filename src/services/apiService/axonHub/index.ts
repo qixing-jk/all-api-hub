@@ -317,16 +317,19 @@ const getSessionToken = async (
   options?: Pick<RequestInit, "signal">,
 ) => {
   const key = cacheKeyForConfig(config)
-  const hasCallerCancellation = Boolean(options?.signal)
+  const callerSignal = options?.signal ?? undefined
+  const hasCallerCancellation = Boolean(callerSignal)
   if (!forceRefresh) {
     const cachedToken = tokenCache.get(key)
     if (cachedToken) return cachedToken
 
     const inflightSignIn = inflightSignIns.get(key)
     if (inflightSignIn) {
-      return hasCallerCancellation
-        ? awaitSignInWithCallerCancellation(inflightSignIn, options)
-        : inflightSignIn
+      if (callerSignal) {
+        return awaitSignInWithCallerCancellation(inflightSignIn, callerSignal)
+      }
+
+      return inflightSignIn
     }
   }
 
@@ -349,13 +352,8 @@ const getSessionToken = async (
 
 const awaitSignInWithCallerCancellation = async (
   pendingSignIn: Promise<string>,
-  options?: Pick<RequestInit, "signal">,
+  callerSignal: AbortSignal,
 ) => {
-  const callerSignal = options?.signal ?? undefined
-  if (!callerSignal) {
-    return pendingSignIn
-  }
-
   let abort: (() => void) | null = null
   try {
     return await Promise.race([

@@ -10,6 +10,14 @@ export const MANAGED_SITE_CHANNELS_TEST_IDS = {
 export const MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX =
   "managed-site-channel-row-" as const
 
+export const MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE =
+  "data-refresh-state" as const
+
+export const MANAGED_SITE_CHANNELS_REFRESH_STATES = {
+  Idle: "idle",
+  Loading: "loading",
+} as const
+
 /**
  * Returns the stable test id for a managed-site channel table row.
  */

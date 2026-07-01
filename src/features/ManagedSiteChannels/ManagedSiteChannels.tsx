@@ -146,6 +146,8 @@ import {
   getManagedSiteChannelRowEditActionTestId,
   getManagedSiteChannelRowSelectTestId,
   getManagedSiteChannelRowTestId,
+  MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+  MANAGED_SITE_CHANNELS_REFRESH_STATES,
   MANAGED_SITE_CHANNELS_TEST_IDS,
 } from "./testIds"
 import type { ChannelRow, CheckboxState, RowActionsLabels } from "./types"
@@ -1397,7 +1399,11 @@ export default function ManagedSiteChannels({
                   <Button
                     variant="outline"
                     data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton}
-                    data-refresh-state={isLoading ? "loading" : "idle"}
+                    {...{
+                      [MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE]: isLoading
+                        ? MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading
+                        : MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
+                    }}
                     onClick={() => {
                       if (isLoading) {
                         cancelRefresh()

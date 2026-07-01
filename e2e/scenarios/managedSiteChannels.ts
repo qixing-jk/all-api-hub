@@ -11,6 +11,8 @@ import {
   getManagedSiteChannelRowSelectTestId,
   getManagedSiteChannelRowTestId,
   MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX,
+  MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+  MANAGED_SITE_CHANNELS_REFRESH_STATES,
   MANAGED_SITE_CHANNELS_TEST_IDS,
 } from "~/features/ManagedSiteChannels/testIds"
 import { expect } from "~~/e2e/fixtures/extensionTest"
@@ -310,24 +312,32 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
       MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton,
     )
     await expect(refreshButton).toHaveAttribute(
-      "data-refresh-state",
-      /idle|loading/,
+      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+      new RegExp(
+        `${MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle}|${MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading}`,
+      ),
       { timeout: 10_000 },
     )
     if (
-      (await refreshButton.getAttribute("data-refresh-state")) === "loading"
+      (await refreshButton.getAttribute(
+        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+      )) === MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading
     ) {
       await expect(refreshButton).toHaveAttribute(
-        "data-refresh-state",
-        "idle",
+        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+        MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
         {
           timeout: 10_000,
         },
       )
     }
-    await expect(refreshButton).toHaveAttribute("data-refresh-state", "idle", {
-      timeout: 10_000,
-    })
+    await expect(refreshButton).toHaveAttribute(
+      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+      MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
+      {
+        timeout: 10_000,
+      },
+    )
     await expect(refreshButton).toBeEnabled({ timeout: 10_000 })
     await refreshButton.click()
     await expect(row).toBeVisible({ timeout: 20_000 })

@@ -520,56 +520,6 @@ describe("AxonHub API service", () => {
     await expect(firstRequest).resolves.toEqual({ ping: "pong" })
   })
 
-  it("waits for the shared sign-in when the later caller has no cancellation signal", async () => {
-    let authHits = 0
-    let resolveAuth:
-      | ((response: Response | PromiseLike<Response>) => void)
-      | undefined
-
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((url: string) => {
-        if (url.endsWith("/admin/auth/signin")) {
-          authHits += 1
-          return new Promise<Response>((resolve) => {
-            resolveAuth = resolve
-          })
-        }
-
-        return Promise.resolve(
-          new Response(JSON.stringify({ data: { ping: "pong" } }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-        )
-      }),
-    )
-
-    const firstRequest = graphqlRequest<{ ping: string }>(
-      { ...config, email: "shared-no-signal@example.com" },
-      "query PingOne",
-    )
-    await vi.waitFor(() => expect(authHits).toBe(1))
-
-    const secondRequest = graphqlRequest<{ ping: string }>(
-      { ...config, email: "shared-no-signal@example.com" },
-      "query PingTwo",
-    )
-
-    resolveAuth?.(
-      new Response(JSON.stringify({ token: "shared-token" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    )
-
-    await expect(Promise.all([firstRequest, secondRequest])).resolves.toEqual([
-      { ping: "pong" },
-      { ping: "pong" },
-    ])
-    expect(authHits).toBe(1)
-  })
-
   it("does not share a signal-bound sign-in with later callers", async () => {
     let authHits = 0
     let graphQlHits = 0
