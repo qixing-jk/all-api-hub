@@ -171,8 +171,15 @@ function isChannelRowLike(value: unknown): value is ChannelRow {
   return (
     typeof candidate.id === "number" &&
     typeof candidate.name === "string" &&
+    (typeof candidate.type === "string" ||
+      typeof candidate.type === "number") &&
+    typeof candidate.key === "string" &&
     typeof candidate.base_url === "string" &&
-    typeof candidate.models === "string"
+    typeof candidate.models === "string" &&
+    typeof candidate.status === "number" &&
+    typeof candidate.priority === "number" &&
+    typeof candidate.weight === "number" &&
+    typeof candidate.group === "string"
   )
 }
 

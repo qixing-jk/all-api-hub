@@ -32,10 +32,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Generate matrix
         id: matrix
-        run: node scripts/github-real-site-e2e-matrix.mjs "${{ github.event.inputs.category || 'all' }}"
+        env:
+          REAL_SITE_CATEGORY: ${{ github.event.inputs.category || 'all' }}
+        run: node scripts/github-real-site-e2e-matrix.mjs "$REAL_SITE_CATEGORY"
 
   real-site-e2e:
     name: ${{ matrix.label }}
@@ -50,6 +54,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
@@ -216,7 +222,8 @@ jobs:
       - name: Run real-site E2E
         env:
           AAH_SKIP_E2E_BUILD: "1"
-        run: pnpm exec playwright test ${{ matrix.spec }} --project=chromium --reporter=list
+          REAL_SITE_SPEC: ${{ matrix.spec }}
+        run: pnpm exec playwright test "$REAL_SITE_SPEC" --project=chromium --reporter=list
 
       - name: Upload Playwright artifacts (failure)
         if: failure()

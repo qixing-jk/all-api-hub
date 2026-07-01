@@ -91,11 +91,15 @@ function resolveWebdavProviderConfig(): ResolvedWebdavProviderConfig {
     }
   }
 
-  const fallbackCandidate = candidates[candidates.length - 1]
+  const fallbackCandidate = candidates.find(
+    (candidate) => resolveMissingWebdavProviderEnvKeys(candidate).length > 0,
+  )
 
   return {
     config: undefined,
-    missingEnvKeys: resolveMissingWebdavProviderEnvKeys(fallbackCandidate),
+    missingEnvKeys: fallbackCandidate
+      ? resolveMissingWebdavProviderEnvKeys(fallbackCandidate)
+      : [],
   }
 }
 

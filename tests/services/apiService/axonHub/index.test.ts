@@ -674,6 +674,9 @@ describe("AxonHub API service", () => {
       }),
     ).resolves.toMatchObject({
       success: true,
+      data: expect.objectContaining({
+        status: CHANNEL_STATUS.Enable,
+      }),
       message: "success",
     })
     expect(statusHits).toBe(1)
@@ -827,6 +830,9 @@ describe("AxonHub API service", () => {
       }),
     ).resolves.toMatchObject({
       success: true,
+      data: expect.objectContaining({
+        status: CHANNEL_STATUS.ManuallyDisabled,
+      }),
       message: "success",
     })
     expect(statusHits).toBe(1)

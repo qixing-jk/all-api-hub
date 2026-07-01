@@ -148,13 +148,13 @@ describe("runRealSiteAccountSaveFlow", () => {
       baseUrl: "https://sub2api.test",
       siteType: SITE_TYPES.SUB2API,
       extensionPageGuardOptions: {
-        ignoreErrorText: ["known real-site warning"],
+        ignoreConsoleErrorPatterns: [/known real-site warning/u],
       },
       login: vi.fn().mockResolvedValue(undefined),
     })
 
     expect(installExtensionPageGuards).toHaveBeenCalledWith(page, {
-      ignoreErrorText: ["known real-site warning"],
+      ignoreConsoleErrorPatterns: [/known real-site warning/u],
     })
   })
 })

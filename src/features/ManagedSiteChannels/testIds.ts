@@ -6,7 +6,7 @@ export const MANAGED_SITE_CHANNELS_TEST_IDS = {
   deleteSelectedButton: "managed-site-channels-delete-selected-button",
 } as const
 
-const MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX =
+export const MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX =
   "managed-site-channel-row-" as const
 
 /**

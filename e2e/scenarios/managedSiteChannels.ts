@@ -10,6 +10,7 @@ import {
   getManagedSiteChannelRowEditActionTestId,
   getManagedSiteChannelRowSelectTestId,
   getManagedSiteChannelRowTestId,
+  MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX,
   MANAGED_SITE_CHANNELS_TEST_IDS,
 } from "~/features/ManagedSiteChannels/testIds"
 import { expect } from "~~/e2e/fixtures/extensionTest"
@@ -406,5 +407,7 @@ async function getChannelRowName(row: ReturnType<typeof channelRowByText>) {
 }
 
 function channelRowByText(page: Page, text: string) {
-  return page.locator("tbody tr").filter({ hasText: text })
+  return page
+    .locator(`[data-testid^="${MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX}"]`)
+    .filter({ hasText: text })
 }

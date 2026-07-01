@@ -28,9 +28,10 @@ const {
   mockUpdateAxonHubChannelStatus,
 } = vi.hoisted(() => ({
   mockAxonHubChannelToManagedSite: vi.fn(
-    (channel: { id: string; name: string }) => ({
+    (channel: { id: string; name: string; status?: string }) => ({
       id: channel.id,
       name: channel.name,
+      ...(channel.status ? { status: channel.status } : {}),
     }),
   ),
   mockCreateAxonHubChannel: vi.fn(),
@@ -116,10 +117,12 @@ describe("AxonHub managed-site provider", () => {
     mockCreateAxonHubChannel.mockResolvedValue({
       id: "created-channel-id",
       name: "Created",
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
     })
     mockUpdateAxonHubChannel.mockResolvedValue({
       id: "updated-channel-id",
       name: "Updated",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
     })
     mockDeleteAxonHubChannel.mockResolvedValue(true)
     mockSearchChannels.mockResolvedValue({
@@ -226,6 +229,11 @@ describe("AxonHub managed-site provider", () => {
       "created-channel-id",
       AXON_HUB_CHANNEL_STATUS.ENABLED,
     )
+    expect(result.data).toEqual({
+      id: "created-channel-id",
+      name: "Created",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+    })
   })
 
   it("builds and creates migrated AxonHub channels with string provider type and supported fields", async () => {
@@ -265,6 +273,7 @@ describe("AxonHub managed-site provider", () => {
       data: {
         id: "created-channel-id",
         name: "Created",
+        status: AXON_HUB_CHANNEL_STATUS.DISABLED,
       },
       message: "success",
     })
@@ -301,7 +310,11 @@ describe("AxonHub managed-site provider", () => {
       }),
     ).resolves.toEqual({
       success: true,
-      data: { id: "updated-channel-id", name: "Updated" },
+      data: {
+        id: "updated-channel-id",
+        name: "Updated",
+        status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+      },
       message: "success",
     })
 
@@ -356,7 +369,11 @@ describe("AxonHub managed-site provider", () => {
       }),
     ).resolves.toEqual({
       success: true,
-      data: { id: "updated-channel-id", name: "Updated" },
+      data: {
+        id: "updated-channel-id",
+        name: "Updated",
+        status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+      },
       message: "success",
     })
 

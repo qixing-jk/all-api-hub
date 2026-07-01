@@ -3,6 +3,8 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
+import { ChannelType } from "~/constants"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -841,6 +843,94 @@ describe("ManagedSiteChannels", () => {
     expect(
       await screen.findByText("channelDialog:title.add"),
     ).toBeInTheDocument()
+  })
+
+  it("refreshes instead of upserting incomplete mutation channel rows", async () => {
+    const user = userEvent.setup()
+    const createChannel = vi.fn().mockResolvedValue({
+      success: true,
+      message: "ok",
+      data: {
+        id: 9,
+        name: "Created Channel",
+        base_url: "https://created.example",
+      },
+    })
+
+    mockChannels([])
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        adminToken: "t",
+        userId: "1",
+      }),
+      buildChannelPayload: vi.fn((draft: any) => ({
+        mode: "single",
+        channel: draft,
+      })),
+      createChannel,
+    } as any)
+    vi.mocked(sendModelSyncMessage)
+      .mockResolvedValueOnce({
+        success: true,
+        data: { items: [] },
+      } as any)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [
+            {
+              id: 9,
+              type: ChannelType.OpenAI,
+              key: "",
+              name: "Created Channel",
+              base_url: "https://created.example",
+              models: "gpt-4o",
+              status: 1,
+              priority: 0,
+              weight: 0,
+              group: "default",
+            },
+          ],
+        },
+      } as any)
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForChannelsRefreshIdle()
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.addChannel",
+      }),
+    )
+    await user.type(
+      await screen.findByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput),
+      "Created Channel",
+    )
+    await user.type(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
+      "sk-created",
+    )
+    await user.type(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.baseUrlInput),
+      "https://created.example",
+    )
+    await user.type(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput),
+      "gpt-4o",
+    )
+    await user.keyboard("{Enter}")
+    await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+
+    await waitForRowText("Created Channel")
+    expect(sendModelSyncMessage).toHaveBeenCalledTimes(2)
   })
 
   it("keeps row selection attached to the same channel after refreshed rows reorder", async () => {

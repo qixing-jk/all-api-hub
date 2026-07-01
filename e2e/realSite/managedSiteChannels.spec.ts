@@ -75,6 +75,19 @@ const managedSiteTargets = [
 ] as const
 
 const selectedManagedSiteTarget = readEnv("AAH_E2E_MANAGED_SITE_TARGET")
+const selectedManagedSiteTargets = managedSiteTargets.filter(
+  (candidate) =>
+    !selectedManagedSiteTarget ||
+    selectedManagedSiteTarget === candidate.siteType,
+)
+
+if (selectedManagedSiteTarget && selectedManagedSiteTargets.length === 0) {
+  throw new Error(
+    `AAH_E2E_MANAGED_SITE_TARGET=${selectedManagedSiteTarget} does not match any managed-site E2E target. Expected one of: ${managedSiteTargets
+      .map((target) => target.siteType)
+      .join(", ")}`,
+  )
+}
 
 test.describe.configure({
   mode: selectedManagedSiteTarget ? "parallel" : "serial",
@@ -88,11 +101,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
     await stubLlmMetadataIndex(context)
   })
 
-  for (const target of managedSiteTargets.filter(
-    (candidate) =>
-      !selectedManagedSiteTarget ||
-      selectedManagedSiteTarget === candidate.siteType,
-  )) {
+  for (const target of selectedManagedSiteTargets) {
     test(`${target.label} covers channel CRUD/search and token channel status when supported`, async ({
       context,
       extensionId,

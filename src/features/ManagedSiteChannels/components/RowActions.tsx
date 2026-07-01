@@ -91,7 +91,6 @@ export default function RowActions({
         {showMigrationAction ? (
           <>
             <DropdownMenuItem
-              data-testid={testIds?.edit}
               onClick={() => {
                 onView(channel)
                 trackManagedSiteChannelRowAction(
