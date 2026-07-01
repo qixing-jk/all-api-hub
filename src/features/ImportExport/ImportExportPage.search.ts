@@ -5,7 +5,11 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
-import { WEBDAV_AUTO_SYNC_TARGET_IDS, WEBDAV_TARGET_IDS } from "./searchTargets"
+import {
+  IMPORT_EXPORT_TARGET_IDS,
+  WEBDAV_AUTO_SYNC_TARGET_IDS,
+  WEBDAV_TARGET_IDS,
+} from "./searchTargets"
 
 export const importExportPageSearchSections: OptionsSearchItemDefinition[] = [
   buildPageSectionDefinition(
@@ -119,6 +123,17 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     {
       descriptionKey: "importExport:import.description",
       keywords: ["import", "restore", "backup"],
+    },
+  ),
+  buildPageControlDefinition(
+    "control:import-content-selection",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    IMPORT_EXPORT_TARGET_IDS.importMode,
+    "importExport:import.sections.label",
+    744.55,
+    {
+      descriptionKey: "importExport:import.sections.accounts.description",
+      keywords: ["import", "append", "merge", "overwrite", "restore"],
     },
   ),
   buildPageControlDefinition(

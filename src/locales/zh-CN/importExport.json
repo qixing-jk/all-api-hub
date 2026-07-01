@@ -28,16 +28,75 @@
     "formatError": "数据格式错误，请检查JSON格式",
     "formatNotCorrect": "数据格式不正确",
     "importFailed": "导入失败: {{error}}",
+    "importSelectedSuccess": "已导入所选内容",
     "importSuccess": "数据导入成功",
     "noImportableData": "没有找到可导入的数据",
     "pasteJsonData": "粘贴JSON数据或通过上面的文件选择器导入...",
+    "replaceWarning": "将替换当前设备上的部分数据，建议先导出备份。",
+    "sections": {
+      "accounts": {
+        "description": "包括账号、书签和标签。",
+        "title": "账号和书签"
+      },
+      "apiCredentialProfiles": {
+        "description": "包括保存的 API 地址、密钥和相关备注。",
+        "title": "API 凭据库"
+      },
+      "channelConfigs": {
+        "description": "包括模型过滤等渠道规则。",
+        "title": "渠道配置"
+      },
+      "label": "选择要导入的内容",
+      "preferences": {
+        "description": "包括主题、语言、点击行为等偏好设置。",
+        "title": "用户设置"
+      }
+    },
+    "sectionStrategy": {
+      "accounts": {
+        "merge": "添加",
+        "replace": "替换"
+      },
+      "apiCredentialProfiles": {
+        "merge": "添加",
+        "replace": "替换"
+      },
+      "channelConfigs": {
+        "merge": "添加",
+        "replace": "替换",
+        "skip": "不导入"
+      },
+      "preferences": {
+        "replace": "替换",
+        "skip": "不导入"
+      }
+    },
+    "sectionStrategyHelp": {
+      "accounts": {
+        "merge": "适合从另一台电脑带回账号；当前已有账号和书签会保留。",
+        "replace": "当前账号和书签会变成备份里的列表。"
+      },
+      "apiCredentialProfiles": {
+        "merge": "把备份里的 API 凭据加进来；已有凭据会保留。",
+        "replace": "当前 API 凭据库会变成备份里的内容。"
+      },
+      "channelConfigs": {
+        "merge": "按渠道添加或更新规则，较新的备份规则会生效。",
+        "replace": "当前渠道配置会变成备份里的内容。",
+        "skip": "保留当前渠道规则。"
+      },
+      "preferences": {
+        "replace": "用备份里的设置替换这台设备当前设置。",
+        "skip": "保留这台设备当前的主题、语言和操作习惯。"
+      }
+    },
     "selectBackupFile": "选择备份文件",
     "selectFileImport": "请选择要导入的文件或输入数据",
     "title": "导入数据"
   },
   "notice": {
     "importantNotice": "重要提示",
-    "importWarning1": "导入数据将覆盖现有的相同类型数据，请谨慎操作",
+    "importWarning1": "导入前可以逐项选择添加、替换或不导入；默认会添加账号/API 凭据，并保留当前设置",
     "importWarning2": "建议在导入前先导出当前数据进行备份",
     "importWarning3": "仅支持本插件导出的JSON格式文件",
     "importWarning4": "导入的数据可能包含敏感信息（账号令牌与 API Key），请妥善保管备份文件并确保来源可信"

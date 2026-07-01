@@ -27,14 +27,14 @@ export default function ImportExport() {
     isExporting,
     setIsExporting,
     isImporting,
+    importPlan,
+    setImportPlan,
     importData,
     setImportData,
     handleFileImport,
     handleImport,
-    validateImportData,
+    validation,
   } = useImportExport()
-
-  const validation = validateImportData()
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
@@ -86,6 +86,8 @@ export default function ImportExport() {
         <ImportSection
           importData={importData}
           setImportData={setImportData}
+          importPlan={importPlan}
+          setImportPlan={setImportPlan}
           handleFileImport={handleFileImport}
           handleImport={handleImport}
           isImporting={isImporting}

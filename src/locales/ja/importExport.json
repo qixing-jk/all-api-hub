@@ -28,16 +28,75 @@
     "formatError": "データ形式エラーです。JSON 形式を確認してください",
     "formatNotCorrect": "データ形式が正しくありません",
     "importFailed": "インポートに失敗しました: {{error}}",
+    "importSelectedSuccess": "選択した内容をインポートしました",
     "importSuccess": "データを正常にインポートしました",
     "noImportableData": "インポート可能なデータが見つかりません",
     "pasteJsonData": "JSON データを貼り付けるか、上のファイル選択からインポートしてください...",
+    "replaceWarning": "この端末上の一部データが置き換えられます。必要に応じて先にバックアップをエクスポートしてください。",
+    "sections": {
+      "accounts": {
+        "description": "アカウント、ブックマーク、タグを含みます。",
+        "title": "アカウントとブックマーク"
+      },
+      "apiCredentialProfiles": {
+        "description": "保存済みの API URL、キー、関連メモを含みます。",
+        "title": "API 認証情報庫"
+      },
+      "channelConfigs": {
+        "description": "モデルフィルターなどのチャネルルールを含みます。",
+        "title": "チャネル設定"
+      },
+      "label": "インポートする内容を選択",
+      "preferences": {
+        "description": "テーマ、言語、クリック動作などの設定を含みます。",
+        "title": "ユーザー設定"
+      }
+    },
+    "sectionStrategy": {
+      "accounts": {
+        "merge": "追加",
+        "replace": "置き換え"
+      },
+      "apiCredentialProfiles": {
+        "merge": "追加",
+        "replace": "置き換え"
+      },
+      "channelConfigs": {
+        "merge": "追加",
+        "replace": "置き換え",
+        "skip": "しない"
+      },
+      "preferences": {
+        "replace": "置き換え",
+        "skip": "しない"
+      }
+    },
+    "sectionStrategyHelp": {
+      "accounts": {
+        "merge": "別の端末からアカウントを持ち込む場合に便利です。現在のアカウントとブックマークは残ります。",
+        "replace": "現在のアカウントとブックマークはバックアップ内の一覧になります。"
+      },
+      "apiCredentialProfiles": {
+        "merge": "バックアップ内の API 認証情報を追加します。既存の認証情報は残ります。",
+        "replace": "現在の API 認証情報庫はバックアップ内の内容になります。"
+      },
+      "channelConfigs": {
+        "merge": "チャネルごとにルールを追加または更新し、新しいバックアップ側のルールが反映されます。",
+        "replace": "現在のチャネル設定はバックアップ内の内容になります。",
+        "skip": "現在のチャネルルールを保持します。"
+      },
+      "preferences": {
+        "replace": "バックアップ内の設定で、この端末の現在の設定を置き換えます。",
+        "skip": "この端末の現在のテーマ、言語、操作習慣を保持します。"
+      }
+    },
     "selectBackupFile": "バックアップファイルを選択",
     "selectFileImport": "インポートするファイルを選択するか、データを入力してください",
     "title": "データをインポート"
   },
   "notice": {
     "importantNotice": "重要なお知らせ",
-    "importWarning1": "インポートしたデータは同種の既存データを上書きします。慎重に操作してください",
+    "importWarning1": "インポート前にデータの種類ごとに追加、置き換え、またはインポートしないを選べます。既定ではアカウント/API 認証情報を追加し、現在の設定は保持します",
     "importWarning2": "インポート前に現在のデータをバックアップとしてエクスポートすることを推奨します",
     "importWarning3": "この拡張機能からエクスポートされた JSON 形式ファイルのみをサポートします",
     "importWarning4": "インポートデータには機密情報（アカウントトークンや API キー）が含まれる場合があります。バックアップは安全に保管し、信頼できるソースからのみインポートしてください"

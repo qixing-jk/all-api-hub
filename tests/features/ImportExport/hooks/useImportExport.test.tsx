@@ -105,6 +105,13 @@ describe("useImportExport", () => {
     loadPreferencesMock.mockResolvedValue(undefined)
     getLanguageMock.mockResolvedValue("ja")
     applyPreferenceLanguageMock.mockResolvedValue(true)
+    parseBackupSummaryMock.mockReturnValue({
+      valid: true,
+      hasAccounts: false,
+      hasPreferences: false,
+      hasChannelConfigs: false,
+      hasApiCredentialProfiles: false,
+    })
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
@@ -178,9 +185,19 @@ describe("useImportExport", () => {
       const importPromise = result.current.handleImport()
       await Promise.resolve()
 
-      expect(importFromBackupObjectMock).toHaveBeenCalledWith({ version: 3 })
+      expect(importFromBackupObjectMock).toHaveBeenCalledWith(
+        { version: 3 },
+        {
+          plan: {
+            accounts: "skip",
+            apiCredentialProfiles: "skip",
+            channelConfigs: "skip",
+            preferences: "skip",
+          },
+        },
+      )
 
-      resolveImport?.({ allImported: true })
+      resolveImport?.({ allImported: true, sections: { preferences: true } })
       await importPromise
     })
 
@@ -201,14 +218,83 @@ describe("useImportExport", () => {
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
 
-    importFromBackupObjectMock.mockResolvedValueOnce({ allImported: false })
+    importFromBackupObjectMock.mockResolvedValueOnce({
+      allImported: false,
+      sections: { accounts: true },
+    })
 
     await act(async () => {
       await result.current.handleImport()
     })
 
-    expect(toastSuccessMock).toHaveBeenCalledTimes(1)
+    expect(toastSuccessMock).toHaveBeenLastCalledWith(
+      "importExport:import.importSelectedSuccess",
+    )
+    expect(toastSuccessMock).toHaveBeenCalledTimes(2)
     expect(loadPreferencesMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("passes the selected section import plan to backup import", async () => {
+    importFromBackupObjectMock.mockResolvedValueOnce({ allImported: true })
+
+    const { result } = renderHook(() => useImportExport())
+
+    act(() => {
+      result.current.setImportData('{"version":3}')
+      result.current.setImportPlan((plan) => ({
+        ...plan,
+        accounts: "replace",
+        preferences: "replace",
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleImport()
+    })
+
+    expect(importFromBackupObjectMock).toHaveBeenCalledWith(
+      { version: 3 },
+      {
+        plan: {
+          accounts: "replace",
+          apiCredentialProfiles: "skip",
+          channelConfigs: "skip",
+          preferences: "replace",
+        },
+      },
+    )
+  })
+
+  it("updates the default import plan from the parsed backup summary", () => {
+    parseBackupSummaryMock.mockReturnValue({
+      valid: true,
+      hasAccounts: true,
+      hasPreferences: true,
+      hasChannelConfigs: true,
+      hasApiCredentialProfiles: true,
+      timestamp: "2026-03-30",
+    })
+
+    const { result } = renderHook(() => useImportExport())
+
+    act(() => {
+      result.current.setImportData('{"version":3,"accounts":[]}')
+    })
+
+    expect(result.current.validation).toEqual(
+      expect.objectContaining({
+        hasAccounts: true,
+        hasPreferences: true,
+        hasChannelConfigs: true,
+        hasApiCredentialProfiles: true,
+      }),
+    )
+    expect(result.current.importPlan).toEqual({
+      accounts: "merge",
+      apiCredentialProfiles: "merge",
+      channelConfigs: "merge",
+      preferences: "skip",
+    })
   })
 
   it("refreshes and reapplies the persisted language for preference-only imports", async () => {
@@ -230,7 +316,9 @@ describe("useImportExport", () => {
     expect(loadPreferencesMock).toHaveBeenCalledTimes(1)
     expect(getLanguageMock).toHaveBeenCalledTimes(1)
     expect(applyPreferenceLanguageMock).toHaveBeenCalledWith("ja")
-    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "importExport:import.importSelectedSuccess",
+    )
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
@@ -286,9 +374,9 @@ describe("useImportExport", () => {
   it("validates parsed summaries and collapses invalid or thrown summaries into a false result", () => {
     const { result } = renderHook(() => useImportExport())
 
-    expect(result.current.validateImportData()).toBeNull()
+    expect(result.current.validation).toBeNull()
 
-    parseBackupSummaryMock.mockReturnValueOnce({
+    parseBackupSummaryMock.mockReturnValue({
       valid: true,
       hasAccounts: true,
       hasPreferences: false,
@@ -298,7 +386,7 @@ describe("useImportExport", () => {
       result.current.setImportData('{"version":5}')
     })
 
-    expect(result.current.validateImportData()).toEqual({
+    expect(result.current.validation).toEqual({
       valid: true,
       hasAccounts: true,
       hasPreferences: false,
@@ -308,12 +396,18 @@ describe("useImportExport", () => {
       "common:labels.unknown",
     )
 
-    parseBackupSummaryMock.mockReturnValueOnce(undefined)
-    expect(result.current.validateImportData()).toEqual({ valid: false })
+    parseBackupSummaryMock.mockReturnValue(undefined)
+    act(() => {
+      result.current.setImportData('{"version":6}')
+    })
+    expect(result.current.validation).toEqual({ valid: false })
 
-    parseBackupSummaryMock.mockImplementationOnce(() => {
+    parseBackupSummaryMock.mockImplementation(() => {
       throw new Error("broken summary")
     })
-    expect(result.current.validateImportData()).toEqual({ valid: false })
+    act(() => {
+      result.current.setImportData('{"version":7}')
+    })
+    expect(result.current.validation).toEqual({ valid: false })
   })
 })

@@ -59,11 +59,18 @@ describe("ImportExport search navigation", () => {
       isExporting: false,
       setIsExporting: vi.fn(),
       isImporting: false,
+      importPlan: {
+        accounts: "skip",
+        apiCredentialProfiles: "skip",
+        channelConfigs: "skip",
+        preferences: "skip",
+      },
+      setImportPlan: vi.fn(),
       importData: "",
       setImportData: vi.fn(),
       handleFileImport: vi.fn(),
       handleImport: vi.fn(),
-      validateImportData: () => null,
+      validation: null,
     })
 
     window.history.replaceState(

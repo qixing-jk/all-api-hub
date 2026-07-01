@@ -28,16 +28,75 @@
     "formatError": "資料格式錯誤，請檢查JSON格式",
     "formatNotCorrect": "資料格式不正確",
     "importFailed": "匯入失敗: {{error}}",
+    "importSelectedSuccess": "已匯入所選內容",
     "importSuccess": "資料匯入成功",
     "noImportableData": "沒有找到可匯入的資料",
     "pasteJsonData": "貼上JSON資料或透過上面的檔案選擇器匯入...",
+    "replaceWarning": "將取代目前裝置上的部分資料，建議先匯出備份。",
+    "sections": {
+      "accounts": {
+        "description": "包括帳號、書籤和標籤。",
+        "title": "帳號和書籤"
+      },
+      "apiCredentialProfiles": {
+        "description": "包括儲存的 API 地址、金鑰和相關備註。",
+        "title": "API 憑據庫"
+      },
+      "channelConfigs": {
+        "description": "包括模型過濾等渠道規則。",
+        "title": "渠道配置"
+      },
+      "label": "選擇要匯入的內容",
+      "preferences": {
+        "description": "包括主題、語言、點擊行為等偏好設定。",
+        "title": "使用者設定"
+      }
+    },
+    "sectionStrategy": {
+      "accounts": {
+        "merge": "加入",
+        "replace": "取代"
+      },
+      "apiCredentialProfiles": {
+        "merge": "加入",
+        "replace": "取代"
+      },
+      "channelConfigs": {
+        "merge": "加入",
+        "replace": "取代",
+        "skip": "不匯入"
+      },
+      "preferences": {
+        "replace": "取代",
+        "skip": "不匯入"
+      }
+    },
+    "sectionStrategyHelp": {
+      "accounts": {
+        "merge": "適合從另一台電腦帶回帳號；目前已有帳號和書籤會保留。",
+        "replace": "目前帳號和書籤會變成備份裡的列表。"
+      },
+      "apiCredentialProfiles": {
+        "merge": "把備份裡的 API 憑據加進來；已有憑據會保留。",
+        "replace": "目前 API 憑據庫會變成備份裡的內容。"
+      },
+      "channelConfigs": {
+        "merge": "按渠道加入或更新規則，較新的備份規則會生效。",
+        "replace": "目前渠道配置會變成備份裡的內容。",
+        "skip": "保留目前渠道規則。"
+      },
+      "preferences": {
+        "replace": "用備份裡的設定取代這台裝置目前設定。",
+        "skip": "保留這台裝置目前的主題、語言和操作習慣。"
+      }
+    },
     "selectBackupFile": "選擇備份檔案",
     "selectFileImport": "請選擇要匯入的檔案或輸入資料",
     "title": "匯入資料"
   },
   "notice": {
     "importantNotice": "重要提示",
-    "importWarning1": "匯入資料將覆蓋現有的相同型別資料，請謹慎操作",
+    "importWarning1": "匯入前可以逐項選擇加入、取代或不匯入；預設會加入帳號/API 憑據，並保留目前設定",
     "importWarning2": "建議在匯入前先匯出當前資料進行備份",
     "importWarning3": "僅支援本外掛匯出的JSON格式檔案",
     "importWarning4": "匯入的資料可能包含敏感資訊（帳號令牌與 API Key），請妥善保管備份檔案並確保來源可信"

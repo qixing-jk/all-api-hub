@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import ExportSection from "~/features/ImportExport/components/ExportSection"
 import ImportSection from "~/features/ImportExport/components/ImportSection"
 import { WebDAVDecryptPasswordModal } from "~/features/ImportExport/components/WebDAVDecryptPasswordModal"
+import { IMPORT_EXPORT_TEST_IDS } from "~/features/ImportExport/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -124,6 +125,7 @@ describe("ImportExport section components", () => {
 
   it("renders import validation details and forwards input events", () => {
     const setImportData = vi.fn()
+    const setImportPlan = vi.fn()
     const handleFileImport = vi.fn()
     const handleImport = vi.fn()
 
@@ -131,6 +133,13 @@ describe("ImportExport section components", () => {
       <ImportSection
         importData='{"version":2}'
         setImportData={setImportData}
+        importPlan={{
+          accounts: "merge",
+          apiCredentialProfiles: "merge",
+          channelConfigs: "skip",
+          preferences: "skip",
+        }}
+        setImportPlan={setImportPlan}
         handleFileImport={handleFileImport}
         handleImport={handleImport}
         isImporting={false}
@@ -162,6 +171,9 @@ describe("ImportExport section components", () => {
       screen.getByRole("button", { name: "common:actions.import" }),
     )
     fireEvent.click(
+      screen.getByTestId(IMPORT_EXPORT_TEST_IDS.importPreferencesReplaceOption),
+    )
+    fireEvent.click(
       screen.getByRole("button", { name: "common:actions.clear" }),
     )
 
@@ -173,6 +185,56 @@ describe("ImportExport section components", () => {
     ).toBeInTheDocument()
     expect(setImportData).toHaveBeenCalledWith('{"version":3}')
     expect(setImportData).toHaveBeenCalledWith("")
+    expect(setImportPlan).toHaveBeenCalledWith(expect.any(Function))
+    const updatePlan = setImportPlan.mock.calls[0]?.[0]
+    expect(
+      updatePlan({
+        accounts: "merge",
+        apiCredentialProfiles: "merge",
+        channelConfigs: "skip",
+        preferences: "skip",
+      }),
+    ).toEqual({
+      accounts: "merge",
+      apiCredentialProfiles: "merge",
+      channelConfigs: "skip",
+      preferences: "replace",
+    })
+    expect(
+      screen.getByRole("button", {
+        name: "importExport:import.sectionStrategy.accounts.merge",
+      }),
+    ).toHaveAttribute("aria-pressed", "true")
+
+    rerender(
+      <I18nextProvider i18n={testI18n}>
+        <ImportSection
+          importData='{"version":2}'
+          setImportData={setImportData}
+          importPlan={{
+            accounts: "merge",
+            apiCredentialProfiles: "merge",
+            channelConfigs: "skip",
+            preferences: "replace",
+          }}
+          setImportPlan={setImportPlan}
+          handleFileImport={handleFileImport}
+          handleImport={handleImport}
+          isImporting={false}
+          validation={{
+            valid: true,
+            hasAccounts: true,
+            hasPreferences: true,
+            hasChannelConfigs: true,
+            hasApiCredentialProfiles: true,
+            timestamp: "2026-03-28",
+          }}
+        />
+      </I18nextProvider>,
+    )
+    expect(
+      screen.getByText("importExport:import.replaceWarning"),
+    ).toBeInTheDocument()
     expect(handleFileImport).toHaveBeenCalledTimes(1)
     expect(handleImport).toHaveBeenCalledTimes(1)
     expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalled()
@@ -182,6 +244,13 @@ describe("ImportExport section components", () => {
         <ImportSection
           importData=""
           setImportData={setImportData}
+          importPlan={{
+            accounts: "skip",
+            apiCredentialProfiles: "skip",
+            channelConfigs: "skip",
+            preferences: "skip",
+          }}
+          setImportPlan={setImportPlan}
           handleFileImport={handleFileImport}
           handleImport={handleImport}
           isImporting

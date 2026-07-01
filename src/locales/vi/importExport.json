@@ -28,16 +28,75 @@
     "formatError": "Lỗi định dạng dữ liệu, vui lòng kiểm tra định dạng JSON",
     "formatNotCorrect": "Định dạng dữ liệu không chính xác",
     "importFailed": "Nhập thất bại: {{error}}",
+    "importSelectedSuccess": "Đã nhập nội dung đã chọn",
     "importSuccess": "Nhập dữ liệu thành công",
     "noImportableData": "Không tìm thấy dữ liệu có thể nhập",
     "pasteJsonData": "Dán dữ liệu JSON hoặc nhập qua bộ chọn tệp ở trên...",
+    "replaceWarning": "Một số dữ liệu trên thiết bị này sẽ bị thay thế. Hãy xuất bản sao lưu trước nếu cần.",
+    "sections": {
+      "accounts": {
+        "description": "Bao gồm tài khoản, dấu trang và thẻ.",
+        "title": "Tài khoản và dấu trang"
+      },
+      "apiCredentialProfiles": {
+        "description": "Bao gồm URL API, khóa và ghi chú đã lưu.",
+        "title": "Thư viện thông tin xác thực API"
+      },
+      "channelConfigs": {
+        "description": "Bao gồm các quy tắc kênh như bộ lọc mô hình.",
+        "title": "Cấu hình kênh"
+      },
+      "label": "Chọn nội dung cần nhập",
+      "preferences": {
+        "description": "Bao gồm chủ đề, ngôn ngữ, hành vi nhấp và các tùy chọn khác.",
+        "title": "Cài đặt người dùng"
+      }
+    },
+    "sectionStrategy": {
+      "accounts": {
+        "merge": "Thêm",
+        "replace": "Thay thế"
+      },
+      "apiCredentialProfiles": {
+        "merge": "Thêm",
+        "replace": "Thay thế"
+      },
+      "channelConfigs": {
+        "merge": "Thêm",
+        "replace": "Thay thế",
+        "skip": "Bỏ qua"
+      },
+      "preferences": {
+        "replace": "Thay thế",
+        "skip": "Bỏ qua"
+      }
+    },
+    "sectionStrategyHelp": {
+      "accounts": {
+        "merge": "Phù hợp khi mang tài khoản từ máy khác về; tài khoản và dấu trang hiện có sẽ được giữ lại.",
+        "replace": "Tài khoản và dấu trang hiện tại sẽ trở thành danh sách trong bản sao lưu."
+      },
+      "apiCredentialProfiles": {
+        "merge": "Thêm thông tin xác thực API từ bản sao lưu; thông tin hiện có sẽ được giữ lại.",
+        "replace": "Thư viện thông tin xác thực API hiện tại sẽ trở thành nội dung trong bản sao lưu."
+      },
+      "channelConfigs": {
+        "merge": "Thêm hoặc cập nhật quy tắc theo kênh; quy tắc mới hơn trong bản sao lưu sẽ được áp dụng.",
+        "replace": "Cấu hình kênh hiện tại sẽ trở thành nội dung trong bản sao lưu.",
+        "skip": "Giữ lại quy tắc kênh hiện tại."
+      },
+      "preferences": {
+        "replace": "Dùng cài đặt trong bản sao lưu để thay thế cài đặt hiện tại trên thiết bị này.",
+        "skip": "Giữ lại chủ đề, ngôn ngữ và thói quen thao tác hiện tại trên thiết bị này."
+      }
+    },
     "selectBackupFile": "Chọn tệp sao lưu",
     "selectFileImport": "Vui lòng chọn tệp để nhập hoặc nhập dữ liệu",
     "title": "Nhập dữ liệu"
   },
   "notice": {
     "importantNotice": "Thông báo quan trọng",
-    "importWarning1": "Việc nhập dữ liệu sẽ ghi đè lên dữ liệu cùng loại hiện có, vui lòng thao tác cẩn thận",
+    "importWarning1": "Trước khi nhập, bạn có thể chọn thêm, thay thế hoặc bỏ qua từng loại dữ liệu. Theo mặc định, tài khoản/thông tin xác thực API sẽ được thêm vào và cài đặt hiện tại được giữ lại",
     "importWarning2": "Bạn nên xuất dữ liệu hiện tại để sao lưu trước khi nhập",
     "importWarning3": "Chỉ hỗ trợ các tệp định dạng JSON được xuất bởi tiện ích này",
     "importWarning4": "Dữ liệu được nhập có thể chứa thông tin nhạy cảm (Mã thông báo tài khoản và API Key), vui lòng bảo quản tệp sao lưu cẩn thận và đảm bảo nguồn đáng tin cậy"

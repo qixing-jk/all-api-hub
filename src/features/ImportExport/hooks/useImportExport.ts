@@ -1,8 +1,12 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  IMPORT_SECTION_STRATEGIES,
+  type ImportPlan,
+} from "~/services/importExport/importExportService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -24,12 +28,76 @@ import { importFromBackupObject, parseBackupSummary } from "../utils"
  */
 const logger = createLogger("ImportExportHook")
 
+export type ManualImportPlan = Required<ImportPlan>
+
+const DEFAULT_IMPORT_PLAN: ManualImportPlan = {
+  accounts: IMPORT_SECTION_STRATEGIES.Skip,
+  apiCredentialProfiles: IMPORT_SECTION_STRATEGIES.Skip,
+  channelConfigs: IMPORT_SECTION_STRATEGIES.Skip,
+  preferences: IMPORT_SECTION_STRATEGIES.Skip,
+}
+
+/**
+ * Builds the safest initial choices for the data types present in a backup.
+ */
+function createDefaultImportPlan(summary: {
+  hasAccounts?: boolean
+  hasPreferences?: boolean
+  hasChannelConfigs?: boolean
+  hasApiCredentialProfiles?: boolean
+}): ManualImportPlan {
+  return {
+    accounts: summary.hasAccounts
+      ? IMPORT_SECTION_STRATEGIES.Merge
+      : IMPORT_SECTION_STRATEGIES.Skip,
+    apiCredentialProfiles: summary.hasApiCredentialProfiles
+      ? IMPORT_SECTION_STRATEGIES.Merge
+      : IMPORT_SECTION_STRATEGIES.Skip,
+    channelConfigs: summary.hasChannelConfigs
+      ? IMPORT_SECTION_STRATEGIES.Merge
+      : IMPORT_SECTION_STRATEGIES.Skip,
+    preferences: IMPORT_SECTION_STRATEGIES.Skip,
+  }
+}
+
+/**
+ * Parses import text into the UI validation shape, collapsing invalid or broken
+ * summaries into the same non-throwing result.
+ */
+function parseValidBackupSummary(importData: string, unknownLabel: string) {
+  if (!importData.trim()) return null
+
+  try {
+    const summary = parseBackupSummary(importData, unknownLabel)
+    if (!summary || !("valid" in summary) || !summary.valid) {
+      return { valid: false } as const
+    }
+    return summary
+  } catch {
+    return { valid: false } as const
+  }
+}
+
 export const useImportExport = () => {
   const { t } = useTranslation()
   const { loadPreferences } = useUserPreferencesContext()
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
+  const [importPlan, setImportPlan] =
+    useState<ManualImportPlan>(DEFAULT_IMPORT_PLAN)
   const [importData, setImportData] = useState("")
+
+  const validation = useMemo(() => {
+    return parseValidBackupSummary(importData, t("common:labels.unknown"))
+  }, [importData, t])
+
+  const updateImportData = (data: string) => {
+    setImportData(data)
+    const summary = parseValidBackupSummary(data, t("common:labels.unknown"))
+    setImportPlan(
+      summary?.valid ? createDefaultImportPlan(summary) : DEFAULT_IMPORT_PLAN,
+    )
+  }
 
   // 处理文件导入
   const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,7 +107,7 @@ export const useImportExport = () => {
     const reader = new FileReader()
     reader.onload = (e) => {
       const content = e.target?.result as string
-      setImportData(content)
+      updateImportData(content)
     }
     reader.readAsText(file)
   }
@@ -63,16 +131,18 @@ export const useImportExport = () => {
       setIsImporting(true)
 
       const data = JSON.parse(importData)
-      const result = await importFromBackupObject(data)
+      const result = await importFromBackupObject(data, { plan: importPlan })
       const hasImportedSection = Object.values(result.sections ?? {}).some(
         Boolean,
       )
-      if (result.allImported || result.sections?.preferences) {
+      if (result.sections?.preferences) {
         await loadPreferences()
         await applyPreferenceLanguage(await userPreferences.getLanguage())
       }
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
+      } else if (hasImportedSection) {
+        toast.success(t("importExport:import.importSelectedSuccess"))
       }
       if (result.allImported || hasImportedSection) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
@@ -101,29 +171,16 @@ export const useImportExport = () => {
     }
   }
 
-  // 验证导入数据
-  const validateImportData = () => {
-    if (!importData.trim()) return null
-
-    try {
-      const summary = parseBackupSummary(importData, t("common:labels.unknown"))
-      if (!summary || !("valid" in summary) || !summary.valid) {
-        return { valid: false }
-      }
-      return summary
-    } catch {
-      return { valid: false }
-    }
-  }
-
   return {
     isExporting,
     setIsExporting,
     isImporting,
+    importPlan,
+    setImportPlan,
     importData,
-    setImportData,
+    setImportData: updateImportData,
     handleFileImport,
     handleImport,
-    validateImportData,
+    validation,
   }
 }

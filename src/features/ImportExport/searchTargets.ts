@@ -26,3 +26,7 @@ export const WEBDAV_AUTO_SYNC_TARGET_IDS = {
   saveSettings: "webdav-auto-sync-save-settings",
   syncNow: "webdav-auto-sync-sync-now",
 } as const
+
+export const IMPORT_EXPORT_TARGET_IDS = {
+  importMode: "import-mode",
+} as const

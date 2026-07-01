@@ -28,16 +28,75 @@
     "formatError": "Data format error, please check JSON format",
     "formatNotCorrect": "Data format not correct",
     "importFailed": "Import failed: {{error}}",
+    "importSelectedSuccess": "Selected content imported successfully",
     "importSuccess": "Data imported successfully",
     "noImportableData": "No importable data found",
     "pasteJsonData": "Paste JSON data or import via the file selector above...",
+    "replaceWarning": "Some data on this device will be replaced. Export a backup first if needed.",
+    "sections": {
+      "accounts": {
+        "description": "Includes accounts, bookmarks, and tags.",
+        "title": "Accounts and bookmarks"
+      },
+      "apiCredentialProfiles": {
+        "description": "Includes saved API URLs, keys, and notes.",
+        "title": "API credential library"
+      },
+      "channelConfigs": {
+        "description": "Includes channel rules such as model filters.",
+        "title": "Channel configuration"
+      },
+      "label": "Choose what to import",
+      "preferences": {
+        "description": "Includes theme, language, click behavior, and other preferences.",
+        "title": "User settings"
+      }
+    },
+    "sectionStrategy": {
+      "accounts": {
+        "merge": "Add",
+        "replace": "Replace"
+      },
+      "apiCredentialProfiles": {
+        "merge": "Add",
+        "replace": "Replace"
+      },
+      "channelConfigs": {
+        "merge": "Add",
+        "replace": "Replace",
+        "skip": "Skip"
+      },
+      "preferences": {
+        "replace": "Replace",
+        "skip": "Skip"
+      }
+    },
+    "sectionStrategyHelp": {
+      "accounts": {
+        "merge": "Useful when bringing accounts from another computer; existing accounts and bookmarks stay here.",
+        "replace": "Your current accounts and bookmarks will match the backup list."
+      },
+      "apiCredentialProfiles": {
+        "merge": "Add API credentials from the backup; existing credentials stay here.",
+        "replace": "Your current API credential library will match the backup."
+      },
+      "channelConfigs": {
+        "merge": "Add or update rules by channel; newer backup rules will apply.",
+        "replace": "Your current channel configuration will match the backup.",
+        "skip": "Keep the current channel rules."
+      },
+      "preferences": {
+        "replace": "Replace this device's current settings with the backup settings.",
+        "skip": "Keep this device's current theme, language, and habits."
+      }
+    },
     "selectBackupFile": "Select backup file",
     "selectFileImport": "Please select file or input data to import",
     "title": "Import Data"
   },
   "notice": {
     "importantNotice": "Important Notice",
-    "importWarning1": "Imported data will overwrite existing data of the same type, please operate with caution",
+    "importWarning1": "Before importing, choose per data type whether to add, replace, or skip it. Accounts/API credentials are added by default, while current settings are kept",
     "importWarning2": "It is recommended to export current data for backup before importing",
     "importWarning3": "Only supports JSON format files exported by this extension",
     "importWarning4": "Imported data may contain sensitive information (account tokens and API keys). Keep backups secure and only import from trusted sources"

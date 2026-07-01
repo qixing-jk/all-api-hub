@@ -8,22 +8,31 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
+  CardItem,
+  CardList,
   CardTitle,
   FormField,
+  ResponsiveButtonGroup,
   Textarea,
+  ToggleButton,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { IMPORT_SECTION_STRATEGIES } from "~/services/importExport/importExportService"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 
+import type { ManualImportPlan } from "../hooks/useImportExport"
+import { IMPORT_EXPORT_TARGET_IDS } from "../searchTargets"
 import { IMPORT_EXPORT_TEST_IDS } from "../testIds"
 
 interface ImportSectionProps {
   importData: string
   setImportData: (data: string) => void
+  importPlan: ManualImportPlan
+  setImportPlan: React.Dispatch<React.SetStateAction<ManualImportPlan>>
   handleFileImport: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleImport: () => void
   isImporting: boolean
@@ -43,12 +52,135 @@ interface ImportSectionProps {
 const ImportSection = ({
   importData,
   setImportData,
+  importPlan,
+  setImportPlan,
   handleFileImport,
   handleImport,
   isImporting,
   validation,
 }: ImportSectionProps) => {
   const { t } = useTranslation("importExport")
+  type ImportStrategy = ManualImportPlan[keyof ManualImportPlan]
+  const importSections: Array<{
+    key: keyof ManualImportPlan
+    visible: boolean
+    title: string
+    description: string
+    strategies: Array<{
+      strategy: ImportStrategy
+      label: string
+      help: string
+      testId: (typeof IMPORT_EXPORT_TEST_IDS)[keyof typeof IMPORT_EXPORT_TEST_IDS]
+    }>
+  }> = [
+    {
+      key: "accounts",
+      visible: Boolean(validation?.hasAccounts),
+      title: t("import.sections.accounts.title"),
+      description: t("import.sections.accounts.description"),
+      strategies: [
+        {
+          strategy: IMPORT_SECTION_STRATEGIES.Merge,
+          label: t("import.sectionStrategy.accounts.merge"),
+          help: t("import.sectionStrategyHelp.accounts.merge"),
+          testId: IMPORT_EXPORT_TEST_IDS.importAccountsMergeOption,
+        },
+        {
+          strategy: IMPORT_SECTION_STRATEGIES.Replace,
+          label: t("import.sectionStrategy.accounts.replace"),
+          help: t("import.sectionStrategyHelp.accounts.replace"),
+          testId: IMPORT_EXPORT_TEST_IDS.importAccountsReplaceOption,
+        },
+      ],
+    },
+    {
+      key: "apiCredentialProfiles",
+      visible: Boolean(validation?.hasApiCredentialProfiles),
+      title: t("import.sections.apiCredentialProfiles.title"),
+      description: t("import.sections.apiCredentialProfiles.description"),
+      strategies: [
+        {
+          strategy: IMPORT_SECTION_STRATEGIES.Merge,
+          label: t("import.sectionStrategy.apiCredentialProfiles.merge"),
+          help: t("import.sectionStrategyHelp.apiCredentialProfiles.merge"),
+          testId: IMPORT_EXPORT_TEST_IDS.importApiCredentialProfilesMergeOption,
+        },
+        {
+          strategy: IMPORT_SECTION_STRATEGIES.Replace,
+          label: t("import.sectionStrategy.apiCredentialProfiles.replace"),
+          help: t("import.sectionStrategyHelp.apiCredentialProfiles.replace"),
+          testId:
+            IMPORT_EXPORT_TEST_IDS.importApiCredentialProfilesReplaceOption,
+        },
+      ],
+    },
+    {
+      key: "preferences",
+      visible: Boolean(validation?.hasPreferences),
+      title: t("import.sections.preferences.title"),
+      description: t("import.sections.preferences.description"),
+      strategies: [
+        {
+          strategy: IMPORT_SECTION_STRATEGIES.Skip,
+          label: t("import.sectionStrategy.preferences.skip"),
+          help: t("import.sectionStrategyHelp.preferences.skip"),
+          testId: IMPORT_EXPORT_TEST_IDS.importPreferencesSkipOption,
+        },
+        {
+          strategy: IMPORT_SECTION_STRATEGIES.Replace,
+          label: t("import.sectionStrategy.preferences.replace"),
+          help: t("import.sectionStrategyHelp.preferences.replace"),
+          testId: IMPORT_EXPORT_TEST_IDS.importPreferencesReplaceOption,
+        },
+      ],
+    },
+    {
+      key: "channelConfigs",
+      visible: Boolean(validation?.hasChannelConfigs),
+      title: t("import.sections.channelConfigs.title"),
+      description: t("import.sections.channelConfigs.description"),
+      strategies: [
+        {
+          strategy: IMPORT_SECTION_STRATEGIES.Skip,
+          label: t("import.sectionStrategy.channelConfigs.skip"),
+          help: t("import.sectionStrategyHelp.channelConfigs.skip"),
+          testId: IMPORT_EXPORT_TEST_IDS.importChannelConfigsSkipOption,
+        },
+        {
+          strategy: IMPORT_SECTION_STRATEGIES.Merge,
+          label: t("import.sectionStrategy.channelConfigs.merge"),
+          help: t("import.sectionStrategyHelp.channelConfigs.merge"),
+          testId: IMPORT_EXPORT_TEST_IDS.importChannelConfigsMergeOption,
+        },
+        {
+          strategy: IMPORT_SECTION_STRATEGIES.Replace,
+          label: t("import.sectionStrategy.channelConfigs.replace"),
+          help: t("import.sectionStrategyHelp.channelConfigs.replace"),
+          testId: IMPORT_EXPORT_TEST_IDS.importChannelConfigsReplaceOption,
+        },
+      ],
+    },
+  ]
+  const visibleImportSections = importSections.filter(
+    (section) => section.visible,
+  )
+  const hasSelectedImportSection = visibleImportSections.some(
+    ({ key }) => importPlan[key] !== IMPORT_SECTION_STRATEGIES.Skip,
+  )
+  const hasReplaceStrategy = visibleImportSections.some(
+    ({ key }) => importPlan[key] === IMPORT_SECTION_STRATEGIES.Replace,
+  )
+
+  const updateImportPlan = (
+    key: keyof ManualImportPlan,
+    strategy: ManualImportPlan[keyof ManualImportPlan],
+  ) => {
+    setImportPlan((plan) => ({
+      ...plan,
+      [key]: strategy,
+    }))
+  }
+
   return (
     <section id="import-section" className="flex h-full">
       <Card padding="none" className="flex flex-1 flex-col">
@@ -93,6 +225,66 @@ const ImportSection = ({
               clearButtonLabel={t("common:actions.clear")}
             />
           </FormField>
+
+          {visibleImportSections.length > 0 && (
+            <div id={IMPORT_EXPORT_TARGET_IDS.importMode}>
+              <FormField label={t("import.sections.label")}>
+                <CardList className="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                  {visibleImportSections.map(
+                    ({ key, title, description, strategies }) => (
+                      <CardItem
+                        key={key}
+                        padding="sm"
+                        title={title}
+                        description={description}
+                        rightContent={
+                          <ResponsiveButtonGroup
+                            aria-label={title}
+                            className="max-w-full"
+                          >
+                            {strategies.map(
+                              ({ strategy, label, help, testId }) => {
+                                const selected = importPlan[key] === strategy
+                                const helpId = `import-plan-${key}-${strategy}-help`
+
+                                return (
+                                  <span key={strategy} className="contents">
+                                    <ToggleButton
+                                      type="button"
+                                      size="sm"
+                                      isActive={selected}
+                                      title={help}
+                                      aria-label={label}
+                                      aria-describedby={helpId}
+                                      onClick={() =>
+                                        updateImportPlan(key, strategy)
+                                      }
+                                      data-testid={testId}
+                                      className="min-w-fit flex-1 sm:flex-none"
+                                    >
+                                      {label}
+                                    </ToggleButton>
+                                    <span id={helpId} className="sr-only">
+                                      {help}
+                                    </span>
+                                  </span>
+                                )
+                              },
+                            )}
+                          </ResponsiveButtonGroup>
+                        }
+                      />
+                    ),
+                  )}
+                </CardList>
+                {hasReplaceStrategy && (
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    {t("import.replaceWarning")}
+                  </p>
+                )}
+              </FormField>
+            </div>
+          )}
 
           {/* 数据验证结果 */}
           {validation && (
@@ -143,7 +335,9 @@ const ImportSection = ({
             <Button
               id="import-backup-action"
               onClick={handleImport}
-              disabled={isImporting || !validation?.valid}
+              disabled={
+                isImporting || !validation?.valid || !hasSelectedImportSection
+              }
               loading={isImporting}
               variant="default"
               bleed

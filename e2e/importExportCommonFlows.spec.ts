@@ -1,4 +1,5 @@
 import fs from "node:fs/promises"
+import type { Page } from "@playwright/test"
 
 import {
   OPTIONS_PAGE_PATH,
@@ -42,6 +43,20 @@ import {
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 const CHANNEL_CONFIGS_STORAGE_KEY = "channel_configs"
+
+async function chooseFullReplaceImport(page: Page) {
+  for (const testId of [
+    IMPORT_EXPORT_TEST_IDS.importAccountsReplaceOption,
+    IMPORT_EXPORT_TEST_IDS.importApiCredentialProfilesReplaceOption,
+    IMPORT_EXPORT_TEST_IDS.importPreferencesReplaceOption,
+    IMPORT_EXPORT_TEST_IDS.importChannelConfigsReplaceOption,
+  ]) {
+    const option = page.getByTestId(testId)
+    if ((await option.count()) > 0) {
+      await option.click()
+    }
+  }
+}
 
 async function readStoredAccountConfig(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
@@ -438,6 +453,7 @@ test("round-trips a full backup through export download and file import", async 
     page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
   ).toBeVisible()
 
+  await chooseFullReplaceImport(page)
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
   await expect
@@ -466,7 +482,7 @@ test("round-trips a full backup through export download and file import", async 
     .toEqual({
       accountIds: ["round-trip-account"],
       bookmarkIds: ["round-trip-bookmark"],
-      profileIds: ["round-trip-old-profile", "round-trip-profile"],
+      profileIds: ["round-trip-profile"],
       channelConfigIds: ["42"],
       channelFilterNames: ["Round Trip Filter"],
       currencyType: "CNY",
@@ -500,10 +516,10 @@ test("round-trips a full backup through export download and file import", async 
   ).toBeVisible()
   await expect(
     page.getByRole("heading", { name: "Round Trip Old Profile" }),
-  ).toBeVisible()
+  ).toHaveCount(0)
 })
 
-test("imports account backup JSON from the preview field and replaces account storage", async ({
+test("imports account backup JSON from the preview field and appends by default", async ({
   context,
   extensionId,
   page,
@@ -551,13 +567,13 @@ test("imports account backup JSON from the preview field and replaces account st
     .poll(async () => {
       const config = await readStoredAccountConfig(serviceWorker)
       return {
-        accountIds: config.accounts.map((account) => account.id),
+        accountIds: config.accounts.map((account) => account.id).sort(),
         pinnedAccountIds: config.pinnedAccountIds,
         orderedAccountIds: config.orderedAccountIds,
       }
     })
     .toEqual({
-      accountIds: ["imported-account"],
+      accountIds: ["imported-account", "old-account"],
       pinnedAccountIds: ["imported-account"],
       orderedAccountIds: ["imported-account"],
     })
@@ -570,7 +586,7 @@ test("imports account backup JSON from the preview field and replaces account st
   await expect(
     page.getByRole("button", { name: "Imported Account" }),
   ).toBeVisible()
-  await expect(page.getByRole("button", { name: "Old Account" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Old Account" })).toBeVisible()
 })
 
 test("imports account backup JSON from a selected file and restores popup accounts", async ({
@@ -665,6 +681,11 @@ test("imports API credential profiles from backup JSON and restores the popup ta
     page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
   ).toBeVisible()
 
+  await page
+    .getByTestId(
+      IMPORT_EXPORT_TEST_IDS.importApiCredentialProfilesReplaceOption,
+    )
+    .click()
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
   await expect
@@ -748,6 +769,11 @@ test("refreshes an already-open popup API credentials tab after backup import", 
     page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
   ).toBeVisible()
 
+  await page
+    .getByTestId(
+      IMPORT_EXPORT_TEST_IDS.importApiCredentialProfilesReplaceOption,
+    )
+    .click()
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
   await expect
@@ -851,6 +877,7 @@ test("restores a full backup and keeps common popup workflows available", async 
     page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
   ).toBeVisible()
 
+  await chooseFullReplaceImport(page)
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
   await expect
@@ -1006,6 +1033,7 @@ test("restores a full backup and keeps the sidepanel model workflow available", 
     page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
   ).toBeVisible()
 
+  await chooseFullReplaceImport(page)
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
   await expect
@@ -1094,6 +1122,9 @@ test("imports preference backup JSON and applies settings after reload", async (
   await expect(page.getByText("Data format is correct")).toBeVisible()
   await expect(page.getByText("Contains user settings")).toBeVisible()
 
+  await page
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.importPreferencesReplaceOption)
+    .click()
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
   await expect
