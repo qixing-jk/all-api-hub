@@ -420,8 +420,19 @@ export function useBookmarkAccountImportDialog() {
     (nodeIds: string[], mode: "select" | "deselect" | "invert") => {
       setSelectedBookmarkNodeIds((current) => {
         const next = new Set(current)
+        const expandedIds = new Set<string>()
 
         for (const id of nodeIds) {
+          const path = findBookmarkNodePath(bookmarkTree, id)
+          const node = path.at(-1)
+          if (!node) continue
+
+          for (const subtreeId of collectBookmarkSubtreeIds(node)) {
+            expandedIds.add(subtreeId)
+          }
+        }
+
+        for (const id of expandedIds) {
           if (mode === "select") {
             next.add(id)
           } else if (mode === "deselect") {
@@ -436,7 +447,7 @@ export function useBookmarkAccountImportDialog() {
         return next
       })
     },
-    [],
+    [bookmarkTree],
   )
 
   const scanSelectedBookmarks = useCallback(() => {

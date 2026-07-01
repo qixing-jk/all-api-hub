@@ -19,7 +19,7 @@
         "collapseFolder": "摺疊資料夾",
         "expandAll": "全部展開",
         "expandFolder": "展開資料夾",
-        "importSelected": "匯入所選項目（{{selectedCount}}）",
+        "importSelected_other": "匯入所選項目（{{count}}）",
         "invertSelected": "反選",
         "openAddAccount": "開啟新增帳號",
         "scanSelected": "掃描所選範圍",
@@ -59,7 +59,7 @@
       "selectedBookmarkCount_one": "已選擇 {{count}} 個書籤",
       "selectedBookmarkCount_other": "已選擇 {{count}} 個書籤",
       "status": {
-        "duplicate": "預設略過。已有已儲存帳號符合數：{{existingAccountCount}}",
+        "duplicate_other": "預設略過。已有已儲存帳號符合數：{{count}}",
         "imported": "已匯入",
         "ready": "可匯入"
       },

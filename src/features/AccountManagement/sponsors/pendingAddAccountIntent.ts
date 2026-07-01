@@ -198,7 +198,7 @@ function normalizeSponsorAddAccountPrefillPayload(
 }
 
 /**
- * Validates a raw bookmark-import prefill and strips path/query data before it reaches the dialog.
+ * Validates a raw bookmark-import prefill before it reaches the dialog.
  */
 function normalizeBookmarkImportAddAccountPrefillPayload(
   value: Record<string, unknown>,
@@ -213,10 +213,17 @@ function normalizeBookmarkImportAddAccountPrefillPayload(
   try {
     const url = new URL(value.siteUrl)
     if (url.protocol !== "https:" && url.protocol !== "http:") return null
+    const siteUrl =
+      siteType !== SITE_TYPES.UNKNOWN
+        ? normalizeAccountSiteProfileUrlForStorage({
+            siteType,
+            url: value.siteUrl,
+          })
+        : url.origin
 
     return {
       source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
-      siteUrl: url.origin,
+      siteUrl,
       ...(siteType !== SITE_TYPES.UNKNOWN ? { siteType } : {}),
       ...(normalizedAuthType ? { authType: normalizedAuthType } : {}),
     }

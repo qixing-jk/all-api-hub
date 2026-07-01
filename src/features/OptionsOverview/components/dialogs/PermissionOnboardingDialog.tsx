@@ -265,12 +265,7 @@ export function PermissionOnboardingDialog({
                 title: permission.title,
                 description: permission.description,
                 status: permission.granted,
-                statusLabel:
-                  permission.granted === null
-                    ? t("permissions.status.checking")
-                    : permission.granted
-                      ? t("permissions.status.granted")
-                      : t("permissions.status.denied"),
+                statusLabel: permission.statusLabel,
                 rightContent: (
                   <div className="flex flex-col items-start gap-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
                     <Button

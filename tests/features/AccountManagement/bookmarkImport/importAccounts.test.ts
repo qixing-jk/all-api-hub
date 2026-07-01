@@ -256,4 +256,91 @@ describe("runBookmarkAccountImport", () => {
       safeMessageKey: "ui:dialog.bookmarkAccountImport.failures.save",
     })
   })
+
+  it("records thrown import failures with safe local messages and nullable account ids", async () => {
+    const draft = createEmptyAccountDialogDraft()
+    const autoDetectAccount = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("private detection failure"))
+      .mockResolvedValueOnce({
+        success: true,
+        message: "detected",
+        data: {
+          username: "user",
+          accessToken: "token",
+          userId: "id",
+          exchangeRate: null,
+          checkIn: undefined,
+          siteName: "Example",
+          siteType: "unsupported-site-type",
+          authType: "unsupported-auth-type",
+        },
+      })
+    const validateAndSaveAccount = vi.fn().mockResolvedValue({
+      success: true,
+      message: "saved",
+      accountId: "   ",
+    })
+
+    const result = await runBookmarkAccountImport({
+      candidates: [
+        {
+          id: "bookmark-import:https://throw.example.invalid",
+          url: "https://throw.example.invalid",
+          normalizedOrigin: "https://throw.example.invalid",
+          status: "ready",
+          selectedByDefault: true,
+          sourceBookmarkCount: 1,
+        },
+        {
+          id: "bookmark-import:https://fallback.example.invalid",
+          url: "https://fallback.example.invalid",
+          normalizedOrigin: "https://fallback.example.invalid",
+          status: "ready",
+          selectedByDefault: true,
+          sourceBookmarkCount: 1,
+        },
+      ],
+      autoDetectAccount,
+      validateAndSaveAccount,
+    })
+
+    expect(validateAndSaveAccount).toHaveBeenCalledWith(
+      "https://fallback.example.invalid",
+      "Example",
+      "user",
+      "token",
+      "id",
+      "",
+      "",
+      [],
+      draft.checkIn,
+      SITE_TYPES.UNKNOWN,
+      AuthTypeEnum.AccessToken,
+      "",
+      "",
+      false,
+      false,
+      undefined,
+      {
+        deferDataRefresh: true,
+      },
+    )
+    expect(result).toMatchObject({
+      successCount: 1,
+      failureCount: 1,
+      rows: [
+        {
+          status: "failed",
+          failureCategory: "unknown",
+          safeMessageKey: "ui:dialog.bookmarkAccountImport.failures.unknown",
+        },
+        {
+          status: "success",
+          accountId: null,
+        },
+      ],
+    })
+    expect(JSON.stringify(result)).not.toContain("private detection failure")
+  })
 })

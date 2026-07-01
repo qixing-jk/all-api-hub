@@ -213,6 +213,28 @@ function bookmarkTreeWithNestedFolders() {
   ]
 }
 
+function bookmarkTreeWithFolderOnlySearchMatch() {
+  return [
+    {
+      id: "root",
+      title: "Bookmarks Bar",
+      children: [
+        {
+          id: "folder-matched",
+          title: "Matched folder",
+          children: [
+            {
+              id: "hidden-bookmark",
+              title: "Hidden relay",
+              url: "https://hidden.example.invalid/dashboard",
+            },
+          ],
+        },
+      ],
+    },
+  ]
+}
+
 describe("BookmarkAccountImportDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -276,12 +298,12 @@ describe("BookmarkAccountImportDialog", () => {
 
   it("uses grammar-safe duplicate status copy for any saved account count", () => {
     const duplicateStatus =
-      enUiLocale.dialog.bookmarkAccountImport.status.duplicate
+      enUiLocale.dialog.bookmarkAccountImport.status.duplicate_other
 
-    expect(duplicateStatus.replace("{{existingAccountCount}}", "1")).toBe(
+    expect(duplicateStatus.replace("{{count}}", "1")).toBe(
       "Skipped by default. Existing saved-account match count: 1",
     )
-    expect(duplicateStatus.replace("{{existingAccountCount}}", "2")).toBe(
+    expect(duplicateStatus.replace("{{count}}", "2")).toBe(
       "Skipped by default. Existing saved-account match count: 2",
     )
   })
@@ -298,6 +320,54 @@ describe("BookmarkAccountImportDialog", () => {
       expect(
         await screen.findByRole("button", { name: "Import selected (2)" }),
       ).toBeEnabled()
+    } finally {
+      testI18n.removeResourceBundle("en", "ui")
+    }
+  })
+
+  it("uses count interpolation for count-dependent import labels", async () => {
+    const user = userEvent.setup()
+    testI18n.addResourceBundle(
+      "en",
+      "ui",
+      {
+        dialog: {
+          bookmarkAccountImport: {
+            ...enUiLocale.dialog.bookmarkAccountImport,
+            actions: {
+              ...enUiLocale.dialog.bookmarkAccountImport.actions,
+              importSelected_one: "Import selected count={{count}}",
+              importSelected_other: "Import selected count={{count}}",
+            },
+            status: {
+              ...enUiLocale.dialog.bookmarkAccountImport.status,
+              duplicate_one: "Duplicate count={{count}}",
+              duplicate_other: "Duplicate count={{count}}",
+            },
+          },
+        },
+      },
+      true,
+      true,
+    )
+    accounts.push(
+      buildSiteAccount({
+        id: "account-existing",
+        site_url: "https://existing.example.invalid/settings",
+      }),
+    )
+
+    try {
+      renderDialog()
+
+      await allowBookmarksAndScanSelected(user)
+
+      expect(
+        await screen.findByRole("button", {
+          name: "Import selected count=1",
+        }),
+      ).toBeEnabled()
+      expect(screen.getByText("Duplicate count=1")).toBeInTheDocument()
     } finally {
       testI18n.removeResourceBundle("en", "ui")
     }
@@ -711,7 +781,7 @@ describe("BookmarkAccountImportDialog", () => {
         screen.getByTestId(
           `${ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScopeCheckbox}-personal-docs`,
         ),
-      ).toHaveAttribute("aria-checked", "false")
+      ).toHaveAttribute("aria-checked", "true")
 
       await user.click(screen.getByRole("button", { name: "Clear selected" }))
       expect(
@@ -737,6 +807,54 @@ describe("BookmarkAccountImportDialog", () => {
       ).toBeInTheDocument()
       expect(
         screen.getByText("https://docs.example.invalid"),
+      ).toBeInTheDocument()
+    } finally {
+      testI18n.removeResourceBundle("en", "ui")
+    }
+  })
+
+  it("normalizes filtered bulk folder selection to hidden descendants before scanning", async () => {
+    const user = userEvent.setup()
+    getBrowserBookmarkTreeMock.mockResolvedValueOnce({
+      success: true,
+      tree: bookmarkTreeWithFolderOnlySearchMatch(),
+    })
+    testI18n.addResourceBundle("en", "ui", enUiLocale, true, true)
+
+    try {
+      renderDialog()
+
+      await user.click(
+        await screen.findByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportAllowScanButton,
+        ),
+      )
+      await user.type(
+        await screen.findByPlaceholderText("Search bookmarks..."),
+        "matched",
+      )
+
+      expect(await screen.findByText("Matched folder")).toBeVisible()
+      expect(screen.queryByText("Hidden relay")).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole("button", { name: "Select all" }))
+      await user.clear(screen.getByPlaceholderText("Search bookmarks..."))
+      await user.click(screen.getByRole("button", { name: "Expand all" }))
+
+      expect(
+        screen.getByTestId(
+          `${ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScopeCheckbox}-hidden-bookmark`,
+        ),
+      ).toHaveAttribute("aria-checked", "true")
+
+      await user.click(
+        screen.getByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScanSelectedButton,
+        ),
+      )
+
+      expect(
+        await screen.findByText("https://hidden.example.invalid"),
       ).toBeInTheDocument()
     } finally {
       testI18n.removeResourceBundle("en", "ui")
@@ -978,6 +1096,120 @@ describe("BookmarkAccountImportDialog", () => {
       await screen.findByText("https://new.example.invalid"),
     ).toBeInTheDocument()
     expect(ensurePermissionsDetailedMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("shows the unsupported browser fallback when bookmarks cannot be read", async () => {
+    const user = userEvent.setup()
+    getBrowserBookmarkTreeMock.mockResolvedValueOnce({
+      success: false,
+      reason: "unavailable",
+    })
+
+    renderDialog()
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportAllowScanButton,
+      ),
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.bookmarkAccountImport.apiUnavailable"),
+    ).toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+        insights: expect.objectContaining({
+          failureReason:
+            PRODUCT_ANALYTICS_FAILURE_REASONS.PermissionUnavailable,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+        }),
+      }),
+    )
+  })
+
+  it("keeps the dialog recoverable when bookmark storage is empty", async () => {
+    const user = userEvent.setup()
+    getBrowserBookmarkTreeMock.mockResolvedValueOnce({
+      success: true,
+      tree: [],
+    })
+
+    renderDialog()
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportAllowScanButton,
+      ),
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.bookmarkAccountImport.empty"),
+    ).toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.EmptyResponse,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Response,
+        }),
+      }),
+    )
+  })
+
+  it("reports selected bookmark scopes that contain no importable account sites", async () => {
+    const user = userEvent.setup()
+    getBrowserBookmarkTreeMock.mockResolvedValueOnce({
+      success: true,
+      tree: bookmarkTreeWith(["mailto:owner@example.invalid"]),
+    })
+
+    renderDialog()
+
+    await allowBookmarksAndScanSelected(user)
+
+    expect(
+      await screen.findByText("ui:dialog.bookmarkAccountImport.noCandidates"),
+    ).toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+        insights: expect.objectContaining({
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.UnsupportedTarget,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+        }),
+      }),
+    )
+  })
+
+  it("keeps import results visible when account data reload fails", async () => {
+    const user = userEvent.setup()
+    loadAccountDataMock.mockRejectedValueOnce(new Error("reload failed"))
+
+    renderDialog()
+
+    await allowBookmarksAndScanSelected(user)
+    await screen.findByText("https://new.example.invalid")
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportImportButton,
+      ),
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.bookmarkAccountImport.reloadFailed"),
+    ).toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.StorageReadFailed,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+        }),
+      }),
+    )
   })
 
   it("exposes Add Account recovery actions for failed imports", async () => {

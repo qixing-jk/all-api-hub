@@ -39,7 +39,7 @@ const errorMessageKeys = {
 /** Resolves the import action label with its selected count. */
 function translateImportCount(t: TFunction, count: number) {
   return t("ui:dialog.bookmarkAccountImport.actions.importSelected", {
-    selectedCount: count,
+    count,
   })
 }
 
@@ -53,7 +53,7 @@ function translateSelectedBookmarkCount(t: TFunction, count: number) {
 /** Resolves duplicate candidate status with the existing-account count. */
 function translateDuplicateStatus(t: TFunction, count: number) {
   return t("ui:dialog.bookmarkAccountImport.status.duplicate", {
-    existingAccountCount: count,
+    count,
   })
 }
 

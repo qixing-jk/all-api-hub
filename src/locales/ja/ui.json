@@ -19,7 +19,7 @@
         "collapseFolder": "フォルダーを折りたたむ",
         "expandAll": "すべて展開",
         "expandFolder": "フォルダーを展開",
-        "importSelected": "選択項目をインポート（{{selectedCount}}）",
+        "importSelected_other": "選択項目をインポート（{{count}}）",
         "invertSelected": "選択を反転",
         "openAddAccount": "アカウント追加を開く",
         "scanSelected": "選択範囲をスキャン",
@@ -59,7 +59,7 @@
       "selectedBookmarkCount_one": "{{count}} 件のブックマークを選択中",
       "selectedBookmarkCount_other": "{{count}} 件のブックマークを選択中",
       "status": {
-        "duplicate": "既定ではスキップされます。保存済みアカウント一致数: {{existingAccountCount}}",
+        "duplicate_other": "既定ではスキップされます。保存済みアカウント一致数: {{count}}",
         "imported": "インポート済み",
         "ready": "インポート可能"
       },

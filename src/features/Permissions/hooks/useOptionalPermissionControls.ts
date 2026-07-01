@@ -94,28 +94,40 @@ export function useOptionalPermissionControls({
 
     setIsRefreshing(true)
     logger.debug("Checking optional permission statuses")
-    const results = await Promise.all(
-      permissionIds.map(async (id) => ({
-        id,
-        granted: await hasPermission(id),
-      })),
-    )
-    logger.debug("Optional permission statuses resolved", { results })
+    try {
+      const results = await Promise.all(
+        permissionIds.map(async (id) => ({
+          id,
+          granted: await hasPermission(id),
+        })),
+      )
+      logger.debug("Optional permission statuses resolved", { results })
 
-    setState((prev) => ({
-      ...prev,
-      statuses: {
-        ...prev.statuses,
-        ...results.reduce(
-          (acc, curr) => ({
-            ...acc,
-            [curr.id]: curr.granted,
-          }),
-          {} as Record<ManifestOptionalPermissions, boolean>,
-        ),
-      },
-    }))
-    setIsRefreshing(false)
+      setState((prev) => ({
+        ...prev,
+        statuses: {
+          ...prev.statuses,
+          ...results.reduce(
+            (acc, curr) => ({
+              ...acc,
+              [curr.id]: curr.granted,
+            }),
+            {} as Record<ManifestOptionalPermissions, boolean>,
+          ),
+        },
+      }))
+    } catch (error) {
+      logger.error("Failed to check optional permission statuses", { error })
+      setState((prev) => ({
+        ...prev,
+        statuses: {
+          ...prev.statuses,
+          ...buildState<boolean>(permissionIds, false),
+        },
+      }))
+    } finally {
+      setIsRefreshing(false)
+    }
   }, [enabled, logger, permissionIds])
 
   useEffect(() => {
@@ -261,6 +273,12 @@ export function useOptionalPermissionControls({
         title: getOptionalPermissionTitle(t, id),
         description: getOptionalPermissionDescription(t, id),
         granted: state.statuses[id],
+        statusLabel:
+          state.statuses[id] === null
+            ? t("permissions.status.checking")
+            : state.statuses[id]
+              ? t("permissions.status.granted")
+              : t("permissions.status.denied"),
         pending: state.pending[id],
       })),
     [permissionIds, state.pending, state.statuses, t],

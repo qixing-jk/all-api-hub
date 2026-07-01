@@ -104,6 +104,20 @@ describe("pending sponsor add-account intent", () => {
     ).toBe(false)
   })
 
+  it("preserves site-type-specific bookmark-import URLs when the site type is known", () => {
+    expect(
+      normalizeAddAccountPrefill({
+        source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+        siteType: SITE_TYPES.AIHUBMIX,
+        siteUrl: "https://aihubmix.com/token",
+      }),
+    ).toEqual({
+      source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+      siteType: SITE_TYPES.AIHUBMIX,
+      siteUrl: "https://console.aihubmix.com",
+    })
+  })
+
   it("clears malformed pending prefill without opening the add-account flow", async () => {
     await storage.set(STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL, {
       source: "sponsor",

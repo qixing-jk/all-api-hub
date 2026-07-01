@@ -267,6 +267,35 @@ describe("PermissionSettings", () => {
     expect(unsubscribeMock).toHaveBeenCalledTimes(1)
   })
 
+  it("settles status refresh when a permission status check rejects", async () => {
+    hasPermissionMock.mockImplementation(async (id: string) => {
+      if (id === "clipboardRead") {
+        throw new Error("status failed")
+      }
+
+      return id === "cookies"
+    })
+
+    render(<PermissionSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "settings:permissions.actions.refresh",
+        }),
+      ).toBeEnabled()
+    })
+    expect(
+      screen.queryByText("settings:permissions.status.checking"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getAllByText("settings:permissions.status.denied"),
+    ).toHaveLength(4)
+  })
+
   it("shows an error toast when requesting a permission throws", async () => {
     requestPermissionDetailedMock.mockRejectedValueOnce(
       new Error("request failed"),

@@ -752,7 +752,6 @@ import type { BrowserBookmarkTreeNode } from "~/utils/browser/browserApi"
 export type BookmarkAccountImportCandidateStatus =
   | "ready"
   | "duplicate"
-  | "unsupported"
 
 export interface BookmarkAccountImportCandidate {
   id: string
@@ -903,7 +902,7 @@ export function buildBookmarkAccountImportCandidates(
   const candidatesByOrigin = new Map<string, BookmarkAccountImportCandidate>()
 
   for (const node of flattenBookmarkNodes(input.bookmarkTree)) {
-    if (node.children && node.children.length > 0) {
+    if (node.children) {
       ignoredCounts.folder += 1
     }
 
@@ -964,9 +963,6 @@ export function summarizeBookmarkAccountImportScan(
   const duplicateCount = scan.candidates.filter(
     (candidate) => candidate.status === "duplicate",
   ).length
-  const unsupportedCount = scan.candidates.filter(
-    (candidate) => candidate.status === "unsupported",
-  ).length
   const ignoredCount = Object.values(scan.ignoredCounts).reduce(
     (sum, count) => sum + count,
     0,
@@ -977,7 +973,9 @@ export function summarizeBookmarkAccountImportScan(
     readyCount,
     duplicateCount,
     invalidCount:
-      unsupportedCount + scan.ignoredCounts.malformed + scan.ignoredCounts.nonWeb,
+      scan.ignoredCounts.unsupported +
+      scan.ignoredCounts.malformed +
+      scan.ignoredCounts.nonWeb,
     ignoredCount,
     selectedDefaultCount: scan.candidates.filter(
       (candidate) => candidate.selectedByDefault,

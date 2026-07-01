@@ -32,8 +32,8 @@
     "warningTitle": "Toàn bộ API Key chỉ hiển thị một lần"
   },
   "bookmarkImportBatch": {
-    "action": "Nhap hang loat tu dau trang",
-    "prompt": "Da luu nhieu trang trong dau trang trinh duyet?"
+    "action": "Nhập hàng loạt từ dấu trang",
+    "prompt": "Đã lưu nhiều trang trong dấu trang trình duyệt? Bạn có thể nhập hàng loạt từ dấu trang."
   },
   "form": {
     "accessToken": "Access Token",

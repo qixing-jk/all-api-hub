@@ -20,7 +20,13 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const permissionMocks = vi.hoisted(() => ({
   ensurePermissionsDetailed: vi.fn(),
@@ -909,12 +915,15 @@ describe("PermissionOnboardingDialog language selection", () => {
 
     renderWithI18n(<PermissionOnboardingDialog open onClose={onClose} />, i18n)
 
+    const cookiesRow = document.getElementById("cookies")
+    if (!cookiesRow) {
+      throw new Error("Expected cookies permission row")
+    }
+
     await user.click(
-      await screen
-        .findAllByRole("button", {
-          name: i18n.t("permissions.actions.allow"),
-        })
-        .then((buttons) => buttons[0]),
+      within(cookiesRow).getByRole("button", {
+        name: i18n.t("permissions.actions.allow"),
+      }),
     )
 
     await waitFor(() => {
@@ -939,12 +948,15 @@ describe("PermissionOnboardingDialog language selection", () => {
 
     renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
 
+    const cookiesRow = document.getElementById("cookies")
+    if (!cookiesRow) {
+      throw new Error("Expected cookies permission row")
+    }
+
     await user.click(
-      await screen
-        .findAllByRole("button", {
-          name: i18n.t("permissions.actions.allow"),
-        })
-        .then((buttons) => buttons[0]),
+      within(cookiesRow).getByRole("button", {
+        name: i18n.t("permissions.actions.allow"),
+      }),
     )
 
     await waitFor(() => {

@@ -1,5 +1,8 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
+import {
+  BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+  type AddAccountPrefill,
+} from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
 export const ACCOUNT_DIALOG_PHASES = {
@@ -15,7 +18,7 @@ export const ACCOUNT_DIALOG_FORM_SOURCES = {
   DETECTED: "detected",
   EXISTING_ACCOUNT: "existing-account",
   SPONSOR: "sponsor",
-  BOOKMARK_IMPORT: "bookmark-import",
+  BOOKMARK_IMPORT: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
 } as const
 
 export type AccountDialogFormSource =

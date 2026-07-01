@@ -366,6 +366,9 @@ function AccountManagement({
   const openBookmarkImportDialog = useCallback(() => {
     setIsBookmarkImportDialogOpen(true)
   }, [])
+  const closeBookmarkImportDialog = useCallback(() => {
+    setIsBookmarkImportDialogOpen(false)
+  }, [])
 
   return (
     <AccountManagementProvider
@@ -376,7 +379,7 @@ function AccountManagement({
         searchQuery={routeParams?.search}
         isBookmarkImportDialogOpen={isBookmarkImportDialogOpen}
         onOpenBookmarkImport={openBookmarkImportDialog}
-        onCloseBookmarkImport={() => setIsBookmarkImportDialogOpen(false)}
+        onCloseBookmarkImport={closeBookmarkImportDialog}
       />
     </AccountManagementProvider>
   )

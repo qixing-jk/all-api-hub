@@ -19,7 +19,7 @@
         "collapseFolder": "折叠文件夹",
         "expandAll": "全部展开",
         "expandFolder": "展开文件夹",
-        "importSelected": "导入所选项（{{selectedCount}}）",
+        "importSelected": "导入所选项（{{count}}）",
         "invertSelected": "反选",
         "openAddAccount": "打开添加账号",
         "scanSelected": "扫描所选范围",
@@ -56,7 +56,7 @@
       "searchPlaceholder": "搜索书签...",
       "selectedBookmarkCount": "已选择 {{count}} 个书签",
       "status": {
-        "duplicate": "默认跳过。已有保存账号匹配数：{{existingAccountCount}}",
+        "duplicate": "默认跳过。已有保存账号匹配数：{{count}}",
         "imported": "已导入",
         "ready": "可导入"
       },

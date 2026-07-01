@@ -19,7 +19,8 @@
         "collapseFolder": "Collapse folder",
         "expandAll": "Expand all",
         "expandFolder": "Expand folder",
-        "importSelected": "Import selected ({{selectedCount}})",
+        "importSelected_one": "Import selected ({{count}})",
+        "importSelected_other": "Import selected ({{count}})",
         "invertSelected": "Invert selected",
         "openAddAccount": "Open Add Account",
         "scanSelected": "Scan selected range",
@@ -59,7 +60,8 @@
       "selectedBookmarkCount_one": "{{count}} bookmark selected",
       "selectedBookmarkCount_other": "{{count}} bookmarks selected",
       "status": {
-        "duplicate": "Skipped by default. Existing saved-account match count: {{existingAccountCount}}",
+        "duplicate_one": "Skipped by default. Existing saved-account match count: {{count}}",
+        "duplicate_other": "Skipped by default. Existing saved-account match count: {{count}}",
         "imported": "Imported",
         "ready": "Ready to import"
       },
