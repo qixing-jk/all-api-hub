@@ -82,6 +82,26 @@ describe("Account Dialog site policy", () => {
     ).toBe(true)
   })
 
+  it("normalizes supported site drafts to built-in check-in detection enabled", () => {
+    const policy = getAccountDialogSitePolicy(SITE_TYPES.NEW_API)
+    const draft = createDraft({
+      siteType: SITE_TYPES.NEW_API,
+      checkIn: {
+        ...createEmptyAccountDialogDraft().checkIn,
+        enableDetection: false,
+        autoCheckInEnabled: false,
+      },
+    })
+
+    const normalized = normalizeAccountDialogDraftForSitePolicy({
+      draft,
+      policy,
+    })
+
+    expect(normalized.checkIn.enableDetection).toBe(true)
+    expect(normalized.checkIn.autoCheckInEnabled).toBe(false)
+  })
+
   it("derives shared auth and supplemental-auth facts from product profiles", async () => {
     vi.resetModules()
     const mockedGetAccountSiteProductProfile = vi.fn()

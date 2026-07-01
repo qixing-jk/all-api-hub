@@ -149,8 +149,7 @@ export default function AccountForm({
   const isAuthTypeLocked = sitePolicy.forceAccessTokenAuth
   const canUseCookieAuth = sitePolicy.allowCookieAuthSession
   const canUseBuiltInCheckInDetection = sitePolicy.allowBuiltInCheckInDetection
-  const showBuiltInAutoCheckIn =
-    canUseBuiltInCheckInDetection && checkIn.enableDetection
+  const showBuiltInAutoCheckIn = canUseBuiltInCheckInDetection
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
 
   return (

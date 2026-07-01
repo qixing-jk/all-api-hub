@@ -691,4 +691,33 @@ describe("AccountDialog AccountForm", () => {
       },
     })
   })
+
+  it("shows auto check-in for supported sites even when a legacy draft has status detection disabled", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      enableDetection: false,
+      autoCheckInEnabled: false,
+    })
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("switch", {
+        name: "accountDialog:form.autoCheckInEnabled",
+      }),
+    )
+
+    expect(props.onCheckInChange).toHaveBeenCalledWith({
+      ...props.draft.checkIn,
+      autoCheckInEnabled: true,
+    })
+  })
 })

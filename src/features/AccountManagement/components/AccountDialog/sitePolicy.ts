@@ -88,9 +88,7 @@ export function normalizeAccountDialogDraftForSitePolicy(params: {
       : "",
     checkIn: {
       ...draft.checkIn,
-      enableDetection: policy.allowBuiltInCheckInDetection
-        ? draft.checkIn.enableDetection
-        : false,
+      enableDetection: policy.allowBuiltInCheckInDetection,
       autoCheckInEnabled: policy.allowBuiltInCheckInDetection
         ? draft.checkIn.autoCheckInEnabled
         : false,
