@@ -317,6 +317,7 @@ export default function ManagedSiteChannels({
   const [isMigrationDialogOpen, setIsMigrationDialogOpen] = useState(false)
   const [isMigrationMode, setIsMigrationMode] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const refreshAbortControllerRef = useRef<AbortController | null>(null)
   const verification = useNewApiManagedVerification()
   const { openNewApiManagedVerification } = verification
 
@@ -351,16 +352,25 @@ export default function ManagedSiteChannels({
         return
       }
 
+      refreshAbortControllerRef.current?.abort()
+      const refreshAbortController = new AbortController()
+      refreshAbortControllerRef.current = refreshAbortController
+
       setIsLoading(true)
       setError(null)
       try {
-        const response = await sendModelSyncMessage(
-          ModelSyncMessageTypes.ListChannels,
-        )
-        if (!response?.success) {
-          throw new Error(response?.error || "Failed to load channels")
+        const service = await getManagedSiteService()
+        const config = await service.getConfig()
+        if (!config) {
+          throw new Error(
+            getManagedSiteConfigMissingMessage(t, service.messagesKey),
+          )
         }
-        const items = response.data?.items ?? []
+
+        const response = await service.listChannels(config, {
+          signal: refreshAbortController.signal,
+        })
+        const items = response.items ?? []
         setChannels(items)
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
@@ -369,6 +379,10 @@ export default function ManagedSiteChannels({
           },
         })
       } catch (err) {
+        if (refreshAbortController.signal.aborted) {
+          return
+        }
+
         const message = getErrorMessage(err)
         setError(message)
         toast.error(t("alerts.loadError.description", { error: message }))
@@ -379,7 +393,10 @@ export default function ManagedSiteChannels({
           },
         })
       } finally {
-        setIsLoading(false)
+        if (refreshAbortControllerRef.current === refreshAbortController) {
+          refreshAbortControllerRef.current = null
+          setIsLoading(false)
+        }
       }
     },
     [isConfigMissing, managedSiteAnalyticsType, t],
@@ -392,6 +409,9 @@ export default function ManagedSiteChannels({
 
   useEffect(() => {
     void refreshChannels()
+    return () => {
+      refreshAbortControllerRef.current?.abort()
+    }
   }, [managedSiteType, refreshChannels])
 
   // 当站点类型变化时，更新分组、优先级、权重列的可见性
@@ -1285,7 +1305,6 @@ export default function ManagedSiteChannels({
                         entrypoint: optionsEntrypoint,
                       })
                     }
-                    disabled={isLoading}
                     loading={isLoading && channels.length > 0}
                     leftIcon={<RefreshCcw className="h-4 w-4" />}
                   >

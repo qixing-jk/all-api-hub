@@ -9,7 +9,7 @@ export function toManagedSiteApiServiceRequest(
     adminToken: string
     userId: string
   },
-  options?: { bypassSiteRequestLimit?: boolean },
+  options?: { bypassSiteRequestLimit?: boolean; signal?: AbortSignal },
 ) {
   return {
     baseUrl: config.baseUrl,
@@ -21,5 +21,6 @@ export function toManagedSiteApiServiceRequest(
     ...(options?.bypassSiteRequestLimit
       ? { bypassSiteRequestLimit: true }
       : {}),
+    ...(options?.signal ? { signal: options.signal } : {}),
   }
 }

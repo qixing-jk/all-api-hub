@@ -4,23 +4,31 @@ export interface TimedRequestSignalOptions {
 }
 
 interface TimedRequestSignalHandle {
-  signal: AbortSignal
+  signal?: AbortSignal
   isTimedOut: () => boolean
   cleanup: () => void
 }
 
 /**
- * Builds a fetch signal that always has a bounded timeout and can still relay a
- * caller-provided abort signal.
+ * Builds a fetch signal only when a caller signal or explicit timeout is
+ * provided. UI-owned cancellation should stay in the same extension context.
  */
 export function buildTimedRequestSignal(
   options?: TimedRequestSignalOptions,
 ): TimedRequestSignalHandle {
+  if (!options?.signal && options?.timeoutMs == null) {
+    return {
+      signal: undefined,
+      isTimedOut: () => false,
+      cleanup: () => {},
+    }
+  }
+
   const controller = new AbortController()
-  const timeoutMs = Math.max(
-    1,
-    Math.floor(options?.timeoutMs ?? DEFAULT_API_SERVICE_REQUEST_TIMEOUT_MS),
-  )
+  const timeoutMs =
+    options.timeoutMs == null
+      ? null
+      : Math.max(1, Math.floor(options.timeoutMs))
   let timedOut = false
 
   const relayCallerAbort = () => {
@@ -29,15 +37,18 @@ export function buildTimedRequestSignal(
     }
   }
 
-  const timeoutId = setTimeout(() => {
-    timedOut = true
-    controller.abort(
-      new DOMException(
-        `Request timed out after ${timeoutMs}ms`,
-        "TimeoutError",
-      ),
-    )
-  }, timeoutMs)
+  const timeoutId =
+    timeoutMs == null
+      ? null
+      : setTimeout(() => {
+          timedOut = true
+          controller.abort(
+            new DOMException(
+              `Request timed out after ${timeoutMs}ms`,
+              "TimeoutError",
+            ),
+          )
+        }, timeoutMs)
 
   if (options?.signal?.aborted) {
     relayCallerAbort()
@@ -51,7 +62,9 @@ export function buildTimedRequestSignal(
     signal: controller.signal,
     isTimedOut: () => timedOut,
     cleanup: () => {
-      clearTimeout(timeoutId)
+      if (timeoutId != null) {
+        clearTimeout(timeoutId)
+      }
       options?.signal?.removeEventListener("abort", relayCallerAbort)
     },
   }

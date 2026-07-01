@@ -1,4 +1,5 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import type { ManagedSiteChannelRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiResponse } from "~/services/apiTransport/type"
 import {
@@ -40,6 +41,11 @@ export interface ManagedSiteService<
     config: TConfig,
     keyword: string,
   ): Promise<ManagedSiteChannelListData | null>
+
+  listChannels(
+    config: TConfig,
+    options?: ManagedSiteChannelRequestOptions,
+  ): Promise<ManagedSiteChannelListData>
 
   createChannel(
     config: TConfig,
@@ -199,6 +205,13 @@ export function getManagedSiteServiceForType(
     siteType,
     messagesKey,
     searchChannel: capabilities.channels.search,
+    listChannels: async (config, options) => {
+      const channelList = capabilities.channels.list
+        ? await capabilities.channels.list(config, options)
+        : await capabilities.channels.search(config, "")
+
+      return channelList ?? { items: [], total: 0, type_counts: {} }
+    },
     createChannel: capabilities.channels.create,
     updateChannel: capabilities.channels.update,
     deleteChannel: capabilities.channels.delete,

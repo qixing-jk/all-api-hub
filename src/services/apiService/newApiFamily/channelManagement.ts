@@ -132,6 +132,7 @@ type ChannelListAllOptions = {
   beforeRequest?: () => Promise<void>
   endpoint?: string
   pageStart?: number
+  signal?: AbortSignal
 }
 
 /**
@@ -167,7 +168,10 @@ export async function listAllChannels(
 
       const response = await fetchApi<ManagedSiteChannelListData>(
         request,
-        { endpoint: `${endpoint}?${params.toString()}` },
+        {
+          endpoint: `${endpoint}?${params.toString()}`,
+          options: { signal: options?.signal },
+        },
         false,
       )
 

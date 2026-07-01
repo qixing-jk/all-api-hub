@@ -206,6 +206,7 @@ export async function listAllChannels(
   options?: {
     pageSize?: number
     beforeRequest?: () => Promise<void>
+    signal?: AbortSignal
   },
 ): Promise<ManagedSiteChannelListData> {
   const pageSize = options?.pageSize ?? REQUEST_CONFIG.DEFAULT_PAGE_SIZE
@@ -216,7 +217,10 @@ export async function listAllChannels(
       await beforeRequest?.()
 
       const endpoint = `/api/channel/?p=${page}&page_size=${pageSize}`
-      const data = await fetchApiData<unknown>(request, { endpoint })
+      const data = await fetchApiData<unknown>(request, {
+        endpoint,
+        options: { signal: options?.signal },
+      })
 
       if (!Array.isArray(data)) {
         throw new ApiError("Failed to fetch channels", undefined, endpoint)

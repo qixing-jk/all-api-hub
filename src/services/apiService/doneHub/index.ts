@@ -127,6 +127,7 @@ type ChannelListAllOptions = {
   beforeRequest?: () => Promise<void>
   endpoint?: string
   pageStart?: number
+  signal?: AbortSignal
 }
 
 /**
@@ -290,6 +291,7 @@ export async function listAllChannels(
       const endpoint = `${endpointBase}?${params.toString()}`
       const result = await fetchApiData<DoneHubDataResult<unknown>>(request, {
         endpoint,
+        options: { signal: options?.signal },
       })
 
       if (page === pageStart) {

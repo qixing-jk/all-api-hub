@@ -10,7 +10,8 @@ import type {
   UpdateChannelPayload,
 } from "~/types/managedSite"
 
-export type ManagedSiteChannelRequestOptions = Pick<RequestInit, "signal"> & {
+export type ManagedSiteChannelRequestOptions = {
+  signal?: AbortSignal
   bypassSiteRequestLimit?: boolean
 }
 
@@ -23,9 +24,8 @@ export type ManagedSiteChannelsCapability<
   ): Promise<ManagedSiteChannelListData | null>
   list?(
     config: TConfig,
-    options?: {
+    options?: ManagedSiteChannelRequestOptions & {
       beforeRequest?: () => Promise<void>
-      bypassSiteRequestLimit?: boolean
     },
   ): Promise<ManagedSiteChannelListData>
   create(
