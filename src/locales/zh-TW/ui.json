@@ -9,6 +9,63 @@
     "tokenBased": "按量計費"
   },
   "dialog": {
+    "bookmarkAccountImport": {
+      "actions": {
+        "allowAndScan": "選擇書籤並開始批量匯入",
+        "backToScope": "返回選擇書籤",
+        "clearSearch": "清空書籤搜尋",
+        "clearSelected": "取消選擇",
+        "collapseAll": "全部摺疊",
+        "collapseFolder": "摺疊資料夾",
+        "expandAll": "全部展開",
+        "expandFolder": "展開資料夾",
+        "importSelected": "匯入所選項目（{{selectedCount}}）",
+        "invertSelected": "反選",
+        "openAddAccount": "開啟新增帳號",
+        "scanSelected": "掃描所選範圍",
+        "selectAll": "全選"
+      },
+      "apiUnavailable": "目前瀏覽器未向擴充功能開放原生書籤介面。",
+      "bookmarkCount_one": "{{count}} 個書籤",
+      "bookmarkCount_other": "{{count}} 個書籤",
+      "description": "批量掃描瀏覽器書籤中的帳號站點，並在匯入前檢視候選項。",
+      "empty": "瀏覽器沒有傳回任何書籤。",
+      "failures": {
+        "detection": "自動偵測無法讀取此站點。",
+        "save": "帳號無法儲存。",
+        "unknown": "匯入失敗。"
+      },
+      "folderCount_one": "{{count}} 個資料夾",
+      "folderCount_other": "{{count}} 個資料夾",
+      "importing": "正在匯入 {{completed}} / {{total}} 個已選站點...",
+      "includeExisting": "包含已有已儲存帳號的站點",
+      "initialSteps": {
+        "chooseScope": "選擇書籤範圍",
+        "review": "預覽可匯入站點",
+        "skipExisting": "預設略過已有帳號"
+      },
+      "initialValue": "如果你之前用瀏覽器書籤收藏了各個中轉站，可以一次掃描這些書籤，批量產生帳號候選。匯入前會先讓你選擇書籤範圍並檢視結果，已有帳號預設略過。",
+      "noCandidates": "未找到可匯入的網頁書籤網址。",
+      "permissionDenied": "未授予書籤權限。你可以不關閉此對話框並重試。",
+      "permissionNeeded": "書籤存取是可選權限，僅會在本次批量匯入時請求。",
+      "readFailed": "無法讀取瀏覽器書籤樹。",
+      "reloadFailed": "匯入已完成，但帳號資料無法重新載入。如果新帳號未顯示，請重新整理帳號列表後重試。",
+      "resultSummary": "已匯入 {{success}} 個，失敗 {{failed}} 個，略過 {{skipped}} 個。",
+      "scanning": "正在掃描瀏覽器書籤...",
+      "scopeHelp": "掃描只會產生候選預覽，匯入前可以返回這裡調整選擇。",
+      "searchEmpty": "未找到相符的書籤範圍",
+      "searchLabel": "搜尋書籤範圍",
+      "searchPlaceholder": "搜尋書籤...",
+      "selectedBookmarkCount_one": "已選擇 {{count}} 個書籤",
+      "selectedBookmarkCount_other": "已選擇 {{count}} 個書籤",
+      "status": {
+        "duplicate": "預設略過。已有已儲存帳號符合數：{{existingAccountCount}}",
+        "imported": "已匯入",
+        "ready": "可匯入"
+      },
+      "title": "從書籤匯入帳號",
+      "untitledFolder": "未命名資料夾"
+    },
     "ccswitch": {
       "actions": {
         "export": "匯出"

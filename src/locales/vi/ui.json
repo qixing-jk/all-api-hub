@@ -9,6 +9,63 @@
     "tokenBased": "Tính phí theo lượng"
   },
   "dialog": {
+    "bookmarkAccountImport": {
+      "actions": {
+        "allowAndScan": "Chon dau trang va bat dau nhap hang loat",
+        "backToScope": "Quay lai chon dau trang",
+        "clearSearch": "Xoa tim kiem dau trang",
+        "clearSelected": "Bo chon",
+        "collapseAll": "Thu gon tat ca",
+        "collapseFolder": "Thu gon thu muc",
+        "expandAll": "Mo rong tat ca",
+        "expandFolder": "Mo rong thu muc",
+        "importSelected": "Nhap muc da chon ({{selectedCount}})",
+        "invertSelected": "Dao chon",
+        "openAddAccount": "Mo Them tai khoan",
+        "scanSelected": "Quet pham vi da chon",
+        "selectAll": "Chon tat ca"
+      },
+      "apiUnavailable": "Trinh duyet nay khong cung cap dau trang goc cho tien ich.",
+      "bookmarkCount_one": "{{count}} dau trang",
+      "bookmarkCount_other": "{{count}} dau trang",
+      "description": "Quet hang loat URL dau trang trong trinh duyet va xem lai cac ung vien trang tai khoan truoc khi nhap.",
+      "empty": "Trinh duyet khong tra ve dau trang nao.",
+      "failures": {
+        "detection": "Tu dong phat hien khong doc duoc trang nay.",
+        "save": "Khong the luu tai khoan.",
+        "unknown": "Nhap that bai."
+      },
+      "folderCount_one": "{{count}} thu muc",
+      "folderCount_other": "{{count}} thu muc",
+      "importing": "Dang nhap {{completed}} / {{total}} trang da chon...",
+      "includeExisting": "Bao gom cac trang da co tai khoan da luu",
+      "initialSteps": {
+        "chooseScope": "Chon thu muc dau trang",
+        "review": "Xem lai ung vien nhap",
+        "skipExisting": "Bo qua tai khoan da co theo mac dinh"
+      },
+      "initialValue": "Quet hang loat dau trang trinh duyet va bien cac trang trung chuyen da luu thanh ung vien tai khoan. Ban chon thu muc dau trang truoc, xem lai ung vien truoc khi nhap, va tai khoan da co se duoc bo qua theo mac dinh.",
+      "noCandidates": "Khong tim thay URL dau trang web nao co the nhap.",
+      "permissionDenied": "Chua cap quyen dau trang. Ban co the thu lai ma khong can dong hop thoai nay.",
+      "permissionNeeded": "Quyen truy cap dau trang la tuy chon va chi duoc yeu cau cho lan nhap hang loat nay.",
+      "readFailed": "Khong the doc cay dau trang cua trinh duyet.",
+      "reloadFailed": "Qua trinh nhap da hoan tat, nhung khong the tai lai du lieu tai khoan. Hay lam moi danh sach tai khoan va thu lai neu tai khoan moi chua hien thi.",
+      "resultSummary": "Da nhap {{success}}, that bai {{failed}}, bo qua {{skipped}}.",
+      "scanning": "Dang quet dau trang trong trinh duyet...",
+      "scopeHelp": "Quet chi tao ban xem truoc ung vien. Ban co the quay lai day de dieu chinh lua chon truoc khi nhap.",
+      "searchEmpty": "Khong co pham vi dau trang phu hop",
+      "searchLabel": "Tim kiem pham vi dau trang",
+      "searchPlaceholder": "Tim kiem dau trang...",
+      "selectedBookmarkCount_one": "Da chon {{count}} dau trang",
+      "selectedBookmarkCount_other": "Da chon {{count}} dau trang",
+      "status": {
+        "duplicate": "Mac dinh bo qua. So ket qua khop tai khoan da luu: {{existingAccountCount}}",
+        "imported": "Da nhap",
+        "ready": "San sang nhap"
+      },
+      "title": "Nhap tai khoan tu dau trang",
+      "untitledFolder": "Thu muc chua dat ten"
+    },
     "ccswitch": {
       "actions": {
         "export": "Xuất"

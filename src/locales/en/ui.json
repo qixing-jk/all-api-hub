@@ -9,6 +9,63 @@
     "tokenBased": "Token-based billing"
   },
   "dialog": {
+    "bookmarkAccountImport": {
+      "actions": {
+        "allowAndScan": "Choose bookmarks and start batch import",
+        "backToScope": "Back to bookmark selection",
+        "clearSearch": "Clear bookmark search",
+        "clearSelected": "Clear selected",
+        "collapseAll": "Collapse all",
+        "collapseFolder": "Collapse folder",
+        "expandAll": "Expand all",
+        "expandFolder": "Expand folder",
+        "importSelected": "Import selected ({{selectedCount}})",
+        "invertSelected": "Invert selected",
+        "openAddAccount": "Open Add Account",
+        "scanSelected": "Scan selected range",
+        "selectAll": "Select all"
+      },
+      "apiUnavailable": "This browser does not expose native bookmarks to the extension.",
+      "bookmarkCount_one": "{{count}} bookmark",
+      "bookmarkCount_other": "{{count}} bookmarks",
+      "description": "Batch scan browser bookmark URLs and review account-site candidates before importing.",
+      "empty": "No browser bookmarks were returned.",
+      "failures": {
+        "detection": "Auto-detect could not read this site.",
+        "save": "The account could not be saved.",
+        "unknown": "The import failed."
+      },
+      "folderCount_one": "{{count}} folder",
+      "folderCount_other": "{{count}} folders",
+      "importing": "Importing {{completed}} of {{total}} selected sites...",
+      "includeExisting": "Include sites that already have saved accounts",
+      "initialSteps": {
+        "chooseScope": "Choose bookmark folders",
+        "review": "Review import candidates",
+        "skipExisting": "Skip existing accounts by default"
+      },
+      "initialValue": "Batch scan browser bookmarks and turn saved relay sites into account candidates. You choose the bookmark folders first, review the candidates before importing, and existing accounts are skipped by default.",
+      "noCandidates": "No importable web bookmark URLs were found.",
+      "permissionDenied": "Bookmark permission was not granted. You can try again without closing this dialog.",
+      "permissionNeeded": "Bookmark access is optional and is requested only for this batch import.",
+      "readFailed": "The browser bookmark tree could not be read.",
+      "reloadFailed": "The import finished, but account data could not be reloaded. Refresh the account list and try again if the new accounts are not visible.",
+      "resultSummary": "Imported {{success}}, failed {{failed}}, skipped {{skipped}}.",
+      "scanning": "Scanning browser bookmarks...",
+      "scopeHelp": "Scanning only creates a preview. You can return here to adjust the selection before importing.",
+      "searchEmpty": "No matching bookmark scopes",
+      "searchLabel": "Search bookmark scopes",
+      "searchPlaceholder": "Search bookmarks...",
+      "selectedBookmarkCount_one": "{{count}} bookmark selected",
+      "selectedBookmarkCount_other": "{{count}} bookmarks selected",
+      "status": {
+        "duplicate": "Skipped by default. Existing saved-account match count: {{existingAccountCount}}",
+        "imported": "Imported",
+        "ready": "Ready to import"
+      },
+      "title": "Import accounts from bookmarks",
+      "untitledFolder": "Untitled folder"
+    },
     "ccswitch": {
       "actions": {
         "export": "Export"

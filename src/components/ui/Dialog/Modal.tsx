@@ -9,7 +9,7 @@ import { t } from "~/utils/i18n/core"
 import { ToasterPortalHost } from "../../toast/ToasterPortal"
 import { FloatingLayerProvider } from "../floating-layer"
 
-type Size = "sm" | "md" | "lg"
+type Size = "sm" | "md" | "lg" | "xl"
 
 interface ModalProps {
   isOpen: boolean
@@ -30,6 +30,7 @@ const sizeMap: Record<Size, string> = {
   sm: "max-w-sm",
   md: "max-w-md",
   lg: "max-w-2xl",
+  xl: "max-w-5xl",
 }
 
 /**
@@ -132,7 +133,7 @@ export function Modal({
                 )}
 
                 {/* content area - 可滚动 */}
-                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:space-y-4 sm:p-6">
+                <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto p-4 sm:space-y-4 sm:p-6">
                   {children}
                 </div>
 

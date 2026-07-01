@@ -9,6 +9,60 @@
     "tokenBased": "按量计费"
   },
   "dialog": {
+    "bookmarkAccountImport": {
+      "actions": {
+        "allowAndScan": "选择书签并开始批量导入",
+        "backToScope": "返回选择书签",
+        "clearSearch": "清空书签搜索",
+        "clearSelected": "取消选择",
+        "collapseAll": "全部折叠",
+        "collapseFolder": "折叠文件夹",
+        "expandAll": "全部展开",
+        "expandFolder": "展开文件夹",
+        "importSelected": "导入所选项（{{selectedCount}}）",
+        "invertSelected": "反选",
+        "openAddAccount": "打开添加账号",
+        "scanSelected": "扫描所选范围",
+        "selectAll": "全选"
+      },
+      "apiUnavailable": "当前浏览器未向扩展开放原生书签接口。",
+      "bookmarkCount": "{{count}} 个书签",
+      "description": "批量扫描浏览器书签中的账号站点，并在导入前复核候选项。",
+      "empty": "浏览器没有返回任何书签。",
+      "failures": {
+        "detection": "自动检测无法读取此站点。",
+        "save": "账号无法保存。",
+        "unknown": "导入失败。"
+      },
+      "folderCount": "{{count}} 个文件夹",
+      "importing": "正在导入 {{completed}} / {{total}} 个已选站点...",
+      "includeExisting": "包含已有已保存账号的站点",
+      "initialSteps": {
+        "chooseScope": "选择书签范围",
+        "review": "预览可导入站点",
+        "skipExisting": "默认跳过已有账号"
+      },
+      "initialValue": "如果你之前用浏览器书签收藏了各个中转站，可以一次扫描这些书签，批量生成账号候选。导入前会先让你选择书签范围并复核结果，已有账号默认跳过。",
+      "noCandidates": "未找到可导入的网页书签网址。",
+      "permissionDenied": "未授予书签权限。你可以不关闭此对话框并重试。",
+      "permissionNeeded": "书签访问是可选权限，仅会在本次批量导入时请求。",
+      "readFailed": "无法读取浏览器书签树。",
+      "reloadFailed": "导入已完成，但账号数据无法重新加载。如果新账号未显示，请刷新账号列表后重试。",
+      "resultSummary": "已导入 {{success}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个。",
+      "scanning": "正在扫描浏览器书签...",
+      "scopeHelp": "扫描只会生成候选预览，导入前可以返回这里调整选择。",
+      "searchEmpty": "未找到匹配的书签范围",
+      "searchLabel": "搜索书签范围",
+      "searchPlaceholder": "搜索书签...",
+      "selectedBookmarkCount": "已选择 {{count}} 个书签",
+      "status": {
+        "duplicate": "默认跳过。已有保存账号匹配数：{{existingAccountCount}}",
+        "imported": "已导入",
+        "ready": "可导入"
+      },
+      "title": "从书签导入账号",
+      "untitledFolder": "未命名文件夹"
+    },
     "ccswitch": {
       "actions": {
         "export": "导出"

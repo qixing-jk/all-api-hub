@@ -9,6 +9,63 @@
     "tokenBased": "トークン課金"
   },
   "dialog": {
+    "bookmarkAccountImport": {
+      "actions": {
+        "allowAndScan": "ブックマークを選んで一括インポートを開始",
+        "backToScope": "ブックマーク選択に戻る",
+        "clearSearch": "ブックマーク検索をクリア",
+        "clearSelected": "選択を解除",
+        "collapseAll": "すべて折りたたむ",
+        "collapseFolder": "フォルダーを折りたたむ",
+        "expandAll": "すべて展開",
+        "expandFolder": "フォルダーを展開",
+        "importSelected": "選択項目をインポート（{{selectedCount}}）",
+        "invertSelected": "選択を反転",
+        "openAddAccount": "アカウント追加を開く",
+        "scanSelected": "選択範囲をスキャン",
+        "selectAll": "すべて選択"
+      },
+      "apiUnavailable": "このブラウザは拡張機能にネイティブブックマークを公開していません。",
+      "bookmarkCount_one": "{{count}} 件のブックマーク",
+      "bookmarkCount_other": "{{count}} 件のブックマーク",
+      "description": "ブラウザのブックマーク URL を一括スキャンし、インポート前にアカウントサイト候補を確認します。",
+      "empty": "ブラウザのブックマークは返されませんでした。",
+      "failures": {
+        "detection": "自動検出でこのサイトを読み取れませんでした。",
+        "save": "アカウントを保存できませんでした。",
+        "unknown": "インポートに失敗しました。"
+      },
+      "folderCount_one": "{{count}} 件のフォルダー",
+      "folderCount_other": "{{count}} 件のフォルダー",
+      "importing": "選択したサイトをインポート中: {{completed}} / {{total}}...",
+      "includeExisting": "保存済みアカウントがあるサイトも含める",
+      "initialSteps": {
+        "chooseScope": "ブックマークフォルダーを選択",
+        "review": "インポート候補を確認",
+        "skipExisting": "既存アカウントは既定でスキップ"
+      },
+      "initialValue": "ブラウザのブックマークに保存していた中継サイトを一括スキャンし、アカウント候補にできます。先にブックマーク範囲を選び、インポート前に候補を確認でき、既存アカウントは既定でスキップされます。",
+      "noCandidates": "インポート可能な Web ブックマーク URL は見つかりませんでした。",
+      "permissionDenied": "ブックマーク権限が許可されませんでした。このダイアログを閉じずに再試行できます。",
+      "permissionNeeded": "ブックマークアクセスは任意権限で、この一括インポート時にのみ要求されます。",
+      "readFailed": "ブラウザのブックマークツリーを読み取れませんでした。",
+      "reloadFailed": "インポートは完了しましたが、アカウントデータを再読み込みできませんでした。新しいアカウントが表示されない場合は、アカウント一覧を更新して再試行してください。",
+      "resultSummary": "{{success}} 件をインポート、{{failed}} 件失敗、{{skipped}} 件スキップ。",
+      "scanning": "ブラウザのブックマークをスキャン中...",
+      "scopeHelp": "スキャンは候補のプレビューを作るだけです。インポート前にここへ戻って選択を調整できます。",
+      "searchEmpty": "一致するブックマーク範囲はありません",
+      "searchLabel": "ブックマーク範囲を検索",
+      "searchPlaceholder": "ブックマークを検索...",
+      "selectedBookmarkCount_one": "{{count}} 件のブックマークを選択中",
+      "selectedBookmarkCount_other": "{{count}} 件のブックマークを選択中",
+      "status": {
+        "duplicate": "既定ではスキップされます。保存済みアカウント一致数: {{existingAccountCount}}",
+        "imported": "インポート済み",
+        "ready": "インポート可能"
+      },
+      "title": "ブックマークからアカウントをインポート",
+      "untitledFolder": "無題のフォルダー"
+    },
     "ccswitch": {
       "actions": {
         "export": "エクスポート"

@@ -48,6 +48,27 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   dedupeScanButton: "account-management-dedupe-scan-button",
   dedupePreviewDeleteButton: "account-management-dedupe-preview-delete-button",
   dedupeConfirmDeleteButton: "account-management-dedupe-confirm-delete-button",
+  bookmarkImportButton: "account-management-bookmark-import-button",
+  bookmarkImportFromAddDialogButton:
+    "account-management-bookmark-import-from-add-dialog-button",
+  bookmarkImportDialog: "account-management-bookmark-import-dialog",
+  bookmarkImportAllowScanButton:
+    "account-management-bookmark-import-allow-scan-button",
+  bookmarkImportScanSelectedButton:
+    "account-management-bookmark-import-scan-selected-button",
+  bookmarkImportBackToScopeButton:
+    "account-management-bookmark-import-back-to-scope-button",
+  bookmarkImportScopeCheckbox:
+    "account-management-bookmark-import-scope-checkbox",
+  bookmarkImportScopeTree: "account-management-bookmark-import-scope-tree",
+  bookmarkImportImportButton:
+    "account-management-bookmark-import-import-button",
+  bookmarkImportIncludeExistingCheckbox:
+    "account-management-bookmark-import-include-existing-checkbox",
+  bookmarkImportCandidateRow:
+    "account-management-bookmark-import-candidate-row",
+  bookmarkImportOpenFailedAddAccountButton:
+    "account-management-bookmark-import-open-failed-add-account-button",
   duplicateWarningContinueButton:
     "account-management-duplicate-warning-continue-button",
   sponsorRecommendations: "account-management-sponsor-recommendations",

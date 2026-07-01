@@ -107,6 +107,7 @@
     "posthog-js": "^1.392.0",
     "radix-ui": "^1.5.0",
     "react": "^19.1.1",
+    "react-arborist": "^3.10.5",
     "react-countup": "^6.5.3",
     "react-dom": "^19.1.1",
     "react-hot-toast": "^2.5.2",
