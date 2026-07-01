@@ -2,7 +2,10 @@ import userEvent from "@testing-library/user-event"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
+import {
+  ChannelDialogContainer,
+  useChannelDialogContext,
+} from "~/components/dialogs/ChannelDialog"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { ChannelType } from "~/constants"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
@@ -547,6 +550,37 @@ describe("ManagedSiteChannels", () => {
     await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
   }
 
+  const mockNewApiServiceWithCreate = (createChannel: unknown) => {
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        adminToken: "t",
+        userId: "1",
+      }),
+      buildChannelPayload: vi.fn((draft: any) => ({
+        mode: "single",
+        channel: draft,
+      })),
+      createChannel,
+    } as any)
+  }
+
+  const ChannelDialogSuccessProbe = ({ result }: { result: unknown }) => {
+    const { state } = useChannelDialogContext()
+
+    return (
+      <button
+        disabled={!state.onSuccessCallback}
+        onClick={() => state.onSuccessCallback?.(result)}
+        type="button"
+      >
+        apply dialog success
+      </button>
+    )
+  }
+
   it("syncs routeParams.search into the search box and filters rows", async () => {
     mockChannels([
       { id: 1, name: "Alpha", base_url: "https://site-a.example" },
@@ -956,20 +990,7 @@ describe("ManagedSiteChannels", () => {
     })
 
     mockChannels([])
-    vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        adminToken: "t",
-        userId: "1",
-      }),
-      buildChannelPayload: vi.fn((draft: any) => ({
-        mode: "single",
-        channel: draft,
-      })),
-      createChannel,
-    } as any)
+    mockNewApiServiceWithCreate(createChannel)
     vi.mocked(sendModelSyncMessage)
       .mockResolvedValueOnce({
         success: true,
@@ -1018,20 +1039,7 @@ describe("ManagedSiteChannels", () => {
     })
 
     mockChannels([])
-    vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        adminToken: "t",
-        userId: "1",
-      }),
-      buildChannelPayload: vi.fn((draft: any) => ({
-        mode: "single",
-        channel: draft,
-      })),
-      createChannel,
-    } as any)
+    mockNewApiServiceWithCreate(createChannel)
     vi.mocked(sendModelSyncMessage).mockResolvedValue({
       success: true,
       data: { items: [] },
@@ -1061,26 +1069,14 @@ describe("ManagedSiteChannels", () => {
 
   it("refreshes when create responses do not include row data", async () => {
     const user = userEvent.setup()
+    const createChannel = vi.fn().mockResolvedValue({
+      success: true,
+      message: "ok",
+      data: null,
+    })
 
     mockChannels([])
-    vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        adminToken: "t",
-        userId: "1",
-      }),
-      buildChannelPayload: vi.fn((draft: any) => ({
-        mode: "single",
-        channel: draft,
-      })),
-      createChannel: vi.fn().mockResolvedValue({
-        success: true,
-        message: "ok",
-        data: null,
-      }),
-    } as any)
+    mockNewApiServiceWithCreate(createChannel)
     vi.mocked(sendModelSyncMessage)
       .mockResolvedValueOnce({
         success: true,
@@ -1110,6 +1106,60 @@ describe("ManagedSiteChannels", () => {
 
     await waitForRowText("Refresh Create")
     expect(sendModelSyncMessage).toHaveBeenCalledTimes(2)
+  })
+
+  it("upserts complete edit responses without a follow-up refresh", async () => {
+    const user = userEvent.setup()
+    const editedChannel = buildCompleteChannelRow({
+      id: 21,
+      name: "Alpha Edited",
+      base_url: "https://alpha-edited.example",
+      status: 2,
+    })
+
+    mockChannels([
+      buildCompleteChannelRow({
+        id: 21,
+        name: "Alpha",
+        base_url: "https://alpha.example",
+      }),
+    ])
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+        <ChannelDialogSuccessProbe
+          result={{
+            success: true,
+            message: "ok",
+            data: editedChannel,
+          }}
+        />
+      </>,
+    )
+
+    await waitForRowText("Alpha")
+    const row = screen.getByText("Alpha").closest("tr")
+    expect(row).toBeTruthy()
+
+    await openRowActionsMenu(row!, user)
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+    await screen.findByText("channelDialog:title.edit")
+    await user.click(
+      screen.getByRole("button", {
+        name: "apply dialog success",
+      }),
+    )
+
+    await waitForRowText("Alpha Edited")
+    expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
+    expect(screen.getByText("https://alpha-edited.example")).toBeInTheDocument()
+    expect(sendModelSyncMessage).toHaveBeenCalledTimes(1)
   })
 
   it("keeps row selection attached to the same channel after refreshed rows reorder", async () => {
