@@ -541,7 +541,7 @@ describe("ClaudeCodeRouterImportDialog", () => {
       id: "profile-1",
       name: "Profile Provider",
       apiType: "openai-compatible",
-      baseUrl: "https://profile.example.com/v1",
+      baseUrl: "https://profile.example.com",
       apiKey: "sk-profile",
       tagIds: [],
       notes: "",
@@ -565,7 +565,7 @@ describe("ClaudeCodeRouterImportDialog", () => {
 
     await waitFor(() => {
       expect(mockFetchOpenAICompatibleModels).toHaveBeenCalledWith({
-        baseUrl: "https://profile.example.com/v1",
+        baseUrl: "https://profile.example.com",
         apiKey: "sk-profile",
       })
     })
