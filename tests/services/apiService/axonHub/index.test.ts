@@ -185,25 +185,9 @@ describe("AxonHub API service", () => {
     expect(graphQlHits).toBe(1)
   })
 
-  it("aborts hung AxonHub GraphQL requests with a bounded timeout", async () => {
-    vi.useFakeTimers()
-    const originalAny = Object.getOwnPropertyDescriptor(AbortSignal, "any")
-    const originalTimeout = Object.getOwnPropertyDescriptor(
-      AbortSignal,
-      "timeout",
-    )
+  it("passes the caller abort signal to hung AxonHub GraphQL requests", async () => {
+    const controller = new AbortController()
     let graphqlSignal: AbortSignal | undefined
-
-    Object.defineProperty(AbortSignal, "any", {
-      value: undefined,
-      configurable: true,
-      writable: true,
-    })
-    Object.defineProperty(AbortSignal, "timeout", {
-      value: undefined,
-      configurable: true,
-      writable: true,
-    })
 
     vi.stubGlobal(
       "fetch",
@@ -231,33 +215,19 @@ describe("AxonHub API service", () => {
       }),
     )
 
-    try {
-      const request = graphqlRequest(
-        { ...config, email: "graphql-timeout@example.com" },
-        "query Ping",
-        undefined,
-        { retryAuth: false, timeoutMs: 25 },
-      )
-      const expectation = expect(request).rejects.toThrow(
-        "AxonHub GraphQL request timed out",
-      )
+    const request = graphqlRequest(
+      { ...config, email: "graphql-abort@example.com" },
+      "query Ping",
+      undefined,
+      { retryAuth: false, signal: controller.signal },
+    )
+    const expectation = expect(request).rejects.toThrow(/aborted/i)
 
-      await vi.advanceTimersByTimeAsync(25)
+    await vi.waitFor(() => expect(graphqlSignal).toBe(controller.signal))
+    controller.abort()
 
-      expect(graphqlSignal?.aborted).toBe(true)
-      await expectation
-    } finally {
-      if (originalAny) {
-        Object.defineProperty(AbortSignal, "any", originalAny)
-      } else {
-        Reflect.deleteProperty(AbortSignal, "any")
-      }
-      if (originalTimeout) {
-        Object.defineProperty(AbortSignal, "timeout", originalTimeout)
-      } else {
-        Reflect.deleteProperty(AbortSignal, "timeout")
-      }
-    }
+    expect(graphqlSignal?.aborted).toBe(true)
+    await expectation
   })
 
   it("retries a GraphQL request once with a fresh token when the cached token is unauthorized", async () => {
@@ -375,8 +345,8 @@ describe("AxonHub API service", () => {
     expect(graphQlHits).toBe(2)
   })
 
-  it("lets a caller time out independently while waiting for an uncancellable shared sign-in", async () => {
-    vi.useFakeTimers()
+  it("lets a caller abort independently while waiting for an uncancellable shared sign-in", async () => {
+    const controller = new AbortController()
     let authHits = 0
     let resolveAuth:
       | ((response: Response | PromiseLike<Response>) => void)
@@ -402,21 +372,20 @@ describe("AxonHub API service", () => {
     )
 
     const firstRequest = graphqlRequest<{ ping: string }>(
-      { ...config, email: "shared-timeout@example.com" },
+      { ...config, email: "shared-abort@example.com" },
       "query PingOne",
     )
+    await vi.waitFor(() => expect(authHits).toBe(1))
 
     const timedRequest = graphqlRequest<{ ping: string }>(
-      { ...config, email: "shared-timeout@example.com" },
+      { ...config, email: "shared-abort@example.com" },
       "query PingTwo",
       undefined,
-      { timeoutMs: 25 },
+      { signal: controller.signal },
     )
-    const expectation = expect(timedRequest).rejects.toThrow(
-      "AxonHub sign-in request timed out",
-    )
+    const expectation = expect(timedRequest).rejects.toThrow(/aborted/i)
 
-    await vi.advanceTimersByTimeAsync(25)
+    controller.abort()
 
     await expectation
     expect(authHits).toBe(1)

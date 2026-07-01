@@ -2,10 +2,6 @@
  * Octopus API 服务
  * 提供与 Octopus 后端的所有 API 交互
  */
-import {
-  buildTimedRequestSignal,
-  type TimedRequestSignalOptions,
-} from "~/services/apiService/requestTimeout"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
@@ -30,36 +26,18 @@ const logger = createLogger("OctopusAPI")
 async function fetchOctopusApi<T>(
   config: OctopusConfig,
   endpoint: string,
-  options: RequestInit & TimedRequestSignalOptions = {},
+  options: RequestInit = {},
 ): Promise<OctopusApiResponse<T>> {
-  const { timeoutMs, ...requestOptions } = options
-  const callerSignal = requestOptions.signal ?? undefined
-  const requestSignal = buildTimedRequestSignal({
-    signal: callerSignal,
-    timeoutMs,
+  const token = await octopusAuthManager.getValidToken(config, {
+    signal: options.signal ?? undefined,
   })
+  const baseUrl = normalizeBaseUrl(config.baseUrl)
+  const url = `${baseUrl}${endpoint}`
 
-  let response: Response
-  try {
-    const token = await octopusAuthManager.getValidToken(config, {
-      signal: requestSignal.signal,
-    })
-    const baseUrl = normalizeBaseUrl(config.baseUrl)
-    const url = `${baseUrl}${endpoint}`
-
-    response = await fetch(url, {
-      ...requestOptions,
-      signal: requestSignal.signal,
-      headers: createOctopusRequestHeaders(token, requestOptions.headers),
-    })
-  } catch (error) {
-    if (requestSignal.isTimedOut()) {
-      throw new Error("Octopus API request timed out")
-    }
-    throw error
-  } finally {
-    requestSignal.cleanup()
-  }
+  const response = await fetch(url, {
+    ...options,
+    headers: createOctopusRequestHeaders(token, options.headers),
+  })
 
   // 检查 HTTP 状态码，处理非成功响应
   if (!response.ok) {
@@ -126,7 +104,7 @@ async function fetchOctopusApi<T>(
  */
 export async function listChannels(
   config: OctopusConfig,
-  options?: TimedRequestSignalOptions,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<OctopusChannel[]> {
   try {
     const result = await fetchOctopusApi<OctopusChannel[]>(

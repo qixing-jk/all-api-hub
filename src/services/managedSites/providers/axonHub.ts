@@ -5,6 +5,7 @@ import {
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import type { ManagedSiteChannelRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as axonHubApi from "~/services/apiService/axonHub"
 import type { ApiResponse } from "~/services/apiTransport/type"
 import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
@@ -172,9 +173,10 @@ export async function searchChannel(
  */
 export async function listChannels(
   config: AxonHubConfig,
+  options?: ManagedSiteChannelRequestOptions,
 ): Promise<ManagedSiteChannelListData> {
   try {
-    return await axonHubApi.listChannels(config)
+    return await axonHubApi.listChannels(config, options)
   } catch (error) {
     logger.error("Failed to list AxonHub channels", error)
     throw error

@@ -268,25 +268,9 @@ describe("Octopus API service", () => {
     ).rejects.toThrow("upstream rejected channel")
   })
 
-  it("aborts hung Octopus API requests with a bounded timeout", async () => {
-    vi.useFakeTimers()
-    const originalAny = Object.getOwnPropertyDescriptor(AbortSignal, "any")
-    const originalTimeout = Object.getOwnPropertyDescriptor(
-      AbortSignal,
-      "timeout",
-    )
+  it("passes the caller abort signal to Octopus channel-list requests", async () => {
+    const controller = new AbortController()
     let requestSignal: AbortSignal | undefined
-
-    Object.defineProperty(AbortSignal, "any", {
-      value: undefined,
-      configurable: true,
-      writable: true,
-    })
-    Object.defineProperty(AbortSignal, "timeout", {
-      value: undefined,
-      configurable: true,
-      writable: true,
-    })
 
     vi.stubGlobal(
       "fetch",
@@ -305,32 +289,20 @@ describe("Octopus API service", () => {
       }),
     )
 
-    try {
-      const request = listChannels(config, { timeoutMs: 25 })
-      const expectation = expect(request).rejects.toThrow(
-        "Octopus API request timed out",
-      )
+    const request = listChannels(config, { signal: controller.signal })
+    const expectation = expect(request).rejects.toThrow(/aborted/i)
 
-      await vi.advanceTimersByTimeAsync(25)
+    await vi.waitFor(() => expect(requestSignal).toBe(controller.signal))
+    controller.abort()
 
-      expect(requestSignal?.aborted).toBe(true)
-      await expectation
-    } finally {
-      vi.useRealTimers()
-      if (originalAny) {
-        Object.defineProperty(AbortSignal, "any", originalAny)
-      } else {
-        Reflect.deleteProperty(AbortSignal, "any")
-      }
-      if (originalTimeout) {
-        Object.defineProperty(AbortSignal, "timeout", originalTimeout)
-      } else {
-        Reflect.deleteProperty(AbortSignal, "timeout")
-      }
-    }
+    expect(mockGetValidToken).toHaveBeenCalledWith(config, {
+      signal: controller.signal,
+    })
+    expect(requestSignal?.aborted).toBe(true)
+    await expectation
   })
 
-  it("uses one bounded signal for Octopus auth and the API request", async () => {
+  it("uses the caller signal for Octopus auth and the API request", async () => {
     const callerSignal = new AbortController().signal
     let fetchSignal: AbortSignal | undefined
     mockGetValidToken.mockResolvedValueOnce("jwt-token")
@@ -349,15 +321,14 @@ describe("Octopus API service", () => {
     )
 
     await expect(
-      listChannels(config, { signal: callerSignal, timeoutMs: 25 }),
+      listChannels(config, { signal: callerSignal }),
     ).resolves.toEqual([])
 
     expect(mockGetValidToken).toHaveBeenCalledWith(config, {
-      signal: expect.any(AbortSignal),
+      signal: callerSignal,
     })
     const authSignal = mockGetValidToken.mock.calls[0][1]?.signal
     expect(authSignal).toBe(fetchSignal)
-    expect(authSignal).not.toBe(callerSignal)
   })
 
   it("surfaces raw JSON bodies when an error response cannot be parsed", async () => {

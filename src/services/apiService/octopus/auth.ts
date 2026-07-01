@@ -7,11 +7,6 @@ import type { OctopusConfig } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import {
-  buildTimedRequestSignal,
-  type TimedRequestSignalOptions,
-} from "../requestTimeout"
-
 const logger = createLogger("OctopusAuth")
 
 /**
@@ -51,27 +46,16 @@ class OctopusAuthManager {
   async login(
     baseUrl: string,
     credentials: OctopusLoginRequest,
-    options?: TimedRequestSignalOptions,
+    options?: Pick<RequestInit, "signal">,
   ): Promise<OctopusLoginResponse> {
     const url = `${baseUrl.replace(/\/$/, "")}/api/v1/user/login`
-    const requestSignal = buildTimedRequestSignal(options)
 
-    let response: Response
-    try {
-      response = await fetch(url, {
-        method: "POST",
-        signal: requestSignal.signal,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-      })
-    } catch (error) {
-      if (requestSignal.isTimedOut()) {
-        throw new Error("Octopus login request timed out")
-      }
-      throw error
-    } finally {
-      requestSignal.cleanup()
-    }
+    const response = await fetch(url, {
+      method: "POST",
+      signal: options?.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
+    })
 
     if (!response.ok) {
       // Read body once as text, then try to parse as JSON
@@ -116,7 +100,7 @@ class OctopusAuthManager {
    */
   async getValidToken(
     config: OctopusConfig,
-    options?: TimedRequestSignalOptions,
+    options?: Pick<RequestInit, "signal">,
   ): Promise<string> {
     if (!config.baseUrl || !config.username || !config.password) {
       throw new Error("Octopus config is incomplete")

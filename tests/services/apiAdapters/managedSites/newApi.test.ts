@@ -192,9 +192,6 @@ describe("newApi managed-site channel capability", () => {
       1,
       { signal, bypassSiteRequestLimit: true },
     )
-    expect(channelManagement.fetchChannelModels.mock.calls[0][0].signal).toBe(
-      signal,
-    )
   })
 
   it("loads config through the managed-site runtime config boundary", async () => {

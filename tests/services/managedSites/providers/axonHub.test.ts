@@ -145,6 +145,7 @@ describe("AxonHub managed-site provider", () => {
     await expect(provider.checkValidAxonHubConfig()).resolves.toBe(true)
     await expect(provider.getAxonHubConfig()).resolves.toEqual(axonHubConfig)
 
+    const signal = new AbortController().signal
     await provider.searchChannel(passedAxonHubConfig, "alpha")
 
     expect(mockSignIn).toHaveBeenCalledWith(axonHubConfig)
@@ -153,9 +154,11 @@ describe("AxonHub managed-site provider", () => {
       "alpha",
     )
 
-    await provider.listChannels(passedAxonHubConfig)
+    await provider.listChannels(passedAxonHubConfig, { signal })
 
-    expect(mockListChannels).toHaveBeenCalledWith(passedAxonHubConfig)
+    expect(mockListChannels).toHaveBeenCalledWith(passedAxonHubConfig, {
+      signal,
+    })
   })
 
   it("returns null for search failures and rethrows list failures", async () => {

@@ -121,11 +121,7 @@ export async function runManagedSiteChannelsCrudScenario<
     })
     await expectPaginationSummary(context.page, "1", "1", "1")
 
-    const editAction = await openSingleVisibleChannelRowActions(
-      context.page,
-      channelName,
-    )
-    await editAction.click({ timeout: 10_000 })
+    await openSingleVisibleChannelEditDialog(context.page, channelName)
     await expect(
       context.page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
     ).toBeVisible({ timeout: 60_000 })
@@ -324,7 +320,6 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
     if (
       (await refreshButton.getAttribute("data-refresh-state")) === "loading"
     ) {
-      await refreshButton.click()
       await expect(refreshButton).toHaveAttribute(
         "data-refresh-state",
         "idle",
@@ -448,30 +443,30 @@ async function fillModelInput(page: Page, model: string) {
   })
 }
 
-async function openSingleVisibleChannelRowActions(page: Page, rowText: string) {
-  const editAction = page.getByTestId(
-    getManagedSiteChannelRowEditActionTestId(rowText),
-  )
-
+async function openSingleVisibleChannelEditDialog(page: Page, rowText: string) {
   await expect(async () => {
     const row = channelRowByName(page, rowText)
     await expect(row).toBeVisible({ timeout: 10_000 })
-    if (await editAction.isVisible()) {
-      return
-    }
-
     const actionsButton = row.getByTestId(
       getManagedSiteChannelRowActionsButtonTestId(rowText),
     )
     await expect(actionsButton).toBeEnabled({ timeout: 10_000 })
     await actionsButton.click({ timeout: 10_000 })
+
+    const editAction = page.getByTestId(
+      getManagedSiteChannelRowEditActionTestId(rowText),
+    )
     await expect(editAction).toBeVisible({ timeout: 10_000 })
+    await editAction.click({ timeout: 10_000 })
+    await expect(
+      page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+    ).toBeVisible({
+      timeout: 10_000,
+    })
   }).toPass({
     intervals: [1_000, 3_000, 5_000],
     timeout: 60_000,
   })
-
-  return editAction
 }
 
 export function buildManagedSiteE2ePrefix(params: {

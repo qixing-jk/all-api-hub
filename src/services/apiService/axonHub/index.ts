@@ -1,8 +1,4 @@
 import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
-import {
-  buildTimedRequestSignal,
-  type TimedRequestSignalOptions,
-} from "~/services/apiService/requestTimeout"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -186,7 +182,6 @@ const channelListCache = new Map<
 const numericIdToGraphqlId = new Map<number, string>()
 const CHANNEL_LIST_CACHE_TTL_MS = 15_000
 const MAX_LIST_CHANNEL_PAGES = 100
-const AXON_HUB_SIGN_IN_TIMEOUT_MESSAGE = "AxonHub sign-in request timed out"
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
 
@@ -277,15 +272,14 @@ const toSafeErrorMessage = (error: unknown, fallback: string) => {
  */
 export async function signIn(
   config: AxonHubConfig,
-  options?: TimedRequestSignalOptions,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<string> {
   const baseUrl = normalizeBaseUrl(config.baseUrl)
-  const requestSignal = buildTimedRequestSignal(options)
 
   try {
     const response = await fetch(`${baseUrl}/admin/auth/signin`, {
       method: "POST",
-      signal: requestSignal.signal,
+      signal: options?.signal,
       headers: {
         "Content-Type": "application/json",
       },
@@ -313,24 +307,17 @@ export async function signIn(
     tokenCache.set(cacheKeyForConfig(config), data.token)
     return data.token
   } catch (error) {
-    if (requestSignal.isTimedOut()) {
-      throw new Error(AXON_HUB_SIGN_IN_TIMEOUT_MESSAGE)
-    }
     throw new Error(toSafeErrorMessage(error, "AxonHub sign-in failed"))
-  } finally {
-    requestSignal.cleanup()
   }
 }
 
 const getSessionToken = async (
   config: AxonHubConfig,
   forceRefresh = false,
-  options?: TimedRequestSignalOptions,
+  options?: Pick<RequestInit, "signal">,
 ) => {
   const key = cacheKeyForConfig(config)
-  const hasCallerCancellation = Boolean(
-    options?.signal || options?.timeoutMs != null,
-  )
+  const hasCallerCancellation = Boolean(options?.signal)
   if (!forceRefresh) {
     const cachedToken = tokenCache.get(key)
     if (cachedToken) return cachedToken
@@ -362,24 +349,19 @@ const getSessionToken = async (
 
 const awaitSignInWithCallerCancellation = async (
   pendingSignIn: Promise<string>,
-  options?: TimedRequestSignalOptions,
+  options?: Pick<RequestInit, "signal">,
 ) => {
-  const requestSignal = buildTimedRequestSignal(options)
-  if (!requestSignal.signal) {
+  const callerSignal = options?.signal ?? undefined
+  if (!callerSignal) {
     return pendingSignIn
   }
-  const callerSignal = requestSignal.signal
 
+  let abort: (() => void) | null = null
   try {
     return await Promise.race([
       pendingSignIn,
       new Promise<string>((_resolve, reject) => {
-        const abort = () => {
-          if (requestSignal.isTimedOut()) {
-            reject(new Error(AXON_HUB_SIGN_IN_TIMEOUT_MESSAGE))
-            return
-          }
-
+        abort = () => {
           reject(
             callerSignal.reason ??
               new DOMException("The operation was aborted", "AbortError"),
@@ -395,7 +377,9 @@ const awaitSignInWithCallerCancellation = async (
       }),
     ])
   } finally {
-    requestSignal.cleanup()
+    if (abort) {
+      callerSignal.removeEventListener("abort", abort)
+    }
   }
 }
 
@@ -420,7 +404,7 @@ export async function graphqlRequest<T>(
   config: AxonHubConfig,
   query: string,
   variables?: Record<string, unknown>,
-  options?: { retryAuth?: boolean } & TimedRequestSignalOptions,
+  options?: { retryAuth?: boolean } & Pick<RequestInit, "signal">,
 ): Promise<T> {
   const baseUrl = normalizeBaseUrl(config.baseUrl)
   const retryAuth = options?.retryAuth ?? true
@@ -430,27 +414,15 @@ export async function graphqlRequest<T>(
     sessionToken: string,
     allowAuthRetry: boolean,
   ): Promise<T | null> => {
-    const requestSignal = buildTimedRequestSignal(options)
-    let response: Response
-
-    try {
-      response = await fetch(`${baseUrl}/admin/graphql`, {
-        method: "POST",
-        signal: requestSignal.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({ query, variables }),
-      })
-    } catch (error) {
-      if (requestSignal.isTimedOut()) {
-        throw new Error("AxonHub GraphQL request timed out")
-      }
-      throw error
-    } finally {
-      requestSignal.cleanup()
-    }
+    const response = await fetch(`${baseUrl}/admin/graphql`, {
+      method: "POST",
+      signal: options?.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionToken}`,
+      },
+      body: JSON.stringify({ query, variables }),
+    })
 
     const payload = (await response
       .json()
@@ -574,6 +546,7 @@ export function axonHubChannelToManagedSite(channel: AxonHubChannel) {
  */
 export async function listChannels(
   config: AxonHubConfig,
+  options?: Pick<RequestInit, "signal">,
 ): Promise<ManagedSiteChannelListData> {
   const cacheKey = cacheKeyForConfig(config)
   const cachedChannels = channelListCache.get(cacheKey)
@@ -603,6 +576,7 @@ export async function listChannels(
           after,
         },
       },
+      options,
     )
 
     total = data.queryChannels.totalCount ?? total

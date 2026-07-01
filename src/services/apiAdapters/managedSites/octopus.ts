@@ -107,8 +107,8 @@ export const octopusManagedSiteChannels: ManagedSiteChannelsCapability<OctopusCo
         return null
       }
     },
-    list: async (config) =>
-      toManagedSiteChannelListData(await listChannels(config)),
+    list: async (config, options) =>
+      toManagedSiteChannelListData(await listChannels(config, options)),
     create: async (config, channelData) => {
       try {
         const result = await createOctopusChannel(

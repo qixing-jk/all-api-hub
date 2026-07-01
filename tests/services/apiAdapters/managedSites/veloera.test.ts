@@ -125,9 +125,6 @@ describe("Veloera managed-site channel capability", () => {
       1,
       { signal: fetchModelsSignal },
     )
-    expect(veloeraApi.fetchChannelModels.mock.calls[0][0].signal).toBe(
-      fetchModelsSignal,
-    )
     expect(veloeraApi.updateChannelModels).toHaveBeenCalledWith(
       expect.objectContaining(request),
       1,
