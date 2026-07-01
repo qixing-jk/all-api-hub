@@ -1042,6 +1042,51 @@ describe("BookmarkAccountImportDialog", () => {
     ])
   })
 
+  it("toggles ready and duplicate candidates according to include-existing state", async () => {
+    const user = userEvent.setup()
+    accounts.push(
+      buildSiteAccount({
+        id: "account-existing",
+        site_url: "https://existing.example.invalid/settings",
+      }),
+    )
+
+    renderDialog()
+
+    await allowBookmarksAndScanSelected(user)
+
+    const readyCheckbox = await screen.findByRole("checkbox", {
+      name: "https://new.example.invalid",
+    })
+    const duplicateCheckbox = screen.getByRole("checkbox", {
+      name: "https://existing.example.invalid",
+    })
+
+    expect(readyCheckbox).toBeChecked()
+    expect(duplicateCheckbox).toBeDisabled()
+
+    await user.click(readyCheckbox)
+    expect(readyCheckbox).not.toBeChecked()
+
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportIncludeExistingCheckbox,
+      ),
+    )
+    expect(duplicateCheckbox).toBeChecked()
+
+    await user.click(duplicateCheckbox)
+    expect(duplicateCheckbox).not.toBeChecked()
+
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportIncludeExistingCheckbox,
+      ),
+    )
+    expect(duplicateCheckbox).toBeDisabled()
+    expect(duplicateCheckbox).not.toBeChecked()
+  })
+
   it("recovers from permission denial and completes analytics as a permission failure", async () => {
     const user = userEvent.setup()
     ensurePermissionsDetailedMock.mockResolvedValueOnce({
@@ -1123,6 +1168,63 @@ describe("BookmarkAccountImportDialog", () => {
         insights: expect.objectContaining({
           failureReason:
             PRODUCT_ANALYTICS_FAILURE_REASONS.PermissionUnavailable,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+        }),
+      }),
+    )
+  })
+
+  it("reports browser bookmark read failures separately from unsupported APIs", async () => {
+    const user = userEvent.setup()
+    getBrowserBookmarkTreeMock.mockResolvedValueOnce({
+      success: false,
+      reason: "read-failed",
+    })
+
+    renderDialog()
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportAllowScanButton,
+      ),
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.bookmarkAccountImport.readFailed"),
+    ).toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: expect.objectContaining({
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.StorageReadFailed,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+        }),
+      }),
+    )
+  })
+
+  it("settles unexpected bookmark read exceptions as read failures", async () => {
+    const user = userEvent.setup()
+    getBrowserBookmarkTreeMock.mockRejectedValueOnce(new Error("read failed"))
+
+    renderDialog()
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportAllowScanButton,
+      ),
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.bookmarkAccountImport.readFailed"),
+    ).toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: expect.objectContaining({
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
         }),
       }),

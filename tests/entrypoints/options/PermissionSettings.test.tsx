@@ -394,4 +394,95 @@ describe("PermissionSettings", () => {
       },
     )
   })
+
+  it("tracks browser API revoke exceptions returned by the permission manager", async () => {
+    removePermissionDetailedMock.mockResolvedValueOnce({
+      success: false,
+      failureReason: "api_exception",
+    })
+
+    render(<PermissionSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText("settings:permissions.items.cookies.title")
+    const cookiesRow = document.getElementById("cookies")
+    if (!cookiesRow) {
+      throw new Error("Expected cookies permission row")
+    }
+
+    fireEvent.click(
+      within(cookiesRow).getByRole("button", {
+        name: "settings:permissions.actions.remove",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith(
+        false,
+        "settings:permissions.messages.revoked",
+        "settings:permissions.messages.revokeFailed",
+      )
+    })
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Cookies,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Remove,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: true,
+        was_granted_after: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+  })
+
+  it("shows an error toast when revoking a permission throws", async () => {
+    removePermissionDetailedMock.mockRejectedValueOnce(
+      new Error("remove failed"),
+    )
+
+    render(<PermissionSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText("settings:permissions.items.cookies.title")
+    const cookiesRow = document.getElementById("cookies")
+    if (!cookiesRow) {
+      throw new Error("Expected cookies permission row")
+    }
+
+    fireEvent.click(
+      within(cookiesRow).getByRole("button", {
+        name: "settings:permissions.actions.remove",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith(
+        false,
+        "settings:permissions.messages.revoked",
+        "settings:permissions.messages.revokeFailed",
+      )
+    })
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Cookies,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Remove,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: true,
+        was_granted_after: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+  })
 })
