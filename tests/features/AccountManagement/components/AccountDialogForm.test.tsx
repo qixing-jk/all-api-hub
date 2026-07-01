@@ -720,4 +720,29 @@ describe("AccountDialog AccountForm", () => {
       autoCheckInEnabled: true,
     })
   })
+
+  it("does not show built-in auto check-in controls for AIHubMix accounts", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.AIHUBMIX
+    props.draft.checkIn = createCheckIn({
+      enableDetection: true,
+      autoCheckInEnabled: true,
+    })
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText("accountDialog:form.checkInStatusUnsupported", {
+        exact: false,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("accountDialog:form.checkInStatusDesc"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("switch", {
+        name: "accountDialog:form.autoCheckInEnabled",
+      }),
+    ).not.toBeInTheDocument()
+  })
 })

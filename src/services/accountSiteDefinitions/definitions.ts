@@ -203,7 +203,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: true,
+        supportsBuiltInCheckInDetection: false,
       },
       createdToken: {
         secretHandling:

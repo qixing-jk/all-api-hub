@@ -150,6 +150,7 @@ describe("Account Dialog site policy", () => {
       SITE_TYPES.AIHUBMIX,
     )
     expect(aihubmixPolicy.allowCookieAuthSession).toBe(false)
+    expect(aihubmixPolicy.allowBuiltInCheckInDetection).toBe(false)
     expect(aihubmixPolicy.allowSub2ApiRefreshTokenState).toBe(false)
     expect(aihubmixPolicy.deferSuccessForOneTimeKeyPostSaveFlow).toBe(true)
 
@@ -211,7 +212,8 @@ describe("Account Dialog site policy", () => {
 
     expect(normalized.authType).toBe(AuthTypeEnum.AccessToken)
     expect(normalized.cookieAuthSessionCookie).toBe("")
-    expect(normalized.checkIn.enableDetection).toBe(true)
+    expect(normalized.checkIn.enableDetection).toBe(false)
+    expect(normalized.checkIn.autoCheckInEnabled).toBe(false)
     expect(normalized.sub2apiUseRefreshToken).toBe(false)
     expect(normalized.sub2apiRefreshToken).toBe("")
     expect(normalized.sub2apiTokenExpiresAt).toBeNull()
