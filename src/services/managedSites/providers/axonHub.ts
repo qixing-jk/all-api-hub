@@ -214,7 +214,11 @@ export async function createChannel(
       )
     }
 
-    return { success: true, data: created, message: "success" }
+    return {
+      success: true,
+      data: axonHubApi.axonHubChannelToManagedSite(created),
+      message: "success",
+    }
   } catch (error) {
     return {
       success: false,
@@ -250,7 +254,11 @@ export async function updateChannel(
       )
     }
 
-    return { success: true, data: updated, message: "success" }
+    return {
+      success: true,
+      data: axonHubApi.axonHubChannelToManagedSite(updated),
+      message: "success",
+    }
   } catch (error) {
     return {
       success: false,

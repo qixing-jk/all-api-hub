@@ -12,6 +12,7 @@ interface ManagedSiteChannelLinkButtonProps {
   channelId?: number
   search?: string
   className?: string
+  testId?: string
 }
 
 /**
@@ -22,6 +23,7 @@ export default function ManagedSiteChannelLinkButton({
   channelId,
   search,
   className,
+  testId,
 }: ManagedSiteChannelLinkButtonProps) {
   const { t } = useTranslation(["managedSiteModelSync"])
 
@@ -43,6 +45,7 @@ export default function ManagedSiteChannelLinkButton({
       onClick={handleClick}
       disabled={channelId == null && !search}
       aria-label={`${t("managedSiteModelSync:execution.table.manageChannel")}: ${channelName}`}
+      data-testid={testId}
     >
       <span className="truncate">{channelName}</span>
     </WorkflowTransitionButton>

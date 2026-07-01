@@ -138,6 +138,14 @@ import ChannelFilterDialog from "./components/ChannelFilterDialog"
 import { ManagedSiteChannelMigrationDialog } from "./components/ManagedSiteChannelMigrationDialog"
 import RowActions from "./components/RowActions"
 import StatusBadge from "./components/StatusBadge"
+import {
+  getManagedSiteChannelRowActionsButtonTestId,
+  getManagedSiteChannelRowDeleteActionTestId,
+  getManagedSiteChannelRowEditActionTestId,
+  getManagedSiteChannelRowSelectTestId,
+  getManagedSiteChannelRowTestId,
+  MANAGED_SITE_CHANNELS_TEST_IDS,
+} from "./testIds"
 import type { ChannelRow, CheckboxState, RowActionsLabels } from "./types"
 import {
   channelIdFilterFn,
@@ -150,6 +158,35 @@ const channelsToolbarSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar
 const channelsRowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
+
+/**
+ * Checks whether a mutation response already contains a table-ready channel row.
+ */
+function isChannelRowLike(value: unknown): value is ChannelRow {
+  if (!value || typeof value !== "object") {
+    return false
+  }
+
+  const candidate = value as Partial<ChannelRow>
+  return (
+    typeof candidate.id === "number" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.base_url === "string" &&
+    typeof candidate.models === "string"
+  )
+}
+
+/**
+ * Inserts or replaces a channel row returned by create/update mutations.
+ */
+function upsertChannelRow(rows: ChannelRow[], channel: ChannelRow) {
+  const existingIndex = rows.findIndex((row) => row.id === channel.id)
+  if (existingIndex === -1) {
+    return [channel, ...rows]
+  }
+
+  return rows.map((row, index) => (index === existingIndex ? channel : row))
+}
 
 /**
  * Main management page for New API channels including table, filters, and dialogs.
@@ -401,9 +438,13 @@ export default function ManagedSiteChannels({
           },
         })
       },
-      onSuccess: () => {
+      onSuccess: (response) => {
         toast.success(t("toasts.channelSaved"))
-        void refreshChannels()
+        if (isChannelRowLike(response?.data)) {
+          setChannels((prev) => upsertChannelRow(prev, response.data))
+        } else {
+          void refreshChannels()
+        }
       },
     })
   }, [managedSiteAnalyticsType, openWithCustom, refreshChannels, t])
@@ -492,9 +533,13 @@ export default function ManagedSiteChannels({
           : undefined,
         onSuccess:
           mode === DIALOG_MODES.EDIT
-            ? () => {
+            ? (response) => {
                 toast.success(t("toasts.channelUpdated"))
-                void refreshChannels()
+                if (isChannelRowLike(response?.data)) {
+                  setChannels((prev) => upsertChannelRow(prev, response.data))
+                } else {
+                  void refreshChannels()
+                }
               }
             : undefined,
         onMutationOutcome:
@@ -890,6 +935,9 @@ export default function ManagedSiteChannels({
               row.toggleSelected(!!value)
             }
             aria-label={t("table.selectRow")}
+            data-testid={getManagedSiteChannelRowSelectTestId(
+              row.original.name,
+            )}
           />
         ),
         size: 16,
@@ -1033,6 +1081,15 @@ export default function ManagedSiteChannels({
             showNewApiOnlyActions={supportsNewApiOnlyChannelActions}
             isSyncing={syncingIds.has(row.original.id)}
             labels={rowActionLabels}
+            testIds={{
+              trigger: getManagedSiteChannelRowActionsButtonTestId(
+                row.original.name,
+              ),
+              edit: getManagedSiteChannelRowEditActionTestId(row.original.name),
+              delete: getManagedSiteChannelRowDeleteActionTestId(
+                row.original.name,
+              ),
+            }}
           />
         ),
         size: 60,
@@ -1286,6 +1343,7 @@ export default function ManagedSiteChannels({
                 onChange={(event) => handleSearchChange(event.target.value)}
                 placeholder={t("toolbar.searchPlaceholder")}
                 className="ps-9"
+                data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.searchInput}
               />
               <ListFilter className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               {searchValue && (
@@ -1431,6 +1489,9 @@ export default function ManagedSiteChannels({
                     <Button
                       variant="outline"
                       disabled={!selectedCount}
+                      data-testid={
+                        MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton
+                      }
                       onClick={() =>
                         scheduleDelete(
                           selectedRows.map((row) => row.original.id),
@@ -1475,6 +1536,9 @@ export default function ManagedSiteChannels({
                     <Button
                       onClick={handleOpenCreateDialog}
                       leftIcon={<Plus className="h-4 w-4" />}
+                      data-testid={
+                        MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton
+                      }
                       analyticsAction={
                         PRODUCT_ANALYTICS_ACTION_IDS.CreateManagedSiteChannel
                       }
@@ -1555,6 +1619,10 @@ export default function ManagedSiteChannels({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
+                      data-testid={getManagedSiteChannelRowTestId(
+                        row.original.name,
+                      )}
+                      data-channel-name={row.original.name}
                       className="group align-middle"
                     >
                       {row
@@ -1632,7 +1700,20 @@ export default function ManagedSiteChannels({
 
             <div className="text-muted-foreground ml-auto">
               {table.getRowCount() ? (
-                <span>
+                <span
+                  data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary}
+                  data-start={
+                    table.getState().pagination.pageIndex *
+                      table.getState().pagination.pageSize +
+                    1
+                  }
+                  data-end={Math.min(
+                    (table.getState().pagination.pageIndex + 1) *
+                      table.getState().pagination.pageSize,
+                    table.getRowCount(),
+                  )}
+                  data-total={table.getRowCount()}
+                >
                   {t("table.paginationSummary", {
                     start:
                       table.getState().pagination.pageIndex *
@@ -1692,6 +1773,9 @@ export default function ManagedSiteChannels({
         description={t("dialog.deleteDescription")}
         cancelLabel={t("dialog.cancel")}
         confirmLabel={t("dialog.confirm")}
+        confirmButtonTestId={
+          MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton
+        }
         onConfirm={() => {
           void handleDelete()
         }}

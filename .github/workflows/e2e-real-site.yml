@@ -1,7 +1,18 @@
 name: Real-Site E2E
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      category:
+        description: Real-site E2E category to run
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - account
+          - managed-site
+          - webdav
   schedule:
     - cron: "17 19 * * *"
 
@@ -13,44 +24,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  real-site-matrix:
+    name: Prepare real-site E2E matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Generate matrix
+        id: matrix
+        run: node scripts/github-real-site-e2e-matrix.mjs "${{ github.event.inputs.category || 'all' }}"
+
   real-site-e2e:
     name: ${{ matrix.label }}
+    needs: real-site-matrix
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # Account-backed real-site flows.
-          - label: New API
-            env_prefix: NEW_API
-            spec: e2e/realSite/newApiAccountAdd.spec.ts
-          - label: OneHub
-            env_prefix: ONE_HUB
-            spec: e2e/realSite/oneHubAccountAdd.spec.ts
-          - label: DoneHub
-            env_prefix: DONE_HUB
-            spec: e2e/realSite/doneHubAccountAdd.spec.ts
-          - label: Veloera
-            env_prefix: VELOERA
-            spec: e2e/realSite/veloeraAccountAdd.spec.ts
-          - label: Sub2API
-            env_prefix: SUB2API
-            spec: e2e/realSite/sub2apiAccountAdd.spec.ts
-          # WebDAV provider compatibility flows.
-          - label: Nutstore WebDAV
-            env_prefix: NUTSTORE_WEBDAV
-            kind: webdav
-            provider_name: Nutstore
-            provider_account_prefix: nutstore
-            spec: e2e/realSite/webdavProviderFlow.spec.ts
-          - label: CTFile WebDAV
-            env_prefix: CTFILE_WEBDAV
-            kind: webdav
-            provider_name: CTFile
-            provider_account_prefix: ctfile
-            spec: e2e/realSite/webdavProviderFlow.spec.ts
+      matrix: ${{ fromJson(needs.real-site-matrix.outputs.matrix) }}
 
     steps:
       - name: Checkout code
@@ -106,6 +101,22 @@ jobs:
           REAL_SITE_SUBMIT_SELECTOR: ${{ secrets[format('AAH_E2E_{0}_SUBMIT_SELECTOR', matrix.env_prefix)] }}
           REAL_SITE_AGREE_SELECTOR: ${{ secrets[format('AAH_E2E_{0}_AGREE_SELECTOR', matrix.env_prefix)] }}
           REAL_SITE_KIND: ${{ matrix.kind || 'account' }}
+          REAL_SITE_CATEGORY: ${{ matrix.category }}
+          MANAGED_SITE_TARGET: ${{ matrix.managed_site_target }}
+          MANAGED_SITE_ADMIN_TOKEN: ${{ secrets[format('AAH_E2E_{0}_ADMIN_TOKEN', matrix.env_prefix)] }}
+          MANAGED_SITE_ADMIN_USER_ID: ${{ secrets[format('AAH_E2E_{0}_ADMIN_USER_ID', matrix.env_prefix)] }}
+          MANAGED_SITE_EMAIL: ${{ secrets[format('AAH_E2E_{0}_EMAIL', matrix.env_prefix)] }}
+          NEW_API_SOURCE_BASE_URL: ${{ secrets.AAH_E2E_NEW_API_BASE_URL }}
+          NEW_API_SOURCE_USERNAME: ${{ secrets.AAH_E2E_NEW_API_USERNAME }}
+          NEW_API_SOURCE_PASSWORD: ${{ secrets.AAH_E2E_NEW_API_PASSWORD }}
+          NEW_API_SOURCE_TOTP_SECRET: ${{ secrets.AAH_E2E_NEW_API_TOTP_SECRET }}
+          NEW_API_SOURCE_LOGIN_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_PATH }}
+          NEW_API_SOURCE_LOGIN_API_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_API_PATH }}
+          NEW_API_SOURCE_LOGIN_2FA_API_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_2FA_API_PATH }}
+          NEW_API_SOURCE_USERNAME_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_USERNAME_SELECTOR }}
+          NEW_API_SOURCE_PASSWORD_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_PASSWORD_SELECTOR }}
+          NEW_API_SOURCE_SUBMIT_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_SUBMIT_SELECTOR }}
+          NEW_API_SOURCE_AGREE_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_AGREE_SELECTOR }}
           WEBDAV_PROVIDER_NAME: ${{ matrix.provider_name }}
           WEBDAV_PROVIDER_ACCOUNT_PREFIX: ${{ matrix.provider_account_prefix }}
           WEBDAV_URL: ${{ secrets[format('AAH_E2E_{0}_URL', matrix.env_prefix)] }}
@@ -121,6 +132,7 @@ jobs:
           }
 
           prefix="$REAL_SITE_ENV_PREFIX"
+          write_env "AAH_E2E_REAL_SITE_CATEGORY" "$REAL_SITE_CATEGORY"
           missing=()
           if [ "$REAL_SITE_KIND" = "webdav" ]; then
             write_env "AAH_E2E_WEBDAV_PROVIDER_PREFIX" "$prefix"
@@ -132,6 +144,52 @@ jobs:
             [ -z "$WEBDAV_URL" ] && missing+=("AAH_E2E_${prefix}_URL")
             [ -z "$WEBDAV_USERNAME" ] && missing+=("AAH_E2E_${prefix}_USERNAME")
             [ -z "$WEBDAV_PASSWORD" ] && missing+=("AAH_E2E_${prefix}_PASSWORD")
+          elif [ "$REAL_SITE_KIND" = "managed-site" ]; then
+            write_env "AAH_E2E_MANAGED_SITE_TARGET" "$MANAGED_SITE_TARGET"
+            write_env "AAH_E2E_${prefix}_BASE_URL" "$REAL_SITE_BASE_URL"
+            write_env "AAH_E2E_${prefix}_USERNAME" "$REAL_SITE_USERNAME"
+            write_env "AAH_E2E_${prefix}_PASSWORD" "$REAL_SITE_PASSWORD"
+            write_env "AAH_E2E_${prefix}_TOTP_SECRET" "$REAL_SITE_TOTP_SECRET"
+            write_env "AAH_E2E_${prefix}_LOGIN_PATH" "$REAL_SITE_LOGIN_PATH"
+            write_env "AAH_E2E_${prefix}_LOGIN_API_PATH" "$REAL_SITE_LOGIN_API_PATH"
+            write_env "AAH_E2E_${prefix}_LOGIN_2FA_API_PATH" "$REAL_SITE_LOGIN_2FA_API_PATH"
+            write_env "AAH_E2E_${prefix}_USERNAME_SELECTOR" "$REAL_SITE_USERNAME_SELECTOR"
+            write_env "AAH_E2E_${prefix}_PASSWORD_SELECTOR" "$REAL_SITE_PASSWORD_SELECTOR"
+            write_env "AAH_E2E_${prefix}_SUBMIT_SELECTOR" "$REAL_SITE_SUBMIT_SELECTOR"
+            write_env "AAH_E2E_${prefix}_AGREE_SELECTOR" "$REAL_SITE_AGREE_SELECTOR"
+            write_env "AAH_E2E_${prefix}_ADMIN_TOKEN" "$MANAGED_SITE_ADMIN_TOKEN"
+            write_env "AAH_E2E_${prefix}_ADMIN_USER_ID" "$MANAGED_SITE_ADMIN_USER_ID"
+            write_env "AAH_E2E_${prefix}_EMAIL" "$MANAGED_SITE_EMAIL"
+            write_env "AAH_E2E_NEW_API_BASE_URL" "$NEW_API_SOURCE_BASE_URL"
+            write_env "AAH_E2E_NEW_API_USERNAME" "$NEW_API_SOURCE_USERNAME"
+            write_env "AAH_E2E_NEW_API_PASSWORD" "$NEW_API_SOURCE_PASSWORD"
+            write_env "AAH_E2E_NEW_API_TOTP_SECRET" "$NEW_API_SOURCE_TOTP_SECRET"
+            write_env "AAH_E2E_NEW_API_LOGIN_PATH" "$NEW_API_SOURCE_LOGIN_PATH"
+            write_env "AAH_E2E_NEW_API_LOGIN_API_PATH" "$NEW_API_SOURCE_LOGIN_API_PATH"
+            write_env "AAH_E2E_NEW_API_LOGIN_2FA_API_PATH" "$NEW_API_SOURCE_LOGIN_2FA_API_PATH"
+            write_env "AAH_E2E_NEW_API_USERNAME_SELECTOR" "$NEW_API_SOURCE_USERNAME_SELECTOR"
+            write_env "AAH_E2E_NEW_API_PASSWORD_SELECTOR" "$NEW_API_SOURCE_PASSWORD_SELECTOR"
+            write_env "AAH_E2E_NEW_API_SUBMIT_SELECTOR" "$NEW_API_SOURCE_SUBMIT_SELECTOR"
+            write_env "AAH_E2E_NEW_API_AGREE_SELECTOR" "$NEW_API_SOURCE_AGREE_SELECTOR"
+
+            [ -z "$REAL_SITE_BASE_URL" ] && missing+=("AAH_E2E_${prefix}_BASE_URL")
+            case "$prefix" in
+              NEW_API|VELOERA|DONE_HUB)
+                [ -z "$MANAGED_SITE_ADMIN_TOKEN" ] && missing+=("AAH_E2E_${prefix}_ADMIN_TOKEN")
+                [ -z "$MANAGED_SITE_ADMIN_USER_ID" ] && missing+=("AAH_E2E_${prefix}_ADMIN_USER_ID")
+                ;;
+              OCTOPUS)
+                [ -z "$REAL_SITE_USERNAME" ] && missing+=("AAH_E2E_${prefix}_USERNAME")
+                [ -z "$REAL_SITE_PASSWORD" ] && missing+=("AAH_E2E_${prefix}_PASSWORD")
+                ;;
+              AXON_HUB)
+                [ -z "$MANAGED_SITE_EMAIL" ] && missing+=("AAH_E2E_${prefix}_EMAIL")
+                [ -z "$REAL_SITE_PASSWORD" ] && missing+=("AAH_E2E_${prefix}_PASSWORD")
+                ;;
+              CLAUDE_CODE_HUB)
+                [ -z "$MANAGED_SITE_ADMIN_TOKEN" ] && missing+=("AAH_E2E_${prefix}_ADMIN_TOKEN")
+                ;;
+            esac
           else
             write_env "AAH_E2E_${prefix}_BASE_URL" "$REAL_SITE_BASE_URL"
             write_env "AAH_E2E_${prefix}_USERNAME" "$REAL_SITE_USERNAME"
@@ -150,9 +208,9 @@ jobs:
           fi
 
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::warning::${prefix} real-site E2E will skip without required secrets: ${missing[*]}"
+            echo "::warning::${REAL_SITE_CATEGORY}/${prefix} real-site E2E will skip without required secrets: ${missing[*]}"
           else
-            echo "${prefix} real-site E2E required secrets are configured."
+            echo "${REAL_SITE_CATEGORY}/${prefix} real-site E2E required secrets are configured."
           fi
 
       - name: Run real-site E2E
@@ -164,7 +222,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: real-site-playwright-report-${{ matrix.env_prefix }}-${{ github.run_attempt }}
+          name: real-site-playwright-report-${{ matrix.category }}-${{ matrix.env_prefix }}-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/

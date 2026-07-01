@@ -7,6 +7,10 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   batchSaveToApiProfilesButton:
     "key-management-batch-save-to-api-profiles-button",
   tokenRowActions: "key-management-token-row-actions",
+  managedSiteStatusBadge: "key-management-managed-site-status-badge",
+  importToManagedSiteButton: "key-management-import-to-managed-site-button",
+  managedSiteChannelLinkButton:
+    "key-management-managed-site-channel-link-button",
   openSelectedAccountModelsButton:
     "key-management-open-selected-account-models-button",
   titleActions: "key-management-title-actions",

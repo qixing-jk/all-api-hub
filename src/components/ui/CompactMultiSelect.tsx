@@ -90,6 +90,10 @@ export interface CompactMultiSelectProps
    * Defaults to `0` to preserve the current always-visible behavior.
    */
   bulkActionsMinOptions?: number
+  /**
+   * Optional stable selector for the searchable chips input.
+   */
+  inputTestId?: string
 }
 
 /**
@@ -116,6 +120,7 @@ export function CompactMultiSelect({
   emptyMessage,
   size = "default",
   bulkActionsMinOptions = 0,
+  inputTestId,
   className,
   ...buttonProps
 }: CompactMultiSelectProps) {
@@ -495,6 +500,7 @@ export function CompactMultiSelect({
                       ))
                     : null}
                   <ComboboxChipsInput
+                    data-testid={inputTestId}
                     aria-label={chipsInputAriaLabel}
                     aria-labelledby={chipsInputAriaLabelledBy}
                     placeholder={chipsInputPlaceholder}

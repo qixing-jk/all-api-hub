@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
   buildChannelDialogAdvisoryWarning,
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
@@ -448,6 +449,7 @@ export function ChannelDialog({
           disabled={!isFormValid || isSaving}
           loading={isSaving}
           type="submit"
+          data-testid={CHANNEL_DIALOG_TEST_IDS.submitButton}
         >
           {isAddMode
             ? t("channelDialog:actions.create")
@@ -513,6 +515,7 @@ export function ChannelDialog({
           </Label>
           <Input
             id="channel-name"
+            data-testid={CHANNEL_DIALOG_TEST_IDS.nameInput}
             type="text"
             value={formData.name}
             onChange={(e) => updateField("name", e.target.value)}
@@ -579,6 +582,7 @@ export function ChannelDialog({
           </Label>
           <Input
             id="channel-key"
+            data-testid={CHANNEL_DIALOG_TEST_IDS.keyInput}
             type="password"
             revealable
             revealed={showKey}
@@ -624,6 +628,7 @@ export function ChannelDialog({
           </Label>
           <Input
             id="channel-base-url"
+            data-testid={CHANNEL_DIALOG_TEST_IDS.baseUrlInput}
             type="url"
             value={formData.base_url}
             onChange={(e) => updateField("base_url", e.target.value)}
@@ -693,6 +698,7 @@ export function ChannelDialog({
             selected={formData.models}
             onChange={(models) => updateField("models", models)}
             size="default"
+            inputTestId={CHANNEL_DIALOG_TEST_IDS.modelsInput}
             placeholder={
               isLoadingModels
                 ? t("channelDialog:fields.models.loading")

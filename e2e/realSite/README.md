@@ -38,13 +38,32 @@ Run all real-site specs:
 pnpm e2e:real-site
 ```
 
-Run the shared WebDAV provider flow locally:
+Run one real-site category locally:
+
+```bash
+pnpm e2e:real-site:account
+pnpm e2e:real-site:managed-site
+pnpm e2e:real-site:webdav
+```
+
+Run one shared WebDAV provider flow locally:
 
 ```bash
 pnpm e2e:real-site:nutstore
 pnpm e2e:real-site:ctfile
-pnpm e2e:real-site:webdav
+pnpm e2e:real-site:webdav-provider
 ```
+
+`pnpm e2e:real-site:webdav` runs every WebDAV real-site matrix entry.
+`pnpm e2e:real-site:webdav-provider` keeps the provider-focused behavior and
+defaults to Nutstore unless a provider prefix is passed.
+Category scripts run each matching matrix entry separately and reuse the first
+extension build for the remaining entries.
+
+The GitHub Actions workflow has a `category` input with `all`, `account`,
+`managed-site`, and `webdav`. Scheduled runs still use `all`; manual runs can
+select a single category so the CI job list and artifacts are visibly grouped as
+`Account / ...`, `Managed Site / ...`, or `WebDAV / ...`.
 
 Playwright loads `.env` and `.env.local` from the repo root. Shell or CI
 environment variables take precedence. Each block is optional; specs skip when
@@ -65,6 +84,17 @@ AAH_E2E_NEW_API_PASSWORD=replace-with-test-password
 # AAH_E2E_NEW_API_PASSWORD_SELECTOR=input[type="password"]
 # AAH_E2E_NEW_API_SUBMIT_SELECTOR=button[type="submit"]
 # AAH_E2E_NEW_API_AGREE_SELECTOR=input[type="checkbox"]
+```
+
+The managed-site channel E2E uses the same New API deployment for account-backed
+status checks and also needs managed-site admin credentials. It creates
+temporary channels and keys with an `AAH E2E ...` prefix, deletes stale matching
+channels before each run, and deletes created channels/keys after each run. It
+intentionally does not run model-list sync.
+
+```env
+AAH_E2E_NEW_API_ADMIN_TOKEN=replace-with-admin-access-token
+AAH_E2E_NEW_API_ADMIN_USER_ID=1
 ```
 
 ## OneHub
@@ -97,6 +127,8 @@ AAH_E2E_DONE_HUB_PASSWORD=replace-with-test-password
 # AAH_E2E_DONE_HUB_PASSWORD_SELECTOR=input[type="password"]
 # AAH_E2E_DONE_HUB_SUBMIT_SELECTOR=button[type="submit"]
 # AAH_E2E_DONE_HUB_AGREE_SELECTOR=input[type="checkbox"]
+AAH_E2E_DONE_HUB_ADMIN_TOKEN=replace-with-admin-access-token
+AAH_E2E_DONE_HUB_ADMIN_USER_ID=1
 ```
 
 ## Veloera
@@ -113,6 +145,41 @@ AAH_E2E_VELOERA_PASSWORD=replace-with-test-password
 # AAH_E2E_VELOERA_PASSWORD_SELECTOR=input[type="password"]
 # AAH_E2E_VELOERA_SUBMIT_SELECTOR=button[type="submit"]
 # AAH_E2E_VELOERA_AGREE_SELECTOR=input[type="checkbox"]
+AAH_E2E_VELOERA_ADMIN_TOKEN=replace-with-admin-access-token
+AAH_E2E_VELOERA_ADMIN_USER_ID=1
+```
+
+Veloera channel CRUD/search is covered by the managed-site channel E2E. Key
+channel-status assertions are skipped for Veloera because the product currently
+does not support base-URL channel lookup for that managed-site type.
+
+## Managed-Site Channel Matrix
+
+The shared managed-site channel spec can be scoped to one target with
+`AAH_E2E_MANAGED_SITE_TARGET`. CI runs it once per managed site so targets can
+execute independently and in parallel.
+
+```bash
+AAH_E2E_MANAGED_SITE_TARGET=new-api pnpm exec playwright test e2e/realSite/managedSiteChannels.spec.ts --project=chromium
+AAH_E2E_MANAGED_SITE_TARGET=done-hub pnpm exec playwright test e2e/realSite/managedSiteChannels.spec.ts --project=chromium
+```
+
+Managed-only site types use a New API source account for key channel-status
+checks when New API account env is available. Without that source account, the
+spec still covers channel CRUD/search for the managed target and annotates the
+status check as skipped.
+
+```env
+AAH_E2E_OCTOPUS_BASE_URL=https://octopus.example.com
+AAH_E2E_OCTOPUS_USERNAME=test-admin
+AAH_E2E_OCTOPUS_PASSWORD=replace-with-test-password
+
+AAH_E2E_AXON_HUB_BASE_URL=https://axonhub.example.com
+AAH_E2E_AXON_HUB_EMAIL=admin@example.com
+AAH_E2E_AXON_HUB_PASSWORD=replace-with-test-password
+
+AAH_E2E_CLAUDE_CODE_HUB_BASE_URL=https://claude-code-hub.example.com
+AAH_E2E_CLAUDE_CODE_HUB_ADMIN_TOKEN=replace-with-admin-token
 ```
 
 ## Sub2API
@@ -175,5 +242,5 @@ For local provider-prefixed variables beyond Nutstore, pass the prefix to the
 runner only after that provider has real test credentials:
 
 ```bash
-pnpm e2e:real-site:webdav CUSTOM_WEBDAV
+pnpm e2e:real-site:webdav-provider CUSTOM_WEBDAV
 ```

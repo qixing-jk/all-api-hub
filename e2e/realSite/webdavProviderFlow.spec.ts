@@ -59,22 +59,23 @@ function resolveWebdavProviderConfig(): ResolvedWebdavProviderConfig {
   const accountPrefix =
     readEnv("AAH_E2E_WEBDAV_ACCOUNT_PREFIX") ??
     providerName.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
-  const candidates: WebdavProviderEnvCandidate[] = [
-    {
-      providerName,
-      accountPrefix,
-      urlEnvKey: "AAH_E2E_WEBDAV_URL",
-      usernameEnvKey: "AAH_E2E_WEBDAV_USERNAME",
-      passwordEnvKey: "AAH_E2E_WEBDAV_PASSWORD",
-    },
-    {
-      providerName,
-      accountPrefix,
-      urlEnvKey: `AAH_E2E_${providerPrefix ?? DEFAULT_WEBDAV_PROVIDER_PREFIX}_URL`,
-      usernameEnvKey: `AAH_E2E_${providerPrefix ?? DEFAULT_WEBDAV_PROVIDER_PREFIX}_USERNAME`,
-      passwordEnvKey: `AAH_E2E_${providerPrefix ?? DEFAULT_WEBDAV_PROVIDER_PREFIX}_PASSWORD`,
-    },
-  ]
+  const genericCandidate: WebdavProviderEnvCandidate = {
+    providerName,
+    accountPrefix,
+    urlEnvKey: "AAH_E2E_WEBDAV_URL",
+    usernameEnvKey: "AAH_E2E_WEBDAV_USERNAME",
+    passwordEnvKey: "AAH_E2E_WEBDAV_PASSWORD",
+  }
+  const prefixedCandidate: WebdavProviderEnvCandidate = {
+    providerName,
+    accountPrefix,
+    urlEnvKey: `AAH_E2E_${providerPrefix ?? DEFAULT_WEBDAV_PROVIDER_PREFIX}_URL`,
+    usernameEnvKey: `AAH_E2E_${providerPrefix ?? DEFAULT_WEBDAV_PROVIDER_PREFIX}_USERNAME`,
+    passwordEnvKey: `AAH_E2E_${providerPrefix ?? DEFAULT_WEBDAV_PROVIDER_PREFIX}_PASSWORD`,
+  }
+  const candidates: WebdavProviderEnvCandidate[] = providerPrefix
+    ? [prefixedCandidate]
+    : [genericCandidate, prefixedCandidate]
 
   for (const candidate of candidates) {
     const config = readWebdavProviderCredentials(candidate)

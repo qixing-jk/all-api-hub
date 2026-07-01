@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test"
 import type { AccountSiteType } from "~/constants/siteType"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import type { AccountFixture } from "~~/e2e/scenarios/accountFixtures"
+import type { ExtensionPageGuardOptions } from "~~/e2e/utils/commonUserFlows"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { runRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/accountSaveFlow"
 import type { CompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatibleApi"
@@ -21,6 +22,7 @@ export async function runCompatibleRealSiteAccountSaveFlow(params: {
   config: CompatibleApiRealSiteConfig
   siteType: AccountSiteType
   expectedDetectedSiteType?: AccountSiteType
+  extensionPageGuardOptions?: ExtensionPageGuardOptions
   login: (
     page: Page,
     config: CompatibleApiRealSiteConfig,
@@ -34,6 +36,7 @@ export async function runCompatibleRealSiteAccountSaveFlow(params: {
     baseUrl: params.config.baseUrl,
     siteType: params.siteType,
     expectedDetectedSiteType: params.expectedDetectedSiteType,
+    extensionPageGuardOptions: params.extensionPageGuardOptions,
     login: async (sitePage) => {
       const loginResult = await params.login(sitePage, params.config)
       expect(loginResult.user).toBeTruthy()

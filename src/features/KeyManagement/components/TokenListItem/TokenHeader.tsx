@@ -670,6 +670,7 @@ function TokenActionButtons({
         aria-label={t("actions.importToManagedSite", {
           site: managedSiteLabel,
         })}
+        data-testid={KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton}
         size="sm"
         variant="ghost"
         onClick={handleImportToManagedSite}
@@ -834,6 +835,7 @@ export function TokenHeader({
                 managedSiteStatus,
               })}
               size="sm"
+              data-testid={KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge}
             >
               {isManagedSiteStatusChecking ? (
                 <ArrowPathIcon className="h-3 w-3 animate-spin" />
@@ -901,12 +903,14 @@ export function TokenHeader({
                     : managedSiteAssessment?.searchBaseUrl
                 }
                 className="h-auto px-0 py-0 text-xs"
+                testId={KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton}
               />
             ) : managedSiteAssessment?.searchBaseUrl ? (
               <ManagedSiteChannelLinkButton
                 channelName={t("managedSiteStatus.actions.reviewChannels")}
                 search={managedSiteAssessment.searchBaseUrl}
                 className="h-auto px-0 py-0 text-xs"
+                testId={KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton}
               />
             ) : null}
 

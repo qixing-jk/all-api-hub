@@ -688,7 +688,11 @@ export async function createChannel(
       )
     }
 
-    return { success: true, data: created, message: "success" }
+    return {
+      success: true,
+      data: axonHubChannelToManagedSite(created),
+      message: "success",
+    }
   } catch (error) {
     logger.error("Failed to create AxonHub channel", error)
     return {
@@ -722,7 +726,11 @@ export async function updateChannel(
       )
     }
 
-    return { success: true, data: updated, message: "success" }
+    return {
+      success: true,
+      data: axonHubChannelToManagedSite(updated),
+      message: "success",
+    }
   } catch (error) {
     logger.error("Failed to update AxonHub channel", error)
     return {

@@ -33,6 +33,11 @@ interface RowActionsProps {
   showNewApiOnlyActions?: boolean
   isSyncing: boolean
   labels: RowActionsLabels
+  testIds?: {
+    trigger: string
+    edit: string
+    delete: string
+  }
 }
 
 const trackManagedSiteChannelRowAction = (
@@ -67,6 +72,7 @@ export default function RowActions({
   showNewApiOnlyActions = true,
   isSyncing,
   labels,
+  testIds,
 }: RowActionsProps) {
   return (
     <DropdownMenu>
@@ -76,6 +82,7 @@ export default function RowActions({
           variant="ghost"
           className="h-8 w-8"
           aria-label={labels.trigger}
+          data-testid={testIds?.trigger}
         >
           <Ellipsis className="h-4 w-4" />
         </Button>
@@ -84,6 +91,7 @@ export default function RowActions({
         {showMigrationAction ? (
           <>
             <DropdownMenuItem
+              data-testid={testIds?.edit}
               onClick={() => {
                 onView(channel)
                 trackManagedSiteChannelRowAction(
@@ -109,6 +117,7 @@ export default function RowActions({
         ) : (
           <>
             <DropdownMenuItem
+              data-testid={testIds?.edit}
               onClick={() => {
                 onEdit(channel)
                 trackManagedSiteChannelRowAction(
@@ -153,6 +162,7 @@ export default function RowActions({
             ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              data-testid={testIds?.delete}
               className="text-destructive focus:text-destructive"
               onClick={() => {
                 onDelete([channel.id])

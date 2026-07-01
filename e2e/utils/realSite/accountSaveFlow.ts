@@ -6,7 +6,10 @@ import {
   createNoopAccountFixtureCleanup,
   type AccountFixture,
 } from "~~/e2e/scenarios/accountFixtures"
-import { installExtensionPageGuards } from "~~/e2e/utils/commonUserFlows"
+import {
+  installExtensionPageGuards,
+  type ExtensionPageGuardOptions,
+} from "~~/e2e/utils/commonUserFlows"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
 import type { AccountAddDialog } from "~~/e2e/utils/realSite/accountAdd"
 
@@ -24,9 +27,10 @@ export async function runRealSiteAccountSaveFlow(params: {
   baseUrl: string
   siteType: AccountSiteType
   expectedDetectedSiteType?: AccountSiteType
+  extensionPageGuardOptions?: ExtensionPageGuardOptions
   login: (sitePage: Page) => Promise<RealSiteAccountSaveLoginResult>
 }): Promise<AccountFixture> {
-  installExtensionPageGuards(params.page)
+  installExtensionPageGuards(params.page, params.extensionPageGuardOptions)
 
   return await runAccountAutoDetectScenario({
     extensionId: params.extensionId,

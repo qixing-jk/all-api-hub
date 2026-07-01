@@ -77,7 +77,7 @@ type StubNewApiSiteRoutesOptions = {
 }
 
 /** Scenario-specific console-error patterns that should not fail the test. */
-type ExtensionPageGuardOptions = {
+export type ExtensionPageGuardOptions = {
   ignoreConsoleErrorPatterns?: RegExp[]
 }
 
