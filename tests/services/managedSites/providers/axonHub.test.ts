@@ -16,6 +16,7 @@ import {
 const {
   mockCreateAxonHubChannel,
   mockDeleteAxonHubChannel,
+  mockAxonHubChannelToManagedSite,
   mockFetchManagedSiteAvailableModels,
   mockFetchTokenScopedModels,
   mockGetPreferences,
@@ -26,6 +27,12 @@ const {
   mockUpdateAxonHubChannel,
   mockUpdateAxonHubChannelStatus,
 } = vi.hoisted(() => ({
+  mockAxonHubChannelToManagedSite: vi.fn(
+    (channel: { id: string; name: string }) => ({
+      id: channel.id,
+      name: channel.name,
+    }),
+  ),
   mockCreateAxonHubChannel: vi.fn(),
   mockDeleteAxonHubChannel: vi.fn(),
   mockFetchManagedSiteAvailableModels: vi.fn(),
@@ -55,6 +62,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 })
 
 vi.mock("~/services/apiService/axonHub", () => ({
+  axonHubChannelToManagedSite: mockAxonHubChannelToManagedSite,
   createAxonHubChannel: mockCreateAxonHubChannel,
   deleteAxonHubChannel: mockDeleteAxonHubChannel,
   listChannels: mockListChannels,

@@ -85,7 +85,7 @@ describe("runRealSiteAccountSaveFlow", () => {
       }),
     ).resolves.toBe(fixture)
 
-    expect(installExtensionPageGuards).toHaveBeenCalledWith(page)
+    expect(installExtensionPageGuards).toHaveBeenCalledWith(page, undefined)
     expect(runAccountAutoDetectScenario).toHaveBeenCalledOnce()
     expect(runAccountKeyLifecycleScenario).not.toHaveBeenCalled()
 
@@ -126,6 +126,36 @@ describe("runRealSiteAccountSaveFlow", () => {
     ).rejects.toThrow(error)
 
     expect(runAccountKeyLifecycleScenario).not.toHaveBeenCalled()
+  })
+
+  it("forwards extension page guard options", async () => {
+    const page = {} as any
+    const sitePage = {} as any
+    const fixture: AccountFixture = {
+      accountId: "account-id",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2api.test",
+      cleanup: vi.fn().mockResolvedValue(undefined),
+    }
+
+    vi.mocked(runAccountAutoDetectScenario).mockResolvedValue(fixture)
+
+    await runRealSiteAccountSaveFlow({
+      page,
+      extensionId: "extension-id",
+      serviceWorker: {} as any,
+      sitePage,
+      baseUrl: "https://sub2api.test",
+      siteType: SITE_TYPES.SUB2API,
+      extensionPageGuardOptions: {
+        ignoreErrorText: ["known real-site warning"],
+      },
+      login: vi.fn().mockResolvedValue(undefined),
+    })
+
+    expect(installExtensionPageGuards).toHaveBeenCalledWith(page, {
+      ignoreErrorText: ["known real-site warning"],
+    })
   })
 })
 
