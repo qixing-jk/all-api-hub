@@ -687,12 +687,9 @@ export async function createChannel(
     const created = await createAxonHubChannel(config, input)
     const finalChannel = { ...created }
     if (status === CHANNEL_STATUS.Enable) {
-      await updateAxonHubChannelStatus(
-        config,
-        created.id,
-        AXON_HUB_CHANNEL_STATUS.ENABLED,
-      )
-      finalChannel.status = AXON_HUB_CHANNEL_STATUS.ENABLED
+      const axonHubStatus = toAxonHubStatus(status)
+      await updateAxonHubChannelStatus(config, created.id, axonHubStatus)
+      finalChannel.status = axonHubStatus
     }
 
     return {

@@ -102,22 +102,25 @@ test.describe("real-site E2E: managed-site channel management", () => {
   })
 
   for (const target of selectedManagedSiteTargets) {
+    const managedSite = target.resolveConfig()
+
+    if (!managedSite.config) {
+      test.skip(`${target.label} covers channel CRUD/search and token channel status when supported`, async () => {
+        getManagedSiteRealSiteSkipReason({
+          label: target.label,
+          missingEnvKeys: managedSite.missingEnvKeys,
+        })
+      })
+      continue
+    }
+
     test(`${target.label} covers channel CRUD/search and token channel status when supported`, async ({
       context,
       extensionId,
       page,
     }, testInfo) => {
-      const managedSite = target.resolveConfig()
-      test.skip(
-        !managedSite.config,
-        getManagedSiteRealSiteSkipReason({
-          label: target.label,
-          missingEnvKeys: managedSite.missingEnvKeys,
-        }),
-      )
-
       const serviceWorker = await getServiceWorker(context)
-      const config = managedSite.config!
+      const config = managedSite.config
       const runId = buildRealSiteRunId()
       const runPrefix = buildManagedSiteE2ePrefix({
         label: target.label.replace(/\s+/g, ""),

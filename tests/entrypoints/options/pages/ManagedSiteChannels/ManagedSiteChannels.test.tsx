@@ -9,6 +9,11 @@ import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/entrypoints/options/pages/ManagedSiteChannels"
+import {
+  isChannelRowLike,
+  upsertChannelRow,
+} from "~/features/ManagedSiteChannels/ManagedSiteChannels"
+import type { ChannelRow } from "~/features/ManagedSiteChannels/types"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
 import {
   getManagedSiteService,
@@ -449,6 +454,99 @@ describe("ManagedSiteChannels", () => {
     } as any)
   }
 
+  const buildCompleteChannelRow = (
+    overrides: Record<string, unknown> = {},
+  ): ChannelRow =>
+    ({
+      id: 9,
+      type: ChannelType.OpenAI,
+      key: "",
+      name: "Created Channel",
+      base_url: "https://created.example",
+      models: "gpt-4o",
+      status: 1,
+      priority: 0,
+      weight: 0,
+      group: "default",
+      ...overrides,
+    }) as ChannelRow
+
+  it("accepts only table-ready mutation channel rows", () => {
+    const completeRow = buildCompleteChannelRow()
+
+    expect(isChannelRowLike(null)).toBe(false)
+    expect(isChannelRowLike("channel")).toBe(false)
+    expect(isChannelRowLike(completeRow)).toBe(true)
+    expect(isChannelRowLike({ ...completeRow, type: "openai" })).toBe(true)
+
+    for (const field of ["id", "status", "priority", "weight"]) {
+      expect(
+        isChannelRowLike({
+          ...completeRow,
+          [field]: undefined,
+        }),
+      ).toBe(false)
+    }
+
+    for (const field of ["name", "key", "base_url", "models", "group"]) {
+      expect(
+        isChannelRowLike({
+          ...completeRow,
+          [field]: undefined,
+        }),
+      ).toBe(false)
+    }
+  })
+
+  it("inserts and replaces mutation channel rows by id", () => {
+    const alpha = buildCompleteChannelRow({
+      id: 1,
+      name: "Alpha",
+    })
+    const beta = buildCompleteChannelRow({
+      id: 2,
+      name: "Beta",
+    })
+    const alphaEdited = buildCompleteChannelRow({
+      id: 1,
+      name: "Alpha Edited",
+    })
+
+    expect(upsertChannelRow([alpha], beta)).toEqual([beta, alpha])
+    expect(upsertChannelRow([alpha], alphaEdited)).toEqual([alphaEdited])
+  })
+
+  const fillAndSubmitChannelDialog = async (
+    user: ReturnType<typeof userEvent.setup>,
+    params: {
+      name: string
+      key?: string
+      baseUrl?: string
+      model?: string
+    },
+  ) => {
+    const nameInput = await screen.findByTestId(
+      CHANNEL_DIALOG_TEST_IDS.nameInput,
+    )
+    await user.clear(nameInput)
+    await user.type(nameInput, params.name)
+
+    const keyInput = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
+    await user.clear(keyInput)
+    await user.type(keyInput, params.key ?? "sk-created")
+
+    const baseUrlInput = screen.getByTestId(
+      CHANNEL_DIALOG_TEST_IDS.baseUrlInput,
+    )
+    await user.clear(baseUrlInput)
+    await user.type(baseUrlInput, params.baseUrl ?? "https://created.example")
+
+    const modelsInput = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput)
+    await user.type(modelsInput, params.model ?? "gpt-4o")
+    await user.keyboard("{Enter}")
+    await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+  }
+
   it("syncs routeParams.search into the search box and filters rows", async () => {
     mockChannels([
       { id: 1, name: "Alpha", base_url: "https://site-a.example" },
@@ -882,16 +980,7 @@ describe("ManagedSiteChannels", () => {
         data: {
           items: [
             {
-              id: 9,
-              type: ChannelType.OpenAI,
-              key: "",
-              name: "Created Channel",
-              base_url: "https://created.example",
-              models: "gpt-4o",
-              status: 1,
-              priority: 0,
-              weight: 0,
-              group: "default",
+              ...buildCompleteChannelRow(),
             },
           ],
         },
@@ -910,26 +999,116 @@ describe("ManagedSiteChannels", () => {
         name: "managedSiteChannels:toolbar.addChannel",
       }),
     )
-    await user.type(
-      await screen.findByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput),
-      "Created Channel",
-    )
-    await user.type(
-      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
-      "sk-created",
-    )
-    await user.type(
-      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.baseUrlInput),
-      "https://created.example",
-    )
-    await user.type(
-      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput),
-      "gpt-4o",
-    )
-    await user.keyboard("{Enter}")
-    await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+    await fillAndSubmitChannelDialog(user, { name: "Created Channel" })
 
     await waitForRowText("Created Channel")
+    expect(sendModelSyncMessage).toHaveBeenCalledTimes(2)
+  })
+
+  it("upserts complete create responses without a follow-up refresh", async () => {
+    const user = userEvent.setup()
+    const createChannel = vi.fn().mockResolvedValue({
+      success: true,
+      message: "ok",
+      data: buildCompleteChannelRow({
+        id: 11,
+        name: "Direct Create",
+        status: 2,
+      }),
+    })
+
+    mockChannels([])
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        adminToken: "t",
+        userId: "1",
+      }),
+      buildChannelPayload: vi.fn((draft: any) => ({
+        mode: "single",
+        channel: draft,
+      })),
+      createChannel,
+    } as any)
+    vi.mocked(sendModelSyncMessage).mockResolvedValue({
+      success: true,
+      data: { items: [] },
+    } as any)
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForChannelsRefreshIdle()
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.addChannel",
+      }),
+    )
+    await fillAndSubmitChannelDialog(user, { name: "Direct Create" })
+
+    await waitForRowText("Direct Create")
+    expect(
+      screen.getByText("managedSiteChannels:statusLabels.manualPause"),
+    ).toBeInTheDocument()
+    expect(sendModelSyncMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it("refreshes when create responses do not include row data", async () => {
+    const user = userEvent.setup()
+
+    mockChannels([])
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        adminToken: "t",
+        userId: "1",
+      }),
+      buildChannelPayload: vi.fn((draft: any) => ({
+        mode: "single",
+        channel: draft,
+      })),
+      createChannel: vi.fn().mockResolvedValue({
+        success: true,
+        message: "ok",
+        data: null,
+      }),
+    } as any)
+    vi.mocked(sendModelSyncMessage)
+      .mockResolvedValueOnce({
+        success: true,
+        data: { items: [] },
+      } as any)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [buildCompleteChannelRow({ name: "Refresh Create" })],
+        },
+      } as any)
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForChannelsRefreshIdle()
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.addChannel",
+      }),
+    )
+    await fillAndSubmitChannelDialog(user, { name: "Refresh Create" })
+
+    await waitForRowText("Refresh Create")
     expect(sendModelSyncMessage).toHaveBeenCalledTimes(2)
   })
 

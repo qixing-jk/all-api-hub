@@ -162,7 +162,7 @@ const channelsRowActionsSurface =
 /**
  * Checks whether a mutation response already contains a table-ready channel row.
  */
-function isChannelRowLike(value: unknown): value is ChannelRow {
+export function isChannelRowLike(value: unknown): value is ChannelRow {
   if (!value || typeof value !== "object") {
     return false
   }
@@ -186,7 +186,7 @@ function isChannelRowLike(value: unknown): value is ChannelRow {
 /**
  * Inserts or replaces a channel row returned by create/update mutations.
  */
-function upsertChannelRow(rows: ChannelRow[], channel: ChannelRow) {
+export function upsertChannelRow(rows: ChannelRow[], channel: ChannelRow) {
   const existingIndex = rows.findIndex((row) => row.id === channel.id)
   if (existingIndex === -1) {
     return [channel, ...rows]
