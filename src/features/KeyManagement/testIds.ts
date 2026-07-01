@@ -11,6 +11,8 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   importToManagedSiteButton: "key-management-import-to-managed-site-button",
   managedSiteChannelLinkButton:
     "key-management-managed-site-channel-link-button",
+  managedSiteVerificationRetryButton:
+    "key-management-managed-site-verification-retry-button",
   openSelectedAccountModelsButton:
     "key-management-open-selected-account-models-button",
   titleActions: "key-management-title-actions",

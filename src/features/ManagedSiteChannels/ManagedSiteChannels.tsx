@@ -1274,6 +1274,7 @@ export default function ManagedSiteChannels({
                 <>
                   <Button
                     variant="outline"
+                    data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton}
                     onClick={() =>
                       void refreshChannels({
                         featureId:

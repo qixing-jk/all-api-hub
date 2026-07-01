@@ -925,6 +925,9 @@ export function TokenHeader({
                 size="sm"
                 variant="outline"
                 className="h-auto px-2 py-0.5 text-xs"
+                data-testid={
+                  KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton
+                }
                 onClick={handleManagedSiteVerificationRetryClick}
               >
                 {t("managedSiteStatus.actions.verifyNow")}

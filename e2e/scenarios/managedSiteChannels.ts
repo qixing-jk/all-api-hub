@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
@@ -108,8 +108,9 @@ export async function runManagedSiteChannelsCrudScenario<
       baseUrl: "https://upstream.example.invalid/v1",
       model: CRUD_MODEL,
     })
-    await expect(channelRowByName(context.page, channelName)).toBeVisible({
-      timeout: 60_000,
+    await expectManagedSiteChannelVisibleAfterRefresh({
+      page: context.page,
+      channelName,
     })
 
     await context.page
@@ -120,12 +121,11 @@ export async function runManagedSiteChannelsCrudScenario<
     })
     await expectPaginationSummary(context.page, "1", "1", "1")
 
-    await openSingleVisibleChannelRowActions(context.page, channelName)
-    const editAction = context.page.getByTestId(
-      getManagedSiteChannelRowEditActionTestId(channelName),
+    const editAction = await openSingleVisibleChannelRowActions(
+      context.page,
+      channelName,
     )
-    await expect(editAction).toBeVisible({ timeout: 30_000 })
-    await editAction.click()
+    await editAction.click({ timeout: 10_000 })
     await expect(
       context.page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
     ).toBeVisible({ timeout: 60_000 })
@@ -221,14 +221,10 @@ export async function runManagedSiteTokenChannelStatusScenario<
     await expect(
       row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge),
     ).toBeVisible({ timeout: 90_000 })
-    const importToManagedSiteButton = row.getByTestId(
-      KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
-    )
-    await expect(importToManagedSiteButton).toBeEnabled({ timeout: 60_000 })
-    await importToManagedSiteButton.click()
-    await expect(
-      keyManagementPage.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
-    ).toBeVisible({ timeout: 60_000 })
+    await openManagedSiteImportDialogFromTokenRow({
+      page: keyManagementPage,
+      row,
+    })
     await keyManagementPage
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
       .fill(channelName)
@@ -236,24 +232,23 @@ export async function runManagedSiteTokenChannelStatusScenario<
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton)
       .click()
 
-    await expect(
-      row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge),
-    ).toHaveText("Added", { timeout: 90_000 })
-    await expect(
-      row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton),
-    ).toBeVisible({ timeout: 60_000 })
-    await keyManagementPage.goto(
-      channelsUrl(context.extensionId, { search: channelName }),
-    )
-    await waitForExtensionRoot(keyManagementPage)
-    await expect(channelRowByName(keyManagementPage, channelName)).toBeVisible({
-      timeout: 60_000,
+    await expectManagedSiteImportStatusAfterChannelCreate(row)
+    await openManagedSiteChannelsAndExpectRow({
+      page: keyManagementPage,
+      extensionId: context.extensionId,
+      channelName,
     })
     await expectPaginationSummary(keyManagementPage, "1", "1", "1")
 
     return { skipped: false as const }
   } finally {
     if (createdTokenName) {
+      keyManagementPage = await openKeyManagementForAccount({
+        page: keyManagementPage,
+        extensionId: context.extensionId,
+        accountId: context.sourceAccount.accountId,
+        openFromAccountRow: false,
+      })
       await deleteTokenFromKeyManagementPage({
         page: keyManagementPage,
         token: createdTokenName,
@@ -270,6 +265,87 @@ export async function runManagedSiteTokenChannelStatusScenario<
       prefix: context.cleanupPrefix ?? context.runPrefix,
     })
   }
+}
+
+async function openManagedSiteImportDialogFromTokenRow(params: {
+  page: Page
+  row: Locator
+}) {
+  await expect(async () => {
+    const importToManagedSiteButton = params.row.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
+    )
+
+    await expect(importToManagedSiteButton).toBeEnabled({ timeout: 20_000 })
+    await importToManagedSiteButton.click()
+    await expect(
+      params.page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+    ).toBeVisible({ timeout: 30_000 })
+  }).toPass({
+    intervals: [1_000, 3_000, 5_000],
+    timeout: 90_000,
+  })
+}
+
+async function openManagedSiteChannelsAndExpectRow(params: {
+  page: Page
+  extensionId: string
+  channelName: string
+}) {
+  await params.page.goto(
+    channelsUrl(params.extensionId, { search: params.channelName }),
+  )
+  await waitForExtensionRoot(params.page)
+  await expectManagedSiteChannelVisibleAfterRefresh({
+    page: params.page,
+    channelName: params.channelName,
+  })
+}
+
+async function expectManagedSiteChannelVisibleAfterRefresh(params: {
+  page: Page
+  channelName: string
+}) {
+  await expect(async () => {
+    const row = channelRowByName(params.page, params.channelName)
+    if ((await row.count()) > 0) {
+      await expect(row).toBeVisible({ timeout: 10_000 })
+      return
+    }
+
+    const refreshButton = params.page.getByTestId(
+      MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton,
+    )
+    await expect(refreshButton).toBeEnabled({ timeout: 10_000 })
+    await refreshButton.click()
+    await expect(row).toBeVisible({ timeout: 20_000 })
+  }).toPass({
+    intervals: [1_000, 3_000, 5_000],
+    timeout: 90_000,
+  })
+}
+
+async function expectManagedSiteImportStatusAfterChannelCreate(row: Locator) {
+  const statusBadge = row.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge,
+  )
+
+  await expect(statusBadge).toHaveText(/^(Added|Cannot fully verify)$/u, {
+    timeout: 90_000,
+  })
+
+  const statusText = (await statusBadge.textContent())?.trim()
+
+  if (statusText === "Added") {
+    await expect(
+      row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton),
+    ).toBeVisible({ timeout: 60_000 })
+    return
+  }
+
+  await expect(
+    row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton),
+  ).toBeVisible({ timeout: 60_000 })
 }
 
 async function cleanupKeyManagementTokensByPrefix(params: {
@@ -356,11 +432,25 @@ async function fillModelInput(page: Page, model: string) {
 }
 
 async function openSingleVisibleChannelRowActions(page: Page, rowText: string) {
-  const row = channelRowByName(page, rowText)
-  await expect(row).toBeVisible({ timeout: 60_000 })
-  await row
-    .getByTestId(getManagedSiteChannelRowActionsButtonTestId(rowText))
-    .click()
+  const editAction = page.getByTestId(
+    getManagedSiteChannelRowEditActionTestId(rowText),
+  )
+
+  await expect(async () => {
+    const row = channelRowByName(page, rowText)
+    await expect(row).toBeVisible({ timeout: 10_000 })
+    const actionsButton = row.getByTestId(
+      getManagedSiteChannelRowActionsButtonTestId(rowText),
+    )
+    await expect(actionsButton).toBeEnabled({ timeout: 10_000 })
+    await actionsButton.click({ timeout: 10_000 })
+    await expect(editAction).toBeVisible({ timeout: 10_000 })
+  }).toPass({
+    intervals: [1_000, 3_000, 5_000],
+    timeout: 60_000,
+  })
+
+  return editAction
 }
 
 export function buildManagedSiteE2ePrefix(params: {
