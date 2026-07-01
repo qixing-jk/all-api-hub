@@ -23,6 +23,7 @@ import {
   getAllCookieStores,
   getAllTabs,
   getBrowserApiCapabilities,
+  getBrowserBookmarkTree,
   getBrowserI18nMessage,
   getExtensionURL,
   getExtensionVersion,
@@ -33,6 +34,7 @@ import {
   getTab,
   getWindow,
   hasAlarmsAPI,
+  hasBookmarksAPI,
   hasContextMenusAPI,
   hasCookieStoresAPI,
   hasNotificationsAPI,
@@ -73,6 +75,19 @@ import {
   updateWindow,
   WINDOW_CREATION_FAILURE_REASONS,
 } from "~/utils/browser/browserApi"
+
+const { loggerMock } = vi.hoisted(() => ({
+  loggerMock: {
+    debug: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  },
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => loggerMock,
+}))
 
 const originalBrowser = (globalThis as any).browser
 const originalChrome = (globalThis as any).chrome
@@ -1792,5 +1807,76 @@ describe("browserApi action and permissions helpers", () => {
     expect(typeof cleanupRemoved).toBe("function")
     expect(() => cleanupAdded()).not.toThrow()
     expect(() => cleanupRemoved()).not.toThrow()
+  })
+})
+
+describe("browserApi bookmark helpers", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    ;(globalThis as any).browser = undefined
+  })
+
+  afterAll(() => {
+    ;(globalThis as any).browser = originalBrowser
+    ;(globalThis as any).chrome = originalChrome
+  })
+
+  it("reports bookmark API support only when getTree is callable", () => {
+    ;(globalThis as any).browser = {}
+    expect(hasBookmarksAPI()).toBe(false)
+    ;(globalThis as any).browser = { bookmarks: {} }
+    expect(hasBookmarksAPI()).toBe(false)
+    ;(globalThis as any).browser = {
+      bookmarks: { getTree: vi.fn() },
+    }
+    expect(hasBookmarksAPI()).toBe(true)
+  })
+
+  it("reads the browser bookmark tree when supported", async () => {
+    const tree = [
+      {
+        id: "root",
+        title: "Bookmarks",
+        children: [
+          {
+            id: "node-1",
+            title: "Example",
+            url: "https://one.example.invalid",
+          },
+        ],
+      },
+    ]
+    ;(globalThis as any).browser = {
+      bookmarks: {
+        getTree: vi.fn().mockResolvedValue(tree),
+      },
+    }
+
+    await expect(getBrowserBookmarkTree()).resolves.toEqual({
+      success: true,
+      tree,
+    })
+  })
+
+  it("classifies missing bookmarks API and getTree failures without throwing", async () => {
+    ;(globalThis as any).browser = {}
+
+    await expect(getBrowserBookmarkTree()).resolves.toEqual({
+      success: false,
+      reason: "unavailable",
+    })
+    ;(globalThis as any).browser = {
+      bookmarks: {
+        getTree: vi.fn().mockRejectedValue(new Error("native read failed")),
+      },
+    }
+
+    await expect(getBrowserBookmarkTree()).resolves.toEqual({
+      success: false,
+      reason: "read_failed",
+    })
+    expect(loggerMock.warn).toHaveBeenCalledWith("bookmarks.getTree failed", {
+      error: "native read failed",
+    })
   })
 })
