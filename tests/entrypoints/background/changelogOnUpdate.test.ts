@@ -314,6 +314,21 @@ describe("background onInstalled changelog opening", () => {
     })
   })
 
+  it("opens permissions onboarding on install when only browser bookmarks are declared", async () => {
+    optionalPermissions = ["bookmarks"]
+    isTestModeMock.mockReturnValue(false)
+
+    await import("~/entrypoints/background/index")
+
+    expect(onInstalledListener).toBeTypeOf("function")
+    await onInstalledListener?.({ reason: "install" })
+    await flushPromises()
+
+    expect(openOrFocusOptionsMenuItemMock).toHaveBeenCalledWith("overview", {
+      onboarding: "permissions",
+    })
+  })
+
   it("skips pending-version state when the manifest has no version", async () => {
     getManifestMock.mockReturnValue({})
 
@@ -374,9 +389,31 @@ describe("background onInstalled changelog opening", () => {
     await flushPromises()
 
     expect(setPendingVersionMock).toHaveBeenCalledWith("2.39.0")
-    expect(hasNewOptionalPermissionsMock).toHaveBeenCalled()
+    expect(hasNewOptionalPermissionsMock).toHaveBeenCalledWith(["cookies"])
     expect(hasPermissionsMock).toHaveBeenCalledWith(["cookies"])
-    expect(setLastSeenOptionalPermissionsMock).toHaveBeenCalledTimes(1)
+    expect(setLastSeenOptionalPermissionsMock).toHaveBeenCalledWith(["cookies"])
     expect(openOrFocusOptionsMenuItemMock).not.toHaveBeenCalled()
+  })
+
+  it("checks new-permission onboarding on update when only browser bookmarks are declared", async () => {
+    optionalPermissions = ["bookmarks"]
+    hasNewOptionalPermissionsMock.mockResolvedValue(true)
+    hasPermissionsMock.mockResolvedValue(false)
+    isTestModeMock.mockReturnValue(false)
+
+    await import("~/entrypoints/background/index")
+
+    expect(onInstalledListener).toBeTypeOf("function")
+    await onInstalledListener?.({ reason: "update" })
+    await flushPromises()
+
+    expect(setPendingVersionMock).toHaveBeenCalledWith("2.39.0")
+    expect(hasNewOptionalPermissionsMock).toHaveBeenCalledWith(["bookmarks"])
+    expect(hasPermissionsMock).toHaveBeenCalledWith(["bookmarks"])
+    expect(setLastSeenOptionalPermissionsMock).not.toHaveBeenCalled()
+    expect(openOrFocusOptionsMenuItemMock).toHaveBeenCalledWith("overview", {
+      onboarding: "permissions",
+      reason: "new-permissions",
+    })
   })
 })

@@ -59,4 +59,23 @@ describe("CardItem", () => {
 
     expect(screen.getByTestId("left-content").parentElement).toHaveClass("mt-2")
   })
+
+  it("renders supplemental title content beside the title", () => {
+    render(
+      <CardItem
+        title="Bookmarks"
+        titleContent={<span data-testid="title-badge">Granted</span>}
+        rightContent={<button type="button">Remove</button>}
+      />,
+    )
+
+    const title = screen.getByText("Bookmarks")
+    const badge = screen.getByTestId("title-badge")
+
+    expect(title.parentElement).toHaveClass("flex", "flex-wrap", "gap-2")
+    expect(title.parentElement).toContainElement(badge)
+    expect(
+      screen.getByRole("button", { name: "Remove" }).parentElement,
+    ).not.toContainElement(badge)
+  })
 })

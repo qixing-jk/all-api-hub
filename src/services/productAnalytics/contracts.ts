@@ -390,6 +390,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   FilterManagedSiteModelSyncResults: "filter_managed_site_model_sync_results",
   ImportBackupData: "import_backup_data",
   ImportAccountCookies: "import_account_cookies",
+  ImportAccountsFromBookmarks: "import_accounts_from_bookmarks",
   ImportApiCredentialProfileToClaudeCodeRouter:
     "import_api_credential_profile_to_claude_code_router",
   ImportApiCredentialProfileToCliProxy:
@@ -732,6 +733,7 @@ export const PRODUCT_ANALYTICS_PERMISSION_IDS = {
   WebRequestBlocking: "webRequestBlocking",
   ClipboardRead: "clipboardRead",
   DeclarativeNetRequestWithHostAccess: "declarativeNetRequestWithHostAccess",
+  Bookmarks: "bookmarks",
 } as const
 
 export type ProductAnalyticsPermissionId =

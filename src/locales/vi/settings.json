@@ -320,6 +320,10 @@
     "description": "Chỉ cấp các quyền tùy chọn này khi cần quy trình vượt bảo vệ bằng cửa sổ tạm.",
     "helper": "Sau khi bật, quyền chỉ dùng để hoàn tất thao tác Cookie/header cần thiết cho vượt bảo vệ và có thể tắt bất cứ lúc nào, không ảnh hưởng chức năng cơ bản.",
     "items": {
+      "bookmarks": {
+        "description": "Chỉ đọc dấu trang trình duyệt khi nhập trang tài khoản từ URL dấu trang đã lưu.",
+        "title": "Dấu trang trình duyệt"
+      },
       "clipboardRead": {
         "description": "Cho phép trợ lý đổi mã phát hiện mã đổi thưởng đã sao chép, từ đó gợi ý tự động đổi mã.",
         "title": "Đọc clipboard"

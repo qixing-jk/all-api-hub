@@ -140,4 +140,21 @@ export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
       isVisible: (context) => context.hasOptionalPermissions,
     },
   ),
+  buildControlDefinition(
+    "control:permissions-bookmarks",
+    "permissions",
+    "bookmarks",
+    "settings:permissions.items.bookmarks.title",
+    707,
+    {
+      descriptionKey: "settings:permissions.items.bookmarks.description",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.permissions",
+        "settings:permissions.title",
+      ],
+      keywords: ["permission", "bookmark", "bookmarks", "browser bookmarks"],
+      isVisible: (context) => context.hasOptionalPermissions,
+    },
+  ),
 ]

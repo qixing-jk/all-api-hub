@@ -1,6 +1,5 @@
-import type { TFunction } from "i18next"
 import { Github, Languages, Sparkles, Star } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
@@ -12,12 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card"
 import { BodySmall, Heading3, Link } from "~/components/ui/Typography"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { PermissionList } from "~/features/Permissions/components/PermissionList"
+import { useOptionalPermissionControls } from "~/features/Permissions/hooks/useOptionalPermissionControls"
 import {
   ensurePermissionsDetailed,
-  hasPermission,
-  ManifestOptionalPermissions,
-  onOptionalPermissionsChanged,
-  OPTIONAL_PERMISSION_DEFINITIONS,
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
 import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
@@ -31,59 +27,6 @@ import { openLanguageRequestPage } from "~/utils/navigation"
 const logger = createLogger("PermissionOnboardingDialog")
 
 const GITHUB_URL = "https://github.com/qixing-jk/all-api-hub"
-
-/**
- * Resolve the localized title for a supported optional permission.
- */
-function getPermissionTitle(t: TFunction, id: ManifestOptionalPermissions) {
-  switch (id) {
-    case "cookies":
-      return t("settings:permissions.items.cookies.title")
-    case "declarativeNetRequestWithHostAccess":
-      return t(
-        "settings:permissions.items.declarativeNetRequestWithHostAccess.title",
-      )
-    case "webRequest":
-      return t("settings:permissions.items.webRequest.title")
-    case "webRequestBlocking":
-      return t("settings:permissions.items.webRequestBlocking.title")
-    case "clipboardRead":
-      return t("settings:permissions.items.clipboardRead.title")
-    case "notifications":
-      return t("settings:permissions.items.notifications.title")
-  }
-}
-
-/**
- * Resolve the localized description for a supported optional permission.
- */
-function getPermissionDescription(
-  t: TFunction,
-  id: ManifestOptionalPermissions,
-) {
-  switch (id) {
-    case "cookies":
-      return t("settings:permissions.items.cookies.description")
-    case "declarativeNetRequestWithHostAccess":
-      return t(
-        "settings:permissions.items.declarativeNetRequestWithHostAccess.description",
-      )
-    case "webRequest":
-      return t("settings:permissions.items.webRequest.description")
-    case "webRequestBlocking":
-      return t("settings:permissions.items.webRequestBlocking.description")
-    case "clipboardRead":
-      return t("settings:permissions.items.clipboardRead.description")
-    case "notifications":
-      return t("settings:permissions.items.notifications.description")
-  }
-}
-
-const buildState = <T,>(value: T) =>
-  Object.fromEntries(OPTIONAL_PERMISSIONS.map((id) => [id, value])) as Record<
-    ManifestOptionalPermissions,
-    T
-  >
 
 interface PermissionOnboardingDialogProps {
   open: boolean
@@ -104,47 +47,20 @@ export function PermissionOnboardingDialog({
   reason,
 }: PermissionOnboardingDialogProps) {
   const { t } = useTranslation("settings")
-  const [statuses, setStatuses] = useState<
-    Record<ManifestOptionalPermissions, boolean | null>
-  >(() => buildState<boolean | null>(null))
   const [isRequesting, setIsRequesting] = useState(false)
 
   const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0
-
-  const loadStatuses = useCallback(async () => {
-    if (!hasOptionalPermissions) return
-    const results = await Promise.all(
-      OPTIONAL_PERMISSIONS.map(async (id) => ({
-        id,
-        granted: await hasPermission(id),
-      })),
-    )
-
-    setStatuses((prev) => ({
-      ...prev,
-      ...results.reduce(
-        (acc, curr) => ({
-          ...acc,
-          [curr.id]: curr.granted,
-        }),
-        {} as Record<ManifestOptionalPermissions, boolean>,
-      ),
-    }))
-  }, [hasOptionalPermissions])
-
-  useEffect(() => {
-    if (open) {
-      void loadStatuses()
-    }
-
-    const unsubscribe = onOptionalPermissionsChanged(() => {
-      void loadStatuses()
-    })
-
-    return () => {
-      unsubscribe()
-    }
-  }, [open, loadStatuses])
+  const {
+    statuses,
+    permissionItems,
+    isAnyPending,
+    handleToggle,
+    loadStatuses,
+  } = useOptionalPermissionControls({
+    enabled: open,
+    loggerName: "PermissionOnboardingDialog",
+    permissionIds: OPTIONAL_PERMISSIONS,
+  })
 
   const handleGrantAll = useCallback(async () => {
     if (!hasOptionalPermissions) return
@@ -186,11 +102,7 @@ export function PermissionOnboardingDialog({
       await loadStatuses()
       setIsRequesting(false)
     }
-
-    if (success) {
-      onClose()
-    }
-  }, [hasOptionalPermissions, loadStatuses, onClose, statuses, t])
+  }, [hasOptionalPermissions, loadStatuses, statuses, t])
 
   const handleOpenGithub = useCallback(() => {
     window.open(GITHUB_URL, "_blank", "noopener,noreferrer")
@@ -199,13 +111,6 @@ export function PermissionOnboardingDialog({
   const handleOpenLanguageRequest = useCallback(() => {
     void openLanguageRequestPage()
   }, [])
-
-  const permissionList = useMemo(() => {
-    return OPTIONAL_PERMISSION_DEFINITIONS.map((permission) => ({
-      ...permission,
-      granted: statuses[permission.id],
-    }))
-  }, [statuses])
 
   if (!hasOptionalPermissions) {
     return null
@@ -225,6 +130,7 @@ export function PermissionOnboardingDialog({
       <Button
         onClick={handleGrantAll}
         loading={isRequesting}
+        disabled={isAnyPending}
         className="h-auto min-h-9 w-full py-2 text-center whitespace-normal"
       >
         {t("permissionsOnboarding.actions.allowAll")}
@@ -253,7 +159,7 @@ export function PermissionOnboardingDialog({
     <Modal
       isOpen={open}
       onClose={onClose}
-      size="lg"
+      size="xl"
       header={header}
       footer={footer}
     >
@@ -354,26 +260,37 @@ export function PermissionOnboardingDialog({
           </CardContent>
           <CardContent padding="none" spacing="none">
             <PermissionList
-              items={permissionList.map((permission) => ({
+              items={permissionItems.map((permission) => ({
                 id: permission.id,
-                title: getPermissionTitle(t, permission.id),
-                description: getPermissionDescription(t, permission.id),
+                title: permission.title,
+                description: permission.description,
+                status: permission.granted,
+                statusLabel:
+                  permission.granted === null
+                    ? t("permissions.status.checking")
+                    : permission.granted
+                      ? t("permissions.status.granted")
+                      : t("permissions.status.denied"),
                 rightContent: (
-                  <Badge
-                    variant={
-                      permission.granted
-                        ? "success"
-                        : permission.granted === false
-                          ? "warning"
-                          : "info"
-                    }
-                  >
-                    {permission.granted === null
-                      ? t("permissions.status.checking")
-                      : permission.granted
-                        ? t("permissions.status.granted")
-                        : t("permissions.status.denied")}
-                  </Badge>
+                  <div className="flex flex-col items-start gap-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
+                    <Button
+                      size="sm"
+                      variant={permission.granted ? "outline" : "default"}
+                      onClick={() =>
+                        void handleToggle(permission.id, !permission.granted)
+                      }
+                      disabled={
+                        isRequesting ||
+                        permission.pending ||
+                        permission.granted === null
+                      }
+                      loading={permission.pending}
+                    >
+                      {permission.granted
+                        ? t("permissions.actions.remove")
+                        : t("permissions.actions.allow")}
+                    </Button>
+                  </div>
                 ),
               }))}
             />

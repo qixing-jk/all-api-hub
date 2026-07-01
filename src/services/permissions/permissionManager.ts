@@ -17,6 +17,7 @@ export const OPTIONAL_PERMISSION_IDS = {
   WebRequestBlocking: "webRequestBlocking",
   ClipboardRead: "clipboardRead",
   Notifications: "notifications",
+  Bookmarks: "bookmarks",
 } as const
 
 export type ManifestOptionalPermissions =

@@ -320,6 +320,10 @@
     "description": "Only grant these optional capabilities when you need All API Hub to handle cookies, headers, or temp-window bypass flows for you.",
     "helper": "Once enabled, the extension simply attaches your existing session cookies and headers in the background. You can disable any permission later without affecting core features.",
     "items": {
+      "bookmarks": {
+        "description": "Read browser bookmarks only when importing account sites from saved bookmark URLs.",
+        "title": "Browser bookmarks"
+      },
       "clipboardRead": {
         "description": "Allow the redemption assistant to detect copied redemption codes, thereby prompting automatic redemption of the codes.",
         "title": "Clipboard Read"

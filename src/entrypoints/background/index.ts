@@ -144,12 +144,12 @@ export default defineBackground(() => {
         }
 
         if (details.reason === "update" && OPTIONAL_PERMISSIONS.length > 0) {
-          const hasNew = await hasNewOptionalPermissions()
+          const hasNew = await hasNewOptionalPermissions(OPTIONAL_PERMISSIONS)
           if (hasNew) {
             const allGranted = await hasPermissions(OPTIONAL_PERMISSIONS)
             if (allGranted) {
               // No missing permissions; refresh snapshot quietly.
-              await setLastSeenOptionalPermissions()
+              await setLastSeenOptionalPermissions(OPTIONAL_PERMISSIONS)
               logger.info(
                 "New optional permissions detected but already granted; snapshot refreshed without prompting",
               )
@@ -168,7 +168,7 @@ export default defineBackground(() => {
             }
           } else {
             // Keep snapshot fresh on update when nothing new to prompt
-            await setLastSeenOptionalPermissions()
+            await setLastSeenOptionalPermissions(OPTIONAL_PERMISSIONS)
           }
         }
       }

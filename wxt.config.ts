@@ -36,6 +36,7 @@ const CHROMIUM_COOKIE_DNR_OPTIONAL_PERMISSIONS = [
   "declarativeNetRequestWithHostAccess",
 ] as const
 const COMMON_OPTIONAL_PERMISSIONS = ["clipboardRead", "notifications"] as const
+const BOOKMARK_IMPORT_OPTIONAL_PERMISSIONS = ["bookmarks"] as const
 
 const requestedMode = readWxtCliMode()
 const isTestBuild = requestedMode === "test"
@@ -122,7 +123,11 @@ function getManifestOptionalPermissions(browser: BrowserTarget) {
     ? FIREFOX_COOKIE_OPTIONAL_PERMISSIONS
     : getChromiumOptionalPermissions()
 
-  return [...browserOptionalPermissions, ...COMMON_OPTIONAL_PERMISSIONS]
+  return [
+    ...browserOptionalPermissions,
+    ...COMMON_OPTIONAL_PERMISSIONS,
+    ...BOOKMARK_IMPORT_OPTIONAL_PERMISSIONS,
+  ]
 }
 
 function getChromiumOptionalPermissions() {

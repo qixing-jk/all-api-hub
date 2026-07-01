@@ -46,6 +46,7 @@ vi.mock("~/utils/browser/browserApi", () => ({
       "webRequest",
       "clipboardRead",
       "notifications",
+      "bookmarks",
     ],
   })),
   onPermissionsAdded: vi.fn((callback: (permissions: any) => void) => {
@@ -75,7 +76,9 @@ describe("permissionManager", () => {
       "webRequest",
       "clipboardRead",
       "notifications",
+      "bookmarks",
     ])
+    expect(OPTIONAL_PERMISSION_IDS.Bookmarks).toBe("bookmarks")
     expect(COOKIE_INTERCEPTOR_PERMISSIONS).toEqual([
       OPTIONAL_PERMISSION_IDS.Cookies,
       OPTIONAL_PERMISSION_IDS.WebRequest,

@@ -26,6 +26,8 @@ const permissionMocks = vi.hoisted(() => ({
   ensurePermissionsDetailed: vi.fn(),
   hasPermission: vi.fn(),
   onOptionalPermissionsChanged: vi.fn(),
+  removePermissionDetailed: vi.fn(),
+  requestPermissionDetailed: vi.fn(),
 }))
 
 const preferenceMocks = vi.hoisted(() => ({
@@ -52,6 +54,7 @@ vi.mock("~/services/permissions/permissionManager", () => {
     "webRequestBlocking",
     "clipboardRead",
     "notifications",
+    "bookmarks",
   ] as const
 
   return {
@@ -63,6 +66,7 @@ vi.mock("~/services/permissions/permissionManager", () => {
       WebRequestBlocking: "webRequestBlocking",
       ClipboardRead: "clipboardRead",
       Notifications: "notifications",
+      Bookmarks: "bookmarks",
     },
     OPTIONAL_PERMISSIONS,
     OPTIONAL_PERMISSION_DEFINITIONS: OPTIONAL_PERMISSIONS.map((id) => ({
@@ -73,6 +77,8 @@ vi.mock("~/services/permissions/permissionManager", () => {
     ensurePermissionsDetailed: permissionMocks.ensurePermissionsDetailed,
     hasPermission: permissionMocks.hasPermission,
     onOptionalPermissionsChanged: permissionMocks.onOptionalPermissionsChanged,
+    removePermissionDetailed: permissionMocks.removePermissionDetailed,
+    requestPermissionDetailed: permissionMocks.requestPermissionDetailed,
   }
 })
 
@@ -230,6 +236,12 @@ describe("PermissionOnboardingDialog language selection", () => {
     })
     permissionMocks.hasPermission.mockResolvedValue(false)
     permissionMocks.onOptionalPermissionsChanged.mockReturnValue(() => {})
+    permissionMocks.removePermissionDetailed.mockResolvedValue({
+      success: true,
+    })
+    permissionMocks.requestPermissionDetailed.mockResolvedValue({
+      success: true,
+    })
     preferenceMocks.setLanguage.mockImplementation(
       async (language: SupportedUiLanguage) => {
         persistedLanguage = language
@@ -242,6 +254,8 @@ describe("PermissionOnboardingDialog language selection", () => {
     permissionMocks.ensurePermissionsDetailed.mockReset()
     permissionMocks.hasPermission.mockReset()
     permissionMocks.onOptionalPermissionsChanged.mockReset()
+    permissionMocks.removePermissionDetailed.mockReset()
+    permissionMocks.requestPermissionDetailed.mockReset()
     preferenceMocks.setLanguage.mockReset()
     toastHelperMocks.showResultToast.mockReset()
     analyticsMocks.trackProductAnalyticsEvent.mockReset()
@@ -447,6 +461,7 @@ describe("PermissionOnboardingDialog language selection", () => {
       webRequestBlocking: false,
       clipboardRead: false,
       notifications: false,
+      bookmarks: false,
     }
 
     permissionMocks.hasPermission.mockImplementation(
@@ -467,7 +482,7 @@ describe("PermissionOnboardingDialog language selection", () => {
       ).toHaveLength(1)
       expect(
         screen.getAllByText(i18n.t("permissions.status.denied")),
-      ).toHaveLength(5)
+      ).toHaveLength(6)
     })
 
     permissionStates.cookies = false
@@ -480,17 +495,17 @@ describe("PermissionOnboardingDialog language selection", () => {
     })
 
     await waitFor(() => {
-      expect(permissionMocks.hasPermission).toHaveBeenCalledTimes(12)
+      expect(permissionMocks.hasPermission).toHaveBeenCalledTimes(14)
       expect(
         screen.getAllByText(i18n.t("permissions.status.granted")),
       ).toHaveLength(3)
       expect(
         screen.getAllByText(i18n.t("permissions.status.denied")),
-      ).toHaveLength(3)
+      ).toHaveLength(4)
     })
   })
 
-  it("requests all optional permissions, reloads statuses, and closes after a successful grant", async () => {
+  it("requests recommended optional permissions, reloads statuses, and keeps the dialog open after a successful grant", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     const i18n = await createSettingsI18n("en")
@@ -511,6 +526,7 @@ describe("PermissionOnboardingDialog language selection", () => {
         "webRequestBlocking",
         "clipboardRead",
         "notifications",
+        "bookmarks",
       ])
     })
 
@@ -519,7 +535,7 @@ describe("PermissionOnboardingDialog language selection", () => {
       i18n.t("permissionsOnboarding.toasts.success"),
       i18n.t("permissionsOnboarding.toasts.error"),
     )
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it("tracks grant-all permission outcomes for permissions that were actually requested", async () => {
@@ -755,6 +771,20 @@ describe("PermissionOnboardingDialog language selection", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       },
     )
+    expect(analyticsMocks.trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Bookmarks,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
     expect(onClose).not.toHaveBeenCalled()
   })
 
@@ -803,8 +833,9 @@ describe("PermissionOnboardingDialog language selection", () => {
     })
 
     await waitFor(() => {
-      expect(onClose).toHaveBeenCalledTimes(1)
+      expect(permissionMocks.hasPermission).toHaveBeenCalled()
     })
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it("shows the new-permissions warning and opens the project page from the CTA", async () => {
@@ -853,6 +884,86 @@ describe("PermissionOnboardingDialog language selection", () => {
     expect(
       screen.getByText(i18n.t("permissions.items.notifications.description")),
     ).toBeInTheDocument()
+  })
+
+  it("includes browser bookmarks in the onboarding permission list", async () => {
+    const i18n = await createSettingsI18n("en")
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
+
+    expect(
+      await screen.findByText(i18n.t("permissions.items.notifications.title")),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(i18n.t("permissions.items.bookmarks.title")),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(i18n.t("permissions.items.bookmarks.description")),
+    ).toBeInTheDocument()
+  })
+
+  it("allows individual permissions from onboarding without closing the dialog", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const i18n = await createSettingsI18n("en")
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={onClose} />, i18n)
+
+    await user.click(
+      await screen
+        .findAllByRole("button", {
+          name: i18n.t("permissions.actions.allow"),
+        })
+        .then((buttons) => buttons[0]),
+    )
+
+    await waitFor(() => {
+      expect(permissionMocks.requestPermissionDetailed).toHaveBeenCalledWith(
+        "cookies",
+      )
+    })
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it("disables bulk permission grants while an individual permission request is pending", async () => {
+    const user = userEvent.setup()
+    const i18n = await createSettingsI18n("en")
+    let resolveRequest: (value: { success: boolean }) => void
+    const permissionRequest = new Promise<{ success: boolean }>((resolve) => {
+      resolveRequest = resolve
+    })
+
+    permissionMocks.requestPermissionDetailed.mockReturnValueOnce(
+      permissionRequest,
+    )
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
+
+    await user.click(
+      await screen
+        .findAllByRole("button", {
+          name: i18n.t("permissions.actions.allow"),
+        })
+        .then((buttons) => buttons[0]),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: i18n.t("permissionsOnboarding.actions.allowAll"),
+        }),
+      ).toBeDisabled()
+    })
+
+    resolveRequest!({ success: true })
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: i18n.t("permissionsOnboarding.actions.allowAll"),
+        }),
+      ).toBeEnabled()
+    })
   })
 
   it("mentions anonymous product analytics in onboarding without making it the primary message", async () => {

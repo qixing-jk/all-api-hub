@@ -35,6 +35,7 @@ export interface CardSectionProps
   rightContent?: React.ReactNode
   icon?: React.ReactNode
   title?: string
+  titleContent?: React.ReactNode
   description?: string
   onClick?: () => void
 }
@@ -49,6 +50,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
       rightContent,
       icon,
       title,
+      titleContent,
       description,
       onClick,
       children,
@@ -85,12 +87,15 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
               )}
               <div className="min-w-0 flex-1">
                 {title && (
-                  <Typography
-                    variant="h6"
-                    className="dark:text-dark-text-primary mb-0.5 text-gray-900 transition-colors"
-                  >
-                    {title}
-                  </Typography>
+                  <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                    <Typography
+                      variant="h6"
+                      className="dark:text-dark-text-primary text-gray-900 transition-colors"
+                    >
+                      {title}
+                    </Typography>
+                    {titleContent}
+                  </div>
                 )}
                 {description && (
                   <BodySmall className="dark:text-dark-text-tertiary text-gray-500">

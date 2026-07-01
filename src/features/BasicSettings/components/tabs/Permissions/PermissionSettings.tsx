@@ -1,261 +1,29 @@
-import type { TFunction } from "i18next"
-import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Alert } from "~/components/ui/Alert"
-import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Card } from "~/components/ui/Card"
 import { BodySmall } from "~/components/ui/Typography"
 import { PermissionList } from "~/features/Permissions/components/PermissionList"
-import {
-  hasPermission,
-  ManifestOptionalPermissions,
-  onOptionalPermissionsChanged,
-  OPTIONAL_PERMISSION_DEFINITIONS,
-  OPTIONAL_PERMISSIONS,
-  removePermissionDetailed,
-  requestPermissionDetailed,
-} from "~/services/permissions/permissionManager"
-import {
-  getPermissionRemoveOutcome,
-  PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
-  PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
-  PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
-  trackOptionalPermissionRequestResult,
-  trackOptionalPermissionResult,
-} from "~/services/productAnalytics/permissions"
-import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
-
-interface PermissionState {
-  statuses: Record<ManifestOptionalPermissions, boolean | null>
-  pending: Record<ManifestOptionalPermissions, boolean>
-}
-
-const buildState = <T,>(value: T) =>
-  Object.fromEntries(OPTIONAL_PERMISSIONS.map((id) => [id, value])) as Record<
-    ManifestOptionalPermissions,
-    T
-  >
-
-/**
- * Resolve the localized title for a supported optional permission.
- */
-function getPermissionTitle(t: TFunction, id: ManifestOptionalPermissions) {
-  switch (id) {
-    case "cookies":
-      return t("settings:permissions.items.cookies.title")
-    case "declarativeNetRequestWithHostAccess":
-      return t(
-        "settings:permissions.items.declarativeNetRequestWithHostAccess.title",
-      )
-    case "webRequest":
-      return t("settings:permissions.items.webRequest.title")
-    case "webRequestBlocking":
-      return t("settings:permissions.items.webRequestBlocking.title")
-    case "clipboardRead":
-      return t("settings:permissions.items.clipboardRead.title")
-    case "notifications":
-      return t("settings:permissions.items.notifications.title")
-  }
-}
-
-/**
- * Resolve the localized description for a supported optional permission.
- */
-function getPermissionDescription(
-  t: TFunction,
-  id: ManifestOptionalPermissions,
-) {
-  switch (id) {
-    case "cookies":
-      return t("settings:permissions.items.cookies.description")
-    case "declarativeNetRequestWithHostAccess":
-      return t(
-        "settings:permissions.items.declarativeNetRequestWithHostAccess.description",
-      )
-    case "webRequest":
-      return t("settings:permissions.items.webRequest.description")
-    case "webRequestBlocking":
-      return t("settings:permissions.items.webRequestBlocking.description")
-    case "clipboardRead":
-      return t("settings:permissions.items.clipboardRead.description")
-    case "notifications":
-      return t("settings:permissions.items.notifications.description")
-  }
-}
-
-/**
- * Unified logger scoped to optional permission settings in the options UI.
- */
-const logger = createLogger("PermissionSettings")
+import { useOptionalPermissionControls } from "~/features/Permissions/hooks/useOptionalPermissionControls"
+import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 
 /**
  * Settings section for managing optional browser permissions: refresh, request, remove.
  */
 export default function PermissionSettings() {
   const { t } = useTranslation("settings")
-  const [state, setState] = useState<PermissionState>(() => ({
-    statuses: buildState<boolean | null>(null),
-    pending: buildState(false),
-  }))
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  const loadStatuses = useCallback(async () => {
-    setIsRefreshing(true)
-    logger.debug("Checking optional permission statuses")
-    const results = await Promise.all(
-      OPTIONAL_PERMISSIONS.map(async (id) => ({
-        id,
-        granted: await hasPermission(id),
-      })),
-    )
-    logger.debug("Optional permission statuses resolved", { results })
-
-    setState((prev) => ({
-      ...prev,
-      statuses: results.reduce(
-        (acc, curr) => ({
-          ...acc,
-          [curr.id]: curr.granted,
-        }),
-        {} as Record<ManifestOptionalPermissions, boolean>,
-      ),
-    }))
-    setIsRefreshing(false)
-  }, [])
-
-  useEffect(() => {
-    void loadStatuses()
-    const unsubscribe = onOptionalPermissionsChanged(() => {
-      void loadStatuses()
-    })
-
-    return () => {
-      unsubscribe()
-    }
-  }, [loadStatuses])
-
-  const handleToggle = useCallback(
-    async (id: ManifestOptionalPermissions, shouldEnable: boolean) => {
-      setState((prev) => ({
-        ...prev,
-        pending: {
-          ...prev.pending,
-          [id]: true,
-        },
-      }))
-
-      const label = getPermissionTitle(t, id)
-      logger.debug("Permission toggle requested by user", {
-        id,
-        action: shouldEnable ? "request" : "revoke",
-        label,
-      })
-      let success = false
-      const wasGrantedBefore = state.statuses[id] === true
-
-      try {
-        if (shouldEnable) {
-          const result = await requestPermissionDetailed(id)
-          success = result.success
-          const wasGrantedAfter = success || wasGrantedBefore
-          trackOptionalPermissionRequestResult(id, {
-            success,
-            failureReason: result.failureReason
-              ? result.failureReason
-              : undefined,
-            wasGrantedBefore,
-            wasGrantedAfter,
-          })
-          logger.debug("Permission request completed", { id, success })
-          showResultToast(
-            success,
-            t("permissions.messages.granted", { name: label }),
-            t("permissions.messages.grantFailed", { name: label }),
-          )
-        } else {
-          const result = await removePermissionDetailed(id)
-          success = result.success
-          const wasGrantedAfter = success ? false : wasGrantedBefore
-          trackOptionalPermissionResult(id, {
-            operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Remove,
-            outcome: result.failureReason
-              ? PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError
-              : getPermissionRemoveOutcome(success),
-            failureReason: result.failureReason
-              ? PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException
-              : success
-                ? undefined
-                : PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.RemoveFailed,
-            wasGrantedBefore,
-            wasGrantedAfter,
-          })
-          logger.debug("Permission revoke completed", { id, success })
-          showResultToast(
-            success,
-            t("permissions.messages.revoked", { name: label }),
-            t("permissions.messages.revokeFailed", { name: label }),
-          )
-        }
-
-        if (success) {
-          setState((prev) => ({
-            ...prev,
-            statuses: {
-              ...prev.statuses,
-              [id]: shouldEnable,
-            },
-          }))
-        }
-      } catch (error) {
-        success = false
-        if (shouldEnable) {
-          trackOptionalPermissionRequestResult(id, {
-            success: false,
-            failureReason: error,
-            wasGrantedBefore,
-            wasGrantedAfter: wasGrantedBefore,
-          })
-        } else {
-          trackOptionalPermissionResult(id, {
-            operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Remove,
-            outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
-            failureReason:
-              PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
-            wasGrantedBefore,
-            wasGrantedAfter: wasGrantedBefore,
-          })
-        }
-        logger.error("Failed to toggle optional permission", { id, error })
-        showResultToast(
-          false,
-          shouldEnable
-            ? t("permissions.messages.granted", { name: label })
-            : t("permissions.messages.revoked", { name: label }),
-          shouldEnable
-            ? t("permissions.messages.grantFailed", { name: label })
-            : t("permissions.messages.revokeFailed", { name: label }),
-        )
-      } finally {
-        setState((prev) => ({
-          ...prev,
-          pending: {
-            ...prev.pending,
-            [id]: false,
-          },
-        }))
-      }
-    },
-    [state.statuses, t],
-  )
-
-  const isLoading = useMemo(
-    () => OPTIONAL_PERMISSIONS.some((id) => state.statuses[id] === null),
-    [state.statuses],
-  )
+  const {
+    isLoading,
+    isRefreshing,
+    permissionItems,
+    handleToggle,
+    loadStatuses,
+  } = useOptionalPermissionControls({
+    loggerName: "PermissionSettings",
+    permissionIds: OPTIONAL_PERMISSIONS,
+  })
 
   return (
     <SettingSection
@@ -284,40 +52,30 @@ export default function PermissionSettings() {
 
       <Card padding="none">
         <PermissionList
-          items={OPTIONAL_PERMISSION_DEFINITIONS.map((permission) => {
-            const granted = state.statuses[permission.id]
-            const pending = state.pending[permission.id]
-            const label = getPermissionTitle(t, permission.id)
-
+          items={permissionItems.map((permission) => {
             return {
               id: permission.id,
-              title: label,
-              description: getPermissionDescription(t, permission.id),
+              title: permission.title,
+              description: permission.description,
+              status: permission.granted,
+              statusLabel:
+                permission.granted === null
+                  ? t("permissions.status.checking")
+                  : permission.granted
+                    ? t("permissions.status.granted")
+                    : t("permissions.status.denied"),
               rightContent: (
                 <div className="flex flex-col items-start gap-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
-                  <Badge
-                    variant={
-                      granted
-                        ? "success"
-                        : granted === false
-                          ? "warning"
-                          : "info"
-                    }
-                  >
-                    {granted === null
-                      ? t("permissions.status.checking")
-                      : granted
-                        ? t("permissions.status.granted")
-                        : t("permissions.status.denied")}
-                  </Badge>
                   <Button
                     size="sm"
-                    variant={granted ? "outline" : "default"}
-                    onClick={() => void handleToggle(permission.id, !granted)}
-                    disabled={pending || granted === null}
-                    loading={pending}
+                    variant={permission.granted ? "outline" : "default"}
+                    onClick={() =>
+                      void handleToggle(permission.id, !permission.granted)
+                    }
+                    disabled={permission.pending || permission.granted === null}
+                    loading={permission.pending}
                   >
-                    {granted
+                    {permission.granted
                       ? t("permissions.actions.remove")
                       : t("permissions.actions.allow")}
                   </Button>

@@ -43,12 +43,19 @@ vi.mock("~/services/permissions/permissionManager", () => ({
     WebRequestBlocking: "webRequestBlocking",
     ClipboardRead: "clipboardRead",
     Notifications: "notifications",
+    Bookmarks: "bookmarks",
   },
-  OPTIONAL_PERMISSIONS: ["cookies", "clipboardRead", "notifications"],
+  OPTIONAL_PERMISSIONS: [
+    "cookies",
+    "clipboardRead",
+    "notifications",
+    "bookmarks",
+  ],
   OPTIONAL_PERMISSION_DEFINITIONS: [
     { id: "cookies" },
     { id: "clipboardRead" },
     { id: "notifications" },
+    { id: "bookmarks" },
   ],
   hasPermission: (id: string) => hasPermissionMock(id),
   onOptionalPermissionsChanged: (listener: () => void) =>
@@ -101,16 +108,20 @@ describe("PermissionSettings", () => {
     ).toHaveLength(2)
     expect(
       screen.getAllByText("settings:permissions.status.denied"),
-    ).toHaveLength(1)
+    ).toHaveLength(2)
     expect(
       screen.getByText("settings:permissions.items.notifications.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("settings:permissions.items.bookmarks.title"),
     ).toBeInTheDocument()
 
     const cookiesRow = document.getElementById("cookies")
     const clipboardRow = document.getElementById("clipboardRead")
     const notificationsRow = document.getElementById("notifications")
+    const bookmarksRow = document.getElementById("bookmarks")
 
-    if (!cookiesRow || !clipboardRow || !notificationsRow) {
+    if (!cookiesRow || !clipboardRow || !notificationsRow || !bookmarksRow) {
       throw new Error("Expected permission rows to be rendered")
     }
 
@@ -213,12 +224,20 @@ describe("PermissionSettings", () => {
       name: "settings:permissions.actions.remove",
     })
     const actionGroup = actionButton.parentElement
+    const title = within(cookiesRow).getByText(
+      "settings:permissions.items.cookies.title",
+    )
+    const statusBadge = within(cookiesRow).getByText(
+      "settings:permissions.status.granted",
+    )
 
     expect(actionGroup).toHaveClass(
       "flex-col",
       "[@container(min-width:42rem)]:flex-row",
       "[@container(min-width:42rem)]:items-center",
     )
+    expect(title.parentElement).toContainElement(statusBadge)
+    expect(actionGroup).not.toContainElement(statusBadge)
   })
 
   it("reloads statuses on external permission change and unsubscribes on cleanup", async () => {
