@@ -9,6 +9,7 @@ import {
   fetchUserInfo,
   rotateCodexServiceCredential,
 } from "~/services/apiService/sharedchat"
+import { ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { sharedChatCodexQuotaSample } from "~~/tests/fixtures/sharedchat/codexQuota.sample"
 import { server } from "~~/tests/msw/server"
@@ -123,6 +124,108 @@ describe("apiService SharedChat", () => {
         },
       },
     })
+  })
+
+  it("normalizes numeric strings and omits invalid subscription metrics", async () => {
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json({
+          ...sharedChatCodexQuotaSample,
+          data: {
+            codex: {
+              ...sharedChatCodexQuotaSample.data.codex,
+              balance: "88",
+              currentUsage: {
+                totalRequests: "10",
+                totalTokens: "12345",
+                totalCost: "1.23",
+                lastRequestTime: "  ",
+              },
+              subscriptions: {
+                subTypeName: "  Team Plan  ",
+                billingType: "  ",
+                limit: "100",
+                amountLimit: "not-a-number",
+                usedAmount: "",
+                remainingAmount: 88,
+                usedCount: "3",
+                remainingCount: undefined,
+                period: " month ",
+                periodResetTime: "  ",
+                expireTime: "2026-09-01T00:00:00+08:00",
+                isLongTerm: "yes",
+                isActive: 0,
+              },
+            },
+          },
+        }),
+      ),
+    )
+
+    await expect(fetchAccountData(accountRequest)).resolves.toMatchObject({
+      quota: 88 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      today_requests_count: 10,
+      today_completion_tokens: 12345,
+      today_quota_consumption:
+        1.23 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      usage: {
+        totalRequests: 10,
+        totalTokens: 12345,
+        totalCost: 1.23,
+        lastRequestTime: undefined,
+      },
+      subscription: {
+        name: "Team Plan",
+        billingType: undefined,
+        limit: 100,
+        amountLimit: undefined,
+        usedAmount: undefined,
+        remainingAmount: 88,
+        usedCount: 3,
+        remainingCount: undefined,
+        period: "month",
+        periodResetTime: undefined,
+        expireTime: "2026-09-01T00:00:00+08:00",
+        isLongTerm: undefined,
+        isActive: undefined,
+      },
+    })
+  })
+
+  it("rejects malformed SharedChat quota envelopes", async () => {
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json({ code: 0, msg: "quota unavailable" }),
+      ),
+    )
+
+    await expect(fetchAccountData(accountRequest)).rejects.toMatchObject({
+      message: "quota unavailable",
+    } satisfies Partial<ApiError>)
+
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json({ code: 1, msg: "success" }),
+      ),
+    )
+
+    await expect(fetchAccountData(accountRequest)).rejects.toBeInstanceOf(
+      ApiError,
+    )
+
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json({
+          code: 1,
+          msg: "success",
+          data: { codex: null },
+        }),
+      ),
+    )
+
+    await expect(fetchAccountData(accountRequest)).rejects.toBeInstanceOf(
+      ApiError,
+    )
   })
 
   it("fetches the singleton Codex service credential without using token CRUD", async () => {

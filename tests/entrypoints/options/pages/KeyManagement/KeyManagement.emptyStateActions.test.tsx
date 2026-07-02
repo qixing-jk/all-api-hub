@@ -506,6 +506,43 @@ describe("KeyManagement empty-state actions", () => {
     })
   })
 
+  it("keeps add-token disabled in all mode when no account can create tokens", async () => {
+    const user = userEvent.setup()
+    const handleAddToken = vi.fn()
+    const serviceCredentialAccount = createAccount({
+      id: "sharedchat-account",
+      name: "SharedChat",
+      siteType: SITE_TYPES.SHAREDCHAT,
+    })
+
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        displayData: [serviceCredentialAccount],
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+        handleAddToken,
+      }),
+    )
+
+    render(<KeyManagement />)
+
+    const addTokenButton = await screen.findByTestId(
+      KEY_MANAGEMENT_TEST_IDS.addTokenButton,
+    )
+
+    expect(addTokenButton).toBeDisabled()
+
+    await user.click(addTokenButton)
+
+    expect(handleAddToken).not.toHaveBeenCalled()
+    expect(tokenListPropsSpy.mock.lastCall?.[0]).toMatchObject({
+      canCreateTokens: false,
+    })
+    expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
+      availableAccounts: [],
+      preSelectedAccountId: null,
+    })
+  })
+
   it("does not preselect an account in the add-token dialog when multiple accounts are filtered", async () => {
     const accountA = createAccount({
       id: "acc-1",
