@@ -1103,6 +1103,92 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith("clipboard denied")
   })
 
+  it("ignores stale service credential copy results after selection changes", async () => {
+    let resolveCopy!: () => void
+    const writeText = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCopy = resolve
+        }),
+    )
+    Object.assign(navigator, {
+      clipboard: { writeText },
+    })
+
+    const sharedChatAccount = createDisplayAccount({
+      id: "sharedchat-stale-copy-acc",
+      name: "SharedChat Stale Copy",
+      siteType: SITE_TYPES.SHAREDCHAT,
+      baseUrl: "https://new.sharedchat.cc",
+      authType: AuthTypeEnum.Cookie,
+      token: "user-token",
+      cookieAuthSessionCookie: "share-session=test-cookie",
+    })
+    const otherAccount = createDisplayAccount({
+      id: "other-copy-account",
+      name: "Other Copy Account",
+    })
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [sharedChatAccount, otherAccount],
+    } as any)
+
+    const fetchTokens = vi.fn().mockResolvedValue([])
+    vi.mocked(getSiteTypeCapabilities).mockImplementation((siteType) =>
+      siteType === SITE_TYPES.SHAREDCHAT
+        ? (createAdapterWithServiceCredential({
+            fetch: vi.fn().mockResolvedValue({
+              kind: "singleton_service_key",
+              service: "codex",
+              label: "Codex",
+              key: "initial-codex-key",
+              isAuthenticated: true,
+              baseUrl: "https://codex.example.invalid",
+            }),
+          }) as any)
+        : (createAdapterWithKeyManagement({ fetchTokens }) as any),
+    )
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(sharedChatAccount.id)
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.serviceCredentials[sharedChatAccount.id]?.credential
+          ?.key,
+      ).toBe("initial-codex-key"),
+    )
+
+    let copyPromise!: Promise<void>
+    act(() => {
+      copyPromise = result.current.copyServiceCredential(sharedChatAccount)
+    })
+
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith("initial-codex-key"),
+    )
+
+    act(() => {
+      result.current.setSelectedAccount(otherAccount.id)
+    })
+
+    await waitFor(() => expect(fetchTokens).toHaveBeenCalled())
+
+    await act(async () => {
+      resolveCopy()
+      await copyPromise
+    })
+
+    expect(vi.mocked(toast.success)).not.toHaveBeenCalledWith(
+      "keyManagement:messages.serviceCredentialCopied",
+    )
+  })
+
   it("rejects service credential rotation when the adapter does not support it", async () => {
     const account = createDisplayAccount({
       id: "sharedchat-rotate-unsupported-acc",

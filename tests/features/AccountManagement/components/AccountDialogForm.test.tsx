@@ -252,6 +252,9 @@ describe("AccountDialog AccountForm", () => {
       screen.getByRole("option", { name: SITE_TYPES.SHAREDCHAT }),
     ).toBeInTheDocument()
     expect(
+      screen.queryByRole("option", { name: SITE_TYPES.UNKNOWN }),
+    ).not.toBeInTheDocument()
+    expect(
       screen.queryByRole("option", { name: SITE_TYPES.OCTOPUS }),
     ).not.toBeInTheDocument()
     expect(

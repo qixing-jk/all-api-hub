@@ -273,9 +273,11 @@ describe("apiService SharedChat", () => {
   })
 
   it("fetches Codex service models through the OpenAI-compatible model list", async () => {
+    let capturedAuthorization: string | null = null
+
     server.use(
       http.get("https://new.sharedchat.cc/codex/v1/models", ({ request }) => {
-        expect(request.headers.get("Authorization")).toBe("Bearer sk-redacted")
+        capturedAuthorization = request.headers.get("Authorization")
         return HttpResponse.json({
           object: "list",
           success: true,
@@ -304,6 +306,7 @@ describe("apiService SharedChat", () => {
         },
       }),
     ).resolves.toEqual(["gpt-5.5", " gpt-5.4-mini "])
+    expect(capturedAuthorization).toBe("Bearer sk-redacted")
   })
 
   it("rotates the singleton Codex service credential with the codex subtype", async () => {

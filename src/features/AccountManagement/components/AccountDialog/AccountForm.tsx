@@ -38,6 +38,10 @@ import { isValidExchangeRate } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
+const ACCOUNT_FORM_SITE_TYPE_OPTIONS = ACCOUNT_SITE_TYPES.filter(
+  (siteType) => siteType !== SITE_TYPES.UNKNOWN,
+)
+
 type AccountFormPresentationSitePolicy = Pick<
   AccountDialogSitePolicy,
   | "forceAccessTokenAuth"
@@ -189,7 +193,7 @@ export default function AccountForm({
               </div>
             </SelectTrigger>
             <SelectContent>
-              {ACCOUNT_SITE_TYPES.map((siteType) => (
+              {ACCOUNT_FORM_SITE_TYPE_OPTIONS.map((siteType) => (
                 <SelectItem key={siteType} value={siteType}>
                   {siteType}
                 </SelectItem>

@@ -166,8 +166,14 @@ const createMockSiteTypeCapabilities = (
     keyManagement?: false
     serviceCredential?: false
   } = {},
-) =>
-  ({
+) => {
+  const shouldIncludeKeyManagement =
+    overrides.keyManagement !== false &&
+    (!overrides.siteType ||
+      overrides.siteType === SITE_TYPES.NEW_API ||
+      overrides.siteType === SITE_TYPES.SUB2API)
+
+  return {
     siteType: overrides.siteType ?? SITE_TYPES.NEW_API,
     account: {
       ...(overrides.modelPricing === false
@@ -186,14 +192,7 @@ const createMockSiteTypeCapabilities = (
             },
           }
         : {}),
-      ...(overrides.siteType === SITE_TYPES.SUB2API &&
-      overrides.keyManagement !== false
-        ? {
-            keyManagement: {},
-          }
-        : {}),
-      ...((!overrides.siteType || overrides.siteType === SITE_TYPES.NEW_API) &&
-      overrides.keyManagement !== false
+      ...(shouldIncludeKeyManagement
         ? {
             keyManagement: {},
           }
@@ -207,7 +206,8 @@ const createMockSiteTypeCapabilities = (
           }
         : {}),
     },
-  }) as any
+  } as any
+}
 
 const createWrapper = () => {
   const queryClient = new QueryClient({

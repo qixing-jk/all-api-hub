@@ -840,6 +840,18 @@ describe("fetchDisplayAccountTokens", () => {
     expect(canCreateDisplayAccountTokens(ACCOUNT as any)).toBe(true)
 
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: "unsupported",
+      account: {},
+    } as any)
+
+    expect(
+      canCreateDisplayAccountTokens({
+        ...ACCOUNT,
+        siteType: "unsupported",
+      } as any),
+    ).toBe(false)
+
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.SHAREDCHAT,
       account: {
         serviceCredential: {

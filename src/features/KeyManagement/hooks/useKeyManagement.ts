@@ -1559,6 +1559,11 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
   const copyServiceCredential = async (account: DisplaySiteData) => {
     const credential = serviceCredentialsRef.current[account.id]?.credential
+    const loadEpoch = selectionEpochRef.current
+    const isCopyRequestCurrent = () =>
+      isMountedRef.current &&
+      isEpochActive(loadEpoch) &&
+      serviceCredentialsRef.current[account.id]?.credential === credential
 
     if (!credential?.key) {
       toast.error(t("keyManagement:messages.copyFailed"))
@@ -1567,8 +1572,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
     try {
       await navigator.clipboard.writeText(credential.key)
+      if (!isCopyRequestCurrent()) return
       toast.success(t("keyManagement:messages.serviceCredentialCopied"))
     } catch (error) {
+      if (!isCopyRequestCurrent()) return
       toast.error(
         getErrorMessage(error, t("keyManagement:messages.copyFailed")),
       )
