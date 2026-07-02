@@ -569,6 +569,18 @@ async function shouldUseTempWindowFallback(
     return false
   }
 
+  if (error.code === API_ERROR_CODES.BUSINESS_ERROR) {
+    logSkipTempWindowFallback(
+      "Error is a backend business error; temp window fallback cannot recover it.",
+      context,
+      {
+        statusCode: error.statusCode,
+        code: error.code,
+      },
+    )
+    return false
+  }
+
   if (
     !matchesTempWindowFallbackAllowlist(error, context.tempWindowFallback) &&
     !isCookieAuthUnauthorizedFallback(error, context)

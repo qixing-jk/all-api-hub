@@ -900,4 +900,32 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       }),
     )
   })
+
+  it("skips fallback for backend business errors even when the response status is 403", async () => {
+    const error = new ApiError(
+      "Backend rejected the request",
+      403,
+      "/v1/models",
+      API_ERROR_CODES.BUSINESS_ERROR,
+    )
+
+    await expect(
+      executeWithTempWindowFallback(buildContext(), async () => {
+        throw error
+      }),
+    ).rejects.toBe(error)
+
+    expect(mocks.sendRuntimeMessageMock).not.toHaveBeenCalled()
+    expect(mocks.logger.debug).toHaveBeenCalledWith(
+      "Temp window fallback skipped",
+      expect.objectContaining({
+        reason:
+          "Error is a backend business error; temp window fallback cannot recover it.",
+        extra: expect.objectContaining({
+          statusCode: 403,
+          code: API_ERROR_CODES.BUSINESS_ERROR,
+        }),
+      }),
+    )
+  })
 })

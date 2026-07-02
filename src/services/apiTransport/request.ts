@@ -63,6 +63,11 @@ interface ContentFetchResponse<T> {
 
 const logger = createLogger("ApiTransportRequest")
 
+interface BackendErrorDetails {
+  message: string
+  isBackendError: boolean
+}
+
 // Throttle log endpoints (`/api/log*`) to reduce burst traffic that can trigger
 // upstream rate limits (e.g. concurrent paging for usage + income).
 const LOG_REQUEST_MIN_INTERVAL_MS = 200
@@ -70,6 +75,53 @@ const LOG_REQUEST_MIN_INTERVAL_MS = 200
 const logRequestRateLimiter = createMinIntervalLimiter({
   minIntervalMs: isTestMode() ? 0 : LOG_REQUEST_MIN_INTERVAL_MS,
 })
+
+const getNonEmptyString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.trim() ? value.trim() : undefined
+
+const KNOWN_BACKEND_ERROR_TYPES = new Set(["new_api_error"])
+
+const isKnownBackendErrorType = (value: unknown): boolean =>
+  typeof value === "string" && KNOWN_BACKEND_ERROR_TYPES.has(value.trim())
+
+/**
+ * Extracts known backend-shaped JSON errors so they are not treated as
+ * WAF/challenge 403s that temp-window fallback can recover.
+ */
+function extractBackendErrorDetails(body: unknown): BackendErrorDetails | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return null
+  }
+
+  const topLevelMessage = getNonEmptyString(
+    (body as { message?: unknown }).message,
+  )
+  if (topLevelMessage) {
+    return {
+      message: topLevelMessage,
+      isBackendError: Boolean(
+        (body as { success?: unknown }).success === false,
+      ),
+    }
+  }
+
+  const error = (body as { error?: unknown }).error
+  if (!error || typeof error !== "object" || Array.isArray(error)) {
+    return null
+  }
+
+  const message = getNonEmptyString((error as { message?: unknown }).message)
+  if (!message) {
+    return null
+  }
+
+  return isKnownBackendErrorType((error as { type?: unknown }).type)
+    ? {
+        message,
+        isBackendError: true,
+      }
+    : null
+}
 
 /**
  * Determine if a given endpoint string matches log API patterns.
@@ -435,13 +487,12 @@ const apiRequest = async <T>(
         const responseBody = (await response.clone().json()) as Partial<
           ApiResponse<unknown>
         >
-        if (
-          responseBody &&
-          typeof responseBody === "object" &&
-          typeof responseBody.message === "string" &&
-          responseBody.message.trim()
-        ) {
-          errorMessage = responseBody.message
+        const backendError = extractBackendErrorDetails(responseBody)
+        if (backendError) {
+          errorMessage = backendError.message
+          if (backendError.isBackendError && response.status === 403) {
+            errorCode = API_ERROR_CODES.BUSINESS_ERROR
+          }
         }
       } catch {
         // Keep the generic HTTP status message when the error body is not parseable JSON.
