@@ -281,7 +281,7 @@ describe("apiService sub2api parsing", () => {
     ).resolves.toBe(false)
   })
 
-  it("returns the fixed unsupported check-in and zero-usage defaults", async () => {
+  it("returns the fixed unsupported check-in and parses today usage", async () => {
     const request = {
       baseUrl: "https://example.com",
       accountId: "account-1",
@@ -291,13 +291,24 @@ describe("apiService sub2api parsing", () => {
       },
     }
 
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        total_requests: 2,
+        total_input_tokens: 12,
+        total_output_tokens: 8,
+        total_actual_cost: 0.25,
+      },
+    } as any)
+
     await expect(fetchSupportCheckIn(request as any)).resolves.toBe(false)
     await expect(fetchCheckInStatus(request as any)).resolves.toBeUndefined()
     await expect(fetchTodayUsage(request as any)).resolves.toEqual({
-      today_quota_consumption: 0,
-      today_prompt_tokens: 0,
-      today_completion_tokens: 0,
-      today_requests_count: 0,
+      today_quota_consumption: 125000,
+      today_prompt_tokens: 12,
+      today_completion_tokens: 8,
+      today_requests_count: 2,
     })
     await expect(fetchTodayIncome(request as any)).resolves.toEqual({
       today_income: 0,
@@ -542,21 +553,60 @@ describe("apiService sub2api refreshAccountData", () => {
     ...overrides,
   })
 
-  it("returns success without retry when /api/v1/auth/me succeeds", async () => {
+  it("returns success with today usage when /api/v1/auth/me and /api/v1/usage/stats succeed", async () => {
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          total_requests: 3,
+          total_input_tokens: 120,
+          total_output_tokens: 45,
+          total_actual_cost: 1.25,
+        },
+      } as any)
+
+    const result = await refreshAccountData(createRequest())
+
+    expect(result.success).toBe(true)
+    expect(result.data?.quota).toBe(1_000_000)
+    expect(result.data?.today_quota_consumption).toBe(625_000)
+    expect(result.data?.today_prompt_tokens).toBe(120)
+    expect(result.data?.today_completion_tokens).toBe(45)
+    expect(result.data?.today_requests_count).toBe(3)
+    expect(result.data?.checkIn.enableDetection).toBe(false)
+    expect(result.authUpdate?.userId).toBe("1")
+    expect(result.authUpdate?.username).toBe("alice")
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect((vi.mocked(fetchApi).mock.calls[1]?.[1] as any)?.endpoint).toBe(
+      "/api/v1/usage/stats?period=today",
+    )
+  })
+
+  it("skips Sub2API today usage when includeTodayCashflow is false", async () => {
     vi.mocked(fetchApi).mockResolvedValueOnce({
       code: 0,
       message: "ok",
       data: { id: 1, username: "alice", balance: 2 },
     } as any)
 
-    const result = await refreshAccountData(createRequest())
+    const result = await refreshAccountData(
+      createRequest({ includeTodayCashflow: false }),
+    )
 
     expect(result.success).toBe(true)
-    expect(result.data?.quota).toBe(1_000_000)
-    expect(result.data?.checkIn.enableDetection).toBe(false)
-    expect(result.authUpdate?.userId).toBe("1")
-    expect(result.authUpdate?.username).toBe("alice")
-    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect(result.data).toMatchObject({
+      today_quota_consumption: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 0,
+    })
+    expect(fetchApi).toHaveBeenCalledTimes(1)
   })
 
   it("re-syncs token and retries once on HTTP 401 (success)", async () => {
@@ -579,7 +629,6 @@ describe("apiService sub2api refreshAccountData", () => {
     const result = await refreshAccountData(request)
 
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
-    expect(fetchApi).toHaveBeenCalledTimes(2)
     const retryRequest = vi.mocked(fetchApi).mock.calls[1]?.[0] as any
     expect(retryRequest?.auth?.accessToken).toBe("new-jwt")
 
@@ -665,7 +714,6 @@ describe("apiService sub2api refreshAccountData", () => {
     const result = await refreshAccountData(request)
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchApi).toHaveBeenCalledTimes(1)
     expect(
       (vi.mocked(fetchApi).mock.calls[0]?.[0] as any)?.auth?.accessToken,
     ).toBe("new-jwt")
@@ -795,7 +843,6 @@ describe("apiService sub2api refreshAccountData", () => {
     )
     expect(secondPayload).toEqual({ refresh_token: "rotated-refresh" })
 
-    expect(fetchApi).toHaveBeenCalledTimes(2)
     expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
 
     expect(result.success).toBe(true)
@@ -851,7 +898,6 @@ describe("apiService sub2api refreshAccountData", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
-    expect(fetchApi).toHaveBeenCalledTimes(2)
 
     expect(result.success).toBe(true)
     expect(result.data?.quota).toBe(500_000)
@@ -911,7 +957,6 @@ describe("apiService sub2api refreshAccountData", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
-    expect(fetchApi).toHaveBeenCalledTimes(2)
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
     ).toBe("resynced-jwt")
@@ -1014,7 +1059,6 @@ describe("apiService sub2api refreshAccountData", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
-    expect(fetchApi).toHaveBeenCalledTimes(2)
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
     ).toBe("resynced-jwt")

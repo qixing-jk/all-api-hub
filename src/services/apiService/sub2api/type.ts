@@ -10,6 +10,7 @@ export const SUB2API_KEYS_ENDPOINT = "/api/v1/keys"
 export const SUB2API_ANNOUNCEMENTS_ENDPOINT = "/api/v1/announcements"
 export const SUB2API_AVAILABLE_GROUPS_ENDPOINT = "/api/v1/groups/available"
 export const SUB2API_GROUP_RATES_ENDPOINT = "/api/v1/groups/rates"
+export const SUB2API_USAGE_STATS_ENDPOINT = "/api/v1/usage/stats"
 
 type IntLike = number | string
 type NumericLike = number | string
@@ -80,6 +81,13 @@ export type Sub2ApiKeyData = {
 export type Sub2ApiKeyListData =
   | Sub2ApiPaginatedData<Sub2ApiKeyData>
   | Sub2ApiKeyData[]
+
+export type Sub2ApiUsageStatsData = {
+  total_requests?: NumericLike | null
+  total_input_tokens?: NumericLike | null
+  total_output_tokens?: NumericLike | null
+  total_actual_cost?: NumericLike | null
+}
 
 export type Sub2ApiAnnouncementData = {
   id?: IntLike | null

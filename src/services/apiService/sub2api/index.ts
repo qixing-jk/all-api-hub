@@ -44,6 +44,7 @@ import {
   parseSub2ApiEnvelope,
   parseSub2ApiGroupRates,
   parseSub2ApiKey,
+  parseSub2ApiTodayUsage,
   parseSub2ApiUserIdentity,
   resolveSub2ApiGroupId,
   translateSub2ApiCreateTokenRequest,
@@ -61,12 +62,14 @@ import {
   SUB2API_AVAILABLE_GROUPS_ENDPOINT,
   SUB2API_GROUP_RATES_ENDPOINT,
   SUB2API_KEYS_ENDPOINT,
+  SUB2API_USAGE_STATS_ENDPOINT,
   type Sub2ApiAnnouncementData,
   type Sub2ApiAnnouncementListData,
   type Sub2ApiAuthMeData,
   type Sub2ApiAuthMeResponse,
   type Sub2ApiKeyData,
   type Sub2ApiKeyListData,
+  type Sub2ApiUsageStatsData,
 } from "./type"
 
 /**
@@ -759,12 +762,10 @@ type Sub2ApiCurrentUser = {
 const createAccountData = (
   currentUser: Sub2ApiCurrentUser,
   checkIn: CheckInConfig,
+  todayUsage: TodayUsageData = ZERO_TODAY_USAGE_DATA,
 ): AccountData => ({
   quota: currentUser.quota,
-  today_quota_consumption: 0,
-  today_prompt_tokens: 0,
-  today_completion_tokens: 0,
-  today_requests_count: 0,
+  ...todayUsage,
   today_income: 0,
   checkIn,
 })
@@ -794,10 +795,11 @@ const createHealthyHealthStatus = () => ({
 const createRefreshSuccessResult = (
   currentUser: Sub2ApiCurrentUser,
   checkIn: CheckInConfig,
+  todayUsage: TodayUsageData,
   authUpdate?: RefreshAccountResult["authUpdate"],
 ): RefreshAccountResult => ({
   success: true,
-  data: createAccountData(currentUser, checkIn),
+  data: createAccountData(currentUser, checkIn, todayUsage),
   healthStatus: createHealthyHealthStatus(),
   authUpdate: {
     ...authUpdate,
@@ -805,6 +807,27 @@ const createRefreshSuccessResult = (
     username: currentUser.username,
   },
 })
+
+const fetchCurrentUserAndTodayUsage = async (
+  request: ApiServiceAccountRequest,
+): Promise<{
+  currentUser: Sub2ApiCurrentUser
+  todayUsage: TodayUsageData
+}> => {
+  const currentUser = await fetchCurrentUser(request)
+  let todayUsage = ZERO_TODAY_USAGE_DATA
+
+  try {
+    todayUsage = await fetchTodayUsage(request)
+  } catch (error) {
+    logger.warn("Failed to fetch Sub2API today usage; using zero defaults", {
+      accountId: request.accountId,
+      error: getSafeErrorMessage(error),
+    })
+  }
+
+  return { currentUser, todayUsage }
+}
 
 const refreshSub2ApiAccountViaResync = async (params: {
   request: ApiServiceRequest
@@ -817,9 +840,11 @@ const refreshSub2ApiAccountViaResync = async (params: {
     authSession: params.authSession,
   })
 
-  const currentUser = await fetchCurrentUser(retryRequest)
+  const { currentUser, todayUsage } = await fetchCurrentUserAndTodayUsage(
+    retryRequest as ApiServiceAccountRequest,
+  )
 
-  return createRefreshSuccessResult(currentUser, params.checkIn, {
+  return createRefreshSuccessResult(currentUser, params.checkIn, todayUsage, {
     accessToken: retryRequest.auth.accessToken,
   })
 }
@@ -1063,22 +1088,45 @@ export async function fetchCheckInStatus(
   return undefined
 }
 
+const ZERO_TODAY_USAGE_DATA: TodayUsageData = {
+  today_quota_consumption: 0,
+  today_prompt_tokens: 0,
+  today_completion_tokens: 0,
+  today_requests_count: 0,
+}
+
+const createSub2ApiUsageStatsEndpoint = (): string =>
+  `${SUB2API_USAGE_STATS_ENDPOINT}?period=today`
+
 /**
- * Sub2API usage stats are not mapped yet; return zeros.
+ * Fetch Sub2API user-level usage stats for today.
+ *
+ * Source: https://github.com/Wei-Shaw/sub2api
+ * User routes register authenticated `GET /api/v1/usage/stats`; `period=today`
+ * maps the response to the extension's existing today-usage account fields.
  */
 export async function fetchTodayUsage(
-  _request: ApiServiceRequest,
+  request: ApiServiceAccountRequest,
 ): Promise<TodayUsageData> {
-  return {
-    today_quota_consumption: 0,
-    today_prompt_tokens: 0,
-    today_completion_tokens: 0,
-    today_requests_count: 0,
+  if (request.includeTodayCashflow === false) {
+    return ZERO_TODAY_USAGE_DATA
   }
+
+  const endpoint = createSub2ApiUsageStatsEndpoint()
+  const data = await fetchSub2ApiData<Sub2ApiUsageStatsData>(
+    request,
+    endpoint,
+    {
+      method: "GET",
+      cache: "no-store",
+    },
+  )
+
+  return parseSub2ApiTodayUsage(data, endpoint)
 }
 
 /**
- * Sub2API income stats are not mapped yet; return zeros.
+ * Sub2API income stats are not mapped separately; return zero.
  */
 export async function fetchTodayIncome(
   _request: ApiServiceRequest,
@@ -1097,9 +1145,10 @@ export async function fetchAccountData(
     enableDetection: false,
   }
 
-  const currentUser = await fetchCurrentUser(request)
+  const { currentUser, todayUsage } =
+    await fetchCurrentUserAndTodayUsage(request)
 
-  return createAccountData(currentUser, checkIn)
+  return createAccountData(currentUser, checkIn, todayUsage)
 }
 
 /**
@@ -1148,9 +1197,10 @@ export async function refreshAccountData(
       }
     }
 
-    const currentUser = await fetchCurrentUser(effectiveRequest)
+    const { currentUser, todayUsage } =
+      await fetchCurrentUserAndTodayUsage(effectiveRequest)
 
-    return createRefreshSuccessResult(currentUser, checkIn, {
+    return createRefreshSuccessResult(currentUser, checkIn, todayUsage, {
       ...(hasProactiveRefreshUpdate
         ? {
             accessToken: effectiveRequest.auth.accessToken,
@@ -1180,9 +1230,10 @@ export async function refreshAccountData(
 
           const retryRequest = refreshed.request
 
-          const currentUser = await fetchCurrentUser(retryRequest)
+          const { currentUser, todayUsage } =
+            await fetchCurrentUserAndTodayUsage(retryRequest)
 
-          return createRefreshSuccessResult(currentUser, checkIn, {
+          return createRefreshSuccessResult(currentUser, checkIn, todayUsage, {
             accessToken: retryRequest.auth.accessToken,
             sub2apiAuth: {
               refreshToken: refreshed.refreshToken,

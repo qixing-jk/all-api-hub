@@ -18,6 +18,7 @@ import type {
   Sub2ApiKeyListData,
   Sub2ApiKeyWritePayloadBase,
   Sub2ApiUpdateKeyPayload,
+  Sub2ApiUsageStatsData,
 } from "./type"
 
 const SHARED_UNLIMITED_EXPIRED_TIME = -1
@@ -45,6 +46,13 @@ type Sub2ApiUserIdentity = {
   username: string
   balanceUsd: number
   quota: number
+}
+
+type Sub2ApiTodayUsage = {
+  today_quota_consumption: number
+  today_prompt_tokens: number
+  today_completion_tokens: number
+  today_requests_count: number
 }
 
 /**
@@ -330,6 +338,38 @@ export const parseSub2ApiKey = (
     group: parseSub2ApiKeyGroup(data),
     sub2api_group_id: parseSub2ApiKeyGroupId(data),
   })
+}
+
+/**
+ * Parse Sub2API user usage stats from `/api/v1/usage/stats?period=today`.
+ *
+ * Source: https://github.com/Wei-Shaw/sub2api
+ * User usage stats return cost fields in USD (`total_actual_cost`) and token
+ * counts as plain totals under the authenticated `/api/v1/usage/stats` route.
+ */
+export const parseSub2ApiTodayUsage = (
+  payload: unknown,
+  endpoint: string,
+): Sub2ApiTodayUsage => {
+  const data = toObjectRecord<Partial<Sub2ApiUsageStatsData>>(payload, endpoint)
+
+  return {
+    today_quota_consumption: convertUsdBalanceToQuota(
+      toFiniteNumberOrZero(data.total_actual_cost),
+    ),
+    today_prompt_tokens: Math.max(
+      0,
+      Math.trunc(toFiniteNumberOrZero(data.total_input_tokens)),
+    ),
+    today_completion_tokens: Math.max(
+      0,
+      Math.trunc(toFiniteNumberOrZero(data.total_output_tokens)),
+    ),
+    today_requests_count: Math.max(
+      0,
+      Math.trunc(toFiniteNumberOrZero(data.total_requests)),
+    ),
+  }
 }
 
 const parseSub2ApiGroupList = (
