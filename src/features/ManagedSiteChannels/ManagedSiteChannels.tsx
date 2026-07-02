@@ -529,6 +529,7 @@ export default function ManagedSiteChannels({
   }, [isAxonHub, isOctopus])
 
   useEffect(() => {
+    setColumnFilters([])
     setRowSelection({})
     setPendingDeleteIds([])
     setIsDeleteDialogOpen(false)

@@ -661,6 +661,23 @@ describe("ManagedSiteChannels", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("shows the filtered empty state when a route channel id matches no channels", async () => {
+    mockChannels([{ id: 1, name: "Alpha", base_url: "https://site-a.example" }])
+
+    render(<ManagedSiteChannels routeParams={{ channelId: "999" }} />)
+
+    await waitForChannelsRefreshIdle()
+
+    const input = screen.getByRole("textbox") as HTMLInputElement
+    expect(input.value).toBe("999")
+    expect(
+      screen.getByText("managedSiteChannels:table.emptyFiltered"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("managedSiteChannels:table.emptyNoChannels"),
+    ).not.toBeInTheDocument()
+  })
+
   it("opens managed-site settings from the title shortcut", async () => {
     mockChannels([{ id: 1, name: "Alpha", base_url: "https://site-a.example" }])
 
@@ -851,6 +868,105 @@ describe("ManagedSiteChannels", () => {
       expect(screen.getByText("Beta")).toBeInTheDocument()
       expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
     })
+  })
+
+  it("clears stale status filters when the managed site type changes", async () => {
+    const user = userEvent.setup()
+    let currentManagedSiteType: ManagedSiteType = SITE_TYPES.NEW_API
+    let currentPreferences = buildPreferences({
+      managedSiteType: currentManagedSiteType,
+      withMigrationTarget: true,
+    })
+    const newApiService = {
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        adminToken: "t",
+        userId: "1",
+      }),
+      listChannels: vi.fn().mockResolvedValue(
+        buildChannelListData([
+          {
+            id: 1,
+            name: "Alpha",
+            base_url: "https://site-a.example",
+            status: 1,
+          },
+          {
+            id: 2,
+            name: "Beta",
+            base_url: "https://site-b.example",
+            status: 2,
+          },
+        ]),
+      ),
+    } as any
+    const doneHubService = {
+      siteType: SITE_TYPES.DONE_HUB,
+      messagesKey: "donehub",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://donehub.example",
+        adminToken: "donehub-token",
+        userId: "9",
+      }),
+      listChannels: vi.fn().mockResolvedValue(buildChannelListData([])),
+    } as any
+
+    vi.mocked(useUserPreferencesContext).mockImplementation(
+      () =>
+        ({
+          preferences: currentPreferences,
+          managedSiteType: currentManagedSiteType,
+          newApiBaseUrl: currentPreferences.newApi.baseUrl,
+          newApiUserId: currentPreferences.newApi.userId,
+          newApiUsername: currentPreferences.newApi.username,
+          newApiPassword: currentPreferences.newApi.password,
+          newApiTotpSecret: currentPreferences.newApi.totpSecret,
+        }) as any,
+    )
+    vi.mocked(getManagedSiteService).mockImplementation(async () =>
+      currentManagedSiteType === SITE_TYPES.DONE_HUB
+        ? doneHubService
+        : newApiService,
+    )
+
+    const { rerender } = render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+    await waitForRowText("Beta")
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.status",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("checkbox", {
+        name: "managedSiteChannels:statusLabels.manualPause",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
+      expect(screen.getByText("Beta")).toBeInTheDocument()
+    })
+
+    currentManagedSiteType = SITE_TYPES.DONE_HUB
+    currentPreferences = buildPreferences({
+      managedSiteType: currentManagedSiteType,
+      withMigrationTarget: true,
+    })
+    rerender(<ManagedSiteChannels />)
+
+    await waitForChannelsRefreshIdle()
+
+    expect(
+      screen.getByText("managedSiteChannels:table.emptyNoChannels"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("managedSiteChannels:table.emptyFiltered"),
+    ).not.toBeInTheDocument()
   })
 
   it("reloads the channel list when refreshKey changes to a truthy value", async () => {
