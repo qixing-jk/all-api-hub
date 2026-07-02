@@ -7,6 +7,7 @@ import {
   deleteProvider,
   getUnmaskedProviderKey,
   listProviders,
+  listProvidersFromAction,
   normalizeClaudeCodeHubBaseUrl,
   redactClaudeCodeHubSecrets,
   searchProviders,
@@ -58,7 +59,7 @@ describe("Claude Code Hub action API adapter", () => {
       }),
     )
 
-    await expect(listProviders(config)).resolves.toEqual([
+    await expect(listProvidersFromAction(config)).resolves.toEqual([
       { id: 1, name: "OpenAI", url: "https://api.example.com" },
     ])
     expect(normalizeClaudeCodeHubBaseUrl(config.baseUrl)).toBe(
@@ -187,6 +188,38 @@ describe("Claude Code Hub action API adapter", () => {
     expect(capturedQuery).toBe("search match")
   })
 
+  it("lists providers through the provider v1 list API without search query", async () => {
+    let capturedAuthorization: string | null = null
+    let capturedQuery: string | null = null
+
+    server.use(
+      http.get(PROVIDER_V1_BASE, ({ request }) => {
+        const url = new URL(request.url)
+        capturedAuthorization = request.headers.get("authorization")
+        capturedQuery = url.searchParams.get("q")
+        return HttpResponse.json({
+          items: [
+            {
+              id: 10,
+              name: "Listed Provider",
+              url: "https://listed.example.com",
+            },
+          ],
+        })
+      }),
+    )
+
+    await expect(listProviders(config)).resolves.toEqual([
+      {
+        id: 10,
+        name: "Listed Provider",
+        url: "https://listed.example.com",
+      },
+    ])
+    expect(capturedAuthorization).toBe("Bearer admin-secret")
+    expect(capturedQuery).toBeNull()
+  })
+
   it("throws redacted errors for provider v1 search failures", async () => {
     server.use(
       http.get(PROVIDER_V1_BASE, () =>
@@ -237,7 +270,7 @@ describe("Claude Code Hub action API adapter", () => {
       ),
     )
 
-    await expect(listProviders(config)).resolves.toEqual([
+    await expect(listProvidersFromAction(config)).resolves.toEqual([
       { id: 2, name: "Codex", url: "https://codex.example.com" },
     ])
   })
@@ -252,7 +285,7 @@ describe("Claude Code Hub action API adapter", () => {
       ),
     )
 
-    await expect(listProviders(config)).resolves.toEqual([])
+    await expect(listProvidersFromAction(config)).resolves.toEqual([])
   })
 
   it("throws redacted errors for action failures and malformed responses", async () => {
@@ -306,7 +339,7 @@ describe("Claude Code Hub action API adapter", () => {
       ),
     )
 
-    await expect(listProviders(config)).rejects.toThrow(
+    await expect(listProvidersFromAction(config)).rejects.toThrow(
       "invalid action response",
     )
   })
@@ -333,7 +366,7 @@ describe("Claude Code Hub action API adapter", () => {
       }),
     )
 
-    await listProviders(config, { signal: controller.signal })
+    await listProvidersFromAction(config, { signal: controller.signal })
 
     expect(capturedSignal).toBeInstanceOf(AbortSignal)
     expect(capturedSignal).not.toBe(controller.signal)
@@ -374,7 +407,7 @@ describe("Claude Code Hub action API adapter", () => {
 
     try {
       await expect(
-        listProviders(config, {
+        listProvidersFromAction(config, {
           signal: controller.signal,
         }),
       ).resolves.toEqual([])
@@ -425,7 +458,7 @@ describe("Claude Code Hub action API adapter", () => {
 
     try {
       await expect(
-        listProviders(config, {
+        listProvidersFromAction(config, {
           signal: controller.signal,
         }),
       ).resolves.toEqual([])
@@ -459,7 +492,7 @@ describe("Claude Code Hub action API adapter", () => {
 
     try {
       await expect(
-        listProviders(config, {
+        listProvidersFromAction(config, {
           signal: controller.signal,
         }),
       ).rejects.toBeInstanceOf(ClaudeCodeHubApiError)
@@ -486,7 +519,7 @@ describe("Claude Code Hub action API adapter", () => {
       ),
     )
 
-    await expect(listProviders(config)).rejects.toBeInstanceOf(
+    await expect(listProvidersFromAction(config)).rejects.toBeInstanceOf(
       ClaudeCodeHubApiError,
     )
   })

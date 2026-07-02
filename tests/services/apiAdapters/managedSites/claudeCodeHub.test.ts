@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 const claudeCodeHubProvider = vi.hoisted(() => ({
   checkValidClaudeCodeHubConfig: vi.fn(),
+  listChannels: vi.fn(),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -25,6 +26,12 @@ describe("Claude Code Hub managed-site channel capability", () => {
   }
 
   it("exposes secret-key and comparable-key hydration helpers", async () => {
+    const listResponse = {
+      items: [{ id: 1, name: "Claude Code Hub" }],
+      total: 1,
+      type_counts: { claude: 1 },
+    }
+    claudeCodeHubProvider.listChannels.mockResolvedValue(listResponse)
     claudeCodeHubProvider.fetchChannelSecretKey.mockResolvedValue("real-key")
     claudeCodeHubProvider.hydrateComparableChannelKeys.mockResolvedValue([
       { id: 1, key: "real-key" },
@@ -34,6 +41,9 @@ describe("Claude Code Hub managed-site channel capability", () => {
       "~/services/apiAdapters/managedSites/claudeCodeHub"
     )
 
+    await expect(claudeCodeHubManagedSiteChannels.list?.(config)).resolves.toBe(
+      listResponse,
+    )
     await expect(
       claudeCodeHubManagedSiteChannels.fetchSecretKey?.(config, 1),
     ).resolves.toBe("real-key")

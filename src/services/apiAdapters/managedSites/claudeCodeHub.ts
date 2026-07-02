@@ -13,6 +13,7 @@ import {
   fetchAvailableModels,
   fetchChannelSecretKey,
   hydrateComparableChannelKeys,
+  listChannels,
   prepareChannelFormData,
   searchChannel,
   updateChannel,
@@ -25,6 +26,7 @@ import { emptyManagedSiteQueries } from "./unsupportedQueries"
 export const claudeCodeHubManagedSiteChannels: ManagedSiteChannelsCapability<ClaudeCodeHubConfig> =
   {
     search: searchChannel,
+    list: listChannels,
     create: createChannel,
     update: updateChannel,
     delete: deleteChannel,

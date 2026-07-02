@@ -149,6 +149,26 @@ function getProviderGroupTag(formData: Pick<ChannelFormData, "groups">) {
 }
 
 /**
+ * Converts Claude Code Hub provider rows into the shared managed-site list shape.
+ */
+function toManagedSiteChannelListData(
+  providers: ClaudeCodeHubProviderDisplay[],
+): ManagedSiteChannelListData {
+  const items = providers.map(providerToManagedSiteChannel)
+  const typeCounts = items.reduce<Record<string, number>>((acc, item) => {
+    const type = String(item.type)
+    acc[type] = (acc[type] ?? 0) + 1
+    return acc
+  }, {})
+
+  return {
+    items,
+    total: items.length,
+    type_counts: typeCounts,
+  }
+}
+
+/**
  * Clamps provider weights to Claude Code Hub's expected positive integer shape.
  */
 function toSafeWeight(weight?: number): number {
@@ -221,18 +241,7 @@ async function searchClaudeCodeHubChannels(
   keyword: string,
 ): Promise<ManagedSiteChannelListData> {
   const providers = await claudeCodeHubApi.searchProviders(config, keyword)
-  const items = providers.map(providerToManagedSiteChannel)
-  const typeCounts = items.reduce<Record<string, number>>((acc, item) => {
-    const type = String(item.type)
-    acc[type] = (acc[type] ?? 0) + 1
-    return acc
-  }, {})
-
-  return {
-    items,
-    total: items.length,
-    type_counts: typeCounts,
-  }
+  return toManagedSiteChannelListData(providers)
 }
 
 /**
@@ -380,6 +389,23 @@ export async function searchChannel(
     logger.error("Failed to search Claude Code Hub providers", error)
     return null
   }
+}
+
+/**
+ * Lists Claude Code Hub channels through the provider v1 list API.
+ */
+export async function listChannels(
+  config: ClaudeCodeHubConfig,
+  options?: {
+    signal?: AbortSignal
+    beforeRequest?: () => Promise<void>
+  },
+): Promise<ManagedSiteChannelListData> {
+  await options?.beforeRequest?.()
+  const providers = await claudeCodeHubApi.listProviders(config, {
+    ...(options?.signal ? { signal: options.signal } : {}),
+  })
+  return toManagedSiteChannelListData(providers)
 }
 
 /**

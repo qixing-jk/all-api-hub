@@ -21,6 +21,7 @@ import {
   fetchChannelSecretKey,
   getClaudeCodeHubConfig,
   hydrateComparableChannelKeys,
+  listChannels,
   prepareChannelFormData,
   providerToManagedSiteChannel,
   searchChannel,
@@ -360,6 +361,46 @@ describe("Claude Code Hub managed-site provider", () => {
 
     await expect(checkValidClaudeCodeHubConfig()).resolves.toBe(false)
     expect(claudeCodeHubApi.validateClaudeCodeHubConfig).not.toHaveBeenCalled()
+  })
+
+  it("lists providers through the same normalized channel list shape", async () => {
+    const requestSignal = new AbortController().signal
+    const beforeRequest = vi.fn().mockResolvedValue(undefined)
+    mockListProviders.mockResolvedValue([
+      {
+        id: 22,
+        name: "Provider Beta",
+        providerType: "claude",
+        url: "https://beta.example.com",
+        maskedKey: "sk-***",
+        allowedModels: ["claude-sonnet"],
+        groupTag: "team-b",
+      },
+    ])
+
+    await expect(
+      listChannels(passedClaudeCodeHubConfig, {
+        signal: requestSignal,
+        beforeRequest,
+      }),
+    ).resolves.toMatchObject({
+      total: 1,
+      items: [
+        expect.objectContaining({
+          id: 22,
+          name: "Provider Beta",
+          models: "claude-sonnet",
+        }),
+      ],
+      type_counts: {
+        claude: 1,
+      },
+    })
+    expect(beforeRequest).toHaveBeenCalledTimes(1)
+    expect(mockListProviders).toHaveBeenCalledWith(passedClaudeCodeHubConfig, {
+      signal: requestSignal,
+    })
+    expect(mockSearchProviders).not.toHaveBeenCalled()
   })
 
   it("searches, creates, updates, and deletes providers with passed admin config", async () => {

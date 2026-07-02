@@ -328,9 +328,9 @@ function extractProviderList(data: unknown): ClaudeCodeHubProviderDisplay[] {
 }
 
 /**
- * Lists Claude Code Hub providers through the admin action API.
+ * Lists Claude Code Hub providers through the legacy admin action API.
  */
-export async function listProviders(
+export async function listProvidersFromAction(
   config: ClaudeCodeHubConfig,
   options?: {
     signal?: AbortSignal
@@ -346,13 +346,34 @@ export async function listProviders(
   return extractProviderList(data)
 }
 
+type ClaudeCodeHubV1ProviderListOptions = {
+  keyword?: string
+  signal?: AbortSignal
+  timeoutMs?: number
+}
+
+/**
+ * Lists Claude Code Hub providers through the admin v1 provider list API.
+ *
+ * Upstream contract: ding113/claude-code-hub
+ * `src/app/api/v1/resources/providers/router.ts` registers
+ * `GET /api/v1/providers` and returns `{ items: ProviderSummary[] }`.
+ */
+export async function listProviders(
+  config: ClaudeCodeHubConfig,
+  options?: {
+    signal?: AbortSignal
+    timeoutMs?: number
+  },
+): Promise<ClaudeCodeHubProviderDisplay[]> {
+  return await fetchV1ProviderList(config, options)
+}
+
 /**
  * Searches Claude Code Hub providers through the admin v1 provider list API.
  *
  * Upstream contract: ding113/claude-code-hub
- * `src/app/api/v1/resources/providers/router.ts` registers
- * `GET /api/v1/providers` with optional `q` search text and returns
- * `{ items: ProviderSummary[] }`.
+ * `GET /api/v1/providers` accepts optional `q` search text.
  */
 export async function searchProviders(
   config: ClaudeCodeHubConfig,
@@ -362,9 +383,22 @@ export async function searchProviders(
     timeoutMs?: number
   },
 ): Promise<ClaudeCodeHubProviderDisplay[]> {
+  return await fetchV1ProviderList(config, {
+    ...options,
+    keyword,
+  })
+}
+
+/**
+ * Fetches the Claude Code Hub v1 provider list, optionally applying search text.
+ */
+async function fetchV1ProviderList(
+  config: ClaudeCodeHubConfig,
+  options?: ClaudeCodeHubV1ProviderListOptions,
+): Promise<ClaudeCodeHubProviderDisplay[]> {
   const baseUrl = normalizeClaudeCodeHubBaseUrl(config.baseUrl)
   const searchParams = new URLSearchParams()
-  const trimmedKeyword = keyword.trim()
+  const trimmedKeyword = options?.keyword?.trim()
   if (trimmedKeyword) {
     searchParams.set("q", trimmedKeyword)
   }
@@ -409,7 +443,7 @@ export async function validateClaudeCodeHubConfig(
     timeoutMs?: number
   },
 ): Promise<boolean> {
-  await listProviders(config, options)
+  await listProvidersFromAction(config, options)
   return true
 }
 
