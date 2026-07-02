@@ -220,6 +220,21 @@ describe("Claude Code Hub action API adapter", () => {
     expect(capturedQuery).toBeNull()
   })
 
+  it("throws when the provider v1 list API returns a non-JSON response", async () => {
+    server.use(
+      http.get(
+        PROVIDER_V1_BASE,
+        () =>
+          new HttpResponse("not json", {
+            status: 200,
+            headers: { "Content-Type": "text/plain" },
+          }),
+      ),
+    )
+
+    await expect(listProviders(config)).rejects.toThrow("non-JSON response")
+  })
+
   it("throws redacted errors for provider v1 search failures", async () => {
     server.use(
       http.get(PROVIDER_V1_BASE, () =>
@@ -237,6 +252,88 @@ describe("Claude Code Hub action API adapter", () => {
     await expect(searchProviders(config, "search match")).rejects.toThrow(
       "bad token [REDACTED] while searching",
     )
+  })
+
+  it("throws redacted errors for provider v1 list failures", async () => {
+    server.use(
+      http.get(PROVIDER_V1_BASE, () =>
+        HttpResponse.json(
+          {
+            type: "about:blank",
+            title: "Provider list failed",
+            detail: "bad token admin-secret while listing",
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    await expect(listProviders(config)).rejects.toThrow(
+      "bad token [REDACTED] while listing",
+    )
+  })
+
+  it("wraps provider v1 list network failures in a ClaudeCodeHubApiError", async () => {
+    server.use(http.get(PROVIDER_V1_BASE, () => HttpResponse.error()))
+
+    await expect(listProviders(config)).rejects.toBeInstanceOf(
+      ClaudeCodeHubApiError,
+    )
+  })
+
+  it("combines caller signals for the provider v1 list API", async () => {
+    const controller = new AbortController()
+    let capturedSignal: AbortSignal | null = null
+
+    server.use(
+      http.get(PROVIDER_V1_BASE, ({ request }) => {
+        capturedSignal = request.signal
+        return HttpResponse.json({ items: [] })
+      }),
+    )
+
+    await listProviders(config, { signal: controller.signal })
+
+    expect(capturedSignal).toBeInstanceOf(AbortSignal)
+    expect(capturedSignal).not.toBe(controller.signal)
+    if (!capturedSignal) {
+      throw new Error("Expected request signal to be captured")
+    }
+    const requestSignal: AbortSignal = capturedSignal
+    controller.abort()
+    expect(requestSignal.aborted).toBe(true)
+  })
+
+  it("rejects already-aborted caller signals for the provider v1 list API", async () => {
+    const originalAny = Object.getOwnPropertyDescriptor(AbortSignal, "any")
+    const originalTimeout = Object.getOwnPropertyDescriptor(
+      AbortSignal,
+      "timeout",
+    )
+    const controller = new AbortController()
+    controller.abort()
+
+    Object.defineProperty(AbortSignal, "any", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(AbortSignal, "timeout", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+
+    try {
+      await expect(
+        listProviders(config, {
+          signal: controller.signal,
+        }),
+      ).rejects.toBeInstanceOf(ClaudeCodeHubApiError)
+    } finally {
+      restoreAbortSignalStatic("any", originalAny)
+      restoreAbortSignalStatic("timeout", originalTimeout)
+    }
   })
 
   it("throws redacted errors for provider v1 reveal failures", async () => {
@@ -502,14 +599,18 @@ describe("Claude Code Hub action API adapter", () => {
     }
   })
 
-  it("validates config by delegating to provider listing", async () => {
+  it("validates config by delegating to the provider v1 list API", async () => {
+    let capturedAuthorization: string | null = null
+
     server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
-        HttpResponse.json({ ok: true, data: [] }),
-      ),
+      http.get(PROVIDER_V1_BASE, ({ request }) => {
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({ items: [] })
+      }),
     )
 
     await expect(validateClaudeCodeHubConfig(config)).resolves.toBe(true)
+    expect(capturedAuthorization).toBe("Bearer admin-secret")
   })
 
   it("wraps network failures in a ClaudeCodeHubApiError", async () => {

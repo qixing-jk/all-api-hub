@@ -443,7 +443,7 @@ export async function validateClaudeCodeHubConfig(
     timeoutMs?: number
   },
 ): Promise<boolean> {
-  await listProvidersFromAction(config, options)
+  await listProviders(config, options)
   return true
 }
 
