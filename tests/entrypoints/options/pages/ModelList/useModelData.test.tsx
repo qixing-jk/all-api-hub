@@ -163,6 +163,8 @@ const createMockSiteTypeCapabilities = (
     siteType?: DisplaySiteData["siteType"]
     modelPricing?: false
     modelCatalog?: false
+    keyManagement?: false
+    serviceCredential?: false
   } = {},
 ) =>
   ({
@@ -181,6 +183,26 @@ const createMockSiteTypeCapabilities = (
         ? {
             modelCatalog: {
               fetchModels: vi.fn(),
+            },
+          }
+        : {}),
+      ...(overrides.siteType === SITE_TYPES.SUB2API &&
+      overrides.keyManagement !== false
+        ? {
+            keyManagement: {},
+          }
+        : {}),
+      ...((!overrides.siteType || overrides.siteType === SITE_TYPES.NEW_API) &&
+      overrides.keyManagement !== false
+        ? {
+            keyManagement: {},
+          }
+        : {}),
+      ...(overrides.siteType === SITE_TYPES.SHAREDCHAT &&
+      overrides.serviceCredential !== false
+        ? {
+            serviceCredential: {
+              fetch: vi.fn(),
             },
           }
         : {}),
@@ -472,7 +494,7 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
     expect(fetchPricing).not.toHaveBeenCalled()
-    expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(account)
+    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
   })
 
   it("does not invoke all-account pricing when Sub2API has no fallback key", async () => {
@@ -2009,13 +2031,13 @@ describe("useModelData all-accounts loading", () => {
         { wrapper: createWrapper() },
       )
 
-      await waitFor(
-        () => {
-          expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(account)
-        },
-        { timeout: 3000 },
-      )
+      await waitFor(() => {
+        expect(result.current.loadErrorMessage).toBe(
+          "modelList:status.loadFailed",
+        )
+      })
       expect(fetchPricing).not.toHaveBeenCalled()
+      expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
       expect(result.current.pricingData).toBeNull()
     } finally {
       await modelPricingCache.invalidate(cacheKey)
@@ -2283,6 +2305,9 @@ describe("useModelData all-accounts loading", () => {
       account: {
         modelCatalog: {
           fetchModels: vi.fn(),
+        },
+        serviceCredential: {
+          fetch: vi.fn(),
         },
       },
     } as any)
