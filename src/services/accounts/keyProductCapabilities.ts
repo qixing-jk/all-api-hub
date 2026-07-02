@@ -66,7 +66,7 @@ const NO_ACCOUNT_KEY_PRODUCT_CAPABILITIES: AccountKeyProductCapabilities = {
  * Product-level readiness for account key features. This intentionally covers
  * account/auth completeness only; backend feature support is projected below.
  */
-export const canUseAccountKeyProductCapabilities = <
+const canUseAccountKeyProductCapabilities = <
   TAccount extends AccountKeyProductCapabilityContext,
 >(
   account: TAccount | null | undefined,

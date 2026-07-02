@@ -117,7 +117,7 @@ export function ServiceCredentialCard({
   } = useUserPreferencesContext()
   const { openWithCredentials } = useChannelDialog()
   const identityKey = `${account.id}:${credential.service}`
-  const visibleKeys = new Set([identityKey])
+  const visibleKeys = new Set<string>()
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
   const [ccSwitchProfile, setCCSwitchProfile] =
     useState<ApiCredentialProfile | null>(null)

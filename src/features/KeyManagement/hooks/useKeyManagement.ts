@@ -1579,6 +1579,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const rotateServiceCredential = async (account: DisplaySiteData) => {
     const { serviceCredential, request } =
       createDisplayAccountApiContext(account)
+    const loadEpoch = selectionEpochRef.current
+    const requestEpoch = getNextAccountRequestEpoch(account.id)
+
+    const isRotateRequestCurrent = () =>
+      isMountedRef.current &&
+      isEpochActive(loadEpoch) &&
+      isLatestAccountRequest(account.id, requestEpoch)
 
     if (!serviceCredential?.rotate) {
       toast.error(t("keyManagement:serviceCredential.rotateUnsupported"))
@@ -1598,6 +1605,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const credential = await serviceCredential.rotate(
         toApiServiceRequest(request),
       )
+      if (!isRotateRequestCurrent()) return
+
       setServiceCredentials((prev) => ({
         ...prev,
         [account.id]: {
@@ -1624,6 +1633,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       })
       toast.success(t("keyManagement:messages.serviceCredentialRotated"))
     } catch (error) {
+      if (!isRotateRequestCurrent()) return
+
       const errorMessage =
         getErrorMessage(error) ||
         t("keyManagement:messages.serviceCredentialRotateFailed")

@@ -86,6 +86,8 @@ describe("accountOperations validateAndSaveAccount", () => {
         data: {
           fetchData: fetchAccountDataMock,
         },
+        keyManagement: {},
+        tokenProvisioning: {},
       },
     })
   })

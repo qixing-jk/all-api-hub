@@ -57,4 +57,32 @@ describe("sharedChatContentSessionExtractor", () => {
       }),
     ).toBe(false)
   })
+
+  it("returns null when the session request fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
+
+    await expect(
+      sharedChatContentSessionExtractor.extract({
+        url: "https://new.sharedchat.cc",
+        siteTypeHint: SITE_TYPES.SHAREDCHAT,
+      }),
+    ).resolves.toBeNull()
+  })
+
+  it("returns null when the session response is not JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockRejectedValue(new SyntaxError("invalid json")),
+      }),
+    )
+
+    await expect(
+      sharedChatContentSessionExtractor.extract({
+        url: "https://new.sharedchat.cc",
+        siteTypeHint: SITE_TYPES.SHAREDCHAT,
+      }),
+    ).resolves.toBeNull()
+  })
 })

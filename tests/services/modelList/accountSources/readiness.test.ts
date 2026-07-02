@@ -85,6 +85,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
     ).toEqual({
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
       modelCatalog,
+      requiresTokenKeyResolution: false,
       dashboardEstimateLoader:
         ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,

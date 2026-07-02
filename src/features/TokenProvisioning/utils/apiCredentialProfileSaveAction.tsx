@@ -55,6 +55,10 @@ type ApiCredentialProfileBatchServiceCredentialItem = Extract<
   { kind: typeof KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential }
 >
 
+type ResolveTokenForSecret = NonNullable<
+  SaveApiTokensToApiCredentialProfilesParams["resolveTokenForSecret"]
+>
+
 const isServiceCredentialBatchItem = (
   item: ApiCredentialProfileBatchSaveItem,
 ): item is ApiCredentialProfileBatchServiceCredentialItem =>
@@ -64,6 +68,37 @@ const isAccountTokenBatchItem = (
   item: ApiCredentialProfileBatchSaveItem,
 ): item is ApiCredentialProfileBatchTokenItem =>
   !isServiceCredentialBatchItem(item)
+
+const normalizeBatchSaveItem = async (
+  item: ApiCredentialProfileBatchSaveItem,
+  resolveTokenForSecret: ResolveTokenForSecret,
+) => {
+  const { account } = item
+
+  if (isServiceCredentialBatchItem(item)) {
+    return {
+      account,
+      fallbackAccountName: account.name,
+      baseUrl: item.credential.baseUrl || account.baseUrl,
+      token: {
+        name: item.credential.label,
+        key: item.credential.key,
+      },
+    }
+  }
+
+  const resolvedToken = await resolveTokenForSecret(account, item.token)
+
+  return {
+    account,
+    fallbackAccountName: item.token.accountName,
+    baseUrl: account.baseUrl,
+    token: {
+      ...item.token,
+      key: resolvedToken.key,
+    },
+  }
+}
 
 const collectBatchSaveSecrets = (items: ApiCredentialProfileBatchSaveItem[]) =>
   items
@@ -182,32 +217,15 @@ export async function saveApiTokensToApiCredentialProfiles({
 
   try {
     for (const item of items) {
-      const { account } = item
-      const resolvedToken = isServiceCredentialBatchItem(item)
-        ? {
-            key: item.credential.key,
-            name: item.credential.label,
-            accountName: account.name,
-          }
-        : await resolveTokenForSecret(account, item.token)
-      const fallbackAccountName = isServiceCredentialBatchItem(item)
-        ? account.name
-        : item.token.accountName
-      const baseUrl = isServiceCredentialBatchItem(item)
-        ? item.credential.baseUrl || account.baseUrl
-        : account.baseUrl
+      const { account, fallbackAccountName, baseUrl, token } =
+        await normalizeBatchSaveItem(item, resolveTokenForSecret)
       await createApiCredentialProfileFromToken({
         accountName: account.name,
         fallbackAccountName,
         baseUrl,
         siteType: account.siteType,
         tagIds: account.tagIds ?? [],
-        token: {
-          ...(isServiceCredentialBatchItem(item)
-            ? { name: item.credential.label }
-            : item.token),
-          key: resolvedToken.key,
-        },
+        token,
       })
       savedCount += 1
     }

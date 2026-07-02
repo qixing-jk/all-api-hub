@@ -23,6 +23,7 @@ import {
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
   SHAREDCHAT_HOSTNAMES,
+  SHAREDCHAT_WEB_ORIGIN,
   SITE_TYPES,
 } from "./identifiers"
 
@@ -37,6 +38,8 @@ function makeTitleRegex(name: string): RegExp {
 
 const DEFAULT_USAGE_PATH = "/console/log"
 const DEFAULT_CHECKIN_PATH = "/console/personal"
+const SHAREDCHAT_CODEX_DASHBOARD_PATH =
+  "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex"
 
 const ACCOUNT_SITE_AUTH_TYPES = {
   AccessToken: AuthTypeEnum.AccessToken,
@@ -255,12 +258,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
       routes: {
         loginPath: "/list/#/login",
-        usagePath:
-          "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
-        adminCredentialsPath:
-          "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
-        siteAnnouncementsPath:
-          "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
+        usagePath: SHAREDCHAT_CODEX_DASHBOARD_PATH,
+        adminCredentialsPath: SHAREDCHAT_CODEX_DASHBOARD_PATH,
+        siteAnnouncementsPath: SHAREDCHAT_CODEX_DASHBOARD_PATH,
       },
     },
     productProfile: {
@@ -287,8 +287,8 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
       urls: {
         recognizedHostnames: SHAREDCHAT_HOSTNAMES,
-        storageOrigin: "https://new.sharedchat.cc",
-        duplicateOrigin: "https://new.sharedchat.cc",
+        storageOrigin: SHAREDCHAT_WEB_ORIGIN,
+        duplicateOrigin: SHAREDCHAT_WEB_ORIGIN,
       },
     },
     readiness: tokenScopedRuntimeModelListReadiness,

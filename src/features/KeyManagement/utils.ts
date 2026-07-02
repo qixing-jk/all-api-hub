@@ -37,7 +37,7 @@ export const buildServiceCredentialTransientToken = (
   name: credential.label,
   created_time: 0,
   accessed_time: 0,
-  expired_time: 0,
+  expired_time: -1,
   remain_quota: 0,
   unlimited_quota: true,
   used_quota: 0,

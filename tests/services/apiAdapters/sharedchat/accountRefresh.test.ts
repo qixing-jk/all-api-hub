@@ -64,4 +64,18 @@ describe("sharedChatAccountRefresh", () => {
 
     expect(mockFetchAccountData).toHaveBeenCalledWith(refreshRequest)
   })
+
+  it("returns a failed health result when the SharedChat quota fetch fails", async () => {
+    mockFetchAccountData.mockRejectedValueOnce(new TypeError("failed to fetch"))
+
+    await expect(
+      sharedChatAccountRefresh.refreshAccount(refreshRequest),
+    ).resolves.toEqual({
+      success: false,
+      healthStatus: {
+        status: SiteHealthStatus.Error,
+        message: "account:healthStatus.networkFailed",
+      },
+    })
+  })
 })

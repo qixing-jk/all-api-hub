@@ -346,9 +346,12 @@ export default function AccountActionButtons({
       }
     } catch (error) {
       logger.error("Failed to fetch key list", {
-        error,
+        diagnostic: toSanitizedErrorSummary(error, [
+          site.baseUrl,
+          site.token,
+          site.cookieAuthSessionCookie ?? "",
+        ]),
         siteId: site.id,
-        baseUrl: site.baseUrl,
         siteType: site.siteType,
       })
       if (error instanceof InvalidTokenPayloadError) {

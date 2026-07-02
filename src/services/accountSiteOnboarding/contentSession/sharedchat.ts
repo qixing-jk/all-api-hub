@@ -1,8 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { SHAREDCHAT_GETME_ENDPOINT } from "~/services/apiService/sharedchat/constants"
 
 import type { ContentSessionExtractor } from "../contracts"
-
-const SHAREDCHAT_GETME_ENDPOINT = "/frontend-api/getme"
 
 type SharedChatGetMeEnvelope = {
   code?: unknown
@@ -24,13 +23,20 @@ export const sharedChatContentSessionExtractor: ContentSessionExtractor = {
   id: "sharedchat",
   canExtract: (context) => context.siteTypeHint === SITE_TYPES.SHAREDCHAT,
   async extract() {
-    const response = await fetch(SHAREDCHAT_GETME_ENDPOINT, {
-      cache: "no-store",
-      credentials: "include",
-    })
-    if (!response.ok) return null
+    let body: SharedChatGetMeEnvelope
 
-    const body = (await response.json()) as SharedChatGetMeEnvelope
+    try {
+      const response = await fetch(SHAREDCHAT_GETME_ENDPOINT, {
+        cache: "no-store",
+        credentials: "include",
+      })
+      if (!response.ok) return null
+
+      body = (await response.json()) as SharedChatGetMeEnvelope
+    } catch {
+      return null
+    }
+
     if (body.code !== 1 || !body.data || typeof body.data !== "object") {
       return null
     }

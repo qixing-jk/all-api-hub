@@ -50,8 +50,18 @@ export interface AccountInfo {
   recentUsageRecords?: AccountUsageRecord[]
 }
 
+export const ACCOUNT_USAGE_SUMMARY_SCOPES = [
+  "today",
+  "current_period",
+  "rolling_window",
+  "lifetime",
+  "unknown",
+] as const
+export type AccountUsageSummaryScope =
+  (typeof ACCOUNT_USAGE_SUMMARY_SCOPES)[number]
+
 export interface AccountUsageSummary {
-  scope: "today" | "current_period" | "rolling_window" | "lifetime" | "unknown"
+  scope: AccountUsageSummaryScope
   totalRequests: number
   totalTokens: number
   totalCost: number

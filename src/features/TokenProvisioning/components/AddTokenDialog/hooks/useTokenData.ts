@@ -73,8 +73,10 @@ export function useTokenData(
           : EMPTY_USER_GROUPS,
       ])
 
+      const resolvedGroupsData = groupsData ?? EMPTY_USER_GROUPS
+
       setAvailableModels(models)
-      setGroups(groupsData)
+      setGroups(resolvedGroupsData)
 
       // Set default group (but keep existing selection when it's still valid).
       setFormData((prev) => {
@@ -87,9 +89,12 @@ export function useTokenData(
         const hasAllowedGroups = normalizedAllowedGroups.length > 0
         const allowedGroupSet = new Set(normalizedAllowedGroups)
 
+        const canValidateGroupMembership = canFetchGroups
         const isGroupEligible = (group: string) => {
           if (!group) return false
-          if (!groupsData[group]) return false
+          if (canValidateGroupMembership && !resolvedGroupsData[group]) {
+            return false
+          }
           if (!hasAllowedGroups) return true
           return allowedGroupSet.has(group)
         }
@@ -105,13 +110,14 @@ export function useTokenData(
 
           if (
             allowedGroupSet.has(DEFAULT_USER_GROUP_NAME) &&
-            groupsData[DEFAULT_USER_GROUP_NAME]
+            (!canValidateGroupMembership ||
+              resolvedGroupsData[DEFAULT_USER_GROUP_NAME])
           ) {
             return { ...prev, group: DEFAULT_USER_GROUP_NAME }
           }
 
           const firstAllowedGroup = normalizedAllowedGroups.find(
-            (group) => groupsData[group],
+            (group) => !canValidateGroupMembership || resolvedGroupsData[group],
           )
 
           return firstAllowedGroup
@@ -119,11 +125,11 @@ export function useTokenData(
             : prev
         }
 
-        if (groupsData[DEFAULT_USER_GROUP_NAME]) {
+        if (resolvedGroupsData[DEFAULT_USER_GROUP_NAME]) {
           return { ...prev, group: DEFAULT_USER_GROUP_NAME }
         }
 
-        const firstGroup = Object.keys(groupsData)[0]
+        const firstGroup = Object.keys(resolvedGroupsData)[0]
         return firstGroup ? { ...prev, group: firstGroup } : prev
       })
     } catch (error) {

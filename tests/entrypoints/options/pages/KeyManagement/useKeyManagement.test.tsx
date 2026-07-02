@@ -968,6 +968,109 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
+  it("ignores stale service credential rotation results after selection changes", async () => {
+    const sharedChatAccount = createDisplayAccount({
+      id: "sharedchat-stale-rotate-acc",
+      name: "SharedChat Stale Rotate",
+      siteType: SITE_TYPES.SHAREDCHAT,
+      baseUrl: "https://new.sharedchat.cc",
+      authType: AuthTypeEnum.Cookie,
+      token: "user-token",
+      cookieAuthSessionCookie: "share-session=test-cookie",
+    })
+    const otherAccount = createDisplayAccount({
+      id: "other-account",
+      name: "Other Account",
+    })
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [sharedChatAccount, otherAccount],
+    } as any)
+
+    let resolveRotation!: (credential: {
+      kind: "singleton_service_key"
+      service: "codex"
+      label: "Codex"
+      key: string
+      isAuthenticated: boolean
+      baseUrl: string
+    }) => void
+    const fetchServiceCredential = vi.fn().mockResolvedValue({
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "initial-codex-key",
+      isAuthenticated: true,
+      baseUrl: "https://codex.example.invalid",
+    })
+    const rotateServiceCredential = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveRotation = resolve
+        }),
+    )
+    const fetchTokens = vi.fn().mockResolvedValue([])
+    vi.mocked(getSiteTypeCapabilities).mockImplementation((siteType) =>
+      siteType === SITE_TYPES.SHAREDCHAT
+        ? (createAdapterWithServiceCredential({
+            fetch: fetchServiceCredential,
+            rotate: rotateServiceCredential,
+          }) as any)
+        : (createAdapterWithKeyManagement({ fetchTokens }) as any),
+    )
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(sharedChatAccount.id)
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.serviceCredentials[sharedChatAccount.id]?.credential
+          ?.key,
+      ).toBe("initial-codex-key"),
+    )
+
+    let rotatePromise!: Promise<void>
+    act(() => {
+      rotatePromise = result.current.rotateServiceCredential(sharedChatAccount)
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.serviceCredentials[sharedChatAccount.id]?.isRotating,
+      ).toBe(true),
+    )
+
+    act(() => {
+      result.current.setSelectedAccount(otherAccount.id)
+    })
+
+    await waitFor(() => expect(fetchTokens).toHaveBeenCalled())
+
+    await act(async () => {
+      resolveRotation({
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "stale-rotated-codex-key",
+        isAuthenticated: true,
+        baseUrl: "https://codex.example.invalid",
+      })
+      await rotatePromise
+    })
+
+    expect(
+      result.current.serviceCredentials[sharedChatAccount.id]?.credential?.key,
+    ).toBe("initial-codex-key")
+    expect(vi.mocked(toast.success)).not.toHaveBeenCalledWith(
+      "keyManagement:messages.serviceCredentialRotated",
+    )
+  })
+
   it("marks superseded all-account token refresh analytics as skipped", async () => {
     const account = createDisplayAccount({
       id: "superseded-refresh-acc",

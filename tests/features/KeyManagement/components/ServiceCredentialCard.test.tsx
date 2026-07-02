@@ -181,7 +181,8 @@ describe("ServiceCredentialCard", () => {
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.serviceCredentialCard),
     ).toBeInTheDocument()
     expect(screen.getByText("Codex")).toBeInTheDocument()
-    expect(screen.getByText("test-codex-service-key")).toBeInTheDocument()
+    expect(screen.queryByText("test-codex-service-key")).not.toBeInTheDocument()
+    expect(screen.getByText("test-cod****************-key")).toBeInTheDocument()
     expect(
       screen.getByText("https://codex.example.invalid"),
     ).toBeInTheDocument()

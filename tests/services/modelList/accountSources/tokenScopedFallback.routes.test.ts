@@ -120,7 +120,7 @@ describe("loadAccountTokenFallbackPricingResponse routing", () => {
       },
     })
     expect(result.model_list_source).toEqual({
-      kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
+      kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
       provider: SITE_TYPES.SUB2API,
       supportsRuntimeModelList: true,
       supportsPricing: false,

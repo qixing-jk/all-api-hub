@@ -3,6 +3,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { coerceAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import {
+  ACCOUNT_USAGE_SUMMARY_SCOPES,
   AuthTypeEnum,
   DELETED_ENTRY_KINDS,
   SiteHealthStatus,
@@ -63,7 +64,10 @@ const DEFAULT_SITE_ACCOUNT: SiteAccount = {
 
 const VALID_AUTH_TYPES = new Set(Object.values(AuthTypeEnum))
 
-const coerceNumber = (input: unknown, fallback: number) => {
+const coerceNumber = <TFallback extends number | undefined>(
+  input: unknown,
+  fallback: TFallback,
+): number | TFallback => {
   if (typeof input === "number" && Number.isFinite(input)) return input
   if (typeof input === "string" && input.trim() !== "") {
     const parsed = Number(input)
@@ -78,14 +82,7 @@ const coerceString = (input: unknown, fallback: string) =>
 const coerceOptionalString = (input: unknown) =>
   typeof input === "string" ? input : undefined
 
-const coerceOptionalNumber = (input: unknown) => {
-  if (typeof input === "number" && Number.isFinite(input)) return input
-  if (typeof input === "string" && input.trim() !== "") {
-    const parsed = Number(input)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return undefined
-}
+const coerceOptionalNumber = (input: unknown) => coerceNumber(input, undefined)
 
 const coerceOptionalBoolean = (input: unknown) =>
   typeof input === "boolean" ? input : undefined
@@ -102,13 +99,9 @@ const normalizeAccountUsageSummary = (
   raw: AccountUsageSummary | undefined,
 ): AccountUsageSummary | undefined => {
   if (!raw || typeof raw !== "object") return undefined
-  const allowedScopes = new Set<AccountUsageSummary["scope"]>([
-    "today",
-    "current_period",
-    "rolling_window",
-    "lifetime",
-    "unknown",
-  ])
+  const allowedScopes = new Set<AccountUsageSummary["scope"]>(
+    ACCOUNT_USAGE_SUMMARY_SCOPES,
+  )
   const scope = allowedScopes.has(raw.scope) ? raw.scope : "unknown"
 
   return {

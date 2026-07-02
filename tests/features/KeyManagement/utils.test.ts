@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
+  buildServiceCredentialTransientToken,
   buildTokenIdentityKey,
   formatKey,
   formatQuota,
 } from "~/features/KeyManagement/utils"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const { tMock } = vi.hoisted(() => ({
   tMock: vi.fn((key: string) => key),
@@ -71,6 +73,28 @@ describe("KeyManagement utils", () => {
       const quota = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR * 1.25
 
       expect(formatQuota(quota, false)).toBe("$1.25")
+    })
+  })
+
+  describe("buildServiceCredentialTransientToken", () => {
+    it("uses the shared no-expiry sentinel for service credentials", () => {
+      const account = buildDisplaySiteData({
+        id: "account-a",
+        name: "SharedChat",
+      })
+
+      expect(
+        buildServiceCredentialTransientToken(account, {
+          kind: "singleton_service_key",
+          service: "codex",
+          label: "Codex",
+          key: "sk-service-key",
+          isAuthenticated: true,
+          baseUrl: "https://codex.example.invalid",
+        }),
+      ).toMatchObject({
+        expired_time: -1,
+      })
     })
   })
 })

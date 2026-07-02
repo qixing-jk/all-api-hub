@@ -32,3 +32,4 @@ export const AIHUBMIX_HOSTNAMES = [
 ] as const
 
 export const SHAREDCHAT_HOSTNAMES = ["new.sharedchat.cc"] as const
+export const SHAREDCHAT_WEB_ORIGIN = "https://new.sharedchat.cc"

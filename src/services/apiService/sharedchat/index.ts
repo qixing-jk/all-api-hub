@@ -11,10 +11,12 @@ import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { t } from "~/utils/i18n/core"
 
-const SHAREDCHAT_GETME_ENDPOINT = "/frontend-api/getme"
-const SHAREDCHAT_CODEX_QUOTA_ENDPOINT = "/frontend-api/vibe-code/quota"
-const SHAREDCHAT_CODEX_RESET_KEY_ENDPOINT = "/frontend-api/vibe-code/reset-key"
-const SHAREDCHAT_CODEX_BASE_URL = "https://new.sharedchat.cc/codex"
+import {
+  SHAREDCHAT_CODEX_BASE_URL,
+  SHAREDCHAT_CODEX_QUOTA_ENDPOINT,
+  SHAREDCHAT_CODEX_RESET_KEY_ENDPOINT,
+  SHAREDCHAT_GETME_ENDPOINT,
+} from "./constants"
 
 type SharedChatEnvelope<T> = {
   code?: unknown
@@ -82,6 +84,18 @@ type SharedChatCodexQuotaPayload = {
 type SharedChatResetKeyPayload = {
   newKey?: unknown
 }
+
+const buildCodexServiceCredential = (params: {
+  key: string
+  isAuthenticated: boolean
+}): AccountServiceCredential => ({
+  kind: "singleton_service_key",
+  service: "codex",
+  label: "Codex",
+  key: params.key,
+  isAuthenticated: params.isAuthenticated,
+  baseUrl: SHAREDCHAT_CODEX_BASE_URL,
+})
 
 const toFiniteNumber = (value: unknown, fallback = 0): number => {
   if (typeof value === "number" && Number.isFinite(value)) return value
@@ -308,14 +322,10 @@ export async function fetchCodexServiceCredential(
   const codex = await getCodexQuota(request)
   const key = toOptionalString(codex.apiKey) ?? ""
 
-  return {
-    kind: "singleton_service_key",
-    service: "codex",
-    label: "Codex",
+  return buildCodexServiceCredential({
     key,
-    isAuthenticated: codex.isAuth === true,
-    baseUrl: SHAREDCHAT_CODEX_BASE_URL,
-  }
+    isAuthenticated: codex.isAuth === true && Boolean(key),
+  })
 }
 
 /**
@@ -349,12 +359,8 @@ export async function rotateCodexServiceCredential(
   )
   const key = toOptionalString(data?.newKey) ?? ""
 
-  return {
-    kind: "singleton_service_key",
-    service: "codex",
-    label: "Codex",
+  return buildCodexServiceCredential({
     key,
     isAuthenticated: true,
-    baseUrl: SHAREDCHAT_CODEX_BASE_URL,
-  }
+  })
 }

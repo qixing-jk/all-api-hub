@@ -821,6 +821,18 @@ describe("fetchDisplayAccountTokens", () => {
         userId: Number.NaN,
       } as any),
     ).toBe(false)
+
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: "unsupported",
+      account: {},
+    } as any)
+
+    expect(
+      canManageDisplayAccountTokens({
+        ...ACCOUNT,
+        siteType: "unsupported",
+      } as any),
+    ).toBe(false)
   })
 
   it("only allows token creation when the account has key-management capability", () => {

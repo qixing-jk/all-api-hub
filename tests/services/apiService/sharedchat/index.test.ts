@@ -142,6 +142,33 @@ describe("apiService SharedChat", () => {
     })
   })
 
+  it("does not mark Codex authenticated when the quota payload omits the service key", async () => {
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json({
+          ...sharedChatCodexQuotaSample,
+          data: {
+            ...sharedChatCodexQuotaSample.data,
+            codex: {
+              ...sharedChatCodexQuotaSample.data.codex,
+              isAuth: true,
+              apiKey: "  ",
+            },
+          },
+        }),
+      ),
+    )
+
+    await expect(fetchCodexServiceCredential(baseRequest)).resolves.toEqual({
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "",
+      isAuthenticated: false,
+      baseUrl: "https://new.sharedchat.cc/codex",
+    })
+  })
+
   it("fetches Codex service models through the OpenAI-compatible model list", async () => {
     server.use(
       http.get("https://new.sharedchat.cc/codex/v1/models", ({ request }) => {

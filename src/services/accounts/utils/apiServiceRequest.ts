@@ -3,7 +3,7 @@ import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accou
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   canCreateAccountApiTokens,
-  canUseAccountKeyProductCapabilities,
+  canListAccountRuntimeKeys,
 } from "~/services/accounts/keyProductCapabilities"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
@@ -405,7 +405,7 @@ export async function resolveDisplayAccountTokenForSecret<
  */
 export const canManageDisplayAccountTokens = (
   account: DisplaySiteData | null | undefined,
-): account is DisplaySiteData => canUseAccountKeyProductCapabilities(account)
+): account is DisplaySiteData => canListAccountRuntimeKeys(account)
 
 /**
  * Guard used by token-creation entry points before showing or enabling create
