@@ -136,7 +136,8 @@
     "ineligible": {
       "accountDisabled": "Tài khoản này đã bị vô hiệu hóa.",
       "missingAuth": "Tài khoản này chưa được cấu hình thông tin xác thực.",
-      "missingCredentials": "Tài khoản này thiếu các thông tin xác thực cần thiết."
+      "missingCredentials": "Tài khoản này thiếu các thông tin xác thực cần thiết.",
+      "readOnlyRuntimeKeys": "Tài khoản này có thể đọc các khóa runtime hiện có, nhưng không thể tạo khóa API mới."
     },
     "keyCopied": "Đã sao chép khóa",
     "loadFailed": "Tải khóa thất bại: {{error}}",
@@ -186,6 +187,10 @@
   "ratio": "Tỷ lệ:",
   "realAmount": "Số tiền nạp thực tế",
   "refreshData": "Làm mới dữ liệu",
+  "runtimeKeyFallbackSourceNotice": {
+    "description": "Danh mục mô hình hiện tại được tải bằng khóa runtime hiện có của tài khoản này, chỉ hỗ trợ phát hiện và xác minh mô hình. Tài khoản này không thể tạo khóa API mới tại đây; nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
+    "title": "Danh mục mô hình bằng khóa runtime"
+  },
   "searchModels": "Tìm kiếm mô hình",
   "searchPlaceholder": "Nhập tên hoặc mô tả mô hình...",
   "selectSource": "Chọn nguồn dữ liệu",

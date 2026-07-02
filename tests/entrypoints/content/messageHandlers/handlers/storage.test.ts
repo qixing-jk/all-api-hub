@@ -5,6 +5,7 @@ import {
   handleGetUserFromLocalStorage,
 } from "~/entrypoints/content/messageHandlers/handlers/storage"
 import { compatibleUserContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/compatibleUser"
+import { sharedChatContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/sharedchat"
 import {
   sub2ApiContentSessionExtractor,
   Sub2ApiContentSessionLoginRequiredError,
@@ -607,6 +608,49 @@ describe("content storage handler", () => {
       expect(matchingExtractor.extract).toHaveBeenCalledWith({
         url: "https://example.invalid",
         siteTypeHint: "unknown",
+      })
+    })
+
+    it("extracts SharedChat users with the site-type hint from temp-window detection", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          code: 1,
+          data: {
+            id: "shared-user-id",
+            name: "Shared User",
+            userToken: "shared-user-token",
+          },
+        }),
+      })
+      vi.stubGlobal("fetch", fetchMock)
+      mockGetContentSessionExtractors.mockReturnValue([
+        sharedChatContentSessionExtractor,
+        compatibleUserContentSessionExtractor,
+      ])
+
+      const response = await new Promise<any>((resolve) => {
+        handleGetUserFromLocalStorage(
+          {
+            url: "https://new.sharedchat.cc/list/#/vibe-code",
+            siteType: "sharedchat",
+          },
+          resolve,
+        )
+      })
+
+      expect(response).toEqual({
+        success: true,
+        data: {
+          userId: "shared-user-id",
+          user: {
+            id: "shared-user-id",
+            name: "Shared User",
+            userToken: "shared-user-token",
+          },
+          accessToken: "shared-user-token",
+          siteTypeHint: "sharedchat",
+        },
       })
     })
 

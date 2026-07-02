@@ -1,4 +1,3 @@
-import { SITE_TYPES } from "~/constants/siteType"
 import { resolveAccountSiteDefaultAuthType } from "~/services/accounts/accountSiteProfile"
 import { AuthTypeEnum } from "~/types"
 
@@ -14,7 +13,7 @@ interface AccountAuthDefaultInput {
  * `siteUrl` is accepted so future domain-backed rules can share this boundary.
  */
 export function resolveDefaultAccountAuthType({
-  siteType = SITE_TYPES.ANYROUTER,
+  siteType,
   siteUrl,
 }: AccountAuthDefaultInput = {}): AuthTypeEnum {
   return resolveAccountSiteDefaultAuthType({ siteType, url: siteUrl })

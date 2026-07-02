@@ -3,6 +3,7 @@ import {
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
 } from "~/services/accounts/accountSiteProfile"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type { ModelCatalogRequest } from "~/services/apiAdapters/contracts/modelCatalog"
 import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
 import {
@@ -18,7 +19,12 @@ import {
   buildSub2ApiRuntimePricingResponse,
   loadSub2ApiEstimatedPricingResponse,
 } from "~/services/modelList/accountSources/sub2apiEstimates"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import {
+  MODEL_LIST_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
+  type PricingResponse,
+} from "~/services/modelList/pricingModel"
+import { buildModelListCatalogPricingResponse } from "~/services/modelList/pricingResponse"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   isAbortError,
@@ -80,6 +86,42 @@ const createRuntimeCatalogRequest = (
   },
 })
 
+const buildRuntimeModelCatalogPricingResponse = (
+  account: LoadAccountTokenFallbackPricingParams["account"],
+  modelIds: string[],
+  unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+): PricingResponse =>
+  buildModelListCatalogPricingResponse({
+    modelIds,
+    unavailableReason,
+    source: {
+      kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+      provider: account.siteType,
+      supportsRuntimeModelList: true,
+      supportsPricing: false,
+    },
+  })
+
+const resolveFallbackTokenSecret = async (
+  params: LoadAccountTokenFallbackPricingParams,
+  readiness: ReturnType<typeof resolveModelListAccountSourceReadiness>,
+) => {
+  if (
+    readiness.route ===
+      MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog &&
+    !readiness.requiresTokenKeyResolution &&
+    hasUsableApiTokenKey(params.token.key)
+  ) {
+    return params.token
+  }
+
+  return params.abortSignal
+    ? resolveDisplayAccountTokenForSecret(params.account, params.token, {
+        abortSignal: params.abortSignal,
+      })
+    : resolveDisplayAccountTokenForSecret(params.account, params.token)
+}
+
 /**
  * Loads a minimal model catalog for an account token by combining selected-token
  * visibility with the source account's Model List readiness route.
@@ -112,15 +154,7 @@ export async function loadAccountTokenFallbackPricingResponse(
       throw createMissingModelPricingCapabilityError(params.account.siteType)
     }
 
-    const resolvedToken = params.abortSignal
-      ? await resolveDisplayAccountTokenForSecret(
-          params.account,
-          params.token,
-          {
-            abortSignal: params.abortSignal,
-          },
-        )
-      : await resolveDisplayAccountTokenForSecret(params.account, params.token)
+    const resolvedToken = await resolveFallbackTokenSecret(params, readiness)
     resolvedTokenKey = resolvedToken.key
 
     if (
@@ -134,13 +168,14 @@ export async function loadAccountTokenFallbackPricingResponse(
           params.abortSignal,
         ),
       )
-      const modelOnlyResponse =
-        buildSub2ApiRuntimePricingResponse(runtimeModelIds)
 
       if (
         readiness.dashboardEstimateLoader ===
         ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api
       ) {
+        const modelOnlyResponse =
+          buildSub2ApiRuntimePricingResponse(runtimeModelIds)
+
         return await loadSub2ApiEstimatedPricingResponse({
           account: params.account,
           selectedToken: params.token,
@@ -151,7 +186,10 @@ export async function loadAccountTokenFallbackPricingResponse(
         })
       }
 
-      return modelOnlyResponse
+      return buildRuntimeModelCatalogPricingResponse(
+        params.account,
+        runtimeModelIds,
+      )
     }
 
     if (

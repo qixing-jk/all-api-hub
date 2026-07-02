@@ -10,6 +10,12 @@ import type { DisplaySiteData } from "~/types"
 import { getCurrencySymbol } from "~/utils/core/formatters"
 import { getDisplayMoneyValue } from "~/utils/core/money"
 
+const formatCompactNumber = (value: number) =>
+  new Intl.NumberFormat(undefined, {
+    notation: Math.abs(value) >= 10000 ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  }).format(value)
+
 interface BalanceDisplayProps {
   site: DisplaySiteData
 }
@@ -117,6 +123,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
 
   const isRefreshing = refreshingAccountId === site.id
   const isAccountDisabled = site.disabled === true
+  const isSubscriptionInactive = site.subscription?.isActive === false
   const estimatedTodayIncomeEnabled =
     preferences?.balanceHistory?.estimatedTodayIncome?.enabled === true
   const estimatedTodayIncome = site.estimatedTodayIncome?.[currencyType]
@@ -206,6 +213,43 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 onClick={isAccountDisabled ? undefined : handleRefreshClick}
                 isRefreshing={isRefreshing}
               />
+            )}
+        </div>
+      )}
+
+      {(site.usage || site.subscription) && (
+        <div className="dark:text-dark-text-tertiary mt-0.5 flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5 text-[10px] text-gray-500 sm:text-xs">
+          {site.subscription?.name && (
+            <span
+              className="max-w-full truncate"
+              title={t("stats.subscriptionTitle")}
+            >
+              {site.subscription.name}
+            </span>
+          )}
+          {isSubscriptionInactive && (
+            <span
+              className="shrink-0 text-amber-600 dark:text-amber-400"
+              title={t("stats.subscriptionStatus")}
+            >
+              {t("stats.subscriptionInactive")}
+            </span>
+          )}
+          {typeof site.usage?.totalRequests === "number" && (
+            <span title={t("stats.usageRequests")}>
+              {formatCompactNumber(site.usage.totalRequests)}
+            </span>
+          )}
+          {typeof site.usage?.totalTokens === "number" && (
+            <span title={t("stats.usageTokens")}>
+              {formatCompactNumber(site.usage.totalTokens)}
+            </span>
+          )}
+          {!isSubscriptionInactive &&
+            typeof site.subscription?.remainingCount === "number" && (
+              <span title={t("stats.subscriptionRemainingCount")}>
+                {formatCompactNumber(site.subscription.remainingCount)}
+              </span>
             )}
         </div>
       )}

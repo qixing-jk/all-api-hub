@@ -51,6 +51,8 @@ const {
 }))
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  fetchDisplayAccountRuntimeKeys: (...args: any[]) =>
+    mockFetchDisplayAccountTokens(...args),
   fetchDisplayAccountTokens: (...args: any[]) =>
     mockFetchDisplayAccountTokens(...args),
   resolveDisplayAccountTokenForSecret: (...args: any[]) =>

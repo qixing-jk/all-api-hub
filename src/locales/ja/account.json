@@ -194,10 +194,16 @@
     "completion": "補完",
     "estimatedTodayIncome": "推定収入",
     "prompt": "プロンプト",
+    "subscriptionInactive": "未有効または期限切れ",
+    "subscriptionRemainingCount": "サブスクリプション残り回数",
+    "subscriptionStatus": "サブスクリプション状態",
+    "subscriptionTitle": "サブスクリプション",
     "todayConsumption": "本日の消費",
     "todayIncome": "本日の収入",
     "totalBalance": "総残高",
-    "trustedTodayIncome": "信頼済み収入"
+    "trustedTodayIncome": "信頼済み収入",
+    "usageRequests": "期間内リクエスト",
+    "usageTokens": "期間内トークン"
   },
   "title": "アカウント管理"
 }

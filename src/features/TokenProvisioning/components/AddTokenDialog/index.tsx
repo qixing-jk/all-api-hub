@@ -10,6 +10,10 @@ import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisionin
 import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
 import { normalizeDefaultTokenRequestName } from "~/services/accounts/defaultTokenLifecycle"
 import {
+  canCreateAccountApiTokens,
+  canUpdateAccountApiTokens,
+} from "~/services/accounts/keyProductCapabilities"
+import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
 } from "~/services/accounts/utils/apiServiceRequest"
@@ -166,6 +170,17 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     )
     setIsSubmitting(true)
     try {
+      if (
+        (isEditMode && !canUpdateAccountApiTokens(currentAccount)) ||
+        (!isEditMode && !canCreateAccountApiTokens(currentAccount))
+      ) {
+        throw new Error(
+          isEditMode
+            ? t("dialog.updateNotSupported")
+            : t("dialog.createNotSupported"),
+        )
+      }
+
       const rawTokenData: CreateTokenRequest = {
         name: formData.name.trim(),
         remain_quota: formData.unlimitedQuota

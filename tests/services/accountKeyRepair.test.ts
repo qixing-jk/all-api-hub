@@ -87,27 +87,53 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn((siteType: string) => ({
     siteType,
     account: {
-      tokenProvisioning:
-        siteType === SITE_TYPES.SUB2API
-          ? {
-              getRepairPolicy: () => ({
-                kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-                skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
+      ...(siteType === SITE_TYPES.SHAREDCHAT
+        ? {
+            serviceCredential: {
+              fetch: async () => ({
+                key: "sharedchat-service-key",
+                label: "SharedChat API key",
+                isAuthenticated: true,
               }),
-            }
-          : siteType === SITE_TYPES.AIHUBMIX
-            ? {
-                getRepairPolicy: () => ({
-                  kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-                  skipReason:
-                    ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
-                }),
-              }
-            : {
-                getRepairPolicy: () => ({
-                  kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-                }),
-              },
+              rotate: async () => ({
+                key: "sharedchat-rotated-service-key",
+                label: "SharedChat API key",
+                isAuthenticated: true,
+              }),
+            },
+          }
+        : {
+            keyManagement: {
+              fetchTokens: async () => [],
+              createToken: async () => true,
+              updateToken: async () => true,
+              resolveTokenKey: async ({ token }: any) => token.key,
+              deleteToken: async () => true,
+              fetchAvailableModels: async () => [],
+              userGroups: { fetch: async () => ({}) },
+            },
+            tokenProvisioning:
+              siteType === SITE_TYPES.SUB2API
+                ? {
+                    getRepairPolicy: () => ({
+                      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
+                      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
+                    }),
+                  }
+                : siteType === SITE_TYPES.AIHUBMIX
+                  ? {
+                      getRepairPolicy: () => ({
+                        kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
+                        skipReason:
+                          ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
+                      }),
+                    }
+                  : {
+                      getRepairPolicy: () => ({
+                        kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+                      }),
+                    },
+          }),
     },
   })),
 }))
@@ -245,10 +271,30 @@ describe("accountKeyRepair", () => {
       site_url: "https://cookie.example.com",
       authType: AuthTypeEnum.Cookie,
       disabled: false,
+      cookieAuth: { sessionCookie: "session=abc" },
       account_info: {
         id: "202",
         access_token: "",
         username: "cookie-user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const sharedChatAccount = buildSiteAccount({
+      id: "sharedchat-1",
+      site_type: SITE_TYPES.SHAREDCHAT,
+      site_url: "https://sharedchat.example.invalid",
+      authType: AuthTypeEnum.Cookie,
+      disabled: false,
+      cookieAuth: { sessionCookie: "session=sharedchat" },
+      account_info: {
+        id: "303",
+        access_token: "",
+        username: "sharedchat-user",
         quota: 0,
         today_prompt_tokens: 0,
         today_completion_tokens: 0,
@@ -263,6 +309,7 @@ describe("accountKeyRepair", () => {
       aihubmixAccount,
       validAccount,
       invalidDisplayAccount,
+      sharedChatAccount,
     ])
     mocks.convertToDisplayData.mockReturnValue([
       buildDisplaySiteData({
@@ -302,6 +349,16 @@ describe("accountKeyRepair", () => {
         token: "",
         cookieAuthSessionCookie: "",
       }),
+      buildDisplaySiteData({
+        id: sharedChatAccount.id,
+        name: "SharedChat",
+        baseUrl: sharedChatAccount.site_url,
+        siteType: SITE_TYPES.SHAREDCHAT,
+        authType: AuthTypeEnum.Cookie,
+        userId: "303",
+        token: "",
+        cookieAuthSessionCookie: "session=sharedchat",
+      }),
     ])
     mocks.ensureAccountKeysForAvailableGroups
       .mockResolvedValueOnce({
@@ -339,7 +396,7 @@ describe("accountKeyRepair", () => {
 
     const progress = await accountKeyRepairRunner.getProgress()
     expect(progress.totals).toMatchObject({
-      enabledAccounts: 4,
+      enabledAccounts: 5,
       eligibleAccounts: 2,
       processedAccounts: 2,
       processedEligibleAccounts: 2,
@@ -347,7 +404,7 @@ describe("accountKeyRepair", () => {
     expect(progress.summary).toEqual({
       created: 2,
       alreadyHad: 0,
-      skipped: 2,
+      skipped: 3,
       failed: 0,
       availableGroups: 0,
       coveredGroups: 0,
@@ -381,6 +438,13 @@ describe("accountKeyRepair", () => {
           accountId: "bad-cookie-1",
           outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
           siteUrlOrigin: "https://cookie.example.com",
+        }),
+        expect.objectContaining({
+          accountId: "sharedchat-1",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
+          skipReason:
+            ACCOUNT_KEY_REPAIR_SKIP_REASONS.TokenAutomationUnsupported,
+          siteUrlOrigin: "https://sharedchat.example.invalid",
         }),
       ]),
     )
@@ -1071,6 +1135,7 @@ describe("accountKeyRepair", () => {
       site_url: "https://cookie.example.com/path/",
       authType: AuthTypeEnum.Cookie,
       disabled: false,
+      cookieAuth: { sessionCookie: "session=abc" },
       account_info: {
         id: "404",
         access_token: "",

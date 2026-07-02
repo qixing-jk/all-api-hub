@@ -12,8 +12,7 @@ import {
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import {
-  createDisplayAccountApiContext,
-  requireDisplayAccountKeyManagement,
+  fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
@@ -203,11 +202,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
     setIsLoadingTokens(true)
     try {
-      const { keyManagement, request } = createDisplayAccountApiContext(account)
-      const accountTokens = await requireDisplayAccountKeyManagement(
-        account,
-        keyManagement,
-      ).fetchTokens(request)
+      const accountTokens = await fetchDisplayAccountRuntimeKeys(account)
 
       const sorted = [...accountTokens].sort((a, b) => {
         const aEnabled = a.status === 1 ? 0 : 1

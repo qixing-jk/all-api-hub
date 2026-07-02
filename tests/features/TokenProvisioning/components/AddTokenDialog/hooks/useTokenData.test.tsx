@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { useTokenData } from "~/features/TokenProvisioning/components/AddTokenDialog/hooks/useTokenData"
 import { AuthTypeEnum } from "~/types"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -46,13 +47,24 @@ const ACCOUNT = {
   id: "acc-1",
   name: "Example",
   username: "tester",
-  siteType: "new-api",
+  siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://example.com",
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
 } as any
+
+const SERVICE_CREDENTIAL_ONLY_ACCOUNT = {
+  ...ACCOUNT,
+  id: "sharedchat-1",
+  name: "SharedChat",
+  siteType: SITE_TYPES.SHAREDCHAT,
+  baseUrl: "https://sharedchat.example.invalid",
+  token: "",
+  authType: AuthTypeEnum.Cookie,
+  cookieAuthSessionCookie: "session=abc",
+}
 
 const createGroups = (keys: string[]) =>
   Object.fromEntries(
@@ -257,6 +269,34 @@ describe("useTokenData", () => {
 
     expect(result.current.groups).toEqual({})
     expect(fetchUserGroupsMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("does not load token metadata for service-credential-only accounts", async () => {
+    createDisplayAccountApiContextMock.mockReturnValue({
+      serviceCredential: {
+        fetch: vi.fn(),
+        rotate: vi.fn(),
+      },
+      request: { accountId: SERVICE_CREDENTIAL_ONLY_ACCOUNT.id },
+    })
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: SERVICE_CREDENTIAL_ONLY_ACCOUNT,
+      initialGroup: "default",
+    })
+
+    await waitFor(() => {
+      expect(createDisplayAccountApiContextMock).not.toHaveBeenCalled()
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    expect(fetchAccountAvailableModelsMock).not.toHaveBeenCalled()
+    expect(fetchUserGroupsMock).not.toHaveBeenCalled()
+    expect(result.current.availableModels).toEqual([])
+    expect(result.current.groups).toEqual({})
+    expect(result.current.formData.group).toBe("default")
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 

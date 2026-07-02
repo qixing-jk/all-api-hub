@@ -39,6 +39,7 @@ type ModelListAccountSourceReadiness =
   | (ModelListAccountSourceBaseReadiness & {
       route: typeof MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
       modelCatalog: ModelCatalogCapability
+      requiresTokenKeyResolution: boolean
       dashboardEstimateLoader: AccountSiteModelListDashboardEstimateLoader
     })
   | (ModelListAccountSourceBaseReadiness & {
@@ -92,6 +93,7 @@ export function resolveModelListAccountSourceReadiness(account: {
         ...base,
         route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
         modelCatalog: accountCapabilities.modelCatalog,
+        requiresTokenKeyResolution: Boolean(accountCapabilities.keyManagement),
         dashboardEstimateLoader: profile.dashboardEstimateLoader,
       }
     }

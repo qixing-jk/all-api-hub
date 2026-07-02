@@ -56,22 +56,31 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: (siteType: string) => ({
     account: {
-      keyManagement: {
-        fetchTokens: vi.fn(async () => []),
-        createToken: (...args: any[]) => createApiTokenMock(...args),
-        updateToken: (...args: any[]) => updateTokenMock(...args),
-        resolveTokenKey: async ({ token }: { token: { key: string } }) =>
-          token.key,
-        deleteToken: vi.fn(),
-        fetchAvailableModels: (...args: any[]) =>
-          fetchAccountAvailableModelsMock(...args),
-        userGroups:
-          siteType === SITE_TYPES.AIHUBMIX
-            ? undefined
-            : {
-                fetch: (...args: any[]) => fetchUserGroupsMock(...args),
-              },
-      },
+      ...(siteType === SITE_TYPES.SHAREDCHAT
+        ? {
+            serviceCredential: {
+              fetch: vi.fn(),
+              rotate: vi.fn(),
+            },
+          }
+        : {
+            keyManagement: {
+              fetchTokens: vi.fn(async () => []),
+              createToken: (...args: any[]) => createApiTokenMock(...args),
+              updateToken: (...args: any[]) => updateTokenMock(...args),
+              resolveTokenKey: async ({ token }: { token: { key: string } }) =>
+                token.key,
+              deleteToken: vi.fn(),
+              fetchAvailableModels: (...args: any[]) =>
+                fetchAccountAvailableModelsMock(...args),
+              userGroups:
+                siteType === SITE_TYPES.AIHUBMIX
+                  ? undefined
+                  : {
+                      fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+                    },
+            },
+          }),
     },
   }),
 }))
@@ -110,6 +119,17 @@ const AIHUBMIX_ACCOUNT = {
   name: "AIHubMix",
   siteType: SITE_TYPES.AIHUBMIX,
   baseUrl: "https://aihubmix.com",
+}
+
+const SERVICE_CREDENTIAL_ONLY_ACCOUNT = {
+  ...ACCOUNT,
+  id: "sharedchat-1",
+  name: "SharedChat",
+  siteType: SITE_TYPES.SHAREDCHAT,
+  baseUrl: "https://sharedchat.example.invalid",
+  token: "",
+  authType: AuthTypeEnum.Cookie,
+  cookieAuthSessionCookie: "session=abc",
 }
 
 describe("AddTokenDialog prefill", () => {
@@ -217,6 +237,41 @@ describe("AddTokenDialog prefill", () => {
     expect(toastErrorMock).not.toHaveBeenCalled()
     expect(trackerCompleteMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+  })
+
+  it("does not create API tokens for service-credential-only accounts", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[SERVICE_CREDENTIAL_ONLY_ACCOUNT]}
+        preSelectedAccountId={SERVICE_CREDENTIAL_ONLY_ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "Unsupported create",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.createNotSupported",
+      )
+    })
+
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      }),
     )
   })
 

@@ -90,6 +90,8 @@ vi.mock(
       ...actual,
       fetchDisplayAccountTokens: (...args: unknown[]) =>
         mockFetchDisplayAccountTokens(...args),
+      fetchDisplayAccountRuntimeKeys: (...args: unknown[]) =>
+        mockFetchDisplayAccountTokens(...args),
     }
   },
 )
@@ -2270,6 +2272,72 @@ describe("useModelData all-accounts loading", () => {
         },
       },
     ])
+  })
+
+  it("loads SharedChat Codex service credentials as token-scoped fallback keys", async () => {
+    const fetchPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("account pricing should not be called"))
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.SHAREDCHAT,
+      account: {
+        modelCatalog: {
+          fetchModels: vi.fn(),
+        },
+      },
+    } as any)
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: -1,
+        name: "Codex",
+        key: "sk-sharedchat-codex",
+        status: 1,
+        user_id: 12672,
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: false,
+        used_quota: 0,
+      },
+    ])
+
+    const account = createDisplayAccount({
+      id: "sharedchat-runtime-fallback-account",
+      siteType: SITE_TYPES.SHAREDCHAT,
+      baseUrl: "https://new.sharedchat.cc",
+      authType: AuthTypeEnum.Cookie,
+      token: "",
+      cookieAuthSessionCookie: "connect.sid=redacted",
+      userId: "12672",
+    })
+    const selectedSource = createAccountSource(account)
+    expect(selectedSource.capabilities.supportsPricing).toBe(true)
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource,
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(result.current.accountFallback?.tokens).toEqual([
+        expect.objectContaining({
+          id: -1,
+          key: "sk-sharedchat-codex",
+          name: "Codex",
+          status: 1,
+        }),
+      ])
+    })
+
+    expect(result.current.accountFallback?.isAvailable).toBe(true)
+    expect(result.current.accountFallback?.selectedTokenId).toBe(-1)
+    expect(fetchPricing).not.toHaveBeenCalled()
+    expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(account)
   })
 
   it("keeps New API direct-pricing failures account-scoped instead of token fallback-scoped", async () => {

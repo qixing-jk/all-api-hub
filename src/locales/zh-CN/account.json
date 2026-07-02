@@ -194,10 +194,16 @@
     "completion": "补全",
     "estimatedTodayIncome": "估算收入",
     "prompt": "提示",
+    "subscriptionInactive": "权益未激活或已过期",
+    "subscriptionRemainingCount": "订阅剩余次数",
+    "subscriptionStatus": "订阅状态",
+    "subscriptionTitle": "订阅套餐",
     "todayConsumption": "今日消耗",
     "todayIncome": "今日收入",
     "totalBalance": "总余额",
-    "trustedTodayIncome": "可信收入"
+    "trustedTodayIncome": "可信收入",
+    "usageRequests": "周期请求数",
+    "usageTokens": "周期 Token 数"
   },
   "title": "账户管理"
 }

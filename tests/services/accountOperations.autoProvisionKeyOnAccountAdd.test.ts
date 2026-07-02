@@ -104,6 +104,20 @@ describe("accountOperations auto-provision key on add", () => {
         data: {
           fetchData: fetchAccountDataMock,
         },
+        keyManagement: {
+          fetchTokens: vi.fn(),
+          createToken: vi.fn(),
+          updateToken: vi.fn(),
+          resolveTokenKey: vi.fn(),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: vi.fn(),
+        },
+        tokenProvisioning: {
+          isInventoryTokenUsable: vi.fn(),
+          resolveDefaultTokenCreation: vi.fn(),
+          classifyCreatedToken: vi.fn(),
+          getRepairPolicy: vi.fn(),
+        },
       },
     })
 
@@ -387,6 +401,46 @@ describe("accountOperations auto-provision key on add", () => {
 
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("skips auto-provision for service-credential-only accounts", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      siteType: SITE_TYPES.SHAREDCHAT,
+      account: {
+        data: {
+          fetchData: fetchAccountDataMock,
+        },
+        serviceCredential: {
+          fetch: vi.fn(),
+          rotate: vi.fn(),
+        },
+      },
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://sharedchat.example.invalid",
+      "SharedChat",
+      "tester",
+      "",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.SHAREDCHAT,
+      AuthTypeEnum.Cookie,
+      "session=abc",
+    )
+
+    expect(result.success).toBe(true)
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastCustomMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 

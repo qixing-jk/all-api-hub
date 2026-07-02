@@ -25,6 +25,7 @@ export const ACCOUNT_KEY_REPAIR_SKIP_REASONS = {
   Sub2Api: "sub2api",
   AihubmixOneTimeKey: "aihubmixOneTimeKey",
   NoneAuth: "noneAuth",
+  TokenAutomationUnsupported: "tokenAutomationUnsupported",
 } as const
 
 export type AccountKeyRepairSkipReason =

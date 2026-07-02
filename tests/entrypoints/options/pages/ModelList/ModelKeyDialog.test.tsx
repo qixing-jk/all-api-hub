@@ -63,16 +63,29 @@ vi.mock(
 )
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteTypeCapabilities: () => ({
-    account: {
-      keyManagement: {
-        fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-        createToken: (...args: any[]) => adapterCreateTokenMock(...args),
-        resolveTokenKey: async ({ token }: { token: { key: string } }) =>
-          token.key,
+  getSiteTypeCapabilities: (siteType: string) => {
+    if (siteType === SITE_TYPES.SHAREDCHAT) {
+      return {
+        account: {
+          serviceCredential: {
+            fetch: (...args: any[]) => fetchAccountTokensMock(...args),
+            rotate: vi.fn(),
+          },
+        },
+      }
+    }
+
+    return {
+      account: {
+        keyManagement: {
+          fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+          createToken: (...args: any[]) => adapterCreateTokenMock(...args),
+          resolveTokenKey: async ({ token }: { token: { key: string } }) =>
+            token.key,
+        },
       },
-    },
-  }),
+    }
+  },
 }))
 
 vi.mock("~/utils/navigation", () => ({
@@ -896,6 +909,32 @@ describe("ModelKeyDialog", () => {
       ),
     ).toBeInTheDocument()
     expect(fetchAccountTokensMock).not.toHaveBeenCalled()
+  })
+
+  it("explains service-credential accounts as read-only instead of missing credentials", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce({
+      key: "sk-sharedchat",
+      updatedAt: "2026-07-02T00:00:00.000Z",
+    })
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{ ...ACCOUNT, siteType: SITE_TYPES.SHAREDCHAT }}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        "modelList:keyDialog.ineligible.readOnlyRuntimeKeys",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:keyDialog.ineligible.missingCredentials"),
+    ).not.toBeInTheDocument()
   })
 
   it("clears loaded token state when the selected account becomes ineligible", async () => {

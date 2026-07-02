@@ -194,10 +194,16 @@
     "completion": "Hoàn thành",
     "estimatedTodayIncome": "Thu nhập ước tính",
     "prompt": "Nhắc nhở",
+    "subscriptionInactive": "Chưa kích hoạt hoặc đã hết hạn",
+    "subscriptionRemainingCount": "Số lượt đăng ký còn lại",
+    "subscriptionStatus": "Trạng thái gói đăng ký",
+    "subscriptionTitle": "Gói đăng ký",
     "todayConsumption": "Tiêu hao hôm nay",
     "todayIncome": "Thu nhập hôm nay",
     "totalBalance": "Tổng số dư",
-    "trustedTodayIncome": "Thu nhập tin cậy"
+    "trustedTodayIncome": "Thu nhập tin cậy",
+    "usageRequests": "Yêu cầu trong kỳ",
+    "usageTokens": "Token trong kỳ"
   },
   "title": "Quản lý tài khoản"
 }

@@ -194,10 +194,16 @@
     "completion": "補全",
     "estimatedTodayIncome": "估算收入",
     "prompt": "提示",
+    "subscriptionInactive": "權益未啟用或已過期",
+    "subscriptionRemainingCount": "訂閱剩餘次數",
+    "subscriptionStatus": "訂閱狀態",
+    "subscriptionTitle": "訂閱方案",
     "todayConsumption": "今日消耗",
     "todayIncome": "今日收入",
     "totalBalance": "總餘額",
-    "trustedTodayIncome": "可信收入"
+    "trustedTodayIncome": "可信收入",
+    "usageRequests": "週期請求數",
+    "usageTokens": "週期 Token 數"
   },
   "title": "帳戶管理"
 }

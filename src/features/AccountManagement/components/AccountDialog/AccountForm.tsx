@@ -23,7 +23,7 @@ import {
   Switch,
   Textarea,
 } from "~/components/ui"
-import { ACCOUNT_SITE_TITLE_RULES, SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
 import {
@@ -189,9 +189,9 @@ export default function AccountForm({
               </div>
             </SelectTrigger>
             <SelectContent>
-              {ACCOUNT_SITE_TITLE_RULES.map((rule) => (
-                <SelectItem key={rule.name} value={rule.name}>
-                  {rule.name}
+              {ACCOUNT_SITE_TYPES.map((siteType) => (
+                <SelectItem key={siteType} value={siteType}>
+                  {siteType}
                 </SelectItem>
               ))}
             </SelectContent>

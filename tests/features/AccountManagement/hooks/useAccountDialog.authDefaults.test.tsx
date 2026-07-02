@@ -153,6 +153,23 @@ describe("useAccountDialog auth defaults", () => {
     expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
   })
 
+  it("uses Cookie auth when a SharedChat URL is entered before site type is known", async () => {
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await act(async () => {
+      result.current.handlers.handleUrlChange("https://new.sharedchat.cc/list")
+    })
+
+    expect(result.current.state.url).toBe("https://new.sharedchat.cc")
+    expect(result.current.state.siteType).toBe(SITE_TYPES.UNKNOWN)
+    expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
+  })
+
   it("does not overwrite explicit auth when an AnyRouter URL is entered", async () => {
     const { result } = renderAccountDialogHook({
       mode: DIALOG_MODES.ADD,

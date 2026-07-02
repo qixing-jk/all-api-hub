@@ -5,8 +5,12 @@ import { useTranslation } from "react-i18next"
 import { buildGroupDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
 import {
-  canManageDisplayAccountTokens,
+  canCreateAccountApiTokens,
+  canListAccountRuntimeKeys,
+} from "~/services/accounts/keyProductCapabilities"
+import {
   createDisplayAccountApiContext,
+  fetchDisplayAccountRuntimeKeys,
   fetchDisplayAccountTokens,
   InvalidTokenPayloadError,
   requireDisplayAccountKeyManagement,
@@ -65,7 +69,12 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   const fetchRequestIdRef = useRef(0)
 
   const canCreateToken = useMemo(
-    () => canManageDisplayAccountTokens(account),
+    () => canCreateAccountApiTokens(account),
+    [account],
+  )
+
+  const canLoadRuntimeKeys = useMemo(
+    () => canListAccountRuntimeKeys(account),
     [account],
   )
 
@@ -76,12 +85,14 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       return t("modelList:keyDialog.ineligible.accountDisabled")
     if (account.authType === AuthTypeEnum.None)
       return t("modelList:keyDialog.ineligible.missingAuth")
+    if (canLoadRuntimeKeys)
+      return t("modelList:keyDialog.ineligible.readOnlyRuntimeKeys")
     return t("modelList:keyDialog.ineligible.missingCredentials")
-  }, [account, canCreateToken, t])
+  }, [account, canCreateToken, canLoadRuntimeKeys, t])
 
   const fetchTokens = useCallback(async () => {
     if (!account) return false
-    if (!canCreateToken) {
+    if (!canLoadRuntimeKeys) {
       fetchRequestIdRef.current += 1
       setTokens([])
       setSelectedTokenId(null)
@@ -98,7 +109,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     setCreateError(null)
 
     try {
-      const fetchedTokens = await fetchDisplayAccountTokens(account)
+      const fetchedTokens = await fetchDisplayAccountRuntimeKeys(account)
       if (fetchRequestIdRef.current !== requestId) return false
       setTokens(fetchedTokens)
       return true
@@ -129,7 +140,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
         setIsLoading(false)
       }
     }
-  }, [account, canCreateToken, t])
+  }, [account, canLoadRuntimeKeys, t])
 
   const modelContext = useMemo(
     () => ({ id: modelId, enableGroups: modelEnableGroups }),

@@ -136,7 +136,8 @@
     "ineligible": {
       "accountDisabled": "このアカウントは無効です。",
       "missingAuth": "このアカウントには認証設定がありません。",
-      "missingCredentials": "このアカウントには必要な認証情報が不足しています。"
+      "missingCredentials": "このアカウントには必要な認証情報が不足しています。",
+      "readOnlyRuntimeKeys": "このアカウントは既存のランタイムキーを読み取れますが、新しい API キーは作成できません。"
     },
     "keyCopied": "キーをコピーしました",
     "loadFailed": "キーの読み込みに失敗しました: {{error}}",
@@ -186,6 +187,10 @@
   "ratio": "倍率:",
   "realAmount": "実際のチャージ額",
   "refreshData": "データを更新",
+  "runtimeKeyFallbackSourceNotice": {
+    "description": "このカタログは、このアカウントの既存ランタイムキー経由で読み込まれているため、モデル検出と検証のみ利用できます。このアカウントではここから新しい API キーを作成できません。[データを更新] を押すと直接のアカウント経路を再試行します。",
+    "title": "ランタイムキーモデルカタログ"
+  },
   "searchModels": "モデルを検索",
   "searchPlaceholder": "モデル名または説明を入力...",
   "selectSource": "ソースを選択",

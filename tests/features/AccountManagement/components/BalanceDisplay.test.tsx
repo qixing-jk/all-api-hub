@@ -436,4 +436,70 @@ describe("BalanceDisplay", () => {
     expect(screen.queryByTestId("countup")).toBeNull()
     expect(balanceNode).toHaveTextContent("¥28.00")
   })
+
+  it("renders provider usage and subscription details when account data exposes them", () => {
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          usage: {
+            scope: "current_period",
+            totalRequests: 42,
+            totalTokens: 12345,
+            totalCost: 6.5,
+            lastRequestTime: "2026-07-01T12:00:00.000Z",
+          },
+          subscription: {
+            name: "Codex Pro",
+            billingType: "amount",
+            remainingAmount: 13.5,
+            amountLimit: 20,
+            remainingCount: 8,
+            usedCount: 2,
+            periodResetTime: "2026-08-01T00:00:00.000Z",
+            expireTime: "2026-12-31T23:59:59.000Z",
+            isActive: true,
+          },
+        } as any)}
+      />,
+    )
+
+    expect(
+      screen.getByTitle("account:stats.subscriptionTitle"),
+    ).toHaveTextContent("Codex Pro")
+    expect(screen.getByTitle("account:stats.usageRequests")).toHaveTextContent(
+      "42",
+    )
+    expect(screen.getByTitle("account:stats.usageTokens")).toHaveTextContent(
+      "12.3K",
+    )
+    expect(
+      screen.getByTitle("account:stats.subscriptionRemainingCount"),
+    ).toHaveTextContent("8")
+  })
+
+  it("marks inactive provider subscriptions so stale remaining quota is not shown as healthy", () => {
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          subscription: {
+            name: "codex 公益 每日100刀",
+            billingType: "amount",
+            remainingAmount: 100,
+            amountLimit: 100,
+            remainingCount: 100,
+            periodResetTime: "2026-07-03T00:00:00.000+08:00",
+            expireTime: "2026-06-13T00:00:00.000+08:00",
+            isActive: false,
+          },
+        } as any)}
+      />,
+    )
+
+    expect(
+      screen.getByTitle("account:stats.subscriptionStatus"),
+    ).toHaveTextContent("account:stats.subscriptionInactive")
+    expect(
+      screen.queryByTitle("account:stats.subscriptionRemainingCount"),
+    ).not.toBeInTheDocument()
+  })
 })

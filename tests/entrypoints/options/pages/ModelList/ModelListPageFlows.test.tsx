@@ -521,6 +521,52 @@ describe("ModelList page flows", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("labels runtime-key fallback catalogs separately from token-management fallback catalogs", async () => {
+    const sharedChatAccount = {
+      ...ACCOUNT,
+      siteType: "sharedchat",
+    }
+
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        currentAccount: sharedChatAccount,
+        selectedSource: createAccountSource(sharedChatAccount),
+        sourceCapabilities: createAccountSource(sharedChatAccount).capabilities,
+        isFallbackCatalogActive: true,
+        fallbackTokenName: "SharedChat service credential",
+        pricingData: {
+          success: true,
+          data: [{ model_name: "gpt-runtime" }],
+          group_ratio: {},
+          usable_group: {},
+        },
+        baseFilteredModels: [
+          {
+            model: { model_name: "gpt-runtime" },
+            source: createAccountSource(sharedChatAccount),
+          },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      await screen.findByText("modelList:runtimeKeyFallbackSourceNotice.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("modelList:runtimeKeyFallbackSourceNotice.description", {
+        exact: false,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:fallbackSourceNotice.title"),
+    ).not.toBeInTheDocument()
+  })
+
   it("keeps summary counts sourced from the pre-account-filter model set", async () => {
     mockUseModelListData.mockReturnValue(
       buildState({

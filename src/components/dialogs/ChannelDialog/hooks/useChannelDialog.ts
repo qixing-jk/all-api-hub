@@ -584,6 +584,7 @@ export function useChannelDialog() {
   const openWithCredentials = async (
     credentials: { name: string; baseUrl: string; apiKey: string },
     onSuccess?: (result: any) => void,
+    options?: Pick<PrefilledChannelOpenOptions, "managedSiteStatus">,
   ): Promise<OpenWithAccountResult> => {
     const toastId = toast.loading(
       t("messages:accountOperations.checkingApiKeys"),
@@ -627,6 +628,7 @@ export function useChannelDialog() {
         accountBaseUrl: formData.base_url,
         models: formData.models,
         key: formData.key,
+        managedSiteStatus: options?.managedSiteStatus,
       })
 
       if (duplicateState.existingChannelName) {

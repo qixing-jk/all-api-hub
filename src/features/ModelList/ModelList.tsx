@@ -20,6 +20,10 @@ import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
+import {
+  canCreateAccountApiTokens,
+  canListAccountRuntimeKeys,
+} from "~/services/accounts/keyProductCapabilities"
 import { getAllProviders } from "~/services/models/utils/modelProviders"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
@@ -192,6 +196,11 @@ export default function ModelList(props: {
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
       ? pricingContexts && pricingContexts.length > 0
       : !!pricingData
+  const isRuntimeKeyOnlyFallbackCatalog =
+    isFallbackCatalogActive &&
+    !!currentAccount &&
+    canListAccountRuntimeKeys(currentAccount) &&
+    !canCreateAccountApiTokens(currentAccount)
   const shouldShowSourceSetupEmptyState = !hasAnySources
   const shouldShowSourceSelectionEmptyState =
     !shouldShowSourceSetupEmptyState && !selectedSource
@@ -555,8 +564,16 @@ export default function ModelList(props: {
             <Alert
               variant="info"
               className="mb-6"
-              title={t("fallbackSourceNotice.title")}
-              description={t("fallbackSourceNotice.description")}
+              title={
+                isRuntimeKeyOnlyFallbackCatalog
+                  ? t("runtimeKeyFallbackSourceNotice.title")
+                  : t("fallbackSourceNotice.title")
+              }
+              description={
+                isRuntimeKeyOnlyFallbackCatalog
+                  ? t("runtimeKeyFallbackSourceNotice.description")
+                  : t("fallbackSourceNotice.description")
+              }
             />
           )}
 

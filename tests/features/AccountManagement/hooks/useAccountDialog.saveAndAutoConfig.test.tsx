@@ -2467,6 +2467,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         createToken: vi.fn(),
         resolveTokenKey: vi.fn(),
       } as any,
+      serviceCredential: undefined,
       tokenProvisioning: undefined,
       request: { accountId: savedDisplayData.id } as any,
     })
@@ -2580,6 +2581,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         createToken: vi.fn(),
         resolveTokenKey: vi.fn(),
       } as any,
+      serviceCredential: undefined,
       tokenProvisioning: undefined,
       request: { accountId: savedDisplayData.id } as any,
     })
@@ -2686,6 +2688,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         createToken: vi.fn(),
         resolveTokenKey: vi.fn(),
       } as any,
+      serviceCredential: undefined,
       tokenProvisioning: undefined,
       request: { accountId: savedDisplayData.id } as any,
     })

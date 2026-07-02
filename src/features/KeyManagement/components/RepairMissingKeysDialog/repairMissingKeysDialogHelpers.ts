@@ -150,6 +150,10 @@ export function getSkipReasonLabel(
       return t("keyManagement:repairMissingKeys.skipReasons.aihubmixOneTimeKey")
     case ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth:
       return t("keyManagement:repairMissingKeys.skipReasons.noneAuth")
+    case ACCOUNT_KEY_REPAIR_SKIP_REASONS.TokenAutomationUnsupported:
+      return t(
+        "keyManagement:repairMissingKeys.skipReasons.tokenAutomationUnsupported",
+      )
   }
 }
 

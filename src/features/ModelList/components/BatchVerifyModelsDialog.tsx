@@ -37,7 +37,7 @@ import {
 } from "~/features/ModelList/testIds"
 import { cn } from "~/lib/utils"
 import {
-  fetchDisplayAccountTokens,
+  fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
@@ -447,7 +447,7 @@ export function BatchVerifyModelsDialog({
       const cached = tokenCacheRef.current.get(account.id)
       if (cached) return cached
 
-      const promise = fetchDisplayAccountTokens(account)
+      const promise = fetchDisplayAccountRuntimeKeys(account)
       tokenCacheRef.current.set(account.id, promise)
       return promise
     },

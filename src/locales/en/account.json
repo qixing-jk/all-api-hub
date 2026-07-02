@@ -203,10 +203,16 @@
     "completion": "Completion",
     "estimatedTodayIncome": "Estimated income",
     "prompt": "Prompt",
+    "subscriptionInactive": "Inactive or expired",
+    "subscriptionRemainingCount": "Remaining subscription requests",
+    "subscriptionStatus": "Subscription status",
+    "subscriptionTitle": "Subscription",
     "todayConsumption": "Today's Consumption",
     "todayIncome": "Today's Income",
     "totalBalance": "Total Balance",
-    "trustedTodayIncome": "Trusted income"
+    "trustedTodayIncome": "Trusted income",
+    "usageRequests": "Period requests",
+    "usageTokens": "Period tokens"
   },
   "title": "Account Management"
 }

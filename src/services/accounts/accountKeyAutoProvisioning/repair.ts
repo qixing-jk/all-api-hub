@@ -2,6 +2,10 @@ import { Storage } from "@plasmohq/storage"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  canRunAccountDefaultTokenAutomation,
+  createStoredAccountKeyProductContext,
+} from "~/services/accounts/keyProductCapabilities"
 import { TOKEN_PROVISIONING_REPAIR_POLICY_KINDS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -100,6 +104,14 @@ function getSkipReason(
 
   if (account.authType === AuthTypeEnum.None) {
     return ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth
+  }
+
+  if (
+    !canRunAccountDefaultTokenAutomation(
+      createStoredAccountKeyProductContext(account),
+    )
+  ) {
+    return ACCOUNT_KEY_REPAIR_SKIP_REASONS.TokenAutomationUnsupported
   }
 
   return null

@@ -142,7 +142,8 @@
     "ineligible": {
       "accountDisabled": "This account is disabled.",
       "missingAuth": "This account does not have authentication configured.",
-      "missingCredentials": "This account is missing required credentials."
+      "missingCredentials": "This account is missing required credentials.",
+      "readOnlyRuntimeKeys": "This account can read existing runtime keys, but it cannot create new API keys."
     },
     "keyCopied": "Key copied",
     "loadFailed": "Failed to load keys: {{error}}",
@@ -192,6 +193,10 @@
   "ratio": "Ratio:",
   "realAmount": "Real Recharge Amount",
   "refreshData": "Refresh Data",
+  "runtimeKeyFallbackSourceNotice": {
+    "description": "This catalog is loaded through an existing runtime key for this account, so it only supports model discovery and verification. This account cannot create new API keys here; Refresh Data will retry the direct account route.",
+    "title": "Runtime-key model catalog"
+  },
   "searchModels": "Search Models",
   "searchPlaceholder": "Enter model name or description...",
   "selectSource": "Select Source",

@@ -19,7 +19,8 @@ import {
 } from "~/services/accounts/accountSiteProfile"
 import {
   canManageDisplayAccountTokens,
-  fetchDisplayAccountTokens,
+  createDisplayAccountApiContext,
+  fetchDisplayAccountRuntimeKeys,
   InvalidTokenPayloadError,
 } from "~/services/accounts/utils/apiServiceRequest"
 import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
@@ -431,6 +432,17 @@ function hasValidPricingData(data: PricingResponse) {
   return Array.isArray(data.data)
 }
 
+/** Returns whether fallback loading can use a singleton service credential. */
+function canLoadDisplayAccountFallbackRuntimeKeys(
+  account: DisplaySiteData | null | undefined,
+) {
+  if (!account) return false
+
+  const { keyManagement, serviceCredential } =
+    createDisplayAccountApiContext(account)
+  return Boolean(serviceCredential && !keyManagement)
+}
+
 /** Maps items through async workers while preserving input order. */
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -499,7 +511,7 @@ async function fetchTokenScopedCatalogPricingContexts(
     throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
   }
 
-  const tokens = (await fetchDisplayAccountTokens(account)).filter(
+  const tokens = (await fetchDisplayAccountRuntimeKeys(account)).filter(
     (token) => token.status === 1,
   )
   if (abortSignal?.aborted) {
@@ -653,7 +665,9 @@ function useSingleAccountModelData(params: {
   }, [currentAccountScopeKey, resetFallbackState, selectedSource?.kind])
 
   const fallbackAvailable = useMemo(
-    () => canManageDisplayAccountTokens(currentAccount),
+    () =>
+      canManageDisplayAccountTokens(currentAccount) ||
+      canLoadDisplayAccountFallbackRuntimeKeys(currentAccount),
     [currentAccount],
   )
 
@@ -800,7 +814,7 @@ function useSingleAccountModelData(params: {
 
     try {
       const nextTokens = (
-        await fetchDisplayAccountTokens(currentAccount)
+        await fetchDisplayAccountRuntimeKeys(currentAccount)
       ).filter((token) => token.status === 1)
 
       if (!isActiveFallbackTokensRequest(requestScopeKey, requestId)) {

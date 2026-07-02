@@ -64,6 +64,8 @@ vi.mock(
         _account: unknown,
         keyManagement: unknown,
       ) => keyManagement,
+      fetchDisplayAccountRuntimeKeys: (...args: any[]) =>
+        mockFetchAccountTokens(...args),
       resolveDisplayAccountTokenForSecret: (...args: any[]) =>
         mockResolveDisplayAccountTokenForSecret(...args),
     }

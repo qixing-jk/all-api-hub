@@ -126,6 +126,21 @@ const createSub2ApiModelCatalogAdapter = (
   siteType: SITE_TYPES.SUB2API,
   family: "sub2api" as const,
   account: {
+    keyManagement: {
+      resolveTokenKey: vi.fn(),
+    },
+    modelCatalog: {
+      fetchModels,
+    },
+  },
+})
+
+const createModelCatalogAdapter = (
+  siteType: typeof SITE_TYPES.SHAREDCHAT,
+  fetchModels = fetchSub2ApiRuntimeModelsMock,
+) => ({
+  siteType,
+  account: {
     modelCatalog: {
       fetchModels,
     },
@@ -494,6 +509,63 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
           unavailable_reason:
             MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
         },
+      }),
+    ])
+  })
+
+  it("loads SharedChat Codex runtime models without Sub2API price semantics", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      createModelCatalogAdapter(SITE_TYPES.SHAREDCHAT),
+    )
+    fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
+      " gpt-5.5 ",
+      "gpt-5.4-mini",
+    ])
+
+    const result = await loadAccountTokenFallbackPricingResponse({
+      account: {
+        ...ACCOUNT,
+        siteType: SITE_TYPES.SHAREDCHAT,
+        baseUrl: "https://new.sharedchat.cc",
+      },
+      token: {
+        ...TOKEN,
+        id: -1,
+        key: "sk-sharedchat-codex",
+        name: "Codex",
+      },
+    })
+
+    expect(resolveDisplayAccountTokenForSecretMock).not.toHaveBeenCalled()
+    expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://new.sharedchat.cc",
+        accountId: "account-1",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          apiKey: "sk-sharedchat-codex",
+        },
+      }),
+    )
+    expect(fetchSub2ApiAvailableGroupsMock).not.toHaveBeenCalled()
+    expect(loadModelPriceTableMock).not.toHaveBeenCalled()
+    expect(result.model_list_source).toEqual({
+      kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+      provider: SITE_TYPES.SHAREDCHAT,
+      supportsRuntimeModelList: true,
+      supportsPricing: false,
+    })
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        model_name: "gpt-5.5",
+        price_metadata: {
+          source: MODEL_PRICE_SOURCE_KINDS.NONE,
+          precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+          unavailable_reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+        },
+      }),
+      expect.objectContaining({
+        model_name: "gpt-5.4-mini",
       }),
     ])
   })

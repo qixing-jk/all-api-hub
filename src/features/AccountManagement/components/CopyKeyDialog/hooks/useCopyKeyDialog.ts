@@ -4,10 +4,14 @@ import { useTranslation } from "react-i18next"
 
 import { resolveDefaultTokenQuickCreateResolution } from "~/services/accounts/accountOperations"
 import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
+import {
+  canCreateAccountApiTokens,
+  canListAccountRuntimeKeys,
+} from "~/services/accounts/keyProductCapabilities"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
-  canManageDisplayAccountTokens,
   createDisplayAccountApiContext,
+  fetchDisplayAccountRuntimeKeys,
   fetchDisplayAccountTokens,
   InvalidTokenPayloadError,
   requireDisplayAccountKeyManagement,
@@ -76,7 +80,12 @@ export function useCopyKeyDialog(
   const fetchRequestIdRef = useRef(0)
 
   const canCreateDefaultKey = useMemo(
-    () => canManageDisplayAccountTokens(account),
+    () => canCreateAccountApiTokens(account),
+    [account],
+  )
+
+  const canLoadRuntimeKeys = useMemo(
+    () => canListAccountRuntimeKeys(account),
     [account],
   )
 
@@ -93,7 +102,7 @@ export function useCopyKeyDialog(
 
   const fetchTokens = useCallback(async () => {
     if (!account) return
-    if (!canCreateDefaultKey) {
+    if (!canLoadRuntimeKeys) {
       fetchRequestIdRef.current += 1
       setTokens([])
       setError(null)
@@ -113,7 +122,7 @@ export function useCopyKeyDialog(
     clearDefaultTokenCreateAllowedGroups()
 
     try {
-      const tokensResponse = await fetchDisplayAccountTokens(account)
+      const tokensResponse = await fetchDisplayAccountRuntimeKeys(account)
       if (fetchRequestIdRef.current !== requestId) return
       setTokens(tokensResponse)
     } catch (error) {
@@ -134,7 +143,7 @@ export function useCopyKeyDialog(
         setIsLoading(false)
       }
     }
-  }, [account, canCreateDefaultKey, clearDefaultTokenCreateAllowedGroups, t])
+  }, [account, canLoadRuntimeKeys, clearDefaultTokenCreateAllowedGroups, t])
 
   useEffect(() => {
     if (isOpen && account) {

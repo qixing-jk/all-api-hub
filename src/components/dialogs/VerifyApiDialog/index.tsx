@@ -14,8 +14,7 @@ import {
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import {
-  createDisplayAccountApiContext,
-  requireDisplayAccountKeyManagement,
+  fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
@@ -210,11 +209,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const loadTokens = async () => {
     setIsLoadingTokens(true)
     try {
-      const { keyManagement, request } = createDisplayAccountApiContext(account)
-      const accountTokens = await requireDisplayAccountKeyManagement(
-        account,
-        keyManagement,
-      ).fetchTokens(request)
+      const accountTokens = await fetchDisplayAccountRuntimeKeys(account)
 
       const sorted = [...accountTokens].sort((a, b) => {
         const aEnabled = a.status === 1 ? 0 : 1

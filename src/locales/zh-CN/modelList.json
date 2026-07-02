@@ -136,7 +136,8 @@
     "ineligible": {
       "accountDisabled": "该账号已被禁用。",
       "missingAuth": "该账号未配置认证信息。",
-      "missingCredentials": "该账号缺少必要的凭据。"
+      "missingCredentials": "该账号缺少必要的凭据。",
+      "readOnlyRuntimeKeys": "该账号可读取已有运行时密钥，但不支持创建新的 API 密钥。"
     },
     "keyCopied": "密钥已复制",
     "loadFailed": "加载密钥失败：{{error}}",
@@ -186,6 +187,10 @@
   "ratio": "倍率:",
   "realAmount": "真实充值金额",
   "refreshData": "刷新数据",
+  "runtimeKeyFallbackSourceNotice": {
+    "description": "当前模型目录通过该账号已有的运行时密钥加载，仅支持模型发现与验证。该账号不支持在此创建新的 API 密钥；点击刷新数据会重新尝试账号接口。",
+    "title": "运行时密钥模型目录"
+  },
   "searchModels": "搜索模型",
   "searchPlaceholder": "输入模型名称或描述...",
   "selectSource": "选择数据源",
