@@ -274,6 +274,49 @@ describe("ServiceCredentialCard", () => {
     ).toHaveTextContent("keyManagement:managedSiteStatus.badges.added")
   })
 
+  it("renders unauthenticated checking and rotating states without an optional base URL", () => {
+    const account = buildDisplaySiteData({
+      id: "sharedchat-account",
+      name: "SharedChat",
+    })
+
+    render(
+      <ServiceCredentialCard
+        account={account}
+        credential={{
+          kind: "singleton_service_key",
+          service: "codex",
+          label: "Codex API Key",
+          key: "sk-service-credential",
+          isAuthenticated: false,
+        }}
+        isManagedSiteStatusChecking
+        isRotating
+        onCopy={vi.fn().mockResolvedValue(undefined)}
+        onRotate={vi.fn().mockResolvedValue(undefined)}
+      />,
+      {
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(
+      screen.getByText("keyManagement:serviceCredential.notAuthenticated"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge),
+    ).toHaveTextContent("keyManagement:managedSiteStatus.badges.checking")
+    expect(
+      screen
+        .getByText("keyManagement:serviceCredential.rotating")
+        .closest("button"),
+    ).toBeDisabled()
+    expect(
+      screen.queryByText("keyManagement:serviceCredential.baseUrl"),
+    ).not.toBeInTheDocument()
+  })
+
   it("reuses managed-site config-missing copy and settings action for service credentials", async () => {
     const user = userEvent.setup()
     const account = buildDisplaySiteData({
