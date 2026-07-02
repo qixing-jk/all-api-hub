@@ -936,11 +936,11 @@ describe("ManagedSiteChannels", () => {
     await waitForRowText("Alpha")
     await waitForRowText("Beta")
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "managedSiteChannels:toolbar.status",
-      }),
-    )
+    const statusButton = screen.getByRole("button", {
+      name: "managedSiteChannels:toolbar.status",
+    })
+
+    await user.click(statusButton)
     await user.click(
       await screen.findByRole("checkbox", {
         name: "managedSiteChannels:statusLabels.manualPause",
@@ -967,6 +967,7 @@ describe("ManagedSiteChannels", () => {
     expect(
       screen.queryByText("managedSiteChannels:table.emptyFiltered"),
     ).not.toBeInTheDocument()
+    expect(statusButton).not.toHaveTextContent("(1)")
   })
 
   it("reloads the channel list when refreshKey changes to a truthy value", async () => {
