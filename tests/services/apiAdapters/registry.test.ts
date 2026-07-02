@@ -197,6 +197,30 @@ describe("apiAdapters registry", () => {
     expect(capabilities.managedSites).toBeUndefined()
   })
 
+  it("returns SharedChat account data and service credential capabilities without token CRUD", () => {
+    const capabilities = getSiteTypeCapabilities(SITE_TYPES.SHAREDCHAT)
+
+    expect(capabilities).toMatchObject({
+      siteType: SITE_TYPES.SHAREDCHAT,
+    })
+    expect(capabilities.family).toBeUndefined()
+    expectAccountDataCapability(capabilities)
+    expect(capabilities.account?.refresh).toEqual({
+      refreshAccount: expect.any(Function),
+    })
+    expect(capabilities.account?.serviceCredential).toEqual({
+      fetch: expect.any(Function),
+      rotate: expect.any(Function),
+    })
+    expect(capabilities.account?.modelCatalog).toEqual({
+      fetchModels: expect.any(Function),
+    })
+    expect(capabilities.account?.keyManagement).toBeUndefined()
+    expect(capabilities.account?.tokenProvisioning).toBeUndefined()
+    expect(capabilities.account?.modelPricing).toBeUndefined()
+    expect(capabilities.managedSites).toBeUndefined()
+  })
+
   it("returns managed-site capabilities for New API family managed sites", () => {
     for (const siteType of [
       SITE_TYPES.NEW_API,

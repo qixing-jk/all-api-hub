@@ -21,6 +21,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   NewApiFamily: "newApiFamily",
   Sub2Api: "sub2api",
   Aihubmix: "aihubmix",
+  SharedChat: "sharedchat",
   Unsupported: "unsupported",
 } as const
 

@@ -14,6 +14,7 @@ import type {
 import type { ModelCatalogCapability } from "./modelCatalog"
 import type { ModelPricingCapability } from "./modelPricing"
 import type { RedemptionCapability } from "./redemption"
+import type { ServiceCredentialCapability } from "./serviceCredential"
 import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
 import type { SiteNoticeCapability } from "./siteNotice"
 import type { TokenProvisioningCapability } from "./tokenProvisioning"
@@ -36,6 +37,7 @@ export type SiteTypeCapabilities = {
     bootstrap?: AccountBootstrapCapability
     completion?: AccountCompletionCapability
     keyManagement?: KeyManagementCapability
+    serviceCredential?: ServiceCredentialCapability
     tokenProvisioning?: TokenProvisioningCapability
     refresh?: AccountRefreshCapability
     redemption?: RedemptionCapability

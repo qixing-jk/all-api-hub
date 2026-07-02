@@ -127,6 +127,9 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
         overrides.account_info?.today_quota_consumption ?? 250_000,
       today_requests_count: overrides.account_info?.today_requests_count ?? 10,
       today_income: overrides.account_info?.today_income ?? 500_000,
+      usage: overrides.account_info?.usage,
+      subscription: overrides.account_info?.subscription,
+      recentUsageRecords: overrides.account_info?.recentUsageRecords,
     },
     last_sync_time: overrides.last_sync_time ?? Date.now(),
     updated_at: updatedAt,
@@ -310,6 +313,90 @@ describe("accountStorage core behaviors", () => {
     expect(display.todayTokens.upload).toBe(600)
     expect(display.todayTokens.download).toBe(400)
     expect(display.created_at).toBe(1_700_000_000_000)
+  })
+
+  it("convertToDisplayData should expose account usage extensions to presentation data", () => {
+    const usage = {
+      scope: "current_period" as const,
+      totalRequests: 42,
+      totalTokens: 12_345,
+      totalCost: 6.5,
+      lastRequestTime: "2026-07-01T12:00:00.000Z",
+    }
+    const subscription = {
+      name: "Codex Pro",
+      remainingAmount: 13.5,
+      remainingCount: 8,
+      isActive: true,
+    }
+    const recentUsageRecords = [
+      {
+        requestTime: "2026-07-01T12:00:00.000Z",
+        model: "codex",
+        totalTokens: 123,
+        status: "success",
+      },
+    ]
+    const account = createAccount({
+      account_info: {
+        id: "1",
+        access_token: "token",
+        username: "tester",
+        quota: 1_500_000,
+        today_prompt_tokens: 600,
+        today_completion_tokens: 400,
+        today_quota_consumption: 500_000,
+        today_requests_count: 8,
+        today_income: 250_000,
+        usage,
+        subscription,
+        recentUsageRecords,
+      },
+    })
+
+    const display = accountStorage.convertToDisplayData(account)
+
+    expect(display.usage).toEqual(usage)
+    expect(display.subscription).toEqual(subscription)
+    expect(display.recentUsageRecords).toEqual(recentUsageRecords)
+  })
+
+  it("convertToDisplayData should convert SharedChat amount-backed quota units to display currency", () => {
+    const account = createAccount({
+      site_type: SITE_TYPES.SHAREDCHAT,
+      exchange_rate: 7,
+      account_info: {
+        id: "1",
+        access_token: "token",
+        username: "tester",
+        quota: 88 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 12_345,
+        today_quota_consumption:
+          1.23 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+        today_requests_count: 10,
+        today_income: 0,
+        usage: {
+          scope: "rolling_window",
+          totalRequests: 10,
+          totalTokens: 12_345,
+          totalCost: 1.23,
+        },
+        subscription: {
+          billingType: "amount",
+          remainingAmount: 88,
+        },
+      },
+    })
+
+    const display = accountStorage.convertToDisplayData(account)
+
+    expect(display.balance.USD).toBeCloseTo(88)
+    expect(display.balance.CNY).toBeCloseTo(616)
+    expect(display.todayConsumption.USD).toBeCloseTo(1.23)
+    expect(display.todayConsumption.CNY).toBeCloseTo(8.61)
+    expect(display.usage?.totalCost).toBe(1.23)
+    expect(display.subscription?.remainingAmount).toBe(88)
   })
 
   it("convertToDisplayData should preserve cookie auth session cookies", () => {

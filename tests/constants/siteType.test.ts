@@ -6,6 +6,7 @@ import {
   getAccountSiteApiRouter,
   isAccountSiteType,
   isManagedSiteType,
+  SHAREDCHAT_HOSTNAMES,
   SITE_TYPES,
 } from "~/constants/siteType"
 
@@ -15,6 +16,7 @@ describe("siteType constants", () => {
     expect(isAccountSiteType(SITE_TYPES.V_API)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.SUB2API)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.AIHUBMIX)).toBe(true)
+    expect(isAccountSiteType(SITE_TYPES.SHAREDCHAT)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.UNKNOWN)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.OCTOPUS)).toBe(false)
     expect(isAccountSiteType(SITE_TYPES.AXON_HUB)).toBe(false)
@@ -30,6 +32,7 @@ describe("siteType constants", () => {
     expect(isManagedSiteType(SITE_TYPES.CLAUDE_CODE_HUB)).toBe(true)
     expect(isManagedSiteType(SITE_TYPES.SUB2API)).toBe(false)
     expect(isManagedSiteType(SITE_TYPES.AIHUBMIX)).toBe(false)
+    expect(isManagedSiteType(SITE_TYPES.SHAREDCHAT)).toBe(false)
     expect(isManagedSiteType("toString")).toBe(false)
   })
 
@@ -73,10 +76,29 @@ describe("siteType constants", () => {
     })
   })
 
+  it("returns SharedChat account page route overrides", () => {
+    expect(getAccountSiteApiRouter(SITE_TYPES.SHAREDCHAT)).toMatchObject({
+      loginPath: "/list/#/login",
+      usagePath:
+        "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
+      adminCredentialsPath:
+        "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
+      siteAnnouncementsPath:
+        "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
+    })
+  })
+
   it("includes AIHubMix domain detection rules", () => {
     expect(ACCOUNT_SITE_DOMAIN_RULES).toContainEqual({
       name: SITE_TYPES.AIHUBMIX,
       hostnames: AIHUBMIX_HOSTNAMES,
+    })
+  })
+
+  it("includes exact SharedChat domain detection rules", () => {
+    expect(ACCOUNT_SITE_DOMAIN_RULES).toContainEqual({
+      name: SITE_TYPES.SHAREDCHAT,
+      hostnames: SHAREDCHAT_HOSTNAMES,
     })
   })
 })

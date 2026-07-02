@@ -22,6 +22,7 @@ import {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
+  SHAREDCHAT_HOSTNAMES,
   SITE_TYPES,
 } from "./identifiers"
 
@@ -55,6 +56,13 @@ const directPricingReadiness = {
   },
 } as const
 
+const tokenScopedRuntimeModelListReadiness = {
+  modelList: {
+    expectedRoute:
+      ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.TokenScopedRuntimeCatalog,
+  },
+} as const
+
 export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.ONE_API,
   SITE_TYPES.NEW_API,
@@ -70,6 +78,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.WONG_GONGYI,
   SITE_TYPES.SUB2API,
   SITE_TYPES.AIHUBMIX,
+  SITE_TYPES.SHAREDCHAT,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -235,6 +244,54 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
     readiness: directPricingReadiness,
+  },
+  {
+    siteType: SITE_TYPES.SHAREDCHAT,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.SharedChat,
+    onboarding: {
+      detection: {
+        hostnames: SHAREDCHAT_HOSTNAMES,
+      },
+      routes: {
+        loginPath: "/list/#/login",
+        usagePath:
+          "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
+        adminCredentialsPath:
+          "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
+        siteAnnouncementsPath:
+          "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex",
+      },
+    },
+    productProfile: {
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: SHAREDCHAT_HOSTNAMES,
+        supportsCookieAuth: true,
+        supportsBuiltInCheckInDetection: false,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
+        tokenScopedCatalogFallback:
+          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
+        dashboardEstimateLoader:
+          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+      },
+      urls: {
+        recognizedHostnames: SHAREDCHAT_HOSTNAMES,
+        storageOrigin: "https://new.sharedchat.cc",
+        duplicateOrigin: "https://new.sharedchat.cc",
+      },
+    },
+    readiness: tokenScopedRuntimeModelListReadiness,
   },
 ] as const satisfies readonly AccountSiteDefinition[]
 

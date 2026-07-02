@@ -201,6 +201,52 @@ describe("detectSiteType", () => {
         ).resolves.toBe(SITE_TYPES.AIHUBMIX)
         expect(titleFetched).toBe(false)
       })
+
+      it("detects SharedChat from the exact target hostname without title fetch", async () => {
+        let titleFetched = false
+        server.use(
+          http.get("https://new.sharedchat.cc", () => {
+            titleFetched = true
+            return new HttpResponse("<html><title>new-api</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://new.sharedchat.cc/list/#/vibe-code"),
+        ).resolves.toBe(SITE_TYPES.SHAREDCHAT)
+        expect(titleFetched).toBe(false)
+      })
+
+      it("does not generalize SharedChat detection to sibling hostnames", async () => {
+        server.use(
+          http.get("https://api.sharedchat.cc", () => {
+            return new HttpResponse(
+              "<html><title>White Label Dashboard</title></html>",
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            )
+          }),
+          http.get("https://api.sharedchat.cc/api/user/self", () => {
+            return HttpResponse.json(
+              {
+                success: false,
+                message: "error: completely unmatched identifier",
+              },
+              { status: 400 },
+            )
+          }),
+          http.get("https://api.sharedchat.cc/api/v1/auth/me", () => {
+            return HttpResponse.json({ message: "not found" }, { status: 404 })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://api.sharedchat.cc"),
+        ).resolves.toBe(SITE_TYPES.UNKNOWN)
+      })
     })
 
     describe("Title-based detection", () => {

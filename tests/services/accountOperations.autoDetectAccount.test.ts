@@ -22,6 +22,7 @@ const {
   mockFetchSupportCheckIn,
   mockExtractDefaultExchangeRate,
   mockFetchUserInfo,
+  mockFetchSharedChatUserInfo,
   mockCreateNewApiAccountBootstrap,
   mockGetOrCreateAccessToken,
 } = vi.hoisted(() => ({
@@ -31,6 +32,7 @@ const {
   mockFetchSupportCheckIn: vi.fn(),
   mockExtractDefaultExchangeRate: vi.fn(),
   mockFetchUserInfo: vi.fn(),
+  mockFetchSharedChatUserInfo: vi.fn(),
   mockCreateNewApiAccountBootstrap: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
 }))
@@ -73,6 +75,16 @@ vi.mock("~/services/apiAdapters/aihubmix/accountBootstrap", () => ({
     resolveRoutePath: vi.fn(),
   },
 }))
+
+vi.mock("~/services/apiService/sharedchat", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiService/sharedchat")>()
+
+  return {
+    ...actual,
+    fetchUserInfo: mockFetchSharedChatUserInfo,
+  }
+})
 
 const currentTabFetchContext = (origin: string) => ({
   kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -170,6 +182,63 @@ describe("accountOperations autoDetectAccount", () => {
       accessToken: "jwt-token",
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
     })
+  })
+
+  it("completes SharedChat cookie auto-detect with frontend getme data", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "shared-user-id",
+        user: {
+          id: "shared-user-id",
+          name: "Shared User",
+          userToken: "shared-user-token",
+        },
+        siteType: SITE_TYPES.SHAREDCHAT,
+        accessToken: "shared-user-token",
+        fetchContext: currentTabFetchContext("https://new.sharedchat.cc"),
+      },
+    })
+    mockFetchSharedChatUserInfo.mockResolvedValueOnce({
+      id: "shared-user-id",
+      username: "Shared User",
+      access_token: "shared-user-token",
+      user: {
+        id: "shared-user-id",
+        name: "Shared User",
+        userToken: "shared-user-token",
+      },
+    })
+
+    const result = await autoDetectAccount(
+      "https://new.sharedchat.cc",
+      AuthTypeEnum.Cookie,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      siteType: SITE_TYPES.SHAREDCHAT,
+      username: "Shared User",
+      accessToken: "shared-user-token",
+      userId: "shared-user-id",
+      authType: AuthTypeEnum.Cookie,
+      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      checkIn: {
+        enableDetection: false,
+        autoCheckInEnabled: false,
+      },
+    })
+    expect(mockFetchSharedChatUserInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://new.sharedchat.cc",
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.Cookie,
+          userId: "shared-user-id",
+        }),
+        fetchContext: currentTabFetchContext("https://new.sharedchat.cc"),
+      }),
+    )
   })
 
   it("continues detection when cookie-interceptor tracking fails", async () => {

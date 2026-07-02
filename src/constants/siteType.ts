@@ -22,6 +22,7 @@ export {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_WEB_ORIGIN,
   MANAGED_SITE_TYPES,
+  SHAREDCHAT_HOSTNAMES,
   SITE_TYPES,
   type AccountSiteType,
   type ManagedSiteType,

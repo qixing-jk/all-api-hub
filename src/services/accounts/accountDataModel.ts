@@ -4,6 +4,9 @@ import {
   SiteHealthStatus,
   TempWindowHealthStatusCode,
   type AccountIdentity,
+  type AccountSubscriptionSummary,
+  type AccountUsageRecord,
+  type AccountUsageSummary,
   type Sub2ApiAuthConfig,
 } from "~/types"
 
@@ -22,6 +25,9 @@ export type TodayStatsData = TodayUsageData & TodayIncomeData
 
 export interface AccountData extends TodayStatsData {
   quota: number
+  usage?: AccountUsageSummary
+  subscription?: AccountSubscriptionSummary
+  recentUsageRecords?: AccountUsageRecord[]
   /**
    * Legacy flag indicating whether the account can be checked in today.
    * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.

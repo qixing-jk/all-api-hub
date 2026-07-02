@@ -1,9 +1,14 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  canCreateAccountApiTokens,
+  canUseAccountKeyProductCapabilities,
+} from "~/services/accounts/keyProductCapabilities"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
+import type { ServiceCredentialCapability } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -21,6 +26,7 @@ const hasNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
 
 const logger = createLogger("DisplayAccountApiContext")
+const SERVICE_CREDENTIAL_RUNTIME_TOKEN_ID = -1
 
 export const createMissingKeyManagementCapabilityError = (
   siteType: string,
@@ -108,6 +114,7 @@ export interface AccountApiContext {
 export interface DisplayAccountApiCapabilityContext extends AccountApiContext {
   capabilities: SiteTypeCapabilities
   keyManagement: KeyManagementCapability | undefined
+  serviceCredential: ServiceCredentialCapability | undefined
   tokenProvisioning: TokenProvisioningCapability | undefined
 }
 
@@ -283,6 +290,7 @@ export const createDisplayAccountApiContext = (
     ...context,
     capabilities,
     keyManagement: accountCapabilities?.keyManagement,
+    serviceCredential: accountCapabilities?.serviceCredential,
     tokenProvisioning: accountCapabilities?.tokenProvisioning,
   }
 }
@@ -322,6 +330,46 @@ export async function fetchDisplayAccountTokens(
   })
 }
 
+const toServiceCredentialRuntimeToken = (
+  credential: Awaited<ReturnType<ServiceCredentialCapability["fetch"]>>,
+): ApiToken => ({
+  id: SERVICE_CREDENTIAL_RUNTIME_TOKEN_ID,
+  user_id: 0,
+  key: credential.key,
+  status: credential.isAuthenticated ? 1 : 2,
+  name: credential.label,
+  created_time: 0,
+  accessed_time: 0,
+  expired_time: -1,
+  remain_quota: 0,
+  unlimited_quota: true,
+  used_quota: 0,
+  models: "",
+})
+
+/**
+ * Fetch account runtime keys for verification/model probing flows.
+ *
+ * Token CRUD-capable sites use key management inventory. Sites like SharedChat
+ * expose an account-bound singleton service key instead, so runtime probes can
+ * still verify the key without pretending token CRUD is supported.
+ */
+export async function fetchDisplayAccountRuntimeKeys(
+  account: DisplayAccountApiSnapshot,
+): Promise<ApiToken[]> {
+  const { keyManagement, serviceCredential, request } =
+    createDisplayAccountApiContext(account)
+
+  if (keyManagement || !serviceCredential) {
+    return fetchDisplayAccountTokens(account)
+  }
+
+  const credential = await serviceCredential.fetch(request)
+  if (!credential.key.trim()) return []
+
+  return [toServiceCredentialRuntimeToken(credential)]
+}
+
 /**
  * Resolves a token into a transient clone with a usable secret key for the
  * current display-account context, without mutating the shared inventory item.
@@ -333,14 +381,19 @@ export async function resolveDisplayAccountTokenForSecret<
   token: TToken,
   options: ResolveDisplayAccountTokenForSecretOptions = {},
 ): Promise<TToken> {
-  const { keyManagement, request } = createDisplayAccountApiContext(account)
+  const { keyManagement, serviceCredential, request } =
+    createDisplayAccountApiContext(account)
   const resolutionRequest = options.abortSignal
     ? { ...request, abortSignal: options.abortSignal }
     : request
-  const resolvedKey = await requireDisplayAccountKeyManagement(
-    account,
-    keyManagement,
-  ).resolveTokenKey({ request: resolutionRequest, token })
+  const resolvedKey = keyManagement
+    ? await keyManagement.resolveTokenKey({ request: resolutionRequest, token })
+    : serviceCredential
+      ? (await serviceCredential.fetch(resolutionRequest)).key
+      : await requireDisplayAccountKeyManagement(
+          account,
+          keyManagement,
+        ).resolveTokenKey({ request: resolutionRequest, token })
   return formatOptionalSkPrefixSiteToken(
     resolvedKey === token.key ? token : { ...token, key: resolvedKey },
     account.siteType,
@@ -352,34 +405,13 @@ export async function resolveDisplayAccountTokenForSecret<
  */
 export const canManageDisplayAccountTokens = (
   account: DisplaySiteData | null | undefined,
-): account is DisplaySiteData => {
-  if (!account || account.disabled === true) {
-    return false
-  }
+): account is DisplaySiteData => canUseAccountKeyProductCapabilities(account)
 
-  if (account.authType === AuthTypeEnum.None) {
-    return false
-  }
-
-  const hasToken = hasNonEmptyString(account.token)
-  const hasCookie = hasNonEmptyString(account.cookieAuthSessionCookie)
-
-  if (
-    !hasNonEmptyString(account.id) ||
-    !hasNonEmptyString(account.baseUrl) ||
-    !hasNonEmptyString(account.siteType) ||
-    !hasNonEmptyString(account.userId)
-  ) {
-    return false
-  }
-
-  if (account.authType === AuthTypeEnum.AccessToken) {
-    return hasToken
-  }
-
-  if (account.authType === AuthTypeEnum.Cookie) {
-    return hasToken || hasCookie
-  }
-
-  return false
-}
+/**
+ * Guard used by token-creation entry points before showing or enabling create
+ * controls. Service-credential-only backends can expose usable runtime keys
+ * without supporting token CRUD.
+ */
+export const canCreateDisplayAccountTokens = (
+  account: DisplaySiteData | null | undefined,
+): account is DisplaySiteData => canCreateAccountApiTokens(account)

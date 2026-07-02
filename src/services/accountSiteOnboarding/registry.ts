@@ -5,6 +5,7 @@ import {
 } from "~/services/accountSiteOnboarding/metadata"
 
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
+import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
 import type { ContentSessionExtractor } from "./contracts"
 
@@ -33,5 +34,9 @@ export function getAccountSiteCompatUserIdHeaderRules() {
  * Returns content-session extractors in account onboarding priority order.
  */
 export function getContentSessionExtractors(): readonly ContentSessionExtractor[] {
-  return [sub2ApiContentSessionExtractor, compatibleUserContentSessionExtractor]
+  return [
+    sub2ApiContentSessionExtractor,
+    sharedChatContentSessionExtractor,
+    compatibleUserContentSessionExtractor,
+  ]
 }

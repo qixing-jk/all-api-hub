@@ -291,6 +291,24 @@ describe("accountSiteProfile", () => {
     expect(profile.auth.defaultAuthHostnames).toEqual(["anyrouter.top"])
   })
 
+  it("uses profile hostnames to resolve default auth for account URLs", () => {
+    expect(
+      resolveAccountSiteDefaultAuthType({
+        url: "https://anyrouter.top/console",
+      }),
+    ).toBe(AuthTypeEnum.Cookie)
+    expect(
+      resolveAccountSiteDefaultAuthType({
+        url: "https://new.sharedchat.cc/list/#/vibe-code",
+      }),
+    ).toBe(AuthTypeEnum.Cookie)
+    expect(
+      resolveAccountSiteDefaultAuthType({
+        url: "https://example.invalid",
+      }),
+    ).toBe(AuthTypeEnum.AccessToken)
+  })
+
   it("normalizes AIHubMix URLs through profile URL rules", () => {
     expect(
       isAccountSiteProfileUrl(SITE_TYPES.AIHUBMIX, "ftp://aihubmix.com"),

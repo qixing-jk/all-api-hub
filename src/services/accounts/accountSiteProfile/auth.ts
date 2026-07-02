@@ -1,4 +1,5 @@
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
+import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions"
 import { AuthTypeEnum } from "~/types"
 
 import { getAccountSiteProductProfile } from "./registry"
@@ -13,6 +14,28 @@ const getHostname = (value: string | null | undefined): string | null => {
   }
 }
 
+const resolveAccountSiteTypeForDefaultAuthUrl = (
+  url: string | null | undefined,
+): AccountSiteType | null => {
+  const hostname = getHostname(url)
+  if (!hostname) return null
+
+  for (const definition of getAccountSiteDefinitions()) {
+    if (!isAccountSiteType(definition.siteType)) continue
+
+    const hostnames = [
+      ...(definition.productProfile?.auth?.defaultAuthHostnames ?? []),
+      ...(definition.productProfile?.urls?.recognizedHostnames ?? []),
+    ]
+
+    if (hostnames.includes(hostname)) {
+      return definition.siteType
+    }
+  }
+
+  return null
+}
+
 /**
  * Resolves the default account auth type from the site product profile.
  */
@@ -23,8 +46,11 @@ export function resolveAccountSiteDefaultAuthType({
   siteType?: AccountSiteType | string | null
   url?: string | null
 } = {}): AuthTypeEnum {
-  const profile = isAccountSiteType(siteType)
-    ? getAccountSiteProductProfile(siteType)
+  const resolvedSiteType = isAccountSiteType(siteType)
+    ? siteType
+    : resolveAccountSiteTypeForDefaultAuthUrl(url)
+  const profile = resolvedSiteType
+    ? getAccountSiteProductProfile(resolvedSiteType)
     : null
   const hostname = getHostname(url)
 

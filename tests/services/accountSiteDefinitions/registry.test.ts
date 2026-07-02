@@ -34,6 +34,7 @@ import {
   getAccountSiteTypeValues,
   getManagedSiteTypeValues,
   MANAGED_SITE_TYPES,
+  SHAREDCHAT_HOSTNAMES,
   SITE_TYPES,
   type AccountSiteDefinition,
   type AccountSiteType,
@@ -69,6 +70,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.WONG_GONGYI
   | typeof SITE_TYPES.SUB2API
   | typeof SITE_TYPES.AIHUBMIX
+  | typeof SITE_TYPES.SHAREDCHAT
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -154,6 +156,7 @@ describe("account site definition registry", () => {
     expect(legacy.ACCOUNT_SITE_TYPE_VALUES).toEqual(getAccountSiteTypeValues())
     expect(legacy.MANAGED_SITE_TYPES).toEqual(getManagedSiteTypeValues())
     expect(legacy.isAccountSiteType(SITE_TYPES.AIHUBMIX)).toBe(true)
+    expect(legacy.isAccountSiteType(SITE_TYPES.SHAREDCHAT)).toBe(true)
     expect(legacy.isAccountSiteType(SITE_TYPES.OCTOPUS)).toBe(false)
     expect(legacy.isManagedSiteType(SITE_TYPES.OCTOPUS)).toBe(true)
     expect(legacy.isManagedSiteType(SITE_TYPES.SUB2API)).toBe(false)
@@ -224,6 +227,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.WONG_GONGYI,
       SITE_TYPES.SUB2API,
       SITE_TYPES.AIHUBMIX,
+      SITE_TYPES.SHAREDCHAT,
       SITE_TYPES.UNKNOWN,
     ])
   })
@@ -277,6 +281,9 @@ describe("account site definition registry", () => {
     expect(getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)?.adapterFamily).toBe(
       ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
     )
+    expect(getAccountSiteDefinition(SITE_TYPES.SHAREDCHAT)?.adapterFamily).toBe(
+      ACCOUNT_SITE_ADAPTER_FAMILIES.SharedChat,
+    )
     expect(getAccountSiteDefinition(SITE_TYPES.OCTOPUS)?.adapterFamily).toBe(
       ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     )
@@ -293,6 +300,11 @@ describe("account site definition registry", () => {
         (definition) => definition.siteType === SITE_TYPES.AIHUBMIX,
       )?.detection?.hostnames,
     ).toEqual(AIHUBMIX_HOSTNAMES)
+    expect(
+      onboardingDefinitions.find(
+        (definition) => definition.siteType === SITE_TYPES.SHAREDCHAT,
+      )?.detection?.hostnames,
+    ).toEqual(SHAREDCHAT_HOSTNAMES)
     expect(
       onboardingDefinitions.find(
         (definition) => definition.siteType === SITE_TYPES.SUB2API,
@@ -499,6 +511,10 @@ describe("account site definition registry", () => {
       getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)?.readiness?.modelList
         ?.expectedRoute,
     ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing)
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.SHAREDCHAT)?.readiness?.modelList
+        ?.expectedRoute,
+    ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog)
   })
 
   it("keeps definition expectation route constants synchronized with runtime routes", () => {

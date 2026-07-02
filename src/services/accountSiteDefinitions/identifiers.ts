@@ -16,6 +16,7 @@ export const SITE_TYPES = {
   AXON_HUB: "axonhub",
   CLAUDE_CODE_HUB: "claude-code-hub",
   AIHUBMIX: "AIHubMix",
+  SHAREDCHAT: "sharedchat",
   UNKNOWN: "unknown",
 } as const
 
@@ -29,3 +30,5 @@ export const AIHUBMIX_HOSTNAMES = [
   "www.aihubmix.com",
   "console.aihubmix.com",
 ] as const
+
+export const SHAREDCHAT_HOSTNAMES = ["new.sharedchat.cc"] as const

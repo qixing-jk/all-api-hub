@@ -45,6 +45,50 @@ export interface AccountInfo {
   today_quota_consumption: number // 今日消耗 quota
   today_requests_count: number // 今日请求次数
   today_income: number // 今日收入 (recharge + check-in)
+  usage?: AccountUsageSummary
+  subscription?: AccountSubscriptionSummary
+  recentUsageRecords?: AccountUsageRecord[]
+}
+
+export interface AccountUsageSummary {
+  scope: "today" | "current_period" | "rolling_window" | "lifetime" | "unknown"
+  totalRequests: number
+  totalTokens: number
+  totalCost: number
+  lastRequestTime?: string
+}
+
+export interface AccountSubscriptionSummary {
+  name?: string
+  billingType?: string
+  limit?: number
+  amountLimit?: number
+  usedAmount?: number
+  remainingAmount?: number
+  usedCount?: number
+  remainingCount?: number
+  period?: string
+  periodResetTime?: string
+  expireTime?: string
+  isLongTerm?: boolean
+  isActive?: boolean
+}
+
+export interface AccountUsageRecord {
+  requestTime?: string
+  model?: string
+  inputTokens?: number
+  outputTokens?: number
+  cacheCreationTokens?: number
+  cacheReadTokens?: number
+  cacheInputTokens?: number
+  reasoningTokens?: number
+  totalTokens?: number
+  responseTime?: number
+  firstByteTime?: number
+  cost?: number
+  errorMessage?: string
+  status?: string
 }
 
 export interface CookieAuthConfig {
@@ -432,6 +476,9 @@ export interface DisplaySiteData {
   todayIncome: CurrencyAmount
   estimatedTodayIncome?: CurrencyAmount | null
   todayTokens: TokenUsage
+  usage?: AccountUsageSummary
+  subscription?: AccountSubscriptionSummary
+  recentUsageRecords?: AccountUsageRecord[]
   health: HealthStatus
   last_sync_time?: number
   created_at?: number

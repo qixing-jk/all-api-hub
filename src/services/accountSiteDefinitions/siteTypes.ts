@@ -6,6 +6,7 @@ export {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_WEB_ORIGIN,
+  SHAREDCHAT_HOSTNAMES,
 } from "./identifiers"
 
 export { SITE_TYPES }

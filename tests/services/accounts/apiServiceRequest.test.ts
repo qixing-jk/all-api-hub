@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import {
+  canCreateDisplayAccountTokens,
   canManageDisplayAccountTokens,
   createAccountApiRequestFromStoredAccount,
   createDisplayAccountApiContext,
   createDisplayAccountRequestContext,
+  fetchDisplayAccountRuntimeKeys,
   fetchDisplayAccountTokens,
   InvalidTokenPayloadError,
   resolveDisplayAccountTokenForSecret,
@@ -82,6 +84,7 @@ describe("fetchDisplayAccountTokens", () => {
   let deleteToken: ReturnType<typeof vi.fn>
   let fetchUserGroups: ReturnType<typeof vi.fn>
   let fetchAvailableModels: ReturnType<typeof vi.fn>
+  let fetchServiceCredential: ReturnType<typeof vi.fn>
   let tokenProvisioning: {
     isInventoryTokenUsable: ReturnType<typeof vi.fn>
     resolveDefaultTokenCreation: ReturnType<typeof vi.fn>
@@ -103,6 +106,9 @@ describe("fetchDisplayAccountTokens", () => {
     siteType: string
     account?: {
       keyManagement?: typeof keyManagement
+      serviceCredential?: {
+        fetch: typeof fetchServiceCredential
+      }
       tokenProvisioning?: typeof tokenProvisioning
     }
   }
@@ -115,6 +121,7 @@ describe("fetchDisplayAccountTokens", () => {
     deleteToken = vi.fn()
     fetchUserGroups = vi.fn()
     fetchAvailableModels = vi.fn()
+    fetchServiceCredential = vi.fn()
     keyManagement = {
       fetchTokens,
       createToken,
@@ -167,6 +174,57 @@ describe("fetchDisplayAccountTokens", () => {
         }),
       }),
     )
+  })
+
+  it("returns singleton service credentials as runtime keys when token inventory is unsupported", async () => {
+    capabilities = {
+      siteType: SITE_TYPES.SHAREDCHAT,
+      account: {
+        serviceCredential: {
+          fetch: fetchServiceCredential,
+        },
+      },
+    }
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
+    fetchServiceCredential.mockResolvedValueOnce({
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "sk-sharedchat-codex",
+      isAuthenticated: true,
+      baseUrl: "https://new.sharedchat.cc/codex",
+    })
+
+    await expect(
+      fetchDisplayAccountRuntimeKeys({
+        ...ACCOUNT,
+        siteType: SITE_TYPES.SHAREDCHAT,
+      } as any),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: -1,
+        key: "sk-sharedchat-codex",
+        name: "Codex",
+        status: 1,
+      }),
+    ])
+    expect(fetchServiceCredential).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ...REQUEST,
+      }),
+    )
+    expect(fetchTokens).not.toHaveBeenCalled()
+  })
+
+  it("keeps runtime key loading on key management when token inventory is supported", async () => {
+    fetchTokens.mockResolvedValueOnce([{ id: 1, key: "sk-test", status: 1 }])
+
+    await expect(
+      fetchDisplayAccountRuntimeKeys(ACCOUNT as any),
+    ).resolves.toEqual([{ id: 1, key: "sk-test", status: 1 }])
+
+    expect(fetchTokens).toHaveBeenCalledWith(expect.objectContaining(REQUEST))
+    expect(fetchServiceCredential).not.toHaveBeenCalled()
   })
 
   it("builds a request-only context from a display account snapshot", () => {
@@ -590,6 +648,45 @@ describe("fetchDisplayAccountTokens", () => {
     })
   })
 
+  it("resolves singleton service credential runtime tokens without key management", async () => {
+    capabilities = {
+      siteType: SITE_TYPES.SHAREDCHAT,
+      account: {
+        serviceCredential: {
+          fetch: fetchServiceCredential,
+        },
+      },
+    }
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
+    fetchServiceCredential.mockResolvedValueOnce({
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "sk-sharedchat-codex",
+      isAuthenticated: true,
+    })
+
+    await expect(
+      resolveDisplayAccountTokenForSecret(
+        {
+          ...ACCOUNT,
+          siteType: SITE_TYPES.SHAREDCHAT,
+        } as any,
+        { id: -1, key: "sk-masked", status: 1, name: "Codex" } as any,
+      ),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        id: -1,
+        key: "sk-sharedchat-codex",
+        name: "Codex",
+      }),
+    )
+    expect(resolveTokenKey).not.toHaveBeenCalled()
+    expect(fetchServiceCredential).toHaveBeenCalledWith(
+      expect.objectContaining(REQUEST),
+    )
+  })
+
   it("returns a transient sk-prefixed secret for optional-prefix compatible account types", async () => {
     const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
     resolveTokenKey.mockResolvedValue("plain-secret")
@@ -722,6 +819,27 @@ describe("fetchDisplayAccountTokens", () => {
       canManageDisplayAccountTokens({
         ...ACCOUNT,
         userId: Number.NaN,
+      } as any),
+    ).toBe(false)
+  })
+
+  it("only allows token creation when the account has key-management capability", () => {
+    expect(canCreateDisplayAccountTokens(null)).toBe(false)
+    expect(canCreateDisplayAccountTokens(ACCOUNT as any)).toBe(true)
+
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.SHAREDCHAT,
+      account: {
+        serviceCredential: {
+          fetch: fetchServiceCredential,
+        },
+      },
+    } as any)
+
+    expect(
+      canCreateDisplayAccountTokens({
+        ...ACCOUNT,
+        siteType: SITE_TYPES.SHAREDCHAT,
       } as any),
     ).toBe(false)
   })

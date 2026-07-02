@@ -35,6 +35,10 @@ import {
   resolveDefaultTokenLifecycleDecision,
 } from "~/services/accounts/defaultTokenLifecycle"
 import {
+  canRunAccountDefaultTokenAutomation,
+  createStoredAccountKeyProductContext,
+} from "~/services/accounts/keyProductCapabilities"
+import {
   TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
   type DefaultTokenQuickCreateResolution,
   type Sub2ApiQuickCreateResolution,
@@ -807,6 +811,9 @@ export async function validateAndSaveAccount(
         today_quota_consumption: freshAccountData.today_quota_consumption,
         today_requests_count: freshAccountData.today_requests_count,
         today_income: freshAccountData.today_income,
+        usage: freshAccountData.usage,
+        subscription: freshAccountData.subscription,
+        recentUsageRecords: freshAccountData.recentUsageRecords,
       },
       last_sync_time: Date.now(),
     }
@@ -1108,6 +1115,9 @@ export async function validateAndUpdateAccount(
         today_quota_consumption: freshAccountData.today_quota_consumption,
         today_requests_count: freshAccountData.today_requests_count,
         today_income: freshAccountData.today_income,
+        usage: freshAccountData.usage,
+        subscription: freshAccountData.subscription,
+        recentUsageRecords: freshAccountData.recentUsageRecords,
       },
       last_sync_time: Date.now(),
     }
@@ -1297,6 +1307,14 @@ async function autoProvisionKeyOnAccountAdd(
     }
 
     if (account.authType === AuthTypeEnum.None) {
+      return
+    }
+
+    if (
+      !canRunAccountDefaultTokenAutomation(
+        createStoredAccountKeyProductContext(account),
+      )
+    ) {
       return
     }
 

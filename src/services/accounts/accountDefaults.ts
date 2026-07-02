@@ -8,6 +8,9 @@ import {
   SiteHealthStatus,
   type AccountInfo,
   type AccountStorageConfig,
+  type AccountSubscriptionSummary,
+  type AccountUsageRecord,
+  type AccountUsageSummary,
   type CheckInConfig,
   type DeletedEntryKind,
   type HealthStatus,
@@ -72,12 +75,101 @@ const coerceNumber = (input: unknown, fallback: number) => {
 const coerceString = (input: unknown, fallback: string) =>
   typeof input === "string" ? input : fallback
 
+const coerceOptionalString = (input: unknown) =>
+  typeof input === "string" ? input : undefined
+
+const coerceOptionalNumber = (input: unknown) => {
+  if (typeof input === "number" && Number.isFinite(input)) return input
+  if (typeof input === "string" && input.trim() !== "") {
+    const parsed = Number(input)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return undefined
+}
+
+const coerceOptionalBoolean = (input: unknown) =>
+  typeof input === "boolean" ? input : undefined
+
 const coerceStringArray = (input: unknown): string[] => {
   if (!Array.isArray(input)) return []
   return input
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim())
     .filter((value) => value.length > 0)
+}
+
+const normalizeAccountUsageSummary = (
+  raw: AccountUsageSummary | undefined,
+): AccountUsageSummary | undefined => {
+  if (!raw || typeof raw !== "object") return undefined
+  const allowedScopes = new Set<AccountUsageSummary["scope"]>([
+    "today",
+    "current_period",
+    "rolling_window",
+    "lifetime",
+    "unknown",
+  ])
+  const scope = allowedScopes.has(raw.scope) ? raw.scope : "unknown"
+
+  return {
+    scope,
+    totalRequests: coerceNumber(raw.totalRequests, 0),
+    totalTokens: coerceNumber(raw.totalTokens, 0),
+    totalCost: coerceNumber(raw.totalCost, 0),
+    lastRequestTime: coerceOptionalString(raw.lastRequestTime),
+  }
+}
+
+const normalizeAccountSubscriptionSummary = (
+  raw: AccountSubscriptionSummary | undefined,
+): AccountSubscriptionSummary | undefined => {
+  if (!raw || typeof raw !== "object") return undefined
+  return {
+    name: coerceOptionalString(raw.name),
+    billingType: coerceOptionalString(raw.billingType),
+    limit: coerceOptionalNumber(raw.limit),
+    amountLimit: coerceOptionalNumber(raw.amountLimit),
+    usedAmount: coerceOptionalNumber(raw.usedAmount),
+    remainingAmount: coerceOptionalNumber(raw.remainingAmount),
+    usedCount: coerceOptionalNumber(raw.usedCount),
+    remainingCount: coerceOptionalNumber(raw.remainingCount),
+    period: coerceOptionalString(raw.period),
+    periodResetTime: coerceOptionalString(raw.periodResetTime),
+    expireTime: coerceOptionalString(raw.expireTime),
+    isLongTerm: coerceOptionalBoolean(raw.isLongTerm),
+    isActive: coerceOptionalBoolean(raw.isActive),
+  }
+}
+
+const normalizeAccountUsageRecord = (
+  raw: AccountUsageRecord,
+): AccountUsageRecord => ({
+  requestTime: coerceOptionalString(raw.requestTime),
+  model: coerceOptionalString(raw.model),
+  inputTokens: coerceOptionalNumber(raw.inputTokens),
+  outputTokens: coerceOptionalNumber(raw.outputTokens),
+  cacheCreationTokens: coerceOptionalNumber(raw.cacheCreationTokens),
+  cacheReadTokens: coerceOptionalNumber(raw.cacheReadTokens),
+  cacheInputTokens: coerceOptionalNumber(raw.cacheInputTokens),
+  reasoningTokens: coerceOptionalNumber(raw.reasoningTokens),
+  totalTokens: coerceOptionalNumber(raw.totalTokens),
+  responseTime: coerceOptionalNumber(raw.responseTime),
+  firstByteTime: coerceOptionalNumber(raw.firstByteTime),
+  cost: coerceOptionalNumber(raw.cost),
+  errorMessage: coerceOptionalString(raw.errorMessage),
+  status: coerceOptionalString(raw.status),
+})
+
+const normalizeAccountUsageRecords = (
+  raw: AccountUsageRecord[] | undefined,
+): AccountUsageRecord[] | undefined => {
+  if (!Array.isArray(raw)) return undefined
+  return raw
+    .filter(
+      (record): record is AccountUsageRecord =>
+        !!record && typeof record === "object",
+    )
+    .map(normalizeAccountUsageRecord)
 }
 
 const RESERVED_DELETED_ENTRY_RECORD_IDS = new Set([
@@ -217,6 +309,9 @@ function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
     today_quota_consumption: coerceNumber(merged.today_quota_consumption, 0),
     today_requests_count: coerceNumber(merged.today_requests_count, 0),
     today_income: coerceNumber(merged.today_income, 0),
+    usage: normalizeAccountUsageSummary(merged.usage),
+    subscription: normalizeAccountSubscriptionSummary(merged.subscription),
+    recentUsageRecords: normalizeAccountUsageRecords(merged.recentUsageRecords),
   }
 }
 

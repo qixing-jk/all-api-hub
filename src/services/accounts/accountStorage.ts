@@ -1187,6 +1187,9 @@ class AccountStorageService {
           today_quota_consumption: result.data.today_quota_consumption,
           today_requests_count: result.data.today_requests_count,
           today_income: result.data.today_income,
+          usage: result.data.usage,
+          subscription: result.data.subscription,
+          recentUsageRecords: result.data.recentUsageRecords,
         }
 
         if (shouldReEnable) {
@@ -1537,6 +1540,9 @@ class AccountStorageService {
           upload: normalized.account_info.today_prompt_tokens,
           download: normalized.account_info.today_completion_tokens,
         },
+        usage: normalized.account_info.usage,
+        subscription: normalized.account_info.subscription,
+        recentUsageRecords: normalized.account_info.recentUsageRecords,
         health: normalized.health,
         last_sync_time: normalized.last_sync_time,
         created_at: normalized.created_at,
