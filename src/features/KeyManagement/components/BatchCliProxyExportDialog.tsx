@@ -16,6 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import {
+  KEY_MANAGEMENT_ENTRY_KINDS,
+  type CliProxyExportEntry,
+} from "~/features/KeyManagement/types"
+import { buildServiceCredentialEntryIdentityKey } from "~/features/KeyManagement/utils"
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import {
   buildDefaultCliProxyProviderBaseUrl,
@@ -35,7 +40,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { ApiToken } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { showResultToast } from "~/utils/core/toastHelpers"
 
@@ -44,10 +49,7 @@ import { buildTokenIdentityKey } from "../utils"
 interface BatchCliProxyExportDialogProps {
   isOpen: boolean
   onClose: () => void
-  items: Array<{
-    account: DisplaySiteData
-    token: AccountToken
-  }>
+  items: CliProxyExportEntry[]
 }
 
 const EXECUTION_STATUSES = {
@@ -68,8 +70,55 @@ interface ExecutionState {
 /**
  * Builds a CLIProxyAPI provider name from account metadata.
  */
-function buildProviderName(account: DisplaySiteData) {
-  return account.name || account.baseUrl
+function buildProviderName(item: CliProxyExportEntry) {
+  if (item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential) {
+    return item.account.name || item.credential.label || item.account.baseUrl
+  }
+
+  return item.account.name || item.account.baseUrl
+}
+
+/**
+ * Resolves the user-facing key label shown in the batch preview.
+ */
+function getEntryTokenName(item: CliProxyExportEntry) {
+  return item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
+    ? item.credential.label
+    : item.token.name
+}
+
+/**
+ * Selects the upstream API base URL for the exported provider.
+ */
+function getEntryBaseUrl(item: CliProxyExportEntry) {
+  return item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
+    ? item.credential.baseUrl || item.account.baseUrl
+    : item.account.baseUrl
+}
+
+/**
+ * Resolves a CLIProxy-compatible token object for each product entry kind.
+ */
+async function resolveCliProxyExportToken(
+  item: CliProxyExportEntry,
+): Promise<ApiToken> {
+  if (item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential) {
+    return {
+      id: 0,
+      user_id: 0,
+      key: item.credential.key,
+      status: 1,
+      name: item.credential.label,
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: -1,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+    }
+  }
+
+  return resolveExportTokenForSecret(item.account, item.token)
 }
 
 /**
@@ -167,15 +216,21 @@ export function BatchCliProxyExportDialog({
   const previewItems = useMemo(
     () =>
       items.map((item) => {
-        const id = buildTokenIdentityKey(item.token.accountId, item.token.id)
         return {
           ...item,
-          id,
-          providerName: buildProviderName(item.account),
-          providerBaseUrl: buildDefaultCliProxyProviderBaseUrl(
-            providerType,
-            item.account,
-          ),
+          id:
+            item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
+              ? buildServiceCredentialEntryIdentityKey(
+                  item.account.id,
+                  item.credential.service,
+                )
+              : buildTokenIdentityKey(item.token.accountId, item.token.id),
+          tokenName: getEntryTokenName(item),
+          providerName: buildProviderName(item),
+          providerBaseUrl: buildDefaultCliProxyProviderBaseUrl(providerType, {
+            ...item.account,
+            baseUrl: getEntryBaseUrl(item),
+          }),
         }
       }),
     [items, providerType],
@@ -235,10 +290,7 @@ export function BatchCliProxyExportDialog({
       }))
 
       try {
-        const resolvedToken = await resolveExportTokenForSecret(
-          item.account,
-          item.token,
-        )
+        const resolvedToken = await resolveCliProxyExportToken(item)
         const result = await importToCliProxy({
           account: item.account,
           token: resolvedToken,
@@ -445,7 +497,7 @@ export function BatchCliProxyExportDialog({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium">
-                      {item.token.name}
+                      {item.tokenName}
                     </div>
                     <div className="text-muted-foreground truncate text-xs">
                       {item.account.name}

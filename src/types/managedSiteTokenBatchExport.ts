@@ -1,4 +1,5 @@
 import type { ManagedSiteType } from "~/constants/siteType"
+import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { AccountToken, DisplaySiteData } from "~/types"
 
 import type { ChannelFormData } from "./managedSite"
@@ -38,10 +39,22 @@ export const MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES = {
 export type ManagedSiteTokenBatchExportBlockedReasonCode =
   (typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES)[keyof typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES]
 
-export interface ManagedSiteTokenBatchExportItemInput {
-  account: DisplaySiteData
-  token: AccountToken
-}
+export const MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS = {
+  AccountToken: "account_token",
+  ServiceCredential: "service_credential",
+} as const
+
+export type ManagedSiteTokenBatchExportItemInput =
+  | {
+      kind?: typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.AccountToken
+      account: DisplaySiteData
+      token: AccountToken
+    }
+  | {
+      kind: typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential
+      account: DisplaySiteData
+      credential: AccountServiceCredential
+    }
 
 export interface ManagedSiteTokenBatchExportMatchedChannel {
   id: number

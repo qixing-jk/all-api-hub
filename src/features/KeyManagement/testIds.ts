@@ -15,6 +15,7 @@ export const KEY_MANAGEMENT_TEST_IDS = {
     "key-management-managed-site-verification-retry-button",
   openSelectedAccountModelsButton:
     "key-management-open-selected-account-models-button",
+  serviceCredentialCard: "key-management-service-credential-card",
   titleActions: "key-management-title-actions",
   deleteTokenConfirmButton: "key-management-delete-token-confirm-button",
   accountScopeSelect: "key-management-account-scope-select",

@@ -16,10 +16,11 @@ import {
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { AccountToken } from "~/types"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
   type ManagedSiteTokenBatchExportBlockedReasonCode,
@@ -74,6 +75,39 @@ const mapWithConcurrency = async <TItem, TResult>(
 const buildPreviewItemId = (accountId: string, tokenId: number) =>
   `${accountId}:${tokenId}`
 
+const isServiceCredentialInput = (
+  input: ManagedSiteTokenBatchExportItemInput,
+) => input.kind === MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential
+
+const buildServiceCredentialPreviewItemId = (
+  accountId: string,
+  service: string,
+) =>
+  `${MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential}:${accountId}:${service}`
+
+const buildTransientTokenFromServiceCredential = (
+  input: Extract<
+    ManagedSiteTokenBatchExportItemInput,
+    {
+      kind: typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential
+    }
+  >,
+): AccountToken => ({
+  id: 0,
+  user_id: 0,
+  key: input.credential.key,
+  status: input.credential.isAuthenticated ? 1 : 0,
+  name: input.credential.label,
+  created_time: 0,
+  accessed_time: 0,
+  expired_time: -1,
+  remain_quota: 0,
+  unlimited_quota: true,
+  used_quota: 0,
+  accountId: input.account.id,
+  accountName: input.account.name,
+})
+
 const toMatchedChannel = (
   channel: ManagedSiteChannel,
 ): { id: number; name: string } => ({
@@ -86,14 +120,29 @@ const buildBasePreviewItem = (
 ): Pick<
   ManagedSiteTokenBatchExportPreviewItem,
   "id" | "accountId" | "accountName" | "tokenId" | "tokenName"
-> => ({
-  id: buildPreviewItemId(input.account.id, input.token.id),
-  accountId: input.account.id,
-  accountName:
-    input.account.name || input.token.accountName || input.account.id,
-  tokenId: input.token.id,
-  tokenName: input.token.name || `#${input.token.id}`,
-})
+> => {
+  if (isServiceCredentialInput(input)) {
+    return {
+      id: buildServiceCredentialPreviewItemId(
+        input.account.id,
+        input.credential.service,
+      ),
+      accountId: input.account.id,
+      accountName: input.account.name || input.account.id,
+      tokenId: 0,
+      tokenName: input.credential.label,
+    }
+  }
+
+  return {
+    id: buildPreviewItemId(input.account.id, input.token.id),
+    accountId: input.account.id,
+    accountName:
+      input.account.name || input.token.accountName || input.account.id,
+    tokenId: input.token.id,
+    tokenName: input.token.name || `#${input.token.id}`,
+  }
+}
 
 const buildBlockedPreviewItem = (
   input: ManagedSiteTokenBatchExportItemInput,
@@ -153,16 +202,43 @@ const getDraftBlockedReason = (
 }
 
 const collectSecrets = (
-  account: DisplaySiteData,
-  token: AccountToken,
+  input: ManagedSiteTokenBatchExportItemInput,
   managedConfig: ManagedSiteConfig,
 ) =>
   [
-    token.key,
-    account.token,
-    account.cookieAuthSessionCookie,
+    isServiceCredentialInput(input) ? input.credential.key : input.token.key,
+    input.account.token,
+    input.account.cookieAuthSessionCookie,
     ...collectManagedConfigSecrets(managedConfig),
   ].filter(Boolean) as string[]
+
+const resolveInputTokenForManagedSiteExport = async (
+  input: ManagedSiteTokenBatchExportItemInput,
+): Promise<AccountToken> => {
+  if (isServiceCredentialInput(input)) {
+    return buildTransientTokenFromServiceCredential(input)
+  }
+
+  return resolveDisplayAccountTokenForSecret(input.account, input.token)
+}
+
+const resolveInputAccountForManagedSiteExport = (
+  input: ManagedSiteTokenBatchExportItemInput,
+) => {
+  if (!isServiceCredentialInput(input)) {
+    return {
+      ...input.account,
+      baseUrl: normalizeManagedSiteChannelBaseUrl(input.account.baseUrl),
+    }
+  }
+
+  return {
+    ...input.account,
+    baseUrl:
+      input.credential.baseUrl?.trim() ||
+      normalizeManagedSiteChannelBaseUrl(input.account.baseUrl),
+  }
+}
 
 const preparePreviewItem = async (params: {
   input: ManagedSiteTokenBatchExportItemInput
@@ -170,19 +246,12 @@ const preparePreviewItem = async (params: {
   managedConfig: ManagedSiteConfig
 }): Promise<ManagedSiteTokenBatchExportPreviewItem> => {
   const { input, service, managedConfig } = params
-  let secretsToRedact = collectSecrets(
-    input.account,
-    input.token,
-    managedConfig,
-  )
+  let secretsToRedact = collectSecrets(input, managedConfig)
 
   let resolvedToken: AccountToken
 
   try {
-    resolvedToken = await resolveDisplayAccountTokenForSecret(
-      input.account,
-      input.token,
-    )
+    resolvedToken = await resolveInputTokenForManagedSiteExport(input)
     secretsToRedact = Array.from(
       new Set([...secretsToRedact, resolvedToken.key].filter(Boolean)),
     )
@@ -190,7 +259,10 @@ const preparePreviewItem = async (params: {
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
     logger.warn("Managed-site token batch secret resolution failed", {
       accountId: input.account.id,
-      tokenId: input.token.id,
+      tokenId: isServiceCredentialInput(input) ? undefined : input.token.id,
+      service: isServiceCredentialInput(input)
+        ? input.credential.service
+        : undefined,
       siteType: service.siteType,
       diagnostic,
     })
@@ -203,14 +275,9 @@ const preparePreviewItem = async (params: {
   }
 
   try {
-    const normalizedAccountBaseUrl = normalizeManagedSiteChannelBaseUrl(
-      input.account.baseUrl,
-    )
+    const channelDraftAccount = resolveInputAccountForManagedSiteExport(input)
     const draft = await service.prepareChannelFormData(
-      {
-        ...input.account,
-        baseUrl: normalizedAccountBaseUrl,
-      },
+      channelDraftAccount,
       resolvedToken,
     )
     const blockedReason = getDraftBlockedReason(service, draft)
@@ -299,7 +366,10 @@ const preparePreviewItem = async (params: {
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
     logger.warn("Managed-site token batch preview item failed", {
       accountId: input.account.id,
-      tokenId: input.token.id,
+      tokenId: isServiceCredentialInput(input) ? undefined : input.token.id,
+      service: isServiceCredentialInput(input)
+        ? input.credential.service
+        : undefined,
       siteType: service.siteType,
       diagnostic,
     })

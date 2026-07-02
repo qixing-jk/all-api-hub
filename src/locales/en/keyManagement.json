@@ -135,6 +135,7 @@
     "availableModels": "Available Models",
     "basicInfo": "Basic Information",
     "createFailed": "Failed to create key, please try again later",
+    "createNotSupported": "This account does not support creating API keys.",
     "createSuccess": "Key created successfully",
     "createToken": "Create Key",
     "editModeNoChange": "Cannot change account in edit mode",
@@ -163,6 +164,7 @@
     "tokenName": "Token Name",
     "unlimitedQuota": "Unlimited Quota",
     "updateFailed": "Failed to update key, please try again later",
+    "updateNotSupported": "This account does not support updating API keys.",
     "updateSuccess": "Key updated successfully",
     "updateToken": "Update Key",
     "validExpiration": "Expiration time must be greater than current time",
@@ -264,6 +266,9 @@
     "revealFailed": "Failed to reveal key",
     "savedToApiProfiles": "Saved {{name}} to API credential library",
     "saveToApiProfilesFailed": "Failed to save to API credential library",
+    "serviceCredentialCopied": "Service key copied to clipboard",
+    "serviceCredentialRotated": "Service key reset",
+    "serviceCredentialRotateFailed": "Failed to reset service key",
     "verifyApiFailed": "Failed to open API verification",
     "verifyCliSupportFailed": "Failed to open CLI compatibility verification"
   },
@@ -364,7 +369,8 @@
     "skipReasons": {
       "aihubmixOneTimeKey": "AIHubMix keys can only be viewed once. Create the key manually and save the full key immediately.",
       "noneAuth": "No credentials (auth type: none)",
-      "sub2api": "Requires selecting a Sub2API group; create the key manually"
+      "sub2api": "Requires selecting a Sub2API group; create the key manually",
+      "tokenAutomationUnsupported": "This site exposes a service credential instead of API-token management; automatic key repair is skipped."
     },
     "title": "Key coverage check",
     "totalsLabels": {
@@ -381,6 +387,16 @@
   "searchPlaceholder": "Search key name...",
   "selectAccount": "Select Account",
   "selectAccountToContinue": "Select an account above before viewing or creating keys.",
+  "serviceCredential": {
+    "authenticated": "Authenticated",
+    "baseUrl": "Base URL:",
+    "copy": "Copy",
+    "notAuthenticated": "Not authenticated",
+    "rotate": "Reset",
+    "rotateUnsupported": "This site does not support resetting the service key",
+    "rotating": "Resetting...",
+    "singleton": "Service key"
+  },
   "showingCount_one": "Showing {{count}}",
   "showingCount_other": "Showing {{count}}",
   "title": "Key Management",

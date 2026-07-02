@@ -1,8 +1,10 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -193,5 +195,59 @@ describe("TokenList grouped all-accounts UX", () => {
     ).toBeInTheDocument()
     expect(await screen.findByText("Token A1")).toBeInTheDocument()
     expect(await screen.findByText("Token B1")).toBeInTheDocument()
+  })
+
+  it("includes loaded service credentials in all-account groups", async () => {
+    const user = userEvent.setup()
+    const account = createAccount({
+      id: "sharedchat-account",
+      name: "SharedChat",
+      siteType: SITE_TYPES.SHAREDCHAT,
+      baseUrl: "https://sharedchat.example.invalid",
+    })
+
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[]}
+        filteredTokens={[]}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={getVisibleTokenKey as any}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
+        displayData={[account] as any}
+        serviceCredentials={{
+          [account.id]: {
+            status: "loaded",
+            credential: {
+              kind: "singleton_service_key",
+              service: "codex",
+              label: "Codex API Key",
+              key: "sk-sharedchat",
+              baseUrl: "https://sharedchat.example.invalid/v1",
+              isAuthenticated: true,
+            },
+          },
+        }}
+        onCopyServiceCredential={vi.fn()}
+        onRotateServiceCredential={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.expandAll",
+      }),
+    )
+
+    expect(
+      await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.serviceCredentialCard),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Codex API Key")).toBeInTheDocument()
   })
 })

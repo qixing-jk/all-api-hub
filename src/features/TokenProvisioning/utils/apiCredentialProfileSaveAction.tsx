@@ -1,8 +1,10 @@
 import type { TFunction } from "i18next"
 import toast from "react-hot-toast"
 
+import { KEY_MANAGEMENT_ENTRY_KINDS } from "~/features/KeyManagement/types"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken, DisplaySiteData } from "~/types"
@@ -18,21 +20,59 @@ type OneTimeKeySaveLogger = {
   error: (message: string, details?: unknown) => void
 }
 
-type ApiCredentialProfileBatchSaveItem = {
-  account: Pick<
-    DisplaySiteData,
-    | "authType"
-    | "baseUrl"
-    | "cookieAuthSessionCookie"
-    | "id"
-    | "name"
-    | "siteType"
-    | "tagIds"
-    | "token"
-    | "userId"
-  >
-  token: AccountToken
-}
+type ApiCredentialProfileBatchSaveAccount = Pick<
+  DisplaySiteData,
+  | "authType"
+  | "baseUrl"
+  | "cookieAuthSessionCookie"
+  | "id"
+  | "name"
+  | "siteType"
+  | "tagIds"
+  | "token"
+  | "userId"
+>
+
+type ApiCredentialProfileBatchSaveItem =
+  | {
+      kind?: typeof KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
+      account: ApiCredentialProfileBatchSaveAccount
+      token: AccountToken
+    }
+  | {
+      kind: typeof KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
+      account: ApiCredentialProfileBatchSaveAccount
+      credential: AccountServiceCredential
+    }
+
+type ApiCredentialProfileBatchTokenItem = Extract<
+  ApiCredentialProfileBatchSaveItem,
+  { token: AccountToken }
+>
+
+type ApiCredentialProfileBatchServiceCredentialItem = Extract<
+  ApiCredentialProfileBatchSaveItem,
+  { kind: typeof KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential }
+>
+
+const isServiceCredentialBatchItem = (
+  item: ApiCredentialProfileBatchSaveItem,
+): item is ApiCredentialProfileBatchServiceCredentialItem =>
+  item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
+
+const isAccountTokenBatchItem = (
+  item: ApiCredentialProfileBatchSaveItem,
+): item is ApiCredentialProfileBatchTokenItem =>
+  !isServiceCredentialBatchItem(item)
+
+const collectBatchSaveSecrets = (items: ApiCredentialProfileBatchSaveItem[]) =>
+  items
+    .flatMap((item) => [
+      isAccountTokenBatchItem(item) ? item.token.key : item.credential.key,
+      item.account.token,
+      item.account.cookieAuthSessionCookie,
+    ])
+    .filter(Boolean) as string[]
 
 interface BuildOneTimeApiKeyProfileSaveActionParams {
   accountName: string
@@ -141,16 +181,31 @@ export async function saveApiTokensToApiCredentialProfiles({
   let savedCount = 0
 
   try {
-    for (const { account, token } of items) {
-      const resolvedToken = await resolveTokenForSecret(account, token)
+    for (const item of items) {
+      const { account } = item
+      const resolvedToken = isServiceCredentialBatchItem(item)
+        ? {
+            key: item.credential.key,
+            name: item.credential.label,
+            accountName: account.name,
+          }
+        : await resolveTokenForSecret(account, item.token)
+      const fallbackAccountName = isServiceCredentialBatchItem(item)
+        ? account.name
+        : item.token.accountName
+      const baseUrl = isServiceCredentialBatchItem(item)
+        ? item.credential.baseUrl || account.baseUrl
+        : account.baseUrl
       await createApiCredentialProfileFromToken({
         accountName: account.name,
-        fallbackAccountName: token.accountName,
-        baseUrl: account.baseUrl,
+        fallbackAccountName,
+        baseUrl,
         siteType: account.siteType,
         tagIds: account.tagIds ?? [],
         token: {
-          ...token,
+          ...(isServiceCredentialBatchItem(item)
+            ? { name: item.credential.label }
+            : item.token),
           key: resolvedToken.key,
         },
       })
@@ -199,14 +254,7 @@ export async function saveApiTokensToApiCredentialProfiles({
               totalCount,
             }
           : {}),
-        message: toSanitizedErrorSummary(
-          error,
-          items.flatMap(({ account, token }) =>
-            [token.key, account.token, account.cookieAuthSessionCookie].filter(
-              Boolean,
-            ),
-          ) as string[],
-        ),
+        message: toSanitizedErrorSummary(error, collectBatchSaveSecrets(items)),
       },
     )
     toast.error(

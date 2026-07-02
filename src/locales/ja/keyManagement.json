@@ -132,6 +132,7 @@
     "availableModels": "利用可能モデル",
     "basicInfo": "基本情報",
     "createFailed": "キーの作成に失敗しました。しばらくしてから再試行してください",
+    "createNotSupported": "このアカウントでは API キーを作成できません。",
     "createSuccess": "キーを正常に作成しました",
     "createToken": "キーを作成",
     "editModeNoChange": "編集モードではアカウントを変更できません",
@@ -159,6 +160,7 @@
     "tokenName": "トークン名",
     "unlimitedQuota": "無制限クォータ",
     "updateFailed": "キーの更新に失敗しました。しばらくしてから再試行してください",
+    "updateNotSupported": "このアカウントでは API キーを更新できません。",
     "updateSuccess": "キーを正常に更新しました",
     "updateToken": "キーを更新",
     "validExpiration": "有効期限は現在時刻より後である必要があります",
@@ -258,6 +260,9 @@
     "revealFailed": "キーの表示に失敗しました",
     "savedToApiProfiles": "{{name}} を API 認証情報庫に保存しました",
     "saveToApiProfilesFailed": "API 認証情報庫への保存に失敗しました",
+    "serviceCredentialCopied": "サービスキーをクリップボードにコピーしました",
+    "serviceCredentialRotated": "サービスキーをリセットしました",
+    "serviceCredentialRotateFailed": "サービスキーのリセットに失敗しました",
     "verifyApiFailed": "API 検証を開けませんでした",
     "verifyCliSupportFailed": "CLI 互換性検証を開けませんでした"
   },
@@ -352,7 +357,8 @@
     "skipReasons": {
       "aihubmixOneTimeKey": "AIHubMix のキーは一度だけ表示できます。手動で作成し、完全なキーをすぐに保存してください。",
       "noneAuth": "認証情報なし（auth type: none）",
-      "sub2api": "Sub2API グループの選択が必要です。手動でキーを作成してください"
+      "sub2api": "Sub2API グループの選択が必要です。手動でキーを作成してください",
+      "tokenAutomationUnsupported": "このサイトは API トークン管理ではなくサービス認証情報を公開するため、自動修復をスキップしました。"
     },
     "title": "キー網羅性チェック",
     "totalsLabels": {
@@ -369,6 +375,16 @@
   "searchPlaceholder": "キー名を検索...",
   "selectAccount": "アカウントを選択",
   "selectAccountToContinue": "上のアカウントを選択してから、キーの確認または作成を行ってください。",
+  "serviceCredential": {
+    "authenticated": "認証済み",
+    "baseUrl": "Base URL:",
+    "copy": "コピー",
+    "notAuthenticated": "未認証",
+    "rotate": "リセット",
+    "rotateUnsupported": "このサイトはサービスキーのリセットに対応していません",
+    "rotating": "リセット中...",
+    "singleton": "サービスキー"
+  },
   "showingCount_other": "{{count}} 件を表示中",
   "title": "キー管理",
   "totalKeys_other": "合計 {{count}} キー"

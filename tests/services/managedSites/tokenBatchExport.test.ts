@@ -5,6 +5,7 @@ import type { ManagedSiteService } from "~/services/managedSites/managedSiteServ
 import type { AccountToken } from "~/types"
 import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
 } from "~/types/managedSiteTokenBatchExport"
@@ -204,6 +205,62 @@ describe("managed-site token batch export", () => {
         }),
       }),
     )
+  })
+
+  it("previews service credentials without resolving an account token secret", async () => {
+    const service = buildService()
+    mockGetManagedSiteService.mockResolvedValue(service)
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const account = buildDisplaySiteData({
+      id: "sharedchat-account",
+      name: "SharedChat",
+      baseUrl: "https://sharedchat.example.invalid/",
+    })
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        {
+          kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential,
+          account,
+          credential: {
+            kind: "singleton_service_key",
+            service: "codex",
+            label: "Codex API Key",
+            key: "sk-service-credential",
+            baseUrl: "https://sharedchat.example.invalid/v1",
+            isAuthenticated: true,
+          },
+        },
+      ],
+    })
+
+    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(service.prepareChannelFormData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "sharedchat-account",
+        baseUrl: "https://sharedchat.example.invalid/v1",
+      }),
+      expect.objectContaining({
+        id: 0,
+        name: "Codex API Key",
+        key: "sk-service-credential",
+        accountId: "sharedchat-account",
+      }),
+    )
+    expect(preview.items[0]).toMatchObject({
+      id: "service_credential:sharedchat-account:codex",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
+      accountName: "SharedChat",
+      tokenId: 0,
+      tokenName: "Codex API Key",
+      draft: expect.objectContaining({
+        base_url: "https://sharedchat.example.invalid/v1",
+        key: "sk-service-credential",
+      }),
+    })
   })
 
   it("reports channel creation failures without marking the item created", async () => {

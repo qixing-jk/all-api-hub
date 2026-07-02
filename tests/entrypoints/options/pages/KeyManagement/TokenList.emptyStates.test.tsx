@@ -126,6 +126,44 @@ describe("TokenList empty states", () => {
     ).toBeNull()
   })
 
+  it("disables the create-first-key action when token creation is unsupported", async () => {
+    const user = userEvent.setup()
+    const handleAddToken = vi.fn()
+    const account = createAccount({
+      id: "acc-1",
+      name: "Account 1",
+    })
+
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[]}
+        filteredTokens={[]}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={vi.fn()}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={handleAddToken}
+        canCreateTokens={false}
+        selectedAccount={account.id}
+        displayData={[account]}
+      />,
+    )
+
+    const createButton = await screen.findByRole("button", {
+      name: "keyManagement:createFirstKey",
+    })
+
+    expect(createButton).toBeDisabled()
+
+    await user.click(createButton)
+
+    expect(handleAddToken).not.toHaveBeenCalled()
+  })
+
   it("keeps the current single-account token list visible while refreshing", async () => {
     const account = createAccount({
       id: "acc-1",

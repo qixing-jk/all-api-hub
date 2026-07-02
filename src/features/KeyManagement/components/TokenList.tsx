@@ -17,6 +17,7 @@ import { Badge, Button, Card, Checkbox, EmptyState } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { saveApiTokensToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { cn } from "~/lib/utils"
+import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -33,14 +34,26 @@ import type {
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
+import { MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS } from "~/types/managedSiteTokenBatchExport"
 import { createTab } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
-import { buildTokenIdentityKey } from "../utils"
+import {
+  KEY_MANAGEMENT_ENTRY_KINDS,
+  type ApiCredentialProfileSaveEntry,
+  type CliProxyExportEntry,
+  type KeyManagementEntry,
+} from "../types"
+import {
+  buildAccountTokenEntryIdentityKey,
+  buildServiceCredentialEntryIdentityKey,
+  buildTokenIdentityKey,
+} from "../utils"
 import { BatchCliProxyExportDialog } from "./BatchCliProxyExportDialog"
 import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
+import { ServiceCredentialCard } from "./ServiceCredentialCard"
 import { TokenListItem } from "./TokenListItem"
 
 const logger = createLogger("TokenList")
@@ -49,6 +62,8 @@ interface TokenListProps {
   isLoading: boolean
   tokens: AccountToken[]
   filteredTokens: AccountToken[]
+  entries?: KeyManagementEntry[]
+  filteredEntries?: KeyManagementEntry[]
   visibleKeys: Set<string>
   resolvingVisibleKeys: Set<string>
   getVisibleTokenKey: (token: AccountToken) => string
@@ -60,6 +75,7 @@ interface TokenListProps {
   handleEditToken: (token: AccountToken) => void
   handleDeleteToken: (token: AccountToken) => void
   handleAddToken: () => void
+  canCreateTokens?: boolean
   onAddAccount?: () => void
   onRequestAccountSelection?: () => void
   selectedAccount: string
@@ -79,6 +95,17 @@ interface TokenListProps {
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => void | Promise<void>
   allAccountsFilterAccountIds?: string[]
+  serviceCredentials?: Record<
+    string,
+    {
+      status: "idle" | "loading" | "loaded" | "error"
+      credential?: AccountServiceCredential
+      errorMessage?: string
+      isRotating?: boolean
+    }
+  >
+  onCopyServiceCredential?: (account: DisplaySiteData) => Promise<void>
+  onRotateServiceCredential?: (account: DisplaySiteData) => Promise<void>
 }
 
 /**
@@ -104,6 +131,7 @@ function LoadingSkeleton() {
  * @param props.selectedAccount Currently selected account identifier.
  * @param props.tokens All tokens for the current account.
  * @param props.handleAddToken Callback to open the add-token flow.
+ * @param props.canCreateTokens Whether the current account scope supports token creation.
  * @param props.displayData Account display data used to determine empty states.
  * @param props.currentAccountLoadError Error message shown when the selected account fails to load.
  * @param props.onRetryCurrentAccount Optional callback to retry loading the selected account.
@@ -114,6 +142,7 @@ function TokenEmptyState({
   selectedAccount,
   tokens,
   handleAddToken,
+  canCreateTokens = true,
   displayData,
   currentAccountLoadError,
   onRetryCurrentAccount,
@@ -123,6 +152,7 @@ function TokenEmptyState({
   selectedAccount: string
   tokens: unknown[]
   handleAddToken: () => void
+  canCreateTokens?: boolean
   displayData: DisplaySiteData[]
   currentAccountLoadError?: string | null
   onRetryCurrentAccount?: () => void
@@ -224,6 +254,7 @@ function TokenEmptyState({
           variant: "success",
           icon: <PlusIcon className="h-4 w-4" />,
           testId: KEY_MANAGEMENT_TEST_IDS.emptyStateAddTokenButton,
+          disabled: !canCreateTokens,
         }}
       />
     )
@@ -253,6 +284,7 @@ function TokenEmptyState({
  * @param props.handleEditToken Opens the edit modal for the given token.
  * @param props.handleDeleteToken Removes the token after confirmation.
  * @param props.handleAddToken Opens the add-token dialog.
+ * @param props.canCreateTokens Whether the current account scope supports token creation.
  * @param props.selectedAccount Currently selected account identifier.
  * @param props.displayData Account metadata used to render contextual info.
  * @param props.currentAccountLoadError Optional load error for the currently selected account.
@@ -267,6 +299,8 @@ export function TokenList(props: TokenListProps) {
     isLoading,
     tokens,
     filteredTokens,
+    entries: providedEntries,
+    filteredEntries: providedFilteredEntries,
     visibleKeys,
     resolvingVisibleKeys,
     getVisibleTokenKey,
@@ -275,6 +309,7 @@ export function TokenList(props: TokenListProps) {
     handleEditToken,
     handleDeleteToken,
     handleAddToken,
+    canCreateTokens = true,
     onAddAccount,
     onRequestAccountSelection,
     selectedAccount,
@@ -285,6 +320,9 @@ export function TokenList(props: TokenListProps) {
     onManagedSiteImportSuccess,
     onManagedSiteVerificationRetry,
     allAccountsFilterAccountIds = [],
+    serviceCredentials = {},
+    onCopyServiceCredential,
+    onRotateServiceCredential,
   } = props
   const { t } = useTranslation(["keyManagement", "settings"])
   const { managedSiteType } = useUserPreferencesContext()
@@ -298,17 +336,63 @@ export function TokenList(props: TokenListProps) {
   >([])
   const [batchCliProxyExportOpen, setBatchCliProxyExportOpen] = useState(false)
   const [batchCliProxyExportItems, setBatchCliProxyExportItems] = useState<
-    ManagedSiteTokenBatchExportItemInput[]
+    CliProxyExportEntry[]
   >([])
   const [isBatchApiProfilesSaving, setIsBatchApiProfilesSaving] =
     useState(false)
-  const [selectedTokenIds, setSelectedTokenIds] = useState<Set<string>>(
+  const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(
     () => new Set(),
   )
 
   const accountById = useMemo(() => {
     return new Map(displayData.map((account) => [account.id, account]))
   }, [displayData])
+  const entries = useMemo(() => {
+    if (providedEntries) return providedEntries
+
+    const tokenEntries = filteredTokens
+      .map((token): KeyManagementEntry | null => {
+        const account = accountById.get(token.accountId)
+        return account
+          ? {
+              kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+              id: buildAccountTokenEntryIdentityKey(token.accountId, token.id),
+              account,
+              token,
+            }
+          : null
+      })
+      .filter((entry): entry is KeyManagementEntry => entry !== null)
+
+    const serviceCredentialEntries = displayData
+      .map((account): KeyManagementEntry | null => {
+        const entry = serviceCredentials[account.id]
+        if (entry?.status !== "loaded" || !entry.credential) {
+          return null
+        }
+
+        return {
+          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
+          id: buildServiceCredentialEntryIdentityKey(
+            account.id,
+            entry.credential.service,
+          ),
+          account,
+          credential: entry.credential,
+          isRotating: entry.isRotating === true,
+        }
+      })
+      .filter((entry): entry is KeyManagementEntry => entry !== null)
+
+    return [...serviceCredentialEntries, ...tokenEntries]
+  }, [
+    accountById,
+    displayData,
+    filteredTokens,
+    providedEntries,
+    serviceCredentials,
+  ])
+  const filteredEntries = providedFilteredEntries ?? entries
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
 
   const isAllAccountsMode =
@@ -354,7 +438,7 @@ export function TokenList(props: TokenListProps) {
     })
   }, [allAccountsFilterAccountIds, isAllAccountsMode])
 
-  const groupedTokens = useMemo(() => {
+  const groupedEntries = useMemo(() => {
     if (!isAllAccountsMode) return null
 
     const totalTokensByAccountId = new Map<string, AccountToken[]>()
@@ -364,90 +448,123 @@ export function TokenList(props: TokenListProps) {
       totalTokensByAccountId.set(token.accountId, list)
     }
 
-    const filteredTokensByAccountId = new Map<string, AccountToken[]>()
-    for (const token of filteredTokens) {
-      const list = filteredTokensByAccountId.get(token.accountId) ?? []
-      list.push(token)
-      filteredTokensByAccountId.set(token.accountId, list)
+    const entriesByAccountId = new Map<string, KeyManagementEntry[]>()
+    for (const entry of filteredEntries) {
+      const accountId =
+        entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
+          ? entry.token.accountId
+          : entry.account.id
+      const list = entriesByAccountId.get(accountId) ?? []
+      list.push(entry)
+      entriesByAccountId.set(accountId, list)
     }
 
     return displayData
-      .filter((account) => filteredTokensByAccountId.has(account.id))
+      .filter((account) => entriesByAccountId.has(account.id))
       .map((account) => {
         const total = totalTokensByAccountId.get(account.id) ?? []
-        const filtered = filteredTokensByAccountId.get(account.id) ?? []
+        const filteredAccountEntries = entriesByAccountId.get(account.id) ?? []
+        const filteredAccountTokens = filteredAccountEntries
+          .filter(
+            (
+              entry,
+            ): entry is Extract<
+              KeyManagementEntry,
+              { kind: typeof KEY_MANAGEMENT_ENTRY_KINDS.AccountToken }
+            > => entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+          )
+          .map((entry) => entry.token)
         return {
           account,
           totalTokens: total,
-          filteredTokens: filtered,
-          totalCount: total.length,
+          filteredTokens: filteredAccountTokens,
+          filteredEntries: filteredAccountEntries,
+          totalCount: Math.max(total.length, filteredAccountEntries.length),
           enabledCount: total.filter((item) => item.status === 1).length,
-          showingCount: filtered.length,
+          showingCount: filteredAccountEntries.length,
         }
       })
-  }, [displayData, filteredTokens, isAllAccountsMode, tokens])
+  }, [displayData, filteredEntries, isAllAccountsMode, tokens])
 
-  const filteredTokenIds = useMemo(
-    () =>
-      new Set(
-        filteredTokens.map((token) =>
-          buildTokenIdentityKey(token.accountId, token.id),
-        ),
-      ),
-    [filteredTokens],
+  const filteredEntryIds = useMemo(
+    () => new Set(filteredEntries.map((entry) => entry.id)),
+    [filteredEntries],
   )
   const selectedVisibleCount = useMemo(
     () =>
-      Array.from(selectedTokenIds).filter((tokenId) =>
-        filteredTokenIds.has(tokenId),
+      Array.from(selectedEntryIds).filter((entryId) =>
+        filteredEntryIds.has(entryId),
       ).length,
-    [filteredTokenIds, selectedTokenIds],
+    [filteredEntryIds, selectedEntryIds],
   )
   const allFilteredSelected =
-    filteredTokens.length > 0 && selectedVisibleCount === filteredTokens.length
+    filteredEntries.length > 0 &&
+    selectedVisibleCount === filteredEntries.length
   const visibleSelectionChecked =
     selectedVisibleCount === 0
       ? false
-      : selectedVisibleCount === filteredTokens.length
+      : selectedVisibleCount === filteredEntries.length
         ? true
         : "indeterminate"
-  const selectedBatchItems = useMemo(
-    () =>
-      tokens
-        .filter((token) =>
-          selectedTokenIds.has(
-            buildTokenIdentityKey(token.accountId, token.id),
-          ),
-        )
-        .map((token) => {
-          const account = accountById.get(token.accountId)
-          return account ? { account, token } : null
-        })
-        .filter(
-          (item): item is { account: DisplaySiteData; token: AccountToken } =>
-            item !== null,
-        ),
-    [accountById, selectedTokenIds, tokens],
+  const selectedEntries = useMemo(
+    () => entries.filter((entry) => selectedEntryIds.has(entry.id)),
+    [entries, selectedEntryIds],
+  )
+  const selectedManagedSiteBatchItems = useMemo(
+    (): ManagedSiteTokenBatchExportItemInput[] =>
+      selectedEntries.map((entry) =>
+        entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
+          ? {
+              kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.AccountToken,
+              account: entry.account,
+              token: entry.token,
+            }
+          : {
+              kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential,
+              account: entry.account,
+              credential: entry.credential,
+            },
+      ),
+    [selectedEntries],
+  )
+  const selectedApiProfileItems = useMemo(
+    (): ApiCredentialProfileSaveEntry[] =>
+      selectedEntries.map((entry) =>
+        entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
+          ? {
+              kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+              account: entry.account,
+              token: entry.token,
+            }
+          : {
+              kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
+              account: entry.account,
+              credential: entry.credential,
+            },
+      ),
+    [selectedEntries],
+  )
+  const selectedCliProxyItems = useMemo(
+    (): CliProxyExportEntry[] => selectedApiProfileItems,
+    [selectedApiProfileItems],
   )
 
   useEffect(() => {
-    const availableIds = new Set(
-      tokens.map((token) => buildTokenIdentityKey(token.accountId, token.id)),
-    )
-    setSelectedTokenIds((prev) => {
+    const availableIds = new Set(entries.map((entry) => entry.id))
+    setSelectedEntryIds((prev) => {
       const next = new Set(
-        Array.from(prev).filter((tokenId) => availableIds.has(tokenId)),
+        Array.from(prev).filter((entryId) => availableIds.has(entryId)),
       )
       return next.size === prev.size ? prev : next
     })
-  }, [tokens])
+  }, [entries])
 
   const collapseAll = useCallback(() => {
-    if (!groupedTokens) return
+    if (!groupedEntries) return
     setCollapsedAccountIds(
-      new Set(groupedTokens.map((group) => group.account.id)),
+      new Set(groupedEntries.map((group) => group.account.id)),
     )
-  }, [groupedTokens, setCollapsedAccountIds])
+  }, [groupedEntries, setCollapsedAccountIds])
 
   const expandAll = useCallback(
     () => setCollapsedAccountIds(new Set()),
@@ -466,31 +583,26 @@ export function TokenList(props: TokenListProps) {
     })
   }
 
-  const toggleTokenSelection = (token: AccountToken, checked: boolean) => {
-    const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
-    setSelectedTokenIds((prev) => {
+  const toggleEntrySelection = (entryId: string, checked: boolean) => {
+    setSelectedEntryIds((prev) => {
       const next = new Set(prev)
       if (checked) {
-        next.add(tokenIdentityKey)
+        next.add(entryId)
       } else {
-        next.delete(tokenIdentityKey)
+        next.delete(entryId)
       }
       return next
     })
   }
 
   const toggleFilteredSelection = () => {
-    setSelectedTokenIds((prev) => {
+    setSelectedEntryIds((prev) => {
       const next = new Set(prev)
-      for (const token of filteredTokens) {
-        const tokenIdentityKey = buildTokenIdentityKey(
-          token.accountId,
-          token.id,
-        )
+      for (const entry of filteredEntries) {
         if (allFilteredSelected) {
-          next.delete(tokenIdentityKey)
+          next.delete(entry.id)
         } else {
-          next.add(tokenIdentityKey)
+          next.add(entry.id)
         }
       }
       return next
@@ -498,22 +610,18 @@ export function TokenList(props: TokenListProps) {
   }
 
   const toggleGroupSelection = (
-    groupTokens: AccountToken[],
+    groupEntries: KeyManagementEntry[],
     checked: boolean | "indeterminate",
   ) => {
-    setSelectedTokenIds((prev) => {
+    setSelectedEntryIds((prev) => {
       const next = new Set(prev)
       const shouldSelect = checked === true
 
-      for (const token of groupTokens) {
-        const tokenIdentityKey = buildTokenIdentityKey(
-          token.accountId,
-          token.id,
-        )
+      for (const entry of groupEntries) {
         if (shouldSelect) {
-          next.add(tokenIdentityKey)
+          next.add(entry.id)
         } else {
-          next.delete(tokenIdentityKey)
+          next.delete(entry.id)
         }
       }
 
@@ -522,11 +630,11 @@ export function TokenList(props: TokenListProps) {
   }
 
   const clearSelection = () => {
-    setSelectedTokenIds(new Set())
+    setSelectedEntryIds(new Set())
   }
 
   const openBatchExportDialog = () => {
-    setBatchExportItems(selectedBatchItems)
+    setBatchExportItems(selectedManagedSiteBatchItems)
     setBatchExportOpen(true)
   }
 
@@ -536,7 +644,7 @@ export function TokenList(props: TokenListProps) {
   }
 
   const openBatchCliProxyExportDialog = () => {
-    setBatchCliProxyExportItems(selectedBatchItems)
+    setBatchCliProxyExportItems(selectedCliProxyItems)
     setBatchCliProxyExportOpen(true)
   }
 
@@ -546,7 +654,7 @@ export function TokenList(props: TokenListProps) {
   }
 
   const handleBatchSaveToApiProfiles = async () => {
-    if (selectedBatchItems.length === 0 || isBatchApiProfilesSaving) return
+    if (selectedApiProfileItems.length === 0 || isBatchApiProfilesSaving) return
 
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
@@ -559,7 +667,7 @@ export function TokenList(props: TokenListProps) {
     setIsBatchApiProfilesSaving(true)
     try {
       await saveApiTokensToApiCredentialProfiles({
-        items: selectedBatchItems,
+        items: selectedApiProfileItems,
         t,
         logger,
         source: "TokenListBatchAction",
@@ -581,10 +689,17 @@ export function TokenList(props: TokenListProps) {
     if (!onManagedSiteImportSuccess) return
 
     const selectedTokenByIdentity = new Map(
-      batchExportItems.map(({ token }) => [
-        buildTokenIdentityKey(token.accountId, token.id),
-        token,
-      ]),
+      batchExportItems.flatMap((item) =>
+        item.kind ===
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential
+          ? []
+          : [
+              [
+                buildTokenIdentityKey(item.token.accountId, item.token.id),
+                item.token,
+              ] as const,
+            ],
+      ),
     )
 
     for (const item of result.items) {
@@ -606,16 +721,43 @@ export function TokenList(props: TokenListProps) {
     setCCSwitchContext(null)
   }
 
-  if (isLoading && tokens.length === 0) {
+  if (isLoading && entries.length === 0) {
     return <LoadingSkeleton />
   }
 
-  if (filteredTokens.length === 0) {
+  const renderServiceCredentialCard = (
+    entry: Extract<
+      KeyManagementEntry,
+      { kind: typeof KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential }
+    >,
+  ) => {
+    const managedSiteStatusEntry = managedSiteTokenStatuses?.[entry.id]
+
+    return onCopyServiceCredential ? (
+      <ServiceCredentialCard
+        account={entry.account}
+        credential={entry.credential}
+        isRotating={entry.isRotating}
+        isSelected={selectedEntryIds.has(entry.id)}
+        managedSiteStatus={managedSiteStatusEntry?.result}
+        isManagedSiteStatusChecking={
+          managedSiteStatusEntry?.isChecking === true
+        }
+        selectionLabel={entry.credential.label}
+        onSelectionChange={(checked) => toggleEntrySelection(entry.id, checked)}
+        onCopy={onCopyServiceCredential}
+        onRotate={onRotateServiceCredential}
+      />
+    ) : null
+  }
+
+  if (filteredEntries.length === 0) {
     return (
       <TokenEmptyState
         selectedAccount={selectedAccount}
         tokens={tokens}
         handleAddToken={handleAddToken}
+        canCreateTokens={canCreateTokens}
         displayData={displayData}
         currentAccountLoadError={currentAccountLoadError}
         onRetryCurrentAccount={onRetryCurrentAccount}
@@ -631,12 +773,12 @@ export function TokenList(props: TokenListProps) {
         <label className="flex items-center gap-2 text-sm">
           <Checkbox
             checked={visibleSelectionChecked}
-            disabled={filteredTokens.length === 0}
+            disabled={filteredEntries.length === 0}
             onCheckedChange={toggleFilteredSelection}
           />
           {t("batchManagedSiteExport.selection.visible", {
             selected: selectedVisibleCount,
-            total: filteredTokens.length,
+            total: filteredEntries.length,
           })}
         </label>
         <div className="flex flex-wrap items-center gap-2">
@@ -644,7 +786,7 @@ export function TokenList(props: TokenListProps) {
             size="sm"
             variant="outline"
             type="button"
-            disabled={selectedTokenIds.size === 0}
+            disabled={selectedEntryIds.size === 0}
             onClick={clearSelection}
           >
             {t("batchManagedSiteExport.actions.clearSelection")}
@@ -652,13 +794,13 @@ export function TokenList(props: TokenListProps) {
           <Button
             size="sm"
             type="button"
-            disabled={selectedBatchItems.length === 0}
+            disabled={selectedCliProxyItems.length === 0}
             variant="outline"
             onClick={openBatchCliProxyExportDialog}
             leftIcon={<Network className="h-4 w-4" />}
           >
             {t("batchCliProxyExport.actions.open", {
-              selectedCount: selectedBatchItems.length,
+              selectedCount: selectedCliProxyItems.length,
             })}
           </Button>
           <Button
@@ -666,7 +808,7 @@ export function TokenList(props: TokenListProps) {
             type="button"
             data-testid={KEY_MANAGEMENT_TEST_IDS.batchSaveToApiProfilesButton}
             disabled={
-              selectedBatchItems.length === 0 || isBatchApiProfilesSaving
+              selectedApiProfileItems.length === 0 || isBatchApiProfilesSaving
             }
             variant="outline"
             onClick={() => void handleBatchSaveToApiProfiles()}
@@ -679,13 +821,13 @@ export function TokenList(props: TokenListProps) {
             }
           >
             {t("batchApiCredentialProfiles.actions.open", {
-              selectedCount: selectedBatchItems.length,
+              selectedCount: selectedApiProfileItems.length,
             })}
           </Button>
           <Button
             size="sm"
             type="button"
-            disabled={selectedBatchItems.length === 0}
+            disabled={selectedManagedSiteBatchItems.length === 0}
             onClick={openBatchExportDialog}
             leftIcon={<SendToBack className="h-4 w-4" />}
           >
@@ -693,14 +835,14 @@ export function TokenList(props: TokenListProps) {
               <ManagedSiteIcon siteType={managedSiteType} size="sm" />
               {t("batchManagedSiteExport.actions.open", {
                 site: managedSiteLabel,
-                selectedCount: selectedBatchItems.length,
+                selectedCount: selectedManagedSiteBatchItems.length,
               })}
             </span>
           </Button>
         </div>
       </div>
 
-      {isAllAccountsMode && groupedTokens && groupedTokens.length > 0 ? (
+      {isAllAccountsMode && groupedEntries && groupedEntries.length > 0 ? (
         <>
           <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
             <Button
@@ -725,21 +867,18 @@ export function TokenList(props: TokenListProps) {
           </div>
 
           <div className="space-y-3">
-            {groupedTokens.map((group) => {
+            {groupedEntries.map((group) => {
               const { account } = group
               const isCollapsed = collapsedAccountIds.has(account.id)
               const shouldShowShowingCount =
                 group.showingCount !== group.totalCount
-              const selectedGroupVisibleCount = group.filteredTokens.filter(
-                (token) =>
-                  selectedTokenIds.has(
-                    buildTokenIdentityKey(token.accountId, token.id),
-                  ),
+              const selectedGroupVisibleCount = group.filteredEntries.filter(
+                (entry) => selectedEntryIds.has(entry.id),
               ).length
               const groupSelectionChecked =
                 selectedGroupVisibleCount === 0
                   ? false
-                  : selectedGroupVisibleCount === group.filteredTokens.length
+                  : selectedGroupVisibleCount === group.filteredEntries.length
                     ? true
                     : "indeterminate"
 
@@ -764,7 +903,7 @@ export function TokenList(props: TokenListProps) {
                         { name: account.name },
                       )}
                       onCheckedChange={(checked) =>
-                        toggleGroupSelection(group.filteredTokens, checked)
+                        toggleGroupSelection(group.filteredEntries, checked)
                       }
                     />
                     <button
@@ -810,7 +949,19 @@ export function TokenList(props: TokenListProps) {
 
                   {!isCollapsed ? (
                     <div className="space-y-3 p-3">
-                      {group.filteredTokens.map((token) => {
+                      {group.filteredEntries.map((entry) => {
+                        if (
+                          entry.kind ===
+                          KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
+                        ) {
+                          return (
+                            <div key={entry.id}>
+                              {renderServiceCredentialCard(entry)}
+                            </div>
+                          )
+                        }
+
+                        const { token } = entry
                         const tokenIdentityKey = buildTokenIdentityKey(
                           token.accountId,
                           token.id,
@@ -842,9 +993,9 @@ export function TokenList(props: TokenListProps) {
                             onManagedSiteVerificationRetry={
                               onManagedSiteVerificationRetry
                             }
-                            isSelected={selectedTokenIds.has(tokenIdentityKey)}
+                            isSelected={selectedEntryIds.has(entry.id)}
                             onSelectionChange={(checked) =>
-                              toggleTokenSelection(token, checked)
+                              toggleEntrySelection(entry.id, checked)
                             }
                             onOpenCCSwitchDialog={() =>
                               handleOpenCCSwitchDialog(token, account)
@@ -861,7 +1012,14 @@ export function TokenList(props: TokenListProps) {
         </>
       ) : (
         <div className="space-y-3">
-          {filteredTokens.map((token) => {
+          {filteredEntries.map((entry) => {
+            if (entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential) {
+              return (
+                <div key={entry.id}>{renderServiceCredentialCard(entry)}</div>
+              )
+            }
+
+            const { token } = entry
             const account = accountById.get(token.accountId)
             if (!account) {
               return null
@@ -894,9 +1052,9 @@ export function TokenList(props: TokenListProps) {
                 }
                 onManagedSiteImportSuccess={onManagedSiteImportSuccess}
                 onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
-                isSelected={selectedTokenIds.has(tokenIdentityKey)}
+                isSelected={selectedEntryIds.has(entry.id)}
                 onSelectionChange={(checked) =>
-                  toggleTokenSelection(token, checked)
+                  toggleEntrySelection(entry.id, checked)
                 }
                 onOpenCCSwitchDialog={() =>
                   handleOpenCCSwitchDialog(token, account)

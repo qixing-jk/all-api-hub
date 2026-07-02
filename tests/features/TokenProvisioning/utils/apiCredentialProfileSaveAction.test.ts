@@ -6,6 +6,7 @@ import {
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/constants/siteType"
+import { KEY_MANAGEMENT_ENTRY_KINDS } from "~/features/KeyManagement/types"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import {
   buildOneTimeApiKeyProfileSaveAction,
@@ -392,5 +393,54 @@ describe("saveApiTokensToApiCredentialProfiles", () => {
       ),
     )
     expect(toastSuccessMock).not.toHaveBeenCalled()
+  })
+
+  it("saves loaded service credentials without resolving them as account tokens", async () => {
+    createApiCredentialProfileMock.mockResolvedValueOnce({
+      id: "profile-1",
+      name: "SharedChat - Codex API Key",
+    })
+    const t = vi.fn((key: string) => key) as unknown as TFunction
+    const logger = { error: vi.fn() }
+    const resolveTokenForSecret = vi.fn()
+
+    const result = await saveApiTokensToApiCredentialProfiles({
+      items: [
+        {
+          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
+          account: createAccount({
+            id: "sharedchat-account",
+            name: "SharedChat",
+            baseUrl: "https://sharedchat.example.invalid",
+            siteType: SITE_TYPES.SHAREDCHAT,
+            authType: AuthTypeEnum.Cookie,
+            token: "",
+            userId: "user-1",
+          }),
+          credential: {
+            kind: "singleton_service_key",
+            service: "codex",
+            label: "Codex API Key",
+            key: "sk-service-credential",
+            baseUrl: "https://sharedchat.example.invalid/v1",
+            isAuthenticated: true,
+          },
+        },
+      ],
+      t,
+      logger,
+      source: "TokenListBatchAction",
+      resolveTokenForSecret,
+    })
+
+    expect(result).toEqual({ savedCount: 1 })
+    expect(resolveTokenForSecret).not.toHaveBeenCalled()
+    expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
+      name: "SharedChat - Codex API Key",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://sharedchat.example.invalid/v1",
+      apiKey: "sk-service-credential",
+      tagIds: [],
+    })
   })
 })

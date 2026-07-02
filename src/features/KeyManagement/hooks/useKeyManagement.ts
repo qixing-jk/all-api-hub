@@ -11,6 +11,8 @@ import {
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/accountTokens/apiTokenKey"
+import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import {
@@ -34,7 +36,17 @@ import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
-import { buildTokenIdentityKey } from "../utils"
+import {
+  KEY_MANAGEMENT_ENTRY_KINDS,
+  type KeyManagementEntry,
+  type ServiceCredentialState,
+} from "../types"
+import {
+  buildAccountTokenEntryIdentityKey,
+  buildServiceCredentialEntryIdentityKey,
+  buildServiceCredentialTransientToken,
+  buildTokenIdentityKey,
+} from "../utils"
 
 /**
  * Unified logger scoped to the Key Management options page hooks.
@@ -116,7 +128,6 @@ const isClipboardPermissionError = (error: unknown) => {
 }
 
 type TokenLoadStatus = "idle" | "loading" | "loaded" | "error"
-
 interface TokenInventoryState {
   status: TokenLoadStatus
   tokens: AccountToken[]
@@ -159,6 +170,31 @@ interface RefreshManagedSiteTokenStatusOptions {
   resolvedChannelKeysById?: Record<number, string>
 }
 
+interface ManagedSiteStatusCheckTargetInput {
+  identityKey: string
+  account: DisplaySiteData
+  token: AccountToken
+}
+
+const buildServiceCredentialManagedSiteStatusTarget = (
+  account: DisplaySiteData,
+  credential: AccountServiceCredential,
+): ManagedSiteStatusCheckTargetInput => {
+  const statusAccount = {
+    ...account,
+    baseUrl: credential.baseUrl || account.baseUrl,
+  }
+
+  return {
+    identityKey: buildServiceCredentialEntryIdentityKey(
+      account.id,
+      credential.service,
+    ),
+    account: statusAccount,
+    token: buildServiceCredentialTransientToken(statusAccount, credential),
+  }
+}
+
 const toDisplayManagedSiteTokenStatusResult = (
   result: ManagedSiteTokenChannelStatusResult,
 ): ManagedSiteTokenChannelStatusResult => {
@@ -171,6 +207,9 @@ const isFailedAccountTokenLoad = (
   value: FailedAccountTokenLoad | null,
 ): value is FailedAccountTokenLoad => value !== null
 
+const toApiServiceRequest = (request: unknown): ApiServiceRequest =>
+  request as ApiServiceRequest
+
 const MANAGED_SITE_STATUS_CONCURRENCY = 4
 
 const tokenMatchesSearch = (token: AccountToken, searchLower: string) => {
@@ -178,6 +217,15 @@ const tokenMatchesSearch = (token: AccountToken, searchLower: string) => {
 
   // Search intentionally matches against token name only (never the raw secret key).
   return token.name.toLowerCase().includes(searchLower)
+}
+
+const serviceCredentialMatchesSearch = (
+  credential: AccountServiceCredential,
+  searchLower: string,
+) => {
+  if (!searchLower) return true
+
+  return credential.label.toLowerCase().includes(searchLower)
 }
 
 const normalizeOrigin = (baseUrl: string) => {
@@ -230,6 +278,11 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   >({})
   const tokenInventoriesRef = useRef(tokenInventories)
   tokenInventoriesRef.current = tokenInventories
+  const [serviceCredentials, setServiceCredentials] = useState<
+    Record<string, ServiceCredentialState>
+  >({})
+  const serviceCredentialsRef = useRef(serviceCredentials)
+  serviceCredentialsRef.current = serviceCredentials
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
   const [resolvedVisibleKeys, setResolvedVisibleKeys] = useState<
     Record<string, string>
@@ -437,6 +490,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const runManagedSiteStatusChecks = useCallback(
     async (params: {
       tokens: AccountToken[]
+      targets?: ManagedSiteStatusCheckTargetInput[]
       force?: boolean
       resolvedChannelKeysByIdentityKey?: Record<string, Record<number, string>>
     }): Promise<Record<string, ManagedSiteTokenChannelStatusResult>> => {
@@ -451,6 +505,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
       const {
         tokens,
+        targets: explicitTargets = [],
         force = false,
         resolvedChannelKeysByIdentityKey = {},
       } = params
@@ -487,6 +542,31 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           resolvedChannelKeysById:
             resolvedChannelKeysByIdentityKey[identityKey] ??
             resolvedChannelKeysByIdentityKeyRef.current[identityKey],
+        })
+      }
+
+      for (const targetInput of explicitTargets) {
+        const cacheKey = [
+          targetInput.identityKey,
+          managedSiteConfigFingerprint,
+        ].join("|")
+        const existingEntry =
+          managedSiteTokenStatusesRef.current[targetInput.identityKey]
+
+        if (!force && existingEntry?.cacheKey === cacheKey) {
+          continue
+        }
+
+        uniqueTargets.set(targetInput.identityKey, {
+          token: targetInput.token,
+          account: targetInput.account,
+          identityKey: targetInput.identityKey,
+          cacheKey,
+          resolvedChannelKeysById:
+            resolvedChannelKeysByIdentityKey[targetInput.identityKey] ??
+            resolvedChannelKeysByIdentityKeyRef.current[
+              targetInput.identityKey
+            ],
         })
       }
 
@@ -594,6 +674,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       accountById,
       buildManagedSiteStatusCacheKey,
       isManagedSiteChannelStatusSupported,
+      managedSiteConfigFingerprint,
       mergeResolvedChannelKeysForIdentity,
       updateManagedSiteTokenStatuses,
     ],
@@ -618,6 +699,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
       if (!isEpochActive(loadEpoch)) return null
       invalidateManagedSiteStatusesForAccount(accountId)
+      setServiceCredentials((prev) => ({
+        ...prev,
+        [accountId]: {
+          status: "idle",
+          credential: undefined,
+          errorMessage: undefined,
+          isRotating: false,
+        },
+      }))
       setTokenInventories((prev) => ({
         ...prev,
         [accountId]: {
@@ -629,8 +719,57 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       }))
 
       try {
-        const { keyManagement, request } =
+        const { keyManagement, serviceCredential, request } =
           createDisplayAccountApiContext(account)
+
+        if (!keyManagement && serviceCredential) {
+          setServiceCredentials((prev) => ({
+            ...prev,
+            [accountId]: {
+              status: "loading",
+              credential: prev[accountId]?.credential,
+              errorMessage: undefined,
+              isRotating: false,
+            },
+          }))
+          const credential = await serviceCredential.fetch(
+            toApiServiceRequest(request),
+          )
+
+          if (!isEpochActive(loadEpoch)) return null
+          if (!isLatestAccountRequest(accountId, requestEpoch)) return null
+
+          setServiceCredentials((prev) => ({
+            ...prev,
+            [accountId]: {
+              status: "loaded",
+              credential,
+              errorMessage: undefined,
+              isRotating: false,
+            },
+          }))
+          setTokenInventories((prev) => ({
+            ...prev,
+            [accountId]: {
+              status: "loaded",
+              tokens: [],
+              errorMessage: undefined,
+              errorCategory: undefined,
+            },
+          }))
+          delete tokenLoadErrorCategoriesRef.current[accountId]
+          void runManagedSiteStatusChecks({
+            tokens: [],
+            targets: [
+              buildServiceCredentialManagedSiteStatusTarget(
+                account,
+                credential,
+              ),
+            ],
+          })
+          return "loaded"
+        }
+
         const tokens = await requireDisplayAccountKeyManagement(
           account,
           keyManagement,
@@ -685,6 +824,22 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           resolveProductAnalyticsErrorCategoryFromError(error)
         tokenLoadErrorCategoriesRef.current[accountId] = errorCategory
         logger.error("获取账号密钥失败", errorMessage)
+        setServiceCredentials((prev) => {
+          const credentialState = prev[accountId]
+          if (!credentialState || credentialState.status === "idle") {
+            return prev
+          }
+
+          return {
+            ...prev,
+            [accountId]: {
+              ...credentialState,
+              status: "error",
+              errorMessage,
+              isRotating: false,
+            },
+          }
+        })
         setTokenInventories((prev) => ({
           ...prev,
           [accountId]: {
@@ -706,6 +861,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       invalidateManagedSiteStatusesForAccount,
       isEpochActive,
       isLatestAccountRequest,
+      runManagedSiteStatusChecks,
     ],
   )
 
@@ -826,6 +982,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           }
           return next
         })
+        setServiceCredentials((prev) => {
+          const next: Record<string, ServiceCredentialState> = {}
+          for (const account of enabledDisplayData) {
+            next[account.id] = prev[account.id] ?? {
+              status: "idle",
+            }
+          }
+          return next
+        })
         const loadResult = await loadTokensForAccounts({
           accountIds: targetAccountIds,
           loadEpoch,
@@ -865,6 +1030,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
       if (!accountById.get(targetAccountId)) {
         setTokenInventories({})
+        setServiceCredentials({})
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
@@ -879,6 +1045,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         [targetAccountId]: prev[targetAccountId] ?? {
           status: "idle",
           tokens: [],
+        },
+      }))
+      setServiceCredentials((prev) => ({
+        ...prev,
+        [targetAccountId]: prev[targetAccountId] ?? {
+          status: "idle",
         },
       }))
 
@@ -1018,6 +1190,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       void loadTokensRef.current()
     } else {
       setTokenInventories({})
+      setServiceCredentials({})
       setVisibleKeys(new Set())
       setResolvedVisibleKeys({})
       setResolvingVisibleKeys(new Set())
@@ -1059,6 +1232,84 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       tokenMatchesSearch(token, normalizedSearchTerm),
     )
   }, [normalizedSearchTerm, tokens])
+
+  const entries = useMemo((): KeyManagementEntry[] => {
+    if (!selectedAccount) return []
+
+    const selectedAccountIds =
+      isAllAccountsMode && allAccountsFilterAccountIds.length > 0
+        ? new Set(allAccountsFilterAccountIds)
+        : null
+    const accountCandidates = isAllAccountsMode
+      ? enabledDisplayData
+      : accountById.get(selectedAccount)
+        ? [accountById.get(selectedAccount)!]
+        : []
+
+    const tokenEntries: KeyManagementEntry[] = tokens
+      .map((token): KeyManagementEntry | null => {
+        const account = accountById.get(token.accountId)
+        if (!account) return null
+
+        return {
+          kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+          id: buildAccountTokenEntryIdentityKey(token.accountId, token.id),
+          account,
+          token,
+        } satisfies KeyManagementEntry
+      })
+      .filter((entry): entry is KeyManagementEntry => entry !== null)
+
+    const serviceCredentialEntries = accountCandidates
+      .filter(
+        (account) =>
+          selectedAccountIds === null || selectedAccountIds.has(account.id),
+      )
+      .map((account): KeyManagementEntry | null => {
+        const serviceCredential = serviceCredentials[account.id]
+        if (
+          serviceCredential?.status !== "loaded" ||
+          !serviceCredential.credential
+        ) {
+          return null
+        }
+
+        return {
+          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
+          id: buildServiceCredentialEntryIdentityKey(
+            account.id,
+            serviceCredential.credential.service,
+          ),
+          account,
+          credential: serviceCredential.credential,
+          isRotating: serviceCredential.isRotating === true,
+        }
+      })
+      .filter((entry): entry is KeyManagementEntry => entry !== null)
+
+    return [...serviceCredentialEntries, ...tokenEntries]
+  }, [
+    accountById,
+    allAccountsFilterAccountIds,
+    enabledDisplayData,
+    isAllAccountsMode,
+    selectedAccount,
+    serviceCredentials,
+    tokens,
+  ])
+
+  const filteredEntries = useMemo(() => {
+    return entries.filter((entry) => {
+      if (entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken) {
+        return tokenMatchesSearch(entry.token, normalizedSearchTerm)
+      }
+
+      return serviceCredentialMatchesSearch(
+        entry.credential,
+        normalizedSearchTerm,
+      )
+    })
+  }, [entries, normalizedSearchTerm])
 
   const isLoading = useMemo(() => {
     if (!selectedAccount) return false
@@ -1106,15 +1357,38 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       .filter(isFailedAccountTokenLoad)
   }, [enabledDisplayData, isAllAccountsMode, tokenInventories])
 
+  const currentAccountLoadError = useMemo(() => {
+    if (
+      !selectedAccount ||
+      selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+    ) {
+      return null
+    }
+
+    const tokenInventory = tokenInventories[selectedAccount]
+    if (tokenInventory?.status === "error") {
+      return tokenInventory.errorMessage ?? loadFailedMessage
+    }
+
+    const serviceCredential = serviceCredentials[selectedAccount]
+    if (serviceCredential?.status === "error") {
+      return serviceCredential.errorMessage ?? loadFailedMessage
+    }
+
+    return null
+  }, [loadFailedMessage, selectedAccount, serviceCredentials, tokenInventories])
+
   const accountSummaryItems = useMemo(() => {
     if (!isAllAccountsMode) return []
 
     const countMap = new Map<string, number>()
-    allTokens
-      .filter((token) => tokenMatchesSearch(token, normalizedSearchTerm))
-      .forEach((token) => {
-        countMap.set(token.accountId, (countMap.get(token.accountId) ?? 0) + 1)
-      })
+    filteredEntries.forEach((entry) => {
+      const accountId =
+        entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
+          ? entry.token.accountId
+          : entry.account.id
+      countMap.set(accountId, (countMap.get(accountId) ?? 0) + 1)
+    })
 
     return enabledDisplayData.map((account) => ({
       accountId: account.id,
@@ -1125,13 +1399,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           ? ("load-failed" as const)
           : undefined,
     }))
-  }, [
-    allTokens,
-    enabledDisplayData,
-    isAllAccountsMode,
-    normalizedSearchTerm,
-    tokenInventories,
-  ])
+  }, [enabledDisplayData, filteredEntries, isAllAccountsMode, tokenInventories])
 
   const statusCheckTokens = useMemo(() => {
     return tokens.filter(
@@ -1286,6 +1554,90 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission
           : resolveProductAnalyticsErrorCategoryFromError(error),
       })
+    }
+  }
+
+  const copyServiceCredential = async (account: DisplaySiteData) => {
+    const credential = serviceCredentialsRef.current[account.id]?.credential
+
+    if (!credential?.key) {
+      toast.error(t("keyManagement:messages.copyFailed"))
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(credential.key)
+      toast.success(t("keyManagement:messages.serviceCredentialCopied"))
+    } catch (error) {
+      toast.error(
+        getErrorMessage(error, t("keyManagement:messages.copyFailed")),
+      )
+      logger.warn("Failed to copy service credential to clipboard", error)
+    }
+  }
+
+  const rotateServiceCredential = async (account: DisplaySiteData) => {
+    const { serviceCredential, request } =
+      createDisplayAccountApiContext(account)
+
+    if (!serviceCredential?.rotate) {
+      toast.error(t("keyManagement:serviceCredential.rotateUnsupported"))
+      return
+    }
+
+    setServiceCredentials((prev) => ({
+      ...prev,
+      [account.id]: {
+        ...(prev[account.id] ?? { status: "idle" }),
+        isRotating: true,
+        errorMessage: undefined,
+      },
+    }))
+
+    try {
+      const credential = await serviceCredential.rotate(
+        toApiServiceRequest(request),
+      )
+      setServiceCredentials((prev) => ({
+        ...prev,
+        [account.id]: {
+          status: "loaded",
+          credential,
+          errorMessage: undefined,
+          isRotating: false,
+        },
+      }))
+      invalidateManagedSiteStatuses(
+        (identityKey) =>
+          identityKey ===
+          buildServiceCredentialEntryIdentityKey(
+            account.id,
+            credential.service,
+          ),
+      )
+      void runManagedSiteStatusChecks({
+        tokens: [],
+        targets: [
+          buildServiceCredentialManagedSiteStatusTarget(account, credential),
+        ],
+        force: true,
+      })
+      toast.success(t("keyManagement:messages.serviceCredentialRotated"))
+    } catch (error) {
+      const errorMessage =
+        getErrorMessage(error) ||
+        t("keyManagement:messages.serviceCredentialRotateFailed")
+      setServiceCredentials((prev) => ({
+        ...prev,
+        [account.id]: {
+          ...(prev[account.id] ?? { status: "error" }),
+          status: "error",
+          errorMessage,
+          isRotating: false,
+        },
+      }))
+      toast.error(errorMessage)
+      logger.warn("Failed to rotate service credential", error)
     }
   }
 
@@ -1526,6 +1878,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     isAddTokenOpen,
     editingToken,
     tokenInventories,
+    serviceCredentials,
+    currentAccountLoadError,
     tokenLoadProgress,
     failedAccounts,
     accountSummaryItems,
@@ -1535,11 +1889,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
     loadTokens,
+    entries,
     filteredTokens,
+    filteredEntries,
     getVisibleTokenKey,
     refreshManagedSiteTokenStatuses,
     refreshManagedSiteTokenStatusForToken,
     copyKey,
+    copyServiceCredential,
+    rotateServiceCredential,
     toggleKeyVisibility,
     retryFailedAccounts,
     handleAddToken,

@@ -132,6 +132,7 @@
     "availableModels": "可用模型",
     "basicInfo": "基本資訊",
     "createFailed": "建立金鑰失敗，請稍後重試",
+    "createNotSupported": "該帳號不支援建立 API 金鑰。",
     "createSuccess": "金鑰建立成功",
     "createToken": "建立金鑰",
     "editModeNoChange": "編輯模式下無法更改帳號",
@@ -159,6 +160,7 @@
     "tokenName": "金鑰名稱",
     "unlimitedQuota": "無限額度",
     "updateFailed": "更新金鑰失敗，請稍後重試",
+    "updateNotSupported": "該帳號不支援更新 API 金鑰。",
     "updateSuccess": "金鑰更新成功",
     "updateToken": "更新金鑰",
     "validExpiration": "過期時間必須大於當前時間",
@@ -258,6 +260,9 @@
     "revealFailed": "顯示金鑰失敗",
     "savedToApiProfiles": "已儲存 {{name}} 到 API 憑據庫",
     "saveToApiProfilesFailed": "儲存到 API 憑據庫失敗",
+    "serviceCredentialCopied": "服務金鑰已複製到剪貼簿",
+    "serviceCredentialRotated": "服務金鑰已重置",
+    "serviceCredentialRotateFailed": "重置服務金鑰失敗",
     "verifyApiFailed": "開啟介面驗證失敗",
     "verifyCliSupportFailed": "開啟 CLI 相容性驗證失敗"
   },
@@ -352,7 +357,8 @@
     "skipReasons": {
       "aihubmixOneTimeKey": "AIHubMix 金鑰僅可查看一次，請手動建立並立即保存完整金鑰",
       "noneAuth": "無憑據（認證方式：無）",
-      "sub2api": "需要選擇 Sub2API 分組，請手動建立金鑰"
+      "sub2api": "需要選擇 Sub2API 分組，請手動建立金鑰",
+      "tokenAutomationUnsupported": "該站點提供的是服務憑證而非 API Token 管理，已跳過自動修復。"
     },
     "title": "金鑰覆蓋檢查",
     "totalsLabels": {
@@ -369,6 +375,16 @@
   "searchPlaceholder": "搜尋金鑰名稱...",
   "selectAccount": "選擇帳號",
   "selectAccountToContinue": "請先在上方選擇一個帳號，然後查看或建立金鑰。",
+  "serviceCredential": {
+    "authenticated": "已認證",
+    "baseUrl": "Base URL：",
+    "copy": "複製",
+    "notAuthenticated": "未認證",
+    "rotate": "重置",
+    "rotateUnsupported": "目前站點不支援重置服務金鑰",
+    "rotating": "重置中...",
+    "singleton": "服務金鑰"
+  },
   "showingCount_other": "顯示 {{count}} 個",
   "title": "金鑰管理",
   "totalKeys_other": "總計 {{count}} 個金鑰"

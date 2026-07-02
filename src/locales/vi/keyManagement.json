@@ -132,6 +132,7 @@
     "availableModels": "Mô hình khả dụng",
     "basicInfo": "Thông tin cơ bản",
     "createFailed": "Tạo khóa thất bại, vui lòng thử lại sau",
+    "createNotSupported": "Tài khoản này không hỗ trợ tạo khóa API.",
     "createSuccess": "Tạo khóa thành công",
     "createToken": "Tạo khóa",
     "editModeNoChange": "Không thể thay đổi tài khoản trong chế độ chỉnh sửa",
@@ -159,6 +160,7 @@
     "tokenName": "Tên khóa",
     "unlimitedQuota": "Hạn ngạch không giới hạn",
     "updateFailed": "Cập nhật khóa thất bại, vui lòng thử lại sau",
+    "updateNotSupported": "Tài khoản này không hỗ trợ cập nhật khóa API.",
     "updateSuccess": "Cập nhật khóa thành công",
     "updateToken": "Cập nhật khóa",
     "validExpiration": "Thời gian hết hạn phải lớn hơn thời gian hiện tại",
@@ -258,6 +260,9 @@
     "revealFailed": "Hiển thị khóa thất bại",
     "savedToApiProfiles": "Đã lưu {{name}} vào Hồ sơ API",
     "saveToApiProfilesFailed": "Lưu vào Hồ sơ API thất bại",
+    "serviceCredentialCopied": "Đã sao chép khóa dịch vụ vào clipboard",
+    "serviceCredentialRotated": "Đã đặt lại khóa dịch vụ",
+    "serviceCredentialRotateFailed": "Đặt lại khóa dịch vụ thất bại",
     "verifyApiFailed": "Không thể mở xác minh API",
     "verifyCliSupportFailed": "Không thể mở xác minh tính tương thích CLI"
   },
@@ -352,7 +357,8 @@
     "skipReasons": {
       "aihubmixOneTimeKey": "Khóa AIHubMix chỉ có thể xem một lần, vui lòng tạo thủ công và lưu ngay khóa đầy đủ",
       "noneAuth": "Không có thông tin xác thực (Phương thức xác thực: Không có)",
-      "sub2api": "Cần chọn nhóm Sub2API; hãy tạo khóa thủ công"
+      "sub2api": "Cần chọn nhóm Sub2API; hãy tạo khóa thủ công",
+      "tokenAutomationUnsupported": "Trang web này cung cấp thông tin xác thực dịch vụ thay vì quản lý API token; đã bỏ qua tự động sửa khóa."
     },
     "title": "Kiểm tra phạm vi khóa",
     "totalsLabels": {
@@ -369,6 +375,16 @@
   "searchPlaceholder": "Tìm kiếm tên khóa...",
   "selectAccount": "Chọn tài khoản",
   "selectAccountToContinue": "Vui lòng chọn một tài khoản ở trên trước, sau đó xem hoặc tạo khóa.",
+  "serviceCredential": {
+    "authenticated": "Đã xác thực",
+    "baseUrl": "Base URL:",
+    "copy": "Sao chép",
+    "notAuthenticated": "Chưa xác thực",
+    "rotate": "Đặt lại",
+    "rotateUnsupported": "Trang web này không hỗ trợ đặt lại khóa dịch vụ",
+    "rotating": "Đang đặt lại...",
+    "singleton": "Khóa dịch vụ"
+  },
   "showingCount_other": "Đang hiển thị {{count}}",
   "title": "Quản lý khóa",
   "totalKeys_other": "Tổng cộng {{count}} key"

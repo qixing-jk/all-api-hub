@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BatchCliProxyExportDialog } from "~/features/KeyManagement/components/BatchCliProxyExportDialog"
+import { KEY_MANAGEMENT_ENTRY_KINDS } from "~/features/KeyManagement/types"
 import { CLI_PROXY_PROVIDER_TYPES } from "~/services/integrations/cliProxyProviderTypes"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -98,8 +99,16 @@ describe("BatchCliProxyExportDialog", () => {
         isOpen={true}
         onClose={() => {}}
         items={[
-          { account, token: token1 },
-          { account, token: token2 },
+          {
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+            account,
+            token: token1,
+          },
+          {
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+            account,
+            token: token2,
+          },
         ]}
       />,
     )
@@ -176,8 +185,16 @@ describe("BatchCliProxyExportDialog", () => {
         isOpen={true}
         onClose={() => {}}
         items={[
-          { account, token: token1 },
-          { account, token: token2 },
+          {
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+            account,
+            token: token1,
+          },
+          {
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+            account,
+            token: token2,
+          },
         ]}
       />,
     )
@@ -217,7 +234,13 @@ describe("BatchCliProxyExportDialog", () => {
       <BatchCliProxyExportDialog
         isOpen={true}
         onClose={() => {}}
-        items={[{ account, token: token1 }]}
+        items={[
+          {
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+            account,
+            token: token1,
+          },
+        ]}
       />,
     )
 
@@ -273,7 +296,13 @@ describe("BatchCliProxyExportDialog", () => {
       <BatchCliProxyExportDialog
         isOpen={true}
         onClose={() => {}}
-        items={[{ account, token: token1 }]}
+        items={[
+          {
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+            account,
+            token: token1,
+          },
+        ]}
       />,
     )
 
@@ -314,8 +343,16 @@ describe("BatchCliProxyExportDialog", () => {
         isOpen={true}
         onClose={() => {}}
         items={[
-          { account, token: token1 },
-          { account, token: token2 },
+          {
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+            account,
+            token: token1,
+          },
+          {
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
+            account,
+            token: token2,
+          },
         ]}
       />,
     )
@@ -350,5 +387,54 @@ describe("BatchCliProxyExportDialog", () => {
         },
       },
     )
+  })
+
+  it("imports service credentials without resolving them as account tokens", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <BatchCliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        items={[
+          {
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
+            account,
+            credential: {
+              kind: "singleton_service_key",
+              service: "codex",
+              label: "Codex API Key",
+              key: "sk-service-credential",
+              baseUrl: "https://codex.example.invalid/v1",
+              isAuthenticated: true,
+            },
+          },
+        ]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:batchCliProxyExport.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToCliProxy).toHaveBeenCalledTimes(1)
+    })
+
+    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(mockImportToCliProxy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account,
+        token: expect.objectContaining({
+          key: "sk-service-credential",
+          name: "Codex API Key",
+        }),
+        providerName: "Account 1",
+        providerBaseUrl: "https://codex.example.invalid/v1",
+      }),
+    )
+    expect(screen.getByText("Codex API Key")).toBeInTheDocument()
   })
 })

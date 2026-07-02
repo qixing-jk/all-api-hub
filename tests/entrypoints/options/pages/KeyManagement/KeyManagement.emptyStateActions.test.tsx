@@ -1,6 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
@@ -19,6 +20,7 @@ const {
   mockedUseUserPreferencesContext,
   addTokenDialogPropsSpy,
   accountSummaryBarPropsSpy,
+  getSiteTypeCapabilitiesMock,
 } = vi.hoisted(() => ({
   sendRuntimeActionMessageMock: vi.fn(),
   tokenListPropsSpy: vi.fn(),
@@ -28,6 +30,7 @@ const {
   mockedUseUserPreferencesContext: vi.fn(),
   addTokenDialogPropsSpy: vi.fn(),
   accountSummaryBarPropsSpy: vi.fn(),
+  getSiteTypeCapabilitiesMock: vi.fn(),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -175,6 +178,10 @@ vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   },
 }))
 
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
+}))
+
 vi.mock("~/features/KeyManagement/components/RepairMissingKeysDialog", () => ({
   RepairMissingKeysDialog: () => null,
 }))
@@ -226,6 +233,26 @@ describe("KeyManagement empty-state actions", () => {
     openModelsPageMock.mockReset()
     addTokenDialogPropsSpy.mockReset()
     accountSummaryBarPropsSpy.mockReset()
+    getSiteTypeCapabilitiesMock.mockReset()
+    getSiteTypeCapabilitiesMock.mockImplementation((siteType: string) => ({
+      siteType,
+      account:
+        siteType === SITE_TYPES.SHAREDCHAT
+          ? {
+              serviceCredential: {
+                fetch: vi.fn(),
+              },
+            }
+          : {
+              keyManagement: {
+                fetchTokens: vi.fn(),
+                createToken: vi.fn(),
+                updateToken: vi.fn(),
+                deleteToken: vi.fn(),
+                resolveTokenKey: vi.fn(),
+              },
+            },
+    }))
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: "new-api",
       newApiBaseUrl: "https://managed.example",
@@ -407,6 +434,75 @@ describe("KeyManagement empty-state actions", () => {
     expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
       isOpen: true,
       preSelectedAccountId: account.id,
+    })
+  })
+
+  it("disables token creation for a selected account without key-management capability", async () => {
+    const user = userEvent.setup()
+    const handleAddToken = vi.fn()
+    const account = createAccount({
+      id: "sharedchat-account",
+      name: "SharedChat",
+      siteType: SITE_TYPES.SHAREDCHAT,
+    })
+
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        displayData: [account],
+        selectedAccount: account.id,
+        handleAddToken,
+      }),
+    )
+
+    render(<KeyManagement />)
+
+    const addTokenButton = await screen.findByTestId(
+      KEY_MANAGEMENT_TEST_IDS.addTokenButton,
+    )
+
+    expect(addTokenButton).toBeDisabled()
+
+    await user.click(addTokenButton)
+
+    expect(handleAddToken).not.toHaveBeenCalled()
+    expect(tokenListPropsSpy.mock.lastCall?.[0]).toMatchObject({
+      canCreateTokens: false,
+    })
+    expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
+      availableAccounts: [],
+      preSelectedAccountId: null,
+    })
+  })
+
+  it("only offers key-management-capable accounts to the add-token dialog", async () => {
+    const keyManagedAccount = createAccount({
+      id: "acc-1",
+      name: "Account 1",
+    })
+    const serviceCredentialAccount = createAccount({
+      id: "sharedchat-account",
+      name: "SharedChat",
+      siteType: SITE_TYPES.SHAREDCHAT,
+    })
+
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        displayData: [keyManagedAccount, serviceCredentialAccount],
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+        isAddTokenOpen: true,
+      }),
+    )
+
+    render(<KeyManagement />)
+
+    await waitFor(() => expect(addTokenDialogPropsSpy).toHaveBeenCalled())
+
+    expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
+      availableAccounts: [keyManagedAccount],
+      preSelectedAccountId: null,
+    })
+    expect(tokenListPropsSpy.mock.lastCall?.[0]).toMatchObject({
+      canCreateTokens: true,
     })
   })
 

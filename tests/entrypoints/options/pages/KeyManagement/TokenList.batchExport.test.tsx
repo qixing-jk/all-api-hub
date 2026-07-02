@@ -1,9 +1,11 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { KEY_MANAGEMENT_ENTRY_KINDS } from "~/features/KeyManagement/types"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -92,7 +94,7 @@ vi.mock(
       onClose,
     }: {
       isOpen: boolean
-      items: Array<{ token: { accountId: string; id: number } }>
+      items: Array<Record<string, unknown>>
       onClose: () => void
     }) =>
       isOpen ? (
@@ -118,7 +120,12 @@ vi.mock(
       onCompleted,
     }: {
       isOpen: boolean
-      items: Array<{ token: { accountId: string; id: number } }>
+      items: Array<{
+        kind?: string
+        token?: { accountId: string; id: number }
+        credential?: { service: string }
+        account: { id: string }
+      }>
       onClose: () => void
       onCompleted?: (result: {
         totalSelected: number
@@ -211,10 +218,17 @@ describe("TokenList batch export selection", () => {
       failedCount: 0,
       skippedCount: 0,
       items: items.map(
-        ({ token }: { token: { accountId: string; id: number } }) => ({
-          id: `${token.accountId}:${token.id}`,
-          accountName: token.accountId,
-          tokenName: String(token.id),
+        (item: {
+          kind?: string
+          token?: { accountId: string; id: number }
+          credential?: { service: string }
+          account: { id: string }
+        }) => ({
+          id: item.token
+            ? `${item.token.accountId}:${item.token.id}`
+            : `service_credential:${item.account.id}:${item.credential?.service}`,
+          accountName: item.token?.accountId ?? item.account.id,
+          tokenName: item.token ? String(item.token.id) : "service credential",
           success: true,
           skipped: false,
         }),
@@ -552,6 +566,106 @@ describe("TokenList batch export selection", () => {
     expect(screen.getByRole("checkbox", { name: "Token 1" })).not.toBeChecked()
     expect(screen.getByRole("checkbox", { name: "Token 2" })).not.toBeChecked()
     expect(saveButton).toBeDisabled()
+  })
+
+  it("includes selected service credentials in API profile, CLIProxy, and managed-site export actions", async () => {
+    const user = userEvent.setup()
+    const sharedChatAccount = createAccount({
+      id: "sharedchat-account",
+      name: "SharedChat",
+      siteType: SITE_TYPES.SHAREDCHAT,
+      baseUrl: "https://sharedchat.example.invalid",
+    })
+
+    renderTokenList({
+      selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      displayData: [sharedChatAccount] as any,
+      tokens: [],
+      filteredTokens: [],
+      entries: [
+        {
+          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
+          id: "service_credential:sharedchat-account:codex",
+          account: sharedChatAccount as any,
+          credential: {
+            kind: "singleton_service_key",
+            service: "codex",
+            label: "Codex API Key",
+            key: "sk-sharedchat",
+            baseUrl: "https://sharedchat.example.invalid/v1",
+            isAuthenticated: true,
+          },
+          isRotating: false,
+        },
+      ] as any,
+      filteredEntries: [
+        {
+          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
+          id: "service_credential:sharedchat-account:codex",
+          account: sharedChatAccount as any,
+          credential: {
+            kind: "singleton_service_key",
+            service: "codex",
+            label: "Codex API Key",
+            key: "sk-sharedchat",
+            baseUrl: "https://sharedchat.example.invalid/v1",
+            isAuthenticated: true,
+          },
+          isRotating: false,
+        },
+      ] as any,
+      onCopyServiceCredential: vi.fn(),
+      onRotateServiceCredential: vi.fn(),
+    })
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.expandAll",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Codex API Key" }),
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /keyManagement:batchCliProxyExport.actions.open/,
+      }),
+    )
+
+    expect(
+      screen.getByTestId("batch-cli-proxy-export-item-count"),
+    ).toHaveTextContent("1")
+
+    await user.click(
+      screen.getByRole("button", { name: "Close batch CLIProxy import" }),
+    )
+
+    const managedSiteExportButton = screen.getByRole("button", {
+      name: /keyManagement:batchManagedSiteExport.actions.open/,
+    })
+    expect(managedSiteExportButton).toBeEnabled()
+
+    await user.click(managedSiteExportButton)
+    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("1")
+
+    await user.click(screen.getByRole("button", { name: "Close batch export" }))
+
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.batchSaveToApiProfilesButton),
+    )
+
+    expect(mockSaveApiCredentialProfiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
+            account: expect.objectContaining({ id: sharedChatAccount.id }),
+            credential: expect.objectContaining({ service: "codex" }),
+          }),
+        ],
+      }),
+    )
   })
 
   it("keeps selected tokens available and tracks failure when API profile batch save fails", async () => {

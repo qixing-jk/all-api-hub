@@ -136,7 +136,7 @@ interface TokenHeaderProps {
   ) => void | Promise<void>
 }
 
-const getManagedSiteStatusBadgeVariant = (params: {
+export const getManagedSiteStatusBadgeVariant = (params: {
   isChecking: boolean
   managedSiteStatus?: ManagedSiteTokenChannelStatus
 }) => {
@@ -161,7 +161,7 @@ const getManagedSiteStatusBadgeVariant = (params: {
   return "warning" as const
 }
 
-const getManagedSiteStatusLabel = (
+export const getManagedSiteStatusLabel = (
   t: TFunction,
   params: {
     isChecking: boolean
@@ -209,7 +209,7 @@ const getManagedSiteStatusLabel = (
   return t("keyManagement:managedSiteStatus.badges.unknown")
 }
 
-const getManagedSiteStatusDescription = (
+export const getManagedSiteStatusDescription = (
   t: TFunction,
   managedSiteStatus?: ManagedSiteTokenChannelStatus,
 ) => {
@@ -242,6 +242,16 @@ const getManagedSiteStatusDescription = (
       return null
   }
 }
+
+export const getManagedSiteSettingsActionLabel = (
+  t: TFunction,
+  params: {
+    isConfigMissing: boolean
+  },
+) =>
+  params.isConfigMissing
+    ? t("keyManagement:managedSiteStatus.actions.configureChecks")
+    : t("common:labels.settings")
 
 /**
  * Renders action buttons for a token (copy, export, edit/delete).
@@ -941,9 +951,9 @@ export function TokenHeader({
                 onClick={handleOpenManagedSiteSettings}
                 title={managedSiteRecoveryMessage ?? undefined}
               >
-                {isManagedSiteConfigMissing
-                  ? t("managedSiteStatus.actions.configureChecks")
-                  : t("common:labels.settings")}
+                {getManagedSiteSettingsActionLabel(t, {
+                  isConfigMissing: isManagedSiteConfigMissing,
+                })}
               </WorkflowTransitionButton>
             ) : null}
           </div>

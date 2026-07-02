@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { DestructiveConfirmDialog } from "~/components/ui"
@@ -13,6 +13,7 @@ import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
 } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
+import { canCreateAccountApiTokens } from "~/services/accounts/keyProductCapabilities"
 import { getRecoverableManagedSiteChannelCandidate } from "~/services/managedSites/channelMatch"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
@@ -122,6 +123,8 @@ export default function KeyManagement(props: {
     resolvingVisibleKeys,
     isAddTokenOpen,
     editingToken,
+    serviceCredentials,
+    currentAccountLoadError,
     tokenLoadProgress,
     failedAccounts,
     accountSummaryItems,
@@ -131,27 +134,22 @@ export default function KeyManagement(props: {
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
     loadTokens,
+    entries,
     filteredTokens,
+    filteredEntries,
     getVisibleTokenKey,
     refreshManagedSiteTokenStatuses,
     refreshManagedSiteTokenStatusForToken,
     copyKey,
+    copyServiceCredential,
+    rotateServiceCredential,
     toggleKeyVisibility,
     retryFailedAccounts,
     handleAddToken,
     handleCloseAddToken,
     handleEditToken,
     handleDeleteToken,
-    tokenInventories,
   } = useKeyManagement(routeParams)
-
-  const currentAccountLoadError =
-    selectedAccount &&
-    selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE &&
-    tokenInventories[selectedAccount]?.status === "error"
-      ? tokenInventories[selectedAccount]?.errorMessage ??
-        t("messages.loadFailed")
-      : null
 
   useEffect(() => {
     let cancelled = false
@@ -300,20 +298,48 @@ export default function KeyManagement(props: {
     await refreshManagedSiteTokenStatusForToken(token)
   }
 
-  const addTokenPreSelectedAccountId =
-    selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
-      ? allAccountsFilterAccountIds.length === 1 &&
-        displayData.some(
+  const addTokenAvailableAccounts = useMemo(
+    () => displayData.filter(canCreateAccountApiTokens),
+    [displayData],
+  )
+
+  const singleFilteredAllAccountsAccount =
+    selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE &&
+    allAccountsFilterAccountIds.length === 1
+      ? displayData.find(
           (account) => account.id === allAccountsFilterAccountIds[0],
-        )
-        ? allAccountsFilterAccountIds[0]
-        : null
-      : selectedAccount || null
+        ) ?? null
+      : null
+
+  const selectedAddTokenScopeAccount =
+    selectedAccount && selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+      ? displayData.find((account) => account.id === selectedAccount) ?? null
+      : singleFilteredAllAccountsAccount
+
+  const canCreateTokensInCurrentScope = selectedAddTokenScopeAccount
+    ? canCreateAccountApiTokens(selectedAddTokenScopeAccount)
+    : selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+      ? addTokenAvailableAccounts.length > 0
+      : false
+
+  const handleRequestAddToken = useCallback(() => {
+    if (!canCreateTokensInCurrentScope) {
+      return
+    }
+
+    handleAddToken()
+  }, [canCreateTokensInCurrentScope, handleAddToken])
+
+  const addTokenPreSelectedAccountId =
+    selectedAddTokenScopeAccount &&
+    canCreateAccountApiTokens(selectedAddTokenScopeAccount)
+      ? selectedAddTokenScopeAccount.id
+      : null
 
   return (
     <div className="p-6">
       <Header
-        onAddToken={handleAddToken}
+        onAddToken={handleRequestAddToken}
         onRepairMissingKeys={handleRepairMissingKeys}
         onRefresh={() => selectedAccount && loadTokens()}
         onOpenSelectedAccountModels={
@@ -335,7 +361,7 @@ export default function KeyManagement(props: {
         selectedAccount={selectedAccount}
         isLoading={isLoading || !selectedAccount}
         isManagedSiteStatusRefreshing={isManagedSiteStatusRefreshing}
-        isAddTokenDisabled={!selectedAccount || displayData.length === 0}
+        isAddTokenDisabled={!canCreateTokensInCurrentScope}
         isRepairDisabled={displayData.length === 0}
         isManagedSiteStatusRefreshDisabled={
           !selectedAccount || tokens.length === 0 || isLoading
@@ -373,6 +399,8 @@ export default function KeyManagement(props: {
         isLoading={isLoading}
         tokens={tokens}
         filteredTokens={filteredTokens}
+        entries={entries}
+        filteredEntries={filteredEntries}
         visibleKeys={visibleKeys}
         resolvingVisibleKeys={resolvingVisibleKeys}
         getVisibleTokenKey={getVisibleTokenKey}
@@ -380,12 +408,16 @@ export default function KeyManagement(props: {
         copyKey={copyKey}
         handleEditToken={handleEditToken}
         handleDeleteToken={handleRequestDeleteToken}
-        handleAddToken={handleAddToken}
+        handleAddToken={handleRequestAddToken}
+        canCreateTokens={canCreateTokensInCurrentScope}
         onAddAccount={handleOpenAccountManagement}
         onRequestAccountSelection={handleRequestAccountSelection}
         selectedAccount={selectedAccount}
         displayData={displayData}
         currentAccountLoadError={currentAccountLoadError}
+        serviceCredentials={serviceCredentials}
+        onCopyServiceCredential={copyServiceCredential}
+        onRotateServiceCredential={rotateServiceCredential}
         onRetryCurrentAccount={
           selectedAccount &&
           selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
@@ -411,7 +443,7 @@ export default function KeyManagement(props: {
       <AddTokenDialog
         isOpen={isAddTokenOpen}
         onClose={handleCloseAddToken}
-        availableAccounts={displayData}
+        availableAccounts={addTokenAvailableAccounts}
         preSelectedAccountId={addTokenPreSelectedAccountId}
         editingToken={editingToken}
       />
