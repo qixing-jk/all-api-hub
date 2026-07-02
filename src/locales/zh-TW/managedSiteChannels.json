@@ -193,7 +193,8 @@
       "type": "型別",
       "weight": "權重"
     },
-    "empty": "未找到渠道，請嘗試調整篩選條件。",
+    "emptyFiltered": "找不到匹配渠道，請調整搜尋詞或篩選條件。",
+    "emptyNoChannels": "暫無渠道。你可以新增渠道或重新整理列表。",
     "loading": "正在載入渠道…",
     "noEntries": "暫無資料",
     "paginationNext": "下一頁",

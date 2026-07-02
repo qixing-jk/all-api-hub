@@ -193,7 +193,8 @@
       "type": "Loại",
       "weight": "Trọng số"
     },
-    "empty": "Không tìm thấy kênh, vui lòng thử điều chỉnh điều kiện lọc.",
+    "emptyFiltered": "Không tìm thấy kênh phù hợp. Hãy thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc.",
+    "emptyNoChannels": "Chưa có kênh nào. Bạn có thể thêm kênh hoặc làm mới danh sách.",
     "loading": "Đang tải kênh…",
     "noEntries": "Không có dữ liệu",
     "paginationNext": "Trang tiếp",

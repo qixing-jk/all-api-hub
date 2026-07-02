@@ -626,6 +626,41 @@ describe("ManagedSiteChannels", () => {
     })
   })
 
+  it("shows the no-channel empty state when the managed site has no channels", async () => {
+    mockChannels([])
+
+    render(<ManagedSiteChannels />)
+
+    await waitForChannelsRefreshIdle()
+
+    expect(
+      screen.getByText("managedSiteChannels:table.emptyNoChannels"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("managedSiteChannels:table.emptyFiltered"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows the filtered empty state when a search term matches no channels", async () => {
+    mockChannels([
+      { id: 1, name: "Alpha", base_url: "https://site-a.example" },
+      { id: 2, name: "Beta", base_url: "https://site-b.example" },
+    ])
+
+    render(<ManagedSiteChannels routeParams={{ search: "gamma" }} />)
+
+    await waitForChannelsRefreshIdle()
+
+    const input = screen.getByRole("textbox") as HTMLInputElement
+    expect(input.value).toBe("gamma")
+    expect(
+      screen.getByText("managedSiteChannels:table.emptyFiltered"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("managedSiteChannels:table.emptyNoChannels"),
+    ).not.toBeInTheDocument()
+  })
+
   it("opens managed-site settings from the title shortcut", async () => {
     mockChannels([{ id: 1, name: "Alpha", base_url: "https://site-a.example" }])
 

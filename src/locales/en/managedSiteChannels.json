@@ -193,7 +193,8 @@
       "type": "Type",
       "weight": "Weight"
     },
-    "empty": "No channels found. Try adjusting your filters.",
+    "emptyFiltered": "No matching channels found. Try adjusting your search or filters.",
+    "emptyNoChannels": "No channels yet. Add a channel or refresh the list.",
     "loading": "Loading channels...",
     "noEntries": "No entries",
     "paginationNext": "Next page",
