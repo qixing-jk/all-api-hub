@@ -35,6 +35,7 @@ import type {
   ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
 import {
+  isExecutableManagedSiteTokenBatchExportPreviewItem as isExecutablePreviewItem,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
@@ -47,13 +48,6 @@ interface ManagedSiteTokenBatchExportDialogProps {
   items: ManagedSiteTokenBatchExportItemInput[]
   onCompleted?: (result: ManagedSiteTokenBatchExportExecutionResult) => void
 }
-
-const isExecutablePreviewItem = (
-  item: ManagedSiteTokenBatchExportPreviewItem,
-) =>
-  Boolean(item.draft) &&
-  (item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY ||
-    item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING)
 
 const canEditItemModels = (item: ManagedSiteTokenBatchExportPreviewItem) =>
   isExecutablePreviewItem(item) ||
@@ -670,7 +664,7 @@ export function ManagedSiteTokenBatchExportDialog({
                         <Checkbox
                           className="mt-0.5"
                           checked={selectedIds.has(item.id)}
-                          aria-label={`${item.accountName} / ${item.tokenName}`}
+                          aria-label={`${item.accountName} / ${item.runtimeKeyName}`}
                           disabled={
                             !isExecutablePreviewItem(item) || !!executionResult
                           }
@@ -678,7 +672,7 @@ export function ManagedSiteTokenBatchExportDialog({
                         />
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-medium">
-                            {item.accountName} / {item.tokenName}
+                            {item.accountName} / {item.runtimeKeyName}
                           </span>
                           <span className="text-muted-foreground block truncate text-xs">
                             {item.draft?.name ?? "-"}
@@ -761,7 +755,7 @@ export function ManagedSiteTokenBatchExportDialog({
                               aria-label={t(
                                 "keyManagement:batchManagedSiteExport.fields.editModelsLabel",
                                 {
-                                  name: `${item.accountName} / ${item.tokenName}`,
+                                  name: `${item.accountName} / ${item.runtimeKeyName}`,
                                 },
                               )}
                               allowCustom

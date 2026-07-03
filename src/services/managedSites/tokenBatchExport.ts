@@ -1,6 +1,11 @@
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  accountRuntimeKeyToLegacyAccountToken,
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
@@ -19,10 +24,11 @@ import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerificati
 import type { AccountToken } from "~/types"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import {
+  isExecutableManagedSiteTokenBatchExportPreviewItem,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
-  MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
+  type ExecutableManagedSiteTokenBatchExportPreviewItem,
   type ManagedSiteTokenBatchExportBlockedReasonCode,
   type ManagedSiteTokenBatchExportExecutionItem,
   type ManagedSiteTokenBatchExportExecutionResult,
@@ -72,41 +78,11 @@ const mapWithConcurrency = async <TItem, TResult>(
   return results
 }
 
-const buildPreviewItemId = (accountId: string, tokenId: number) =>
-  `${accountId}:${tokenId}`
+const getInputRuntimeKeyId = (input: ManagedSiteTokenBatchExportItemInput) =>
+  input.runtimeKey.id
 
-const isServiceCredentialInput = (
-  input: ManagedSiteTokenBatchExportItemInput,
-) => input.kind === MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential
-
-const buildServiceCredentialPreviewItemId = (
-  accountId: string,
-  service: string,
-) =>
-  `${MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential}:${accountId}:${service}`
-
-const buildTransientTokenFromServiceCredential = (
-  input: Extract<
-    ManagedSiteTokenBatchExportItemInput,
-    {
-      kind: typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential
-    }
-  >,
-): AccountToken => ({
-  id: 0,
-  user_id: 0,
-  key: input.credential.key,
-  status: input.credential.isAuthenticated ? 1 : 0,
-  name: input.credential.label,
-  created_time: 0,
-  accessed_time: 0,
-  expired_time: -1,
-  remain_quota: 0,
-  unlimited_quota: true,
-  used_quota: 0,
-  accountId: input.account.id,
-  accountName: input.account.name,
-})
+const getInputRuntimeKeyName = (input: ManagedSiteTokenBatchExportItemInput) =>
+  input.runtimeKey.label
 
 const toMatchedChannel = (
   channel: ManagedSiteChannel,
@@ -119,30 +95,15 @@ const buildBasePreviewItem = (
   input: ManagedSiteTokenBatchExportItemInput,
 ): Pick<
   ManagedSiteTokenBatchExportPreviewItem,
-  "id" | "accountId" | "accountName" | "tokenId" | "tokenName"
-> => {
-  if (isServiceCredentialInput(input)) {
-    return {
-      id: buildServiceCredentialPreviewItemId(
-        input.account.id,
-        input.credential.service,
-      ),
-      accountId: input.account.id,
-      accountName: input.account.name || input.account.id,
-      tokenId: 0,
-      tokenName: input.credential.label,
-    }
-  }
-
-  return {
-    id: buildPreviewItemId(input.account.id, input.token.id),
-    accountId: input.account.id,
-    accountName:
-      input.account.name || input.token.accountName || input.account.id,
-    tokenId: input.token.id,
-    tokenName: input.token.name || `#${input.token.id}`,
-  }
-}
+  "id" | "accountId" | "accountName" | "runtimeKeyId" | "runtimeKeyName"
+> => ({
+  id: getInputRuntimeKeyId(input),
+  accountId: input.account.id,
+  accountName:
+    input.account.name || input.runtimeKey.accountName || input.account.id,
+  runtimeKeyId: input.runtimeKey.id,
+  runtimeKeyName: getInputRuntimeKeyName(input),
+})
 
 const buildBlockedPreviewItem = (
   input: ManagedSiteTokenBatchExportItemInput,
@@ -201,42 +162,51 @@ const getDraftBlockedReason = (
   return null
 }
 
+const isCollectedSecret = (value: string | undefined): value is string =>
+  Boolean(value)
+
 const collectSecrets = (
   input: ManagedSiteTokenBatchExportItemInput,
   managedConfig: ManagedSiteConfig,
 ) =>
   [
-    isServiceCredentialInput(input) ? input.credential.key : input.token.key,
+    input.runtimeKey.secret,
     input.account.token,
     input.account.cookieAuthSessionCookie,
     ...collectManagedConfigSecrets(managedConfig),
-  ].filter(Boolean) as string[]
+  ].filter(isCollectedSecret)
+
+const resolveInputRuntimeKeyForManagedSiteExport = async (
+  input: ManagedSiteTokenBatchExportItemInput,
+): Promise<AccountRuntimeKey> => {
+  if (!isAccountTokenRuntimeKey(input.runtimeKey)) {
+    return input.runtimeKey
+  }
+
+  return resolveDisplayAccountRuntimeKeySecret(input.account, input.runtimeKey)
+}
 
 const resolveInputTokenForManagedSiteExport = async (
   input: ManagedSiteTokenBatchExportItemInput,
-): Promise<AccountToken> => {
-  if (isServiceCredentialInput(input)) {
-    return buildTransientTokenFromServiceCredential(input)
-  }
-
-  return resolveDisplayAccountTokenForSecret(input.account, input.token)
-}
+): Promise<AccountToken> =>
+  accountRuntimeKeyToLegacyAccountToken(
+    await resolveInputRuntimeKeyForManagedSiteExport(input),
+  )
 
 const resolveInputAccountForManagedSiteExport = (
   input: ManagedSiteTokenBatchExportItemInput,
 ) => {
-  if (!isServiceCredentialInput(input)) {
-    return {
-      ...input.account,
-      baseUrl: normalizeManagedSiteChannelBaseUrl(input.account.baseUrl),
-    }
-  }
+  const runtimeKeyBaseUrl = input.runtimeKey.baseUrl.trim()
+  const baseUrl = isAccountTokenRuntimeKey(input.runtimeKey)
+    ? normalizeManagedSiteChannelBaseUrl(
+        input.runtimeKey.baseUrl || input.account.baseUrl,
+      )
+    : runtimeKeyBaseUrl ||
+      normalizeManagedSiteChannelBaseUrl(input.account.baseUrl)
 
   return {
     ...input.account,
-    baseUrl:
-      input.credential.baseUrl?.trim() ||
-      normalizeManagedSiteChannelBaseUrl(input.account.baseUrl),
+    baseUrl,
   }
 }
 
@@ -259,10 +229,8 @@ const preparePreviewItem = async (params: {
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
     logger.warn("Managed-site token batch secret resolution failed", {
       accountId: input.account.id,
-      tokenId: isServiceCredentialInput(input) ? undefined : input.token.id,
-      service: isServiceCredentialInput(input)
-        ? input.credential.service
-        : undefined,
+      runtimeKeyId: input.runtimeKey.id,
+      runtimeKeySource: input.runtimeKey.source,
       siteType: service.siteType,
       diagnostic,
     })
@@ -366,10 +334,8 @@ const preparePreviewItem = async (params: {
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
     logger.warn("Managed-site token batch preview item failed", {
       accountId: input.account.id,
-      tokenId: isServiceCredentialInput(input) ? undefined : input.token.id,
-      service: isServiceCredentialInput(input)
-        ? input.credential.service
-        : undefined,
+      runtimeKeyId: input.runtimeKey.id,
+      runtimeKeySource: input.runtimeKey.source,
       siteType: service.siteType,
       diagnostic,
     })
@@ -462,7 +428,7 @@ const buildExecutionSkippedItem = (
 ): ManagedSiteTokenBatchExportExecutionItem => ({
   id: item.id,
   accountName: item.accountName,
-  tokenName: item.tokenName,
+  runtimeKeyName: item.runtimeKeyName,
   success: false,
   skipped: true,
 })
@@ -478,26 +444,22 @@ export async function executeManagedSiteTokenBatchExport(params: {
   const selectedIds = new Set(params.selectedItemIds)
   const service = getManagedSiteServiceForType(params.preview.siteType)
   const managedConfig = await service.getConfig()
+  const isSelectedExecutablePreviewItem = (
+    item: ManagedSiteTokenBatchExportPreviewItem,
+  ): item is ExecutableManagedSiteTokenBatchExportPreviewItem =>
+    selectedIds.has(item.id) &&
+    isExecutableManagedSiteTokenBatchExportPreviewItem(item)
   const executableItems = params.preview.items.filter(
-    (item) =>
-      selectedIds.has(item.id) &&
-      item.draft &&
-      (item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY ||
-        item.status ===
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING),
+    isSelectedExecutablePreviewItem,
   )
 
   if (!managedConfig) {
     const items = params.preview.items.map((item) =>
-      selectedIds.has(item.id) &&
-      item.draft &&
-      (item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY ||
-        item.status ===
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING)
+      isSelectedExecutablePreviewItem(item)
         ? {
             id: item.id,
             accountName: item.accountName,
-            tokenName: item.tokenName,
+            runtimeKeyName: item.runtimeKeyName,
             success: false,
             skipped: false,
             error:
@@ -525,7 +487,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
     TOKEN_BATCH_EXPORT_CONCURRENCY,
     async (item): Promise<ManagedSiteTokenBatchExportExecutionItem> => {
       try {
-        const payload = service.buildChannelPayload(item.draft!)
+        const payload = service.buildChannelPayload(item.draft)
         const response = await service.createChannel(managedConfig, payload)
 
         if (!response.success) {
@@ -535,7 +497,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
         return {
           id: item.id,
           accountName: item.accountName,
-          tokenName: item.tokenName,
+          runtimeKeyName: item.runtimeKeyName,
           success: true,
           skipped: false,
         }
@@ -543,7 +505,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
         return {
           id: item.id,
           accountName: item.accountName,
-          tokenName: item.tokenName,
+          runtimeKeyName: item.runtimeKeyName,
           success: false,
           skipped: false,
           error: getErrorMessage(error),

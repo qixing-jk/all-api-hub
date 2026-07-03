@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog"
+import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -16,6 +17,7 @@ import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
   type ManagedSiteTokenBatchExportPreview,
+  type ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
 import {
   buildApiToken,
@@ -177,6 +179,26 @@ const token = {
   accountId: account.id,
   accountName: account.name,
 }
+const runtimeKey = buildAccountTokenRuntimeKey(account, token)
+
+const buildDialogPreviewItem = (
+  tokenId: number,
+  runtimeKeyName: string,
+  fields: Omit<
+    ManagedSiteTokenBatchExportPreviewItem,
+    "id" | "accountId" | "accountName" | "runtimeKeyId" | "runtimeKeyName"
+  >,
+): ManagedSiteTokenBatchExportPreviewItem => {
+  const runtimeKeyId = `account_token:account-1:${tokenId}`
+  return {
+    id: runtimeKeyId,
+    accountId: "account-1",
+    accountName: "Account 1",
+    runtimeKeyId,
+    runtimeKeyName,
+    ...fields,
+  }
+}
 
 const preview: ManagedSiteTokenBatchExportPreview = {
   siteType: SITE_TYPES.NEW_API,
@@ -186,12 +208,7 @@ const preview: ManagedSiteTokenBatchExportPreview = {
   skippedCount: 0,
   blockedCount: 0,
   items: [
-    {
-      id: "account-1:1",
-      accountId: "account-1",
-      accountName: "Account 1",
-      tokenId: 1,
-      tokenName: "Token 1",
+    buildDialogPreviewItem(1, "Token 1", {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
       warningCodes: [],
       draft: {
@@ -205,13 +222,8 @@ const preview: ManagedSiteTokenBatchExportPreview = {
         weight: 0,
         status: 1,
       },
-    },
-    {
-      id: "account-1:2",
-      accountId: "account-1",
-      accountName: "Account 1",
-      tokenId: 2,
-      tokenName: "Token 2",
+    }),
+    buildDialogPreviewItem(2, "Token 2", {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
       warningCodes: [],
       draft: {
@@ -225,7 +237,7 @@ const preview: ManagedSiteTokenBatchExportPreview = {
         weight: 0,
         status: 1,
       },
-    },
+    }),
   ],
 }
 
@@ -249,12 +261,7 @@ const richPreview: ManagedSiteTokenBatchExportPreview = {
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.DEDUPE_UNSUPPORTED,
       ],
     },
-    {
-      id: "account-1:3",
-      accountId: "account-1",
-      accountName: "Account 1",
-      tokenId: 3,
-      tokenName: "Token 3",
+    buildDialogPreviewItem(3, "Token 3", {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
       warningCodes: [],
       draft: {
@@ -272,20 +279,15 @@ const richPreview: ManagedSiteTokenBatchExportPreview = {
         id: 8,
         name: "Existing channel",
       },
-    },
-    {
-      id: "account-1:4",
-      accountId: "account-1",
-      accountName: "Account 1",
-      tokenId: 4,
-      tokenName: "Token 4",
+    }),
+    buildDialogPreviewItem(4, "Token 4", {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
       warningCodes: [],
       blockingReasonCode:
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED,
       blockingMessage: "missing base URL",
       draft: null,
-    },
+    }),
   ],
 }
 
@@ -297,12 +299,7 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
   skippedCount: 1,
   blockedCount: 2,
   items: [
-    {
-      id: "account-1:9",
-      accountId: "account-1",
-      accountName: "Account 1",
-      tokenId: 9,
-      tokenName: "Token 9",
+    buildDialogPreviewItem(9, "Token 9", {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
       warningCodes: [],
       blockingReasonCode:
@@ -318,13 +315,8 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
         weight: 0,
         status: 1,
       },
-    },
-    {
-      id: "account-1:3",
-      accountId: "account-1",
-      accountName: "Account 1",
-      tokenId: 3,
-      tokenName: "Token 3",
+    }),
+    buildDialogPreviewItem(3, "Token 3", {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
       warningCodes: [],
       draft: {
@@ -342,20 +334,15 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
         id: 8,
         name: "Existing channel",
       },
-    },
-    {
-      id: "account-1:4",
-      accountId: "account-1",
-      accountName: "Account 1",
-      tokenId: 4,
-      tokenName: "Token 4",
+    }),
+    buildDialogPreviewItem(4, "Token 4", {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
       warningCodes: [],
       blockingReasonCode:
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED,
       blockingMessage: "missing base URL",
       draft: null,
-    },
+    }),
   ],
 }
 
@@ -367,7 +354,7 @@ const renderDialog = (props?: {
     <ManagedSiteTokenBatchExportDialog
       isOpen={true}
       onClose={props?.onClose ?? vi.fn()}
-      items={[{ account, token }]}
+      items={[{ account, runtimeKey }]}
       onCompleted={props?.onCompleted as any}
     />,
   )
@@ -413,7 +400,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       <ManagedSiteTokenBatchExportDialog
         isOpen={true}
         onClose={vi.fn()}
-        items={[{ account, token }]}
+        items={[{ account, runtimeKey }]}
       />,
     )
 
@@ -427,7 +414,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       <ManagedSiteTokenBatchExportDialog
         isOpen={false}
         onClose={vi.fn()}
-        items={[{ account, token }]}
+        items={[{ account, runtimeKey }]}
       />,
     )
 
@@ -437,7 +424,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       <ManagedSiteTokenBatchExportDialog
         isOpen={true}
         onClose={vi.fn()}
-        items={[{ account, token }]}
+        items={[{ account, runtimeKey }]}
       />,
     )
 
@@ -480,16 +467,16 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 1,
       items: [
         {
-          id: "account-1:1",
+          id: "account_token:account-1:1",
           accountName: "Account 1",
-          tokenName: "Token 1",
+          runtimeKeyName: "Token 1",
           success: true,
           skipped: false,
         },
         {
-          id: "account-1:2",
+          id: "account_token:account-1:2",
           accountName: "Account 1",
-          tokenName: "Token 2",
+          runtimeKeyName: "Token 2",
           success: false,
           skipped: true,
         },
@@ -546,7 +533,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledWith({
         preview,
-        selectedItemIds: ["account-1:1"],
+        selectedItemIds: ["account_token:account-1:1"],
       })
     })
     expect(mockToastSuccess).toHaveBeenCalledWith(
@@ -570,16 +557,16 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       items: [
         {
-          id: "account-1:1",
+          id: "account_token:account-1:1",
           accountName: "Account 1",
-          tokenName: "Token 1",
+          runtimeKeyName: "Token 1",
           success: true,
           skipped: false,
         },
         {
-          id: "account-1:2",
+          id: "account_token:account-1:2",
           accountName: "Account 1",
-          tokenName: "Token 2",
+          runtimeKeyName: "Token 2",
           success: false,
           skipped: false,
           error: "backend detail",
@@ -688,16 +675,16 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       items: [
         {
-          id: "account-1:1",
+          id: "account_token:account-1:1",
           accountName: "Account 1",
-          tokenName: "Token 1",
+          runtimeKeyName: "Token 1",
           success: true,
           skipped: false,
         },
         {
-          id: "account-1:2",
+          id: "account_token:account-1:2",
           accountName: "Account 1",
-          tokenName: "Token 2",
+          runtimeKeyName: "Token 2",
           success: true,
           skipped: false,
         },
@@ -727,7 +714,10 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       "gpt-4o-mini",
       "custom-model",
     ])
-    expect(call.selectedItemIds).toEqual(["account-1:1", "account-1:2"])
+    expect(call.selectedItemIds).toEqual([
+      "account_token:account-1:1",
+      "account_token:account-1:2",
+    ])
   })
 
   it("lets users unblock rows that only lack models", async () => {
@@ -741,9 +731,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       items: [
         {
-          id: "account-1:9",
+          id: "account_token:account-1:9",
           accountName: "Account 1",
-          tokenName: "Token 9",
+          runtimeKeyName: "Token 9",
           success: true,
           skipped: false,
         },
@@ -783,7 +773,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       "gpt-4o-mini",
       "custom-model",
     ])
-    expect(call.selectedItemIds).toEqual(["account-1:9"])
+    expect(call.selectedItemIds).toEqual(["account_token:account-1:9"])
   })
 
   it("re-blocks edited rows when models are cleared", async () => {
@@ -821,31 +811,31 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 2,
       items: [
         {
-          id: "account-1:1",
+          id: "account_token:account-1:1",
           accountName: "Account 1",
-          tokenName: "Token 1",
+          runtimeKeyName: "Token 1",
           success: true,
           skipped: false,
         },
         {
-          id: "account-1:2",
+          id: "account_token:account-1:2",
           accountName: "Account 1",
-          tokenName: "Token 2",
+          runtimeKeyName: "Token 2",
           success: false,
           skipped: false,
           error: "warning item failed",
         },
         {
-          id: "account-1:3",
+          id: "account_token:account-1:3",
           accountName: "Account 1",
-          tokenName: "Token 3",
+          runtimeKeyName: "Token 3",
           success: false,
           skipped: true,
         },
         {
-          id: "account-1:4",
+          id: "account_token:account-1:4",
           accountName: "Account 1",
-          tokenName: "Token 4",
+          runtimeKeyName: "Token 4",
           success: false,
           skipped: true,
         },
@@ -986,18 +976,18 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 1,
       items: [
         {
-          id: "account-1:1",
+          id: "account_token:account-1:1",
           accountName: "Account 1",
-          tokenName: "Token 1",
+          runtimeKeyName: "Token 1",
           success: false,
           skipped: false,
           error:
             MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.CONFIG_MISSING,
         },
         {
-          id: "account-1:2",
+          id: "account_token:account-1:2",
           accountName: "Account 1",
-          tokenName: "Token 2",
+          runtimeKeyName: "Token 2",
           success: false,
           skipped: true,
         },
@@ -1035,18 +1025,13 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         readyCount: 0,
         blockedCount: 1,
         items: [
-          {
-            id: "account-1:5",
-            accountId: "account-1",
-            accountName: "Account 1",
-            tokenId: 5,
-            tokenName: "Token 5",
+          buildDialogPreviewItem(5, "Token 5", {
             status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
             warningCodes: [],
             blockingReasonCode: "unknown-reason" as any,
             blockingMessage: "custom detail",
             draft: null,
-          },
+          }),
         ],
       })
       .mockResolvedValueOnce(preview)
@@ -1058,17 +1043,17 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 1,
       items: [
         {
-          id: "account-1:1",
+          id: "account_token:account-1:1",
           accountName: "Account 1",
-          tokenName: "Token 1",
+          runtimeKeyName: "Token 1",
           success: false,
           skipped: false,
           error: "   ",
         },
         {
-          id: "account-1:2",
+          id: "account_token:account-1:2",
           accountName: "Account 1",
-          tokenName: "Token 2",
+          runtimeKeyName: "Token 2",
           success: false,
           skipped: true,
         },
@@ -1118,79 +1103,49 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       blockedCount: 6,
       items: [
-        {
-          id: "account-1:11",
-          accountId: "account-1",
-          accountName: "Account 1",
-          tokenId: 11,
-          tokenName: "Token 11",
+        buildDialogPreviewItem(11, "Token 11", {
           status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
           warningCodes: [],
           blockingReasonCode:
             MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.SECRET_RESOLUTION_FAILED,
           blockingMessage: "secret issue",
           draft: null,
-        },
-        {
-          id: "account-1:12",
-          accountId: "account-1",
-          accountName: "Account 1",
-          tokenId: 12,
-          tokenName: "Token 12",
+        }),
+        buildDialogPreviewItem(12, "Token 12", {
           status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
           warningCodes: [],
           blockingReasonCode:
             MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.NAME_REQUIRED,
           draft: null,
-        },
-        {
-          id: "account-1:13",
-          accountId: "account-1",
-          accountName: "Account 1",
-          tokenId: 13,
-          tokenName: "Token 13",
+        }),
+        buildDialogPreviewItem(13, "Token 13", {
           status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
           warningCodes: [],
           blockingReasonCode:
             MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.KEY_REQUIRED,
           draft: null,
-        },
-        {
-          id: "account-1:14",
-          accountId: "account-1",
-          accountName: "Account 1",
-          tokenId: 14,
-          tokenName: "Token 14",
+        }),
+        buildDialogPreviewItem(14, "Token 14", {
           status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
           warningCodes: [],
           blockingReasonCode:
             MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.REAL_KEY_REQUIRED,
           draft: null,
-        },
-        {
-          id: "account-1:15",
-          accountId: "account-1",
-          accountName: "Account 1",
-          tokenId: 15,
-          tokenName: "Token 15",
+        }),
+        buildDialogPreviewItem(15, "Token 15", {
           status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
           warningCodes: [],
           blockingReasonCode:
             MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
           draft: null,
-        },
-        {
-          id: "account-1:16",
-          accountId: "account-1",
-          accountName: "Account 1",
-          tokenId: 16,
-          tokenName: "Token 16",
+        }),
+        buildDialogPreviewItem(16, "Token 16", {
           status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
           warningCodes: [],
           blockingReasonCode:
             MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
           draft: null,
-        },
+        }),
       ],
     })
 

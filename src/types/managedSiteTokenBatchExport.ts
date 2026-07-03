@@ -1,6 +1,6 @@
 import type { ManagedSiteType } from "~/constants/siteType"
-import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { DisplaySiteData } from "~/types"
 
 import type { ChannelFormData } from "./managedSite"
 
@@ -39,22 +39,10 @@ export const MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES = {
 export type ManagedSiteTokenBatchExportBlockedReasonCode =
   (typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES)[keyof typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES]
 
-export const MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS = {
-  AccountToken: "account_token",
-  ServiceCredential: "service_credential",
-} as const
-
-export type ManagedSiteTokenBatchExportItemInput =
-  | {
-      kind?: typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.AccountToken
-      account: DisplaySiteData
-      token: AccountToken
-    }
-  | {
-      kind: typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential
-      account: DisplaySiteData
-      credential: AccountServiceCredential
-    }
+export type ManagedSiteTokenBatchExportItemInput = {
+  account: DisplaySiteData
+  runtimeKey: AccountRuntimeKey
+}
 
 export interface ManagedSiteTokenBatchExportMatchedChannel {
   id: number
@@ -65,8 +53,8 @@ export interface ManagedSiteTokenBatchExportPreviewItem {
   id: string
   accountId: string
   accountName: string
-  tokenId: number
-  tokenName: string
+  runtimeKeyId: string
+  runtimeKeyName: string
   draft: ChannelFormData | null
   status: ManagedSiteTokenBatchExportPreviewStatus
   warningCodes: ManagedSiteTokenBatchExportWarningCode[]
@@ -74,6 +62,18 @@ export interface ManagedSiteTokenBatchExportPreviewItem {
   blockingMessage?: string
   matchedChannel?: ManagedSiteTokenBatchExportMatchedChannel
 }
+
+export type ExecutableManagedSiteTokenBatchExportPreviewItem =
+  ManagedSiteTokenBatchExportPreviewItem & {
+    draft: ChannelFormData
+  }
+
+export const isExecutableManagedSiteTokenBatchExportPreviewItem = (
+  item: ManagedSiteTokenBatchExportPreviewItem,
+): item is ExecutableManagedSiteTokenBatchExportPreviewItem =>
+  item.draft !== null &&
+  (item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY ||
+    item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING)
 
 export interface ManagedSiteTokenBatchExportPreview {
   siteType: ManagedSiteType
@@ -88,7 +88,7 @@ export interface ManagedSiteTokenBatchExportPreview {
 export interface ManagedSiteTokenBatchExportExecutionItem {
   id: string
   accountName: string
-  tokenName: string
+  runtimeKeyName: string
   success: boolean
   skipped: boolean
   error?: string

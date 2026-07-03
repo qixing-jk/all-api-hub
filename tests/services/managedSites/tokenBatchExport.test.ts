@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  buildAccountTokenRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type { AccountToken } from "~/types"
 import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
-  MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
 } from "~/types/managedSiteTokenBatchExport"
@@ -16,19 +19,20 @@ import {
 } from "~~/tests/test-utils/factories"
 
 const {
-  mockResolveDisplayAccountTokenForSecret,
+  mockResolveDisplayAccountRuntimeKeySecret,
   mockGetManagedSiteService,
   mockGetManagedSiteServiceForType,
   mockResolveManagedSiteChannelMatch,
 } = vi.hoisted(() => ({
-  mockResolveDisplayAccountTokenForSecret: vi.fn(),
+  mockResolveDisplayAccountRuntimeKeySecret: vi.fn(),
   mockGetManagedSiteService: vi.fn(),
   mockGetManagedSiteServiceForType: vi.fn(),
   mockResolveManagedSiteChannelMatch: vi.fn(),
 }))
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
-  resolveDisplayAccountTokenForSecret: mockResolveDisplayAccountTokenForSecret,
+  resolveDisplayAccountRuntimeKeySecret:
+    mockResolveDisplayAccountRuntimeKeySecret,
 }))
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
@@ -51,6 +55,14 @@ const buildAccountToken = (
   accountId: "account-1",
   accountName: "Account 1",
   ...overrides,
+})
+
+const buildAccountTokenInput = (
+  account = buildDisplaySiteData(),
+  token = buildAccountToken(),
+) => ({
+  account,
+  runtimeKey: buildAccountTokenRuntimeKey(account, token),
 })
 
 const buildMatchInspection = (overrides: Record<string, any> = {}) => ({
@@ -127,8 +139,8 @@ const buildService = (
 describe("managed-site token batch export", () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    mockResolveDisplayAccountTokenForSecret.mockImplementation(
-      async (_account, token) => token,
+    mockResolveDisplayAccountRuntimeKeySecret.mockImplementation(
+      async (_account, runtimeKey) => runtimeKey,
     )
     mockResolveManagedSiteChannelMatch.mockResolvedValue(buildMatchInspection())
   })
@@ -172,14 +184,14 @@ describe("managed-site token batch export", () => {
     })
     const token = buildAccountToken()
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [{ account, token }],
+      items: [buildAccountTokenInput(account, token)],
     })
 
     expect(preview.readyCount).toBe(1)
     expect(preview.items[0]).toMatchObject({
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
       accountName: "Alpha",
-      tokenName: "Token 11",
+      runtimeKeyName: "Token 11",
     })
 
     const result = await executeManagedSiteTokenBatchExport({
@@ -220,31 +232,34 @@ describe("managed-site token batch export", () => {
       name: "SharedChat",
       baseUrl: "https://sharedchat.example.invalid/",
     })
+    const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
+      account,
+      {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex API Key",
+        key: "sk-service-credential",
+        baseUrl: "https://sharedchat.example.invalid/v1",
+        isAuthenticated: true,
+      },
+    )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [
         {
-          kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential,
           account,
-          credential: {
-            kind: "singleton_service_key",
-            service: "codex",
-            label: "Codex API Key",
-            key: "sk-service-credential",
-            baseUrl: "https://sharedchat.example.invalid/v1",
-            isAuthenticated: true,
-          },
+          runtimeKey: serviceCredentialRuntimeKey,
         },
       ],
     })
 
-    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
     expect(service.prepareChannelFormData).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "sharedchat-account",
         baseUrl: "https://sharedchat.example.invalid/v1",
       }),
       expect.objectContaining({
-        id: 0,
+        id: -1,
         name: "Codex API Key",
         key: "sk-service-credential",
         accountId: "sharedchat-account",
@@ -254,13 +269,91 @@ describe("managed-site token batch export", () => {
       id: "service_credential:sharedchat-account:codex",
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
       accountName: "SharedChat",
-      tokenId: 0,
-      tokenName: "Codex API Key",
+      runtimeKeyId: "service_credential:sharedchat-account:codex",
+      runtimeKeyName: "Codex API Key",
       draft: expect.objectContaining({
         base_url: "https://sharedchat.example.invalid/v1",
         key: "sk-service-credential",
       }),
     })
+  })
+
+  it("normalizes account-token runtime key base URLs before preparing channel drafts", async () => {
+    const service = buildService()
+    mockGetManagedSiteService.mockResolvedValue(service)
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const account = buildDisplaySiteData({
+      id: "account-1",
+      name: "Alpha",
+      baseUrl: "https://upstream.example.com/v1",
+    })
+    const token = buildAccountToken()
+
+    await prepareManagedSiteTokenBatchExportPreview({
+      items: [buildAccountTokenInput(account, token)],
+    })
+
+    expect(service.prepareChannelFormData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "account-1",
+        baseUrl: "https://upstream.example.com",
+      }),
+      expect.objectContaining({
+        id: token.id,
+        key: "token-secret",
+      }),
+    )
+  })
+
+  it("falls back to normalized account base URL for blank service-credential runtime key base URLs", async () => {
+    const service = buildService()
+    mockGetManagedSiteService.mockResolvedValue(service)
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const account = buildDisplaySiteData({
+      id: "sharedchat-account",
+      name: "SharedChat",
+      baseUrl: "https://sharedchat.example.invalid/v1",
+    })
+    const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
+      account,
+      {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex API Key",
+        key: "sk-service-credential",
+        baseUrl: "   ",
+        isAuthenticated: true,
+      },
+    )
+
+    await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        {
+          account,
+          runtimeKey: serviceCredentialRuntimeKey,
+        },
+      ],
+    })
+
+    expect(service.prepareChannelFormData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "sharedchat-account",
+        baseUrl: "https://sharedchat.example.invalid",
+      }),
+      expect.objectContaining({
+        id: -1,
+        name: "Codex API Key",
+        key: "sk-service-credential",
+      }),
+    )
   })
 
   it("reports channel creation failures without marking the item created", async () => {
@@ -279,12 +372,7 @@ describe("managed-site token batch export", () => {
     } = await import("~/services/managedSites/tokenBatchExport")
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [
-        {
-          account: buildDisplaySiteData(),
-          token: buildAccountToken(),
-        },
-      ],
+      items: [buildAccountTokenInput()],
     })
 
     const result = await executeManagedSiteTokenBatchExport({
@@ -319,12 +407,7 @@ describe("managed-site token batch export", () => {
     } = await import("~/services/managedSites/tokenBatchExport")
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [
-        {
-          account: buildDisplaySiteData(),
-          token: buildAccountToken(),
-        },
-      ],
+      items: [buildAccountTokenInput()],
     })
 
     const result = await executeManagedSiteTokenBatchExport({
@@ -375,12 +458,7 @@ describe("managed-site token batch export", () => {
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [
-        {
-          account: buildDisplaySiteData(),
-          token: buildAccountToken(),
-        },
-      ],
+      items: [buildAccountTokenInput()],
     })
 
     expect(preview.skippedCount).toBe(1)
@@ -404,12 +482,7 @@ describe("managed-site token batch export", () => {
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [
-        {
-          account: buildDisplaySiteData(),
-          token: buildAccountToken(),
-        },
-      ],
+      items: [buildAccountTokenInput()],
     })
 
     expect(preview.blockedCount).toBe(1)
@@ -433,12 +506,7 @@ describe("managed-site token batch export", () => {
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [
-        {
-          account: buildDisplaySiteData(),
-          token: buildAccountToken(),
-        },
-      ],
+      items: [buildAccountTokenInput()],
     })
 
     expect(preview.warningCount).toBe(1)
@@ -559,12 +627,7 @@ describe("managed-site token batch export", () => {
       )
 
       const preview = await prepareManagedSiteTokenBatchExportPreview({
-        items: [
-          {
-            account: buildDisplaySiteData(),
-            token: buildAccountToken(),
-          },
-        ],
+        items: [buildAccountTokenInput()],
       })
 
       expect(preview.items[0]).toMatchObject({
@@ -648,12 +711,7 @@ describe("managed-site token batch export", () => {
       )
 
       const preview = await prepareManagedSiteTokenBatchExportPreview({
-        items: [
-          {
-            account: buildDisplaySiteData(),
-            token: buildAccountToken(),
-          },
-        ],
+        items: [buildAccountTokenInput()],
       })
 
       expect(preview.items[0]).toMatchObject({
@@ -701,12 +759,11 @@ describe("managed-site token batch export", () => {
 
       const preview = await prepareManagedSiteTokenBatchExportPreview({
         items: [
-          {
-            account: buildDisplaySiteData({
+          buildAccountTokenInput(
+            buildDisplaySiteData({
               baseUrl: "https://upstream.example.com/",
             }),
-            token: buildAccountToken(),
-          },
+          ),
         ],
       })
 
@@ -728,7 +785,7 @@ describe("managed-site token batch export", () => {
   it("blocks the preview when secret resolution fails", async () => {
     const service = buildService()
     mockGetManagedSiteService.mockResolvedValue(service)
-    mockResolveDisplayAccountTokenForSecret.mockRejectedValue(
+    mockResolveDisplayAccountRuntimeKeySecret.mockRejectedValue(
       new Error("secret lookup failed"),
     )
 
@@ -737,12 +794,7 @@ describe("managed-site token batch export", () => {
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [
-        {
-          account: buildDisplaySiteData(),
-          token: buildAccountToken(),
-        },
-      ],
+      items: [buildAccountTokenInput()],
     })
 
     expect(preview.items[0]).toMatchObject({
@@ -764,12 +816,7 @@ describe("managed-site token batch export", () => {
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [
-        {
-          account: buildDisplaySiteData(),
-          token: buildAccountToken(),
-        },
-      ],
+      items: [buildAccountTokenInput()],
     })
 
     expect(preview.items[0]).toMatchObject({
@@ -792,19 +839,16 @@ describe("managed-site token batch export", () => {
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [
-        {
-          account: buildDisplaySiteData(),
-          token: buildAccountToken(),
-        },
-        {
-          account: buildDisplaySiteData({ id: "account-2", name: "Account 2" }),
-          token: buildAccountToken({
+        buildAccountTokenInput(),
+        buildAccountTokenInput(
+          buildDisplaySiteData({ id: "account-2", name: "Account 2" }),
+          buildAccountToken({
             id: 12,
             accountId: "account-2",
             accountName: "Account 2",
             name: "Token 12",
           }),
-        },
+        ),
       ],
     })
 
