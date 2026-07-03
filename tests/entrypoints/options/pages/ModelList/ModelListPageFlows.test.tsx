@@ -533,7 +533,7 @@ describe("ModelList page flows", () => {
         selectedSource: createAccountSource(sharedChatAccount),
         sourceCapabilities: createAccountSource(sharedChatAccount).capabilities,
         isFallbackCatalogActive: true,
-        fallbackTokenName: "SharedChat service credential",
+        fallbackRuntimeKeyName: "SharedChat service credential",
         pricingData: {
           success: true,
           data: [{ model_name: "gpt-runtime" }],

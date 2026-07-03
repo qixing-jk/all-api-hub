@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
@@ -16,6 +15,8 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum } from "~/types"
+
+import { loadAccountRuntimeKeyFallbackPricingResponseFromToken } from "./runtimeKeyFallbackTestUtils"
 
 const {
   fetchRuntimeModelsMock,
@@ -66,29 +67,6 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
     return runtimeKey
   },
 }))
-
-const loadAccountRuntimeKeyFallbackPricingResponseFromToken = async (params: {
-  account: any
-  token: any
-}) => {
-  const { loadAccountRuntimeKeyFallbackPricingResponse } = await import(
-    "~/services/modelList/accountSources/tokenScopedFallback"
-  )
-  const account = {
-    ...params.account,
-    name: params.account.name || params.account.id,
-    tagIds: params.account.tagIds ?? [],
-  }
-
-  return loadAccountRuntimeKeyFallbackPricingResponse({
-    account: params.account,
-    runtimeKey: buildAccountTokenRuntimeKey(account, {
-      ...params.token,
-      accountId: params.account.id,
-      accountName: account.name,
-    }),
-  })
-}
 
 describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => {
   beforeEach(() => {

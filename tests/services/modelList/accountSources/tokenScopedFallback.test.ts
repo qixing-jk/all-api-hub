@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
-  buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -18,7 +17,9 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
+import { AuthTypeEnum } from "~/types"
+
+import { loadAccountRuntimeKeyFallbackPricingResponseFromToken } from "./runtimeKeyFallbackTestUtils"
 
 const {
   fetchOpenAICompatibleModelIdsMock,
@@ -128,34 +129,6 @@ const TOKEN = {
   used_quota: 0,
   models: "",
 } as const
-
-const loadAccountRuntimeKeyFallbackPricingResponseFromToken = (params: {
-  account: Parameters<
-    typeof loadAccountRuntimeKeyFallbackPricingResponse
-  >[0]["account"] &
-    Partial<Pick<DisplaySiteData, "name" | "tagIds">>
-  token: ApiToken
-  abortSignal?: AbortSignal
-}) => {
-  const account = {
-    ...params.account,
-    name:
-      "name" in params.account
-        ? params.account.name || params.account.id
-        : params.account.id,
-    tagIds: "tagIds" in params.account ? params.account.tagIds ?? [] : [],
-  }
-
-  return loadAccountRuntimeKeyFallbackPricingResponse({
-    account: params.account,
-    runtimeKey: buildAccountTokenRuntimeKey(account, {
-      ...params.token,
-      accountId: params.account.id,
-      accountName: account.name,
-    }),
-    abortSignal: params.abortSignal,
-  })
-}
 
 const createSub2ApiModelCatalogAdapter = (
   fetchModels = fetchSub2ApiRuntimeModelsMock,
