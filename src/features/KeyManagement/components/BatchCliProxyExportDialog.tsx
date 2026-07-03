@@ -16,11 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import type { CliProxyExportEntry } from "~/features/KeyManagement/types"
 import {
-  KEY_MANAGEMENT_ENTRY_KINDS,
-  type CliProxyExportEntry,
-} from "~/features/KeyManagement/types"
-import { buildServiceCredentialEntryIdentityKey } from "~/features/KeyManagement/utils"
+  accountRuntimeKeyToLegacyApiToken,
+  isAccountTokenRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import {
   buildDefaultCliProxyProviderBaseUrl,
@@ -40,11 +40,9 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { ApiToken } from "~/types"
+import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { showResultToast } from "~/utils/core/toastHelpers"
-
-import { buildTokenIdentityKey } from "../utils"
 
 interface BatchCliProxyExportDialogProps {
   isOpen: boolean
@@ -71,29 +69,21 @@ interface ExecutionState {
  * Builds a CLIProxyAPI provider name from account metadata.
  */
 function buildProviderName(item: CliProxyExportEntry) {
-  if (item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential) {
-    return item.account.name || item.credential.label || item.account.baseUrl
-  }
-
-  return item.account.name || item.account.baseUrl
+  return `${item.runtimeKey.accountName} / ${item.runtimeKey.label}`
 }
 
 /**
  * Resolves the user-facing key label shown in the batch preview.
  */
 function getEntryTokenName(item: CliProxyExportEntry) {
-  return item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
-    ? item.credential.label
-    : item.token.name
+  return item.runtimeKey.label
 }
 
 /**
  * Selects the upstream API base URL for the exported provider.
  */
 function getEntryBaseUrl(item: CliProxyExportEntry) {
-  return item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
-    ? item.credential.baseUrl || item.account.baseUrl
-    : item.account.baseUrl
+  return item.runtimeKey.baseUrl
 }
 
 /**
@@ -102,23 +92,14 @@ function getEntryBaseUrl(item: CliProxyExportEntry) {
 async function resolveCliProxyExportToken(
   item: CliProxyExportEntry,
 ): Promise<ApiToken> {
-  if (item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential) {
-    return {
-      id: 0,
-      user_id: 0,
-      key: item.credential.key,
-      status: 1,
-      name: item.credential.label,
-      created_time: 0,
-      accessed_time: 0,
-      expired_time: -1,
-      remain_quota: 0,
-      unlimited_quota: false,
-      used_quota: 0,
-    }
+  if (isAccountTokenRuntimeKey(item.runtimeKey)) {
+    return resolveExportTokenForSecret(
+      item.runtimeKey.account as DisplaySiteData,
+      item.runtimeKey.token,
+    )
   }
 
-  return resolveExportTokenForSecret(item.account, item.token)
+  return accountRuntimeKeyToLegacyApiToken(item.runtimeKey)
 }
 
 /**
@@ -216,21 +197,22 @@ export function BatchCliProxyExportDialog({
   const previewItems = useMemo(
     () =>
       items.map((item) => {
+        const account = {
+          ...item.runtimeKey.account,
+          name: item.runtimeKey.accountName,
+          baseUrl: getEntryBaseUrl(item),
+        } as DisplaySiteData
+
         return {
           ...item,
-          id:
-            item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
-              ? buildServiceCredentialEntryIdentityKey(
-                  item.account.id,
-                  item.credential.service,
-                )
-              : buildTokenIdentityKey(item.token.accountId, item.token.id),
+          id: item.id,
           tokenName: getEntryTokenName(item),
           providerName: buildProviderName(item),
-          providerBaseUrl: buildDefaultCliProxyProviderBaseUrl(providerType, {
-            ...item.account,
-            baseUrl: getEntryBaseUrl(item),
-          }),
+          account,
+          providerBaseUrl: buildDefaultCliProxyProviderBaseUrl(
+            providerType,
+            account,
+          ),
         }
       }),
     [items, providerType],
@@ -500,7 +482,7 @@ export function BatchCliProxyExportDialog({
                       {item.tokenName}
                     </div>
                     <div className="text-muted-foreground truncate text-xs">
-                      {item.account.name}
+                      {item.runtimeKey.accountName}
                     </div>
                   </div>
                   <Badge

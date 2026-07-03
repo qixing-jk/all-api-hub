@@ -2,7 +2,10 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BatchCliProxyExportDialog } from "~/features/KeyManagement/components/BatchCliProxyExportDialog"
-import { KEY_MANAGEMENT_ENTRY_KINDS } from "~/features/KeyManagement/types"
+import {
+  buildAccountTokenRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { CLI_PROXY_PROVIDER_TYPES } from "~/services/integrations/cliProxyProviderTypes"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -73,6 +76,41 @@ describe("BatchCliProxyExportDialog", () => {
     name: "Token 2",
     key: "sk-token-2************masked",
   })
+  const createAccountTokenEntry = (
+    token: typeof token1,
+    entryAccount = account,
+  ) => {
+    const runtimeKey = buildAccountTokenRuntimeKey(entryAccount, token)
+
+    return {
+      id: `runtime_key:${runtimeKey.id}`,
+      runtimeKey,
+      uiState: {},
+    }
+  }
+  const createServiceCredentialEntry = () => {
+    const runtimeKey = buildServiceCredentialRuntimeKey(
+      createAccount({
+        id: "account-1",
+        name: "Example Account",
+        baseUrl: "https://example.invalid",
+      }),
+      {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "service-secret",
+        baseUrl: "https://runtime.example.invalid",
+        isAuthenticated: true,
+      },
+    )
+
+    return {
+      id: `runtime_key:${runtimeKey.id}`,
+      runtimeKey,
+      uiState: {},
+    }
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -99,16 +137,8 @@ describe("BatchCliProxyExportDialog", () => {
         isOpen={true}
         onClose={() => {}}
         items={[
-          {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-            account,
-            token: token1,
-          },
-          {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-            account,
-            token: token2,
-          },
+          createAccountTokenEntry(token1),
+          createAccountTokenEntry(token2),
         ]}
       />,
     )
@@ -129,7 +159,7 @@ describe("BatchCliProxyExportDialog", () => {
         account,
         token: expect.objectContaining({ key: "resolved-1" }),
         providerType: CLI_PROXY_PROVIDER_TYPES.OPENAI_COMPATIBILITY,
-        providerName: "Account 1",
+        providerName: "Account 1 / Token 1",
         providerBaseUrl: "https://one.example.invalid/api/v1",
         proxyUrl: "",
         models: undefined,
@@ -185,16 +215,8 @@ describe("BatchCliProxyExportDialog", () => {
         isOpen={true}
         onClose={() => {}}
         items={[
-          {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-            account,
-            token: token1,
-          },
-          {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-            account,
-            token: token2,
-          },
+          createAccountTokenEntry(token1),
+          createAccountTokenEntry(token2),
         ]}
       />,
     )
@@ -234,13 +256,7 @@ describe("BatchCliProxyExportDialog", () => {
       <BatchCliProxyExportDialog
         isOpen={true}
         onClose={() => {}}
-        items={[
-          {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-            account,
-            token: token1,
-          },
-        ]}
+        items={[createAccountTokenEntry(token1)]}
       />,
     )
 
@@ -296,13 +312,7 @@ describe("BatchCliProxyExportDialog", () => {
       <BatchCliProxyExportDialog
         isOpen={true}
         onClose={() => {}}
-        items={[
-          {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-            account,
-            token: token1,
-          },
-        ]}
+        items={[createAccountTokenEntry(token1)]}
       />,
     )
 
@@ -343,16 +353,8 @@ describe("BatchCliProxyExportDialog", () => {
         isOpen={true}
         onClose={() => {}}
         items={[
-          {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-            account,
-            token: token1,
-          },
-          {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-            account,
-            token: token2,
-          },
+          createAccountTokenEntry(token1),
+          createAccountTokenEntry(token2),
         ]}
       />,
     )
@@ -396,20 +398,7 @@ describe("BatchCliProxyExportDialog", () => {
       <BatchCliProxyExportDialog
         isOpen={true}
         onClose={() => {}}
-        items={[
-          {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
-            account,
-            credential: {
-              kind: "singleton_service_key",
-              service: "codex",
-              label: "Codex API Key",
-              key: "sk-service-credential",
-              baseUrl: "https://codex.example.invalid/v1",
-              isAuthenticated: true,
-            },
-          },
-        ]}
+        items={[createServiceCredentialEntry()]}
       />,
     )
 
@@ -426,15 +415,18 @@ describe("BatchCliProxyExportDialog", () => {
     expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
     expect(mockImportToCliProxy).toHaveBeenCalledWith(
       expect.objectContaining({
-        account,
-        token: expect.objectContaining({
-          key: "sk-service-credential",
-          name: "Codex API Key",
+        account: expect.objectContaining({
+          id: "account-1",
+          baseUrl: "https://runtime.example.invalid",
         }),
-        providerName: "Account 1",
-        providerBaseUrl: "https://codex.example.invalid/v1",
+        token: expect.objectContaining({
+          key: "service-secret",
+          name: "Codex",
+        }),
+        providerName: "Example Account / Codex",
+        providerBaseUrl: "https://runtime.example.invalid/v1",
       }),
     )
-    expect(screen.getByText("Codex API Key")).toBeInTheDocument()
+    expect(screen.getByText("Codex")).toBeInTheDocument()
   })
 })

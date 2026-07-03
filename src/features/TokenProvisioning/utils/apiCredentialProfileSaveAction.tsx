@@ -1,14 +1,16 @@
 import type { TFunction } from "i18next"
 import toast from "react-hot-toast"
 
-import { KEY_MANAGEMENT_ENTRY_KINDS } from "~/features/KeyManagement/types"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
+import {
+  collectAccountRuntimeKeySecrets,
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken, DisplaySiteData } from "~/types"
-import type { AccountToken } from "~/types/accountToken"
 import { openApiCredentialProfilesPage } from "~/utils/navigation"
 
 type OneTimeApiKeySaveAction = {
@@ -33,81 +35,33 @@ type ApiCredentialProfileBatchSaveAccount = Pick<
   | "userId"
 >
 
-type ApiCredentialProfileBatchSaveItem =
-  | {
-      kind?: typeof KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
-      account: ApiCredentialProfileBatchSaveAccount
-      token: AccountToken
-    }
-  | {
-      kind: typeof KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
-      account: ApiCredentialProfileBatchSaveAccount
-      credential: AccountServiceCredential
-    }
+type ApiCredentialProfileBatchSaveItem = {
+  runtimeKey: AccountRuntimeKey
+}
 
-type ApiCredentialProfileBatchTokenItem = Extract<
-  ApiCredentialProfileBatchSaveItem,
-  { token: AccountToken }
+type ResolveRuntimeKeySecret = NonNullable<
+  SaveAccountRuntimeKeysToApiCredentialProfilesParams["resolveRuntimeKeySecret"]
 >
-
-type ApiCredentialProfileBatchServiceCredentialItem = Extract<
-  ApiCredentialProfileBatchSaveItem,
-  { kind: typeof KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential }
->
-
-type ResolveTokenForSecret = NonNullable<
-  SaveApiTokensToApiCredentialProfilesParams["resolveTokenForSecret"]
->
-
-const isServiceCredentialBatchItem = (
-  item: ApiCredentialProfileBatchSaveItem,
-): item is ApiCredentialProfileBatchServiceCredentialItem =>
-  item.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
-
-const isAccountTokenBatchItem = (
-  item: ApiCredentialProfileBatchSaveItem,
-): item is ApiCredentialProfileBatchTokenItem =>
-  !isServiceCredentialBatchItem(item)
 
 const normalizeBatchSaveItem = async (
   item: ApiCredentialProfileBatchSaveItem,
-  resolveTokenForSecret: ResolveTokenForSecret,
+  resolveRuntimeKeySecret: ResolveRuntimeKeySecret,
 ) => {
-  const { account } = item
-
-  if (isServiceCredentialBatchItem(item)) {
-    return {
-      account,
-      fallbackAccountName: account.name,
-      baseUrl: item.credential.baseUrl || account.baseUrl,
-      token: {
-        name: item.credential.label,
-        key: item.credential.key,
-      },
-    }
-  }
-
-  const resolvedToken = await resolveTokenForSecret(account, item.token)
+  const { runtimeKey } = item
+  const resolvedRuntimeKey = isAccountTokenRuntimeKey(runtimeKey)
+    ? await resolveRuntimeKeySecret(runtimeKey.account, runtimeKey)
+    : runtimeKey
 
   return {
-    account,
-    fallbackAccountName: item.token.accountName,
-    baseUrl: account.baseUrl,
+    account: runtimeKey.account,
+    fallbackAccountName: runtimeKey.accountName,
+    baseUrl: resolvedRuntimeKey.baseUrl,
     token: {
-      ...item.token,
-      key: resolvedToken.key,
+      name: resolvedRuntimeKey.label,
+      key: resolvedRuntimeKey.secret,
     },
   }
 }
-
-const collectBatchSaveSecrets = (items: ApiCredentialProfileBatchSaveItem[]) =>
-  items
-    .flatMap((item) => [
-      isAccountTokenBatchItem(item) ? item.token.key : item.credential.key,
-      item.account.token,
-      item.account.cookieAuthSessionCookie,
-    ])
-    .filter(Boolean) as string[]
 
 interface BuildOneTimeApiKeyProfileSaveActionParams {
   accountName: string
@@ -121,15 +75,15 @@ interface BuildOneTimeApiKeyProfileSaveActionParams {
   source: string
 }
 
-interface SaveApiTokensToApiCredentialProfilesParams {
+interface SaveAccountRuntimeKeysToApiCredentialProfilesParams {
   items: ApiCredentialProfileBatchSaveItem[]
   t: TFunction
   logger: OneTimeKeySaveLogger
   source: string
-  resolveTokenForSecret?: (
-    account: ApiCredentialProfileBatchSaveItem["account"],
-    token: AccountToken,
-  ) => Promise<AccountToken>
+  resolveRuntimeKeySecret?: (
+    account: ApiCredentialProfileBatchSaveAccount,
+    runtimeKey: AccountRuntimeKey,
+  ) => Promise<AccountRuntimeKey>
 }
 
 /**
@@ -202,15 +156,15 @@ async function saveOneTimeApiKeyToProfile({
 }
 
 /**
- * Persists selected account tokens into the API credential profile library.
+ * Persists selected account runtime keys into the API credential profile library.
  */
-export async function saveApiTokensToApiCredentialProfiles({
+export async function saveAccountRuntimeKeysToApiCredentialProfiles({
   items,
   t,
   logger,
   source,
-  resolveTokenForSecret = resolveDisplayAccountTokenForSecret,
-}: SaveApiTokensToApiCredentialProfilesParams): Promise<{
+  resolveRuntimeKeySecret = resolveDisplayAccountRuntimeKeySecret,
+}: SaveAccountRuntimeKeysToApiCredentialProfilesParams): Promise<{
   savedCount: number
 }> {
   let savedCount = 0
@@ -218,7 +172,7 @@ export async function saveApiTokensToApiCredentialProfiles({
   try {
     for (const item of items) {
       const { account, fallbackAccountName, baseUrl, token } =
-        await normalizeBatchSaveItem(item, resolveTokenForSecret)
+        await normalizeBatchSaveItem(item, resolveRuntimeKeySecret)
       await createApiCredentialProfileFromToken({
         accountName: account.name,
         fallbackAccountName,
@@ -272,7 +226,10 @@ export async function saveApiTokensToApiCredentialProfiles({
               totalCount,
             }
           : {}),
-        message: toSanitizedErrorSummary(error, collectBatchSaveSecrets(items)),
+        message: toSanitizedErrorSummary(
+          error,
+          collectAccountRuntimeKeySecrets(items.map((item) => item.runtimeKey)),
+        ),
       },
     )
     toast.error(

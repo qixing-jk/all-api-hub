@@ -6,12 +6,15 @@ import {
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/constants/siteType"
-import { KEY_MANAGEMENT_ENTRY_KINDS } from "~/features/KeyManagement/types"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import {
   buildOneTimeApiKeyProfileSaveAction,
-  saveApiTokensToApiCredentialProfiles,
+  saveAccountRuntimeKeysToApiCredentialProfiles,
 } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import {
+  buildAccountTokenRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -217,7 +220,7 @@ describe("buildOneTimeApiKeyProfileSaveAction", () => {
   })
 })
 
-describe("saveApiTokensToApiCredentialProfiles", () => {
+describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
   beforeEach(() => {
     createApiCredentialProfileMock.mockReset()
     toastErrorMock.mockReset()
@@ -231,50 +234,54 @@ describe("saveApiTokensToApiCredentialProfiles", () => {
     const t = vi.fn((key: string) => key) as unknown as TFunction
     const logger = { error: vi.fn() }
 
-    const result = await saveApiTokensToApiCredentialProfiles({
+    const account1 = createAccount({
+      id: "account-1",
+      name: "Example",
+      baseUrl: "https://api.example.invalid/v1",
+      siteType: SITE_TYPES.NEW_API,
+      tagIds: ["tag-a"],
+      authType: AuthTypeEnum.AccessToken,
+      token: "account-token",
+      userId: "1",
+    })
+    const token1 = createToken({
+      id: 1,
+      accountId: "account-1",
+      key: "sk-first",
+      name: "First",
+      accountName: "Example",
+    })
+    const account2 = createAccount({
+      id: "account-2",
+      name: "AIHubMix",
+      baseUrl: AIHUBMIX_WEB_ORIGIN,
+      siteType: SITE_TYPES.AIHUBMIX,
+      tagIds: ["tag-b"],
+      authType: AuthTypeEnum.AccessToken,
+      token: "account-token",
+      userId: "2",
+    })
+    const token2 = createToken({
+      id: 2,
+      accountId: "account-2",
+      key: "sk-second",
+      name: "Second",
+      accountName: "AIHubMix",
+    })
+
+    const result = await saveAccountRuntimeKeysToApiCredentialProfiles({
       items: [
         {
-          account: createAccount({
-            id: "account-1",
-            name: "Example",
-            baseUrl: "https://api.example.invalid/v1",
-            siteType: SITE_TYPES.NEW_API,
-            tagIds: ["tag-a"],
-            authType: AuthTypeEnum.AccessToken,
-            token: "account-token",
-            userId: "1",
-          }),
-          token: createToken({
-            id: 1,
-            accountId: "account-1",
-            key: "sk-first",
-            name: "First",
-            accountName: "Example",
-          }),
+          runtimeKey: buildAccountTokenRuntimeKey(account1, token1),
         },
         {
-          account: createAccount({
-            id: "account-2",
-            name: "AIHubMix",
-            baseUrl: AIHUBMIX_WEB_ORIGIN,
-            siteType: SITE_TYPES.AIHUBMIX,
-            tagIds: ["tag-b"],
-            authType: AuthTypeEnum.AccessToken,
-            token: "account-token",
-            userId: "2",
-          }),
-          token: createToken({
-            id: 2,
-            accountId: "account-2",
-            key: "sk-second",
-            name: "Second",
-            accountName: "AIHubMix",
-          }),
+          runtimeKey: buildAccountTokenRuntimeKey(account2, token2),
         },
       ],
       t,
       logger,
       source: "TokenListBatchAction",
+      resolveRuntimeKeySecret: async (_account, runtimeKey) => runtimeKey,
     })
 
     expect(result).toEqual({ savedCount: 2 })
@@ -321,51 +328,54 @@ describe("saveApiTokensToApiCredentialProfiles", () => {
       params ? `${key}:${JSON.stringify(params)}` : key,
     ) as unknown as TFunction
     const logger = { error: vi.fn() }
+    const account1 = createAccount({
+      id: "account-1",
+      name: "Example",
+      baseUrl: "https://api.example.invalid/v1",
+      siteType: SITE_TYPES.NEW_API,
+      tagIds: ["tag-a"],
+      authType: AuthTypeEnum.AccessToken,
+      token: "account-token",
+      userId: "1",
+    })
+    const token1 = createToken({
+      id: 1,
+      accountId: "account-1",
+      key: "sk-first",
+      name: "First",
+      accountName: "Example",
+    })
+    const account2 = createAccount({
+      id: "account-2",
+      name: "Other",
+      baseUrl: "https://other.example.invalid/v1",
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      token: "other-account-token",
+      userId: "2",
+    })
+    const token2 = createToken({
+      id: 2,
+      accountId: "account-2",
+      key: "sk-second",
+      name: "Second",
+      accountName: "Other",
+    })
 
     await expect(
-      saveApiTokensToApiCredentialProfiles({
+      saveAccountRuntimeKeysToApiCredentialProfiles({
         items: [
           {
-            account: createAccount({
-              id: "account-1",
-              name: "Example",
-              baseUrl: "https://api.example.invalid/v1",
-              siteType: SITE_TYPES.NEW_API,
-              tagIds: ["tag-a"],
-              authType: AuthTypeEnum.AccessToken,
-              token: "account-token",
-              userId: "1",
-            }),
-            token: createToken({
-              id: 1,
-              accountId: "account-1",
-              key: "sk-first",
-              name: "First",
-              accountName: "Example",
-            }),
+            runtimeKey: buildAccountTokenRuntimeKey(account1, token1),
           },
           {
-            account: createAccount({
-              id: "account-2",
-              name: "Other",
-              baseUrl: "https://other.example.invalid/v1",
-              siteType: SITE_TYPES.NEW_API,
-              authType: AuthTypeEnum.AccessToken,
-              token: "other-account-token",
-              userId: "2",
-            }),
-            token: createToken({
-              id: 2,
-              accountId: "account-2",
-              key: "sk-second",
-              name: "Second",
-              accountName: "Other",
-            }),
+            runtimeKey: buildAccountTokenRuntimeKey(account2, token2),
           },
         ],
         t,
         logger,
         source: "TokenListBatchAction",
+        resolveRuntimeKeySecret: async (_account, runtimeKey) => runtimeKey,
       }),
     ).rejects.toThrow(error)
 
@@ -402,45 +412,49 @@ describe("saveApiTokensToApiCredentialProfiles", () => {
     })
     const t = vi.fn((key: string) => key) as unknown as TFunction
     const logger = { error: vi.fn() }
-    const resolveTokenForSecret = vi.fn()
+    const account = createAccount({
+      id: "account-1",
+      name: "Example Account",
+      baseUrl: "https://example.invalid",
+      siteType: SITE_TYPES.SHAREDCHAT,
+      authType: AuthTypeEnum.Cookie,
+      token: "",
+      userId: "user-1",
+      tagIds: ["tag-a"],
+    })
+    const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
+      account,
+      {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "service-secret",
+        isAuthenticated: true,
+        baseUrl: "https://runtime.example.invalid",
+      },
+    )
+    const resolveRuntimeKeySecret = vi.fn()
 
-    const result = await saveApiTokensToApiCredentialProfiles({
+    const result = await saveAccountRuntimeKeysToApiCredentialProfiles({
       items: [
         {
-          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
-          account: createAccount({
-            id: "sharedchat-account",
-            name: "SharedChat",
-            baseUrl: "https://sharedchat.example.invalid",
-            siteType: SITE_TYPES.SHAREDCHAT,
-            authType: AuthTypeEnum.Cookie,
-            token: "",
-            userId: "user-1",
-          }),
-          credential: {
-            kind: "singleton_service_key",
-            service: "codex",
-            label: "Codex API Key",
-            key: "sk-service-credential",
-            baseUrl: "https://sharedchat.example.invalid/v1",
-            isAuthenticated: true,
-          },
+          runtimeKey: serviceCredentialRuntimeKey,
         },
       ],
       t,
       logger,
       source: "TokenListBatchAction",
-      resolveTokenForSecret,
+      resolveRuntimeKeySecret,
     })
 
     expect(result).toEqual({ savedCount: 1 })
-    expect(resolveTokenForSecret).not.toHaveBeenCalled()
+    expect(resolveRuntimeKeySecret).not.toHaveBeenCalled()
     expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
-      name: "SharedChat - Codex API Key",
+      name: "Example Account - Codex",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: "https://sharedchat.example.invalid/v1",
-      apiKey: "sk-service-credential",
-      tagIds: [],
+      baseUrl: "https://runtime.example.invalid",
+      apiKey: "service-secret",
+      tagIds: ["tag-a"],
     })
   })
 })
