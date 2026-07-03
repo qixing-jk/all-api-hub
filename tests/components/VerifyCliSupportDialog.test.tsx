@@ -1045,6 +1045,80 @@ describe("VerifyCliSupportDialog", () => {
     expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
   })
 
+  it("clears single-tool running state when a resolved runtime key has no API key", async () => {
+    const account = {
+      id: "a1",
+      name: "Account",
+      username: "u",
+      balance: { USD: 0, CNY: 0 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: "healthy" as any },
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://example.invalid",
+      token: "t",
+      userId: "1",
+      authType: "access_token" as any,
+      checkIn: { enableDetection: false } as any,
+      tagIds: [],
+    }
+    const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
+      account,
+      {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "stale-service-secret",
+        isAuthenticated: true,
+        baseUrl: "https://runtime.example.invalid",
+      },
+    )
+
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([
+      serviceCredentialRuntimeKey,
+    ])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValueOnce({
+      ...serviceCredentialRuntimeKey,
+      secret: "",
+      credential: {
+        ...serviceCredentialRuntimeKey.credential,
+        key: "",
+        isAuthenticated: false,
+      },
+      status: "inactive",
+    })
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={account}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
+    const runButton = within(toolCard).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
+    })
+
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
+
+    expect(
+      await within(toolCard).findByText(
+        "cliSupportVerification:verifyDialog.summaries.noRuntimeKeySecret",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(toolCard).getByRole("button", {
+        name: "cliSupportVerification:verifyDialog.actions.retry",
+      }),
+    ).toBeEnabled()
+    expect(mockRunCliSupportTool).not.toHaveBeenCalled()
+  })
+
   it("keeps account-mode actions disabled for inactive empty service credentials", async () => {
     const account = {
       id: "a1",

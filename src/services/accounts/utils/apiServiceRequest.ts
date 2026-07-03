@@ -1,9 +1,9 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import {
-  ACCOUNT_RUNTIME_KEY_STATUSES,
   accountRuntimeKeyToLegacyApiToken,
   buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
+  deriveServiceCredentialRuntimeKeyFields,
   formatAccountRuntimeKeySecretForSite,
   isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
@@ -469,11 +469,7 @@ export async function resolveDisplayAccountRuntimeKeySecret<
     return formatAccountRuntimeKeySecretForSite({
       ...runtimeKey,
       credential,
-      secret: credential.isAuthenticated ? credential.key : "",
-      baseUrl: credential.baseUrl || account.baseUrl,
-      status: credential.isAuthenticated
-        ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
-        : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
+      ...deriveServiceCredentialRuntimeKeyFields(credential, account.baseUrl),
     })
   }
 

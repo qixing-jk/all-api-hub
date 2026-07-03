@@ -97,6 +97,11 @@ export function translateCliSupportSummary(
         "cliSupportVerification:verifyDialog.summaries.noModelIdProvided",
         summaryParams,
       )
+    case "verifyDialog.summaries.noRuntimeKeySecret":
+      return t(
+        "cliSupportVerification:verifyDialog.summaries.noRuntimeKeySecret",
+        summaryParams,
+      )
     case "verifyDialog.summaries.unsupportedForApiType":
       return t(
         "cliSupportVerification:verifyDialog.summaries.unsupportedForApiType",

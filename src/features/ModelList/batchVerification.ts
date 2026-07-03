@@ -145,6 +145,18 @@ export function pickBatchVerifyCompatibleRuntimeKey(
   }
 
   if (
+    item.sourceIdentity?.kind === MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN
+  ) {
+    const sourceIdentity = item.sourceIdentity
+    const runtimeKey = runtimeKeys.find(
+      (candidate) =>
+        isAccountTokenRuntimeKey(candidate) &&
+        candidate.tokenId === sourceIdentity.tokenId,
+    )
+    return runtimeKey && isCompatible(runtimeKey) ? runtimeKey : null
+  }
+
+  if (
     item.sourceIdentity?.kind ===
     MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY
   ) {

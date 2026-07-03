@@ -48,6 +48,7 @@ import {
   buildAccountTokenKeyManagementEntry,
   buildServiceCredentialKeyManagementEntry,
   buildTokenIdentityKey,
+  isManagedSiteStatusIdentityForAccount,
 } from "../utils"
 
 /**
@@ -453,7 +454,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const invalidateManagedSiteStatusesForAccount = useCallback(
     (accountId: string) => {
       invalidateManagedSiteStatuses((identityKey) =>
-        identityKey.startsWith(`${accountId}:`),
+        isManagedSiteStatusIdentityForAccount(identityKey, accountId),
       )
     },
     [invalidateManagedSiteStatuses],

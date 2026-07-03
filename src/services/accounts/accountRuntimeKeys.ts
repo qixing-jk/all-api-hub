@@ -85,6 +85,17 @@ export const buildServiceCredentialRuntimeKeyId = (
   service: AccountServiceCredential["service"],
 ) => `${ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential}:${accountId}:${service}`
 
+export const deriveServiceCredentialRuntimeKeyFields = (
+  credential: AccountServiceCredential,
+  fallbackBaseUrl: string,
+) => ({
+  secret: credential.isAuthenticated ? credential.key : "",
+  baseUrl: credential.baseUrl || fallbackBaseUrl,
+  status: credential.isAuthenticated
+    ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
+    : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
+})
+
 export const isAccountTokenRuntimeKey = (
   runtimeKey: AccountRuntimeKey,
 ): runtimeKey is AccountTokenRuntimeKey =>
@@ -196,11 +207,7 @@ export const buildServiceCredentialRuntimeKey = (
   ...getAccountRuntimeKeyBase(account, {
     id: buildServiceCredentialRuntimeKeyId(account.id, credential.service),
     label: credential.label,
-    secret: credential.isAuthenticated ? credential.key : "",
-    baseUrl: credential.baseUrl || account.baseUrl,
-    status: credential.isAuthenticated
-      ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
-      : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
+    ...deriveServiceCredentialRuntimeKeyFields(credential, account.baseUrl),
     capabilities: {
       ...ACCOUNT_RUNTIME_KEY_BASE_CAPABILITIES,
       rotate: options.canRotate === true,

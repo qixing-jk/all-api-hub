@@ -6,6 +6,7 @@ import {
   createAccountSource,
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
+import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -181,20 +182,23 @@ describe("StatusIndicator", () => {
           runtimeKeyLoadErrorMessage: null,
           catalogLoadErrorMessage: null,
           runtimeKeys: [
-            {
-              id: "account_token:acc-1:7",
-              label: "Only key",
-              user_id: 1,
-              key: "sk-only",
-              status: 1,
-              name: "Only key",
-              created_time: 0,
-              accessed_time: 0,
-              expired_time: -1,
-              remain_quota: 0,
-              unlimited_quota: true,
-              used_quota: 0,
-            } as any,
+            buildAccountTokenRuntimeKey(
+              ACCOUNT as any,
+              {
+                id: 7,
+                accountId: ACCOUNT.id,
+                accountName: ACCOUNT.name,
+                key: "sk-only",
+                status: 1,
+                name: "Only key",
+                created_time: 0,
+                accessed_time: 0,
+                expired_time: -1,
+                remain_quota: 0,
+                unlimited_quota: true,
+                used_quota: 0,
+              } as any,
+            ),
           ],
           selectedRuntimeKeyId: "account_token:acc-1:7",
           activeRuntimeKeyName: null,

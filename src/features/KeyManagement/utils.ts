@@ -1,5 +1,6 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
+  ACCOUNT_RUNTIME_KEY_SOURCES,
   buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -14,6 +15,22 @@ export const buildTokenIdentityKey = (accountId: string, tokenId: number) =>
 
 export const buildAccountRuntimeKeyEntryIdentityKey = (runtimeKeyId: string) =>
   ["runtime_key", runtimeKeyId].join(":")
+
+export const isManagedSiteStatusIdentityForAccount = (
+  identityKey: string,
+  accountId: string,
+) =>
+  identityKey.startsWith(`${accountId}:`) ||
+  identityKey.startsWith(
+    buildAccountRuntimeKeyEntryIdentityKey(
+      `${ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken}:${accountId}:`,
+    ),
+  ) ||
+  identityKey.startsWith(
+    buildAccountRuntimeKeyEntryIdentityKey(
+      `${ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential}:${accountId}:`,
+    ),
+  )
 
 export const buildAccountTokenKeyManagementEntry = (
   account: DisplaySiteData,

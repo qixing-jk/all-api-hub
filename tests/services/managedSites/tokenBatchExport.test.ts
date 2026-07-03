@@ -309,6 +309,46 @@ describe("managed-site token batch export", () => {
     )
   })
 
+  it("falls back to normalized account base URL for blank account-token runtime key base URLs", async () => {
+    const service = buildService()
+    mockGetManagedSiteService.mockResolvedValue(service)
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const account = buildDisplaySiteData({
+      id: "account-1",
+      name: "Alpha",
+      baseUrl: "https://upstream.example.com/v1",
+    })
+    const token = buildAccountToken()
+    const runtimeKey = buildAccountTokenRuntimeKey(account, token)
+
+    await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        {
+          account,
+          runtimeKey: {
+            ...runtimeKey,
+            baseUrl: "   ",
+          },
+        },
+      ],
+    })
+
+    expect(service.prepareChannelFormData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "account-1",
+        baseUrl: "https://upstream.example.com",
+      }),
+      expect.objectContaining({
+        id: token.id,
+        key: "token-secret",
+      }),
+    )
+  })
+
   it("falls back to normalized account base URL for blank service-credential runtime key base URLs", async () => {
     const service = buildService()
     mockGetManagedSiteService.mockResolvedValue(service)

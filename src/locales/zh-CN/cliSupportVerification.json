@@ -40,6 +40,7 @@
       "invalidResponse": "返回格式不符合预期",
       "networkError": "网络错误 / 请求被阻止",
       "noModelIdProvided": "没有可用的模型 ID",
+      "noRuntimeKeySecret": "当前运行密钥没有可用的 API Key。",
       "noToolCallDetected": "未检测到工具调用（可能不支持 tool/function calling）",
       "stopped": "已停止。",
       "supported": "支持",

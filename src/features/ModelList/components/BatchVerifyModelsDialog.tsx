@@ -37,6 +37,7 @@ import {
 } from "~/features/ModelList/testIds"
 import { cn } from "~/lib/utils"
 import {
+  collectAccountRuntimeKeySecrets,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -554,6 +555,7 @@ export function BatchVerifyModelsDialog({
       })
 
       let apiKey = ""
+      let accountRuntimeKeySecretsToRedact: string[] = []
       const apiType = resolveBatchVerifyApiType(apiTypeMode, item.modelId)
       const selectedProbeIdSet = new Set(selectedProbeIds)
 
@@ -588,12 +590,19 @@ export function BatchVerifyModelsDialog({
                   return null
                 }
 
+                accountRuntimeKeySecretsToRedact =
+                  collectAccountRuntimeKeySecrets([runtimeKey])
                 const resolvedRuntimeKey = await getResolvedRuntimeKey(
                   item,
                   runtimeKey,
                   abortSignal,
                 )
                 if (isStopped()) return null
+                accountRuntimeKeySecretsToRedact =
+                  collectAccountRuntimeKeySecrets([
+                    runtimeKey,
+                    resolvedRuntimeKey,
+                  ])
                 const resolvedToken = isAccountTokenRuntimeKey(
                   resolvedRuntimeKey,
                 )
@@ -755,6 +764,7 @@ export function BatchVerifyModelsDialog({
                 item.source.account.token,
                 item.source.account.cookieAuthSessionCookie,
                 apiKey,
+                ...accountRuntimeKeySecretsToRedact,
               ])
         const message =
           toSanitizedErrorSummary(error, redactions) ||

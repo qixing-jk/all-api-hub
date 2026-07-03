@@ -405,7 +405,7 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
     expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 
-  it("saves loaded service credentials without resolving them as account tokens", async () => {
+  it("resolves loaded service credentials before saving API profiles", async () => {
     createApiCredentialProfileMock.mockResolvedValueOnce({
       id: "profile-1",
       name: "SharedChat - Codex API Key",
@@ -433,7 +433,16 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
         baseUrl: "https://runtime.example.invalid",
       },
     )
-    const resolveRuntimeKeySecret = vi.fn()
+    const resolveRuntimeKeySecret = vi.fn(async () => ({
+      ...serviceCredentialRuntimeKey,
+      secret: "fresh-service-secret",
+      baseUrl: "https://fresh-runtime.example.invalid",
+      credential: {
+        ...serviceCredentialRuntimeKey.credential,
+        key: "fresh-service-secret",
+        baseUrl: "https://fresh-runtime.example.invalid",
+      },
+    }))
 
     const result = await saveAccountRuntimeKeysToApiCredentialProfiles({
       items: [
@@ -448,12 +457,15 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
     })
 
     expect(result).toEqual({ savedCount: 1 })
-    expect(resolveRuntimeKeySecret).not.toHaveBeenCalled()
+    expect(resolveRuntimeKeySecret).toHaveBeenCalledWith(
+      account,
+      serviceCredentialRuntimeKey,
+    )
     expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
       name: "Example Account - Codex",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: "https://runtime.example.invalid",
-      apiKey: "service-secret",
+      baseUrl: "https://fresh-runtime.example.invalid",
+      apiKey: "fresh-service-secret",
       tagIds: ["tag-a"],
     })
   })

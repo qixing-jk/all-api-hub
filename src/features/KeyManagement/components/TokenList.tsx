@@ -359,26 +359,29 @@ export function TokenList(props: TokenListProps) {
       })
       .filter((entry): entry is KeyManagementEntry => entry !== null)
 
-    const serviceCredentialEntries = displayData
-      .map((account): KeyManagementEntry | null => {
-        const entry = serviceCredentials[account.id]
-        if (entry?.status !== "loaded" || !entry.credential) {
-          return null
-        }
+    const serviceCredentialEntries = onCopyServiceCredential
+      ? displayData
+          .map((account): KeyManagementEntry | null => {
+            const entry = serviceCredentials[account.id]
+            if (entry?.status !== "loaded" || !entry.credential) {
+              return null
+            }
 
-        return buildServiceCredentialKeyManagementEntry({
-          account,
-          serviceCredential: entry,
-          canRotate: onRotateServiceCredential !== undefined,
-        })
-      })
-      .filter((entry): entry is KeyManagementEntry => entry !== null)
+            return buildServiceCredentialKeyManagementEntry({
+              account,
+              serviceCredential: entry,
+              canRotate: onRotateServiceCredential !== undefined,
+            })
+          })
+          .filter((entry): entry is KeyManagementEntry => entry !== null)
+      : []
 
     return [...serviceCredentialEntries, ...tokenEntries]
   }, [
     accountById,
     displayData,
     filteredTokens,
+    onCopyServiceCredential,
     onRotateServiceCredential,
     providedEntries,
     serviceCredentials,

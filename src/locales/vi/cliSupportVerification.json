@@ -40,6 +40,7 @@
       "invalidResponse": "Định dạng phản hồi không như mong đợi",
       "networkError": "Lỗi mạng / Yêu cầu bị chặn",
       "noModelIdProvided": "Không có ID mô hình khả dụng",
+      "noRuntimeKeySecret": "Runtime key này không có API Key khả dụng.",
       "noToolCallDetected": "Không phát hiện gọi công cụ (có thể không hỗ trợ tool/function calling)",
       "stopped": "Đã dừng bởi người dùng.",
       "supported": "Hỗ trợ",

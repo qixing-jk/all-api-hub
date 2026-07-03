@@ -40,6 +40,7 @@
       "invalidResponse": "Unexpected response format",
       "networkError": "Network error / blocked request",
       "noModelIdProvided": "No model id available",
+      "noRuntimeKeySecret": "No API key is available for this runtime key.",
       "noToolCallDetected": "No tool call detected (tool calling may not be supported)",
       "stopped": "Stopped by user.",
       "supported": "Supported",

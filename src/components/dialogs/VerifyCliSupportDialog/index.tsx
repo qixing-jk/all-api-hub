@@ -326,7 +326,16 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
     let resolvedApiKey = activeApiKey
     let resolvedBaseUrl = sourceBaseUrl
-    const secretsToRedact = new Set<string>(activeApiKey ? [activeApiKey] : [])
+    const secretsToRedact = new Set<string>(
+      filterRedactions([
+        activeApiKey ?? undefined,
+        sourceAccount?.token ?? undefined,
+        sourceAccount?.cookieAuthSessionCookie ?? undefined,
+        ...(accountRuntimeKey
+          ? collectAccountRuntimeKeySecrets([accountRuntimeKey])
+          : []),
+      ]),
+    )
     const startedAt = Date.now()
     setTools((prev) =>
       prev.map((t) =>
@@ -369,7 +378,36 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         }
       }
 
-      if (!resolvedApiKey) return null
+      if (!resolvedApiKey) {
+        const finishedAt = Date.now()
+        setTools((prev) =>
+          prev.map((t) =>
+            t.toolId === toolId
+              ? {
+                  ...t,
+                  isRunning: false,
+                  result: {
+                    id: toolId,
+                    probeId: "tool-calling",
+                    status: "fail",
+                    latencyMs: Math.max(0, finishedAt - startedAt),
+                    summary: "No API key is available for this runtime key.",
+                    summaryKey: "verifyDialog.summaries.noRuntimeKeySecret",
+                    input: {
+                      toolId,
+                      baseUrl: resolvedBaseUrl,
+                      modelId: resolvedModelId,
+                      ...(selectedRuntimeKeyId
+                        ? { runtimeKeyId: selectedRuntimeKeyId }
+                        : {}),
+                    },
+                  },
+                }
+              : t,
+          ),
+        )
+        return null
+      }
 
       const result = await runCliSupportTool({
         toolId,

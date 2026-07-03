@@ -8,6 +8,7 @@ import {
   buildTokenIdentityKey,
   formatKey,
   formatQuota,
+  isManagedSiteStatusIdentityForAccount,
 } from "~/features/KeyManagement/utils"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
@@ -123,6 +124,30 @@ describe("KeyManagement utils", () => {
           isRotating: true,
         },
       })
+    })
+
+    it("matches legacy token and runtime-key status identities by account", () => {
+      expect(
+        isManagedSiteStatusIdentityForAccount("account-1:42", "account-1"),
+      ).toBe(true)
+      expect(
+        isManagedSiteStatusIdentityForAccount(
+          "runtime_key:account_token:account-1:42",
+          "account-1",
+        ),
+      ).toBe(true)
+      expect(
+        isManagedSiteStatusIdentityForAccount(
+          "runtime_key:service_credential:account-1:codex",
+          "account-1",
+        ),
+      ).toBe(true)
+      expect(
+        isManagedSiteStatusIdentityForAccount(
+          "runtime_key:service_credential:account-2:codex",
+          "account-1",
+        ),
+      ).toBe(false)
     })
   })
 

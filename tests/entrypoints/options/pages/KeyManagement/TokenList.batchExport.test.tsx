@@ -664,6 +664,42 @@ describe("TokenList batch export selection", () => {
     )
   })
 
+  it("omits service credential entries when no copy handler can render them", () => {
+    const sharedChatAccount = createAccount({
+      id: "sharedchat-account",
+      name: "SharedChat",
+      siteType: SITE_TYPES.SHAREDCHAT,
+      baseUrl: "https://sharedchat.example.invalid",
+    })
+
+    renderTokenList({
+      selectedAccount: sharedChatAccount.id,
+      displayData: [sharedChatAccount] as any,
+      tokens: [],
+      filteredTokens: [],
+      serviceCredentials: {
+        [sharedChatAccount.id]: {
+          status: "loaded",
+          credential: {
+            kind: "singleton_service_key",
+            service: "codex",
+            label: "Codex API Key",
+            key: "sk-sharedchat",
+            baseUrl: "https://sharedchat.example.invalid/v1",
+            isAuthenticated: true,
+          },
+        },
+      },
+    })
+
+    expect(
+      screen.queryByRole("button", {
+        name: /keyManagement:batchCliProxyExport.actions.open/,
+      }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("Codex API Key")).not.toBeInTheDocument()
+  })
+
   it("keeps selected tokens available and tracks failure when API profile batch save fails", async () => {
     const user = userEvent.setup()
     mockSaveApiCredentialProfiles.mockRejectedValueOnce(

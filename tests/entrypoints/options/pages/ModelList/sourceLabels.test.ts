@@ -54,6 +54,31 @@ describe("formatModelListSourceLabel", () => {
     })
   })
 
+  it("falls back to runtime-key ids when runtime-key source names are blank", () => {
+    const account = createDisplayAccount({
+      id: "sharedchat-account",
+      name: "SharedChat Account",
+      baseUrl: "https://sharedchat.example.invalid",
+      siteType: SITE_TYPES.SHAREDCHAT,
+    })
+
+    expect(
+      formatModelListSourceLabel(
+        createAccountSource(account),
+        labelOptions,
+        createAccountRuntimeKeyModelListSourceIdentity({
+          accountId: account.id,
+          runtimeKeyId: "service_credential:sharedchat-account:codex",
+          runtimeKeyName: "  ",
+        }),
+      ),
+    ).toEqual({
+      label:
+        "SharedChat Account / service_credential:sharedchat-account:codex · sharedchat.example.invalid",
+      title: "https://sharedchat.example.invalid",
+    })
+  })
+
   it("includes token names for account-token model-list sources", () => {
     const account = createDisplayAccount({
       id: "sub2api-account",

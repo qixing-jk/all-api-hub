@@ -40,6 +40,7 @@
       "invalidResponse": "予期しない応答形式です",
       "networkError": "ネットワークエラー / リクエストがブロックされました",
       "noModelIdProvided": "利用可能なモデル ID がありません",
+      "noRuntimeKeySecret": "このランタイムキーで利用できる API キーがありません。",
       "noToolCallDetected": "ツール呼び出しが検出されませんでした（ツール呼び出し未対応の可能性があります）",
       "stopped": "ユーザーが停止しました。",
       "supported": "対応",

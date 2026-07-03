@@ -4,7 +4,6 @@ import toast from "react-hot-toast"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import {
   collectAccountRuntimeKeySecrets,
-  isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
@@ -48,9 +47,10 @@ const normalizeBatchSaveItem = async (
   resolveRuntimeKeySecret: ResolveRuntimeKeySecret,
 ) => {
   const { runtimeKey } = item
-  const resolvedRuntimeKey = isAccountTokenRuntimeKey(runtimeKey)
-    ? await resolveRuntimeKeySecret(runtimeKey.account, runtimeKey)
-    : runtimeKey
+  const resolvedRuntimeKey = await resolveRuntimeKeySecret(
+    runtimeKey.account,
+    runtimeKey,
+  )
 
   return {
     account: runtimeKey.account,

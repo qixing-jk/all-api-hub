@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
+  buildAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
@@ -948,6 +949,27 @@ describe("fetchDisplayAccountTokens", () => {
       request: expect.objectContaining(REQUEST),
       token,
     })
+  })
+
+  it("resolves account-token runtime key secrets without double-formatting optional prefixes", async () => {
+    const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
+    const runtimeKey = buildAccountTokenRuntimeKey(
+      { ...ACCOUNT, siteType: "Veloera" } as any,
+      {
+        ...token,
+        accountId: ACCOUNT.id,
+        accountName: ACCOUNT.name,
+      } as any,
+    )
+    resolveTokenKey.mockResolvedValue("plain-secret")
+
+    const result = await resolveDisplayAccountRuntimeKeySecret(
+      { ...ACCOUNT, siteType: "Veloera" } as any,
+      runtimeKey,
+    )
+
+    expect(result.secret).toBe("sk-plain-secret")
+    expect(result.token.key).toBe("sk-plain-secret")
   })
 
   it("throws when adapter key management is not implemented", async () => {

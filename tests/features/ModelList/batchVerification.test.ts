@@ -544,4 +544,71 @@ describe("model list batch verification helpers", () => {
       }),
     ).toBe(runtimeKeys[1])
   })
+
+  it("preserves exact matching for legacy account-token source identities", () => {
+    const runtimeKeys = [
+      {
+        id: "account_token:acc-1:51",
+        source: "account_token",
+        label: "First key",
+        secret: "sk-first",
+        status: "active",
+        tokenId: 51,
+        token: {
+          id: 51,
+          name: "First key",
+          key: "sk-first",
+          status: 1,
+          group: DEFAULT_MODEL_GROUP,
+          model_limits_enabled: false,
+          model_limits: "",
+          models: "",
+        },
+      },
+      {
+        id: "account_token:acc-1:52",
+        source: "account_token",
+        label: "Second key",
+        secret: "sk-second",
+        status: "active",
+        tokenId: 52,
+        token: {
+          id: 52,
+          name: "Second key",
+          key: "sk-second",
+          status: 1,
+          group: DEFAULT_MODEL_GROUP,
+          model_limits_enabled: false,
+          model_limits: "",
+          models: "",
+        },
+      },
+    ] as any
+
+    expect(
+      pickBatchVerifyCompatibleRuntimeKey(runtimeKeys, {
+        modelId: "shared-model",
+        enableGroups: [DEFAULT_MODEL_GROUP],
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
+          id: "acc-1:token:52",
+          tokenId: 52,
+          tokenName: "Second key",
+        },
+      }),
+    ).toBe(runtimeKeys[1])
+
+    expect(
+      pickBatchVerifyCompatibleRuntimeKey(runtimeKeys, {
+        modelId: "shared-model",
+        enableGroups: [DEFAULT_MODEL_GROUP],
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
+          id: "acc-1:token:53",
+          tokenId: 53,
+          tokenName: "Missing key",
+        },
+      }),
+    ).toBeNull()
+  })
 })

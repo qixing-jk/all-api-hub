@@ -199,7 +199,7 @@ const resolveInputAccountForManagedSiteExport = (
   const runtimeKeyBaseUrl = input.runtimeKey.baseUrl.trim()
   const baseUrl = isAccountTokenRuntimeKey(input.runtimeKey)
     ? normalizeManagedSiteChannelBaseUrl(
-        input.runtimeKey.baseUrl || input.account.baseUrl,
+        runtimeKeyBaseUrl || input.account.baseUrl,
       )
     : runtimeKeyBaseUrl ||
       normalizeManagedSiteChannelBaseUrl(input.account.baseUrl)
