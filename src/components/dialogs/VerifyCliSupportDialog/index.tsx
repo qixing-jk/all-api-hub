@@ -159,6 +159,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const toolAbortControllersRef = useRef(
     new Map<(typeof CLI_TOOL_IDS)[number], AbortController>(),
   )
+  const runtimeKeysRequestIdRef = useRef(0)
   const fetchModelsAbortControllerRef = useRef<AbortController | null>(null)
   const fetchModelsRequestIdRef = useRef(0)
 
@@ -220,6 +221,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   }, [sourceBaseUrl, sourceName, t])
 
   const loadRuntimeKeys = useCallback(async () => {
+    const requestId = (runtimeKeysRequestIdRef.current += 1)
     if (!account) {
       setAccountRuntimeKeys([])
       setSelectedRuntimeKeyId("")
@@ -232,6 +234,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     setIsLoadingRuntimeKeys(true)
     try {
       const runtimeKeys = await fetchDisplayAccountRuntimeKeys(account)
+      if (runtimeKeysRequestIdRef.current !== requestId) return
 
       const sorted = sortAccountRuntimeKeysActiveFirst(runtimeKeys)
 
@@ -245,10 +248,13 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           filterRedactions([account.token, account.cookieAuthSessionCookie]),
         ),
       })
+      if (runtimeKeysRequestIdRef.current !== requestId) return
       setAccountRuntimeKeys([])
       setSelectedRuntimeKeyId("")
     } finally {
-      setIsLoadingRuntimeKeys(false)
+      if (runtimeKeysRequestIdRef.current === requestId) {
+        setIsLoadingRuntimeKeys(false)
+      }
     }
   }, [account])
 
@@ -714,6 +720,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                 onChange={setSelectedRuntimeKeyId}
                 disabled={isLoadingRuntimeKeys}
                 placeholder={t("verifyDialog.meta.runtimeKeyPlaceholder")}
+                data-testid="verify-cli-runtime-key-id"
               />
             </div>
           )}

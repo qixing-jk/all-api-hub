@@ -44,6 +44,8 @@ function getCliToolCardTestId(toolId: string) {
   return `verify-cli-${toolId}`
 }
 
+const VERIFY_CLI_RUNTIME_KEY_TEST_ID = "verify-cli-runtime-key-id"
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
   let reject!: (reason?: unknown) => void
@@ -308,9 +310,9 @@ describe("VerifyCliSupportDialog", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toHaveTextContent(
-        "First runtime key",
-      )
+      expect(
+        screen.getByTestId(VERIFY_CLI_RUNTIME_KEY_TEST_ID),
+      ).toHaveTextContent("First runtime key")
     })
 
     rerender(
@@ -325,14 +327,102 @@ describe("VerifyCliSupportDialog", () => {
     await waitFor(() =>
       expect(mockFetchDisplayAccountRuntimeKeys).toHaveBeenCalledTimes(2),
     )
-    expect(screen.getByRole("combobox")).not.toHaveTextContent(
-      "First runtime key",
-    )
+    expect(
+      screen.getByTestId(VERIFY_CLI_RUNTIME_KEY_TEST_ID),
+    ).not.toHaveTextContent("First runtime key")
 
     await act(async () => {
       pendingSecondRuntimeKeys.resolve([])
       await pendingSecondRuntimeKeys.promise
     })
+  })
+
+  it("ignores stale account runtime-key responses after another account loads", async () => {
+    const firstAccount = {
+      id: "a1",
+      name: "First Account",
+      username: "u1",
+      balance: { USD: 0, CNY: 0 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: "healthy" as any },
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://first.example.invalid",
+      token: "t1",
+      userId: "1",
+      authType: "access_token" as any,
+      checkIn: { enableDetection: false } as any,
+      tagIds: [],
+    }
+    const secondAccount = {
+      ...firstAccount,
+      id: "a2",
+      name: "Second Account",
+      baseUrl: "https://second.example.invalid",
+      token: "t2",
+    }
+    const firstRuntimeKey = buildServiceCredentialRuntimeKey(firstAccount, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "First runtime key",
+      key: "first-secret",
+      isAuthenticated: true,
+      baseUrl: "https://first-runtime.example.invalid",
+    })
+    const secondRuntimeKey = buildServiceCredentialRuntimeKey(secondAccount, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Second runtime key",
+      key: "second-secret",
+      isAuthenticated: true,
+      baseUrl: "https://second-runtime.example.invalid",
+    })
+    const pendingFirstRuntimeKeys = createDeferred<AccountRuntimeKey[]>()
+
+    mockFetchDisplayAccountRuntimeKeys
+      .mockReturnValueOnce(pendingFirstRuntimeKeys.promise)
+      .mockResolvedValueOnce([secondRuntimeKey])
+
+    const { rerender } = render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={firstAccount}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    await waitFor(() =>
+      expect(mockFetchDisplayAccountRuntimeKeys).toHaveBeenCalledTimes(1),
+    )
+
+    rerender(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={secondAccount}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(VERIFY_CLI_RUNTIME_KEY_TEST_ID),
+      ).toHaveTextContent("Second runtime key")
+    })
+
+    await act(async () => {
+      pendingFirstRuntimeKeys.resolve([firstRuntimeKey])
+      await pendingFirstRuntimeKeys.promise
+    })
+
+    expect(
+      screen.getByTestId(VERIFY_CLI_RUNTIME_KEY_TEST_ID),
+    ).toHaveTextContent("Second runtime key")
+    expect(
+      screen.getByTestId(VERIFY_CLI_RUNTIME_KEY_TEST_ID),
+    ).not.toHaveTextContent("First runtime key")
   })
 
   it("fetches profile models and lets the user choose one", async () => {
