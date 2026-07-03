@@ -11,7 +11,7 @@ import {
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
   createDisplayAccountApiContext,
-  fetchDisplayAccountRuntimeKeys,
+  fetchDisplayAccountRuntimeKeyTokens,
   InvalidTokenPayloadError,
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
@@ -121,7 +121,7 @@ export function useCopyKeyDialog(
     clearDefaultTokenCreateAllowedGroups()
 
     try {
-      const tokensResponse = await fetchDisplayAccountRuntimeKeys(account)
+      const tokensResponse = await fetchDisplayAccountRuntimeKeyTokens(account)
       if (fetchRequestIdRef.current !== requestId) return
       setTokens(tokensResponse)
     } catch (error) {
@@ -247,7 +247,8 @@ export function useCopyKeyDialog(
           return
         }
 
-        const refreshedTokens = await fetchDisplayAccountRuntimeKeys(account)
+        const refreshedTokens =
+          await fetchDisplayAccountRuntimeKeyTokens(account)
         setTokens(refreshedTokens)
 
         if (refreshedTokens.length === 0) {

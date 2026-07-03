@@ -1,4 +1,14 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import {
+  ACCOUNT_RUNTIME_KEY_STATUSES,
+  accountRuntimeKeyToLegacyApiToken,
+  buildAccountTokenRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+  formatAccountRuntimeKeySecretForSite,
+  isAccountTokenRuntimeKey,
+  isServiceCredentialRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
@@ -26,7 +36,6 @@ const hasNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
 
 const logger = createLogger("DisplayAccountApiContext")
-const SERVICE_CREDENTIAL_RUNTIME_TOKEN_ID = -1
 
 export const createMissingKeyManagementCapabilityError = (
   siteType: string,
@@ -97,12 +106,19 @@ export class StoredAccountApiContextError extends Error {
 
 export interface DisplayAccountApiSnapshot {
   id: DisplaySiteData["id"]
+  name?: DisplaySiteData["name"]
   siteType: DisplaySiteData["siteType"]
   baseUrl: DisplaySiteData["baseUrl"]
   authType: DisplaySiteData["authType"]
   userId: DisplaySiteData["userId"]
   token: DisplaySiteData["token"]
   cookieAuthSessionCookie?: DisplaySiteData["cookieAuthSessionCookie"]
+  tagIds?: DisplaySiteData["tagIds"]
+}
+
+type DisplayAccountRuntimeKeySnapshot = DisplayAccountApiSnapshot & {
+  name: DisplaySiteData["name"]
+  tagIds: NonNullable<DisplaySiteData["tagIds"]>
 }
 
 export interface AccountApiContext {
@@ -330,21 +346,12 @@ export async function fetchDisplayAccountTokens(
   })
 }
 
-const toServiceCredentialRuntimeToken = (
-  credential: Awaited<ReturnType<ServiceCredentialCapability["fetch"]>>,
-): ApiToken => ({
-  id: SERVICE_CREDENTIAL_RUNTIME_TOKEN_ID,
-  user_id: 0,
-  key: credential.key,
-  status: credential.isAuthenticated ? 1 : 2,
-  name: credential.label,
-  created_time: 0,
-  accessed_time: 0,
-  expired_time: -1,
-  remain_quota: 0,
-  unlimited_quota: true,
-  used_quota: 0,
-  models: "",
+const createAccountRuntimeKeyAccount = (
+  account: DisplayAccountApiSnapshot,
+): DisplayAccountRuntimeKeySnapshot => ({
+  ...account,
+  name: account.name || account.id,
+  tagIds: account.tagIds ?? [],
 })
 
 /**
@@ -356,18 +363,40 @@ const toServiceCredentialRuntimeToken = (
  */
 export async function fetchDisplayAccountRuntimeKeys(
   account: DisplayAccountApiSnapshot,
-): Promise<ApiToken[]> {
+): Promise<AccountRuntimeKey[]> {
   const { keyManagement, serviceCredential, request } =
     createDisplayAccountApiContext(account)
+  const runtimeKeyAccount = createAccountRuntimeKeyAccount(account)
 
   if (keyManagement || !serviceCredential) {
-    return fetchDisplayAccountTokens(account)
+    const tokens = await fetchDisplayAccountTokens(account)
+    return tokens.map((token) =>
+      buildAccountTokenRuntimeKey(runtimeKeyAccount, {
+        ...token,
+        accountId: account.id,
+        accountName: runtimeKeyAccount.name,
+      }),
+    )
   }
 
   const credential = await serviceCredential.fetch(request)
   if (!credential.key.trim()) return []
 
-  return [toServiceCredentialRuntimeToken(credential)]
+  return [
+    buildServiceCredentialRuntimeKey(runtimeKeyAccount, credential, {
+      canRotate: typeof serviceCredential.rotate === "function",
+    }),
+  ]
+}
+
+/**
+ * Converts account runtime keys to the legacy ApiToken shape for staged callers.
+ */
+export async function fetchDisplayAccountRuntimeKeyTokens(
+  account: DisplayAccountApiSnapshot,
+): Promise<ApiToken[]> {
+  const runtimeKeys = await fetchDisplayAccountRuntimeKeys(account)
+  return runtimeKeys.map(accountRuntimeKeyToLegacyApiToken)
 }
 
 /**
@@ -398,6 +427,57 @@ export async function resolveDisplayAccountTokenForSecret<
     resolvedKey === token.key ? token : { ...token, key: resolvedKey },
     account.siteType,
   )
+}
+
+/**
+ * Resolves a runtime-key clone with the latest usable secret for its source.
+ */
+export async function resolveDisplayAccountRuntimeKeySecret<
+  TRuntimeKey extends AccountRuntimeKey,
+>(
+  account: DisplayAccountApiSnapshot,
+  runtimeKey: TRuntimeKey,
+  options: ResolveDisplayAccountTokenForSecretOptions = {},
+): Promise<TRuntimeKey> {
+  if (isAccountTokenRuntimeKey(runtimeKey)) {
+    const resolvedToken = await resolveDisplayAccountTokenForSecret(
+      account,
+      runtimeKey.token,
+      options,
+    )
+    return formatAccountRuntimeKeySecretForSite({
+      ...runtimeKey,
+      token: resolvedToken,
+      secret: resolvedToken.key,
+    })
+  }
+
+  if (isServiceCredentialRuntimeKey(runtimeKey)) {
+    const { serviceCredential, request } =
+      createDisplayAccountApiContext(account)
+    const resolutionRequest = options.abortSignal
+      ? { ...request, abortSignal: options.abortSignal }
+      : request
+    if (!serviceCredential) {
+      throw new Error(
+        `serviceCredential is not implemented for ${account.siteType}`,
+      )
+    }
+
+    const credential = await serviceCredential.fetch(resolutionRequest)
+
+    return formatAccountRuntimeKeySecretForSite({
+      ...runtimeKey,
+      credential,
+      secret: credential.isAuthenticated ? credential.key : "",
+      baseUrl: credential.baseUrl || account.baseUrl,
+      status: credential.isAuthenticated
+        ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
+        : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
+    })
+  }
+
+  return runtimeKey
 }
 
 /**

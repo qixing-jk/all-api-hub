@@ -196,6 +196,19 @@ vi.mock(
           responseType: typeof result,
         })
       },
+      fetchDisplayAccountRuntimeKeyTokens: async (...args: unknown[]) => {
+        const result = await fetchAccountTokensMock(...args)
+        if (Array.isArray(result)) {
+          return result
+        }
+
+        throw new actual.InvalidTokenPayloadError({
+          accountId: "test-account",
+          baseUrl: "https://example.com",
+          siteType: "test-site",
+          responseType: typeof result,
+        })
+      },
       fetchDisplayAccountRuntimeKeys: async (...args: unknown[]) => {
         const result = await fetchAccountTokensMock(...args)
         if (Array.isArray(result)) {

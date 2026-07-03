@@ -31,7 +31,7 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import {
-  fetchDisplayAccountRuntimeKeys,
+  fetchDisplayAccountRuntimeKeyTokens,
   InvalidTokenPayloadError,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
@@ -311,7 +311,7 @@ export default function AccountActionButtons({
 
     try {
       // Fetch tokens to check count before deciding action
-      const tokensResponse = await fetchDisplayAccountRuntimeKeys(site)
+      const tokensResponse = await fetchDisplayAccountRuntimeKeyTokens(site)
 
       if (tokensResponse.length === 1) {
         // Single token - copy directly
@@ -437,7 +437,7 @@ export default function AccountActionButtons({
         baseUrl: accountBaseUrl,
       }
       const tokensResponse =
-        await fetchDisplayAccountRuntimeKeys(tokenLookupAccount)
+        await fetchDisplayAccountRuntimeKeyTokens(tokenLookupAccount)
 
       if (tokensResponse.length === 0) {
         return handleChannelLocateFallback(
