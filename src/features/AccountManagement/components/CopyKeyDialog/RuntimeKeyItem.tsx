@@ -6,6 +6,7 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
+import { getCopyKeyDialogRuntimeKeyItemTestId } from "~/features/AccountManagement/testIds"
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   isAccountTokenRuntimeKey,
@@ -57,6 +58,7 @@ export function RuntimeKeyItem({
         padding="sm"
         className="dark:hover:bg-dark-bg-tertiary cursor-pointer transition-colors hover:bg-gray-50"
         onClick={onToggle}
+        data-testid={getCopyKeyDialogRuntimeKeyItemTestId(runtimeKey.id)}
       >
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1 space-y-1.5">

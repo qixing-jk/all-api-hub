@@ -102,9 +102,11 @@ export async function verifyApiCredentialProfileModelsProbeScenario(params: {
     })
     await expect(profileHeading).toBeVisible()
 
-    const profileCard = profileHeading.locator(
-      `xpath=ancestor::*[.//*[@data-testid="${API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton}"]][1]`,
-    )
+    const profileCard = await getApiCredentialProfileCard({
+      page: params.page,
+      profileName: params.profileName,
+      actionTestId: API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton,
+    })
     verifyButton = profileCard.getByTestId(
       API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton,
     )
@@ -118,6 +120,7 @@ export async function verifyApiCredentialProfileModelsProbeScenario(params: {
 async function getApiCredentialProfileCard(params: {
   page: Page
   profileName: string
+  actionTestId?: string
 }) {
   const profileHeading = params.page.getByRole("heading", {
     name: params.profileName,
@@ -125,7 +128,7 @@ async function getApiCredentialProfileCard(params: {
   await expect(profileHeading).toBeVisible()
 
   return profileHeading.locator(
-    `xpath=ancestor::*[.//*[@data-testid="${API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton}"]][1]`,
+    `xpath=ancestor::*[.//*[@data-testid="${params.actionTestId ?? API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton}"]][1]`,
   )
 }
 

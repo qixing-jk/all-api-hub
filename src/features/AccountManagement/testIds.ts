@@ -32,6 +32,8 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   rowOpenButton: "account-management-row-open-button",
   rowCopyUrlButton: "account-management-row-copy-url-button",
   rowCopyKeyButton: "account-management-row-copy-key-button",
+  copyKeyDialogRuntimeKeyItem:
+    "account-management-copy-key-dialog-runtime-key-item",
   copyKeyDialogExportToCCSwitchButton:
     "account-management-copy-key-dialog-export-to-cc-switch-button",
   rowEditButton: "account-management-row-edit-button",
@@ -90,4 +92,11 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
  */
 export function getAccountManagementListItemTestId(accountId: string) {
   return `account-management-account-list-item-${accountId}`
+}
+
+/**
+ * Returns a stable test id for a runtime key row inside the copy-key dialog.
+ */
+export function getCopyKeyDialogRuntimeKeyItemTestId(runtimeKeyId: string) {
+  return `${ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogRuntimeKeyItem}-${runtimeKeyId}`
 }

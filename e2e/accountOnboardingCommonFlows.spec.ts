@@ -10,8 +10,10 @@ import {
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
+  getCopyKeyDialogRuntimeKeyItemTestId,
 } from "~/features/AccountManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { ApiToken, SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -584,12 +586,19 @@ test("exports an account key from the copy-key dialog to CC Switch", async ({
     getAccountManagementListItemTestId("e2e-copy-dialog-cc-switch-account"),
   )
   await expect(accountRow).toBeVisible()
+  await accountRow.hover()
   await accountRow
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyKeyButton)
     .click()
 
   await expect(page.getByRole("heading", { name: "Key List" })).toBeVisible()
-  await page.getByRole("heading", { name: "Copy Dialog CC Key" }).click()
+  await page
+    .getByTestId(
+      getCopyKeyDialogRuntimeKeyItemTestId(
+        buildAccountTokenRuntimeKeyId("e2e-copy-dialog-cc-switch-account", 1),
+      ),
+    )
+    .click()
   await page
     .getByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportToCCSwitchButton,
