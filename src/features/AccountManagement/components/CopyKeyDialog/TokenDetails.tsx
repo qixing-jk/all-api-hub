@@ -15,7 +15,11 @@ import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  accountRuntimeKeyToLegacyAccountToken,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -37,9 +41,9 @@ import {
 import { showResultToast } from "~/utils/core/toastHelpers"
 
 interface TokenDetailsProps {
-  token: ApiToken
-  copiedTokenId: number | null
-  onCopyKey: (token: ApiToken) => void
+  runtimeKey: AccountRuntimeKey
+  copiedRuntimeKeyId: string | null
+  onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
 }
@@ -48,8 +52,8 @@ interface TokenDetailsProps {
  * Displays detailed token metadata, quota information, and export actions inside copy key dialog.
  */
 export function TokenDetails({
-  token,
-  copiedTokenId,
+  runtimeKey,
+  copiedRuntimeKeyId,
   onCopyKey,
   account,
   onOpenCCSwitchDialog,
@@ -69,10 +73,11 @@ export function TokenDetails({
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
+  const token = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
 
   const handleCopy = (event: MouseEvent) => {
     event.stopPropagation()
-    void onCopyKey(token)
+    void onCopyKey(runtimeKey)
   }
 
   const handleUseInCherry = async (event: MouseEvent) => {
@@ -86,11 +91,14 @@ export function TokenDetails({
     })
 
     try {
-      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+      const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
         account,
-        token,
+        runtimeKey,
       )
-      OpenInCherryStudio(account, resolvedToken)
+      OpenInCherryStudio(
+        account,
+        accountRuntimeKeyToLegacyAccountToken(resolvedRuntimeKey),
+      )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -222,7 +230,7 @@ export function TokenDetails({
           <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
             <IconButton
               aria-label={
-                copiedTokenId === token.id
+                copiedRuntimeKeyId === runtimeKey.id
                   ? t("dialog.copyKey.copied")
                   : t("dialog.copyKey.copy")
               }
@@ -230,7 +238,7 @@ export function TokenDetails({
               size="sm"
               onClick={handleCopy}
             >
-              {copiedTokenId === token.id ? (
+              {copiedRuntimeKeyId === runtimeKey.id ? (
                 <CheckIcon className="h-4 w-4 text-green-500" />
               ) : (
                 <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />

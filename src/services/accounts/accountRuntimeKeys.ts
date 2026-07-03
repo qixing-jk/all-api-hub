@@ -33,6 +33,12 @@ type AccountRuntimeKeyAccount = Pick<
   | "userId"
 >
 
+type AccountRuntimeKeyAccountSource = Omit<
+  AccountRuntimeKeyAccount,
+  "name" | "tagIds"
+> &
+  Partial<Pick<AccountRuntimeKeyAccount, "name" | "tagIds">>
+
 type AccountRuntimeKeyCapabilities = {
   copy: boolean
   export: boolean
@@ -84,6 +90,14 @@ export const buildServiceCredentialRuntimeKeyId = (
   accountId: string,
   service: AccountServiceCredential["service"],
 ) => `${ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential}:${accountId}:${service}`
+
+export const buildAccountRuntimeKeyAccount = (
+  account: AccountRuntimeKeyAccountSource,
+): AccountRuntimeKeyAccount => ({
+  ...account,
+  name: account.name || account.id,
+  tagIds: account.tagIds ?? [],
+})
 
 export const deriveServiceCredentialRuntimeKeyFields = (
   credential: AccountServiceCredential,
@@ -198,6 +212,24 @@ export const buildAccountTokenRuntimeKey = (
   tokenId: token.id,
   token,
 })
+
+export const buildDisplayAccountTokenRuntimeKey = (
+  account: AccountRuntimeKeyAccountSource,
+  token: ApiToken | AccountToken,
+): AccountTokenRuntimeKey => {
+  const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
+  return buildAccountTokenRuntimeKey(runtimeKeyAccount, {
+    ...token,
+    accountId:
+      "accountId" in token && typeof token.accountId === "string"
+        ? token.accountId
+        : runtimeKeyAccount.id,
+    accountName:
+      "accountName" in token && typeof token.accountName === "string"
+        ? token.accountName
+        : runtimeKeyAccount.name,
+  })
+}
 
 export const buildServiceCredentialRuntimeKey = (
   account: AccountRuntimeKeyAccount,

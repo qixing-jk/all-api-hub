@@ -61,14 +61,12 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
-    const { buildAccountTokenRuntimeKey } = await import(
+    const { buildDisplayAccountTokenRuntimeKey } = await import(
       "~/services/accounts/accountRuntimeKeys"
     )
 
     return {
       ...actual,
-      fetchDisplayAccountRuntimeKeyTokens: (...args: any[]) =>
-        mockFetchDisplayAccountTokens(...args),
       fetchDisplayAccountRuntimeKeys: async (...args: any[]) => {
         const [account] = args
         const runtimeKeys = await mockFetchDisplayAccountRuntimeKeys(...args)
@@ -76,21 +74,13 @@ vi.mock(
           return runtimeKeys.map((runtimeKey: any) =>
             runtimeKey?.source && runtimeKey?.accountId
               ? runtimeKey
-              : buildAccountTokenRuntimeKey(account, {
-                  ...runtimeKey,
-                  accountId: account.id,
-                  accountName: account.name,
-                }),
+              : buildDisplayAccountTokenRuntimeKey(account, runtimeKey),
           )
         }
 
         const tokens = await mockFetchDisplayAccountTokens(...args)
         return tokens.map((token: any) =>
-          buildAccountTokenRuntimeKey(account, {
-            ...token,
-            accountId: account.id,
-            accountName: account.name,
-          }),
+          buildDisplayAccountTokenRuntimeKey(account, token),
         )
       },
       fetchDisplayAccountTokens: (...args: any[]) =>

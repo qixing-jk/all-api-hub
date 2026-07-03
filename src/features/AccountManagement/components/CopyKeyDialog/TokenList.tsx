@@ -6,16 +6,17 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { Alert, EmptyState } from "~/components/ui"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
 import { TokenItem } from "./TokenItem"
 
 interface TokenListProps {
-  tokens: ApiToken[]
-  expandedTokens: Set<number>
-  copiedTokenId: number | null
-  onToggleToken: (id: number) => void
-  onCopyKey: (token: ApiToken) => void
+  runtimeKeys: AccountRuntimeKey[]
+  expandedRuntimeKeys: Set<string>
+  copiedRuntimeKeyId: string | null
+  onToggleRuntimeKey: (id: string) => void
+  onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
   canCreateDefaultKey?: boolean
@@ -29,10 +30,10 @@ interface TokenListProps {
  * List view wrapper for TokenItem elements, handling empty states and expansion toggles.
  */
 export function TokenList({
-  tokens,
-  expandedTokens,
-  copiedTokenId,
-  onToggleToken,
+  runtimeKeys,
+  expandedRuntimeKeys,
+  copiedRuntimeKeyId,
+  onToggleRuntimeKey,
   onCopyKey,
   account,
   onOpenCCSwitchDialog,
@@ -44,7 +45,7 @@ export function TokenList({
 }: TokenListProps) {
   const { t } = useTranslation("ui")
 
-  if (!Array.isArray(tokens) || tokens.length === 0) {
+  if (!Array.isArray(runtimeKeys) || runtimeKeys.length === 0) {
     const actions = [
       ...(onCreateDefaultKey
         ? [
@@ -89,13 +90,13 @@ export function TokenList({
 
   return (
     <div className="space-y-3">
-      {tokens.map((token) => (
+      {runtimeKeys.map((runtimeKey) => (
         <TokenItem
-          key={token.id}
-          token={token}
-          isExpanded={expandedTokens.has(token.id)}
-          copiedTokenId={copiedTokenId}
-          onToggle={() => onToggleToken(token.id)}
+          key={runtimeKey.id}
+          runtimeKey={runtimeKey}
+          isExpanded={expandedRuntimeKeys.has(runtimeKey.id)}
+          copiedRuntimeKeyId={copiedRuntimeKeyId}
+          onToggle={() => onToggleRuntimeKey(runtimeKey.id)}
           onCopyKey={onCopyKey}
           account={account}
           onOpenCCSwitchDialog={onOpenCCSwitchDialog}

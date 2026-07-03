@@ -43,7 +43,7 @@ const {
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
   resolveProductAnalyticsErrorCategoryFromErrorMock,
-  resolveDisplayAccountTokenForSecretMock,
+  resolveDisplayAccountRuntimeKeySecretMock,
 } = vi.hoisted(() => ({
   mockHandleSetAccountDisabled: vi.fn(),
   mockTogglePinAccount: vi.fn(),
@@ -83,7 +83,7 @@ const {
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
   resolveProductAnalyticsErrorCategoryFromErrorMock: vi.fn(),
-  resolveDisplayAccountTokenForSecretMock: vi.fn(),
+  resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -180,6 +180,9 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
+    const runtimeKeyHelpers = await import(
+      "~/services/accounts/accountRuntimeKeys"
+    )
 
     return {
       ...actual,
@@ -196,23 +199,18 @@ vi.mock(
           responseType: typeof result,
         })
       },
-      fetchDisplayAccountRuntimeKeyTokens: async (...args: unknown[]) => {
-        const result = await fetchAccountTokensMock(...args)
-        if (Array.isArray(result)) {
-          return result
-        }
-
-        throw new actual.InvalidTokenPayloadError({
-          accountId: "test-account",
-          baseUrl: "https://example.com",
-          siteType: "test-site",
-          responseType: typeof result,
-        })
-      },
       fetchDisplayAccountRuntimeKeys: async (...args: unknown[]) => {
         const result = await fetchAccountTokensMock(...args)
         if (Array.isArray(result)) {
-          return result
+          const account = args[0] as any
+          return result.map((token) =>
+            "source" in Object(token)
+              ? token
+              : runtimeKeyHelpers.buildDisplayAccountTokenRuntimeKey(
+                  account,
+                  token as any,
+                ),
+          )
         }
 
         throw new actual.InvalidTokenPayloadError({
@@ -222,10 +220,15 @@ vi.mock(
           responseType: typeof result,
         })
       },
-      resolveDisplayAccountTokenForSecret: async (
+      resolveDisplayAccountTokenForSecret: async () => {
+        throw new Error(
+          "resolveDisplayAccountTokenForSecret should not be used by account row actions",
+        )
+      },
+      resolveDisplayAccountRuntimeKeySecret: async (
         account: unknown,
-        token: { key: string },
-      ) => resolveDisplayAccountTokenForSecretMock(account, token),
+        runtimeKey: { secret: string },
+      ) => resolveDisplayAccountRuntimeKeySecretMock(account, runtimeKey),
     }
   },
 )
@@ -253,8 +256,8 @@ describe("AccountActionButtons", () => {
       PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     )
     completeProductAnalyticsActionMock.mockResolvedValue(undefined)
-    resolveDisplayAccountTokenForSecretMock.mockImplementation(
-      async (_account: unknown, token: { key: string }) => token,
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementation(
+      async (_account: unknown, runtimeKey: unknown) => runtimeKey,
     )
     exportShareSnapshotWithToastMock.mockResolvedValue(undefined)
   })
@@ -1819,11 +1822,14 @@ describe("AccountActionButtons", () => {
         baseUrl: "https://api.example.com/v1/openai",
       }),
     )
-    expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenCalledWith(
+    expect(resolveDisplayAccountRuntimeKeySecretMock).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://api.example.com/v1/openai",
       }),
-      expect.objectContaining({ key: "" }),
+      expect.objectContaining({
+        secret: "",
+        token: expect.objectContaining({ key: "" }),
+      }),
     )
     expect(openManagedSiteChannelsForChannelMock).not.toHaveBeenCalled()
   })

@@ -6,6 +6,8 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
+import { accountRuntimeKeyToLegacyAccountToken } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import {
   getGroupBadgeStyle,
@@ -15,11 +17,11 @@ import {
 import { TokenDetails } from "./TokenDetails"
 
 interface TokenItemProps {
-  token: ApiToken
+  runtimeKey: AccountRuntimeKey
   isExpanded: boolean
-  copiedTokenId: number | null
+  copiedRuntimeKeyId: string | null
   onToggle: () => void
-  onCopyKey: (token: ApiToken) => void
+  onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
 }
@@ -28,15 +30,16 @@ interface TokenItemProps {
  * Collapsible card for a single API token showing group, status, and expanded details.
  */
 export function TokenItem({
-  token,
+  runtimeKey,
   isExpanded,
-  copiedTokenId,
+  copiedRuntimeKeyId,
   onToggle,
   onCopyKey,
   account,
   onOpenCCSwitchDialog,
 }: TokenItemProps) {
   const { t } = useTranslation("ui")
+  const token = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
 
   return (
     <Card variant="interactive" padding="none">
@@ -92,8 +95,8 @@ export function TokenItem({
 
       {isExpanded && (
         <TokenDetails
-          token={token}
-          copiedTokenId={copiedTokenId}
+          runtimeKey={runtimeKey}
+          copiedRuntimeKeyId={copiedRuntimeKeyId}
           onCopyKey={onCopyKey}
           account={account}
           onOpenCCSwitchDialog={onOpenCCSwitchDialog}

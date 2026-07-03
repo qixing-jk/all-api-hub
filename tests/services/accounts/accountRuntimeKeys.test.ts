@@ -8,6 +8,7 @@ import {
   accountRuntimeKeyToLegacyApiToken,
   buildAccountTokenRuntimeKey,
   buildAccountTokenRuntimeKeyId,
+  buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
   buildServiceCredentialRuntimeKeyId,
   collectAccountRuntimeKeySecrets,
@@ -98,6 +99,32 @@ describe("accountRuntimeKeys", () => {
     expect(
       buildAccountTokenRuntimeKey(account, { ...token, status: 99 }).status,
     ).toBe(ACCOUNT_RUNTIME_KEY_STATUSES.Unknown)
+  })
+
+  it("builds display-account token runtime keys with normalized account fields", () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(
+      {
+        ...account,
+        name: "",
+        tagIds: undefined,
+      },
+      {
+        ...token,
+        accountId: undefined as unknown as string,
+        accountName: undefined as unknown as string,
+      },
+    )
+
+    expect(runtimeKey.account).toMatchObject({
+      id: account.id,
+      name: account.id,
+      tagIds: [],
+    })
+    expect(runtimeKey.accountName).toBe(account.id)
+    expect(runtimeKey.token).toMatchObject({
+      accountId: account.id,
+      accountName: account.id,
+    })
   })
 
   it("builds stable service-credential runtime keys", () => {

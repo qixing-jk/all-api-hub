@@ -3,6 +3,10 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { resolveDefaultTokenQuickCreateResolution } from "~/services/accounts/accountOperations"
+import {
+  buildDisplayAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
 import {
   canCreateAccountApiTokens,
@@ -11,10 +15,10 @@ import {
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
   createDisplayAccountApiContext,
-  fetchDisplayAccountRuntimeKeyTokens,
+  fetchDisplayAccountRuntimeKeys,
   InvalidTokenPayloadError,
   requireDisplayAccountKeyManagement,
-  resolveDisplayAccountTokenForSecret,
+  resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
 import { TOKEN_PROVISIONING_ERRORS } from "~/services/apiAdapters/contracts/tokenProvisioning"
@@ -62,7 +66,7 @@ export function useCopyKeyDialog(
   account: DisplaySiteData | null,
 ) {
   const { t } = useTranslation(["ui", "messages"])
-  const [tokens, setTokens] = useState<ApiToken[]>([])
+  const [runtimeKeys, setRuntimeKeys] = useState<AccountRuntimeKey[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -70,8 +74,12 @@ export function useCopyKeyDialog(
   const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
   const [defaultTokenCreateAllowedGroups, setDefaultTokenCreateAllowedGroups] =
     useState<string[] | null>(null)
-  const [copiedTokenId, setCopiedTokenId] = useState<number | null>(null)
-  const [expandedTokens, setExpandedTokens] = useState<Set<number>>(new Set())
+  const [copiedRuntimeKeyId, setCopiedRuntimeKeyId] = useState<string | null>(
+    null,
+  )
+  const [expandedRuntimeKeys, setExpandedRuntimeKeys] = useState<Set<string>>(
+    new Set(),
+  )
   const copiedTokenResetTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null)
@@ -103,13 +111,13 @@ export function useCopyKeyDialog(
     if (!account) return
     if (!canLoadRuntimeKeys) {
       fetchRequestIdRef.current += 1
-      setTokens([])
+      setRuntimeKeys([])
       setError(null)
       setCreateError(null)
       setOneTimeToken(null)
       clearDefaultTokenCreateAllowedGroups()
-      setCopiedTokenId(null)
-      setExpandedTokens(new Set())
+      setCopiedRuntimeKeyId(null)
+      setExpandedRuntimeKeys(new Set())
       setIsLoading(false)
       return
     }
@@ -121,9 +129,9 @@ export function useCopyKeyDialog(
     clearDefaultTokenCreateAllowedGroups()
 
     try {
-      const tokensResponse = await fetchDisplayAccountRuntimeKeyTokens(account)
+      const loadedRuntimeKeys = await fetchDisplayAccountRuntimeKeys(account)
       if (fetchRequestIdRef.current !== requestId) return
-      setTokens(tokensResponse)
+      setRuntimeKeys(loadedRuntimeKeys)
     } catch (error) {
       if (fetchRequestIdRef.current !== requestId) return
       logger.error("Failed to load key list", {
@@ -149,14 +157,14 @@ export function useCopyKeyDialog(
       fetchTokens()
     } else {
       clearCopiedTokenResetTimeout()
-      setTokens([])
+      setRuntimeKeys([])
       setError(null)
       setIsCreating(false)
       setCreateError(null)
       setOneTimeToken(null)
       clearDefaultTokenCreateAllowedGroups()
-      setCopiedTokenId(null)
-      setExpandedTokens(new Set())
+      setCopiedRuntimeKeyId(null)
+      setExpandedRuntimeKeys(new Set())
     }
   }, [
     account,
@@ -173,24 +181,24 @@ export function useCopyKeyDialog(
   }, [clearCopiedTokenResetTimeout])
 
   const copyKey = useCallback(
-    async (token: ApiToken) => {
+    async (runtimeKey: AccountRuntimeKey) => {
       if (!account) return
 
       const tracker = startProductAnalyticsAction(copyKeyAnalyticsContext)
 
       try {
-        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
           account,
-          token,
+          runtimeKey,
         )
-        await navigator.clipboard.writeText(resolvedToken.key)
-        setCopiedTokenId(token.id)
+        await navigator.clipboard.writeText(resolvedRuntimeKey.secret)
+        setCopiedRuntimeKeyId(runtimeKey.id)
         toast.success(t("ui:dialog.copyKey.keyCopied"))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
 
         clearCopiedTokenResetTimeout()
         copiedTokenResetTimeoutRef.current = setTimeout(() => {
-          setCopiedTokenId(null)
+          setCopiedRuntimeKeyId(null)
           copiedTokenResetTimeoutRef.current = null
         }, 2000)
       } catch (error) {
@@ -234,30 +242,34 @@ export function useCopyKeyDialog(
           shouldShowOneTimeKeyDialogForCreatedToken(account, createdToken)
 
         if (createdToken && shouldShowOneTimeKeyDialog) {
-          setTokens((currentTokens) => {
-            const withoutCreated = currentTokens.filter(
-              (token) => token.id !== createdToken.id,
+          const createdRuntimeKey = buildDisplayAccountTokenRuntimeKey(
+            account,
+            createdToken,
+          )
+          setRuntimeKeys((currentRuntimeKeys) => {
+            const withoutCreated = currentRuntimeKeys.filter(
+              (runtimeKey) => runtimeKey.id !== createdRuntimeKey.id,
             )
-            return [...withoutCreated, createdToken]
+            return [...withoutCreated, createdRuntimeKey]
           })
           setOneTimeToken(
             formatOptionalSkPrefixSiteToken(createdToken, account.siteType),
           )
-          await copyKey(createdToken)
+          await copyKey(createdRuntimeKey)
           return
         }
 
-        const refreshedTokens =
-          await fetchDisplayAccountRuntimeKeyTokens(account)
-        setTokens(refreshedTokens)
+        const refreshedRuntimeKeys =
+          await fetchDisplayAccountRuntimeKeys(account)
+        setRuntimeKeys(refreshedRuntimeKeys)
 
-        if (refreshedTokens.length === 0) {
+        if (refreshedRuntimeKeys.length === 0) {
           setCreateError(t("ui:dialog.copyKey.noKeyFoundAfterCreate"))
           return
         }
 
-        if (refreshedTokens.length === 1) {
-          await copyKey(refreshedTokens[0])
+        if (refreshedRuntimeKeys.length === 1) {
+          await copyKey(refreshedRuntimeKeys[0])
           return
         }
 
@@ -347,34 +359,34 @@ export function useCopyKeyDialog(
     t,
   ])
 
-  const toggleTokenExpansion = (tokenId: number) => {
-    setExpandedTokens((prev) => {
+  const toggleRuntimeKeyExpansion = (runtimeKeyId: string) => {
+    setExpandedRuntimeKeys((prev) => {
       const newSet = new Set(prev)
-      if (newSet.has(tokenId)) {
-        newSet.delete(tokenId)
+      if (newSet.has(runtimeKeyId)) {
+        newSet.delete(runtimeKeyId)
       } else {
-        newSet.add(tokenId)
+        newSet.add(runtimeKeyId)
       }
       return newSet
     })
   }
 
   return {
-    tokens,
+    runtimeKeys,
     isLoading,
     error,
     isCreating,
     createError,
     oneTimeToken,
     defaultTokenCreateAllowedGroups,
-    copiedTokenId,
-    expandedTokens,
+    copiedRuntimeKeyId,
+    expandedRuntimeKeys,
     canCreateDefaultKey,
     fetchTokens,
     copyKey,
     createDefaultKey,
     refreshTokensAfterCreate,
-    toggleTokenExpansion,
+    toggleRuntimeKeyExpansion,
     clearDefaultTokenCreateAllowedGroups,
     clearOneTimeToken: () => setOneTimeToken(null),
   }

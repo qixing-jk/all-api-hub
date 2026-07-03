@@ -40,21 +40,21 @@ export default function CopyKeyDialog({
     account: DisplaySiteData
   } | null>(null)
   const {
-    tokens,
+    runtimeKeys,
     isLoading,
     error,
     isCreating,
     createError,
     oneTimeToken,
     defaultTokenCreateAllowedGroups,
-    copiedTokenId,
-    expandedTokens,
+    copiedRuntimeKeyId,
+    expandedRuntimeKeys,
     canCreateDefaultKey,
     fetchTokens,
     copyKey,
     createDefaultKey,
     refreshTokensAfterCreate,
-    toggleTokenExpansion,
+    toggleRuntimeKeyExpansion,
     clearDefaultTokenCreateAllowedGroups,
     clearOneTimeToken,
   } = useCopyKeyDialog(isOpen, account)
@@ -139,10 +139,10 @@ export default function CopyKeyDialog({
     }
     return (
       <TokenList
-        tokens={tokens}
-        expandedTokens={expandedTokens}
-        copiedTokenId={copiedTokenId}
-        onToggleToken={toggleTokenExpansion}
+        runtimeKeys={runtimeKeys}
+        expandedRuntimeKeys={expandedRuntimeKeys}
+        copiedRuntimeKeyId={copiedRuntimeKeyId}
+        onToggleRuntimeKey={toggleRuntimeKeyExpansion}
         onCopyKey={copyKey}
         account={account}
         onOpenCCSwitchDialog={handleOpenCCSwitchDialog}
@@ -162,7 +162,9 @@ export default function CopyKeyDialog({
         onClose={onClose}
         panelClassName="max-h-[85vh] overflow-hidden flex flex-col"
         header={<DialogHeader account={account} />}
-        footer={<DialogFooter tokenCount={tokens.length} onClose={onClose} />}
+        footer={
+          <DialogFooter tokenCount={runtimeKeys.length} onClose={onClose} />
+        }
       >
         <div className="flex-1 overflow-y-auto">{renderContent()}</div>
       </Modal>

@@ -76,18 +76,7 @@ vi.mock(
 
       const tokens = await mockFetchAccountTokens(account)
       return tokens.map((token: any) =>
-        runtimeKeyHelpers.buildAccountTokenRuntimeKey(
-          {
-            ...account,
-            name: account.name || account.id,
-            tagIds: account.tagIds ?? [],
-          },
-          {
-            ...token,
-            accountId: account.id,
-            accountName: account.name || account.id,
-          },
-        ),
+        runtimeKeyHelpers.buildDisplayAccountTokenRuntimeKey(account, token),
       )
     }
 
@@ -95,10 +84,6 @@ vi.mock(
       ...actual,
       fetchDisplayAccountRuntimeKeys: (...args: any[]) =>
         toRuntimeKeys(args[0]),
-      fetchDisplayAccountRuntimeKeyTokens: async (...args: any[]) =>
-        (await toRuntimeKeys(args[0])).map(
-          runtimeKeyHelpers.accountRuntimeKeyToLegacyApiToken,
-        ),
       resolveDisplayAccountRuntimeKeySecret: async (...args: any[]) => {
         const resolvedRuntimeKey =
           await mockResolveDisplayAccountRuntimeKeySecret(...args)
@@ -140,11 +125,7 @@ vi.mock(
         return runtimeKeyHelpers.accountRuntimeKeyToLegacyApiToken(
           runtimeKeyHelpers.formatAccountRuntimeKeySecretForSite(
             runtimeKeyHelpers.buildAccountTokenRuntimeKey(
-              {
-                ...account,
-                name: account.name || account.id,
-                tagIds: account.tagIds ?? [],
-              },
+              runtimeKeyHelpers.buildAccountRuntimeKeyAccount(account),
               { ...token, key: resolvedKey },
             ),
           ),

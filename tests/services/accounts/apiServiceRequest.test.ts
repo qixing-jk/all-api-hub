@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
   buildAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -14,7 +13,6 @@ import {
   createDisplayAccountApiContext,
   createDisplayAccountRequestContext,
   fetchDisplayAccountRuntimeKeys,
-  fetchDisplayAccountRuntimeKeyTokens,
   fetchDisplayAccountTokens,
   InvalidTokenPayloadError,
   resolveDisplayAccountRuntimeKeySecret,
@@ -248,42 +246,6 @@ describe("fetchDisplayAccountTokens", () => {
       }),
     )
     expect(fetchTokens).not.toHaveBeenCalled()
-  })
-
-  it("exposes a clearly named compatibility helper for legacy token-shaped consumers", async () => {
-    const serviceCredentialAccount = {
-      ...ACCOUNT,
-      siteType: SITE_TYPES.SHAREDCHAT,
-      baseUrl: "https://runtime.example.invalid",
-    }
-    capabilities = {
-      siteType: SITE_TYPES.SHAREDCHAT,
-      account: {
-        serviceCredential: {
-          fetch: fetchServiceCredential,
-        },
-      },
-    }
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
-    fetchServiceCredential.mockResolvedValueOnce({
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "service-credential-secret",
-      isAuthenticated: true,
-    })
-
-    const result = await fetchDisplayAccountRuntimeKeyTokens(
-      serviceCredentialAccount as any,
-    )
-
-    expect(result).toEqual([
-      expect.objectContaining({
-        id: ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
-        name: "Codex",
-        key: "service-credential-secret",
-      }),
-    ])
   })
 
   it("keeps runtime key loading on key management when token inventory is supported", async () => {

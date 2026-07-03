@@ -23,6 +23,10 @@ import {
   buildGroupDefaultTokenRequest,
   resolvePreferredDefaultUserGroup,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import {
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -50,9 +54,16 @@ const logger = createLogger("ModelKeyDialog")
 /**
  * Builds a compact label that disambiguates same-named keys across groups.
  */
-function getCompatibleTokenLabel(token: Pick<ApiToken, "name" | "group">) {
-  const group = typeof token.group === "string" ? token.group.trim() : ""
-  return `${token.name} · ${group || DEFAULT_MODEL_GROUP}`
+function getCompatibleRuntimeKeyLabel(runtimeKey: AccountRuntimeKey) {
+  if (!isAccountTokenRuntimeKey(runtimeKey)) {
+    return runtimeKey.label
+  }
+
+  const group =
+    typeof runtimeKey.token.group === "string"
+      ? runtimeKey.token.group.trim()
+      : ""
+  return `${runtimeKey.label} · ${group || DEFAULT_MODEL_GROUP}`
 }
 
 /**
@@ -130,11 +141,11 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   }, [createGroupOptions, isOpen])
 
   const {
-    compatibleTokens,
+    compatibleRuntimeKeys,
     isLoading,
     error,
-    selectedTokenId,
-    setSelectedTokenId,
+    selectedRuntimeKeyId,
+    setSelectedRuntimeKeyId,
     canCreateToken,
     ineligibleDescription,
     isCreating,
@@ -164,13 +175,17 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
       })
     : undefined
 
-  const requiresExplicitSelection = compatibleTokens.length > 1
+  const requiresExplicitSelection = compatibleRuntimeKeys.length > 1
 
   const canCopy = useMemo(() => {
-    if (compatibleTokens.length === 0) return false
+    if (compatibleRuntimeKeys.length === 0) return false
     if (!requiresExplicitSelection) return true
-    return selectedTokenId !== null
-  }, [compatibleTokens.length, requiresExplicitSelection, selectedTokenId])
+    return selectedRuntimeKeyId !== null
+  }, [
+    compatibleRuntimeKeys.length,
+    requiresExplicitSelection,
+    selectedRuntimeKeyId,
+  ])
 
   const handleOpenAddTokenDialog = () => setIsAddTokenDialogOpen(true)
   const handleCloseAddTokenDialog = () => setIsAddTokenDialogOpen(false)
@@ -324,7 +339,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
             />
           ) : null}
 
-          {compatibleTokens.length === 0 ? (
+          {compatibleRuntimeKeys.length === 0 ? (
             <div className="space-y-4">
               <EmptyState
                 icon={<KeyIcon className="h-12 w-12" />}
@@ -426,10 +441,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 <div className="mt-2">
                   <Select
                     value={
-                      selectedTokenId === null ? "" : String(selectedTokenId)
+                      selectedRuntimeKeyId === null ? "" : selectedRuntimeKeyId
                     }
-                    onValueChange={(value) => setSelectedTokenId(Number(value))}
-                    disabled={compatibleTokens.length === 1}
+                    onValueChange={(value) => setSelectedRuntimeKeyId(value)}
+                    disabled={compatibleRuntimeKeys.length === 1}
                   >
                     <SelectTrigger
                       id={compatibleKeySelectId}
@@ -440,15 +455,15 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {compatibleTokens.map((token) => (
-                        <SelectItem key={token.id} value={String(token.id)}>
-                          {getCompatibleTokenLabel(token)}
+                      {compatibleRuntimeKeys.map((runtimeKey) => (
+                        <SelectItem key={runtimeKey.id} value={runtimeKey.id}>
+                          {getCompatibleRuntimeKeyLabel(runtimeKey)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                {requiresExplicitSelection && selectedTokenId === null ? (
+                {requiresExplicitSelection && selectedRuntimeKeyId === null ? (
                   <p className="dark:text-dark-text-tertiary mt-2 text-sm text-gray-500">
                     {t("modelList:keyDialog.selectHint")}
                   </p>

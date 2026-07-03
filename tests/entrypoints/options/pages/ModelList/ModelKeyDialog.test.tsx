@@ -21,7 +21,7 @@ const {
   adapterCreateTokenMock,
   toastSuccessMock,
   toastErrorMock,
-  resolveDisplayAccountTokenForSecretMock,
+  resolveDisplayAccountRuntimeKeySecretMock,
   openKeysPageMock,
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
@@ -32,7 +32,7 @@ const {
   adapterCreateTokenMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
-  resolveDisplayAccountTokenForSecretMock: vi.fn(),
+  resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
   openKeysPageMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
@@ -56,8 +56,13 @@ vi.mock(
       >()
     return {
       ...original,
-      resolveDisplayAccountTokenForSecret: (...args: any[]) =>
-        resolveDisplayAccountTokenForSecretMock(...args),
+      resolveDisplayAccountTokenForSecret: () => {
+        throw new Error(
+          "resolveDisplayAccountTokenForSecret should not be used by model key dialog",
+        )
+      },
+      resolveDisplayAccountRuntimeKeySecret: (...args: any[]) =>
+        resolveDisplayAccountRuntimeKeySecretMock(...args),
     }
   },
 )
@@ -181,7 +186,7 @@ describe("ModelKeyDialog", () => {
     adapterCreateTokenMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
-    resolveDisplayAccountTokenForSecretMock.mockReset()
+    resolveDisplayAccountRuntimeKeySecretMock.mockReset()
     openKeysPageMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
     completeProductAnalyticsActionMock.mockReset()
@@ -190,8 +195,8 @@ describe("ModelKeyDialog", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
-    resolveDisplayAccountTokenForSecretMock.mockImplementation(
-      async (_account, token) => token,
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementation(
+      async (_account, runtimeKey) => runtimeKey,
     )
   })
 
@@ -260,7 +265,7 @@ describe("ModelKeyDialog", () => {
 
   it("shows the resolver error message when copying the selected key fails", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
-    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+    resolveDisplayAccountRuntimeKeySecretMock.mockRejectedValueOnce(
       new Error("resolver failed"),
     )
 

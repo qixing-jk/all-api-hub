@@ -31,9 +31,13 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import {
-  fetchDisplayAccountRuntimeKeyTokens,
+  accountRuntimeKeyToLegacyAccountToken,
+  collectAccountRuntimeKeySecrets,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
+  fetchDisplayAccountRuntimeKeys,
   InvalidTokenPayloadError,
-  resolveDisplayAccountTokenForSecret,
+  resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import {
@@ -295,7 +299,7 @@ export default function AccountActionButtons({
     }
   }
 
-  // Smart copy key logic - check token count before deciding action
+  // Smart copy key logic - check runtime-key count before deciding action
   const handleSmartCopyKey = async (e: React.MouseEvent) => {
     e.stopPropagation()
 
@@ -308,49 +312,52 @@ export default function AccountActionButtons({
       entrypoint: optionsEntrypoint,
     })
     setIsCheckingTokens(true)
+    const secretsToRedact = new Set<string>(
+      [site.baseUrl, site.token, site.cookieAuthSessionCookie].filter(
+        Boolean,
+      ) as string[],
+    )
 
     try {
-      // Fetch tokens to check count before deciding action
-      const tokensResponse = await fetchDisplayAccountRuntimeKeyTokens(site)
+      const runtimeKeys = await fetchDisplayAccountRuntimeKeys(site)
+      runtimeKeys
+        .flatMap((runtimeKey) => collectAccountRuntimeKeySecrets([runtimeKey]))
+        .forEach((secret) => secretsToRedact.add(secret))
 
-      if (tokensResponse.length === 1) {
-        // Single token - copy directly
-        const token = tokensResponse[0]
-        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+      if (runtimeKeys.length === 1) {
+        const runtimeKey = runtimeKeys[0]
+        const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
           site,
-          token,
+          runtimeKey,
         )
-        await navigator.clipboard.writeText(resolvedToken.key)
+        collectAccountRuntimeKeySecrets([resolvedRuntimeKey]).forEach(
+          (secret) => secretsToRedact.add(secret),
+        )
+        await navigator.clipboard.writeText(resolvedRuntimeKey.secret)
         toast.success(t("actions.keyCopied"))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
-            itemCount: tokensResponse.length,
+            itemCount: runtimeKeys.length,
           },
         })
-      } else if (tokensResponse.length > 1) {
-        // Multiple tokens - open dialog
+      } else if (runtimeKeys.length > 1) {
         onCopyKey(site)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           insights: {
-            itemCount: tokensResponse.length,
+            itemCount: runtimeKeys.length,
           },
         })
       } else {
-        // No tokens found - open dialog for actionable empty state
         onCopyKey(site)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           insights: {
-            itemCount: tokensResponse.length,
+            itemCount: runtimeKeys.length,
           },
         })
       }
     } catch (error) {
       logger.error("Failed to fetch key list", {
-        diagnostic: toSanitizedErrorSummary(error, [
-          site.baseUrl,
-          site.token,
-          site.cookieAuthSessionCookie ?? "",
-        ]),
+        diagnostic: toSanitizedErrorSummary(error, Array.from(secretsToRedact)),
         siteId: site.id,
         siteType: site.siteType,
       })
@@ -436,32 +443,34 @@ export default function AccountActionButtons({
         ...site,
         baseUrl: accountBaseUrl,
       }
-      const tokensResponse =
-        await fetchDisplayAccountRuntimeKeyTokens(tokenLookupAccount)
+      const runtimeKeys =
+        await fetchDisplayAccountRuntimeKeys(tokenLookupAccount)
+      runtimeKeys
+        .flatMap((runtimeKey) => collectAccountRuntimeKeySecrets([runtimeKey]))
+        .forEach((secret) => secretsToRedact.add(secret))
 
-      if (tokensResponse.length === 0) {
+      if (runtimeKeys.length === 0) {
         return handleChannelLocateFallback(
           t("actions.channelLocateNoKeyFallback"),
         )
       }
 
-      if (tokensResponse.length > 1) {
+      if (runtimeKeys.length > 1) {
         return handleChannelLocateFallback(
           t("actions.channelLocateMultipleKeysFallback"),
         )
       }
 
-      const apiToken = tokensResponse[0]
-      if (apiToken.key) {
-        secretsToRedact.add(apiToken.key)
-      }
-      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+      const runtimeKey = runtimeKeys[0]
+      const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
         tokenLookupAccount,
-        apiToken,
+        runtimeKey,
       )
-      if (resolvedToken.key) {
-        secretsToRedact.add(resolvedToken.key)
-      }
+      collectAccountRuntimeKeySecrets([resolvedRuntimeKey]).forEach((secret) =>
+        secretsToRedact.add(secret),
+      )
+      const resolvedToken =
+        accountRuntimeKeyToLegacyAccountToken(resolvedRuntimeKey)
       let formData: Awaited<ReturnType<typeof service.prepareChannelFormData>>
       try {
         formData = await service.prepareChannelFormData(

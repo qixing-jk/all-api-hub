@@ -81,41 +81,13 @@ vi.mock(
         _account: unknown,
         keyManagement: unknown,
       ) => keyManagement,
-      fetchDisplayAccountRuntimeKeyTokens: async (...args: any[]) =>
-        (await mockFetchAccountTokens(...args)).map((token: any) =>
-          runtimeKeyHelpers.accountRuntimeKeyToLegacyApiToken(
-            runtimeKeyHelpers.buildAccountTokenRuntimeKey(
-              {
-                ...args[0],
-                name: args[0].name || args[0].id,
-                tagIds: args[0].tagIds ?? [],
-              },
-              {
-                ...token,
-                accountId: args[0].id,
-                accountName: args[0].name || args[0].id,
-              },
-            ),
-          ),
-        ),
       fetchDisplayAccountRuntimeKeys: async (...args: any[]) => {
         const runtimeKeys = await mockFetchDisplayAccountRuntimeKeys(...args)
         if (runtimeKeys !== undefined) return runtimeKeys
         const [account] = args
         const tokens = await mockFetchAccountTokens(...args)
         return tokens.map((token: any) =>
-          runtimeKeyHelpers.buildAccountTokenRuntimeKey(
-            {
-              ...account,
-              name: account.name || account.id,
-              tagIds: account.tagIds ?? [],
-            },
-            {
-              ...token,
-              accountId: account.id,
-              accountName: account.name || account.id,
-            },
-          ),
+          runtimeKeyHelpers.buildDisplayAccountTokenRuntimeKey(account, token),
         )
       },
       resolveDisplayAccountRuntimeKeySecret: async (...args: any[]) => {

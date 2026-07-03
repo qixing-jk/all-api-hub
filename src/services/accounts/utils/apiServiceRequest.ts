@@ -1,7 +1,7 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import {
-  accountRuntimeKeyToLegacyApiToken,
-  buildAccountTokenRuntimeKey,
+  buildAccountRuntimeKeyAccount,
+  buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
   deriveServiceCredentialRuntimeKeyFields,
   formatAccountRuntimeKeySecretForSite,
@@ -114,11 +114,6 @@ export interface DisplayAccountApiSnapshot {
   token: DisplaySiteData["token"]
   cookieAuthSessionCookie?: DisplaySiteData["cookieAuthSessionCookie"]
   tagIds?: DisplaySiteData["tagIds"]
-}
-
-type DisplayAccountRuntimeKeySnapshot = DisplayAccountApiSnapshot & {
-  name: DisplaySiteData["name"]
-  tagIds: NonNullable<DisplaySiteData["tagIds"]>
 }
 
 export interface AccountApiContext {
@@ -346,14 +341,6 @@ export async function fetchDisplayAccountTokens(
   })
 }
 
-const createAccountRuntimeKeyAccount = (
-  account: DisplayAccountApiSnapshot,
-): DisplayAccountRuntimeKeySnapshot => ({
-  ...account,
-  name: account.name || account.id,
-  tagIds: account.tagIds ?? [],
-})
-
 /**
  * Fetch account runtime keys for verification/model probing flows.
  *
@@ -366,16 +353,12 @@ export async function fetchDisplayAccountRuntimeKeys(
 ): Promise<AccountRuntimeKey[]> {
   const { keyManagement, serviceCredential, request } =
     createDisplayAccountApiContext(account)
-  const runtimeKeyAccount = createAccountRuntimeKeyAccount(account)
+  const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
 
   if (keyManagement || !serviceCredential) {
     const tokens = await fetchDisplayAccountTokens(account)
     return tokens.map((token) =>
-      buildAccountTokenRuntimeKey(runtimeKeyAccount, {
-        ...token,
-        accountId: account.id,
-        accountName: runtimeKeyAccount.name,
-      }),
+      buildDisplayAccountTokenRuntimeKey(runtimeKeyAccount, token),
     )
   }
 
@@ -387,16 +370,6 @@ export async function fetchDisplayAccountRuntimeKeys(
       canRotate: typeof serviceCredential.rotate === "function",
     }),
   ]
-}
-
-/**
- * Converts account runtime keys to the legacy ApiToken shape for staged callers.
- */
-export async function fetchDisplayAccountRuntimeKeyTokens(
-  account: DisplayAccountApiSnapshot,
-): Promise<ApiToken[]> {
-  const runtimeKeys = await fetchDisplayAccountRuntimeKeys(account)
-  return runtimeKeys.map(accountRuntimeKeyToLegacyApiToken)
 }
 
 /**
