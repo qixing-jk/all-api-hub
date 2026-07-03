@@ -63,7 +63,7 @@
     "idleHint": "This will batch-verify the currently filtered models with the selected test items.",
     "messages": {
       "noApplicableProbes": "None of the selected test items apply to this model.",
-      "noCompatibleRuntimeKey": "No enabled compatible token was found for this model.",
+      "noCompatibleRuntimeKey": "No enabled compatible key was found for this model.",
       "notSelected": "This model was not selected, so it was skipped in this batch run.",
       "pending": "Waiting to test",
       "probeSummary_one": "Ran {{count}} item, passed {{pass}}, failed {{fail}}, unsupported {{unsupported}}",
@@ -84,7 +84,7 @@
       "label": "Test items",
       "noneSelected": "Select at least one test item."
     },
-    "runtimeKeyUsed": "Token: {{name}}",
+    "runtimeKeyUsed": "Key: {{name}}",
     "status": {
       "fail": "Fail",
       "pass": "Pass",

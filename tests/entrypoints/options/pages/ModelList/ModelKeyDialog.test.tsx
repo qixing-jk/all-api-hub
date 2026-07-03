@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
+import { useModelKeyDialog } from "~/features/ModelList/components/ModelKeyDialog/hooks/useModelKeyDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -14,7 +15,13 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 const {
   fetchAccountTokensMock,
@@ -1051,6 +1058,33 @@ describe("ModelKeyDialog", () => {
       screen.queryByRole("button", { name: "common:actions.copyKey" }),
     ).not.toBeInTheDocument()
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("clears runtime-key hook state when the dialog closes", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useModelKeyDialog({
+          isOpen,
+          account: ACCOUNT,
+          modelId: "gpt-4",
+          modelEnableGroups: ["default"],
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => expect(result.current.runtimeKeys).toHaveLength(1))
+
+    rerender({ isOpen: false })
+
+    await waitFor(() => {
+      expect(result.current.runtimeKeys).toEqual([])
+      expect(result.current.selectedRuntimeKeyId).toBeNull()
+      expect(result.current.isLoading).toBe(false)
+    })
   })
 
   it("ignores stale runtime-key fetch completions after the selected account becomes ineligible", async () => {

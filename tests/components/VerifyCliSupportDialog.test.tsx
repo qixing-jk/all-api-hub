@@ -44,6 +44,17 @@ function getCliToolCardTestId(toolId: string) {
   return `verify-cli-${toolId}`
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve
+    reject = nextReject
+  })
+
+  return { promise, resolve, reject }
+}
+
 vi.mock(
   "~/services/accounts/utils/apiServiceRequest",
   async (importOriginal) => {
@@ -246,6 +257,82 @@ describe("VerifyCliSupportDialog", () => {
     fireEvent.click(runButton)
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
     expect(mockRunCliSupportTool).not.toHaveBeenCalled()
+  })
+
+  it("clears stale account runtime-key labels while loading another account", async () => {
+    const firstAccount = {
+      id: "a1",
+      name: "First Account",
+      username: "u1",
+      balance: { USD: 0, CNY: 0 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: "healthy" as any },
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://first.example.invalid",
+      token: "t1",
+      userId: "1",
+      authType: "access_token" as any,
+      checkIn: { enableDetection: false } as any,
+      tagIds: [],
+    }
+    const secondAccount = {
+      ...firstAccount,
+      id: "a2",
+      name: "Second Account",
+      baseUrl: "https://second.example.invalid",
+      token: "t2",
+    }
+    const firstRuntimeKey = buildServiceCredentialRuntimeKey(firstAccount, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "First runtime key",
+      key: "first-secret",
+      isAuthenticated: true,
+      baseUrl: "https://first-runtime.example.invalid",
+    })
+    const pendingSecondRuntimeKeys = createDeferred<AccountRuntimeKey[]>()
+
+    mockFetchDisplayAccountRuntimeKeys
+      .mockResolvedValueOnce([firstRuntimeKey])
+      .mockReturnValueOnce(pendingSecondRuntimeKeys.promise)
+
+    const { rerender } = render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={firstAccount}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toHaveTextContent(
+        "First runtime key",
+      )
+    })
+
+    rerender(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={secondAccount}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    await waitFor(() =>
+      expect(mockFetchDisplayAccountRuntimeKeys).toHaveBeenCalledTimes(2),
+    )
+    expect(screen.getByRole("combobox")).not.toHaveTextContent(
+      "First runtime key",
+    )
+
+    await act(async () => {
+      pendingSecondRuntimeKeys.resolve([])
+      await pendingSecondRuntimeKeys.promise
+    })
   })
 
   it("fetches profile models and lets the user choose one", async () => {

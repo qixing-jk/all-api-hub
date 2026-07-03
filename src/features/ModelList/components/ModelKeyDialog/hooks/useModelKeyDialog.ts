@@ -217,36 +217,35 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     [compatibleRuntimeKeys, selectedRuntimeKeyId],
   )
 
-  const fetchRuntimeKeysUntilCompatibleAfterCreate = useCallback(async () => {
-    if (!account) {
-      return { refreshedRuntimeKeys: [], refreshedCompatible: [] }
-    }
-
-    for (
-      let attempt = 1;
-      attempt <= POST_CREATE_TOKEN_REFRESH_ATTEMPTS;
-      attempt++
-    ) {
-      const refreshedRuntimeKeys = buildAccountTokenRuntimeKeys(
-        account,
-        await fetchDisplayAccountTokens(account),
-      )
-      const refreshedCompatible = refreshedRuntimeKeys.filter((runtimeKey) =>
-        isRuntimeKeyCompatibleWithModel(runtimeKey, modelContext),
-      )
-
-      if (
-        refreshedCompatible.length > 0 ||
-        attempt === POST_CREATE_TOKEN_REFRESH_ATTEMPTS
+  const fetchRuntimeKeysUntilCompatibleAfterCreate = useCallback(
+    async (currentAccount: DisplaySiteData) => {
+      for (
+        let attempt = 1;
+        attempt <= POST_CREATE_TOKEN_REFRESH_ATTEMPTS;
+        attempt++
       ) {
-        return { refreshedRuntimeKeys, refreshedCompatible }
+        const refreshedRuntimeKeys = buildAccountTokenRuntimeKeys(
+          currentAccount,
+          await fetchDisplayAccountTokens(currentAccount),
+        )
+        const refreshedCompatible = refreshedRuntimeKeys.filter((runtimeKey) =>
+          isRuntimeKeyCompatibleWithModel(runtimeKey, modelContext),
+        )
+
+        if (
+          refreshedCompatible.length > 0 ||
+          attempt === POST_CREATE_TOKEN_REFRESH_ATTEMPTS
+        ) {
+          return { refreshedRuntimeKeys, refreshedCompatible }
+        }
+
+        await sleep(POST_CREATE_TOKEN_REFRESH_INTERVAL_MS)
       }
 
-      await sleep(POST_CREATE_TOKEN_REFRESH_INTERVAL_MS)
-    }
-
-    return { refreshedRuntimeKeys: [], refreshedCompatible: [] }
-  }, [account, modelContext])
+      return { refreshedRuntimeKeys: [], refreshedCompatible: [] }
+    },
+    [modelContext],
+  )
 
   const copySelectedKey = useCallback(async () => {
     if (!account || !selectedRuntimeKey) return
@@ -318,7 +317,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
         }
 
         const { refreshedRuntimeKeys, refreshedCompatible } =
-          await fetchRuntimeKeysUntilCompatibleAfterCreate()
+          await fetchRuntimeKeysUntilCompatibleAfterCreate(account)
         setRuntimeKeys(refreshedRuntimeKeys)
 
         if (refreshedCompatible.length === 0) {

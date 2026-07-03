@@ -1092,6 +1092,25 @@ describe("CopyKeyDialog", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("does not mask short secrets when the preview would not elide characters", async () => {
+    const shortSecret = "abcdefghijklmnopqrstuv"
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      {
+        ...TOKEN,
+        key: shortSecret,
+      },
+    ])
+
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(await screen.findByText("default"))
+
+    expect(screen.getByText(shortSecret)).toBeInTheDocument()
+    expect(screen.queryByText("••••••")).not.toBeInTheDocument()
+  })
+
   it("renders disabled token state and collapses expanded token details", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([
       {

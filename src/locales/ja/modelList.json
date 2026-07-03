@@ -61,7 +61,7 @@
     "idleHint": "選択したテスト項目で、現在フィルターされたモデルを一括検証します。",
     "messages": {
       "noApplicableProbes": "選択したテスト項目はこのモデルに適用できません。",
-      "noCompatibleRuntimeKey": "このモデルに対応する有効なトークンが見つかりません。",
+      "noCompatibleRuntimeKey": "このモデルに対応する有効なキーが見つかりません。",
       "notSelected": "このモデルは選択されていないため、今回の一括テストではスキップされました。",
       "pending": "テスト待ち",
       "probeSummary_other": "{{count}} 件実行、成功 {{pass}}、失敗 {{fail}}、非対応 {{unsupported}}",
@@ -80,7 +80,7 @@
       "label": "テスト項目",
       "noneSelected": "少なくとも 1 つのテスト項目を選択してください。"
     },
-    "runtimeKeyUsed": "トークン: {{name}}",
+    "runtimeKeyUsed": "キー: {{name}}",
     "status": {
       "fail": "失敗",
       "pass": "成功",

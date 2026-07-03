@@ -65,7 +65,10 @@ const SECRET_PREVIEW_SUFFIX_LENGTH = 6
 const SECRET_PREVIEW_MASK_LENGTH = 6
 
 const getSecretPreviewParts = (secret: string) => {
-  if (secret.length <= SECRET_PREVIEW_PREFIX_LENGTH) {
+  if (
+    secret.length <=
+    SECRET_PREVIEW_PREFIX_LENGTH + SECRET_PREVIEW_SUFFIX_LENGTH
+  ) {
     return {
       prefix: secret,
       suffix: "",

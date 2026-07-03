@@ -227,6 +227,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       return
     }
 
+    setAccountRuntimeKeys([])
+    setSelectedRuntimeKeyId("")
     setIsLoadingRuntimeKeys(true)
     try {
       const runtimeKeys = await fetchDisplayAccountRuntimeKeys(account)
