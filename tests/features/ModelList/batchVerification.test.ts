@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   createBatchVerifyModelItems,
   MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
+  pickBatchVerifyCompatibleRuntimeKey,
   pickBatchVerifyCompatibleToken,
   resolveBatchVerifyApiType,
 } from "~/features/ModelList/batchVerification"
@@ -407,5 +408,140 @@ describe("model list batch verification helpers", () => {
         enableGroups: [DEFAULT_MODEL_GROUP],
       }),
     ).toBeNull()
+  })
+
+  it("selects a matching service-credential runtime key without token group filtering", () => {
+    const runtimeKey = {
+      id: "service_credential:acc-1:codex",
+      source: "service_credential",
+      label: "Codex",
+      secret: "sk-service",
+      status: "active",
+      accountId: "acc-1",
+      accountName: "Account One",
+      siteType: "sharedchat",
+      baseUrl: "https://runtime.example.invalid",
+      capabilities: {
+        copy: true,
+        export: true,
+        verify: true,
+        fetchRuntimeModels: true,
+        rotate: false,
+        updateToken: false,
+        deleteToken: false,
+      },
+      service: "codex",
+      credential: {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "sk-service",
+        isAuthenticated: true,
+        baseUrl: "https://runtime.example.invalid",
+      },
+      account: {
+        id: "acc-1",
+        name: "Account One",
+        siteType: "sharedchat",
+        baseUrl: "https://runtime.example.invalid",
+        authType: "access_token",
+        token: "account-token",
+        userId: "1",
+        tagIds: [],
+      },
+    } as any
+
+    expect(
+      pickBatchVerifyCompatibleRuntimeKey([runtimeKey], {
+        modelId: "vip-only-model",
+        enableGroups: ["vip"],
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY,
+          id: "acc-1:runtime-key:service_credential:acc-1:codex",
+          runtimeKeyId: "service_credential:acc-1:codex",
+          runtimeKeyName: "Codex",
+        },
+      }),
+    ).toBe(runtimeKey)
+
+    expect(
+      pickBatchVerifyCompatibleRuntimeKey([runtimeKey], {
+        modelId: "empty-groups-model",
+        enableGroups: [],
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY,
+          id: "acc-1:runtime-key:service_credential:acc-1:codex",
+          runtimeKeyId: "service_credential:acc-1:codex",
+          runtimeKeyName: "Codex",
+        },
+      }),
+    ).toBe(runtimeKey)
+  })
+
+  it("keeps account-token runtime keys constrained by token compatibility", () => {
+    const runtimeKeys = [
+      {
+        id: "account_token:acc-1:1",
+        source: "account_token",
+        label: "Default key",
+        secret: "sk-default",
+        status: "active",
+        tokenId: 1,
+        token: {
+          id: 1,
+          name: "Default key",
+          key: "sk-default",
+          status: 1,
+          group: DEFAULT_MODEL_GROUP,
+          model_limits_enabled: false,
+          model_limits: "",
+          models: "",
+        },
+      },
+      {
+        id: "account_token:acc-1:2",
+        source: "account_token",
+        label: "VIP key",
+        secret: "sk-vip",
+        status: "active",
+        tokenId: 2,
+        token: {
+          id: 2,
+          name: "VIP key",
+          key: "sk-vip",
+          status: 1,
+          group: "vip",
+          model_limits_enabled: false,
+          model_limits: "",
+          models: "",
+        },
+      },
+    ] as any
+
+    expect(
+      pickBatchVerifyCompatibleRuntimeKey(runtimeKeys, {
+        modelId: "shared-model",
+        enableGroups: [DEFAULT_MODEL_GROUP],
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY,
+          id: "acc-1:runtime-key:account_token:acc-1:2",
+          runtimeKeyId: "account_token:acc-1:2",
+          runtimeKeyName: "VIP key",
+        },
+      }),
+    ).toBeNull()
+
+    expect(
+      pickBatchVerifyCompatibleRuntimeKey(runtimeKeys, {
+        modelId: "shared-model",
+        enableGroups: ["vip"],
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY,
+          id: "acc-1:runtime-key:account_token:acc-1:2",
+          runtimeKeyId: "account_token:acc-1:2",
+          runtimeKeyName: "VIP key",
+        },
+      }),
+    ).toBe(runtimeKeys[1])
   })
 })

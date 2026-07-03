@@ -49,11 +49,13 @@ const { mockTrackProductAnalyticsActionCompleted } = vi.hoisted(() => ({
 }))
 
 const {
+  mockFetchDisplayAccountRuntimeKeys,
   mockFetchDisplayAccountTokens,
-  mockLoadAccountTokenFallbackPricingResponse,
+  mockLoadAccountRuntimeKeyFallbackPricingResponse,
 } = vi.hoisted(() => ({
+  mockFetchDisplayAccountRuntimeKeys: vi.fn(),
   mockFetchDisplayAccountTokens: vi.fn(),
-  mockLoadAccountTokenFallbackPricingResponse: vi.fn(),
+  mockLoadAccountRuntimeKeyFallbackPricingResponse: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -85,13 +87,29 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
+    const { buildAccountTokenRuntimeKey } = await import(
+      "~/services/accounts/accountRuntimeKeys"
+    )
 
     return {
       ...actual,
       fetchDisplayAccountTokens: (...args: unknown[]) =>
         mockFetchDisplayAccountTokens(...args),
-      fetchDisplayAccountRuntimeKeys: (...args: unknown[]) =>
+      fetchDisplayAccountRuntimeKeyTokens: (...args: unknown[]) =>
         mockFetchDisplayAccountTokens(...args),
+      fetchDisplayAccountRuntimeKeys: async (...args: unknown[]) => {
+        const [account] = args as [DisplaySiteData]
+        const runtimeKeys = await mockFetchDisplayAccountRuntimeKeys(account)
+        return runtimeKeys.map((runtimeKey: any) =>
+          runtimeKey?.source && runtimeKey?.accountId
+            ? runtimeKey
+            : buildAccountTokenRuntimeKey(account, {
+                ...runtimeKey,
+                accountId: account.id,
+                accountName: account.name,
+              }),
+        )
+      },
     }
   },
 )
@@ -121,8 +139,8 @@ vi.mock("~/services/modelList/accountSources", async (importOriginal) => {
   return {
     ...actual,
     ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED: "ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED",
-    loadAccountTokenFallbackPricingResponse: (...args: unknown[]) =>
-      mockLoadAccountTokenFallbackPricingResponse(...args),
+    loadAccountRuntimeKeyFallbackPricingResponse: (...args: unknown[]) =>
+      mockLoadAccountRuntimeKeyFallbackPricingResponse(...args),
   }
 })
 
@@ -326,8 +344,12 @@ const expectLastModelDataAnalyticsCompletion = (expected: {
 describe("useModelData all-accounts loading", () => {
   beforeEach(() => {
     mockFetchApiCredentialModelIds.mockReset()
+    mockFetchDisplayAccountRuntimeKeys.mockReset()
+    mockFetchDisplayAccountRuntimeKeys.mockImplementation((...args) =>
+      mockFetchDisplayAccountTokens(...args),
+    )
     mockFetchDisplayAccountTokens.mockReset()
-    mockLoadAccountTokenFallbackPricingResponse.mockReset()
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockReset()
     mockTrackProductAnalyticsActionCompleted.mockReset()
     vi.mocked(getSiteTypeCapabilities).mockReset()
   })
@@ -638,7 +660,7 @@ describe("useModelData all-accounts loading", () => {
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValueOnce(fallbackTokens)
-    mockLoadAccountTokenFallbackPricingResponse
+    mockLoadAccountRuntimeKeyFallbackPricingResponse
       .mockResolvedValueOnce(defaultPricing)
       .mockResolvedValueOnce(vipPricing)
 
@@ -654,7 +676,7 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(
       () => {
         expect(
-          mockLoadAccountTokenFallbackPricingResponse,
+          mockLoadAccountRuntimeKeyFallbackPricingResponse,
         ).toHaveBeenCalledTimes(2)
       },
       { timeout: 3000 },
@@ -667,20 +689,20 @@ describe("useModelData all-accounts loading", () => {
         account,
         pricing: defaultPricing,
         sourceIdentity: {
-          kind: "account-token",
-          id: "sub2api-all-accounts:token:21",
-          tokenId: 21,
-          tokenName: "Default runtime key",
+          kind: "account-runtime-key",
+          id: "sub2api-all-accounts:runtime-key:account_token:sub2api-all-accounts:21",
+          runtimeKeyId: "account_token:sub2api-all-accounts:21",
+          runtimeKeyName: "Default runtime key",
         },
       },
       {
         account,
         pricing: vipPricing,
         sourceIdentity: {
-          kind: "account-token",
-          id: "sub2api-all-accounts:token:22",
-          tokenId: 22,
-          tokenName: "VIP runtime key",
+          kind: "account-runtime-key",
+          id: "sub2api-all-accounts:runtime-key:account_token:sub2api-all-accounts:22",
+          runtimeKeyId: "account_token:sub2api-all-accounts:22",
+          runtimeKeyName: "VIP runtime key",
         },
       },
     ])
@@ -747,7 +769,9 @@ describe("useModelData all-accounts loading", () => {
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValueOnce(tokens)
-    mockLoadAccountTokenFallbackPricingResponse.mockResolvedValueOnce(pricing)
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockResolvedValueOnce(
+      pricing,
+    )
 
     const { result } = renderHook(
       () =>
@@ -761,17 +785,23 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(
       () => {
         expect(
-          mockLoadAccountTokenFallbackPricingResponse,
+          mockLoadAccountRuntimeKeyFallbackPricingResponse,
         ).toHaveBeenCalledTimes(1)
       },
       { timeout: 3000 },
     )
 
-    expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith(
+    expect(
+      mockLoadAccountRuntimeKeyFallbackPricingResponse,
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         account,
-        token: tokens[0],
-        abortSignal: expect.any(AbortSignal),
+        runtimeKey: expect.objectContaining({
+          id: "account_token:sub2api-active-only:21",
+          label: "Active runtime key",
+          token: expect.objectContaining({ id: tokens[0].id }),
+        }),
+        abortSignal: expect.anything(),
       }),
     )
     expect(fetchPricing).not.toHaveBeenCalled()
@@ -781,10 +811,10 @@ describe("useModelData all-accounts loading", () => {
         account,
         pricing,
         sourceIdentity: {
-          kind: "account-token",
-          id: "sub2api-active-only:token:21",
-          tokenId: 21,
-          tokenName: "Active runtime key",
+          kind: "account-runtime-key",
+          id: "sub2api-active-only:runtime-key:account_token:sub2api-active-only:21",
+          runtimeKeyId: "account_token:sub2api-active-only:21",
+          runtimeKeyName: "Active runtime key",
         },
       },
     ])
@@ -854,7 +884,7 @@ describe("useModelData all-accounts loading", () => {
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValue(tokens)
-    mockLoadAccountTokenFallbackPricingResponse
+    mockLoadAccountRuntimeKeyFallbackPricingResponse
       .mockResolvedValueOnce(pricing)
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
 
@@ -929,7 +959,7 @@ describe("useModelData all-accounts loading", () => {
     ]
 
     mockFetchDisplayAccountTokens.mockResolvedValue(tokens)
-    mockLoadAccountTokenFallbackPricingResponse.mockRejectedValue(
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockRejectedValue(
       new Error("token failed"),
     )
 
@@ -1009,7 +1039,7 @@ describe("useModelData all-accounts loading", () => {
     ]
 
     mockFetchDisplayAccountTokens.mockResolvedValue(tokens)
-    mockLoadAccountTokenFallbackPricingResponse
+    mockLoadAccountRuntimeKeyFallbackPricingResponse
       .mockResolvedValueOnce({
         data: null,
         group_ratio: {},
@@ -1730,7 +1760,7 @@ describe("useModelData all-accounts loading", () => {
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValue([fallbackToken])
-    mockLoadAccountTokenFallbackPricingResponse
+    mockLoadAccountRuntimeKeyFallbackPricingResponse
       .mockResolvedValueOnce({
         data: [
           {
@@ -1767,7 +1797,9 @@ describe("useModelData all-accounts loading", () => {
 
     await waitFor(
       () => {
-        expect(result.current.accountFallback?.selectedTokenId).toBe(8)
+        expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
+          "account_token:analytics-fallback-account:8",
+        )
       },
       { timeout: 3000 },
     )
@@ -2088,7 +2120,7 @@ describe("useModelData all-accounts loading", () => {
         used_quota: 0,
       },
     ])
-    mockLoadAccountTokenFallbackPricingResponse.mockResolvedValueOnce(
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockResolvedValueOnce(
       runtimePricing,
     )
 
@@ -2115,16 +2147,130 @@ describe("useModelData all-accounts loading", () => {
       ).toBe("runtime-model")
     })
     expect(fetchPricing).not.toHaveBeenCalled()
-    expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith(
+    expect(
+      mockLoadAccountRuntimeKeyFallbackPricingResponse,
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         account,
-        token: expect.objectContaining({
-          id: 10,
-          name: "Runtime Key",
+        runtimeKey: expect.objectContaining({
+          id: "account_token:sub2api-readiness-all-accounts:10",
+          label: "Runtime Key",
+          token: expect.objectContaining({ id: 10 }),
         }),
-        abortSignal: expect.any(AbortSignal),
+        abortSignal: expect.anything(),
       }),
     )
+  })
+
+  it("loads all-accounts service-credential runtime keys without legacy token fallback", async () => {
+    const runtimePricing = {
+      data: [
+        {
+          model_name: "codex-runtime-model",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: [],
+          supported_endpoint_types: [],
+        },
+      ],
+      group_ratio: {},
+      success: true,
+      usable_group: {},
+    }
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.SHAREDCHAT,
+      account: {
+        modelCatalog: {
+          fetchModels: vi.fn().mockResolvedValue(["codex-runtime-model"]),
+        },
+        serviceCredential: {
+          fetch: vi.fn(),
+        },
+      },
+    } as any)
+
+    const account = createDisplayAccount({
+      id: "sharedchat-all-accounts-runtime",
+      name: "SharedChat",
+      siteType: SITE_TYPES.SHAREDCHAT,
+      baseUrl: "https://sharedchat.example.invalid",
+      authType: AuthTypeEnum.Cookie,
+      token: "",
+      cookieAuthSessionCookie: "connect.sid=redacted",
+      userId: "12672",
+    })
+    const runtimeKey = {
+      id: "service_credential:sharedchat-all-accounts-runtime:codex",
+      source: "service_credential",
+      account,
+      accountId: account.id,
+      accountName: account.name,
+      siteType: account.siteType,
+      label: "Codex",
+      secret: "sk-sharedchat-codex",
+      baseUrl: "https://sharedchat.example.invalid",
+      status: "active",
+      capabilities: {
+        copy: true,
+        export: true,
+        verify: true,
+        fetchRuntimeModels: true,
+        rotate: false,
+        updateToken: false,
+        deleteToken: false,
+      },
+      service: "codex",
+      credential: {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "sk-sharedchat-codex",
+        isAuthenticated: true,
+        baseUrl: "https://sharedchat.example.invalid",
+      },
+    }
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([runtimeKey])
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockResolvedValueOnce(
+      runtimePricing,
+    )
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(result.current.pricingContexts).toHaveLength(1)
+    })
+
+    expect(mockFetchDisplayAccountRuntimeKeys).toHaveBeenCalledWith(account)
+    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
+    expect(
+      mockLoadAccountRuntimeKeyFallbackPricingResponse,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account,
+        runtimeKey,
+        abortSignal: expect.anything(),
+      }),
+    )
+    expect(result.current.pricingContexts[0]).toEqual({
+      account,
+      pricing: runtimePricing,
+      sourceIdentity: {
+        kind: "account-runtime-key",
+        id: "sharedchat-all-accounts-runtime:runtime-key:service_credential:sharedchat-all-accounts-runtime:codex",
+        runtimeKeyId:
+          "service_credential:sharedchat-all-accounts-runtime:codex",
+        runtimeKeyName: "Codex",
+      },
+    })
   })
 
   it("loads Sub2API selected-key fallback runtime models without enabling common pricing", async () => {
@@ -2176,7 +2322,7 @@ describe("useModelData all-accounts loading", () => {
     ]
 
     mockFetchDisplayAccountTokens.mockResolvedValue(fallbackTokens)
-    mockLoadAccountTokenFallbackPricingResponse.mockResolvedValueOnce({
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockResolvedValueOnce({
       data: [
         {
           model_name: "example-runtime-model",
@@ -2226,19 +2372,34 @@ describe("useModelData all-accounts loading", () => {
     expect(result.current.loadErrorMessage).toBeNull()
     expect(fetchPricing).not.toHaveBeenCalled()
     await waitFor(() => {
-      expect(result.current.accountFallback?.selectedTokenId).toBeNull()
-      expect(result.current.accountFallback?.statusScope).toBe("token")
-      expect(result.current.accountFallback?.tokens).toEqual(fallbackTokens)
+      expect(result.current.accountFallback?.selectedRuntimeKeyId).toBeNull()
+      expect(result.current.accountFallback?.statusScope).toBe("runtime-key")
+      expect(result.current.accountFallback?.runtimeKeys).toEqual([
+        expect.objectContaining({
+          id: "account_token:sub2api-runtime-fallback-account:17",
+          token: expect.objectContaining({ id: fallbackTokens[0].id }),
+        }),
+        expect.objectContaining({
+          id: "account_token:sub2api-runtime-fallback-account:18",
+          token: expect.objectContaining({ id: fallbackTokens[1].id }),
+        }),
+      ])
     })
 
-    expect(mockLoadAccountTokenFallbackPricingResponse).not.toHaveBeenCalled()
+    expect(
+      mockLoadAccountRuntimeKeyFallbackPricingResponse,
+    ).not.toHaveBeenCalled()
 
     act(() => {
-      result.current.accountFallback?.setSelectedTokenId(18)
+      result.current.accountFallback?.setSelectedRuntimeKeyId(
+        "account_token:sub2api-runtime-fallback-account:18",
+      )
     })
 
     await waitFor(() => {
-      expect(result.current.accountFallback?.selectedTokenId).toBe(18)
+      expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
+        "account_token:sub2api-runtime-fallback-account:18",
+      )
     })
 
     await act(async () => {
@@ -2246,11 +2407,16 @@ describe("useModelData all-accounts loading", () => {
     })
 
     await waitFor(() => {
-      expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith(
+      expect(
+        mockLoadAccountRuntimeKeyFallbackPricingResponse,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           account,
-          token: fallbackTokens[1],
-          abortSignal: expect.any(AbortSignal),
+          runtimeKey: expect.objectContaining({
+            id: "account_token:sub2api-runtime-fallback-account:18",
+            token: expect.objectContaining({ id: fallbackTokens[1].id }),
+          }),
+          abortSignal: expect.anything(),
         }),
       )
       expect(result.current.accountFallback?.isActive).toBe(true)
@@ -2287,10 +2453,10 @@ describe("useModelData all-accounts loading", () => {
           ],
         }),
         sourceIdentity: {
-          kind: "account-token",
-          id: "sub2api-runtime-fallback-account:token:18",
-          tokenId: 18,
-          tokenName: "Runtime key",
+          kind: "account-runtime-key",
+          id: "sub2api-runtime-fallback-account:runtime-key:account_token:sub2api-runtime-fallback-account:18",
+          runtimeKeyId: "account_token:sub2api-runtime-fallback-account:18",
+          runtimeKeyName: "Runtime key",
         },
       },
     ])
@@ -2349,18 +2515,20 @@ describe("useModelData all-accounts loading", () => {
     )
 
     await waitFor(() => {
-      expect(result.current.accountFallback?.tokens).toEqual([
+      expect(result.current.accountFallback?.runtimeKeys).toEqual([
         expect.objectContaining({
-          id: -1,
-          key: "sk-sharedchat-codex",
-          name: "Codex",
-          status: 1,
+          id: "account_token:sharedchat-runtime-fallback-account:-1",
+          label: "Codex",
+          secret: "sk-sharedchat-codex",
+          status: "active",
         }),
       ])
     })
 
     expect(result.current.accountFallback?.isAvailable).toBe(true)
-    expect(result.current.accountFallback?.selectedTokenId).toBe(-1)
+    expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
+      "account_token:sharedchat-runtime-fallback-account:-1",
+    )
     expect(fetchPricing).not.toHaveBeenCalled()
     expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(account)
   })
@@ -2405,6 +2573,74 @@ describe("useModelData all-accounts loading", () => {
     })
     expect(fetchPricing).toHaveBeenCalled()
     expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(account)
+  })
+
+  it("excludes inactive runtime keys from single-account fallback loading", async () => {
+    const fetchPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("account pricing should not be called"))
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing, {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
+      }),
+    )
+
+    const account = createDisplayAccount({
+      id: "sub2api-single-active-only",
+      name: "Sub2API Single Active Only",
+      baseUrl: "https://sub2api-single-active-only.example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+    })
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 31,
+        user_id: 31,
+        key: "sk-inactive",
+        status: 2,
+        name: "Inactive runtime key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+      {
+        id: 32,
+        user_id: 32,
+        key: "sk-active",
+        status: 1,
+        name: "Active runtime key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(result.current.accountFallback?.runtimeKeys).toEqual([
+        expect.objectContaining({
+          id: "account_token:sub2api-single-active-only:32",
+          label: "Active runtime key",
+        }),
+      ])
+    })
+    expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
+      "account_token:sub2api-single-active-only:32",
+    )
   })
 
   it("auto-loads Sub2API runtime models when a single fallback key is available", async () => {
@@ -2469,7 +2705,7 @@ describe("useModelData all-accounts loading", () => {
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValue([fallbackToken])
-    mockLoadAccountTokenFallbackPricingResponse.mockResolvedValueOnce(
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockResolvedValueOnce(
       fallbackPricing,
     )
 
@@ -2492,12 +2728,15 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(
       () => {
         expect(
-          mockLoadAccountTokenFallbackPricingResponse,
+          mockLoadAccountRuntimeKeyFallbackPricingResponse,
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             account,
-            token: fallbackToken,
-            abortSignal: expect.any(AbortSignal),
+            runtimeKey: expect.objectContaining({
+              id: "account_token:sub2api-auto-runtime-account:19",
+              token: expect.objectContaining({ id: fallbackToken.id }),
+            }),
+            abortSignal: expect.anything(),
           }),
         )
       },
@@ -2506,7 +2745,7 @@ describe("useModelData all-accounts loading", () => {
 
     await waitFor(() => {
       expect(result.current.accountFallback?.isActive).toBe(true)
-      expect(result.current.accountFallback?.statusScope).toBe("token")
+      expect(result.current.accountFallback?.statusScope).toBe("runtime-key")
       expect(result.current.pricingData).toEqual(fallbackPricing)
     })
     expect(fetchPricing).not.toHaveBeenCalled()
@@ -2570,7 +2809,7 @@ describe("useModelData all-accounts loading", () => {
     })
 
     mockFetchDisplayAccountTokens.mockResolvedValue([fallbackToken])
-    mockLoadAccountTokenFallbackPricingResponse
+    mockLoadAccountRuntimeKeyFallbackPricingResponse
       .mockResolvedValueOnce(createFallbackPricing("stale-runtime-model"))
       .mockResolvedValueOnce(createFallbackPricing("fresh-runtime-model"))
 
@@ -2586,7 +2825,7 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(
       () => {
         expect(
-          mockLoadAccountTokenFallbackPricingResponse,
+          mockLoadAccountRuntimeKeyFallbackPricingResponse,
         ).toHaveBeenCalledTimes(1)
         expect(result.current.pricingData?.data[0]?.model_name).toBe(
           "stale-runtime-model",
@@ -2600,20 +2839,23 @@ describe("useModelData all-accounts loading", () => {
     })
 
     await waitFor(() => {
-      expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledTimes(
-        2,
-      )
+      expect(
+        mockLoadAccountRuntimeKeyFallbackPricingResponse,
+      ).toHaveBeenCalledTimes(2)
       expect(result.current.pricingData?.data[0]?.model_name).toBe(
         "fresh-runtime-model",
       )
     })
     expect(
-      mockLoadAccountTokenFallbackPricingResponse,
+      mockLoadAccountRuntimeKeyFallbackPricingResponse,
     ).toHaveBeenLastCalledWith(
       expect.objectContaining({
         account,
-        token: fallbackToken,
-        abortSignal: expect.any(AbortSignal),
+        runtimeKey: expect.objectContaining({
+          id: "account_token:sub2api-refresh-runtime-account:20",
+          token: expect.objectContaining({ id: fallbackToken.id }),
+        }),
+        abortSignal: expect.anything(),
       }),
     )
     expect(fetchPricing).not.toHaveBeenCalled()
@@ -2759,7 +3001,7 @@ describe("useModelData all-accounts loading", () => {
           apiType: API_TYPES.OPENAI_COMPATIBLE,
           baseUrl: "https://profile.example.com",
           apiKey: "sk-secret",
-          abortSignal: expect.any(AbortSignal),
+          abortSignal: expect.anything(),
         }),
       ),
     )
@@ -2867,7 +3109,7 @@ describe("useModelData all-accounts loading", () => {
     ]
 
     mockFetchDisplayAccountTokens.mockResolvedValueOnce(fallbackTokens)
-    mockLoadAccountTokenFallbackPricingResponse.mockResolvedValueOnce({
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockResolvedValueOnce({
       data: [
         {
           model_name: "gpt-4o-mini",
@@ -2910,24 +3152,31 @@ describe("useModelData all-accounts loading", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.accountFallback?.tokens).toHaveLength(2)
+      expect(result.current.accountFallback?.runtimeKeys).toHaveLength(2)
     })
 
-    expect(result.current.accountFallback?.selectedTokenId).toBeNull()
+    expect(result.current.accountFallback?.selectedRuntimeKeyId).toBeNull()
 
     act(() => {
-      result.current.accountFallback?.setSelectedTokenId(2)
+      result.current.accountFallback?.setSelectedRuntimeKeyId(
+        "account_token:fallback-account:2",
+      )
     })
     await act(async () => {
       await result.current.accountFallback?.loadCatalog()
     })
 
     await waitFor(() => {
-      expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith(
+      expect(
+        mockLoadAccountRuntimeKeyFallbackPricingResponse,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           account,
-          token: fallbackTokens[1],
-          abortSignal: expect.any(AbortSignal),
+          runtimeKey: expect.objectContaining({
+            id: "account_token:fallback-account:2",
+            token: expect.objectContaining({ id: fallbackTokens[1].id }),
+          }),
+          abortSignal: expect.anything(),
         }),
       )
     })
@@ -2991,7 +3240,7 @@ describe("useModelData all-accounts loading", () => {
       success: true,
       usable_group: {},
     })
-    mockLoadAccountTokenFallbackPricingResponse
+    mockLoadAccountRuntimeKeyFallbackPricingResponse
       .mockResolvedValueOnce(createFallbackPricing("stale-fallback-model"))
       .mockResolvedValueOnce(createFallbackPricing("fresh-fallback-model"))
 
@@ -3022,7 +3271,9 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
     await waitFor(() => {
-      expect(result.current.accountFallback?.selectedTokenId).toBe(7)
+      expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
+        "account_token:fallback-reset-account:7",
+      )
     })
 
     await act(async () => {
@@ -3041,9 +3292,9 @@ describe("useModelData all-accounts loading", () => {
     })
 
     await waitFor(() => {
-      expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledTimes(
-        2,
-      )
+      expect(
+        mockLoadAccountRuntimeKeyFallbackPricingResponse,
+      ).toHaveBeenCalledTimes(2)
     })
 
     expect(result.current.loadErrorMessage).toBeNull()
@@ -3137,8 +3388,8 @@ describe("useModelData all-accounts loading", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.accountFallback?.tokens).toEqual([])
-      expect(result.current.accountFallback?.selectedTokenId).toBeNull()
+      expect(result.current.accountFallback?.runtimeKeys).toEqual([])
+      expect(result.current.accountFallback?.selectedRuntimeKeyId).toBeNull()
       expect(result.current.pricingData).toEqual({
         data: [],
         group_ratio: {},
@@ -3172,7 +3423,7 @@ describe("useModelData all-accounts loading", () => {
     }
     let receivedSignal: AbortSignal | undefined
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([fallbackToken])
-    mockLoadAccountTokenFallbackPricingResponse.mockImplementationOnce(
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockImplementationOnce(
       ({ abortSignal }: { abortSignal?: AbortSignal }) => {
         receivedSignal = abortSignal
         return new Promise(() => {})
@@ -3199,11 +3450,11 @@ describe("useModelData all-accounts loading", () => {
     })
 
     await act(async () => {
-      await result.current.accountFallback?.loadTokens()
+      await result.current.accountFallback?.loadRuntimeKeys()
     })
 
     await waitFor(() => {
-      expect(result.current.accountFallback?.tokens).toHaveLength(1)
+      expect(result.current.accountFallback?.runtimeKeys).toHaveLength(1)
     })
 
     act(() => {
@@ -3256,13 +3507,13 @@ describe("useModelData all-accounts loading", () => {
     )
     await waitFor(
       () => {
-        expect(result.current.accountFallback?.tokenLoadErrorMessage).toBe(
+        expect(result.current.accountFallback?.runtimeKeyLoadErrorMessage).toBe(
           "modelList:status.fallback.loadKeysFailedFallback",
         )
       },
       { timeout: 3000 },
     )
-    expect(result.current.accountFallback?.tokens).toEqual([])
+    expect(result.current.accountFallback?.runtimeKeys).toEqual([])
   })
 
   it("shows a generic fallback-model error when the fallback catalog load fails without details", async () => {
@@ -3289,7 +3540,7 @@ describe("useModelData all-accounts loading", () => {
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([fallbackToken])
-    mockLoadAccountTokenFallbackPricingResponse.mockRejectedValueOnce(
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockRejectedValueOnce(
       new Error(""),
     )
 
@@ -3316,7 +3567,9 @@ describe("useModelData all-accounts loading", () => {
     )
     await waitFor(
       () => {
-        expect(result.current.accountFallback?.selectedTokenId).toBe(5)
+        expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
+          "account_token:catalog-error-account:5",
+        )
       },
       { timeout: 3000 },
     )
@@ -3362,7 +3615,7 @@ describe("useModelData all-accounts loading", () => {
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([fallbackToken])
-    mockLoadAccountTokenFallbackPricingResponse.mockRejectedValueOnce(
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockRejectedValueOnce(
       new Error("sanitized fallback failure", {
         cause: new ApiError(
           "private auth failure for sk-only",
@@ -3396,7 +3649,9 @@ describe("useModelData all-accounts loading", () => {
     )
     await waitFor(
       () => {
-        expect(result.current.accountFallback?.selectedTokenId).toBe(6)
+        expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
+          "account_token:catalog-auth-error-account:6",
+        )
       },
       { timeout: 3000 },
     )

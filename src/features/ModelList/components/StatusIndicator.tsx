@@ -19,7 +19,6 @@ import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
-import { ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES } from "~/services/accounts/accountSiteProfile"
 import type { DisplaySiteData } from "~/types"
 
 interface StatusIndicatorProps {
@@ -77,8 +76,7 @@ export function StatusIndicator({
 
   const isKeyScopedStatus =
     selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
-    accountFallback?.statusScope ===
-      ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token &&
+    accountFallback?.statusScope === "runtime-key" &&
     accountFallback?.isAvailable === true &&
     !accountFallback.isActive
 
@@ -87,11 +85,12 @@ export function StatusIndicator({
       return null
     }
 
-    const requiresExplicitSelection = accountFallback.tokens.length > 1
+    const requiresExplicitSelection = accountFallback.runtimeKeys.length > 1
     const canLoadWithSelectedKey =
-      !accountFallback.isLoadingTokens &&
+      !accountFallback.isLoadingRuntimeKeys &&
       !accountFallback.isLoadingCatalog &&
-      (!requiresExplicitSelection || accountFallback.selectedTokenId !== null)
+      (!requiresExplicitSelection ||
+        accountFallback.selectedRuntimeKeyId !== null)
 
     return (
       <div className="dark:border-dark-bg-tertiary mt-4 space-y-4 border-t border-gray-200 pt-4">
@@ -108,19 +107,19 @@ export function StatusIndicator({
           </p>
         </div>
 
-        {accountFallback.tokenLoadErrorMessage ? (
+        {accountFallback.runtimeKeyLoadErrorMessage ? (
           <Alert
             variant="destructive"
             title={t("status.fallback.tokensLoadFailedTitle")}
-            description={accountFallback.tokenLoadErrorMessage}
+            description={accountFallback.runtimeKeyLoadErrorMessage}
           >
             <div className="mt-3">
               <Button
                 variant="secondary"
-                onClick={accountFallback.loadTokens}
-                loading={accountFallback.isLoadingTokens}
+                onClick={accountFallback.loadRuntimeKeys}
+                loading={accountFallback.isLoadingRuntimeKeys}
                 leftIcon={
-                  !accountFallback.isLoadingTokens && (
+                  !accountFallback.isLoadingRuntimeKeys && (
                     <ArrowPathIcon className="h-4 w-4" />
                   )
                 }
@@ -131,8 +130,8 @@ export function StatusIndicator({
           </Alert>
         ) : null}
 
-        {!accountFallback.hasLoadedTokens &&
-        !accountFallback.tokenLoadErrorMessage ? (
+        {!accountFallback.hasLoadedRuntimeKeys &&
+        !accountFallback.runtimeKeyLoadErrorMessage ? (
           <div className="flex items-center gap-3 py-1">
             <Spinner size="sm" />
             <p className="dark:text-dark-text-secondary text-sm text-gray-600">
@@ -141,8 +140,8 @@ export function StatusIndicator({
           </div>
         ) : null}
 
-        {accountFallback.hasLoadedTokens &&
-        accountFallback.tokens.length === 0 ? (
+        {accountFallback.hasLoadedRuntimeKeys &&
+        accountFallback.runtimeKeys.length === 0 ? (
           <Alert
             variant="info"
             title={t("status.fallback.noKeysTitle")}
@@ -151,10 +150,10 @@ export function StatusIndicator({
             <div className="mt-3">
               <Button
                 variant="secondary"
-                onClick={accountFallback.loadTokens}
-                loading={accountFallback.isLoadingTokens}
+                onClick={accountFallback.loadRuntimeKeys}
+                loading={accountFallback.isLoadingRuntimeKeys}
                 leftIcon={
-                  !accountFallback.isLoadingTokens && (
+                  !accountFallback.isLoadingRuntimeKeys && (
                     <ArrowPathIcon className="h-4 w-4" />
                   )
                 }
@@ -165,7 +164,7 @@ export function StatusIndicator({
           </Alert>
         ) : null}
 
-        {accountFallback.tokens.length > 0 ? (
+        {accountFallback.runtimeKeys.length > 0 ? (
           <div className="space-y-3">
             <div>
               <label
@@ -177,15 +176,15 @@ export function StatusIndicator({
               <div className="mt-2">
                 <Select
                   value={
-                    accountFallback.selectedTokenId === null
+                    accountFallback.selectedRuntimeKeyId === null
                       ? ""
-                      : String(accountFallback.selectedTokenId)
+                      : accountFallback.selectedRuntimeKeyId
                   }
                   onValueChange={(value) =>
-                    accountFallback.setSelectedTokenId(Number(value))
+                    accountFallback.setSelectedRuntimeKeyId(value || null)
                   }
                   disabled={
-                    accountFallback.isLoadingTokens ||
+                    accountFallback.isLoadingRuntimeKeys ||
                     accountFallback.isLoadingCatalog
                   }
                 >
@@ -198,16 +197,16 @@ export function StatusIndicator({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {accountFallback.tokens.map((token) => (
-                      <SelectItem key={token.id} value={String(token.id)}>
-                        {token.name}
+                    {accountFallback.runtimeKeys.map((runtimeKey) => (
+                      <SelectItem key={runtimeKey.id} value={runtimeKey.id}>
+                        {runtimeKey.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               {requiresExplicitSelection &&
-              accountFallback.selectedTokenId === null ? (
+              accountFallback.selectedRuntimeKeyId === null ? (
                 <p className="dark:text-dark-text-tertiary mt-2 text-sm text-gray-500">
                   {t("status.fallback.selectHint")}
                 </p>
@@ -234,11 +233,11 @@ export function StatusIndicator({
               </Button>
               <Button
                 variant="secondary"
-                onClick={accountFallback.loadTokens}
-                loading={accountFallback.isLoadingTokens}
+                onClick={accountFallback.loadRuntimeKeys}
+                loading={accountFallback.isLoadingRuntimeKeys}
                 disabled={accountFallback.isLoadingCatalog}
                 leftIcon={
-                  !accountFallback.isLoadingTokens && (
+                  !accountFallback.isLoadingRuntimeKeys && (
                     <ArrowPathIcon className="h-4 w-4" />
                   )
                 }

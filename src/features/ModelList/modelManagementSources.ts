@@ -64,6 +64,7 @@ export type ModelManagementItemSource =
 export const MODEL_LIST_SOURCE_IDENTITY_KINDS = {
   ACCOUNT: "account",
   ACCOUNT_TOKEN: "account-token",
+  ACCOUNT_RUNTIME_KEY: "account-runtime-key",
 } as const
 
 export type ModelListSourceIdentity =
@@ -76,6 +77,12 @@ export type ModelListSourceIdentity =
       id: string
       tokenId: number
       tokenName?: string
+    }
+  | {
+      kind: typeof MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY
+      id: string
+      runtimeKeyId: string
+      runtimeKeyName?: string
     }
 
 /** Creates the default account-scoped source identity for model-list rows. */
@@ -101,6 +108,22 @@ export function createAccountTokenModelListSourceIdentity(params: {
     id: `${params.accountId}:token:${params.tokenId}`,
     tokenId: params.tokenId,
     ...(tokenName ? { tokenName } : {}),
+  }
+}
+
+/** Creates a runtime-key-scoped account source identity for model-list rows. */
+export function createAccountRuntimeKeyModelListSourceIdentity(params: {
+  accountId: string
+  runtimeKeyId: string
+  runtimeKeyName?: string
+}): ModelListSourceIdentity {
+  const runtimeKeyName = params.runtimeKeyName?.trim()
+
+  return {
+    kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY,
+    id: `${params.accountId}:runtime-key:${params.runtimeKeyId}`,
+    runtimeKeyId: params.runtimeKeyId,
+    ...(runtimeKeyName ? { runtimeKeyName } : {}),
   }
 }
 

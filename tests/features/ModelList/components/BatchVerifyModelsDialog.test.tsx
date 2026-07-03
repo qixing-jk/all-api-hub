@@ -25,8 +25,10 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
+  mockFetchDisplayAccountRuntimeKeys,
   mockFetchDisplayAccountTokens,
   mockGetApiVerificationProbeDefinitions,
+  mockResolveDisplayAccountRuntimeKeySecret,
   mockResolveDisplayAccountTokenForSecret,
   mockRunApiVerificationProbe,
   mockStartProductAnalyticsAction,
@@ -36,8 +38,10 @@ const {
   mockTrackProductAnalyticsActionStarted,
   mockUpsertLatestSummary,
 } = vi.hoisted(() => ({
+  mockFetchDisplayAccountRuntimeKeys: vi.fn(),
   mockFetchDisplayAccountTokens: vi.fn(),
   mockGetApiVerificationProbeDefinitions: vi.fn(),
+  mockResolveDisplayAccountRuntimeKeySecret: vi.fn(),
   mockResolveDisplayAccountTokenForSecret: vi.fn(),
   mockRunApiVerificationProbe: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
@@ -50,14 +54,73 @@ const {
   mockUpsertLatestSummary: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
-  fetchDisplayAccountRuntimeKeys: (...args: any[]) =>
-    mockFetchDisplayAccountTokens(...args),
-  fetchDisplayAccountTokens: (...args: any[]) =>
-    mockFetchDisplayAccountTokens(...args),
-  resolveDisplayAccountTokenForSecret: (...args: any[]) =>
-    mockResolveDisplayAccountTokenForSecret(...args),
-}))
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+    const { buildAccountTokenRuntimeKey } = await import(
+      "~/services/accounts/accountRuntimeKeys"
+    )
+
+    return {
+      ...actual,
+      fetchDisplayAccountRuntimeKeyTokens: (...args: any[]) =>
+        mockFetchDisplayAccountTokens(...args),
+      fetchDisplayAccountRuntimeKeys: async (...args: any[]) => {
+        const [account] = args
+        const runtimeKeys = await mockFetchDisplayAccountRuntimeKeys(...args)
+        if (runtimeKeys !== undefined) {
+          return runtimeKeys.map((runtimeKey: any) =>
+            runtimeKey?.source && runtimeKey?.accountId
+              ? runtimeKey
+              : buildAccountTokenRuntimeKey(account, {
+                  ...runtimeKey,
+                  accountId: account.id,
+                  accountName: account.name,
+                }),
+          )
+        }
+
+        const tokens = await mockFetchDisplayAccountTokens(...args)
+        return tokens.map((token: any) =>
+          buildAccountTokenRuntimeKey(account, {
+            ...token,
+            accountId: account.id,
+            accountName: account.name,
+          }),
+        )
+      },
+      fetchDisplayAccountTokens: (...args: any[]) =>
+        mockFetchDisplayAccountTokens(...args),
+      resolveDisplayAccountRuntimeKeySecret: async (...args: any[]) => {
+        const [account, runtimeKey, options] = args
+        const resolvedRuntimeKey =
+          await mockResolveDisplayAccountRuntimeKeySecret(...args)
+        if (resolvedRuntimeKey !== undefined) return resolvedRuntimeKey
+
+        if (runtimeKey?.source === "account_token") {
+          const resolvedToken = await mockResolveDisplayAccountTokenForSecret(
+            account,
+            runtimeKey.token,
+            options,
+          )
+          return {
+            ...runtimeKey,
+            token: resolvedToken,
+            secret: resolvedToken.key,
+          }
+        }
+
+        return runtimeKey
+      },
+      resolveDisplayAccountTokenForSecret: (...args: any[]) =>
+        mockResolveDisplayAccountTokenForSecret(...args),
+    }
+  },
+)
 
 vi.mock("react-virtuoso", () => {
   return {
@@ -163,8 +226,10 @@ function renderDialog(items: any[]) {
 
 describe("BatchVerifyModelsDialog", () => {
   beforeEach(() => {
+    mockFetchDisplayAccountRuntimeKeys.mockReset()
     mockFetchDisplayAccountTokens.mockReset()
     mockGetApiVerificationProbeDefinitions.mockReset()
+    mockResolveDisplayAccountRuntimeKeySecret.mockReset()
     mockResolveDisplayAccountTokenForSecret.mockReset()
     mockRunApiVerificationProbe.mockReset()
     mockStartProductAnalyticsAction.mockReset()
@@ -357,6 +422,207 @@ describe("BatchVerifyModelsDialog", () => {
       await screen.findByText("modelList:batchVerify.tokenUsed"),
     ).toBeInTheDocument()
     expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses the account-token runtime key identified by the row source identity", async () => {
+    const firstRuntimeKey = {
+      id: "account_token:acc-1:1",
+      source: "account_token",
+      account,
+      accountId: account.id,
+      accountName: account.name,
+      siteType: account.siteType,
+      label: "First runtime key",
+      secret: "masked-first",
+      baseUrl: "https://first.example.invalid",
+      status: "active",
+      capabilities: {
+        copy: true,
+        export: true,
+        verify: true,
+        fetchRuntimeModels: true,
+        rotate: false,
+        updateToken: true,
+        deleteToken: true,
+      },
+      tokenId: 1,
+      token: {
+        id: 1,
+        name: "First runtime key",
+        key: "masked-first",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    }
+    const secondRuntimeKey = {
+      ...firstRuntimeKey,
+      id: "account_token:acc-1:2",
+      label: "Second runtime key",
+      secret: "masked-second",
+      baseUrl: "https://second.example.invalid",
+      tokenId: 2,
+      token: {
+        ...firstRuntimeKey.token,
+        id: 2,
+        name: "Second runtime key",
+        key: "masked-second",
+      },
+    }
+    const resolvedSecondRuntimeKey = {
+      ...secondRuntimeKey,
+      secret: "sk-second-real",
+      token: {
+        ...secondRuntimeKey.token,
+        key: "sk-second-real",
+      },
+    }
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([
+      firstRuntimeKey,
+      secondRuntimeKey,
+    ])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValueOnce(
+      resolvedSecondRuntimeKey,
+    )
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Text generation succeeded",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:runtime-key:2:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+        sourceIdentity: {
+          kind: "account-runtime-key",
+          id: "acc-1:runtime-key:account_token:acc-1:2",
+          runtimeKeyId: "account_token:acc-1:2",
+          runtimeKeyName: "Second runtime key",
+        },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://second.example.invalid",
+          apiKey: "sk-second-real",
+          modelId: "gpt-4o",
+          tokenMeta: {
+            id: 2,
+            name: "Second runtime key",
+            model_limits: "",
+            models: "",
+          },
+        }),
+      )
+    })
+    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
+      account,
+      secondRuntimeKey,
+      { abortSignal: expect.any(AbortSignal) },
+    )
+  })
+
+  it("uses service-credential runtime keys without fake numeric token ids", async () => {
+    const runtimeKey = {
+      id: "service_credential:acc-1:codex",
+      source: "service_credential",
+      account,
+      accountId: account.id,
+      accountName: account.name,
+      siteType: account.siteType,
+      label: "Codex",
+      secret: "masked-service",
+      baseUrl: "https://service.example.invalid",
+      status: "active",
+      capabilities: {
+        copy: true,
+        export: true,
+        verify: true,
+        fetchRuntimeModels: true,
+        rotate: false,
+        updateToken: false,
+        deleteToken: false,
+      },
+      service: "codex",
+      credential: {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "masked-service",
+        isAuthenticated: true,
+        baseUrl: "https://service.example.invalid",
+      },
+    }
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([runtimeKey])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValueOnce({
+      ...runtimeKey,
+      secret: "sk-service-real",
+      credential: {
+        ...runtimeKey.credential,
+        key: "sk-service-real",
+      },
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Text generation succeeded",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:runtime-key:codex:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+        sourceIdentity: {
+          kind: "account-runtime-key",
+          id: "acc-1:runtime-key:service_credential:acc-1:codex",
+          runtimeKeyId: "service_credential:acc-1:codex",
+          runtimeKeyName: "Codex",
+        },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://service.example.invalid",
+          apiKey: "sk-service-real",
+          modelId: "gpt-4o",
+          tokenMeta: undefined,
+        }),
+      )
+    })
+    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
+      account,
+      runtimeKey,
+      { abortSignal: expect.any(AbortSignal) },
+    )
   })
 
   it("runs the selected probe set for each model and persists combined results", async () => {

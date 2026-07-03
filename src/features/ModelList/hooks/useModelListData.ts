@@ -275,7 +275,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     sourceCapabilities,
     isFallbackCatalogActive,
     isAihubmixCatalogFallbackActive,
-    fallbackTokenName: modelData.accountFallback?.activeTokenName ?? null,
+    fallbackTokenName: modelData.accountFallback?.activeRuntimeKeyName ?? null,
 
     ...state,
     ...modelData,

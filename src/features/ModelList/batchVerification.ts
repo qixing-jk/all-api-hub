@@ -3,6 +3,11 @@ import {
   type ModelListSourceIdentity,
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
+import {
+  hasUsableAccountRuntimeKeySecret,
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import {
@@ -115,4 +120,40 @@ export function pickBatchVerifyCompatibleToken(
   }
 
   return tokens.find((token) => isCompatible(token)) ?? null
+}
+
+/**
+ * Pick the deterministic runtime key used to verify a model for an account
+ * source. Runtime-key scoped rows must match their source identity exactly.
+ */
+export function pickBatchVerifyCompatibleRuntimeKey(
+  runtimeKeys: AccountRuntimeKey[],
+  item: Pick<
+    BatchVerifyModelItem,
+    "modelId" | "enableGroups" | "sourceIdentity"
+  >,
+): AccountRuntimeKey | null {
+  const isCompatible = (runtimeKey: AccountRuntimeKey) => {
+    if (isAccountTokenRuntimeKey(runtimeKey)) {
+      return isTokenCompatibleWithModel(runtimeKey.token, {
+        id: item.modelId,
+        enableGroups: item.enableGroups,
+      })
+    }
+
+    return hasUsableAccountRuntimeKeySecret(runtimeKey)
+  }
+
+  if (
+    item.sourceIdentity?.kind ===
+    MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY
+  ) {
+    const sourceIdentity = item.sourceIdentity
+    const runtimeKey = runtimeKeys.find(
+      (candidate) => candidate.id === sourceIdentity.runtimeKeyId,
+    )
+    return runtimeKey && isCompatible(runtimeKey) ? runtimeKey : null
+  }
+
+  return runtimeKeys.find((runtimeKey) => isCompatible(runtimeKey)) ?? null
 }

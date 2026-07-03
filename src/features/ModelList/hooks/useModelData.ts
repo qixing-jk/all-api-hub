@@ -6,16 +6,19 @@ import { useTranslation } from "react-i18next"
 
 import {
   createAccountModelListSourceIdentity,
-  createAccountTokenModelListSourceIdentity,
+  createAccountRuntimeKeyModelListSourceIdentity,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelListSourceIdentity,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
+  hasUsableAccountRuntimeKeySecret,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
   getAccountSiteModelListProfile,
   shouldUseAccountSiteRuntimeKeyCatalogFallback,
   supportsAccountSiteDirectModelPricing,
-  type AccountSiteModelListStatusScope,
 } from "~/services/accounts/accountSiteProfile"
 import {
   canManageDisplayAccountTokens,
@@ -30,7 +33,7 @@ import {
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import {
   ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
-  loadAccountTokenFallbackPricingResponse,
+  loadAccountRuntimeKeyFallbackPricingResponse,
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   resolveModelListAccountSourceReadiness,
 } from "~/services/modelList/accountSources"
@@ -65,7 +68,7 @@ import {
   isAbortError,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 
 import {
@@ -110,17 +113,17 @@ interface SettledContextResult {
 export interface AccountFallbackControls {
   isAvailable: boolean
   isActive: boolean
-  statusScope: AccountSiteModelListStatusScope
-  hasLoadedTokens: boolean
-  isLoadingTokens: boolean
-  isLoadingCatalog: boolean
-  tokenLoadErrorMessage: string | null
+  statusScope: "account" | "runtime-key"
+  runtimeKeys: AccountRuntimeKey[]
+  selectedRuntimeKeyId: string | null
+  setSelectedRuntimeKeyId: (runtimeKeyId: string | null) => void
+  isLoadingRuntimeKeys: boolean
+  hasLoadedRuntimeKeys: boolean
+  runtimeKeyLoadErrorMessage: string | null
   catalogLoadErrorMessage: string | null
-  tokens: ApiToken[]
-  selectedTokenId: number | null
-  activeTokenName: string | null
-  loadTokens: () => Promise<void>
-  setSelectedTokenId: (tokenId: number | null) => void
+  isLoadingCatalog: boolean
+  activeRuntimeKeyName: string | null
+  loadRuntimeKeys: () => Promise<void>
   loadCatalog: () => Promise<void>
 }
 
@@ -425,7 +428,7 @@ function createDisplayAccountModelPricingRequest(
   }
 }
 
-const TOKEN_SCOPED_CATALOG_CONCURRENCY = 4
+const RUNTIME_KEY_SCOPED_CATALOG_CONCURRENCY = 4
 
 /** Checks that a pricing response exposes the expected model row array. */
 function hasValidPricingData(data: PricingResponse) {
@@ -470,14 +473,14 @@ async function mapWithConcurrency<T, R>(
   return results
 }
 
-/** Loads one token-scoped catalog as a row source context. */
-async function loadTokenScopedCatalogPricingContext(params: {
+/** Loads one runtime-key-scoped catalog as a row source context. */
+async function loadRuntimeKeyScopedCatalogPricingContext(params: {
   account: DisplaySiteData
-  token: ApiToken
+  runtimeKey: AccountRuntimeKey
   abortSignal?: AbortSignal
 }): Promise<SettledContextResult> {
   try {
-    const pricing = await loadAccountTokenFallbackPricingResponse(params)
+    const pricing = await loadAccountRuntimeKeyFallbackPricingResponse(params)
     if (!hasValidPricingData(pricing)) {
       throw createInvalidFormatError()
     }
@@ -486,10 +489,10 @@ async function loadTokenScopedCatalogPricingContext(params: {
       context: {
         account: params.account,
         pricing,
-        sourceIdentity: createAccountTokenModelListSourceIdentity({
+        sourceIdentity: createAccountRuntimeKeyModelListSourceIdentity({
           accountId: params.account.id,
-          tokenId: params.token.id,
-          tokenName: params.token.name,
+          runtimeKeyId: params.runtimeKey.id,
+          runtimeKeyName: params.runtimeKey.label,
         }),
       },
     }
@@ -502,8 +505,8 @@ async function loadTokenScopedCatalogPricingContext(params: {
   }
 }
 
-/** Loads token-scoped catalog fallbacks for every account token in comparison mode. */
-async function fetchTokenScopedCatalogPricingContexts(
+/** Loads runtime-key-scoped catalog fallbacks for every account runtime key in comparison mode. */
+async function fetchRuntimeKeyScopedCatalogPricingContexts(
   account: DisplaySiteData,
   abortSignal?: AbortSignal,
 ): Promise<AccountPricingQueryResult> {
@@ -511,21 +514,25 @@ async function fetchTokenScopedCatalogPricingContexts(
     throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
   }
 
-  const tokens = (await fetchDisplayAccountRuntimeKeys(account)).filter(
-    (token) => token.status === 1,
+  const runtimeKeys = (await fetchDisplayAccountRuntimeKeys(account)).filter(
+    hasUsableAccountRuntimeKeySecret,
   )
   if (abortSignal?.aborted) {
     throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
   }
-  if (tokens.length === 0) {
+  if (runtimeKeys.length === 0) {
     throw createUnsupportedModelPricingError()
   }
 
   const settledResults = await mapWithConcurrency(
-    tokens,
-    TOKEN_SCOPED_CATALOG_CONCURRENCY,
-    (token) =>
-      loadTokenScopedCatalogPricingContext({ account, token, abortSignal }),
+    runtimeKeys,
+    RUNTIME_KEY_SCOPED_CATALOG_CONCURRENCY,
+    (runtimeKey) =>
+      loadRuntimeKeyScopedCatalogPricingContext({
+        account,
+        runtimeKey,
+        abortSignal,
+      }),
     abortSignal,
   )
   const contexts = settledResults.flatMap((result) =>
@@ -597,14 +604,19 @@ function useSingleAccountModelData(params: {
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
   const [fallbackPricingData, setFallbackPricingData] =
     useState<PricingResponse | null>(null)
-  const [fallbackTokens, setFallbackTokens] = useState<ApiToken[]>([])
-  const [hasLoadedFallbackTokens, setHasLoadedFallbackTokens] = useState(false)
-  const [isLoadingFallbackTokens, setIsLoadingFallbackTokens] = useState(false)
-  const [fallbackTokenLoadErrorMessage, setFallbackTokenLoadErrorMessage] =
+  const [fallbackRuntimeKeys, setFallbackRuntimeKeys] = useState<
+    AccountRuntimeKey[]
+  >([])
+  const [hasLoadedFallbackRuntimeKeys, setHasLoadedFallbackRuntimeKeys] =
+    useState(false)
+  const [isLoadingFallbackRuntimeKeys, setIsLoadingFallbackRuntimeKeys] =
+    useState(false)
+  const [
+    fallbackRuntimeKeyLoadErrorMessage,
+    setFallbackRuntimeKeyLoadErrorMessage,
+  ] = useState<string | null>(null)
+  const [selectedFallbackRuntimeKeyId, setSelectedFallbackRuntimeKeyId] =
     useState<string | null>(null)
-  const [selectedFallbackTokenId, setSelectedFallbackTokenId] = useState<
-    number | null
-  >(null)
   const [isLoadingFallbackCatalog, setIsLoadingFallbackCatalog] =
     useState(false)
   const [fallbackCatalogLoadErrorMessage, setFallbackCatalogLoadErrorMessage] =
@@ -625,17 +637,17 @@ function useSingleAccountModelData(params: {
   const fallbackCatalogAbortControllerRef = useRef<AbortController | null>(null)
 
   const resetFallbackState = useCallback(() => {
-    fallbackTokensRequestIdRef.current += 1
+    fallbackRuntimeKeysRequestIdRef.current += 1
     fallbackCatalogRequestIdRef.current += 1
     fallbackCatalogAbortControllerRef.current?.abort()
     fallbackCatalogAbortControllerRef.current = null
     setFallbackStateScopeKey(MODEL_LIST_QUERY_SCOPE_VALUES.NONE)
     setFallbackPricingData(null)
-    setFallbackTokens([])
-    setHasLoadedFallbackTokens(false)
-    setIsLoadingFallbackTokens(false)
-    setFallbackTokenLoadErrorMessage(null)
-    setSelectedFallbackTokenId(null)
+    setFallbackRuntimeKeys([])
+    setHasLoadedFallbackRuntimeKeys(false)
+    setIsLoadingFallbackRuntimeKeys(false)
+    setFallbackRuntimeKeyLoadErrorMessage(null)
+    setSelectedFallbackRuntimeKeyId(null)
     setIsLoadingFallbackCatalog(false)
     setFallbackCatalogLoadErrorMessage(null)
   }, [])
@@ -655,7 +667,7 @@ function useSingleAccountModelData(params: {
   const currentAccountScopeKeyRef = useRef(currentAccountScopeKey)
   currentAccountScopeKeyRef.current = currentAccountScopeKey
 
-  const fallbackTokensRequestIdRef = useRef(0)
+  const fallbackRuntimeKeysRequestIdRef = useRef(0)
   const fallbackCatalogRequestIdRef = useRef(0)
 
   useEffect(() => {
@@ -671,10 +683,10 @@ function useSingleAccountModelData(params: {
     [currentAccount],
   )
 
-  const isActiveFallbackTokensRequest = useCallback(
+  const isActiveFallbackRuntimeKeysRequest = useCallback(
     (scopeKey: string, requestId: number) =>
       currentAccountScopeKeyRef.current === scopeKey &&
-      fallbackTokensRequestIdRef.current === requestId,
+      fallbackRuntimeKeysRequestIdRef.current === requestId,
     [],
   )
 
@@ -691,18 +703,18 @@ function useSingleAccountModelData(params: {
 
     return {
       fallbackPricingData: isCurrentFallbackScope ? fallbackPricingData : null,
-      fallbackTokens: isCurrentFallbackScope ? fallbackTokens : [],
-      hasLoadedFallbackTokens: isCurrentFallbackScope
-        ? hasLoadedFallbackTokens
+      fallbackRuntimeKeys: isCurrentFallbackScope ? fallbackRuntimeKeys : [],
+      hasLoadedFallbackRuntimeKeys: isCurrentFallbackScope
+        ? hasLoadedFallbackRuntimeKeys
         : false,
-      isLoadingFallbackTokens: isCurrentFallbackScope
-        ? isLoadingFallbackTokens
+      isLoadingFallbackRuntimeKeys: isCurrentFallbackScope
+        ? isLoadingFallbackRuntimeKeys
         : false,
-      fallbackTokenLoadErrorMessage: isCurrentFallbackScope
-        ? fallbackTokenLoadErrorMessage
+      fallbackRuntimeKeyLoadErrorMessage: isCurrentFallbackScope
+        ? fallbackRuntimeKeyLoadErrorMessage
         : null,
-      selectedFallbackTokenId: isCurrentFallbackScope
-        ? selectedFallbackTokenId
+      selectedFallbackRuntimeKeyId: isCurrentFallbackScope
+        ? selectedFallbackRuntimeKeyId
         : null,
       isLoadingFallbackCatalog: isCurrentFallbackScope
         ? isLoadingFallbackCatalog
@@ -717,24 +729,24 @@ function useSingleAccountModelData(params: {
     fallbackCatalogLoadErrorMessage,
     fallbackPricingData,
     fallbackStateScopeKey,
-    fallbackTokenLoadErrorMessage,
-    fallbackTokens,
-    hasLoadedFallbackTokens,
+    fallbackRuntimeKeyLoadErrorMessage,
+    fallbackRuntimeKeys,
+    hasLoadedFallbackRuntimeKeys,
     isLoadingFallbackCatalog,
-    isLoadingFallbackTokens,
-    selectedFallbackTokenId,
+    isLoadingFallbackRuntimeKeys,
+    selectedFallbackRuntimeKeyId,
   ])
 
   const scopedFallbackPricingData = scopedFallbackState.fallbackPricingData
-  const scopedFallbackTokens = scopedFallbackState.fallbackTokens
-  const scopedHasLoadedFallbackTokens =
-    scopedFallbackState.hasLoadedFallbackTokens
-  const scopedIsLoadingFallbackTokens =
-    scopedFallbackState.isLoadingFallbackTokens
-  const scopedFallbackTokenLoadErrorMessage =
-    scopedFallbackState.fallbackTokenLoadErrorMessage
-  const scopedSelectedFallbackTokenId =
-    scopedFallbackState.selectedFallbackTokenId
+  const scopedFallbackRuntimeKeys = scopedFallbackState.fallbackRuntimeKeys
+  const scopedHasLoadedFallbackRuntimeKeys =
+    scopedFallbackState.hasLoadedFallbackRuntimeKeys
+  const scopedIsLoadingFallbackRuntimeKeys =
+    scopedFallbackState.isLoadingFallbackRuntimeKeys
+  const scopedFallbackRuntimeKeyLoadErrorMessage =
+    scopedFallbackState.fallbackRuntimeKeyLoadErrorMessage
+  const scopedSelectedFallbackRuntimeKeyId =
+    scopedFallbackState.selectedFallbackRuntimeKeyId
   const scopedIsLoadingFallbackCatalog =
     scopedFallbackState.isLoadingFallbackCatalog
   const scopedFallbackCatalogLoadErrorMessage =
@@ -786,60 +798,62 @@ function useSingleAccountModelData(params: {
     },
   })
 
-  const selectedFallbackToken = useMemo(() => {
-    if (scopedSelectedFallbackTokenId !== null) {
+  const selectedFallbackRuntimeKey = useMemo(() => {
+    if (scopedSelectedFallbackRuntimeKeyId !== null) {
       return (
-        scopedFallbackTokens.find(
-          (token) => token.id === scopedSelectedFallbackTokenId,
+        scopedFallbackRuntimeKeys.find(
+          (runtimeKey) => runtimeKey.id === scopedSelectedFallbackRuntimeKeyId,
         ) ?? null
       )
     }
 
-    if (scopedFallbackTokens.length === 1) {
-      return scopedFallbackTokens[0]
+    if (scopedFallbackRuntimeKeys.length === 1) {
+      return scopedFallbackRuntimeKeys[0]
     }
 
     return null
-  }, [scopedFallbackTokens, scopedSelectedFallbackTokenId])
+  }, [scopedFallbackRuntimeKeys, scopedSelectedFallbackRuntimeKeyId])
 
-  const loadFallbackTokens = useCallback(async () => {
+  const loadFallbackRuntimeKeys = useCallback(async () => {
     if (!currentAccount || !fallbackAvailable) return
     const requestScopeKey = currentAccountScopeKey
-    const requestId = ++fallbackTokensRequestIdRef.current
+    const requestId = ++fallbackRuntimeKeysRequestIdRef.current
 
     setFallbackStateScopeKey(requestScopeKey)
-    setIsLoadingFallbackTokens(true)
-    setFallbackTokenLoadErrorMessage(null)
+    setIsLoadingFallbackRuntimeKeys(true)
+    setFallbackRuntimeKeyLoadErrorMessage(null)
     setFallbackCatalogLoadErrorMessage(null)
 
     try {
-      const nextTokens = (
+      const runtimeKeys = (
         await fetchDisplayAccountRuntimeKeys(currentAccount)
-      ).filter((token) => token.status === 1)
+      ).filter(hasUsableAccountRuntimeKeySecret)
 
-      if (!isActiveFallbackTokensRequest(requestScopeKey, requestId)) {
+      if (!isActiveFallbackRuntimeKeysRequest(requestScopeKey, requestId)) {
         return
       }
 
       setFallbackStateScopeKey(requestScopeKey)
-      setFallbackTokens(nextTokens)
-      setHasLoadedFallbackTokens(true)
-      setSelectedFallbackTokenId((currentTokenId) => {
+      setFallbackRuntimeKeys(runtimeKeys)
+      setHasLoadedFallbackRuntimeKeys(true)
+      setSelectedFallbackRuntimeKeyId((currentRuntimeKeyId) => {
         if (
-          currentTokenId !== null &&
-          nextTokens.some((token) => token.id === currentTokenId)
+          currentRuntimeKeyId !== null &&
+          runtimeKeys.some(
+            (runtimeKey) => runtimeKey.id === currentRuntimeKeyId,
+          )
         ) {
-          return currentTokenId
+          return currentRuntimeKeyId
         }
 
-        if (nextTokens.length === 1) {
-          return nextTokens[0].id
+        if (runtimeKeys.length === 1) {
+          return runtimeKeys[0].id
         }
 
         return null
       })
     } catch (error) {
-      if (!isActiveFallbackTokensRequest(requestScopeKey, requestId)) {
+      if (!isActiveFallbackRuntimeKeysRequest(requestScopeKey, requestId)) {
         return
       }
 
@@ -849,27 +863,27 @@ function useSingleAccountModelData(params: {
           : getErrorMessage(error)
 
       setFallbackStateScopeKey(requestScopeKey)
-      setFallbackTokenLoadErrorMessage(
+      setFallbackRuntimeKeyLoadErrorMessage(
         errorMessage &&
           errorMessage !== t("status.fallback.loadKeysFailedFallback")
           ? t("status.fallback.loadKeysFailed", { errorMessage })
           : t("status.fallback.loadKeysFailedFallback"),
       )
     } finally {
-      if (isActiveFallbackTokensRequest(requestScopeKey, requestId)) {
-        setIsLoadingFallbackTokens(false)
+      if (isActiveFallbackRuntimeKeysRequest(requestScopeKey, requestId)) {
+        setIsLoadingFallbackRuntimeKeys(false)
       }
     }
   }, [
     currentAccount,
     currentAccountScopeKey,
     fallbackAvailable,
-    isActiveFallbackTokensRequest,
+    isActiveFallbackRuntimeKeysRequest,
     t,
   ])
 
   const loadFallbackCatalog = useCallback(async () => {
-    if (!currentAccount || !selectedFallbackToken) return
+    if (!currentAccount || !selectedFallbackRuntimeKey) return
     const requestScopeKey = currentAccountScopeKey
     const requestId = ++fallbackCatalogRequestIdRef.current
     fallbackCatalogAbortControllerRef.current?.abort()
@@ -881,9 +895,9 @@ function useSingleAccountModelData(params: {
     setFallbackCatalogLoadErrorMessage(null)
 
     try {
-      const pricing = await loadAccountTokenFallbackPricingResponse({
+      const pricing = await loadAccountRuntimeKeyFallbackPricingResponse({
         account: currentAccount,
-        token: selectedFallbackToken,
+        runtimeKey: selectedFallbackRuntimeKey,
         abortSignal: abortController.signal,
       })
 
@@ -941,7 +955,7 @@ function useSingleAccountModelData(params: {
     currentAccount,
     currentAccountScopeKey,
     isActiveFallbackCatalogRequest,
-    selectedFallbackToken,
+    selectedFallbackRuntimeKey,
     t,
   ])
 
@@ -966,19 +980,23 @@ function useSingleAccountModelData(params: {
       | { code?: string }
       | undefined
     if (typedError?.code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT) return
-    if (scopedHasLoadedFallbackTokens || scopedIsLoadingFallbackTokens) return
-    if (scopedFallbackTokenLoadErrorMessage) return
+    if (
+      scopedHasLoadedFallbackRuntimeKeys ||
+      scopedIsLoadingFallbackRuntimeKeys
+    )
+      return
+    if (scopedFallbackRuntimeKeyLoadErrorMessage) return
 
     // Retryable account failures should immediately hydrate the fallback key
     // list so the user can pick a key without an extra preparatory click.
-    void loadFallbackTokens()
+    void loadFallbackRuntimeKeys()
   }, [
     currentAccount,
     fallbackAvailable,
-    scopedFallbackTokenLoadErrorMessage,
-    scopedHasLoadedFallbackTokens,
-    scopedIsLoadingFallbackTokens,
-    loadFallbackTokens,
+    scopedFallbackRuntimeKeyLoadErrorMessage,
+    scopedHasLoadedFallbackRuntimeKeys,
+    scopedIsLoadingFallbackRuntimeKeys,
+    loadFallbackRuntimeKeys,
     query.error,
     query.isError,
     selectedSource?.kind,
@@ -995,9 +1013,9 @@ function useSingleAccountModelData(params: {
     if (!shouldUseAccountSiteRuntimeKeyCatalogFallback(currentAccount)) return
     if (!query.isError) return
     if (!isUnsupportedModelPricingError(query.error)) return
-    if (!scopedHasLoadedFallbackTokens) return
-    if (scopedFallbackTokens.length !== 1) return
-    if (!selectedFallbackToken) return
+    if (!scopedHasLoadedFallbackRuntimeKeys) return
+    if (scopedFallbackRuntimeKeys.length !== 1) return
+    if (!selectedFallbackRuntimeKey) return
     if (scopedFallbackPricingData) return
     if (scopedIsLoadingFallbackCatalog) return
     if (scopedFallbackCatalogLoadErrorMessage) return
@@ -1011,10 +1029,10 @@ function useSingleAccountModelData(params: {
     query.isError,
     scopedFallbackCatalogLoadErrorMessage,
     scopedFallbackPricingData,
-    scopedFallbackTokens.length,
-    scopedHasLoadedFallbackTokens,
+    scopedFallbackRuntimeKeys.length,
+    scopedHasLoadedFallbackRuntimeKeys,
     scopedIsLoadingFallbackCatalog,
-    selectedFallbackToken,
+    selectedFallbackRuntimeKey,
     selectedSource?.kind,
   ])
 
@@ -1123,7 +1141,7 @@ function useSingleAccountModelData(params: {
 
   const loadPricingData = useCallback(async () => {
     if (!currentAccount) return
-    if (scopedFallbackPricingData && selectedFallbackToken) {
+    if (scopedFallbackPricingData && selectedFallbackRuntimeKey) {
       await loadFallbackCatalog()
       return
     }
@@ -1137,7 +1155,7 @@ function useSingleAccountModelData(params: {
     loadFallbackCatalog,
     query,
     scopedFallbackPricingData,
-    selectedFallbackToken,
+    selectedFallbackRuntimeKey,
   ])
 
   const pricingData = query.data ?? scopedFallbackPricingData ?? null
@@ -1153,11 +1171,11 @@ function useSingleAccountModelData(params: {
               account: currentAccount,
               pricing: pricingData,
               sourceIdentity:
-                isFallbackCatalogActive && selectedFallbackToken
-                  ? createAccountTokenModelListSourceIdentity({
+                isFallbackCatalogActive && selectedFallbackRuntimeKey
+                  ? createAccountRuntimeKeyModelListSourceIdentity({
                       accountId: currentAccount.id,
-                      tokenId: selectedFallbackToken.id,
-                      tokenName: selectedFallbackToken.name,
+                      runtimeKeyId: selectedFallbackRuntimeKey.id,
+                      runtimeKeyName: selectedFallbackRuntimeKey.label,
                     })
                   : createAccountModelListSourceIdentity(currentAccount.id),
             },
@@ -1167,7 +1185,7 @@ function useSingleAccountModelData(params: {
       currentAccount,
       isFallbackCatalogActive,
       pricingData,
-      selectedFallbackToken,
+      selectedFallbackRuntimeKey,
     ],
   )
 
@@ -1179,36 +1197,39 @@ function useSingleAccountModelData(params: {
     return {
       isAvailable: fallbackAvailable,
       isActive: isFallbackCatalogActive,
-      statusScope: getAccountSiteModelListProfile(currentAccount.siteType)
-        .statusScope,
-      hasLoadedTokens: scopedHasLoadedFallbackTokens,
-      isLoadingTokens: scopedIsLoadingFallbackTokens,
-      isLoadingCatalog: scopedIsLoadingFallbackCatalog,
-      tokenLoadErrorMessage: scopedFallbackTokenLoadErrorMessage,
+      statusScope:
+        getAccountSiteModelListProfile(currentAccount.siteType).statusScope ===
+        "token"
+          ? "runtime-key"
+          : "account",
+      runtimeKeys: scopedFallbackRuntimeKeys,
+      selectedRuntimeKeyId: scopedSelectedFallbackRuntimeKeyId,
+      setSelectedRuntimeKeyId: setSelectedFallbackRuntimeKeyId,
+      isLoadingRuntimeKeys: scopedIsLoadingFallbackRuntimeKeys,
+      hasLoadedRuntimeKeys: scopedHasLoadedFallbackRuntimeKeys,
+      runtimeKeyLoadErrorMessage: scopedFallbackRuntimeKeyLoadErrorMessage,
       catalogLoadErrorMessage: scopedFallbackCatalogLoadErrorMessage,
-      tokens: scopedFallbackTokens,
-      selectedTokenId: scopedSelectedFallbackTokenId,
-      activeTokenName:
-        isFallbackCatalogActive && selectedFallbackToken
-          ? selectedFallbackToken.name
+      isLoadingCatalog: scopedIsLoadingFallbackCatalog,
+      activeRuntimeKeyName:
+        isFallbackCatalogActive && selectedFallbackRuntimeKey
+          ? selectedFallbackRuntimeKey.label
           : null,
-      loadTokens: loadFallbackTokens,
-      setSelectedTokenId: setSelectedFallbackTokenId,
+      loadRuntimeKeys: loadFallbackRuntimeKeys,
       loadCatalog: loadFallbackCatalog,
     }
   }, [
     currentAccount,
     fallbackAvailable,
     isFallbackCatalogActive,
-    scopedHasLoadedFallbackTokens,
-    scopedIsLoadingFallbackTokens,
+    scopedHasLoadedFallbackRuntimeKeys,
+    scopedIsLoadingFallbackRuntimeKeys,
     scopedIsLoadingFallbackCatalog,
-    scopedFallbackTokenLoadErrorMessage,
+    scopedFallbackRuntimeKeyLoadErrorMessage,
     scopedFallbackCatalogLoadErrorMessage,
-    scopedFallbackTokens,
-    scopedSelectedFallbackTokenId,
-    selectedFallbackToken,
-    loadFallbackTokens,
+    scopedFallbackRuntimeKeys,
+    scopedSelectedFallbackRuntimeKeyId,
+    selectedFallbackRuntimeKey,
+    loadFallbackRuntimeKeys,
     loadFallbackCatalog,
   ])
 
@@ -1255,7 +1276,7 @@ function useAllAccountsModelData(
           readiness.route ===
           MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
         ) {
-          return fetchTokenScopedCatalogPricingContexts(account, signal)
+          return fetchRuntimeKeyScopedCatalogPricingContexts(account, signal)
         }
 
         if (

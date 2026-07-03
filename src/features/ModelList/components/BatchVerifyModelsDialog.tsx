@@ -24,7 +24,7 @@ import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
   MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
-  pickBatchVerifyCompatibleToken,
+  pickBatchVerifyCompatibleRuntimeKey,
   resolveBatchVerifyApiType,
   type BatchVerifyApiTypeMode,
   type BatchVerifyModelItem,
@@ -37,8 +37,12 @@ import {
 } from "~/features/ModelList/testIds"
 import { cn } from "~/lib/utils"
 import {
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
   fetchDisplayAccountRuntimeKeys,
-  resolveDisplayAccountTokenForSecret,
+  resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -76,7 +80,6 @@ import {
   createVerificationHistorySummary,
   verificationResultHistoryStorage,
 } from "~/services/verification/verificationResultHistory"
-import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 const BATCH_VERIFY_ROW_STATUSES = {
@@ -117,7 +120,7 @@ const logger = createLogger("BatchVerifyModelsDialog")
 
 /** Normalize optional secrets before passing them to shared redaction. */
 function filterRedactions(values: Array<string | undefined>): string[] {
-  return values.filter(Boolean) as string[]
+  return values.filter((value): value is string => Boolean(value))
 }
 
 /** Build the initial row state for the current batch item snapshot. */
@@ -297,11 +300,15 @@ export function BatchVerifyModelsDialog({
     isOpen: false,
     items,
   })
-  const tokenCacheRef = useRef(new Map<string, Promise<ApiToken[]>>())
-  const resolvedTokenCacheRef = useRef(new Map<string, Promise<ApiToken>>())
-  const clearCachedTokenPromises = useCallback(() => {
-    tokenCacheRef.current.clear()
-    resolvedTokenCacheRef.current.clear()
+  const runtimeKeyCacheRef = useRef(
+    new Map<string, Promise<AccountRuntimeKey[]>>(),
+  )
+  const resolvedRuntimeKeyCacheRef = useRef(
+    new Map<string, Promise<AccountRuntimeKey>>(),
+  )
+  const clearCachedRuntimeKeyPromises = useCallback(() => {
+    runtimeKeyCacheRef.current.clear()
+    resolvedRuntimeKeyCacheRef.current.clear()
   }, [])
 
   useEffect(() => {
@@ -319,7 +326,7 @@ export function BatchVerifyModelsDialog({
 
     previousDialogSnapshotRef.current = { isOpen, items }
     shouldStopRef.current = false
-    clearCachedTokenPromises()
+    clearCachedRuntimeKeyPromises()
     setRows(buildRows(items))
     setListHeight(0)
     setApiTypeMode(getDefaultApiTypeMode(items))
@@ -327,7 +334,7 @@ export function BatchVerifyModelsDialog({
     setSelectedModelKeys(items.map((item) => item.key))
     setIsRunning(false)
     setHasStarted(false)
-  }, [clearCachedTokenPromises, isOpen, isRunning, items])
+  }, [clearCachedRuntimeKeyPromises, isOpen, isRunning, items])
 
   const summary = useMemo(() => {
     return rows.reduce(
@@ -441,39 +448,39 @@ export function BatchVerifyModelsDialog({
     setSelectedModelKeys([])
   }, [])
 
-  const getAccountTokens = useCallback(
-    (item: AccountBatchVerifyModelItem): Promise<ApiToken[]> => {
+  const getAccountRuntimeKeys = useCallback(
+    (item: AccountBatchVerifyModelItem): Promise<AccountRuntimeKey[]> => {
       const account = item.source.account
-      const cached = tokenCacheRef.current.get(account.id)
+      const cached = runtimeKeyCacheRef.current.get(account.id)
       if (cached) return cached
 
       const promise = fetchDisplayAccountRuntimeKeys(account)
-      tokenCacheRef.current.set(account.id, promise)
+      runtimeKeyCacheRef.current.set(account.id, promise)
       return promise
     },
     [],
   )
 
-  const getResolvedToken = useCallback(
+  const getResolvedRuntimeKey = useCallback(
     (
       item: AccountBatchVerifyModelItem,
-      token: ApiToken,
+      runtimeKey: AccountRuntimeKey,
       abortSignal?: AbortSignal,
-    ): Promise<ApiToken> => {
-      const cacheKey = `${item.source.account.id}:${token.id}`
-      const cached = resolvedTokenCacheRef.current.get(cacheKey)
+    ): Promise<AccountRuntimeKey> => {
+      const cacheKey = `${item.source.account.id}:${runtimeKey.id}`
+      const cached = resolvedRuntimeKeyCacheRef.current.get(cacheKey)
       const promise =
         cached ??
-        resolveDisplayAccountTokenForSecret(item.source.account, token, {
+        resolveDisplayAccountRuntimeKeySecret(item.source.account, runtimeKey, {
           abortSignal,
         })
       if (!cached) {
         const cachedPromise = promise.catch((error) => {
-          resolvedTokenCacheRef.current.delete(cacheKey)
+          resolvedRuntimeKeyCacheRef.current.delete(cacheKey)
           throw error
         })
         cachedPromise.catch(() => {})
-        resolvedTokenCacheRef.current.set(cacheKey, cachedPromise)
+        resolvedRuntimeKeyCacheRef.current.set(cacheKey, cachedPromise)
       }
 
       if (!abortSignal || !cached) return promise
@@ -485,7 +492,7 @@ export function BatchVerifyModelsDialog({
 
       return Promise.race([
         promise,
-        new Promise<ApiToken>((_resolve, reject) => {
+        new Promise<AccountRuntimeKey>((_resolve, reject) => {
           abortSignal.addEventListener(
             "abort",
             () =>
@@ -561,11 +568,14 @@ export function BatchVerifyModelsDialog({
             : await (async () => {
                 if (!isAccountBatchVerifyModelItem(item)) return null
                 const account = item.source.account
-                const tokens = await getAccountTokens(item)
+                const runtimeKeys = await getAccountRuntimeKeys(item)
                 if (isStopped()) return null
 
-                const token = pickBatchVerifyCompatibleToken(tokens, item)
-                if (!token) {
+                const runtimeKey = pickBatchVerifyCompatibleRuntimeKey(
+                  runtimeKeys,
+                  item,
+                )
+                if (!runtimeKey) {
                   const summary = t(
                     "modelList:batchVerify.messages.noCompatibleToken",
                   )
@@ -578,17 +588,22 @@ export function BatchVerifyModelsDialog({
                   return null
                 }
 
-                const resolvedToken = await getResolvedToken(
+                const resolvedRuntimeKey = await getResolvedRuntimeKey(
                   item,
-                  token,
+                  runtimeKey,
                   abortSignal,
                 )
                 if (isStopped()) return null
+                const resolvedToken = isAccountTokenRuntimeKey(
+                  resolvedRuntimeKey,
+                )
+                  ? resolvedRuntimeKey.token
+                  : undefined
 
                 return {
-                  baseUrl: account.baseUrl,
-                  apiKey: resolvedToken.key,
-                  tokenName: token.name,
+                  baseUrl: resolvedRuntimeKey.baseUrl || account.baseUrl,
+                  apiKey: resolvedRuntimeKey.secret,
+                  tokenName: runtimeKey.label,
                   token: resolvedToken,
                 }
               })()
@@ -780,8 +795,8 @@ export function BatchVerifyModelsDialog({
     },
     [
       apiTypeMode,
-      getAccountTokens,
-      getResolvedToken,
+      getAccountRuntimeKeys,
+      getResolvedRuntimeKey,
       persistResult,
       selectedProbeIds,
       t,
@@ -812,7 +827,7 @@ export function BatchVerifyModelsDialog({
       selectedModelKeySet.has(item.key),
     )
     shouldStopRef.current = false
-    clearCachedTokenPromises()
+    clearCachedRuntimeKeyPromises()
     const abortController = new AbortController()
     batchAbortControllerRef.current = abortController
     batchFailureCategoryRef.current = undefined

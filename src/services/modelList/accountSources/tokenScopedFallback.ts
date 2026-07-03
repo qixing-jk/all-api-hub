@@ -1,9 +1,13 @@
 import {
+  collectAccountRuntimeKeySecrets,
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
 } from "~/services/accounts/accountSiteProfile"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import type { ModelCatalogRequest } from "~/services/apiAdapters/contracts/modelCatalog"
 import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
 import {
@@ -30,10 +34,10 @@ import {
   isAbortError,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
+import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 import { parseDelimitedList } from "~/utils/core/string"
 
-interface LoadAccountTokenFallbackPricingParams {
+interface LoadAccountRuntimeKeyFallbackPricingParams {
   account: Pick<
     DisplaySiteData,
     | "siteType"
@@ -44,7 +48,7 @@ interface LoadAccountTokenFallbackPricingParams {
     | "token"
     | "cookieAuthSessionCookie"
   >
-  token: ApiToken
+  runtimeKey: AccountRuntimeKey
   abortSignal?: AbortSignal
 }
 
@@ -58,7 +62,7 @@ const createMissingModelPricingCapabilityError = (siteType: string) =>
   new Error(`modelPricing is not implemented for ${siteType}`)
 
 const createAccountModelPricingRequest = (
-  account: LoadAccountTokenFallbackPricingParams["account"],
+  account: LoadAccountRuntimeKeyFallbackPricingParams["account"],
   abortSignal?: AbortSignal,
 ): ModelPricingRequest => ({
   baseUrl: account.baseUrl,
@@ -73,11 +77,12 @@ const createAccountModelPricingRequest = (
 })
 
 const createRuntimeCatalogRequest = (
-  account: LoadAccountTokenFallbackPricingParams["account"],
+  account: LoadAccountRuntimeKeyFallbackPricingParams["account"],
+  runtimeKey: AccountRuntimeKey,
   apiKey: string,
   abortSignal?: AbortSignal,
 ): ModelCatalogRequest => ({
-  baseUrl: account.baseUrl,
+  baseUrl: runtimeKey.baseUrl || account.baseUrl,
   accountId: account.id,
   abortSignal,
   auth: {
@@ -87,7 +92,7 @@ const createRuntimeCatalogRequest = (
 })
 
 const buildRuntimeModelCatalogPricingResponse = (
-  account: LoadAccountTokenFallbackPricingParams["account"],
+  account: LoadAccountRuntimeKeyFallbackPricingParams["account"],
   modelIds: string[],
   unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
 ): PricingResponse =>
@@ -102,36 +107,39 @@ const buildRuntimeModelCatalogPricingResponse = (
     },
   })
 
-const resolveFallbackTokenSecret = async (
-  params: LoadAccountTokenFallbackPricingParams,
+const resolveFallbackRuntimeKeySecret = async (
+  params: LoadAccountRuntimeKeyFallbackPricingParams,
   readiness: ReturnType<typeof resolveModelListAccountSourceReadiness>,
 ) => {
   if (
     readiness.route ===
       MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog &&
     !readiness.requiresTokenKeyResolution &&
-    hasUsableApiTokenKey(params.token.key)
+    params.runtimeKey.secret.trim()
   ) {
-    return params.token
+    return params.runtimeKey
   }
 
   return params.abortSignal
-    ? resolveDisplayAccountTokenForSecret(params.account, params.token, {
+    ? resolveDisplayAccountRuntimeKeySecret(params.account, params.runtimeKey, {
         abortSignal: params.abortSignal,
       })
-    : resolveDisplayAccountTokenForSecret(params.account, params.token)
+    : resolveDisplayAccountRuntimeKeySecret(params.account, params.runtimeKey)
 }
 
 /**
  * Loads a minimal model catalog for an account token by combining selected-token
  * visibility with the source account's Model List readiness route.
  */
-export async function loadAccountTokenFallbackPricingResponse(
-  params: LoadAccountTokenFallbackPricingParams,
+export async function loadAccountRuntimeKeyFallbackPricingResponse(
+  params: LoadAccountRuntimeKeyFallbackPricingParams,
 ): Promise<PricingResponse> {
-  const declaredModelIds = parseDelimitedList(params.token.models)
+  const declaredModelIds = isAccountTokenRuntimeKey(params.runtimeKey)
+    ? parseDelimitedList(params.runtimeKey.token.models)
+    : []
   const readiness = resolveModelListAccountSourceReadiness(params.account)
-  let resolvedTokenKey = ""
+  let resolvedRuntimeKeySecret = ""
+  let resolvedRuntimeKeySecrets: string[] = []
 
   try {
     if (
@@ -154,8 +162,14 @@ export async function loadAccountTokenFallbackPricingResponse(
       throw createMissingModelPricingCapabilityError(params.account.siteType)
     }
 
-    const resolvedToken = await resolveFallbackTokenSecret(params, readiness)
-    resolvedTokenKey = resolvedToken.key
+    const resolvedRuntimeKey = await resolveFallbackRuntimeKeySecret(
+      params,
+      readiness,
+    )
+    resolvedRuntimeKeySecret = resolvedRuntimeKey.secret
+    resolvedRuntimeKeySecrets = collectAccountRuntimeKeySecrets([
+      resolvedRuntimeKey,
+    ])
 
     if (
       readiness.route ===
@@ -164,7 +178,8 @@ export async function loadAccountTokenFallbackPricingResponse(
       const runtimeModelIds = await readiness.modelCatalog.fetchModels(
         createRuntimeCatalogRequest(
           params.account,
-          resolvedToken.key,
+          resolvedRuntimeKey,
+          resolvedRuntimeKey.secret,
           params.abortSignal,
         ),
       )
@@ -176,10 +191,14 @@ export async function loadAccountTokenFallbackPricingResponse(
         const modelOnlyResponse =
           buildSub2ApiRuntimePricingResponse(runtimeModelIds)
 
+        if (!isAccountTokenRuntimeKey(resolvedRuntimeKey)) {
+          return modelOnlyResponse
+        }
+
         return await loadSub2ApiEstimatedPricingResponse({
           account: params.account,
-          selectedToken: params.token,
-          resolvedKey: resolvedToken.key,
+          selectedToken: resolvedRuntimeKey.token,
+          resolvedKey: resolvedRuntimeKey.secret,
           runtimeModelIds,
           fallbackResponse: modelOnlyResponse,
           abortSignal: params.abortSignal,
@@ -205,7 +224,7 @@ export async function loadAccountTokenFallbackPricingResponse(
       upstreamModelIds = await fetchApiCredentialModelIds({
         apiType: API_TYPES.OPENAI_COMPATIBLE,
         baseUrl: params.account.baseUrl,
-        apiKey: resolvedToken.key,
+        apiKey: resolvedRuntimeKey.secret,
         abortSignal: params.abortSignal,
       })
     } catch (error) {
@@ -231,8 +250,9 @@ export async function loadAccountTokenFallbackPricingResponse(
       params.account.baseUrl,
       params.account.token,
       params.account.cookieAuthSessionCookie ?? "",
-      params.token.key,
-      resolvedTokenKey,
+      params.runtimeKey.secret,
+      resolvedRuntimeKeySecret,
+      ...resolvedRuntimeKeySecrets,
     ])
 
     throw new Error(sanitizedMessage || ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED, {

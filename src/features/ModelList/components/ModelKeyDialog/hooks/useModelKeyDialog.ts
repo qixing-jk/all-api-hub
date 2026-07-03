@@ -10,7 +10,7 @@ import {
 } from "~/services/accounts/keyProductCapabilities"
 import {
   createDisplayAccountApiContext,
-  fetchDisplayAccountRuntimeKeys,
+  fetchDisplayAccountRuntimeKeyTokens,
   fetchDisplayAccountTokens,
   InvalidTokenPayloadError,
   requireDisplayAccountKeyManagement,
@@ -109,7 +109,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     setCreateError(null)
 
     try {
-      const fetchedTokens = await fetchDisplayAccountRuntimeKeys(account)
+      const fetchedTokens = await fetchDisplayAccountRuntimeKeyTokens(account)
       if (fetchRequestIdRef.current !== requestId) return false
       setTokens(fetchedTokens)
       return true

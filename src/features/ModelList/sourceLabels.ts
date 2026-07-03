@@ -17,13 +17,20 @@ type FormatModelListSourceLabelOptions = {
   formatProfileLabel: (params: { name: string; host?: string }) => string
 }
 
-/** Returns the display-safe token label for token-scoped account rows. */
-function formatAccountTokenName(sourceIdentity: ModelListSourceIdentity) {
-  if (sourceIdentity.kind !== MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN) {
-    return null
+/** Returns the display-safe name for token- or runtime-key-scoped account rows. */
+function formatScopedSourceIdentityName(
+  sourceIdentity: ModelListSourceIdentity,
+) {
+  switch (sourceIdentity.kind) {
+    case MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN:
+      return sourceIdentity.tokenName?.trim() || `#${sourceIdentity.tokenId}`
+    case MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY:
+      return (
+        sourceIdentity.runtimeKeyName?.trim() || sourceIdentity.runtimeKeyId
+      )
+    default:
+      return null
   }
-
-  return sourceIdentity.tokenName?.trim() || `#${sourceIdentity.tokenId}`
 }
 
 /**
@@ -50,11 +57,11 @@ export function formatModelListSourceLabel(
 
   const baseUrl = source.account.baseUrl?.trim() ?? ""
   const host = tryParseUrl(baseUrl)?.host || baseUrl || undefined
-  const tokenName = sourceIdentity
-    ? formatAccountTokenName(sourceIdentity)
+  const scopedSourceName = sourceIdentity
+    ? formatScopedSourceIdentityName(sourceIdentity)
     : null
-  const accountLabel = tokenName
-    ? `${source.account.name} / ${tokenName}`
+  const accountLabel = scopedSourceName
+    ? `${source.account.name} / ${scopedSourceName}`
     : source.account.name
 
   return {

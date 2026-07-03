@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
@@ -46,11 +47,50 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 }))
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
-  resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
-    resolveDisplayAccountTokenForSecretMock(...args),
+  resolveDisplayAccountRuntimeKeySecret: async (...args: unknown[]) => {
+    const [account, runtimeKey] = args as [
+      { id: string; name?: string },
+      { token?: unknown; source: string },
+    ]
+    if (runtimeKey.source === "account_token") {
+      const token = await resolveDisplayAccountTokenForSecretMock(
+        account,
+        runtimeKey.token,
+      )
+      return {
+        ...runtimeKey,
+        token,
+        secret: (token as { key: string }).key,
+      }
+    }
+    return runtimeKey
+  },
 }))
 
-describe("loadAccountTokenFallbackPricingResponse routing", () => {
+const loadAccountRuntimeKeyFallbackPricingResponseFromToken = async (params: {
+  account: any
+  token: any
+}) => {
+  const { loadAccountRuntimeKeyFallbackPricingResponse } = await import(
+    "~/services/modelList/accountSources/tokenScopedFallback"
+  )
+  const account = {
+    ...params.account,
+    name: params.account.name || params.account.id,
+    tagIds: params.account.tagIds ?? [],
+  }
+
+  return loadAccountRuntimeKeyFallbackPricingResponse({
+    account: params.account,
+    runtimeKey: buildAccountTokenRuntimeKey(account, {
+      ...params.token,
+      accountId: params.account.id,
+      accountName: account.name,
+    }),
+  })
+}
+
+describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => {
   beforeEach(() => {
     fetchRuntimeModelsMock.mockReset()
     getAccountSiteModelListProfileMock.mockReset()
@@ -81,19 +121,18 @@ describe("loadAccountTokenFallbackPricingResponse routing", () => {
   })
 
   it("returns runtime model-only rows when a token-scoped route has no dashboard estimate loader", async () => {
-    const { loadAccountTokenFallbackPricingResponse } = await import(
-      "~/services/modelList/accountSources/tokenScopedFallback"
-    )
     fetchRuntimeModelsMock.mockResolvedValueOnce(["runtime-only-model"])
 
-    const result = await loadAccountTokenFallbackPricingResponse({
+    const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
       account: {
         id: "account-1",
+        name: "Account",
         siteType: SITE_TYPES.SUB2API,
         baseUrl: "https://sub2api.example.invalid",
         userId: "1",
         token: "account-token",
         authType: AuthTypeEnum.AccessToken,
+        tagIds: [],
       },
       token: {
         id: 10,
@@ -134,6 +173,48 @@ describe("loadAccountTokenFallbackPricingResponse routing", () => {
           unavailable_reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
         },
       }),
+    ])
+  })
+
+  it("accepts the legacy minimal account shape for token fallback callers", async () => {
+    fetchRuntimeModelsMock.mockResolvedValueOnce(["legacy-minimal-model"])
+
+    const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
+      account: {
+        id: "minimal-account",
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: "https://minimal.example.invalid",
+        userId: "1",
+        token: "account-token",
+        authType: AuthTypeEnum.AccessToken,
+      },
+      token: {
+        id: 11,
+        user_id: 1,
+        key: "sk-minimal-secret",
+        status: 1,
+        name: "Minimal Key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+        models: "",
+      },
+    })
+
+    expect(fetchRuntimeModelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "minimal-account",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          apiKey: "sk-minimal-secret",
+        },
+      }),
+    )
+    expect(result.data.map((model) => model.model_name)).toEqual([
+      "legacy-minimal-model",
     ])
   })
 })
