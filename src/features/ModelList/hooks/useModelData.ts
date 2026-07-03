@@ -22,7 +22,6 @@ import {
 } from "~/services/accounts/accountSiteProfile"
 import {
   canManageDisplayAccountTokens,
-  createDisplayAccountApiContext,
   fetchDisplayAccountRuntimeKeys,
   InvalidTokenPayloadError,
 } from "~/services/accounts/utils/apiServiceRequest"
@@ -33,6 +32,7 @@ import {
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import {
   ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
+  canLoadModelListAccountFallbackRuntimeKeys,
   loadAccountRuntimeKeyFallbackPricingResponse,
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   resolveModelListAccountSourceReadiness,
@@ -435,17 +435,6 @@ function hasValidPricingData(data: PricingResponse) {
   return Array.isArray(data.data)
 }
 
-/** Returns whether fallback loading can use a singleton service credential. */
-function canLoadDisplayAccountFallbackRuntimeKeys(
-  account: DisplaySiteData | null | undefined,
-) {
-  if (!account) return false
-
-  const { keyManagement, serviceCredential } =
-    createDisplayAccountApiContext(account)
-  return Boolean(serviceCredential && !keyManagement)
-}
-
 /** Maps items through async workers while preserving input order. */
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -679,7 +668,7 @@ function useSingleAccountModelData(params: {
   const fallbackAvailable = useMemo(
     () =>
       canManageDisplayAccountTokens(currentAccount) ||
-      canLoadDisplayAccountFallbackRuntimeKeys(currentAccount),
+      canLoadModelListAccountFallbackRuntimeKeys(currentAccount),
     [currentAccount],
   )
 

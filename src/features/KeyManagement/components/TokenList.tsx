@@ -18,7 +18,6 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { cn } from "~/lib/utils"
 import {
-  accountRuntimeKeyToLegacyAccountToken,
   isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -53,6 +52,7 @@ import {
   buildAccountTokenKeyManagementEntry,
   buildServiceCredentialKeyManagementEntry,
   buildTokenIdentityKey,
+  toLegacyAccountTokenForKeyManagementEntry,
 } from "../utils"
 import { BatchCliProxyExportDialog } from "./BatchCliProxyExportDialog"
 import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
@@ -911,11 +911,8 @@ export function TokenList(props: TokenListProps) {
                           )
                         }
 
-                        const token = isAccountTokenRuntimeKey(entry.runtimeKey)
-                          ? entry.runtimeKey.token
-                          : accountRuntimeKeyToLegacyAccountToken(
-                              entry.runtimeKey,
-                            )
+                        const token =
+                          toLegacyAccountTokenForKeyManagementEntry(entry)
                         const tokenIdentityKey = buildTokenIdentityKey(
                           token.accountId,
                           token.id,
@@ -973,9 +970,7 @@ export function TokenList(props: TokenListProps) {
               )
             }
 
-            const token = isAccountTokenRuntimeKey(entry.runtimeKey)
-              ? entry.runtimeKey.token
-              : accountRuntimeKeyToLegacyAccountToken(entry.runtimeKey)
+            const token = toLegacyAccountTokenForKeyManagementEntry(entry)
             const account = accountById.get(token.accountId)
             if (!account) {
               return null

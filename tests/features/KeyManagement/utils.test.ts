@@ -5,14 +5,19 @@ import {
   buildAccountRuntimeKeyEntryIdentityKey,
   buildAccountTokenKeyManagementEntry,
   buildServiceCredentialKeyManagementEntry,
+  buildServiceCredentialManagedSiteStatusTarget,
   buildTokenIdentityKey,
   formatKey,
   formatQuota,
   isManagedSiteStatusIdentityForAccount,
+  loadServiceCredentialKeyManagementRuntimeKey,
+  toLegacyAccountTokenForKeyManagementEntry,
 } from "~/features/KeyManagement/utils"
 import {
+  ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
   ACCOUNT_RUNTIME_KEY_SOURCES,
   ACCOUNT_RUNTIME_KEY_STATUSES,
+  buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
   buildApiToken,
@@ -126,6 +131,67 @@ describe("KeyManagement utils", () => {
       })
     })
 
+    it("loads service-credential runtime keys only when token CRUD is unavailable", async () => {
+      const account = buildDisplaySiteData({
+        id: "account-1",
+        name: "Example Account",
+        baseUrl: "https://new.sharedchat.cc",
+      })
+      const request = {
+        baseUrl: account.baseUrl,
+        accountId: account.id,
+        auth: {
+          authType: account.authType,
+          userId: account.userId,
+          accessToken: account.token,
+          cookie: account.cookieAuthSessionCookie,
+        },
+      }
+      const fetch = vi.fn().mockResolvedValue({
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "service-secret",
+        isAuthenticated: true,
+        baseUrl: "https://codex.example.invalid",
+      })
+      const serviceCredential = { fetch }
+
+      await expect(
+        loadServiceCredentialKeyManagementRuntimeKey({
+          account,
+          keyManagement: { fetchTokens: vi.fn() } as any,
+          serviceCredential,
+          request,
+        }),
+      ).resolves.toBeNull()
+      expect(fetch).not.toHaveBeenCalled()
+
+      await expect(
+        loadServiceCredentialKeyManagementRuntimeKey({
+          account,
+          keyManagement: undefined,
+          serviceCredential,
+          request,
+        }),
+      ).resolves.toEqual({
+        credential: expect.objectContaining({
+          key: "service-secret",
+        }),
+        runtimeKey: expect.objectContaining({
+          id: "service_credential:account-1:codex",
+          source: ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential,
+          baseUrl: "https://codex.example.invalid",
+          capabilities: expect.objectContaining({
+            updateToken: false,
+            deleteToken: false,
+            rotate: false,
+          }),
+        }),
+      })
+      expect(fetch).toHaveBeenCalledWith(request)
+    })
+
     it("matches legacy token and runtime-key status identities by account", () => {
       expect(
         isManagedSiteStatusIdentityForAccount("account-1:42", "account-1"),
@@ -148,6 +214,74 @@ describe("KeyManagement utils", () => {
           "account-1",
         ),
       ).toBe(false)
+    })
+
+    it("converts key-management entries to legacy account tokens at the feature boundary", () => {
+      const account = buildDisplaySiteData({
+        id: "account-1",
+        name: "Example Account",
+      })
+      const entry = buildServiceCredentialKeyManagementEntry({
+        account,
+        serviceCredential: {
+          status: "loaded",
+          credential: {
+            kind: "singleton_service_key",
+            service: "codex",
+            label: "Codex",
+            key: "service-secret",
+            isAuthenticated: true,
+          },
+        },
+        canRotate: true,
+      })
+
+      expect(entry).not.toBeNull()
+      expect(toLegacyAccountTokenForKeyManagementEntry(entry!)).toMatchObject({
+        id: ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
+        accountId: "account-1",
+        accountName: "Example Account",
+        key: "service-secret",
+        name: "Codex",
+        status: 1,
+      })
+    })
+
+    it("builds managed-site status targets for service credentials with runtime-key identity", () => {
+      const account = buildDisplaySiteData({
+        id: "account-1",
+        name: "Example Account",
+        baseUrl: "https://new-api.example.invalid",
+      })
+      const runtimeKey = buildServiceCredentialRuntimeKey(
+        account,
+        {
+          kind: "singleton_service_key",
+          service: "codex",
+          label: "Codex",
+          key: "service-secret",
+          isAuthenticated: true,
+          baseUrl: "https://codex.example.invalid",
+        },
+        { canRotate: true },
+      )
+
+      expect(
+        buildServiceCredentialManagedSiteStatusTarget(account, runtimeKey),
+      ).toMatchObject({
+        identityKey: "runtime_key:service_credential:account-1:codex",
+        account: {
+          id: "account-1",
+          baseUrl: "https://codex.example.invalid",
+        },
+        token: {
+          id: ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
+          accountId: "account-1",
+          accountName: "Example Account",
+          key: "service-secret",
+          name: "Codex",
+        },
+      })
     })
   })
 

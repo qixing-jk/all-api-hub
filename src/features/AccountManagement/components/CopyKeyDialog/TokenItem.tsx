@@ -6,8 +6,11 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
-import { accountRuntimeKeyToLegacyAccountToken } from "~/services/accounts/accountRuntimeKeys"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import {
+  ACCOUNT_RUNTIME_KEY_STATUSES,
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import {
   getGroupBadgeStyle,
@@ -39,7 +42,11 @@ export function TokenItem({
   onOpenCCSwitchDialog,
 }: TokenItemProps) {
   const { t } = useTranslation("ui")
-  const token = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
+  const group = isAccountTokenRuntimeKey(runtimeKey)
+    ? runtimeKey.token.group
+    : ""
+  const status =
+    runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active ? 1 : 2
 
   return (
     <Card variant="interactive" padding="none">
@@ -51,27 +58,27 @@ export function TokenItem({
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1 space-y-1.5">
             <h4 className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900">
-              {token.name}
+              {runtimeKey.label}
             </h4>
             <div className="flex items-center space-x-1.5">
               <UserGroupIcon className="h-3 w-3 text-gray-400 dark:text-gray-500" />
               <Badge
                 variant="outline"
                 size="sm"
-                className={getGroupBadgeStyle(token.group || "")}
+                className={getGroupBadgeStyle(group || "")}
               >
-                {token.group || t("dialog.copyKey.defaultGroup")}
+                {group || t("dialog.copyKey.defaultGroup")}
               </Badge>
             </div>
           </div>
 
           <div className="ml-3 flex items-center space-x-2">
             <Badge
-              variant={token.status === 1 ? "success" : "secondary"}
+              variant={status === 1 ? "success" : "secondary"}
               size="sm"
-              className={getStatusBadgeStyle(token.status)}
+              className={getStatusBadgeStyle(status)}
             >
-              {token.status === 1
+              {status === 1
                 ? t("dialog.copyKey.enabled")
                 : t("dialog.copyKey.disabled")}
             </Badge>

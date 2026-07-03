@@ -8,10 +8,12 @@ import {
 } from "~/services/accounts/accountSiteProfile"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
+  canLoadModelListAccountFallbackRuntimeKeys,
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS,
   resolveModelListAccountSourceReadiness,
 } from "~/services/modelList/accountSources/readiness"
+import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn(),
@@ -23,6 +25,16 @@ const modelPricing = {
 
 const modelCatalog = {
   fetchModels: vi.fn(),
+}
+
+const runtimeKeyFallbackAccount = {
+  id: "sharedchat-account",
+  siteType: SITE_TYPES.SHAREDCHAT,
+  baseUrl: "https://new.sharedchat.cc",
+  authType: AuthTypeEnum.Cookie,
+  userId: "user-1",
+  token: "access-token",
+  cookieAuthSessionCookie: "session=redacted",
 }
 
 describe("resolveModelListAccountSourceReadiness", () => {
@@ -92,6 +104,33 @@ describe("resolveModelListAccountSourceReadiness", () => {
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     })
+  })
+
+  it("exposes whether model-list fallback can load account runtime keys", () => {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.SHAREDCHAT,
+      account: {
+        modelCatalog,
+        serviceCredential: {
+          fetch: vi.fn(),
+        },
+      },
+    } as any)
+
+    expect(
+      canLoadModelListAccountFallbackRuntimeKeys(runtimeKeyFallbackAccount),
+    ).toBe(true)
+
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.SHAREDCHAT,
+      account: {
+        modelCatalog,
+      },
+    } as any)
+
+    expect(
+      canLoadModelListAccountFallbackRuntimeKeys(runtimeKeyFallbackAccount),
+    ).toBe(false)
   })
 
   it("returns missing model-catalog capability for token-scoped profiles without modelCatalog", () => {

@@ -6,11 +6,9 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
-  accountRuntimeKeyToLegacyAccountToken,
   buildServiceCredentialRuntimeKey,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
-  type ServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
   createDisplayAccountApiContext,
@@ -47,8 +45,11 @@ import {
   buildAccountRuntimeKeyEntryIdentityKey,
   buildAccountTokenKeyManagementEntry,
   buildServiceCredentialKeyManagementEntry,
+  buildServiceCredentialManagedSiteStatusTarget,
   buildTokenIdentityKey,
   isManagedSiteStatusIdentityForAccount,
+  loadServiceCredentialKeyManagementRuntimeKey,
+  type ManagedSiteStatusCheckTargetInput,
 } from "../utils"
 
 /**
@@ -171,31 +172,6 @@ type ManagedSiteTokenChannelStatusResult = Awaited<
 
 interface RefreshManagedSiteTokenStatusOptions {
   resolvedChannelKeysById?: Record<number, string>
-}
-
-interface ManagedSiteStatusCheckTargetInput {
-  identityKey: string
-  account: DisplaySiteData
-  token: AccountToken
-}
-
-const buildServiceCredentialManagedSiteStatusTarget = (
-  account: DisplaySiteData,
-  runtimeKey: ServiceCredentialRuntimeKey,
-): ManagedSiteStatusCheckTargetInput => {
-  const statusAccount = {
-    ...account,
-    baseUrl: runtimeKey.baseUrl,
-  }
-
-  return {
-    identityKey: buildAccountRuntimeKeyEntryIdentityKey(runtimeKey.id),
-    account: statusAccount,
-    token: accountRuntimeKeyToLegacyAccountToken({
-      ...runtimeKey,
-      account: statusAccount,
-    }),
-  }
 }
 
 const toDisplayManagedSiteTokenStatusResult = (
@@ -725,19 +701,27 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         const { keyManagement, serviceCredential, request } =
           createDisplayAccountApiContext(account)
 
-        if (!keyManagement && serviceCredential) {
-          setServiceCredentials((prev) => ({
-            ...prev,
-            [accountId]: {
-              status: "loading",
-              credential: prev[accountId]?.credential,
-              errorMessage: undefined,
-              isRotating: false,
+        const serviceCredentialLoad =
+          await loadServiceCredentialKeyManagementRuntimeKey({
+            account,
+            keyManagement,
+            serviceCredential,
+            request: toApiServiceRequest(request),
+            onBeforeFetch: () => {
+              setServiceCredentials((prev) => ({
+                ...prev,
+                [accountId]: {
+                  status: "loading",
+                  credential: prev[accountId]?.credential,
+                  errorMessage: undefined,
+                  isRotating: false,
+                },
+              }))
             },
-          }))
-          const credential = await serviceCredential.fetch(
-            toApiServiceRequest(request),
-          )
+          })
+
+        if (serviceCredentialLoad) {
+          const { credential, runtimeKey } = serviceCredentialLoad
 
           if (!isEpochActive(loadEpoch)) return null
           if (!isLatestAccountRequest(accountId, requestEpoch)) return null
@@ -761,13 +745,6 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             },
           }))
           delete tokenLoadErrorCategoriesRef.current[accountId]
-          const runtimeKey = buildServiceCredentialRuntimeKey(
-            account,
-            credential,
-            {
-              canRotate: typeof serviceCredential.rotate === "function",
-            },
-          )
           void runManagedSiteStatusChecks({
             tokens: [],
             targets: [

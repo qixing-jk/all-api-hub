@@ -7,6 +7,7 @@ import {
   type AccountSiteModelListDisplayCapabilitySource,
   type AccountSiteModelListStatusScope,
 } from "~/services/accounts/accountSiteProfile"
+import { canListAccountRuntimeKeys } from "~/services/accounts/keyProductCapabilities"
 import type { ModelCatalogCapability } from "~/services/apiAdapters/contracts/modelCatalog"
 import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -46,6 +47,10 @@ type ModelListAccountSourceReadiness =
       route: typeof MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported
       reason: ModelListAccountSourceUnsupportedReason
     })
+
+type ModelListAccountRuntimeKeyFallbackContext = Parameters<
+  typeof canListAccountRuntimeKeys
+>[0]
 
 /**
  * Resolves which account-backed model-list source can be used for an account site.
@@ -111,4 +116,18 @@ export function resolveModelListAccountSourceReadiness(account: {
     route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
     reason: MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.NoSupportedRoute,
   }
+}
+
+/**
+ * Returns whether Model List can load fallback catalogs through account runtime keys.
+ */
+export function canLoadModelListAccountFallbackRuntimeKeys(
+  account: ModelListAccountRuntimeKeyFallbackContext,
+): boolean {
+  if (!canListAccountRuntimeKeys(account)) return false
+
+  return (
+    resolveModelListAccountSourceReadiness(account).route ===
+    MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
+  )
 }
