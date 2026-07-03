@@ -12,8 +12,17 @@ import {
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import {
+  collectAccountRuntimeKeySecrets,
+  findDefaultSelectableAccountRuntimeKey,
+  isAccountTokenRuntimeKey,
+  isSelectableAccountRuntimeKey,
+  sortAccountRuntimeKeysActiveFirst,
+  type AccountRuntimeKey,
+  type AccountTokenRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
   fetchDisplayAccountRuntimeKeys,
-  resolveDisplayAccountTokenForSecret,
+  resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
   fetchApiCredentialModelIds,
@@ -48,7 +57,6 @@ import {
   getCliSupportToolLabel,
   translateCliSupportSummary,
 } from "~/services/verification/cliSupportVerification/i18n"
-import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 import { ToolStatusBadge } from "./ToolStatusBadge"
@@ -69,6 +77,13 @@ function isAbortError(error: unknown, abortSignal?: AbortSignal) {
     (error instanceof DOMException && error.name === "AbortError") ||
     (error instanceof Error && error.name === "AbortError")
   )
+}
+
+/**
+ * Keeps optional redaction values type-safe before sanitizing diagnostics.
+ */
+function filterRedactions(values: Array<string | undefined>): string[] {
+  return values.filter((value): value is string => Boolean(value))
 }
 
 /**
@@ -100,11 +115,9 @@ function buildStoppedToolResult(toolId: (typeof CLI_TOOL_IDS)[number]) {
 /**
  * Parse token-provided model metadata into distinct selectable ids.
  */
-function extractTokenModelIds(
-  token: Pick<ApiToken, "models" | "model_limits">,
-) {
+function extractTokenModelIds(runtimeKey: AccountTokenRuntimeKey) {
   return normalizeApiCredentialModelIds(
-    [token.models, token.model_limits]
+    [runtimeKey.token.models, runtimeKey.token.model_limits]
       .filter(
         (value): value is string =>
           typeof value === "string" && value.trim().length > 0,
@@ -133,8 +146,10 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
   const [isRunning, setIsRunning] = useState(false)
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)
-  const [tokens, setTokens] = useState<ApiToken[]>([])
-  const [selectedTokenId, setSelectedTokenId] = useState<string>("")
+  const [accountRuntimeKeys, setAccountRuntimeKeys] = useState<
+    AccountRuntimeKey[]
+  >([])
+  const [selectedRuntimeKeyId, setSelectedRuntimeKeyId] = useState<string>("")
   const [profileModelOptions, setProfileModelOptions] = useState<string[]>([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
@@ -147,26 +162,38 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const fetchModelsAbortControllerRef = useRef<AbortController | null>(null)
   const fetchModelsRequestIdRef = useRef(0)
 
-  const selectedToken = tokens.find(
-    (tok) => tok.id.toString() === selectedTokenId,
+  const selectedRuntimeKey = accountRuntimeKeys.find(
+    (runtimeKey) => runtimeKey.id === selectedRuntimeKeyId,
   )
-  const activeApiKey = profile?.apiKey ?? selectedToken?.key ?? null
-  const hasRunnableSource = isProfileSource ? !!activeApiKey : !!selectedToken
+  const activeApiKey = profile?.apiKey ?? selectedRuntimeKey?.secret ?? null
+  const selectedRuntimeKeyIsRunnable =
+    !!selectedRuntimeKey && isSelectableAccountRuntimeKey(selectedRuntimeKey)
+  const hasRunnableSource = isProfileSource
+    ? !!activeApiKey
+    : selectedRuntimeKeyIsRunnable
   const modelOptions = useMemo(() => {
     if (isProfileSource) return profileModelOptions
-    if (!selectedToken) return []
-    return extractTokenModelIds(selectedToken)
-  }, [isProfileSource, profileModelOptions, selectedToken])
+    if (!selectedRuntimeKey || !isAccountTokenRuntimeKey(selectedRuntimeKey)) {
+      return []
+    }
+    return extractTokenModelIds(selectedRuntimeKey)
+  }, [isProfileSource, profileModelOptions, selectedRuntimeKey])
 
   const tokenModelHint = useMemo(() => {
-    if (!selectedToken || isProfileSource) return ""
+    if (
+      !selectedRuntimeKey ||
+      !isAccountTokenRuntimeKey(selectedRuntimeKey) ||
+      isProfileSource
+    ) {
+      return ""
+    }
     return (
       guessModelIdFromToken({
-        models: selectedToken.models,
-        model_limits: selectedToken.model_limits,
+        models: selectedRuntimeKey.token.models,
+        model_limits: selectedRuntimeKey.token.model_limits,
       }) ?? ""
     )
-  }, [isProfileSource, selectedToken])
+  }, [isProfileSource, selectedRuntimeKey])
 
   const resolvedModelId = (modelId.trim() || tokenModelHint.trim() || "").trim()
 
@@ -194,37 +221,30 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
   const loadTokens = useCallback(async () => {
     if (!account) {
-      setTokens([])
-      setSelectedTokenId("")
+      setAccountRuntimeKeys([])
+      setSelectedRuntimeKeyId("")
       setIsLoadingTokens(false)
       return
     }
 
     setIsLoadingTokens(true)
     try {
-      const accountTokens = await fetchDisplayAccountRuntimeKeys(account)
+      const runtimeKeys = await fetchDisplayAccountRuntimeKeys(account)
 
-      const sorted = [...accountTokens].sort((a, b) => {
-        const aEnabled = a.status === 1 ? 0 : 1
-        const bEnabled = b.status === 1 ? 0 : 1
-        return aEnabled - bEnabled
-      })
+      const sorted = sortAccountRuntimeKeysActiveFirst(runtimeKeys)
 
-      setTokens(sorted)
-      const defaultToken =
-        sorted.find((tok) => tok.status === 1) ?? sorted.at(0) ?? null
-      setSelectedTokenId(defaultToken ? defaultToken.id.toString() : "")
+      setAccountRuntimeKeys(sorted)
+      const defaultToken = findDefaultSelectableAccountRuntimeKey(sorted)
+      setSelectedRuntimeKeyId(defaultToken ? defaultToken.id : "")
     } catch (error) {
       logger.error("Failed to load tokens", {
         message: toSanitizedErrorSummary(
           error,
-          [account.token, account.cookieAuthSessionCookie].filter(
-            Boolean,
-          ) as string[],
+          filterRedactions([account.token, account.cookieAuthSessionCookie]),
         ),
       })
-      setTokens([])
-      setSelectedTokenId("")
+      setAccountRuntimeKeys([])
+      setSelectedRuntimeKeyId("")
     } finally {
       setIsLoadingTokens(false)
     }
@@ -291,13 +311,21 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     if (abortSignal?.aborted || shouldStopRef.current) return null
     if (isProfileSource && !activeApiKey) return null
     const sourceAccount = account
-    const accountToken = selectedToken
+    const accountRuntimeKey = selectedRuntimeKey
 
-    if (!isProfileSource && (!sourceAccount || !accountToken)) return null
+    if (
+      !isProfileSource &&
+      (!sourceAccount ||
+        !accountRuntimeKey ||
+        !isSelectableAccountRuntimeKey(accountRuntimeKey))
+    ) {
+      return null
+    }
 
     if (!resolvedModelId.trim()) return null
 
     let resolvedApiKey = activeApiKey
+    let resolvedBaseUrl = sourceBaseUrl
     const secretsToRedact = new Set<string>(activeApiKey ? [activeApiKey] : [])
     const startedAt = Date.now()
     setTools((prev) =>
@@ -310,11 +338,11 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
     try {
       if (!isProfileSource) {
-        if (!sourceAccount || !accountToken) return null
+        if (!sourceAccount || !accountRuntimeKey) return null
 
-        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
           sourceAccount,
-          accountToken,
+          accountRuntimeKey,
           { abortSignal },
         )
         if (abortSignal?.aborted || shouldStopRef.current) {
@@ -331,12 +359,13 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           )
           return null
         }
-        resolvedApiKey = resolvedToken.key
-        if (accountToken.key) {
-          secretsToRedact.add(accountToken.key)
-        }
-        if (resolvedToken.key) {
-          secretsToRedact.add(resolvedToken.key)
+        resolvedApiKey = resolvedRuntimeKey.secret
+        resolvedBaseUrl = resolvedRuntimeKey.baseUrl
+        for (const secret of collectAccountRuntimeKeySecrets([
+          accountRuntimeKey,
+          resolvedRuntimeKey,
+        ])) {
+          secretsToRedact.add(secret)
         }
       }
 
@@ -344,7 +373,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
       const result = await runCliSupportTool({
         toolId,
-        baseUrl: sourceBaseUrl,
+        baseUrl: resolvedBaseUrl,
         apiKey: resolvedApiKey,
         modelId: resolvedModelId,
         abortSignal,
@@ -421,9 +450,13 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         summaryParams,
         input: {
           toolId,
-          baseUrl: sourceBaseUrl,
+          baseUrl: isProfileSource
+            ? sourceBaseUrl
+            : selectedRuntimeKey?.baseUrl ?? sourceBaseUrl,
           modelId: resolvedModelId,
-          ...(selectedTokenId ? { tokenId: selectedTokenId } : {}),
+          ...(selectedRuntimeKeyId
+            ? { runtimeKeyId: selectedRuntimeKeyId }
+            : {}),
         },
         output: {
           error: sanitizedMessage,
@@ -568,8 +601,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     setProfileModelOptions([])
     setFetchModelsError(null)
     if (isProfileSource) {
-      setTokens([])
-      setSelectedTokenId("")
+      setAccountRuntimeKeys([])
+      setSelectedRuntimeKeyId("")
       setIsLoadingTokens(false)
       void loadProfileModels()
     } else {
@@ -622,13 +655,14 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
               <SearchableSelect
                 options={[
                   { value: "", label: t("verifyDialog.meta.tokenPlaceholder") },
-                  ...tokens.map((tok) => ({
-                    value: tok.id.toString(),
-                    label: tok.name,
+                  ...accountRuntimeKeys.map((runtimeKey) => ({
+                    value: runtimeKey.id,
+                    label: runtimeKey.label,
+                    disabled: !isSelectableAccountRuntimeKey(runtimeKey),
                   })),
                 ]}
-                value={selectedTokenId}
-                onChange={setSelectedTokenId}
+                value={selectedRuntimeKeyId}
+                onChange={setSelectedRuntimeKeyId}
                 disabled={isLoadingTokens}
                 placeholder={t("verifyDialog.meta.tokenPlaceholder")}
               />

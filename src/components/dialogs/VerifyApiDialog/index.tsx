@@ -14,8 +14,16 @@ import {
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import {
+  collectAccountRuntimeKeySecrets,
+  findDefaultSelectableAccountRuntimeKey,
+  isAccountTokenRuntimeKey,
+  isSelectableAccountRuntimeKey,
+  sortAccountRuntimeKeysActiveFirst,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
   fetchDisplayAccountRuntimeKeys,
-  resolveDisplayAccountTokenForSecret,
+  resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
@@ -56,7 +64,6 @@ import {
   createAccountModelVerificationHistoryTarget,
   verificationResultHistoryStorage,
 } from "~/services/verification/verificationResultHistory"
-import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 import { buildProbeState } from "./probeState"
@@ -81,6 +88,13 @@ function isAbortError(error: unknown, abortSignal?: AbortSignal) {
 }
 
 /**
+ * Keeps optional redaction values type-safe before sanitizing diagnostics.
+ */
+function filterRedactions(values: Array<string | undefined>): string[] {
+  return values.filter((value): value is string => Boolean(value))
+}
+
+/**
  * Builds a synthetic result so interrupted probes render as stopped, not failed.
  */
 function buildStoppedProbeResult(
@@ -93,6 +107,26 @@ function buildStoppedProbeResult(
     summary: "Stopped",
     summaryKey: "verifyDialog.summaries.stopped",
   }
+}
+
+/**
+ * Applies model/group limits only to account-token runtime keys.
+ */
+function isRuntimeKeyCompatibleWithModel(
+  runtimeKey: AccountRuntimeKey,
+  options: {
+    hasModelGroupContext: boolean
+    requestedModelId: string
+    modelEnableGroups: VerifyApiDialogProps["modelEnableGroups"]
+  },
+) {
+  if (!isSelectableAccountRuntimeKey(runtimeKey)) return false
+  if (!options.hasModelGroupContext) return true
+  if (!isAccountTokenRuntimeKey(runtimeKey)) return true
+  return isTokenCompatibleWithModel(runtimeKey.token, {
+    id: options.requestedModelId,
+    enableGroups: options.modelEnableGroups,
+  })
 }
 
 /**
@@ -111,8 +145,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
   const [isRunning, setIsRunning] = useState(false)
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)
-  const [tokens, setTokens] = useState<ApiToken[]>([])
-  const [selectedTokenId, setSelectedTokenId] = useState<string>("")
+  const [accountRuntimeKeys, setAccountRuntimeKeys] = useState<
+    AccountRuntimeKey[]
+  >([])
+  const [selectedRuntimeKeyId, setSelectedRuntimeKeyId] = useState<string>("")
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     API_TYPES.OPENAI_COMPATIBLE,
   )
@@ -139,37 +175,42 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     loadVerificationHistory,
   } = useVerificationDialogState(historyTarget)
 
-  const selectedToken = tokens.find(
-    (tok) => tok.id.toString() === selectedTokenId,
+  const selectedRuntimeKey = accountRuntimeKeys.find(
+    (runtimeKey) => runtimeKey.id === selectedRuntimeKeyId,
   )
 
   const requestedModelId = initialModelId?.trim() || modelId.trim()
   const hasModelGroupContext =
     requestedModelId.length > 0 && Array.isArray(modelEnableGroups)
-  const compatibleTokens = useMemo(() => {
-    if (!hasModelGroupContext) return tokens
-    return tokens.filter((token) =>
-      isTokenCompatibleWithModel(token, {
-        id: requestedModelId,
-        enableGroups: modelEnableGroups,
+  const compatibleRuntimeKeys = useMemo(() => {
+    return accountRuntimeKeys.filter((runtimeKey) =>
+      isRuntimeKeyCompatibleWithModel(runtimeKey, {
+        hasModelGroupContext,
+        requestedModelId,
+        modelEnableGroups,
       }),
     )
-  }, [hasModelGroupContext, modelEnableGroups, requestedModelId, tokens])
-  const compatibleTokenIds = useMemo(
-    () => new Set(compatibleTokens.map((token) => token.id)),
-    [compatibleTokens],
+  }, [
+    accountRuntimeKeys,
+    hasModelGroupContext,
+    modelEnableGroups,
+    requestedModelId,
+  ])
+  const compatibleRuntimeKeyIds = useMemo(
+    () => new Set(compatibleRuntimeKeys.map((runtimeKey) => runtimeKey.id)),
+    [compatibleRuntimeKeys],
   )
-  const hasLoadedTokens = !isLoadingTokens && tokens.length > 0
+  const hasLoadedRuntimeKeys = !isLoadingTokens && accountRuntimeKeys.length > 0
   const hasNoCompatibleToken =
-    hasModelGroupContext && hasLoadedTokens && compatibleTokens.length === 0
-  const selectedTokenIsCompatible =
-    !selectedToken ||
-    !hasModelGroupContext ||
-    compatibleTokenIds.has(selectedToken.id)
+    hasModelGroupContext &&
+    hasLoadedRuntimeKeys &&
+    compatibleRuntimeKeys.length === 0
+  const selectedRuntimeKeyIsCompatible =
+    !selectedRuntimeKey || compatibleRuntimeKeyIds.has(selectedRuntimeKey.id)
   const hasIncompatibleSelectedToken =
     hasModelGroupContext &&
-    selectedToken !== undefined &&
-    !selectedTokenIsCompatible
+    selectedRuntimeKey !== undefined &&
+    !selectedRuntimeKeyIsCompatible
   const tokenCompatibilityHint = hasNoCompatibleToken
     ? t("verifyDialog.noCompatibleTokenHint")
     : hasIncompatibleSelectedToken
@@ -177,12 +218,14 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       : null
 
   const tokenModelHint = useMemo(() => {
-    if (!selectedToken) return undefined
+    if (!selectedRuntimeKey || !isAccountTokenRuntimeKey(selectedRuntimeKey)) {
+      return undefined
+    }
     return guessModelIdFromToken({
-      models: selectedToken.models,
-      model_limits: selectedToken.model_limits,
+      models: selectedRuntimeKey.token.models,
+      model_limits: selectedRuntimeKey.token.model_limits,
     })
-  }, [selectedToken])
+  }, [selectedRuntimeKey])
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
   const canClose = !isRunning && !isAnyProbeRunning
@@ -209,41 +252,31 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const loadTokens = async () => {
     setIsLoadingTokens(true)
     try {
-      const accountTokens = await fetchDisplayAccountRuntimeKeys(account)
+      const runtimeKeys = await fetchDisplayAccountRuntimeKeys(account)
 
-      const sorted = [...accountTokens].sort((a, b) => {
-        const aEnabled = a.status === 1 ? 0 : 1
-        const bEnabled = b.status === 1 ? 0 : 1
-        return aEnabled - bEnabled
-      })
+      const sorted = sortAccountRuntimeKeysActiveFirst(runtimeKeys)
 
-      setTokens(sorted)
+      setAccountRuntimeKeys(sorted)
 
-      const defaultToken =
-        sorted.find((tok) => {
-          if (!hasModelGroupContext) return tok.status === 1
-          return isTokenCompatibleWithModel(tok, {
-            id: requestedModelId,
-            enableGroups: modelEnableGroups,
-          })
-        }) ??
-        (hasModelGroupContext
-          ? null
-          : sorted.find((tok) => tok.status === 1)) ??
-        (hasModelGroupContext ? null : sorted.at(0)) ??
-        null
-      setSelectedTokenId(defaultToken ? defaultToken.id.toString() : "")
+      const defaultToken = hasModelGroupContext
+        ? sorted.find((runtimeKey) =>
+            isRuntimeKeyCompatibleWithModel(runtimeKey, {
+              hasModelGroupContext,
+              requestedModelId,
+              modelEnableGroups,
+            }),
+          ) ?? null
+        : findDefaultSelectableAccountRuntimeKey(sorted)
+      setSelectedRuntimeKeyId(defaultToken ? defaultToken.id : "")
     } catch (error) {
       logger.error("Failed to load tokens", {
         message: toSanitizedErrorSummary(
           error,
-          [account.token, account.cookieAuthSessionCookie].filter(
-            Boolean,
-          ) as string[],
+          filterRedactions([account.token, account.cookieAuthSessionCookie]),
         ),
       })
-      setTokens([])
-      setSelectedTokenId("")
+      setAccountRuntimeKeys([])
+      setSelectedRuntimeKeyId("")
     } finally {
       setIsLoadingTokens(false)
     }
@@ -254,8 +287,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     abortSignal?: AbortSignal,
   ) => {
     if (abortSignal?.aborted || shouldStopRef.current) return null
-    if (!selectedToken || !selectedTokenIsCompatible) return null
-    let resolvedToken = selectedToken
+    if (!selectedRuntimeKey || !selectedRuntimeKeyIsCompatible) return null
+    let resolvedRuntimeKey = selectedRuntimeKey
 
     const pendingProbes = probesRef.current.map((probe) =>
       probe.definition.id === probeId
@@ -265,9 +298,9 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     replaceProbes(pendingProbes)
 
     try {
-      resolvedToken = await resolveDisplayAccountTokenForSecret(
+      resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
         account,
-        selectedToken,
+        selectedRuntimeKey,
         { abortSignal },
       )
       if (abortSignal?.aborted || shouldStopRef.current) {
@@ -285,16 +318,18 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         return null
       }
       const result = await runApiVerificationProbe({
-        baseUrl: account.baseUrl,
-        apiKey: resolvedToken.key,
+        baseUrl: resolvedRuntimeKey.baseUrl,
+        apiKey: resolvedRuntimeKey.secret,
         apiType,
         modelId: modelId.trim() || undefined,
-        tokenMeta: {
-          id: resolvedToken.id,
-          name: resolvedToken.name,
-          model_limits: resolvedToken.model_limits,
-          models: resolvedToken.models,
-        },
+        tokenMeta: isAccountTokenRuntimeKey(resolvedRuntimeKey)
+          ? {
+              id: resolvedRuntimeKey.token.id,
+              name: resolvedRuntimeKey.token.name,
+              model_limits: resolvedRuntimeKey.token.model_limits,
+              models: resolvedRuntimeKey.token.models,
+            }
+          : undefined,
         probeId,
         abortSignal,
       })
@@ -344,12 +379,14 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
       const sanitizedMessage = toSanitizedErrorSummary(
         error,
-        [
-          selectedToken.key,
-          resolvedToken.key,
+        filterRedactions([
           account.token,
           account.cookieAuthSessionCookie,
-        ].filter(Boolean) as string[],
+          ...collectAccountRuntimeKeySecrets([
+            selectedRuntimeKey,
+            resolvedRuntimeKey,
+          ]),
+        ]),
       )
       logger.error("Probe failed", {
         probeId,
@@ -390,7 +427,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   }
 
   // The suite can always run the models probe without a model id.
-  const canRunAll = !!selectedToken && selectedTokenIsCompatible
+  const canRunAll = !!selectedRuntimeKey && selectedRuntimeKeyIsCompatible
 
   const runAll = async () => {
     if (!canRunAll) return
@@ -503,8 +540,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     suiteAbortControllerRef.current = null
     probeAbortControllersRef.current.forEach((controller) => controller.abort())
     probeAbortControllersRef.current.clear()
-    setTokens([])
-    setSelectedTokenId("")
+    setAccountRuntimeKeys([])
+    setSelectedRuntimeKeyId("")
     setModelId(trimmedModelId)
     applyPersistedSummary(null)
 
@@ -603,12 +640,13 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             <SearchableSelect
               options={[
                 { value: "", label: t("verifyDialog.meta.tokenPlaceholder") },
-                ...tokens.map((tok) => {
-                  const isCompatible =
-                    !hasModelGroupContext || compatibleTokenIds.has(tok.id)
+                ...accountRuntimeKeys.map((runtimeKey) => {
+                  const isCompatible = compatibleRuntimeKeyIds.has(
+                    runtimeKey.id,
+                  )
                   return {
-                    value: tok.id.toString(),
-                    label: tok.name,
+                    value: runtimeKey.id,
+                    label: runtimeKey.label,
                     disabled: !isCompatible,
                     suffix: isCompatible ? undefined : (
                       <span className="text-xs text-gray-400">
@@ -618,8 +656,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                   }
                 }),
               ]}
-              value={selectedTokenId}
-              onChange={setSelectedTokenId}
+              value={selectedRuntimeKeyId}
+              onChange={setSelectedRuntimeKeyId}
               disabled={isLoadingTokens}
               placeholder={t("verifyDialog.meta.tokenPlaceholder")}
             />
@@ -800,8 +838,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                       isRunning ||
                       isLoadingTokens ||
                       (!probe.isRunning &&
-                        (!selectedToken ||
-                          !selectedTokenIsCompatible ||
+                        (!selectedRuntimeKey ||
+                          !selectedRuntimeKeyIsCompatible ||
                           isDisabledForModel))
                     }
                   >

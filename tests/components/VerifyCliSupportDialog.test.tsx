@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -20,11 +22,23 @@ import {
   within,
 } from "~~/tests/test-utils/render"
 
-const mockFetchAccountTokens = vi.fn()
-const mockFetchApiCredentialModelIds = vi.fn()
-const mockResolveDisplayAccountTokenForSecret = vi.fn()
-const mockStartProductAnalyticsAction = vi.fn()
-const mockCompleteProductAnalyticsAction = vi.fn()
+const {
+  mockFetchAccountTokens,
+  mockFetchDisplayAccountRuntimeKeys,
+  mockFetchApiCredentialModelIds,
+  mockResolveDisplayAccountRuntimeKeySecret,
+  mockResolveDisplayAccountTokenForSecret,
+  mockStartProductAnalyticsAction,
+  mockCompleteProductAnalyticsAction,
+} = vi.hoisted(() => ({
+  mockFetchAccountTokens: vi.fn(),
+  mockFetchDisplayAccountRuntimeKeys: vi.fn(),
+  mockFetchApiCredentialModelIds: vi.fn(),
+  mockResolveDisplayAccountRuntimeKeySecret: vi.fn(),
+  mockResolveDisplayAccountTokenForSecret: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
+}))
 
 function getCliToolCardTestId(toolId: string) {
   return `verify-cli-${toolId}`
@@ -37,6 +51,9 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
+    const runtimeKeyHelpers = await vi.importActual<
+      typeof import("~/services/accounts/accountRuntimeKeys")
+    >("~/services/accounts/accountRuntimeKeys")
 
     return {
       ...actual,
@@ -64,8 +81,68 @@ vi.mock(
         _account: unknown,
         keyManagement: unknown,
       ) => keyManagement,
-      fetchDisplayAccountRuntimeKeys: (...args: any[]) =>
-        mockFetchAccountTokens(...args),
+      fetchDisplayAccountRuntimeKeyTokens: async (...args: any[]) =>
+        (await mockFetchAccountTokens(...args)).map((token: any) =>
+          runtimeKeyHelpers.accountRuntimeKeyToLegacyApiToken(
+            runtimeKeyHelpers.buildAccountTokenRuntimeKey(
+              {
+                ...args[0],
+                name: args[0].name || args[0].id,
+                tagIds: args[0].tagIds ?? [],
+              },
+              {
+                ...token,
+                accountId: args[0].id,
+                accountName: args[0].name || args[0].id,
+              },
+            ),
+          ),
+        ),
+      fetchDisplayAccountRuntimeKeys: async (...args: any[]) => {
+        const runtimeKeys = await mockFetchDisplayAccountRuntimeKeys(...args)
+        if (runtimeKeys !== undefined) return runtimeKeys
+        const [account] = args
+        const tokens = await mockFetchAccountTokens(...args)
+        return tokens.map((token: any) =>
+          runtimeKeyHelpers.buildAccountTokenRuntimeKey(
+            {
+              ...account,
+              name: account.name || account.id,
+              tagIds: account.tagIds ?? [],
+            },
+            {
+              ...token,
+              accountId: account.id,
+              accountName: account.name || account.id,
+            },
+          ),
+        )
+      },
+      resolveDisplayAccountRuntimeKeySecret: async (...args: any[]) => {
+        const resolvedRuntimeKey =
+          await mockResolveDisplayAccountRuntimeKeySecret(...args)
+        if (resolvedRuntimeKey !== undefined) return resolvedRuntimeKey
+
+        const [_account, runtimeKey] = args as [
+          unknown,
+          AccountRuntimeKey,
+          unknown,
+        ]
+        if (!runtimeKeyHelpers.isAccountTokenRuntimeKey(runtimeKey)) {
+          return runtimeKey
+        }
+
+        const resolvedToken = await mockResolveDisplayAccountTokenForSecret(
+          args[0],
+          runtimeKey.token,
+          args[2],
+        )
+        return runtimeKeyHelpers.formatAccountRuntimeKeySecretForSite({
+          ...runtimeKey,
+          token: resolvedToken,
+          secret: resolvedToken.key,
+        })
+      },
       resolveDisplayAccountTokenForSecret: (...args: any[]) =>
         mockResolveDisplayAccountTokenForSecret(...args),
     }
@@ -105,8 +182,12 @@ vi.mock("~/services/verification/cliSupportVerification", () => ({
 describe("VerifyCliSupportDialog", () => {
   beforeEach(() => {
     mockFetchAccountTokens.mockReset()
+    mockFetchDisplayAccountRuntimeKeys.mockReset()
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue(undefined)
     mockFetchApiCredentialModelIds.mockReset()
     mockFetchApiCredentialModelIds.mockResolvedValue([])
+    mockResolveDisplayAccountRuntimeKeySecret.mockReset()
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(undefined)
     mockResolveDisplayAccountTokenForSecret.mockReset()
     mockResolveDisplayAccountTokenForSecret.mockImplementation(
       async (_account, token) => token,
@@ -500,7 +581,7 @@ describe("VerifyCliSupportDialog", () => {
         expect.objectContaining({
           toolId: "claude",
           baseUrl: "https://example.com",
-          apiKey: "secret",
+          apiKey: "sk-secret",
           modelId: "gpt-test",
         }),
       )
@@ -728,7 +809,7 @@ describe("VerifyCliSupportDialog", () => {
         expect.objectContaining({
           toolId: "codex",
           baseUrl: "https://example.com",
-          apiKey: "disabled-secret",
+          apiKey: "sk-disabled-secret",
           modelId: "claude-3-5-sonnet",
         }),
       )
@@ -861,16 +942,168 @@ describe("VerifyCliSupportDialog", () => {
     fireEvent.click(runButton)
 
     await waitFor(() => {
+      expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledTimes(1)
       expect(mockResolveDisplayAccountTokenForSecret).toHaveBeenCalledTimes(1)
       expect(mockRunCliSupportTool).toHaveBeenCalledWith(
         expect.objectContaining({
           toolId: "claude",
           baseUrl: "https://example.com",
-          apiKey: "resolved-secret",
+          apiKey: "sk-resolved-secret",
           modelId: "gpt-test",
         }),
       )
     })
+  })
+
+  it("runs account-mode verification with a service-credential runtime key", async () => {
+    const account = {
+      id: "a1",
+      name: "Account",
+      username: "u",
+      balance: { USD: 0, CNY: 0 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: "healthy" as any },
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://example.invalid",
+      token: "t",
+      userId: "1",
+      authType: "access_token" as any,
+      checkIn: { enableDetection: false } as any,
+      tagIds: [],
+    }
+    const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
+      account,
+      {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "service-secret",
+        isAuthenticated: true,
+        baseUrl: "https://runtime.example.invalid",
+      },
+    )
+    const resolvedRuntimeKey = {
+      ...serviceCredentialRuntimeKey,
+      secret: "resolved-service-secret",
+      credential: {
+        ...serviceCredentialRuntimeKey.credential,
+        key: "resolved-service-secret",
+      },
+    }
+
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([
+      serviceCredentialRuntimeKey,
+    ])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValueOnce(
+      resolvedRuntimeKey,
+    )
+    mockRunCliSupportTool.mockResolvedValueOnce({
+      id: "claude",
+      probeId: "tool-calling",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Supported",
+      summaryKey: "verifyDialog.summaries.supported",
+      input: { foo: 1 },
+      output: { bar: 2 },
+    })
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={account}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
+    const runButton = within(toolCard).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
+    })
+
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
+
+    await waitFor(() => {
+      expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
+        account,
+        serviceCredentialRuntimeKey,
+        { abortSignal: expect.any(AbortSignal) },
+      )
+      expect(mockRunCliSupportTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolId: "claude",
+          baseUrl: "https://runtime.example.invalid",
+          apiKey: "resolved-service-secret",
+          modelId: "gpt-test",
+        }),
+      )
+    })
+    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+  })
+
+  it("keeps account-mode actions disabled for inactive empty service credentials", async () => {
+    const account = {
+      id: "a1",
+      name: "Account",
+      username: "u",
+      balance: { USD: 0, CNY: 0 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: "healthy" as any },
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://example.invalid",
+      token: "t",
+      userId: "1",
+      authType: "access_token" as any,
+      checkIn: { enableDetection: false } as any,
+      tagIds: [],
+    }
+    const emptyServiceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
+      account,
+      {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "",
+        isAuthenticated: false,
+        baseUrl: "https://runtime.example.invalid",
+      },
+    )
+
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([
+      emptyServiceCredentialRuntimeKey,
+    ])
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={account}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByRole("combobox")).toBeEnabled())
+    fireEvent.click(screen.getByRole("combobox"))
+    expect(
+      await screen.findByRole("option", { name: "Codex" }),
+    ).toHaveAttribute("aria-disabled", "true")
+
+    const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
+    const runButton = within(toolCard).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
+    })
+
+    await waitFor(() => expect(runButton).toBeDisabled())
+    fireEvent.click(runButton)
+
+    expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
+    expect(mockRunCliSupportTool).not.toHaveBeenCalled()
   })
 
   it("stops account-mode verification while resolving the full token key", async () => {
