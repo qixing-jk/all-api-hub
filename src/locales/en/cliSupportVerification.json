@@ -12,14 +12,14 @@
       "input": "Input",
       "output": "Output"
     },
-    "idleHint": "Select a token, then run the simulation. Provide a model id if the token cannot be used to infer one.",
+    "idleHint": "Select a key, then run the simulation. Provide a model id if the key cannot be used to infer one.",
     "loadingModelsHint": "Loading models...",
-    "loadingTokensHint": "Loading tokens...",
+    "loadingRuntimeKeysHint": "Loading keys...",
     "meta": {
       "model": "Model",
       "modelPlaceholder": "Enter model id",
-      "token": "Token",
-      "tokenPlaceholder": "Select token"
+      "runtimeKey": "Key",
+      "runtimeKeyPlaceholder": "Select key"
     },
     "modelHint": "Model hint from token: {{modelId}}",
     "modelPickerPlaceholder": "Select or enter model id",
@@ -40,7 +40,7 @@
       "invalidResponse": "Unexpected response format",
       "networkError": "Network error / blocked request",
       "noModelIdProvided": "No model id available",
-      "noRuntimeKeySecret": "No API key is available for this runtime key.",
+      "noRuntimeKeySecret": "No API key is available for the selected key.",
       "noToolCallDetected": "No tool call detected (tool calling may not be supported)",
       "stopped": "Stopped by user.",
       "supported": "Supported",

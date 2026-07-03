@@ -7,9 +7,9 @@ import {
 } from "~/services/accounts/accountRuntimeKeys"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
-  ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
+  ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED,
   loadAccountRuntimeKeyFallbackPricingResponse,
-} from "~/services/modelList/accountSources/tokenScopedFallback"
+} from "~/services/modelList/accountSources/runtimeKeyFallback"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -647,7 +647,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     ])
   })
 
-  it("passes abort signals through token-scoped catalog fallback requests", async () => {
+  it("passes abort signals through runtime-key catalog fallback requests", async () => {
     const abortController = new AbortController()
     resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
       ...TOKEN,
@@ -883,7 +883,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     expect(message).not.toContain("sk-real-secret")
     expect(message).not.toContain("https://example.com")
     expect(message.length).toBeGreaterThan(0)
-    expect(message).not.toBe(ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED)
+    expect(message).not.toBe(ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED)
   })
 
   it("redacts account auth secrets when account-scoped pricing fails", async () => {

@@ -61,7 +61,7 @@
     "idleHint": "將按所選測試項目批量驗證目前篩選模型。",
     "messages": {
       "noApplicableProbes": "目前選擇的測試項目不適用於此模型。",
-      "noCompatibleToken": "未找到相容該模型的可用金鑰。",
+      "noCompatibleRuntimeKey": "未找到相容該模型的可用金鑰。",
       "notSelected": "未選擇此模型，本次批量測試已跳過。",
       "pending": "等待測試",
       "probeSummary_other": "已執行 {{count}} 項，通過 {{pass}}，失敗 {{fail}}，不支援 {{unsupported}}",
@@ -80,6 +80,7 @@
       "label": "測試項目",
       "noneSelected": "請至少選擇一個測試項目。"
     },
+    "runtimeKeyUsed": "金鑰：{{name}}",
     "status": {
       "fail": "失敗",
       "pass": "通過",
@@ -90,7 +91,6 @@
     "subtitle_other": "目前篩選 {{count}} 個模型",
     "summary_other": "已完成 {{completed}} / {{count}}，通過 {{pass}}，失敗 {{fail}}，跳過 {{skipped}}",
     "title": "批量測試模型",
-    "tokenUsed": "金鑰：{{name}}",
     "warning": "批量測試會按每個模型解析後的介面型別執行所選項目；不適用的項目會自動跳過。檢測結果僅供參考，請以工具實際呼叫情況為準。"
   },
   "billingMode": "計費方式",
@@ -137,7 +137,7 @@
       "accountDisabled": "該帳號已被禁用。",
       "missingAuth": "該帳號未配置認證資訊。",
       "missingCredentials": "該帳號缺少必要的憑據。",
-      "readOnlyRuntimeKeys": "此帳號可讀取既有執行階段金鑰，但不支援建立新的 API 金鑰。"
+      "readOnlyRuntimeKeys": "此帳號可讀取既有金鑰，但不支援建立新的 API 金鑰。"
     },
     "keyCopied": "金鑰已複製",
     "loadFailed": "載入金鑰失敗：{{error}}",
@@ -188,8 +188,8 @@
   "realAmount": "真實充值金額",
   "refreshData": "重新整理資料",
   "runtimeKeyFallbackSourceNotice": {
-    "description": "目前模型目錄是透過此帳號既有的執行階段金鑰載入，僅支援模型發現與驗證。此帳號不支援在此建立新的 API 金鑰；點擊重新整理資料會重新嘗試帳號介面。",
-    "title": "執行階段金鑰模型目錄"
+    "description": "目前模型目錄是透過此帳號既有的金鑰載入，僅支援模型發現與驗證。此帳號不支援在此建立新的 API 金鑰；點擊重新整理資料會重新嘗試帳號介面。",
+    "title": "帳號金鑰模型目錄"
   },
   "searchModels": "搜尋模型",
   "searchPlaceholder": "輸入模型名稱或描述...",
@@ -223,11 +223,11 @@
       "noKeysTitle": "找不到可用金鑰",
       "reloadKeys": "重新載入金鑰",
       "retryLoadWithKey": "重試所選金鑰",
+      "runtimeKeysLoadFailedTitle": "載入帳號金鑰失敗",
       "selectHint": "此帳號有多個可用金鑰，請先明確選擇要使用的金鑰。",
       "selectLabel": "用於回退載入的金鑰",
       "selectPlaceholder": "請選擇金鑰",
-      "title": "改用帳號金鑰載入模型",
-      "tokensLoadFailedTitle": "載入帳號金鑰失敗"
+      "title": "改用帳號金鑰載入模型"
     },
     "formatNotStandard": "當前站點的模型資料格式不符合標準，請手動檢視站點定價頁面",
     "genericLoadFailedTitle": "載入模型資料失敗",
@@ -240,10 +240,10 @@
     "profileLoadFailed": "載入該 API 憑據的模型失敗：{{errorMessage}}",
     "profileLoadFailedTitle": "載入該 API 憑據的模型失敗",
     "retryLoad": "重新嘗試載入",
-    "tokenScopedCatalogDescription": "此來源帳號不提供帳號級模型列表。擴充功能會透過該帳號下的 API 密鑰取得實際可用模型。",
-    "tokenScopedCatalogFallbackDescription": "請選擇一個 API 密鑰；如果只有一個可用密鑰，擴充功能會自動使用它載入模型。",
-    "tokenScopedCatalogFallbackTitle": "透過密鑰取得模型",
-    "tokenScopedCatalogTitle": "正在透過 API 密鑰取得模型列表"
+    "runtimeKeyScopedCatalogDescription": "此來源帳號不提供帳號級模型列表。擴充功能會透過該帳號下的 API 密鑰取得實際可用模型。",
+    "runtimeKeyScopedCatalogFallbackDescription": "請選擇一個 API 密鑰；如果只有一個可用密鑰，擴充功能會自動使用它載入模型。",
+    "runtimeKeyScopedCatalogFallbackTitle": "透過密鑰取得模型",
+    "runtimeKeyScopedCatalogTitle": "正在透過 API 密鑰取得模型列表"
   },
   "title": "模型列表",
   "totalModels_other": "總計 {{count}} 個模型",

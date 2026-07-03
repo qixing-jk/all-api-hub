@@ -12,14 +12,18 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiToken, DisplaySiteData } from "~/types"
-import {
-  getGroupBadgeStyle,
-  getStatusBadgeStyle,
-} from "~/utils/core/formatters"
+import { getGroupBadgeStyle } from "~/utils/core/formatters"
 
-import { TokenDetails } from "./TokenDetails"
+import { RuntimeKeyDetails } from "./RuntimeKeyDetails"
 
-interface TokenItemProps {
+const getRuntimeKeyStatusBadgeStyle = (
+  runtimeKey: Pick<AccountRuntimeKey, "status">,
+): string =>
+  runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active
+    ? "bg-green-100 text-green-800 border-green-200"
+    : "bg-red-100 text-red-800 border-red-200"
+
+interface RuntimeKeyItemProps {
   runtimeKey: AccountRuntimeKey
   isExpanded: boolean
   copiedRuntimeKeyId: string | null
@@ -30,9 +34,9 @@ interface TokenItemProps {
 }
 
 /**
- * Collapsible card for a single API token showing group, status, and expanded details.
+ * Collapsible card for a single runtime key showing group, status, and expanded details.
  */
-export function TokenItem({
+export function RuntimeKeyItem({
   runtimeKey,
   isExpanded,
   copiedRuntimeKeyId,
@@ -40,13 +44,12 @@ export function TokenItem({
   onCopyKey,
   account,
   onOpenCCSwitchDialog,
-}: TokenItemProps) {
+}: RuntimeKeyItemProps) {
   const { t } = useTranslation("ui")
   const group = isAccountTokenRuntimeKey(runtimeKey)
     ? runtimeKey.token.group
     : ""
-  const status =
-    runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active ? 1 : 2
+  const isActive = runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active
 
   return (
     <Card variant="interactive" padding="none">
@@ -74,11 +77,11 @@ export function TokenItem({
 
           <div className="ml-3 flex items-center space-x-2">
             <Badge
-              variant={status === 1 ? "success" : "secondary"}
+              variant={isActive ? "success" : "secondary"}
               size="sm"
-              className={getStatusBadgeStyle(status)}
+              className={getRuntimeKeyStatusBadgeStyle(runtimeKey)}
             >
-              {status === 1
+              {isActive
                 ? t("dialog.copyKey.enabled")
                 : t("dialog.copyKey.disabled")}
             </Badge>
@@ -101,7 +104,7 @@ export function TokenItem({
       </CardContent>
 
       {isExpanded && (
-        <TokenDetails
+        <RuntimeKeyDetails
           runtimeKey={runtimeKey}
           copiedRuntimeKeyId={copiedRuntimeKeyId}
           onCopyKey={onCopyKey}

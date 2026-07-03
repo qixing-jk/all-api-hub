@@ -53,7 +53,7 @@ export function StatusIndicator({
   accountFallback,
 }: StatusIndicatorProps) {
   const { t } = useTranslation("modelList")
-  const fallbackTokenSelectId = `model-list-fallback-token-${useId()}`
+  const fallbackRuntimeKeySelectId = `model-list-fallback-runtime-key-${useId()}`
   if (!selectedSource) {
     return (
       <EmptyState
@@ -97,12 +97,12 @@ export function StatusIndicator({
         <div>
           <h4 className="dark:text-dark-text-primary text-sm font-semibold text-gray-900">
             {isKeyScopedStatus
-              ? t("status.tokenScopedCatalogFallbackTitle")
+              ? t("status.runtimeKeyScopedCatalogFallbackTitle")
               : t("status.fallback.title")}
           </h4>
           <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-600">
             {isKeyScopedStatus
-              ? t("status.tokenScopedCatalogFallbackDescription")
+              ? t("status.runtimeKeyScopedCatalogFallbackDescription")
               : t("status.fallback.description")}
           </p>
         </div>
@@ -110,7 +110,7 @@ export function StatusIndicator({
         {accountFallback.runtimeKeyLoadErrorMessage ? (
           <Alert
             variant="destructive"
-            title={t("status.fallback.tokensLoadFailedTitle")}
+            title={t("status.fallback.runtimeKeysLoadFailedTitle")}
             description={accountFallback.runtimeKeyLoadErrorMessage}
           >
             <div className="mt-3">
@@ -168,7 +168,7 @@ export function StatusIndicator({
           <div className="space-y-3">
             <div>
               <label
-                htmlFor={fallbackTokenSelectId}
+                htmlFor={fallbackRuntimeKeySelectId}
                 className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
               >
                 {t("status.fallback.selectLabel")}
@@ -189,7 +189,7 @@ export function StatusIndicator({
                   }
                 >
                   <SelectTrigger
-                    id={fallbackTokenSelectId}
+                    id={fallbackRuntimeKeySelectId}
                     aria-label={t("status.fallback.selectLabel")}
                   >
                     <SelectValue
@@ -256,8 +256,8 @@ export function StatusIndicator({
       <Alert
         variant="info"
         className="mb-6"
-        title={t("status.tokenScopedCatalogTitle")}
-        description={t("status.tokenScopedCatalogDescription")}
+        title={t("status.runtimeKeyScopedCatalogTitle")}
+        description={t("status.runtimeKeyScopedCatalogDescription")}
         aria-live="polite"
       >
         {renderAccountFallbackSection()}

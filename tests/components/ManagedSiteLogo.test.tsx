@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { TokenDetails } from "~/features/AccountManagement/components/CopyKeyDialog/TokenDetails"
+import { RuntimeKeyDetails } from "~/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyDetails"
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
 import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -172,7 +172,7 @@ describe("Managed site logo", () => {
     })
 
     render(
-      <TokenDetails
+      <RuntimeKeyDetails
         runtimeKey={createRuntimeKeyStub()}
         copiedRuntimeKeyId={null}
         onCopyKey={vi.fn()}
@@ -191,7 +191,7 @@ describe("Managed site logo", () => {
     })
 
     render(
-      <TokenDetails
+      <RuntimeKeyDetails
         runtimeKey={createRuntimeKeyStub()}
         copiedRuntimeKeyId={null}
         onCopyKey={vi.fn()}

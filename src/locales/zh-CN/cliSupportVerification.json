@@ -14,12 +14,12 @@
     },
     "idleHint": "请选择密钥后开始验证。如无法从密钥推测模型，请手动填写模型 ID。",
     "loadingModelsHint": "正在加载模型...",
-    "loadingTokensHint": "正在加载密钥...",
+    "loadingRuntimeKeysHint": "正在加载密钥...",
     "meta": {
       "model": "模型",
       "modelPlaceholder": "输入模型 ID",
-      "token": "密钥",
-      "tokenPlaceholder": "选择密钥"
+      "runtimeKey": "密钥",
+      "runtimeKeyPlaceholder": "选择密钥"
     },
     "modelHint": "从密钥推测的模型：{{modelId}}",
     "modelPickerPlaceholder": "选择或输入模型 ID",
@@ -40,7 +40,7 @@
       "invalidResponse": "返回格式不符合预期",
       "networkError": "网络错误 / 请求被阻止",
       "noModelIdProvided": "没有可用的模型 ID",
-      "noRuntimeKeySecret": "当前运行密钥没有可用的 API Key。",
+      "noRuntimeKeySecret": "当前选择的密钥没有可用的 API Key。",
       "noToolCallDetected": "未检测到工具调用（可能不支持 tool/function calling）",
       "stopped": "已停止。",
       "supported": "支持",

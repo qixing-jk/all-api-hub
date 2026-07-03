@@ -1,5 +1,5 @@
 import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import { loadAccountRuntimeKeyFallbackPricingResponse } from "~/services/modelList/accountSources/tokenScopedFallback"
+import { loadAccountRuntimeKeyFallbackPricingResponse } from "~/services/modelList/accountSources/runtimeKeyFallback"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
 export const loadAccountRuntimeKeyFallbackPricingResponseFromToken = (params: {

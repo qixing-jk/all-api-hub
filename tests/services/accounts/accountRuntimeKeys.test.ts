@@ -6,6 +6,7 @@ import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   accountRuntimeKeyToLegacyAccountToken,
   accountRuntimeKeyToLegacyApiToken,
+  appendOrReplaceAccountRuntimeKey,
   buildAccountTokenRuntimeKey,
   buildAccountTokenRuntimeKeyId,
   buildDisplayAccountTokenRuntimeKey,
@@ -326,6 +327,31 @@ describe("accountRuntimeKeys", () => {
     expect(
       findDefaultSelectableAccountRuntimeKey([inactiveServiceRuntimeKey]),
     ).toBeNull()
+  })
+
+  it("appends a new runtime key while replacing an existing key with the same id", () => {
+    const existingRuntimeKey = buildAccountTokenRuntimeKey(account, token)
+    const otherRuntimeKey = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "service-secret",
+      isAuthenticated: true,
+    })
+    const updatedRuntimeKey = buildAccountTokenRuntimeKey(account, {
+      ...token,
+      key: "sk-updated-token-secret",
+    })
+
+    expect(
+      appendOrReplaceAccountRuntimeKey(
+        [existingRuntimeKey, otherRuntimeKey],
+        updatedRuntimeKey,
+      ),
+    ).toEqual([otherRuntimeKey, updatedRuntimeKey])
+    expect(
+      appendOrReplaceAccountRuntimeKey([existingRuntimeKey], otherRuntimeKey),
+    ).toEqual([existingRuntimeKey, otherRuntimeKey])
   })
 
   it("formats account-token runtime key secrets for compatible site auth", () => {

@@ -51,6 +51,18 @@ const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const keyDialogSurface = PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListKeyDialog
 const logger = createLogger("ModelKeyDialog")
 
+const analyticsResultByCreateResult: Record<
+  ModelKeyDialogCreateResult,
+  (typeof PRODUCT_ANALYTICS_RESULTS)[keyof typeof PRODUCT_ANALYTICS_RESULTS]
+> = {
+  success: PRODUCT_ANALYTICS_RESULTS.Success,
+  failure: PRODUCT_ANALYTICS_RESULTS.Failure,
+  skipped: PRODUCT_ANALYTICS_RESULTS.Skipped,
+}
+
+const normalizeModelGroup = (group: unknown) =>
+  typeof group === "string" ? group.trim() : ""
+
 /**
  * Builds a compact label that disambiguates same-named keys across groups.
  */
@@ -64,6 +76,21 @@ function getCompatibleRuntimeKeyLabel(runtimeKey: AccountRuntimeKey) {
       ? runtimeKey.token.group.trim()
       : ""
   return `${runtimeKey.label} · ${group || DEFAULT_MODEL_GROUP}`
+}
+
+/**
+ * Builds the group choices available to the model-compatible key creation flow.
+ */
+function buildCreateGroupOptions(modelEnableGroups?: readonly string[]) {
+  const options = Array.from(
+    new Set(
+      (modelEnableGroups ?? [])
+        .map(normalizeModelGroup)
+        .filter((group) => group.length > 0),
+    ),
+  )
+
+  return options.length > 0 ? options : [DEFAULT_MODEL_GROUP]
 }
 
 /**
@@ -101,22 +128,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   const createGroupSelectId = `model-key-dialog-create-group-${useId()}`
   const compatibleKeySelectId = `model-key-dialog-compatible-key-${useId()}`
 
-  const createGroupOptions = useMemo(() => {
-    const seen = new Set<string>()
-    const options: string[] = []
-    const groups = modelEnableGroups ?? []
-
-    groups
-      .map((group) => (typeof group === "string" ? group.trim() : ""))
-      .filter(Boolean)
-      .forEach((group) => {
-        if (seen.has(group)) return
-        seen.add(group)
-        options.push(group)
-      })
-
-    return options.length > 0 ? options : [DEFAULT_MODEL_GROUP]
-  }, [modelEnableGroups])
+  const createGroupOptions = useMemo(
+    () => buildCreateGroupOptions(modelEnableGroups),
+    [modelEnableGroups],
+  )
 
   const requiresCreateGroupSelection = createGroupOptions.length > 1
 
@@ -151,10 +166,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     isCreating,
     createError,
     oneTimeToken,
-    fetchTokens,
+    fetchRuntimeKeys,
     copySelectedKey,
     createDefaultKey,
-    refreshTokensAfterCreate,
+    refreshRuntimeKeysAfterCreate,
     clearOneTimeToken,
   } = useModelKeyDialog({
     isOpen,
@@ -190,7 +205,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   const handleOpenAddTokenDialog = () => setIsAddTokenDialogOpen(true)
   const handleCloseAddTokenDialog = () => setIsAddTokenDialogOpen(false)
   const handleTokenCreated = async (createdToken?: ApiToken) => {
-    await refreshTokensAfterCreate(createdToken)
+    await refreshRuntimeKeysAfterCreate(createdToken)
   }
   const handleOpenKeysPage = () => {
     void openKeysPage(account.id)
@@ -201,14 +216,14 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   )
   const customCreateTokenRequest =
     buildGroupDefaultTokenRequest(customCreateGroup)
-  const handleRetryFetchTokens = async () => {
+  const handleRetryFetchRuntimeKeys = async () => {
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelKeyCandidates,
       surfaceId: keyDialogSurface,
       entrypoint: optionsEntrypoint,
     })
-    const isLoaded = await fetchTokens()
+    const isLoaded = await fetchRuntimeKeys()
     if (isLoaded) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       return
@@ -226,14 +241,6 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
       entrypoint: optionsEntrypoint,
     })
     const result = await createDefaultKey(group)
-    const analyticsResultByCreateResult: Record<
-      ModelKeyDialogCreateResult,
-      (typeof PRODUCT_ANALYTICS_RESULTS)[keyof typeof PRODUCT_ANALYTICS_RESULTS]
-    > = {
-      success: PRODUCT_ANALYTICS_RESULTS.Success,
-      failure: PRODUCT_ANALYTICS_RESULTS.Failure,
-      skipped: PRODUCT_ANALYTICS_RESULTS.Skipped,
-    }
 
     if (result === "failure") {
       tracker.complete(analyticsResultByCreateResult[result], {
@@ -303,7 +310,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
             <div className="mt-3">
               <Button
                 onClick={() => {
-                  void handleRetryFetchTokens()
+                  void handleRetryFetchRuntimeKeys()
                 }}
                 variant="destructive"
                 size="sm"

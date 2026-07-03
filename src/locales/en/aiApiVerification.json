@@ -27,18 +27,18 @@
       "clear": "Clear history",
       "lastVerified": "Last verified"
     },
-    "idleHint": "Select a token to start verification. Model id is required for model-dependent probes.",
-    "loadingTokensHint": "Loading tokens...",
+    "idleHint": "Select a key to start verification. Model id is required for model-dependent probes.",
+    "loadingRuntimeKeysHint": "Loading keys...",
     "meta": {
       "apiType": "API type",
       "apiTypePlaceholder": "Select API type",
       "model": "Model",
       "modelPlaceholder": "Enter model id",
-      "token": "Token",
-      "tokenIncompatible": "Not available for this model",
-      "tokenPlaceholder": "Select token"
+      "runtimeKey": "Key",
+      "runtimeKeyIncompatible": "Not available for this model",
+      "runtimeKeyPlaceholder": "Select key"
     },
-    "noCompatibleTokenHint": "No token is available for this model's group. Create or choose a token for an enabled group in Key Management.",
+    "noCompatibleRuntimeKeyHint": "No key is available for this model's group. Create or choose a key for an enabled group in Key Management.",
     "notRunYet": "Not run yet",
     "probes": {
       "models": "Models endpoint (/v1/models)",
@@ -48,7 +48,7 @@
       "web-search": "Web search / grounding"
     },
     "requiresModelId": "Enter a model id to run this test.",
-    "selectedTokenIncompatibleHint": "The selected token is not available for this model's group. Choose a compatible token before running verification.",
+    "selectedRuntimeKeyIncompatibleHint": "The selected key is not available for this model's group. Choose a compatible key before running verification.",
     "status": {
       "fail": "Fail",
       "pass": "Pass",

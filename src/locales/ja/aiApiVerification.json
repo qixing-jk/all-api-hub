@@ -27,18 +27,18 @@
       "clear": "履歴をクリア",
       "lastVerified": "前回の検証"
     },
-    "idleHint": "検証を開始するにはトークンを選択してください。モデル依存のプローブにはモデル ID が必要です。",
-    "loadingTokensHint": "トークンを読み込み中...",
+    "idleHint": "検証を開始するにはキーを選択してください。モデル依存のプローブにはモデル ID が必要です。",
+    "loadingRuntimeKeysHint": "キーを読み込み中...",
     "meta": {
       "apiType": "API 種別",
       "apiTypePlaceholder": "API 種別を選択",
       "model": "モデル",
       "modelPlaceholder": "モデル ID を入力",
-      "token": "トークン",
-      "tokenIncompatible": "このモデルでは使用不可",
-      "tokenPlaceholder": "トークンを選択"
+      "runtimeKey": "キー",
+      "runtimeKeyIncompatible": "このモデルでは使用不可",
+      "runtimeKeyPlaceholder": "キーを選択"
     },
-    "noCompatibleTokenHint": "このモデルのグループで使用できるトークンがありません。キー管理で有効なグループのトークンを作成するか選択してください。",
+    "noCompatibleRuntimeKeyHint": "このモデルのグループで使用できるキーがありません。キー管理で有効なグループのキーを作成するか選択してください。",
     "notRunYet": "未実行",
     "probes": {
       "models": "Models エンドポイント (/v1/models)",
@@ -48,7 +48,7 @@
       "web-search": "Web 検索 / grounding"
     },
     "requiresModelId": "このテストを実行するにはモデル ID を入力してください。",
-    "selectedTokenIncompatibleHint": "選択中のトークンはこのモデルのグループでは使用できません。互換性のあるトークンを選択してから検証してください。",
+    "selectedRuntimeKeyIncompatibleHint": "選択中のキーはこのモデルのグループでは使用できません。互換性のあるキーを選択してから検証してください。",
     "status": {
       "fail": "失敗",
       "pass": "成功",

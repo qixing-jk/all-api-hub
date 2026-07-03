@@ -130,7 +130,7 @@ function isRuntimeKeyCompatibleWithModel(
 }
 
 /**
- * Modal dialog that runs API verification for a selected account token + model.
+ * Modal dialog that runs API verification for a selected runtime key + model.
  */
 export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const {
@@ -144,7 +144,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const { t } = useTranslation("aiApiVerification")
 
   const [isRunning, setIsRunning] = useState(false)
-  const [isLoadingTokens, setIsLoadingTokens] = useState(false)
+  const [isLoadingRuntimeKeys, setIsLoadingRuntimeKeys] = useState(false)
   const [accountRuntimeKeys, setAccountRuntimeKeys] = useState<
     AccountRuntimeKey[]
   >([])
@@ -200,21 +200,22 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     () => new Set(compatibleRuntimeKeys.map((runtimeKey) => runtimeKey.id)),
     [compatibleRuntimeKeys],
   )
-  const hasLoadedRuntimeKeys = !isLoadingTokens && accountRuntimeKeys.length > 0
-  const hasNoCompatibleToken =
+  const hasLoadedRuntimeKeys =
+    !isLoadingRuntimeKeys && accountRuntimeKeys.length > 0
+  const hasNoCompatibleRuntimeKey =
     hasModelGroupContext &&
     hasLoadedRuntimeKeys &&
     compatibleRuntimeKeys.length === 0
   const selectedRuntimeKeyIsCompatible =
     !selectedRuntimeKey || compatibleRuntimeKeyIds.has(selectedRuntimeKey.id)
-  const hasIncompatibleSelectedToken =
+  const hasIncompatibleSelectedRuntimeKey =
     hasModelGroupContext &&
     selectedRuntimeKey !== undefined &&
     !selectedRuntimeKeyIsCompatible
-  const tokenCompatibilityHint = hasNoCompatibleToken
-    ? t("verifyDialog.noCompatibleTokenHint")
-    : hasIncompatibleSelectedToken
-      ? t("verifyDialog.selectedTokenIncompatibleHint")
+  const runtimeKeyCompatibilityHint = hasNoCompatibleRuntimeKey
+    ? t("verifyDialog.noCompatibleRuntimeKeyHint")
+    : hasIncompatibleSelectedRuntimeKey
+      ? t("verifyDialog.selectedRuntimeKeyIncompatibleHint")
       : null
 
   const tokenModelHint = useMemo(() => {
@@ -249,8 +250,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     )
   }, [account.baseUrl, account.name, t])
 
-  const loadTokens = async () => {
-    setIsLoadingTokens(true)
+  const loadRuntimeKeys = async () => {
+    setIsLoadingRuntimeKeys(true)
     try {
       const runtimeKeys = await fetchDisplayAccountRuntimeKeys(account)
 
@@ -258,7 +259,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
       setAccountRuntimeKeys(sorted)
 
-      const defaultToken = hasModelGroupContext
+      const defaultRuntimeKey = hasModelGroupContext
         ? sorted.find((runtimeKey) =>
             isRuntimeKeyCompatibleWithModel(runtimeKey, {
               hasModelGroupContext,
@@ -267,9 +268,9 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             }),
           ) ?? null
         : findDefaultSelectableAccountRuntimeKey(sorted)
-      setSelectedRuntimeKeyId(defaultToken ? defaultToken.id : "")
+      setSelectedRuntimeKeyId(defaultRuntimeKey ? defaultRuntimeKey.id : "")
     } catch (error) {
-      logger.error("Failed to load tokens", {
+      logger.error("Failed to load runtime keys", {
         message: toSanitizedErrorSummary(
           error,
           filterRedactions([account.token, account.cookieAuthSessionCookie]),
@@ -278,7 +279,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       setAccountRuntimeKeys([])
       setSelectedRuntimeKeyId("")
     } finally {
-      setIsLoadingTokens(false)
+      setIsLoadingRuntimeKeys(false)
     }
   }
 
@@ -568,7 +569,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       },
     })
 
-    void loadTokens()
+    void loadRuntimeKeys()
 
     return () => {
       cancelled = true
@@ -605,7 +606,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         <Button
           variant={isRunning ? "destructive" : "success"}
           onClick={isRunning ? stopRun : runAll}
-          disabled={!isRunning && (isLoadingTokens || !canRunAll)}
+          disabled={!isRunning && (isLoadingRuntimeKeys || !canRunAll)}
         >
           {isRunning
             ? t("verifyDialog.actions.stop")
@@ -635,11 +636,14 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-              {t("verifyDialog.meta.token")}
+              {t("verifyDialog.meta.runtimeKey")}
             </div>
             <SearchableSelect
               options={[
-                { value: "", label: t("verifyDialog.meta.tokenPlaceholder") },
+                {
+                  value: "",
+                  label: t("verifyDialog.meta.runtimeKeyPlaceholder"),
+                },
                 ...accountRuntimeKeys.map((runtimeKey) => {
                   const isCompatible = compatibleRuntimeKeyIds.has(
                     runtimeKey.id,
@@ -650,7 +654,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                     disabled: !isCompatible,
                     suffix: isCompatible ? undefined : (
                       <span className="text-xs text-gray-400">
-                        {t("verifyDialog.meta.tokenIncompatible")}
+                        {t("verifyDialog.meta.runtimeKeyIncompatible")}
                       </span>
                     ),
                   }
@@ -658,13 +662,13 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               ]}
               value={selectedRuntimeKeyId}
               onChange={setSelectedRuntimeKeyId}
-              disabled={isLoadingTokens}
-              placeholder={t("verifyDialog.meta.tokenPlaceholder")}
+              disabled={isLoadingRuntimeKeys}
+              placeholder={t("verifyDialog.meta.runtimeKeyPlaceholder")}
             />
-            {tokenCompatibilityHint ? (
+            {runtimeKeyCompatibilityHint ? (
               <div className="space-y-1.5">
                 <div className="text-xs text-red-500" role="alert">
-                  {tokenCompatibilityHint}
+                  {runtimeKeyCompatibilityHint}
                 </div>
                 {onManageModelKey ? (
                   <Button
@@ -730,8 +734,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
         {!hasAnyResult && (
           <div className="dark:text-dark-text-secondary text-sm text-gray-600">
-            {isLoadingTokens
-              ? t("verifyDialog.loadingTokensHint")
+            {isLoadingRuntimeKeys
+              ? t("verifyDialog.loadingRuntimeKeysHint")
               : t("verifyDialog.idleHint")}
           </div>
         )}
@@ -836,7 +840,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                     }
                     disabled={
                       isRunning ||
-                      isLoadingTokens ||
+                      isLoadingRuntimeKeys ||
                       (!probe.isRunning &&
                         (!selectedRuntimeKey ||
                           !selectedRuntimeKeyIsCompatible ||

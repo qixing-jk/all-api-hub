@@ -9,9 +9,9 @@ import { Alert, EmptyState } from "~/components/ui"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
-import { TokenItem } from "./TokenItem"
+import { RuntimeKeyItem } from "./RuntimeKeyItem"
 
-interface TokenListProps {
+interface RuntimeKeyListProps {
   runtimeKeys: AccountRuntimeKey[]
   expandedRuntimeKeys: Set<string>
   copiedRuntimeKeyId: string | null
@@ -27,9 +27,9 @@ interface TokenListProps {
 }
 
 /**
- * List view wrapper for TokenItem elements, handling empty states and expansion toggles.
+ * List view wrapper for RuntimeKeyItem elements, handling empty states and expansion toggles.
  */
-export function TokenList({
+export function RuntimeKeyList({
   runtimeKeys,
   expandedRuntimeKeys,
   copiedRuntimeKeyId,
@@ -42,7 +42,7 @@ export function TokenList({
   createError,
   onCreateDefaultKey,
   onOpenAddTokenDialog,
-}: TokenListProps) {
+}: RuntimeKeyListProps) {
   const { t } = useTranslation("ui")
 
   if (!Array.isArray(runtimeKeys) || runtimeKeys.length === 0) {
@@ -91,7 +91,7 @@ export function TokenList({
   return (
     <div className="space-y-3">
       {runtimeKeys.map((runtimeKey) => (
-        <TokenItem
+        <RuntimeKeyItem
           key={runtimeKey.id}
           runtimeKey={runtimeKey}
           isExpanded={expandedRuntimeKeys.has(runtimeKey.id)}

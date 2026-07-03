@@ -63,7 +63,7 @@
     "idleHint": "This will batch-verify the currently filtered models with the selected test items.",
     "messages": {
       "noApplicableProbes": "None of the selected test items apply to this model.",
-      "noCompatibleToken": "No enabled compatible token was found for this model.",
+      "noCompatibleRuntimeKey": "No enabled compatible token was found for this model.",
       "notSelected": "This model was not selected, so it was skipped in this batch run.",
       "pending": "Waiting to test",
       "probeSummary_one": "Ran {{count}} item, passed {{pass}}, failed {{fail}}, unsupported {{unsupported}}",
@@ -84,6 +84,7 @@
       "label": "Test items",
       "noneSelected": "Select at least one test item."
     },
+    "runtimeKeyUsed": "Token: {{name}}",
     "status": {
       "fail": "Fail",
       "pass": "Pass",
@@ -96,7 +97,6 @@
     "summary_one": "Completed {{completed}} / {{count}} model, passed {{pass}}, failed {{fail}}, skipped {{skipped}}",
     "summary_other": "Completed {{completed}} / {{count}} models, passed {{pass}}, failed {{fail}}, skipped {{skipped}}",
     "title": "Batch Test Models",
-    "tokenUsed": "Token: {{name}}",
     "warning": "Batch testing runs the selected items according to each model’s resolved API type. Inapplicable items are skipped automatically. Results are advisory; rely on real tool calls for final confirmation."
   },
   "billingMode": "Billing Mode",
@@ -143,7 +143,7 @@
       "accountDisabled": "This account is disabled.",
       "missingAuth": "This account does not have authentication configured.",
       "missingCredentials": "This account is missing required credentials.",
-      "readOnlyRuntimeKeys": "This account can read existing runtime keys, but it cannot create new API keys."
+      "readOnlyRuntimeKeys": "This account can read existing keys, but it cannot create new API keys."
     },
     "keyCopied": "Key copied",
     "loadFailed": "Failed to load keys: {{error}}",
@@ -194,8 +194,8 @@
   "realAmount": "Real Recharge Amount",
   "refreshData": "Refresh Data",
   "runtimeKeyFallbackSourceNotice": {
-    "description": "This catalog is loaded through an existing runtime key for this account, so it only supports model discovery and verification. This account cannot create new API keys here; Refresh Data will retry the direct account route.",
-    "title": "Runtime-key model catalog"
+    "description": "This catalog is loaded through an existing key for this account, so it only supports model discovery and verification. This account cannot create new API keys here; Refresh Data will retry the direct account route.",
+    "title": "Account key model catalog"
   },
   "searchModels": "Search Models",
   "searchPlaceholder": "Enter model name or description...",
@@ -230,11 +230,11 @@
       "noKeysTitle": "No available keys found",
       "reloadKeys": "Reload keys",
       "retryLoadWithKey": "Retry selected key",
+      "runtimeKeysLoadFailedTitle": "Failed to load account keys",
       "selectHint": "This account has multiple eligible keys. Choose the one you want to use before loading the fallback catalog.",
       "selectLabel": "Key for fallback loading",
       "selectPlaceholder": "Select a key",
-      "title": "Load models with an account key",
-      "tokensLoadFailedTitle": "Failed to load account keys"
+      "title": "Load models with an account key"
     },
     "formatNotStandard": "The model data format of the current site does not meet the standard, please manually check the site pricing page",
     "genericLoadFailedTitle": "Failed to load model data",
@@ -247,10 +247,10 @@
     "profileLoadFailed": "Failed to load models for this API credential: {{errorMessage}}",
     "profileLoadFailedTitle": "Failed to load models for this API credential",
     "retryLoad": "Retry Load",
-    "tokenScopedCatalogDescription": "This source account does not provide an account-level model list. The extension fetches the models available to this account through its API keys.",
-    "tokenScopedCatalogFallbackDescription": "Select an API key. If only one available key exists, the extension will use it automatically.",
-    "tokenScopedCatalogFallbackTitle": "Fetch models through a key",
-    "tokenScopedCatalogTitle": "Fetching the model list through an API key"
+    "runtimeKeyScopedCatalogDescription": "This source account does not provide an account-level model list. The extension fetches the models available to this account through its API keys.",
+    "runtimeKeyScopedCatalogFallbackDescription": "Select an API key. If only one available key exists, the extension will use it automatically.",
+    "runtimeKeyScopedCatalogFallbackTitle": "Fetch models through a key",
+    "runtimeKeyScopedCatalogTitle": "Fetching the model list through an API key"
   },
   "title": "Model List",
   "totalModels_one": "Total {{count}} model",

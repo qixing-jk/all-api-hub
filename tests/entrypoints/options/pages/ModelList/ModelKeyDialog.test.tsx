@@ -230,7 +230,7 @@ describe("ModelKeyDialog", () => {
     })
   })
 
-  it("copies selected key when exactly one compatible token exists", async () => {
+  it("copies selected key when exactly one compatible runtime key exists", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
 
     const user = userEvent.setup()
@@ -322,7 +322,7 @@ describe("ModelKeyDialog", () => {
     expect(screen.getByText("shared key · vip")).toBeInTheDocument()
   })
 
-  it("shows empty state and explicit create actions when no compatible tokens exist", async () => {
+  it("shows empty state and explicit create actions when no compatible runtime keys exist", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
 
     render(
@@ -648,7 +648,7 @@ describe("ModelKeyDialog", () => {
     )
   })
 
-  it("refreshes tokens when default create returns a token-shaped object with an invalid secret", async () => {
+  it("refreshes runtime keys when default create returns a token-shaped object with an invalid secret", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce([
       {
         ...TOKEN,
@@ -752,7 +752,7 @@ describe("ModelKeyDialog", () => {
     )
   })
 
-  it("shows a create error when refreshed inventory has no compatible token", async () => {
+  it("shows a create error when refreshed inventory has no compatible runtime key", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
       .mockResolvedValue([{ ...TOKEN, id: 11, group: "vip" }])
@@ -942,7 +942,7 @@ describe("ModelKeyDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("clears loaded token state when the selected account becomes ineligible", async () => {
+  it("clears loaded runtime-key state when the selected account becomes ineligible", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
 
     const { rerender } = render(
@@ -978,7 +978,7 @@ describe("ModelKeyDialog", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
-  it("ignores stale token fetch completions after the selected account becomes ineligible", async () => {
+  it("ignores stale runtime-key fetch completions after the selected account becomes ineligible", async () => {
     const pendingTokens = createDeferred<(typeof TOKEN)[]>()
     fetchAccountTokensMock.mockReturnValueOnce(pendingTokens.promise)
 
@@ -1019,7 +1019,7 @@ describe("ModelKeyDialog", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
-  it("uses the unknown fallback when token inventory payload is invalid", async () => {
+  it("uses the unknown fallback when runtime-key inventory payload is invalid", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce(null)
 
     render(
@@ -1069,7 +1069,7 @@ describe("ModelKeyDialog", () => {
     )
   })
 
-  it("supports retry when token loading fails", async () => {
+  it("supports retry when runtime-key loading fails", async () => {
     fetchAccountTokensMock
       .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValueOnce([TOKEN])
@@ -1118,7 +1118,7 @@ describe("ModelKeyDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("tracks retry completion when token loading fails again", async () => {
+  it("tracks retry completion when runtime-key loading fails again", async () => {
     fetchAccountTokensMock
       .mockRejectedValueOnce(new Error("first boom"))
       .mockRejectedValueOnce(new Error("retry boom"))

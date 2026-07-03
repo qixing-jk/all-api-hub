@@ -1,6 +1,6 @@
 import { CheckIcon, ClockIcon } from "@heroicons/react/24/outline"
 import { Copy } from "lucide-react"
-import { MouseEvent, useState } from "react"
+import { MouseEvent, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
@@ -15,11 +15,21 @@ import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
+import {
+  createCliProxyExportPayload,
+  createExportAccount,
+  createExportToken,
+} from "~/features/ApiCredentialProfiles/utils/exportShims"
 import {
   accountRuntimeKeyToLegacyAccountToken,
+  isAccountTokenRuntimeKey,
+  isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
+  type ServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
+import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -31,7 +41,9 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
 import {
   formatKeyTime,
@@ -40,7 +52,7 @@ import {
 } from "~/utils/core/formatters"
 import { showResultToast } from "~/utils/core/toastHelpers"
 
-interface TokenDetailsProps {
+interface RuntimeKeyDetailsProps {
   runtimeKey: AccountRuntimeKey
   copiedRuntimeKeyId: string | null
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
@@ -48,16 +60,56 @@ interface TokenDetailsProps {
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
 }
 
+const SECRET_PREVIEW_PREFIX_LENGTH = 16
+const SECRET_PREVIEW_SUFFIX_LENGTH = 6
+const SECRET_PREVIEW_MASK_LENGTH = 6
+
+const getSecretPreviewParts = (secret: string) => {
+  if (secret.length <= SECRET_PREVIEW_PREFIX_LENGTH) {
+    return {
+      prefix: secret,
+      suffix: "",
+    }
+  }
+
+  return {
+    prefix: secret.slice(0, SECRET_PREVIEW_PREFIX_LENGTH),
+    suffix: secret.slice(-SECRET_PREVIEW_SUFFIX_LENGTH),
+  }
+}
+
+const buildServiceCredentialExportProfile = (
+  account: DisplaySiteData,
+  runtimeKey: ServiceCredentialRuntimeKey,
+): ApiCredentialProfile => {
+  const now = Date.now()
+  return {
+    id: `service-credential:${account.id}:${runtimeKey.service}`,
+    name: buildApiCredentialProfileName({
+      accountName: account.name,
+      fallbackAccountName: account.name,
+      tokenName: runtimeKey.label,
+    }),
+    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    baseUrl: runtimeKey.baseUrl,
+    apiKey: runtimeKey.secret,
+    tagIds: account.tagIds ?? [],
+    notes: "",
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
 /**
- * Displays detailed token metadata, quota information, and export actions inside copy key dialog.
+ * Displays detailed runtime key metadata, quota information, and export actions inside copy key dialog.
  */
-export function TokenDetails({
+export function RuntimeKeyDetails({
   runtimeKey,
   copiedRuntimeKeyId,
   onCopyKey,
   account,
   onOpenCCSwitchDialog,
-}: TokenDetailsProps) {
+}: RuntimeKeyDetailsProps) {
   const { t } = useTranslation(["ui", "keyManagement", "settings"])
   const {
     managedSiteType,
@@ -66,14 +118,24 @@ export function TokenDetails({
     cliProxyBaseUrl,
     cliProxyManagementKey,
   } = useUserPreferencesContext()
-  const { openWithAccount } = useChannelDialog()
+  const { openWithAccount, openWithCredentials } = useChannelDialog()
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
-  const token = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
+  const accountToken = isAccountTokenRuntimeKey(runtimeKey)
+    ? runtimeKey.token
+    : null
+  const serviceCredentialProfile = useMemo(
+    () =>
+      isServiceCredentialRuntimeKey(runtimeKey)
+        ? buildServiceCredentialExportProfile(account, runtimeKey)
+        : null,
+    [account, runtimeKey],
+  )
+  const secretPreview = getSecretPreviewParts(runtimeKey.secret)
 
   const handleCopy = (event: MouseEvent) => {
     event.stopPropagation()
@@ -91,14 +153,21 @@ export function TokenDetails({
     })
 
     try {
-      const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
-        account,
-        runtimeKey,
-      )
-      OpenInCherryStudio(
-        account,
-        accountRuntimeKeyToLegacyAccountToken(resolvedRuntimeKey),
-      )
+      if (serviceCredentialProfile) {
+        OpenInCherryStudio(
+          createExportAccount(serviceCredentialProfile),
+          createExportToken(serviceCredentialProfile),
+        )
+      } else {
+        const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
+          account,
+          runtimeKey,
+        )
+        OpenInCherryStudio(
+          account,
+          accountRuntimeKeyToLegacyAccountToken(resolvedRuntimeKey),
+        )
+      }
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -115,7 +184,16 @@ export function TokenDetails({
 
   const handleExportToCCSwitch = (event: MouseEvent) => {
     event.stopPropagation()
-    onOpenCCSwitchDialog?.(token, account)
+    if (serviceCredentialProfile) {
+      onOpenCCSwitchDialog?.(
+        createExportToken(serviceCredentialProfile),
+        createExportAccount(serviceCredentialProfile),
+      )
+      return
+    }
+
+    const legacyToken = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
+    onOpenCCSwitchDialog?.(legacyToken, account)
   }
 
   const handleImportToManagedSite = async (event: MouseEvent) => {
@@ -128,9 +206,27 @@ export function TokenDetails({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
 
-    const result = await openWithAccount(account, token, (result) => {
-      showResultToast(result)
-    })
+    const result = serviceCredentialProfile
+      ? await openWithCredentials(
+          {
+            name: serviceCredentialProfile.name,
+            baseUrl: serviceCredentialProfile.baseUrl,
+            apiKey: serviceCredentialProfile.apiKey,
+          },
+          (channelResult) => {
+            showResultToast(channelResult)
+          },
+          {
+            managedSiteStatus: undefined,
+          },
+        )
+      : await openWithAccount(
+          account,
+          accountRuntimeKeyToLegacyAccountToken(runtimeKey),
+          (channelResult) => {
+            showResultToast(channelResult)
+          },
+        )
 
     if (result.opened || result.deferred) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
@@ -164,63 +260,138 @@ export function TokenDetails({
     setIsClaudeCodeRouterOpen(true)
   }
 
-  return (
-    <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-t border-gray-100 bg-gray-50/30 px-3 pb-3">
+  const renderKiloCodeExportDialog = () => {
+    if (!isKiloCodeDialogOpen) return null
+
+    if (serviceCredentialProfile) {
+      return (
+        <KiloCodeProfileExportDialog
+          isOpen={true}
+          onClose={() => setIsKiloCodeDialogOpen(false)}
+          profile={serviceCredentialProfile}
+        />
+      )
+    }
+
+    if (!accountToken) return null
+
+    return (
       <KiloCodeExportDialog
-        isOpen={isKiloCodeDialogOpen}
+        isOpen={true}
         onClose={() => setIsKiloCodeDialogOpen(false)}
         initialSelectedSiteIds={[account.id]}
-        initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
+        initialSelectedTokenIdsBySite={{
+          [account.id]: [`${accountToken.id}`],
+        }}
       />
+    )
+  }
+
+  const renderClaudeCodeRouterImportDialog = () => {
+    if (!isClaudeCodeRouterOpen) return null
+
+    if (serviceCredentialProfile) {
+      return (
+        <ClaudeCodeRouterImportDialog
+          isOpen={true}
+          onClose={() => setIsClaudeCodeRouterOpen(false)}
+          account={createExportAccount(serviceCredentialProfile)}
+          token={createExportToken(serviceCredentialProfile)}
+          routerBaseUrl={claudeCodeRouterBaseUrl}
+          routerApiKey={claudeCodeRouterApiKey}
+        />
+      )
+    }
+
+    const legacyToken = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
+
+    return (
       <ClaudeCodeRouterImportDialog
-        isOpen={isClaudeCodeRouterOpen}
+        isOpen={true}
         onClose={() => setIsClaudeCodeRouterOpen(false)}
         account={account}
-        token={token}
+        token={legacyToken}
         routerBaseUrl={claudeCodeRouterBaseUrl}
         routerApiKey={claudeCodeRouterApiKey}
       />
+    )
+  }
+
+  const renderCliProxyExportDialog = () => {
+    if (!isCliProxyDialogOpen) return null
+
+    if (serviceCredentialProfile) {
+      const cliProxyPayload = createCliProxyExportPayload(
+        serviceCredentialProfile,
+      )
+
+      return (
+        <CliProxyExportDialog
+          isOpen={true}
+          onClose={() => setIsCliProxyDialogOpen(false)}
+          account={cliProxyPayload.account}
+          token={cliProxyPayload.token}
+          apiTypeHint={cliProxyPayload.apiTypeHint}
+        />
+      )
+    }
+
+    const legacyToken = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
+
+    return (
       <CliProxyExportDialog
-        isOpen={isCliProxyDialogOpen}
+        isOpen={true}
         onClose={() => setIsCliProxyDialogOpen(false)}
         account={account}
-        token={token}
+        token={legacyToken}
       />
-      <div className="dark:text-dark-text-secondary mb-3 flex items-center space-x-1 pt-3 text-xs text-gray-500">
-        <ClockIcon className="h-3 w-3" />
-        <span>
-          {t("dialog.copyKey.expireTime", {
-            time: formatKeyTime(token.expired_time),
-          })}
-        </span>
-      </div>
+    )
+  }
 
-      <div className="mb-3 grid grid-cols-2 gap-2">
-        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary rounded border border-gray-100 bg-white p-2">
-          <div className="dark:text-dark-text-secondary mb-0.5 text-xs text-gray-500">
-            {t("dialog.copyKey.usedQuota")}
+  return (
+    <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-t border-gray-100 bg-gray-50/30 px-3 pb-3">
+      {renderKiloCodeExportDialog()}
+      {renderClaudeCodeRouterImportDialog()}
+      {renderCliProxyExportDialog()}
+      {accountToken ? (
+        <div className="dark:text-dark-text-secondary mb-3 flex items-center space-x-1 pt-3 text-xs text-gray-500">
+          <ClockIcon className="h-3 w-3" />
+          <span>
+            {t("dialog.copyKey.expireTime", {
+              time: formatKeyTime(accountToken.expired_time),
+            })}
+          </span>
+        </div>
+      ) : null}
+
+      {accountToken ? (
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary rounded border border-gray-100 bg-white p-2">
+            <div className="dark:text-dark-text-secondary mb-0.5 text-xs text-gray-500">
+              {t("dialog.copyKey.usedQuota")}
+            </div>
+            <div className="dark:text-dark-text-primary text-sm font-semibold text-gray-900">
+              {formatUsedQuota(accountToken)}
+            </div>
           </div>
-          <div className="dark:text-dark-text-primary text-sm font-semibold text-gray-900">
-            {formatUsedQuota(token)}
+          <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary rounded border border-gray-100 bg-white p-2">
+            <div className="dark:text-dark-text-secondary mb-0.5 text-xs text-gray-500">
+              {t("dialog.copyKey.remainingQuota")}
+            </div>
+            <div
+              className={`text-sm font-semibold ${
+                accountToken.unlimited_quota || accountToken.remain_quota < 0
+                  ? "text-green-600"
+                  : accountToken.remain_quota < 1000000
+                    ? "text-orange-600"
+                    : "dark:text-dark-text-primary text-gray-900"
+              }`}
+            >
+              {formatQuota(accountToken)}
+            </div>
           </div>
         </div>
-        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary rounded border border-gray-100 bg-white p-2">
-          <div className="dark:text-dark-text-secondary mb-0.5 text-xs text-gray-500">
-            {t("dialog.copyKey.remainingQuota")}
-          </div>
-          <div
-            className={`text-sm font-semibold ${
-              token.unlimited_quota || token.remain_quota < 0
-                ? "text-green-600"
-                : token.remain_quota < 1000000
-                  ? "text-orange-600"
-                  : "dark:text-dark-text-primary text-gray-900"
-            }`}
-          >
-            {formatQuota(token)}
-          </div>
-        </div>
-      </div>
+      ) : null}
 
       <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary rounded border border-gray-100 bg-white p-2">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
@@ -303,14 +474,18 @@ export function TokenDetails({
         </div>
         <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary dark:text-dark-text-secondary rounded border border-gray-200 bg-gray-50 px-2 py-1 font-mono text-xs break-all text-gray-700">
           <span className="dark:text-dark-text-primary text-gray-900">
-            {token.key.substring(0, 16)}
+            {secretPreview.prefix}
           </span>
-          <span className="text-gray-400 dark:text-gray-600">
-            {"•".repeat(6)}
-          </span>
-          <span className="dark:text-dark-text-primary text-gray-900">
-            {token.key.substring(token.key.length - 6)}
-          </span>
+          {secretPreview.suffix ? (
+            <>
+              <span className="text-gray-400 dark:text-gray-600">
+                {"•".repeat(SECRET_PREVIEW_MASK_LENGTH)}
+              </span>
+              <span className="dark:text-dark-text-primary text-gray-900">
+                {secretPreview.suffix}
+              </span>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

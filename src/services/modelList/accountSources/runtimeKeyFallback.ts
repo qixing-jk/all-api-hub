@@ -52,8 +52,8 @@ interface LoadAccountRuntimeKeyFallbackPricingParams {
   abortSignal?: AbortSignal
 }
 
-export const ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED =
-  "ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED"
+export const ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED =
+  "ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED"
 
 const createMissingModelCatalogCapabilityError = (siteType: string) =>
   new Error(`modelCatalog is not implemented for ${siteType}`)
@@ -128,7 +128,7 @@ const resolveFallbackRuntimeKeySecret = async (
 }
 
 /**
- * Loads a minimal model catalog for an account token by combining selected-token
+ * Loads a minimal model catalog for a runtime key by combining selected-key
  * visibility with the source account's Model List readiness route.
  */
 export async function loadAccountRuntimeKeyFallbackPricingResponse(
@@ -255,8 +255,11 @@ export async function loadAccountRuntimeKeyFallbackPricingResponse(
       ...resolvedRuntimeKeySecrets,
     ])
 
-    throw new Error(sanitizedMessage || ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED, {
-      cause: error,
-    })
+    throw new Error(
+      sanitizedMessage || ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED,
+      {
+        cause: error,
+      },
+    )
   }
 }

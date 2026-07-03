@@ -63,17 +63,17 @@ describe("StatusIndicator", () => {
     )
 
     expect(
-      await screen.findByText("modelList:status.tokenScopedCatalogTitle"),
+      await screen.findByText("modelList:status.runtimeKeyScopedCatalogTitle"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("modelList:status.tokenScopedCatalogDescription"),
+      screen.getByText("modelList:status.runtimeKeyScopedCatalogDescription"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("modelList:status.tokenScopedCatalogFallbackTitle"),
+      screen.getByText("modelList:status.runtimeKeyScopedCatalogFallbackTitle"),
     ).toBeInTheDocument()
     expect(
       screen.getByText(
-        "modelList:status.tokenScopedCatalogFallbackDescription",
+        "modelList:status.runtimeKeyScopedCatalogFallbackDescription",
       ),
     ).toBeInTheDocument()
     expect(
@@ -115,7 +115,7 @@ describe("StatusIndicator", () => {
     )
 
     expect(
-      await screen.findByText("modelList:status.tokenScopedCatalogTitle"),
+      await screen.findByText("modelList:status.runtimeKeyScopedCatalogTitle"),
     ).toBeInTheDocument()
     expect(
       screen.queryByText("modelList:status.genericLoadFailedTitle"),
@@ -154,7 +154,7 @@ describe("StatusIndicator", () => {
       await screen.findByText("modelList:status.fallback.loadingKeys"),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText("modelList:status.tokenScopedCatalogTitle"),
+      screen.queryByText("modelList:status.runtimeKeyScopedCatalogTitle"),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", {

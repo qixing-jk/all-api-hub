@@ -621,7 +621,7 @@ export function TokenList(props: TokenListProps) {
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId:
-        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountTokensToApiCredentialProfiles,
+        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountRuntimeKeysToApiCredentialProfiles,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementPage,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })

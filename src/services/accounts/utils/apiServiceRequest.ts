@@ -30,6 +30,7 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 const hasNonEmptyString = (value: unknown): value is string =>
@@ -88,6 +89,24 @@ export class InvalidTokenPayloadError extends Error {
     this.responseType = params.responseType
   }
 }
+
+export const getRuntimeKeyInventoryErrorMessage = (
+  error: unknown,
+  invalidPayloadFallback: string,
+) =>
+  error instanceof InvalidTokenPayloadError
+    ? invalidPayloadFallback
+    : getErrorMessage(error)
+
+export const getInvalidTokenPayloadLogContext = (error: unknown) =>
+  error instanceof InvalidTokenPayloadError
+    ? {
+        payloadAccountId: error.accountId,
+        payloadBaseUrl: error.baseUrl,
+        payloadSiteType: error.siteType,
+        payloadResponseType: error.responseType,
+      }
+    : {}
 
 export class StoredAccountApiContextError extends Error {
   readonly code:
@@ -388,14 +407,22 @@ export async function resolveDisplayAccountTokenForSecret<
   const resolutionRequest = options.abortSignal
     ? { ...request, abortSignal: options.abortSignal }
     : request
-  const resolvedKey = keyManagement
-    ? await keyManagement.resolveTokenKey({ request: resolutionRequest, token })
-    : serviceCredential
-      ? (await serviceCredential.fetch(resolutionRequest)).key
-      : await requireDisplayAccountKeyManagement(
-          account,
-          keyManagement,
-        ).resolveTokenKey({ request: resolutionRequest, token })
+  let resolvedKey: string
+
+  if (keyManagement) {
+    resolvedKey = await keyManagement.resolveTokenKey({
+      request: resolutionRequest,
+      token,
+    })
+  } else if (serviceCredential) {
+    resolvedKey = (await serviceCredential.fetch(resolutionRequest)).key
+  } else {
+    resolvedKey = await requireDisplayAccountKeyManagement(
+      account,
+      keyManagement,
+    ).resolveTokenKey({ request: resolutionRequest, token })
+  }
+
   return formatOptionalSkPrefixSiteToken(
     resolvedKey === token.key ? token : { ...token, key: resolvedKey },
     account.siteType,

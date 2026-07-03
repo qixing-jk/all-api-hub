@@ -14,6 +14,8 @@ import {
   createDisplayAccountRequestContext,
   fetchDisplayAccountRuntimeKeys,
   fetchDisplayAccountTokens,
+  getInvalidTokenPayloadLogContext,
+  getRuntimeKeyInventoryErrorMessage,
   InvalidTokenPayloadError,
   resolveDisplayAccountRuntimeKeySecret,
   resolveDisplayAccountTokenForSecret,
@@ -640,6 +642,34 @@ describe("fetchDisplayAccountTokens", () => {
       expect(error.siteType).toBe("new-api")
       expect(error.responseType).toBe("object")
     }
+  })
+
+  it("keeps invalid token payload errors user-safe while exposing diagnostic log context", () => {
+    const error = new InvalidTokenPayloadError({
+      accountId: "account-1",
+      baseUrl: "https://example.com",
+      siteType: "new-api",
+      responseType: "object",
+    })
+
+    expect(getRuntimeKeyInventoryErrorMessage(error, "fallback")).toBe(
+      "fallback",
+    )
+    expect(getInvalidTokenPayloadLogContext(error)).toEqual({
+      payloadAccountId: "account-1",
+      payloadBaseUrl: "https://example.com",
+      payloadSiteType: "new-api",
+      payloadResponseType: "object",
+    })
+  })
+
+  it("preserves ordinary runtime key inventory error messages without payload diagnostics", () => {
+    const error = new Error("network failed")
+
+    expect(getRuntimeKeyInventoryErrorMessage(error, "fallback")).toBe(
+      "network failed",
+    )
+    expect(getInvalidTokenPayloadLogContext(error)).toEqual({})
   })
 
   it("returns the original token object when the resolved secret key is unchanged", async () => {

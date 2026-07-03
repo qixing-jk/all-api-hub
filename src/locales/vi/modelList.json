@@ -61,7 +61,7 @@
     "idleHint": "Sẽ kiểm tra hàng loạt các mô hình đã lọc theo mục kiểm tra đã chọn.",
     "messages": {
       "noApplicableProbes": "Mục kiểm tra hiện tại không áp dụng cho mô hình này.",
-      "noCompatibleToken": "Không tìm thấy khóa khả dụng tương thích với mô hình này.",
+      "noCompatibleRuntimeKey": "Không tìm thấy khóa khả dụng tương thích với mô hình này.",
       "notSelected": "Chưa chọn mô hình này, đã bỏ qua trong lần kiểm tra hàng loạt này.",
       "pending": "Đang chờ kiểm tra",
       "probeSummary_other": "Đã chạy {{count}} mục, thành công {{pass}}, thất bại {{fail}}, không hỗ trợ {{unsupported}}",
@@ -80,6 +80,7 @@
       "label": "Mục kiểm tra",
       "noneSelected": "Vui lòng chọn ít nhất một mục kiểm tra."
     },
+    "runtimeKeyUsed": "Khóa: {{name}}",
     "status": {
       "fail": "Thất bại",
       "pass": "Thành công",
@@ -90,7 +91,6 @@
     "subtitle_other": "Hiện đang lọc {{count}} mô hình",
     "summary_other": "Đã hoàn thành {{completed}} / {{count}}, thành công {{pass}}, thất bại {{fail}}, bỏ qua {{skipped}}",
     "title": "Kiểm tra hàng loạt mô hình",
-    "tokenUsed": "Khóa: {{name}}",
     "warning": "Kiểm tra hàng loạt sẽ thực hiện các mục đã chọn theo loại API đã phân tích cho từng mô hình; các mục không áp dụng sẽ tự động bị bỏ qua. Kết quả kiểm tra chỉ mang tính tham khảo, vui lòng dựa trên tình hình gọi thực tế của công cụ."
   },
   "billingMode": "Phương thức tính phí",
@@ -137,7 +137,7 @@
       "accountDisabled": "Tài khoản này đã bị vô hiệu hóa.",
       "missingAuth": "Tài khoản này chưa được cấu hình thông tin xác thực.",
       "missingCredentials": "Tài khoản này thiếu các thông tin xác thực cần thiết.",
-      "readOnlyRuntimeKeys": "Tài khoản này có thể đọc các khóa runtime hiện có, nhưng không thể tạo khóa API mới."
+      "readOnlyRuntimeKeys": "Tài khoản này có thể đọc các khóa hiện có, nhưng không thể tạo khóa API mới."
     },
     "keyCopied": "Đã sao chép khóa",
     "loadFailed": "Tải khóa thất bại: {{error}}",
@@ -188,8 +188,8 @@
   "realAmount": "Số tiền nạp thực tế",
   "refreshData": "Làm mới dữ liệu",
   "runtimeKeyFallbackSourceNotice": {
-    "description": "Danh mục mô hình hiện tại được tải bằng khóa runtime hiện có của tài khoản này, chỉ hỗ trợ phát hiện và xác minh mô hình. Tài khoản này không thể tạo khóa API mới tại đây; nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
-    "title": "Danh mục mô hình bằng khóa runtime"
+    "description": "Danh mục mô hình hiện tại được tải bằng khóa hiện có của tài khoản này, chỉ hỗ trợ phát hiện và xác minh mô hình. Tài khoản này không thể tạo khóa API mới tại đây; nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
+    "title": "Danh mục mô hình bằng khóa tài khoản"
   },
   "searchModels": "Tìm kiếm mô hình",
   "searchPlaceholder": "Nhập tên hoặc mô tả mô hình...",
@@ -223,11 +223,11 @@
       "noKeysTitle": "Không tìm thấy khóa khả dụng",
       "reloadKeys": "Tải lại khóa",
       "retryLoadWithKey": "Thử lại khóa đã chọn",
+      "runtimeKeysLoadFailedTitle": "Tải khóa tài khoản thất bại",
       "selectHint": "Tài khoản này có nhiều khóa khả dụng, vui lòng chọn rõ ràng khóa bạn muốn sử dụng trước.",
       "selectLabel": "Khóa dùng để tải dự phòng",
       "selectPlaceholder": "Vui lòng chọn khóa",
-      "title": "Chuyển sang sử dụng khóa tài khoản để tải mô hình",
-      "tokensLoadFailedTitle": "Tải khóa tài khoản thất bại"
+      "title": "Chuyển sang sử dụng khóa tài khoản để tải mô hình"
     },
     "formatNotStandard": "Định dạng dữ liệu mô hình của trang web hiện tại không đạt chuẩn, vui lòng xem trang định giá của trang web theo cách thủ công",
     "genericLoadFailedTitle": "Tải dữ liệu mô hình thất bại",
@@ -240,10 +240,10 @@
     "profileLoadFailed": "Tải mô hình của thông tin xác thực API này thất bại: {{errorMessage}}",
     "profileLoadFailedTitle": "Tải mô hình của thông tin xác thực API này thất bại",
     "retryLoad": "Thử tải lại",
-    "tokenScopedCatalogDescription": "Tài khoản nguồn này không cung cấp danh sách mô hình ở cấp tài khoản. Tiện ích sẽ dùng API key của tài khoản này để lấy các mô hình thực sự có thể sử dụng.",
-    "tokenScopedCatalogFallbackDescription": "Chọn một API key. Nếu chỉ có một key khả dụng, tiện ích sẽ tự động dùng key đó để tải mô hình.",
-    "tokenScopedCatalogFallbackTitle": "Lấy mô hình qua key",
-    "tokenScopedCatalogTitle": "Đang lấy danh sách mô hình qua API key"
+    "runtimeKeyScopedCatalogDescription": "Tài khoản nguồn này không cung cấp danh sách mô hình ở cấp tài khoản. Tiện ích sẽ dùng API key của tài khoản này để lấy các mô hình thực sự có thể sử dụng.",
+    "runtimeKeyScopedCatalogFallbackDescription": "Chọn một API key. Nếu chỉ có một key khả dụng, tiện ích sẽ tự động dùng key đó để tải mô hình.",
+    "runtimeKeyScopedCatalogFallbackTitle": "Lấy mô hình qua key",
+    "runtimeKeyScopedCatalogTitle": "Đang lấy danh sách mô hình qua API key"
   },
   "title": "Danh sách mô hình",
   "totalModels_other": "Tổng cộng {{count}} mô hình",

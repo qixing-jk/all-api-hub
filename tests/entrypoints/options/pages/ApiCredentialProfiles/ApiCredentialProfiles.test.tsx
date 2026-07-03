@@ -522,7 +522,7 @@ describe("ApiCredentialProfiles page", () => {
       await screen.findByRole("option", { name: "gpt-4o-mini" }),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText("cliSupportVerification:verifyDialog.meta.token"),
+      screen.queryByText("cliSupportVerification:verifyDialog.meta.runtimeKey"),
     ).not.toBeInTheDocument()
   })
 

@@ -31,7 +31,7 @@ import {
   fetchApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import {
-  ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
+  ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED,
   canLoadModelListAccountFallbackRuntimeKeys,
   loadAccountRuntimeKeyFallbackPricingResponse,
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
@@ -916,7 +916,8 @@ function useSingleAccountModelData(params: {
 
       const errorMessage = getErrorMessage(error)
       const sanitizedMessage =
-        errorMessage && errorMessage !== ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED
+        errorMessage &&
+        errorMessage !== ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED
           ? errorMessage
           : t("status.fallback.loadModelsFailedFallback")
 

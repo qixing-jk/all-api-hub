@@ -24,6 +24,11 @@ export const buildTokenIdentityKey = (accountId: string, tokenId: number) =>
 export const buildAccountRuntimeKeyEntryIdentityKey = (runtimeKeyId: string) =>
   ["runtime_key", runtimeKeyId].join(":")
 
+const buildAccountRuntimeKeyEntryIdentityPrefix = (
+  source: (typeof ACCOUNT_RUNTIME_KEY_SOURCES)[keyof typeof ACCOUNT_RUNTIME_KEY_SOURCES],
+  accountId: string,
+) => buildAccountRuntimeKeyEntryIdentityKey(`${source}:${accountId}:`)
+
 export interface ManagedSiteStatusCheckTargetInput {
   identityKey: string
   account: DisplaySiteData
@@ -36,13 +41,15 @@ export const isManagedSiteStatusIdentityForAccount = (
 ) =>
   identityKey.startsWith(`${accountId}:`) ||
   identityKey.startsWith(
-    buildAccountRuntimeKeyEntryIdentityKey(
-      `${ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken}:${accountId}:`,
+    buildAccountRuntimeKeyEntryIdentityPrefix(
+      ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+      accountId,
     ),
   ) ||
   identityKey.startsWith(
-    buildAccountRuntimeKeyEntryIdentityKey(
-      `${ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential}:${accountId}:`,
+    buildAccountRuntimeKeyEntryIdentityPrefix(
+      ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential,
+      accountId,
     ),
   )
 

@@ -28,17 +28,17 @@
       "lastVerified": "最近验证"
     },
     "idleHint": "请选择密钥开始验证；模型相关探测需要填写模型 ID。",
-    "loadingTokensHint": "正在加载密钥...",
+    "loadingRuntimeKeysHint": "正在加载密钥...",
     "meta": {
       "apiType": "接口类型",
       "apiTypePlaceholder": "选择接口类型",
       "model": "模型",
       "modelPlaceholder": "输入模型 ID",
-      "token": "密钥",
-      "tokenIncompatible": "不适用于该模型",
-      "tokenPlaceholder": "选择密钥"
+      "runtimeKey": "密钥",
+      "runtimeKeyIncompatible": "不适用于该模型",
+      "runtimeKeyPlaceholder": "选择密钥"
     },
-    "noCompatibleTokenHint": "当前没有适用于该模型分组的密钥。请在密钥管理中创建或选择可用分组的密钥。",
+    "noCompatibleRuntimeKeyHint": "当前没有适用于该模型分组的密钥。请在密钥管理中创建或选择可用分组的密钥。",
     "notRunYet": "尚未运行",
     "probes": {
       "models": "模型列表接口 (/v1/models)",
@@ -48,7 +48,7 @@
       "web-search": "联网搜索 / Grounding"
     },
     "requiresModelId": "请输入模型 ID 后运行该测试。",
-    "selectedTokenIncompatibleHint": "当前选择的密钥不适用于该模型分组。请先选择适用的密钥后再测试。",
+    "selectedRuntimeKeyIncompatibleHint": "当前选择的密钥不适用于该模型分组。请先选择适用的密钥后再测试。",
     "status": {
       "fail": "失败",
       "pass": "通过",

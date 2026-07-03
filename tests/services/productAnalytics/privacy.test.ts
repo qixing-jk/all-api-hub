@@ -338,7 +338,7 @@ describe("product analytics privacy filtering", () => {
     },
     {
       actionId:
-        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountTokensToApiCredentialProfiles,
+        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountRuntimeKeysToApiCredentialProfiles,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementPage,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       errorCategory: undefined,

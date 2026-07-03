@@ -156,6 +156,11 @@ export const findDefaultSelectableAccountRuntimeKey = (
   runtimeKeys.find(isAccountTokenRuntimeKey) ??
   null
 
+export const appendOrReplaceAccountRuntimeKey = (
+  runtimeKeys: AccountRuntimeKey[],
+  runtimeKey: AccountRuntimeKey,
+) => [...runtimeKeys.filter(({ id }) => id !== runtimeKey.id), runtimeKey]
+
 const accountTokenStatusToRuntimeKeyStatus = (
   status: AccountToken["status"],
 ): AccountRuntimeKeyStatus => {

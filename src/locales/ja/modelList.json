@@ -61,7 +61,7 @@
     "idleHint": "選択したテスト項目で、現在フィルターされたモデルを一括検証します。",
     "messages": {
       "noApplicableProbes": "選択したテスト項目はこのモデルに適用できません。",
-      "noCompatibleToken": "このモデルに対応する有効なトークンが見つかりません。",
+      "noCompatibleRuntimeKey": "このモデルに対応する有効なトークンが見つかりません。",
       "notSelected": "このモデルは選択されていないため、今回の一括テストではスキップされました。",
       "pending": "テスト待ち",
       "probeSummary_other": "{{count}} 件実行、成功 {{pass}}、失敗 {{fail}}、非対応 {{unsupported}}",
@@ -80,6 +80,7 @@
       "label": "テスト項目",
       "noneSelected": "少なくとも 1 つのテスト項目を選択してください。"
     },
+    "runtimeKeyUsed": "トークン: {{name}}",
     "status": {
       "fail": "失敗",
       "pass": "成功",
@@ -90,7 +91,6 @@
     "subtitle_other": "フィルター済み {{count}} モデル",
     "summary_other": "完了 {{completed}} / {{count}}、成功 {{pass}}、失敗 {{fail}}、スキップ {{skipped}}",
     "title": "モデルを一括テスト",
-    "tokenUsed": "トークン: {{name}}",
     "warning": "一括テストは、各モデルで解決された API 種別に応じて選択項目を実行します。適用できない項目は自動的にスキップされます。結果は参考情報です。最終確認は実際のツール呼び出しで行ってください。"
   },
   "billingMode": "課金方式",
@@ -137,7 +137,7 @@
       "accountDisabled": "このアカウントは無効です。",
       "missingAuth": "このアカウントには認証設定がありません。",
       "missingCredentials": "このアカウントには必要な認証情報が不足しています。",
-      "readOnlyRuntimeKeys": "このアカウントは既存のランタイムキーを読み取れますが、新しい API キーは作成できません。"
+      "readOnlyRuntimeKeys": "このアカウントは既存のキーを読み取れますが、新しい API キーは作成できません。"
     },
     "keyCopied": "キーをコピーしました",
     "loadFailed": "キーの読み込みに失敗しました: {{error}}",
@@ -188,8 +188,8 @@
   "realAmount": "実際のチャージ額",
   "refreshData": "データを更新",
   "runtimeKeyFallbackSourceNotice": {
-    "description": "このカタログは、このアカウントの既存ランタイムキー経由で読み込まれているため、モデル検出と検証のみ利用できます。このアカウントではここから新しい API キーを作成できません。[データを更新] を押すと直接のアカウント経路を再試行します。",
-    "title": "ランタイムキーモデルカタログ"
+    "description": "このカタログは、このアカウントの既存キー経由で読み込まれているため、モデル検出と検証のみ利用できます。このアカウントではここから新しい API キーを作成できません。[データを更新] を押すと直接のアカウント経路を再試行します。",
+    "title": "アカウントキーモデルカタログ"
   },
   "searchModels": "モデルを検索",
   "searchPlaceholder": "モデル名または説明を入力...",
@@ -223,11 +223,11 @@
       "noKeysTitle": "利用可能なキーが見つかりません",
       "reloadKeys": "キーを再読み込み",
       "retryLoadWithKey": "選択したキーで再試行",
+      "runtimeKeysLoadFailedTitle": "アカウントキーの読み込みに失敗しました",
       "selectHint": "このアカウントには利用可能なキーが複数あります。フォールバックカタログを読み込む前に使うキーを選択してください。",
       "selectLabel": "フォールバック読み込みに使うキー",
       "selectPlaceholder": "キーを選択",
-      "title": "アカウントキーでモデルを読み込む",
-      "tokensLoadFailedTitle": "アカウントキーの読み込みに失敗しました"
+      "title": "アカウントキーでモデルを読み込む"
     },
     "formatNotStandard": "現在のサイトのモデルデータ形式は標準仕様に準拠していません。サイトの料金ページを手動で確認してください",
     "genericLoadFailedTitle": "モデルデータの読み込みに失敗しました",
@@ -240,10 +240,10 @@
     "profileLoadFailed": "この API 認証情報のモデル読み込みに失敗しました: {{errorMessage}}",
     "profileLoadFailedTitle": "この API 認証情報のモデル読み込みに失敗しました",
     "retryLoad": "再読み込み",
-    "tokenScopedCatalogDescription": "このソースアカウントはアカウント単位のモデル一覧を提供していません。拡張機能は、このアカウントの API キーを使って実際に利用できるモデルを取得します。",
-    "tokenScopedCatalogFallbackDescription": "API キーを選択してください。利用可能なキーが 1 つだけの場合は、拡張機能が自動的にそのキーでモデルを読み込みます。",
-    "tokenScopedCatalogFallbackTitle": "キーでモデルを取得",
-    "tokenScopedCatalogTitle": "API キーでモデル一覧を取得しています"
+    "runtimeKeyScopedCatalogDescription": "このソースアカウントはアカウント単位のモデル一覧を提供していません。拡張機能は、このアカウントの API キーを使って実際に利用できるモデルを取得します。",
+    "runtimeKeyScopedCatalogFallbackDescription": "API キーを選択してください。利用可能なキーが 1 つだけの場合は、拡張機能が自動的にそのキーでモデルを読み込みます。",
+    "runtimeKeyScopedCatalogFallbackTitle": "キーでモデルを取得",
+    "runtimeKeyScopedCatalogTitle": "API キーでモデル一覧を取得しています"
   },
   "title": "モデル一覧",
   "totalModels_other": "合計 {{count}} モデル",

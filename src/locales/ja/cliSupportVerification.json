@@ -12,14 +12,14 @@
       "input": "入力",
       "output": "出力"
     },
-    "idleHint": "トークンを選択してからシミュレーションを実行してください。トークンからモデルを推定できない場合は、モデル ID を指定してください。",
+    "idleHint": "キーを選択してからシミュレーションを実行してください。キーからモデルを推定できない場合は、モデル ID を指定してください。",
     "loadingModelsHint": "モデルを読み込み中...",
-    "loadingTokensHint": "トークンを読み込み中...",
+    "loadingRuntimeKeysHint": "キーを読み込み中...",
     "meta": {
       "model": "モデル",
       "modelPlaceholder": "モデル ID を入力",
-      "token": "トークン",
-      "tokenPlaceholder": "トークンを選択"
+      "runtimeKey": "キー",
+      "runtimeKeyPlaceholder": "キーを選択"
     },
     "modelHint": "トークンから推定したモデル: {{modelId}}",
     "modelPickerPlaceholder": "モデル ID を選択または入力",
@@ -40,7 +40,7 @@
       "invalidResponse": "予期しない応答形式です",
       "networkError": "ネットワークエラー / リクエストがブロックされました",
       "noModelIdProvided": "利用可能なモデル ID がありません",
-      "noRuntimeKeySecret": "このランタイムキーで利用できる API キーがありません。",
+      "noRuntimeKeySecret": "選択したキーで利用できる API キーがありません。",
       "noToolCallDetected": "ツール呼び出しが検出されませんでした（ツール呼び出し未対応の可能性があります）",
       "stopped": "ユーザーが停止しました。",
       "supported": "対応",

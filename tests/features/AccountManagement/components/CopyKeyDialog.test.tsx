@@ -43,6 +43,14 @@ const {
   toastSuccessMock,
   toastErrorMock,
   createApiCredentialProfileMock,
+  fetchServiceCredentialMock,
+  ccSwitchDialogMock,
+  cliProxyDialogMock,
+  claudeCodeRouterDialogMock,
+  kiloCodeExportDialogMock,
+  kiloCodeProfileExportDialogMock,
+  openWithCredentialsMock,
+  userPreferencesContextMock,
 } = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
   createApiTokenMock: vi.fn(),
@@ -56,6 +64,22 @@ const {
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   createApiCredentialProfileMock: vi.fn(),
+  fetchServiceCredentialMock: vi.fn(),
+  ccSwitchDialogMock: vi.fn(),
+  cliProxyDialogMock: vi.fn(),
+  claudeCodeRouterDialogMock: vi.fn(),
+  kiloCodeExportDialogMock: vi.fn(),
+  kiloCodeProfileExportDialogMock: vi.fn(),
+  openWithCredentialsMock: vi.fn(),
+  userPreferencesContextMock: {
+    claudeCodeRouterApiKey: "ccr-management-key",
+    claudeCodeRouterBaseUrl: "https://router.example.invalid",
+    cliProxyBaseUrl: "https://cliproxy.example.invalid",
+    cliProxyManagementKey: "cliproxy-management-key",
+    managedSiteType: "new-api",
+    themeMode: "system",
+    updateThemeMode: vi.fn(),
+  },
 }))
 
 const normalizeGroupNames = (groups: Record<string, unknown>): string[] =>
@@ -144,27 +168,85 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteTypeCapabilities: () => ({
-    account: {
-      keyManagement: {
-        fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-        createToken: (...args: any[]) => createApiTokenMock(...args),
-        resolveTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
-        deleteToken: vi.fn(),
-        fetchAvailableModels: (...args: any[]) =>
-          fetchAccountAvailableModelsMock(...args),
-        userGroups: {
-          fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+  getSiteTypeCapabilities: (siteType: string) => {
+    if (siteType === SITE_TYPES.SHAREDCHAT) {
+      return {
+        account: {
+          serviceCredential: {
+            fetch: (...args: any[]) => fetchServiceCredentialMock(...args),
+          },
         },
+      }
+    }
+
+    return {
+      account: {
+        keyManagement: {
+          fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+          createToken: (...args: any[]) => createApiTokenMock(...args),
+          resolveTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
+          deleteToken: vi.fn(),
+          fetchAvailableModels: (...args: any[]) =>
+            fetchAccountAvailableModelsMock(...args),
+          userGroups: {
+            fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+          },
+        },
+        tokenProvisioning: createSub2ApiTokenProvisioningMock(),
       },
-      tokenProvisioning: createSub2ApiTokenProvisioningMock(),
-    },
-  }),
+    }
+  },
 }))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
-  useChannelDialog: () => ({ openWithAccount: openWithAccountMock }),
+  useChannelDialog: () => ({
+    openWithAccount: openWithAccountMock,
+    openWithCredentials: openWithCredentialsMock,
+  }),
+}))
+
+vi.mock("~/components/CCSwitchExportDialog", () => ({
+  CCSwitchExportDialog: (props: unknown) => {
+    ccSwitchDialogMock(props)
+    return null
+  },
+}))
+
+vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
+  ClaudeCodeRouterImportDialog: (props: unknown) => {
+    claudeCodeRouterDialogMock(props)
+    return null
+  },
+}))
+
+vi.mock("~/components/CliProxyExportDialog", () => ({
+  CliProxyExportDialog: (props: unknown) => {
+    cliProxyDialogMock(props)
+    return null
+  },
+}))
+
+vi.mock("~/components/KiloCodeExportDialog", () => ({
+  KiloCodeExportDialog: (props: unknown) => {
+    kiloCodeExportDialogMock(props)
+    return null
+  },
+}))
+
+vi.mock(
+  "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog",
+  () => ({
+    KiloCodeProfileExportDialog: (props: unknown) => {
+      kiloCodeProfileExportDialogMock(props)
+      return null
+    },
+  }),
+)
+
+vi.mock("~/contexts/UserPreferencesContext", () => ({
+  UserPreferencesProvider: ({ children }: { children: ReactNode }) => children,
+  useUserPreferencesContext: () => userPreferencesContextMock,
 }))
 
 vi.mock("~/services/integrations/cherryStudio", () => ({
@@ -250,12 +332,57 @@ function createDeferred<T>() {
   return { promise, resolve, reject }
 }
 
+const SHAREDCHAT_SERVICE_CREDENTIAL = {
+  kind: "singleton_service_key" as const,
+  service: "codex" as const,
+  label: "Codex service key",
+  key: "sk-service-credential-secret",
+  isAuthenticated: true,
+  baseUrl: "https://api.example.invalid/v1",
+}
+
+const SHAREDCHAT_ACCOUNT = {
+  ...ACCOUNT,
+  id: "sharedchat-account",
+  name: "SharedChat",
+  siteType: SITE_TYPES.SHAREDCHAT,
+  baseUrl: "https://sharedchat.example.invalid",
+  authType: AuthTypeEnum.Cookie,
+  token: "",
+  cookieAuthSessionCookie: "session=example",
+} as any
+
+async function renderExpandedServiceCredentialDialog() {
+  fetchServiceCredentialMock.mockResolvedValue(SHAREDCHAT_SERVICE_CREDENTIAL)
+
+  const user = userEvent.setup()
+
+  render(
+    <CopyKeyDialog
+      isOpen={true}
+      onClose={() => {}}
+      account={SHAREDCHAT_ACCOUNT}
+    />,
+  )
+
+  await user.click(await screen.findByText("Codex service key"))
+
+  return user
+}
+
 describe("CopyKeyDialog", () => {
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
     fetchAccountAvailableModelsMock.mockReset()
     fetchUserGroupsMock.mockReset()
+    fetchServiceCredentialMock.mockReset()
+    ccSwitchDialogMock.mockReset()
+    cliProxyDialogMock.mockReset()
+    claudeCodeRouterDialogMock.mockReset()
+    kiloCodeExportDialogMock.mockReset()
+    kiloCodeProfileExportDialogMock.mockReset()
+    openWithCredentialsMock.mockReset()
     resolveApiTokenKeyMock.mockReset()
     openInCherryStudioMock.mockReset()
     openWithAccountMock.mockReset()
@@ -287,6 +414,14 @@ describe("CopyKeyDialog", () => {
     )
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
+    openWithCredentialsMock.mockResolvedValue({ opened: true })
+    userPreferencesContextMock.claudeCodeRouterApiKey = "ccr-management-key"
+    userPreferencesContextMock.claudeCodeRouterBaseUrl =
+      "https://router.example.invalid"
+    userPreferencesContextMock.cliProxyBaseUrl =
+      "https://cliproxy.example.invalid"
+    userPreferencesContextMock.cliProxyManagementKey = "cliproxy-management-key"
+    userPreferencesContextMock.managedSiteType = SITE_TYPES.NEW_API
   })
 
   it("creates token then refreshes and auto-copies when exactly one token exists", async () => {
@@ -474,7 +609,7 @@ describe("CopyKeyDialog", () => {
     expect(screen.queryByText("invalid_token_payload")).not.toBeInTheDocument()
   })
 
-  it("shows a load error when the initial token inventory request fails", async () => {
+  it("shows a load error when the initial runtime-key inventory request fails", async () => {
     fetchAccountTokensMock.mockRejectedValueOnce(new Error("load failed"))
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
@@ -484,7 +619,7 @@ describe("CopyKeyDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("shows a load error when the initial token inventory is malformed", async () => {
+  it("shows a load error when the initial runtime-key inventory is malformed", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce(null)
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
@@ -911,6 +1046,156 @@ describe("CopyKeyDialog", () => {
         PRODUCT_ANALYTICS_RESULTS.Success,
       )
     })
+  })
+
+  it("renders service credential details without token-only quota or expiry metadata", async () => {
+    await renderExpandedServiceCredentialDialog()
+
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.exportToKiloCode",
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("sk-service-crede")).toBeInTheDocument()
+    expect(screen.getByText("secret")).toBeInTheDocument()
+    expect(
+      screen.queryByText("ui:dialog.copyKey.expireTime"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("ui:dialog.copyKey.usedQuota"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("ui:dialog.copyKey.remainingQuota"),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("-1")).not.toBeInTheDocument()
+  })
+
+  it("exports service credentials with the credential API base URL", async () => {
+    const user = await renderExpandedServiceCredentialDialog()
+
+    await user.click(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
+    )
+
+    await waitFor(() => {
+      expect(openInCherryStudioMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://api.example.invalid/v1",
+          name: "SharedChat - Codex service key",
+        }),
+        expect.objectContaining({
+          key: "sk-service-credential-secret",
+          name: "SharedChat - Codex service key",
+        }),
+      )
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.copyKey.exportToCCSwitch",
+      }),
+    )
+    await waitFor(() => {
+      expect(ccSwitchDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: expect.objectContaining({
+            baseUrl: "https://api.example.invalid/v1",
+          }),
+          token: expect.objectContaining({
+            key: "sk-service-credential-secret",
+          }),
+        }),
+      )
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToCliProxy",
+      }),
+    )
+    await waitFor(() => {
+      expect(cliProxyDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: expect.objectContaining({
+            baseUrl: "https://api.example.invalid/v1",
+          }),
+          token: expect.objectContaining({
+            key: "sk-service-credential-secret",
+          }),
+          apiTypeHint: API_TYPES.OPENAI_COMPATIBLE,
+        }),
+      )
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToClaudeCodeRouter",
+      }),
+    )
+    await waitFor(() => {
+      expect(claudeCodeRouterDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: expect.objectContaining({
+            baseUrl: "https://api.example.invalid/v1",
+          }),
+          token: expect.objectContaining({
+            key: "sk-service-credential-secret",
+          }),
+          routerApiKey: "ccr-management-key",
+          routerBaseUrl: "https://router.example.invalid",
+        }),
+      )
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    )
+    await waitFor(() => {
+      expect(openWithCredentialsMock).toHaveBeenCalledWith(
+        {
+          name: "SharedChat - Codex service key",
+          baseUrl: "https://api.example.invalid/v1",
+          apiKey: "sk-service-credential-secret",
+        },
+        expect.any(Function),
+        {
+          managedSiteStatus: undefined,
+        },
+      )
+      expect(openWithAccountMock).not.toHaveBeenCalled()
+    })
+  })
+
+  it("opens Kilo Code profile export for service credentials", async () => {
+    const user = await renderExpandedServiceCredentialDialog()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.exportToKiloCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(kiloCodeProfileExportDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          profile: expect.objectContaining({
+            baseUrl: "https://api.example.invalid/v1",
+            apiKey: "sk-service-credential-secret",
+            name: "SharedChat - Codex service key",
+          }),
+        }),
+      )
+    })
+    expect(kiloCodeExportDialogMock).not.toHaveBeenCalled()
   })
 
   it("keeps masked-key copy failures localized to the action and shows the error message", async () => {

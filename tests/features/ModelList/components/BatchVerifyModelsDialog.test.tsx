@@ -409,7 +409,7 @@ describe("BatchVerifyModelsDialog", () => {
       ).length,
     ).toBeGreaterThan(0)
     expect(
-      await screen.findByText("modelList:batchVerify.tokenUsed"),
+      await screen.findByText("modelList:batchVerify.runtimeKeyUsed"),
     ).toBeInTheDocument()
     expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
   })
@@ -1177,7 +1177,7 @@ describe("BatchVerifyModelsDialog", () => {
     })
   })
 
-  it("completes batch verification analytics as skipped when no compatible token exists", async () => {
+  it("completes batch verification analytics as skipped when no compatible runtime key exists", async () => {
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([
       {
         id: 1,
@@ -1352,7 +1352,7 @@ describe("BatchVerifyModelsDialog", () => {
       status: "fail",
       latencyMs: 22,
       summary: "",
-      summaryKey: "verifyDialog.noCompatibleTokenHint",
+      summaryKey: "verifyDialog.noCompatibleRuntimeKeyHint",
     })
 
     renderDialog([
@@ -1375,7 +1375,7 @@ describe("BatchVerifyModelsDialog", () => {
     )
     await waitFor(() => {
       expect(row).toHaveTextContent(
-        "aiApiVerification:verifyDialog.noCompatibleTokenHint",
+        "aiApiVerification:verifyDialog.noCompatibleRuntimeKeyHint",
       )
     })
     expect(row).not.toHaveTextContent(
@@ -1604,7 +1604,7 @@ describe("BatchVerifyModelsDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("skips an account model when no compatible token exists", async () => {
+  it("skips an account model when no compatible runtime key exists", async () => {
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([
       {
         id: 1,
@@ -1635,7 +1635,7 @@ describe("BatchVerifyModelsDialog", () => {
 
     expect(
       await screen.findByText(
-        "modelList:batchVerify.messages.noCompatibleToken",
+        "modelList:batchVerify.messages.noCompatibleRuntimeKey",
       ),
     ).toBeInTheDocument()
     expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
@@ -1732,7 +1732,7 @@ describe("BatchVerifyModelsDialog", () => {
     })
   })
 
-  it("refetches tokens after a failed run when rerunning the batch", async () => {
+  it("refetches runtime keys after a failed run when rerunning the batch", async () => {
     mockFetchDisplayAccountTokens
       .mockRejectedValueOnce(new Error("temporary token failure"))
       .mockResolvedValueOnce([

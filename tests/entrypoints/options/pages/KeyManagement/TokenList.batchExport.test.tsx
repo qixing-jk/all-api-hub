@@ -6,6 +6,12 @@ import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -550,6 +556,13 @@ describe("TokenList batch export selection", () => {
 
     await user.click(saveButton)
 
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountRuntimeKeysToApiCredentialProfiles,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     expect(mockSaveApiCredentialProfiles).toHaveBeenCalledWith(
       expect.objectContaining({
         items: [

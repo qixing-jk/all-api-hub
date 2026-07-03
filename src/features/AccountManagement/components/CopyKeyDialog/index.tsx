@@ -15,7 +15,7 @@ import { DialogFooter } from "./DialogFooter"
 import { DialogHeader } from "./DialogHeader"
 import { ErrorDisplay } from "./ErrorDisplay"
 import { LoadingIndicator } from "./LoadingIndicator"
-import { TokenList } from "./TokenList"
+import { RuntimeKeyList } from "./RuntimeKeyList"
 
 interface CopyKeyDialogProps {
   isOpen: boolean
@@ -50,10 +50,10 @@ export default function CopyKeyDialog({
     copiedRuntimeKeyId,
     expandedRuntimeKeys,
     canCreateDefaultKey,
-    fetchTokens,
+    fetchRuntimeKeys,
     copyKey,
     createDefaultKey,
-    refreshTokensAfterCreate,
+    refreshRuntimeKeysAfterCreate,
     toggleRuntimeKeyExpansion,
     clearDefaultTokenCreateAllowedGroups,
     clearOneTimeToken,
@@ -82,7 +82,7 @@ export default function CopyKeyDialog({
   }
   const handleAddTokenSuccess = (createdToken?: ApiToken) => {
     clearDefaultTokenCreateAllowedGroups()
-    return refreshTokensAfterCreate(createdToken)
+    return refreshRuntimeKeysAfterCreate(createdToken)
   }
 
   useEffect(() => {
@@ -132,13 +132,13 @@ export default function CopyKeyDialog({
       return <LoadingIndicator />
     }
     if (error) {
-      return <ErrorDisplay error={error} onRetry={fetchTokens} />
+      return <ErrorDisplay error={error} onRetry={fetchRuntimeKeys} />
     }
     if (!account) {
       return null
     }
     return (
-      <TokenList
+      <RuntimeKeyList
         runtimeKeys={runtimeKeys}
         expandedRuntimeKeys={expandedRuntimeKeys}
         copiedRuntimeKeyId={copiedRuntimeKeyId}
@@ -163,7 +163,7 @@ export default function CopyKeyDialog({
         panelClassName="max-h-[85vh] overflow-hidden flex flex-col"
         header={<DialogHeader account={account} />}
         footer={
-          <DialogFooter tokenCount={runtimeKeys.length} onClose={onClose} />
+          <DialogFooter keyCount={runtimeKeys.length} onClose={onClose} />
         }
       >
         <div className="flex-1 overflow-y-auto">{renderContent()}</div>

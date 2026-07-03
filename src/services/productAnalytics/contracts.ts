@@ -500,8 +500,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   RetryFailedManagedSiteModelSync: "retry_failed_managed_site_model_sync",
   SaveAccountTokenToApiCredentialProfile:
     "save_account_token_to_api_credential_profile",
-  SaveAccountTokensToApiCredentialProfiles:
-    "save_account_tokens_to_api_credential_profiles",
+  SaveAccountRuntimeKeysToApiCredentialProfiles:
+    "save_account_runtime_keys_to_api_credential_profiles",
   SaveManagedSiteChannelModelFilters: "save_managed_site_channel_model_filters",
   ScanDuplicateAccounts: "scan_duplicate_accounts",
   SearchAccounts: "search_accounts",

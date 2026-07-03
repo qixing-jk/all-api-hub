@@ -61,7 +61,7 @@
     "idleHint": "将按所选测试项目批量验证当前筛选模型。",
     "messages": {
       "noApplicableProbes": "当前选择的测试项目不适用于该模型。",
-      "noCompatibleToken": "未找到兼容该模型的可用密钥。",
+      "noCompatibleRuntimeKey": "未找到兼容该模型的可用密钥。",
       "notSelected": "未选择该模型，本次批量测试已跳过。",
       "pending": "等待测试",
       "probeSummary": "已运行 {{count}} 项，通过 {{pass}}，失败 {{fail}}，不支持 {{unsupported}}",
@@ -80,6 +80,7 @@
       "label": "测试项目",
       "noneSelected": "请至少选择一个测试项目。"
     },
+    "runtimeKeyUsed": "密钥：{{name}}",
     "status": {
       "fail": "失败",
       "pass": "通过",
@@ -90,7 +91,6 @@
     "subtitle": "当前筛选 {{count}} 个模型",
     "summary": "已完成 {{completed}} / {{count}}，通过 {{pass}}，失败 {{fail}}，跳过 {{skipped}}",
     "title": "批量测试模型",
-    "tokenUsed": "密钥：{{name}}",
     "warning": "批量测试会按每个模型解析后的接口类型执行所选项目；不适用的项目会自动跳过。检测结果仅供参考，请以工具实际调用情况为准。"
   },
   "billingMode": "计费方式",
@@ -137,7 +137,7 @@
       "accountDisabled": "该账号已被禁用。",
       "missingAuth": "该账号未配置认证信息。",
       "missingCredentials": "该账号缺少必要的凭据。",
-      "readOnlyRuntimeKeys": "该账号可读取已有运行时密钥，但不支持创建新的 API 密钥。"
+      "readOnlyRuntimeKeys": "该账号可读取已有密钥，但不支持创建新的 API 密钥。"
     },
     "keyCopied": "密钥已复制",
     "loadFailed": "加载密钥失败：{{error}}",
@@ -188,8 +188,8 @@
   "realAmount": "真实充值金额",
   "refreshData": "刷新数据",
   "runtimeKeyFallbackSourceNotice": {
-    "description": "当前模型目录通过该账号已有的运行时密钥加载，仅支持模型发现与验证。该账号不支持在此创建新的 API 密钥；点击刷新数据会重新尝试账号接口。",
-    "title": "运行时密钥模型目录"
+    "description": "当前模型目录通过该账号已有的密钥加载，仅支持模型发现与验证。该账号不支持在此创建新的 API 密钥；点击刷新数据会重新尝试账号接口。",
+    "title": "账号密钥模型目录"
   },
   "searchModels": "搜索模型",
   "searchPlaceholder": "输入模型名称或描述...",
@@ -223,11 +223,11 @@
       "noKeysTitle": "未找到可用密钥",
       "reloadKeys": "重新加载密钥",
       "retryLoadWithKey": "重试所选密钥",
+      "runtimeKeysLoadFailedTitle": "加载账号密钥失败",
       "selectHint": "该账号存在多个可用密钥，请先明确选择要使用的密钥。",
       "selectLabel": "用于回退加载的密钥",
       "selectPlaceholder": "请选择密钥",
-      "title": "改用账号密钥加载模型",
-      "tokensLoadFailedTitle": "加载账号密钥失败"
+      "title": "改用账号密钥加载模型"
     },
     "formatNotStandard": "当前站点的模型数据格式不符合标准，请手动查看站点定价页面",
     "genericLoadFailedTitle": "加载模型数据失败",
@@ -240,10 +240,10 @@
     "profileLoadFailed": "加载该 API 凭据的模型失败：{{errorMessage}}",
     "profileLoadFailedTitle": "加载该 API 凭据的模型失败",
     "retryLoad": "重新尝试加载",
-    "tokenScopedCatalogDescription": "该来源账号不提供账号级模型列表。插件会通过账号下的 API 密钥获取实际可用模型。",
-    "tokenScopedCatalogFallbackDescription": "请选择一个 API 密钥；如果只有一个可用密钥，插件会自动使用它加载模型。",
-    "tokenScopedCatalogFallbackTitle": "通过密钥获取模型",
-    "tokenScopedCatalogTitle": "正在通过 API 密钥获取模型列表"
+    "runtimeKeyScopedCatalogDescription": "该来源账号不提供账号级模型列表。插件会通过账号下的 API 密钥获取实际可用模型。",
+    "runtimeKeyScopedCatalogFallbackDescription": "请选择一个 API 密钥；如果只有一个可用密钥，插件会自动使用它加载模型。",
+    "runtimeKeyScopedCatalogFallbackTitle": "通过密钥获取模型",
+    "runtimeKeyScopedCatalogTitle": "正在通过 API 密钥获取模型列表"
   },
   "title": "模型列表",
   "totalModels": "总计 {{count}} 个模型",

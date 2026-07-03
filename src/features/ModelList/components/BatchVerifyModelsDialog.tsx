@@ -100,7 +100,7 @@ type BatchVerifyRow = {
   latencyMs: number
   summary: string
   results: ApiVerificationProbeResult[]
-  tokenName?: string
+  runtimeKeyName?: string
   errorCategory?: ProductAnalyticsErrorCategory
 }
 
@@ -550,7 +550,7 @@ export function BatchVerifyModelsDialog({
         latencyMs: 0,
         summary: t("modelList:batchVerify.status.running"),
         results: [],
-        tokenName: undefined,
+        runtimeKeyName: undefined,
         errorCategory: undefined,
       })
 
@@ -565,7 +565,7 @@ export function BatchVerifyModelsDialog({
             ? {
                 baseUrl: item.source.profile.baseUrl,
                 apiKey: item.source.profile.apiKey,
-                tokenName: undefined,
+                runtimeKeyName: undefined,
               }
             : await (async () => {
                 if (!isAccountBatchVerifyModelItem(item)) return null
@@ -579,7 +579,7 @@ export function BatchVerifyModelsDialog({
                 )
                 if (!runtimeKey) {
                   const summary = t(
-                    "modelList:batchVerify.messages.noCompatibleToken",
+                    "modelList:batchVerify.messages.noCompatibleRuntimeKey",
                   )
                   updateRow(item.key, {
                     status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
@@ -612,7 +612,7 @@ export function BatchVerifyModelsDialog({
                 return {
                   baseUrl: resolvedRuntimeKey.baseUrl || account.baseUrl,
                   apiKey: resolvedRuntimeKey.secret,
-                  tokenName: runtimeKey.label,
+                  runtimeKeyName: runtimeKey.label,
                   token: resolvedToken,
                 }
               })()
@@ -634,7 +634,7 @@ export function BatchVerifyModelsDialog({
             latencyMs: 0,
             summary: t("modelList:batchVerify.messages.noApplicableProbes"),
             results: [],
-            tokenName: credentials.tokenName,
+            runtimeKeyName: credentials.runtimeKeyName,
           })
           return BATCH_VERIFY_ROW_STATUSES.SKIPPED
         }
@@ -747,7 +747,7 @@ export function BatchVerifyModelsDialog({
             unsupported,
           }),
           results,
-          tokenName: credentials.tokenName,
+          runtimeKeyName: credentials.runtimeKeyName,
           errorCategory,
         })
         return status
@@ -1002,10 +1002,10 @@ export function BatchVerifyModelsDialog({
             <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
               {row.summary || t("modelList:batchVerify.messages.pending")}
             </div>
-            {row.tokenName ? (
+            {row.runtimeKeyName ? (
               <div className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
-                {t("modelList:batchVerify.tokenUsed", {
-                  name: row.tokenName,
+                {t("modelList:batchVerify.runtimeKeyUsed", {
+                  name: row.runtimeKeyName,
                 })}
               </div>
             ) : null}

@@ -28,17 +28,17 @@
       "lastVerified": "最近驗證"
     },
     "idleHint": "請選擇金鑰開始驗證；模型相關探測需要填寫模型 ID。",
-    "loadingTokensHint": "正在載入金鑰...",
+    "loadingRuntimeKeysHint": "正在載入金鑰...",
     "meta": {
       "apiType": "介面型別",
       "apiTypePlaceholder": "選擇介面型別",
       "model": "模型",
       "modelPlaceholder": "輸入模型 ID",
-      "token": "金鑰",
-      "tokenIncompatible": "不適用於此模型",
-      "tokenPlaceholder": "選擇金鑰"
+      "runtimeKey": "金鑰",
+      "runtimeKeyIncompatible": "不適用於此模型",
+      "runtimeKeyPlaceholder": "選擇金鑰"
     },
-    "noCompatibleTokenHint": "目前沒有適用於此模型分組的金鑰。請在金鑰管理中建立或選擇可用分組的金鑰。",
+    "noCompatibleRuntimeKeyHint": "目前沒有適用於此模型分組的金鑰。請在金鑰管理中建立或選擇可用分組的金鑰。",
     "notRunYet": "尚未執行",
     "probes": {
       "models": "模型列表介面 (/v1/models)",
@@ -48,7 +48,7 @@
       "web-search": "聯網搜尋 / Grounding"
     },
     "requiresModelId": "請輸入模型 ID 後執行該測試。",
-    "selectedTokenIncompatibleHint": "目前選擇的金鑰不適用於此模型分組。請先選擇適用的金鑰後再測試。",
+    "selectedRuntimeKeyIncompatibleHint": "目前選擇的金鑰不適用於此模型分組。請先選擇適用的金鑰後再測試。",
     "status": {
       "fail": "失敗",
       "pass": "透過",
@@ -61,6 +61,7 @@
       "forbidden": "禁止訪問（403）：訪問被拒絕",
       "httpError": "HTTP 錯誤（{{status}}）",
       "modelsFetched": "成功獲取 {{count}} 個模型。",
+      "modelsFetched_other": "成功獲取 {{count}} 個模型。",
       "modelsProbeUnsupportedForApiType": "當前介面型別不支援模型列表探測。",
       "noModelAvailableToRunProbes": "沒有可用模型，無法執行探測。",
       "noModelIdProvided": "未提供模型 ID，無法執行探測。",

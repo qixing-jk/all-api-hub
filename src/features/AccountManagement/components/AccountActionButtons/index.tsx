@@ -164,6 +164,26 @@ const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const rowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions
 
+const addRedactionSecrets = (
+  secretsToRedact: Set<string>,
+  secrets: Array<string | undefined>,
+) => {
+  secrets.forEach((secret) => {
+    if (secret) {
+      secretsToRedact.add(secret)
+    }
+  })
+}
+
+const addRuntimeKeyRedactionSecrets = (
+  secretsToRedact: Set<string>,
+  runtimeKeys: Parameters<typeof collectAccountRuntimeKeySecrets>[0],
+) => {
+  collectAccountRuntimeKeySecrets(runtimeKeys).forEach((secret) =>
+    secretsToRedact.add(secret),
+  )
+}
+
 const quickCheckinAnalyticsContext: ProductAnalyticsActionContext = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunQuickCheckin,
@@ -312,17 +332,16 @@ export default function AccountActionButtons({
       entrypoint: optionsEntrypoint,
     })
     setIsCheckingTokens(true)
-    const secretsToRedact = new Set<string>(
-      [site.baseUrl, site.token, site.cookieAuthSessionCookie].filter(
-        Boolean,
-      ) as string[],
-    )
+    const secretsToRedact = new Set<string>()
+    addRedactionSecrets(secretsToRedact, [
+      site.baseUrl,
+      site.token,
+      site.cookieAuthSessionCookie,
+    ])
 
     try {
       const runtimeKeys = await fetchDisplayAccountRuntimeKeys(site)
-      runtimeKeys
-        .flatMap((runtimeKey) => collectAccountRuntimeKeySecrets([runtimeKey]))
-        .forEach((secret) => secretsToRedact.add(secret))
+      addRuntimeKeyRedactionSecrets(secretsToRedact, runtimeKeys)
 
       if (runtimeKeys.length === 1) {
         const runtimeKey = runtimeKeys[0]
@@ -330,19 +349,10 @@ export default function AccountActionButtons({
           site,
           runtimeKey,
         )
-        collectAccountRuntimeKeySecrets([resolvedRuntimeKey]).forEach(
-          (secret) => secretsToRedact.add(secret),
-        )
+        addRuntimeKeyRedactionSecrets(secretsToRedact, [resolvedRuntimeKey])
         await navigator.clipboard.writeText(resolvedRuntimeKey.secret)
         toast.success(t("actions.keyCopied"))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: {
-            itemCount: runtimeKeys.length,
-          },
-        })
-      } else if (runtimeKeys.length > 1) {
-        onCopyKey(site)
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           insights: {
             itemCount: runtimeKeys.length,
           },
@@ -419,9 +429,11 @@ export default function AccountActionButtons({
       showWarningToast(message)
     }
 
-    const secretsToRedact = new Set<string>(
-      [site.token, site.cookieAuthSessionCookie].filter(Boolean) as string[],
-    )
+    const secretsToRedact = new Set<string>()
+    addRedactionSecrets(secretsToRedact, [
+      site.token,
+      site.cookieAuthSessionCookie,
+    ])
 
     try {
       const service = await getManagedSiteService()
@@ -433,11 +445,10 @@ export default function AccountActionButtons({
         )
       }
 
-      collectManagedConfigSecrets(managedConfig).forEach((secret) => {
-        if (secret) {
-          secretsToRedact.add(secret)
-        }
-      })
+      addRedactionSecrets(
+        secretsToRedact,
+        collectManagedConfigSecrets(managedConfig),
+      )
 
       const tokenLookupAccount = {
         ...site,
@@ -445,9 +456,7 @@ export default function AccountActionButtons({
       }
       const runtimeKeys =
         await fetchDisplayAccountRuntimeKeys(tokenLookupAccount)
-      runtimeKeys
-        .flatMap((runtimeKey) => collectAccountRuntimeKeySecrets([runtimeKey]))
-        .forEach((secret) => secretsToRedact.add(secret))
+      addRuntimeKeyRedactionSecrets(secretsToRedact, runtimeKeys)
 
       if (runtimeKeys.length === 0) {
         return handleChannelLocateFallback(
@@ -466,9 +475,7 @@ export default function AccountActionButtons({
         tokenLookupAccount,
         runtimeKey,
       )
-      collectAccountRuntimeKeySecrets([resolvedRuntimeKey]).forEach((secret) =>
-        secretsToRedact.add(secret),
-      )
+      addRuntimeKeyRedactionSecrets(secretsToRedact, [resolvedRuntimeKey])
       const resolvedToken =
         accountRuntimeKeyToLegacyAccountToken(resolvedRuntimeKey)
       let formData: Awaited<ReturnType<typeof service.prepareChannelFormData>>

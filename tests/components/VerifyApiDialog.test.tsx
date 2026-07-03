@@ -308,7 +308,7 @@ describe("VerifyApiDialog", () => {
       name: "aiApiVerification:verifyDialog.actions.runOne",
     })
 
-    // The action button is disabled until tokens are fetched and a token is selected.
+    // The action button is disabled until runtime keys are fetched and selected.
     await waitFor(() => expect(runButton).toBeEnabled())
     fireEvent.click(runButton)
 
@@ -696,7 +696,9 @@ describe("VerifyApiDialog", () => {
 
     await waitFor(() => expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1))
     expect(
-      screen.getByText("aiApiVerification:verifyDialog.noCompatibleTokenHint"),
+      screen.getByText(
+        "aiApiVerification:verifyDialog.noCompatibleRuntimeKeyHint",
+      ),
     ).toBeInTheDocument()
     const manageButton = screen.getByRole("button", {
       name: "aiApiVerification:verifyDialog.actions.manageModelKey",
@@ -784,7 +786,7 @@ describe("VerifyApiDialog", () => {
 
     expect(
       screen.getByText(
-        "aiApiVerification:verifyDialog.selectedTokenIncompatibleHint",
+        "aiApiVerification:verifyDialog.selectedRuntimeKeyIncompatibleHint",
       ),
     ).toBeInTheDocument()
     expect(runButton).toBeDisabled()

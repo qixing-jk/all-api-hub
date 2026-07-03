@@ -14,12 +14,12 @@
     },
     "idleHint": "請選擇金鑰後開始驗證。如無法從金鑰推測模型，請手動填寫模型 ID。",
     "loadingModelsHint": "正在載入模型...",
-    "loadingTokensHint": "正在載入金鑰...",
+    "loadingRuntimeKeysHint": "正在載入金鑰...",
     "meta": {
       "model": "模型",
       "modelPlaceholder": "輸入模型 ID",
-      "token": "金鑰",
-      "tokenPlaceholder": "選擇金鑰"
+      "runtimeKey": "金鑰",
+      "runtimeKeyPlaceholder": "選擇金鑰"
     },
     "modelHint": "從金鑰推測的模型：{{modelId}}",
     "modelPickerPlaceholder": "選擇或輸入模型 ID",
@@ -40,7 +40,7 @@
       "invalidResponse": "返回格式不符合預期",
       "networkError": "網路錯誤 / 請求被阻止",
       "noModelIdProvided": "沒有可用的模型 ID",
-      "noRuntimeKeySecret": "目前執行階段金鑰沒有可用的 API Key。",
+      "noRuntimeKeySecret": "目前選擇的金鑰沒有可用的 API Key。",
       "noToolCallDetected": "未檢測到工具呼叫（可能不支援 tool/function calling）",
       "stopped": "已停止。",
       "supported": "支援",
