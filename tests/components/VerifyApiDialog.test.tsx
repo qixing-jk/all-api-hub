@@ -503,6 +503,48 @@ describe("VerifyApiDialog", () => {
     )
   })
 
+  it("keeps probes disabled when runtime-key loading fails", async () => {
+    mockFetchDisplayAccountRuntimeKeys.mockRejectedValueOnce(
+      new Error("inventory offline"),
+    )
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: "1",
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    await waitFor(() =>
+      expect(mockFetchDisplayAccountRuntimeKeys).toHaveBeenCalledTimes(1),
+    )
+
+    const probeCard = await screen.findByTestId("verify-probe-text-generation")
+    const runButton = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    expect(runButton).toBeDisabled()
+    fireEvent.click(runButton)
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+  })
+
   it("verifies service-credential runtime keys without token conversion", async () => {
     const account = {
       id: "a1",

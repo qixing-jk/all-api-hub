@@ -224,6 +224,30 @@ describe("VerifyCliSupportDialog", () => {
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
   })
 
+  it("keeps account-mode tools disabled when the account is unavailable", async () => {
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={null as any}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    expect(
+      await screen.findByText("cliSupportVerification:verifyDialog.idleHint"),
+    ).toBeInTheDocument()
+
+    const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
+    const runButton = within(toolCard).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
+    })
+    expect(runButton).toBeDisabled()
+    fireEvent.click(runButton)
+    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+    expect(mockRunCliSupportTool).not.toHaveBeenCalled()
+  })
+
   it("fetches profile models and lets the user choose one", async () => {
     mockFetchApiCredentialModelIds.mockResolvedValueOnce([
       "gpt-4o-mini",

@@ -964,6 +964,22 @@ describe("fetchDisplayAccountTokens", () => {
     expect(result.token.key).toBe("sk-plain-secret")
   })
 
+  it("throws when resolving a token secret without key-management or service-credential support", async () => {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: "unsupported",
+    } as any)
+
+    await expect(
+      resolveDisplayAccountTokenForSecret(
+        {
+          ...ACCOUNT,
+          siteType: "unsupported",
+        } as any,
+        { id: 1, key: "sk-masked", status: 1, name: "Masked" } as any,
+      ),
+    ).rejects.toThrow("keyManagement is not implemented for unsupported")
+  })
+
   it("throws when adapter key management is not implemented", async () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: "unsupported",

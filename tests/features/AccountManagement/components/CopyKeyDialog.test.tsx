@@ -1016,7 +1016,12 @@ describe("CopyKeyDialog", () => {
 
   it("tracks managed-site single token import when the copied token flow opens", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
-    openWithAccountMock.mockResolvedValueOnce({ opened: true })
+    openWithAccountMock.mockImplementationOnce(
+      async (_account, _token, onResult) => {
+        onResult({ success: false, message: "managed import failed" })
+        return { opened: true }
+      },
+    )
 
     const user = userEvent.setup()
 
@@ -1042,9 +1047,156 @@ describe("CopyKeyDialog", () => {
         expect.objectContaining({ id: 1 }),
         expect.any(Function),
       )
+      expect(toastErrorMock).toHaveBeenCalledWith("managed import failed")
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
       )
+    })
+  })
+
+  it("resets copied state after showing the copied action label", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.copied",
+      }),
+    ).toBeInTheDocument()
+    expect(writeText).toHaveBeenCalledWith("sk-test")
+
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
+        ).toBeInTheDocument()
+      },
+      { timeout: 2500 },
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: "ui:dialog.copyKey.copied",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders disabled token state and collapses expanded token details", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      {
+        ...TOKEN,
+        status: 2,
+        remain_quota: 2000000,
+        unlimited_quota: false,
+      },
+    ])
+
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    expect(await screen.findByText("default")).toBeInTheDocument()
+    expect(screen.getByText("ui:dialog.copyKey.disabled")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "ui:dialog.expand" }))
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "ui:dialog.collapse" }))
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("exports account tokens to external tools with the account token payload", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(await screen.findByText("default"))
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.copyKey.exportToCCSwitch",
+      }),
+    )
+    await waitFor(() => {
+      expect(ccSwitchDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: expect.objectContaining({ id: "acc-1" }),
+          token: expect.objectContaining({ id: 1, key: "sk-test" }),
+        }),
+      )
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.exportToKiloCode",
+      }),
+    )
+    await waitFor(() => {
+      expect(kiloCodeExportDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          initialSelectedSiteIds: ["acc-1"],
+          initialSelectedTokenIdsBySite: {
+            "acc-1": ["1"],
+          },
+        }),
+      )
+    })
+    act(() => {
+      kiloCodeExportDialogMock.mock.calls[0]?.[0].onClose()
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToCliProxy",
+      }),
+    )
+    await waitFor(() => {
+      expect(cliProxyDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: expect.objectContaining({ id: "acc-1" }),
+          token: expect.objectContaining({ id: 1, key: "sk-test" }),
+        }),
+      )
+    })
+    act(() => {
+      cliProxyDialogMock.mock.calls[0]?.[0].onClose()
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToClaudeCodeRouter",
+      }),
+    )
+    await waitFor(() => {
+      expect(claudeCodeRouterDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: expect.objectContaining({ id: "acc-1" }),
+          token: expect.objectContaining({ id: 1, key: "sk-test" }),
+          routerApiKey: "ccr-management-key",
+          routerBaseUrl: "https://router.example.invalid",
+        }),
+      )
+    })
+    act(() => {
+      claudeCodeRouterDialogMock.mock.calls[0]?.[0].onClose()
     })
   })
 
@@ -1077,6 +1229,12 @@ describe("CopyKeyDialog", () => {
   })
 
   it("exports service credentials with the credential API base URL", async () => {
+    openWithCredentialsMock.mockImplementationOnce(
+      async (_credential, onResult) => {
+        onResult({ success: true, message: "credential import queued" })
+        return { deferred: true }
+      },
+    )
     const user = await renderExpandedServiceCredentialDialog()
 
     await user.click(
@@ -1132,6 +1290,9 @@ describe("CopyKeyDialog", () => {
         }),
       )
     })
+    act(() => {
+      cliProxyDialogMock.mock.calls[0]?.[0].onClose()
+    })
 
     await user.click(
       screen.getByRole("button", {
@@ -1152,6 +1313,9 @@ describe("CopyKeyDialog", () => {
         }),
       )
     })
+    act(() => {
+      claudeCodeRouterDialogMock.mock.calls[0]?.[0].onClose()
+    })
 
     await user.click(
       screen.getByRole("button", {
@@ -1171,6 +1335,7 @@ describe("CopyKeyDialog", () => {
         },
       )
       expect(openWithAccountMock).not.toHaveBeenCalled()
+      expect(toastSuccessMock).toHaveBeenCalledWith("credential import queued")
     })
   })
 
@@ -1194,6 +1359,9 @@ describe("CopyKeyDialog", () => {
           }),
         }),
       )
+    })
+    act(() => {
+      kiloCodeProfileExportDialogMock.mock.calls[0]?.[0].onClose()
     })
     expect(kiloCodeExportDialogMock).not.toHaveBeenCalled()
   })

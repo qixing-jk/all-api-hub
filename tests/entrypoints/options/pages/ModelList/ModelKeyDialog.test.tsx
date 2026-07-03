@@ -322,6 +322,46 @@ describe("ModelKeyDialog", () => {
     expect(screen.getByText("shared key · vip")).toBeInTheDocument()
   })
 
+  it("copies the runtime key selected from multiple compatible options", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      { ...TOKEN, id: 1, key: "sk-default", name: "shared key", group: null },
+      { ...TOKEN, id: 2, key: "sk-vip", name: "shared key", group: "vip" },
+    ])
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default", "vip"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "modelList:keyDialog.selectLabel",
+      }),
+    )
+    expect(screen.getByText("shared key · default")).toBeInTheDocument()
+
+    await user.click(
+      await screen.findByRole("option", { name: "shared key · vip" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.copyKey" }),
+    )
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("sk-vip")
+    })
+  })
+
   it("shows empty state and explicit create actions when no compatible runtime keys exist", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
 
@@ -787,6 +827,41 @@ describe("ModelKeyDialog", () => {
         "modelList:keyDialog.noCompatibleFoundAfterCreate",
       ),
     ).toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
+  })
+
+  it("shows a create error when post-create runtime-key refresh fails", async () => {
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("inventory offline"))
+    adapterCreateTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText("modelList:keyDialog.createFailed"),
+    ).toBeInTheDocument()
+    expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
