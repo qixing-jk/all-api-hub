@@ -36,6 +36,13 @@ _Avoid_: dedicated override, alias, fallback
 A normalized product-owned shape consumed by features after upstream backend payloads have been adapted.
 _Avoid_: upstream response, New API response
 
+**Account Runtime Key**:
+A product canonical model for a key that can be used for account-scoped runtime
+requests such as verification, model probing, export, or CLI configuration,
+regardless of whether the key comes from an API token resource or an account
+service credential.
+_Avoid_: API token, token row
+
 ## Relationships
 
 - An **Account Site Type** is a **Site Type** that supports saved-account workflows.
@@ -47,6 +54,9 @@ _Avoid_: upstream response, New API response
 - A **Product Canonical Model** may retain historical New API field names when
   those fields are now the product contract. Its owner is determined by product
   semantics, not by the upstream backend that originally shaped it.
+- An **Account Runtime Key** is not necessarily an API token resource. API token
+  CRUD, token metadata, and service-credential rotation remain source-specific
+  behavior behind the account runtime key source.
 
 ## Example dialogue
 
