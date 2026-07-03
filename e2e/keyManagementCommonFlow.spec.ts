@@ -1,11 +1,16 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getKeyManagementTokenRowTestId,
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
-import type { ApiToken } from "~/types"
+import { AuthTypeEnum, type ApiToken } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
-import { verifyAccountKeyLifecycleUsage } from "~~/e2e/scenarios/accountUsage"
+import {
+  verifyAccountKeyLifecycleUsage,
+  verifyAccountTokenCcSwitchModelPickerUsage,
+} from "~~/e2e/scenarios/accountUsage"
+import { verifyCcSwitchModelExportDeepLink } from "~~/e2e/scenarios/ccSwitchExport"
 import { saveTokenToApiCredentialProfilesFromKeyManagementPage } from "~~/e2e/utils/accountLifecycle"
 import {
   createStoredAccount,
@@ -45,6 +50,69 @@ function createStubApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
   }
 }
 
+async function stubSharedChatServiceCredentialRoutes(
+  context: Parameters<typeof stubNewApiSiteRoutes>[0],
+) {
+  await context.route("https://new.sharedchat.cc/**", async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+
+    if (
+      request.method() === "GET" &&
+      url.pathname === "/frontend-api/vibe-code/quota"
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          code: 1,
+          msg: "ok",
+          data: {
+            codex: {
+              isAuth: true,
+              apiKey: "sk-sharedchat-service-e2e",
+              subscriptions: {
+                remainingAmount: 12.5,
+              },
+              currentUsage: {
+                totalRequests: 3,
+                totalTokens: 456,
+                totalCost: 0.42,
+              },
+              recentRecords: [],
+            },
+          },
+        }),
+      })
+      return
+    }
+
+    if (request.method() === "GET" && url.pathname === "/codex/v1/models") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          object: "list",
+          data: [
+            {
+              id: "gpt-sharedchat-service",
+              object: "model",
+              owned_by: "e2e",
+            },
+          ],
+        }),
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Unhandled SharedChat E2E route" }),
+    })
+  })
+}
+
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
@@ -74,6 +142,99 @@ test("creates a token from key management and reloads it into the visible list",
     account: accountFixture,
     openFromAccountRow: false,
     buildTokenName: () => "E2E Created Key",
+  })
+})
+
+test("opens the CC Switch model picker for an account API key", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+
+  const accountFixture = await seedMockAccountFixture({
+    serviceWorker,
+    account: createStoredAccount({
+      id: "e2e-cc-switch-account",
+      site_name: "CC Switch Source",
+      site_url: "https://cc-switch-source.example.com",
+    }),
+  })
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: "https://cc-switch-source.example.com",
+    models: ["gpt-cc-switch-smoke"],
+  })
+
+  await verifyAccountTokenCcSwitchModelPickerUsage({
+    extensionId,
+    page,
+    serviceWorker,
+    account: accountFixture,
+    openFromAccountRow: false,
+    buildTokenName: () => "E2E CC Switch Key",
+    modelName: "gpt-cc-switch-smoke",
+    expectedCcSwitchDeepLink: {
+      app: "claude",
+      name: "CC Switch Source",
+      homepage: "https://cc-switch-source.example.com",
+      endpoint: "https://cc-switch-source.example.com",
+      apiKey: "sk-created-1",
+    },
+  })
+})
+
+test("exports a SharedChat service credential to CC Switch", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "e2e-sharedchat-service-account",
+      site_name: "SharedChat Service",
+      site_type: SITE_TYPES.SHAREDCHAT,
+      site_url: "https://new.sharedchat.cc",
+      authType: AuthTypeEnum.Cookie,
+      account_info: {
+        id: "sharedchat-user",
+        access_token: "sharedchat-session",
+        username: "sharedchat-user",
+      },
+    }),
+  ])
+  await stubSharedChatServiceCredentialRoutes(context)
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=e2e-sharedchat-service-account`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  const serviceCredentialCard = page.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.serviceCredentialCard,
+  )
+  await expect(serviceCredentialCard).toBeVisible()
+  await expect(
+    serviceCredentialCard.getByRole("heading", { name: "Codex" }),
+  ).toBeVisible()
+
+  await serviceCredentialCard
+    .getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportToCCSwitchButton,
+    )
+    .click()
+
+  await verifyCcSwitchModelExportDeepLink({
+    page,
+    modelName: "gpt-sharedchat-service",
+    expected: {
+      app: "claude",
+      name: "SharedChat Service - Codex",
+      homepage: "https://new.sharedchat.cc/codex",
+      endpoint: "https://new.sharedchat.cc/codex",
+      apiKey: "sk-sharedchat-service-e2e",
+    },
   })
 })
 

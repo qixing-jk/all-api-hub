@@ -12,6 +12,11 @@ import {
   runAccountKeyToApiProfileScenario,
   saveExistingAccountTokenToApiProfileScenario,
 } from "~~/e2e/scenarios/accountKeyToApiProfile"
+import { verifyAccountTokenModelsProbeUsage } from "~~/e2e/scenarios/accountUsage"
+import {
+  verifyApiCredentialProfileModelsProbeScenario,
+  verifyOpenApiCredentialProfileModelsProbeDialog,
+} from "~~/e2e/scenarios/apiCredentialProfileVerification"
 import {
   deleteApiCredentialProfileFromStorage,
   deleteTokenFromKeyManagementPage,
@@ -30,6 +35,8 @@ const mocks = vi.hoisted(() => ({
   openKeyManagementForAccount: vi.fn(),
   saveTokenToApiCredentialProfilesFromKeyManagementPage: vi.fn(),
   submitTokenCreationFromKeyManagementPage: vi.fn(),
+  verifyApiCredentialProfileModelsProbeScenario: vi.fn(),
+  verifyOpenApiCredentialProfileModelsProbeDialog: vi.fn(),
 }))
 
 vi.mock("~~/e2e/utils/accountLifecycle", () => ({
@@ -44,6 +51,13 @@ vi.mock("~~/e2e/utils/accountLifecycle", () => ({
     mocks.saveTokenToApiCredentialProfilesFromKeyManagementPage,
   submitTokenCreationFromKeyManagementPage:
     mocks.submitTokenCreationFromKeyManagementPage,
+}))
+
+vi.mock("~~/e2e/scenarios/apiCredentialProfileVerification", () => ({
+  verifyApiCredentialProfileModelsProbeScenario:
+    mocks.verifyApiCredentialProfileModelsProbeScenario,
+  verifyOpenApiCredentialProfileModelsProbeDialog:
+    mocks.verifyOpenApiCredentialProfileModelsProbeDialog,
 }))
 
 describe("account E2E scenarios", () => {
@@ -361,6 +375,108 @@ describe("account E2E scenarios", () => {
     ).rejects.toMatchObject({
       errors: [primaryError, cleanupError],
     })
+  })
+
+  it("runs account token cleanup finalizers when token deletion fails", async () => {
+    const extensionPage = {} as any
+    const keyPage = {} as any
+    const deletionError = new Error("delete failed")
+    const fixtureCleanup = vi.fn().mockResolvedValue(undefined)
+    const environmentCleanup = vi.fn().mockResolvedValue(undefined)
+    const verifyButton = {
+      click: vi.fn().mockResolvedValue(undefined),
+    }
+    const tokenRow = {
+      getByTestId: vi.fn().mockReturnValue(verifyButton),
+    }
+    const fixture = createAccountFixture({
+      accountId: "seeded-account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://seeded.example.com",
+      cleanup: fixtureCleanup,
+    })
+
+    vi.mocked(openKeyManagementForAccount).mockResolvedValue(keyPage)
+    vi.mocked(submitTokenCreationFromKeyManagementPage).mockResolvedValue(
+      undefined,
+    )
+    vi.mocked(expectTokenCreatedInKeyManagementPage).mockResolvedValue({
+      page: keyPage,
+      row: tokenRow as any,
+    })
+    vi.mocked(
+      verifyOpenApiCredentialProfileModelsProbeDialog,
+    ).mockResolvedValue(undefined)
+    vi.mocked(deleteTokenFromKeyManagementPage).mockRejectedValue(deletionError)
+
+    await expect(
+      verifyAccountTokenModelsProbeUsage({
+        page: extensionPage,
+        extensionId: "extension-id",
+        serviceWorker: {} as any,
+        account: fixture,
+        buildTokenName: () => "E2E Models Probe Key",
+        cleanup: environmentCleanup,
+      }),
+    ).rejects.toThrow(deletionError)
+
+    expect(deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
+      page: keyPage,
+      token: "E2E Models Probe Key",
+    })
+    expect(fixtureCleanup).toHaveBeenCalledOnce()
+    expect(environmentCleanup).toHaveBeenCalledOnce()
+  })
+
+  it("runs account token models probe in the already-open verification dialog", async () => {
+    const extensionPage = {} as any
+    const keyPage = {} as any
+    const verifyButton = {
+      click: vi.fn().mockResolvedValue(undefined),
+    }
+    const tokenRow = {
+      getByTestId: vi.fn().mockReturnValue(verifyButton),
+    }
+    const fixture = createAccountFixture({
+      accountId: "seeded-account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://seeded.example.com",
+      cleanup: createNoopAccountFixtureCleanup(),
+    })
+
+    vi.mocked(openKeyManagementForAccount).mockResolvedValue(keyPage)
+    vi.mocked(submitTokenCreationFromKeyManagementPage).mockResolvedValue(
+      undefined,
+    )
+    vi.mocked(expectTokenCreatedInKeyManagementPage).mockResolvedValue({
+      page: keyPage,
+      row: tokenRow as any,
+    })
+    vi.mocked(
+      verifyOpenApiCredentialProfileModelsProbeDialog,
+    ).mockResolvedValue(undefined)
+
+    await verifyAccountTokenModelsProbeUsage({
+      page: extensionPage,
+      extensionId: "extension-id",
+      serviceWorker: {} as any,
+      account: fixture,
+      buildTokenName: () => "E2E Models Probe Key",
+      modelsProbe: {
+        expectedStatus: "handled",
+        closeDialog: true,
+      },
+    })
+
+    expect(verifyButton.click).toHaveBeenCalledOnce()
+    expect(
+      verifyOpenApiCredentialProfileModelsProbeDialog,
+    ).toHaveBeenCalledWith({
+      page: keyPage,
+      expectedStatus: "handled",
+      closeDialog: true,
+    })
+    expect(verifyApiCredentialProfileModelsProbeScenario).not.toHaveBeenCalled()
   })
 
   it("creates a key, saves it to API profiles, and cleans up both artifacts", async () => {

@@ -108,6 +108,11 @@ export interface SearchableSelectProps
    * Optional stable test id resolver for option rows.
    */
   getOptionTestId?: (option: SearchableSelectOption) => string | undefined
+
+  /**
+   * Optional stable test id for the popover search input.
+   */
+  searchInputTestId?: string
 }
 
 /**
@@ -134,6 +139,7 @@ export const SearchableSelect = React.forwardRef<
     portalContainer,
     listClassName,
     getOptionTestId,
+    searchInputTestId,
     className,
     disabled,
     ...buttonProps
@@ -217,6 +223,7 @@ export const SearchableSelect = React.forwardRef<
             placeholder={resolvedSearchPlaceholder}
             value={searchTerm}
             onValueChange={setSearchTerm}
+            data-testid={searchInputTestId}
           />
           <CommandList
             className={cn(

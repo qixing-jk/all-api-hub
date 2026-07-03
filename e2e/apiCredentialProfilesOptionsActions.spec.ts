@@ -5,6 +5,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { verifyApiCredentialProfileCcSwitchModelPickerScenario } from "~~/e2e/scenarios/apiCredentialProfileVerification"
 import {
   createStoredApiCredentialProfile,
   forceExtensionLanguage,
@@ -253,4 +254,42 @@ test("opens model management for an options-page API credential profile", async 
   expect(targetUrl.hash).toBe(`#${MENU_ITEM_IDS.MODELS}`)
   expect(targetUrl.searchParams.get("profileId")).toBe("profile-models")
   await expect(targetPage.getByText("gpt-options-model")).toBeVisible()
+})
+
+test("opens the CC Switch model picker for an API credential profile", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedApiCredentialProfiles(serviceWorker, [
+    createStoredApiCredentialProfile({
+      id: "profile-cc-switch",
+      name: "CC Switch Profile",
+      baseUrl: "https://cc-switch-profile.example.com",
+      apiKey: "sk-cc-switch-profile",
+    }),
+  ])
+
+  await context.route(
+    "https://cc-switch-profile.example.com/v1/models",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: [{ id: "gpt-cc-switch-profile" }],
+        }),
+      }),
+  )
+
+  await openProfilesPage(page, extensionId)
+
+  await verifyApiCredentialProfileCcSwitchModelPickerScenario({
+    page,
+    profileName: "CC Switch Profile",
+    modelName: "gpt-cc-switch-profile",
+    expectedBaseUrl: "https://cc-switch-profile.example.com",
+    expectedApiKey: "sk-cc-switch-profile",
+  })
 })

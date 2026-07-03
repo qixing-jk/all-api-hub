@@ -647,6 +647,7 @@ function TokenActionButtons({
           aria-label={t("actions.exportToCCSwitch")}
           size="sm"
           variant="ghost"
+          data-testid={KEY_MANAGEMENT_TEST_IDS.exportToCCSwitchButton}
           onClick={onOpenCCSwitchDialog}
         >
           <CCSwitchIcon />

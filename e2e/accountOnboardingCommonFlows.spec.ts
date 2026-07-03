@@ -7,10 +7,13 @@ import {
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/constants/siteType"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementListItemTestId,
+} from "~/features/AccountManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
-import type { SiteAccount } from "~/types"
+import type { ApiToken, SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { runAccountAutoDetectScenario } from "~~/e2e/scenarios/accountAutoDetect"
 import { saveExistingAccountTokenToApiProfileScenario } from "~~/e2e/scenarios/accountKeyToApiProfile"
@@ -18,6 +21,7 @@ import {
   openApiCredentialProfilesPopupScenario,
   verifyApiCredentialProfileModelsProbeScenario,
 } from "~~/e2e/scenarios/apiCredentialProfileVerification"
+import { verifyCcSwitchModelExportDeepLink } from "~~/e2e/scenarios/ccSwitchExport"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -39,6 +43,29 @@ const AIHUBMIX_SITE_URL = AIHUBMIX_WEB_ORIGIN
 const MANAGED_SITE_BASE_URL = "https://managed-site.example.com"
 const MANAGED_SITE_ADMIN_TOKEN = "managed-site-admin-token"
 const MANAGED_SITE_USER_ID = "1"
+
+function createCopyDialogToken(overrides: Partial<ApiToken> = {}): ApiToken {
+  const nowSeconds = Math.floor(Date.now() / 1000)
+
+  return {
+    id: 1,
+    user_id: 1,
+    key: "sk-copy-dialog-token",
+    status: 1,
+    name: "Copy Dialog Key",
+    created_time: nowSeconds,
+    accessed_time: nowSeconds,
+    expired_time: -1,
+    remain_quota: -1,
+    unlimited_quota: true,
+    model_limits_enabled: false,
+    model_limits: "",
+    allow_ips: "",
+    used_quota: 0,
+    group: "default",
+    ...overrides,
+  }
+}
 
 async function readStoredAccounts(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
@@ -509,6 +536,76 @@ test("enables default-key provisioning, adds an account, saves the created key a
     page: popupPage,
     profileName: savedProfile.name,
     expectedModelCount: 2,
+  })
+})
+
+test("exports an account key from the copy-key dialog to CC Switch", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "e2e-copy-dialog-cc-switch-account",
+      site_name: "Copy Dialog CC Source",
+      site_url: "https://copy-dialog-cc.example.com",
+      account_info: {
+        id: "45",
+        username: "copy-dialog-user",
+        access_token: "copy-dialog-access-token",
+      },
+    }),
+  ])
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: "https://copy-dialog-cc.example.com",
+    models: ["gpt-copy-dialog-cc"],
+    initialTokens: [
+      createCopyDialogToken({
+        id: 1,
+        name: "Copy Dialog CC Key",
+        key: "sk-copy-dialog-cc",
+      }),
+      createCopyDialogToken({
+        id: 2,
+        name: "Copy Dialog Secondary Key",
+        key: "sk-copy-dialog-secondary",
+      }),
+    ],
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  const accountRow = page.getByTestId(
+    getAccountManagementListItemTestId("e2e-copy-dialog-cc-switch-account"),
+  )
+  await expect(accountRow).toBeVisible()
+  await accountRow
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyKeyButton)
+    .click()
+
+  await expect(page.getByRole("heading", { name: "Key List" })).toBeVisible()
+  await page.getByRole("heading", { name: "Copy Dialog CC Key" }).click()
+  await page
+    .getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportToCCSwitchButton,
+    )
+    .click()
+
+  await verifyCcSwitchModelExportDeepLink({
+    page,
+    modelName: "gpt-copy-dialog-cc",
+    expected: {
+      app: "claude",
+      name: "Copy Dialog CC Source",
+      homepage: "https://copy-dialog-cc.example.com",
+      endpoint: "https://copy-dialog-cc.example.com",
+      apiKey: "sk-copy-dialog-cc",
+    },
   })
 })
 

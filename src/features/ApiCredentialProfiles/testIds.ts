@@ -7,6 +7,9 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   deleteConfirmButton: "api-credential-profile-delete-confirm-button",
   deleteTriggerButton: "api-credential-profile-delete-trigger-button",
   editButton: "api-credential-profile-edit-button",
+  exportMenuButton: "api-credential-profile-export-menu-button",
+  exportToCCSwitchMenuItem:
+    "api-credential-profile-export-to-cc-switch-menu-item",
   openModelManagementButton:
     "api-credential-profile-open-model-management-button",
   popupView: "api-credential-profiles-popup-view",

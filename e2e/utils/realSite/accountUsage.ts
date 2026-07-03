@@ -48,7 +48,7 @@ type RealSiteAccountUsageCheck =
   AccountUsagePlanCheck<RealSiteAccountUsagePlanContext>
 
 type ApiProfilePopupModelsProbeExpectation = {
-  expectedStatus?: "pass" | "fail"
+  expectedStatus?: "pass" | "fail" | "handled"
   expectedSummaryText?: string
 }
 
@@ -152,6 +152,23 @@ export async function maybeVerifyRealSiteModelToKeyUsage(
   })
 }
 
+async function withApiCredentialProfilesPopupPage(
+  context: Pick<RealSiteAccountUsageContext, "page" | "extensionId">,
+  verify: (popupPage: Page) => Promise<void>,
+) {
+  const popupPage = await context.page.context().newPage()
+
+  try {
+    await openApiCredentialProfilesPopupScenario({
+      page: popupPage,
+      extensionId: context.extensionId,
+    })
+    await verify(popupPage)
+  } finally {
+    await popupPage.close()
+  }
+}
+
 async function verifyRealSiteApiProfilePopupModelsUsage(
   context: RealSiteAccountUsageContext & {
     profileLabel?: string
@@ -166,21 +183,14 @@ async function verifyRealSiteApiProfilePopupModelsUsage(
     profileLabel: context.profileLabel,
     expectedProfile: context.expectedProfile,
     afterProfileSaved: async (profile) => {
-      const popupPage = await openApiCredentialProfilesPopupScenario({
-        page: await context.page.context().newPage(),
-        extensionId: context.extensionId,
-      })
-
-      try {
+      await withApiCredentialProfilesPopupPage(context, async (popupPage) => {
         await verifyApiCredentialProfileModelsProbeScenario({
           page: popupPage,
           profileName: profile.name,
           ...context.popupModelsProbe,
         })
         verifiedProfile = profile
-      } finally {
-        await popupPage.close()
-      }
+      })
     },
   })
 

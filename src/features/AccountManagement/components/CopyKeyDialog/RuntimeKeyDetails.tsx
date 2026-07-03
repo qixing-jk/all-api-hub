@@ -15,6 +15,7 @@ import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
 import {
   createCliProxyExportPayload,
@@ -431,6 +432,9 @@ export function RuntimeKeyDetails({
                 aria-label={t("dialog.copyKey.exportToCCSwitch")}
                 variant="ghost"
                 size="sm"
+                data-testid={
+                  ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportToCCSwitchButton
+                }
                 onClick={handleExportToCCSwitch}
               >
                 <CCSwitchIcon />

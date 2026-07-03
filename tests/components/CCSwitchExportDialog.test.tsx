@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
+import { CC_SWITCH_EXPORT_TEST_IDS } from "~/components/CCSwitchExportDialog.testIds"
 import {
   createExportAccount,
   createExportToken,
@@ -73,6 +74,40 @@ describe("CCSwitchExportDialog", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+  })
+
+  it("exposes stable test ids for E2E flows", async () => {
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
+        }
+        token={{ id: "tok", key: "sk-test" } as any}
+      />,
+    )
+
+    expect(
+      await screen.findByTestId(CC_SWITCH_EXPORT_TEST_IDS.dialog),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(CC_SWITCH_EXPORT_TEST_IDS.modelPicker),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(CC_SWITCH_EXPORT_TEST_IDS.exportButton),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(CC_SWITCH_EXPORT_TEST_IDS.cancelButton),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByTestId(CC_SWITCH_EXPORT_TEST_IDS.modelPicker))
+    expect(
+      await screen.findByTestId(CC_SWITCH_EXPORT_TEST_IDS.modelSearchInput),
+    ).toBeInTheDocument()
   })
 
   it("places the app selector before provider details", async () => {
@@ -358,6 +393,7 @@ describe("CCSwitchExportDialog", () => {
     const modelCombo = await screen.findByLabelText(
       "ui:dialog.ccswitch.fields.model",
     )
+    expect(modelCombo).toBeEnabled()
     expect(modelCombo).toHaveTextContent("ui:dialog.ccswitch.modelOptions.none")
     expect(screen.queryByText("gpt-4")).toBeNull()
     warnSpy.mockRestore()

@@ -436,6 +436,9 @@ export function ServiceCredentialCard({
                   aria-label={t("actions.exportToCCSwitch")}
                   size="sm"
                   variant="ghost"
+                  data-testid={
+                    KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportToCCSwitchButton
+                  }
                   onClick={() => setCCSwitchProfile(transientProfile)}
                 >
                   <CCSwitchIcon />

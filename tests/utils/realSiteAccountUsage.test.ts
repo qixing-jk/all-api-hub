@@ -347,6 +347,46 @@ describe("real-site account usage adapters", () => {
     expect(popupPage.close).toHaveBeenCalledOnce()
   })
 
+  it("closes the popup page when popup model opening fails after page creation", async () => {
+    const error = new Error("popup open failed")
+    const popupPage = {
+      close: vi.fn().mockResolvedValue(undefined),
+    }
+    const pageWithContext = {
+      context: () => ({
+        newPage: vi.fn().mockResolvedValue(popupPage),
+      }),
+    } as any
+    vi.mocked(openApiCredentialProfilesPopupScenario).mockRejectedValue(error)
+    vi.mocked(verifyAccountKeyToApiProfileUsage).mockImplementation(
+      async (params) => {
+        await params.afterProfileSaved?.({
+          id: "profile-id",
+          name: "Saved profile",
+        } as any)
+        return { id: "profile-id", name: "Saved profile" } as any
+      },
+    )
+
+    await expect(
+      realSiteAccountUsageChecks.keyToApiProfileAndPopupModels().run({
+        testInfo: { annotations: [] } as any,
+        page: pageWithContext,
+        extensionId: "extension-id",
+        serviceWorker,
+        account,
+        label: "New API",
+      }),
+    ).rejects.toThrow(error)
+
+    expect(openApiCredentialProfilesPopupScenario).toHaveBeenCalledWith({
+      page: popupPage,
+      extensionId: "extension-id",
+    })
+    expect(verifyApiCredentialProfileModelsProbeScenario).not.toHaveBeenCalled()
+    expect(popupPage.close).toHaveBeenCalledOnce()
+  })
+
   it("fails when key-to-profile usage does not run popup verification", async () => {
     vi.mocked(verifyAccountKeyToApiProfileUsage).mockResolvedValue({
       id: "profile-id",

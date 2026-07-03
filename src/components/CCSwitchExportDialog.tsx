@@ -45,6 +45,8 @@ import {
   stripTrailingOpenAIV1,
 } from "~/utils/core/url"
 
+import { CC_SWITCH_EXPORT_TEST_IDS } from "./CCSwitchExportDialog.testIds"
+
 interface CCSwitchExportDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -152,6 +154,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       : ""
     if (!upstreamBaseUrl) {
       setUpstreamModelOptions([])
+      setIsLoadingModels(false)
       return
     }
 
@@ -247,6 +250,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      panelTestId={CC_SWITCH_EXPORT_TEST_IDS.dialog}
       header={
         <div className="flex items-center gap-2">
           <CCSwitchIcon size="lg" />
@@ -262,10 +266,19 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       }
       footer={
         <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="ghost" type="button" onClick={onClose}>
+          <Button
+            variant="ghost"
+            type="button"
+            data-testid={CC_SWITCH_EXPORT_TEST_IDS.cancelButton}
+            onClick={onClose}
+          >
             {t("common:actions.cancel")}
           </Button>
-          <Button type="submit" form={formId}>
+          <Button
+            type="submit"
+            form={formId}
+            data-testid={CC_SWITCH_EXPORT_TEST_IDS.exportButton}
+          >
             {t("ui:dialog.ccswitch.actions.export")}
           </Button>
         </div>
@@ -376,6 +389,8 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             ]}
             allowCustomValue
             disabled={isLoadingModels}
+            data-testid={CC_SWITCH_EXPORT_TEST_IDS.modelPicker}
+            searchInputTestId={CC_SWITCH_EXPORT_TEST_IDS.modelSearchInput}
           />
           <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
             {t("ui:dialog.ccswitch.descriptions.model")}

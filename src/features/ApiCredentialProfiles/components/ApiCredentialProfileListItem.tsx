@@ -605,6 +605,9 @@ export function ApiCredentialProfileListItem({
                     aria-label={t("common:actions.export")}
                     size="sm"
                     variant="ghost"
+                    data-testid={
+                      API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton
+                    }
                     analyticsAction={
                       PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu
                     }
@@ -622,6 +625,9 @@ export function ApiCredentialProfileListItem({
                     {t("keyManagement:actions.useInCherry")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    data-testid={
+                      API_CREDENTIAL_PROFILES_TEST_IDS.exportToCCSwitchMenuItem
+                    }
                     onSelect={() => onExport(profile, "ccSwitch")}
                   >
                     <span aria-hidden="true">
