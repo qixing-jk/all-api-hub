@@ -5,7 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { KEY_MANAGEMENT_ENTRY_KINDS } from "~/features/KeyManagement/types"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -32,7 +32,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 vi.mock(
   "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction",
   () => ({
-    saveApiTokensToApiCredentialProfiles: (...args: unknown[]) =>
+    saveAccountRuntimeKeysToApiCredentialProfiles: (...args: unknown[]) =>
       mockSaveApiCredentialProfiles(...args),
   }),
 )
@@ -121,10 +121,12 @@ vi.mock(
     }: {
       isOpen: boolean
       items: Array<{
-        kind?: string
-        token?: { accountId: string; id: number }
-        credential?: { service: string }
         account: { id: string }
+        runtimeKey: {
+          id: string
+          label: string
+          token?: { accountId: string; id: number }
+        }
       }>
       onClose: () => void
       onCompleted?: (result: {
@@ -136,7 +138,7 @@ vi.mock(
         items: Array<{
           id: string
           accountName: string
-          tokenName: string
+          runtimeKeyName: string
           success: boolean
           skipped: boolean
         }>
@@ -219,16 +221,16 @@ describe("TokenList batch export selection", () => {
       skippedCount: 0,
       items: items.map(
         (item: {
-          kind?: string
-          token?: { accountId: string; id: number }
-          credential?: { service: string }
           account: { id: string }
+          runtimeKey: {
+            id: string
+            label: string
+            token?: { accountId: string; id: number }
+          }
         }) => ({
-          id: item.token
-            ? `${item.token.accountId}:${item.token.id}`
-            : `service_credential:${item.account.id}:${item.credential?.service}`,
-          accountName: item.token?.accountId ?? item.account.id,
-          tokenName: item.token ? String(item.token.id) : "service credential",
+          id: item.runtimeKey.id,
+          accountName: item.account.id,
+          runtimeKeyName: item.runtimeKey.label,
           success: true,
           skipped: false,
         }),
@@ -339,16 +341,16 @@ describe("TokenList batch export selection", () => {
       skippedCount: 0,
       items: [
         {
-          id: `${token1.accountId}:${token1.id}`,
+          id: `account_token:${token1.accountId}:${token1.id}`,
           accountName: token1.accountId,
-          tokenName: String(token1.id),
+          runtimeKeyName: String(token1.id),
           success: true,
           skipped: false,
         },
         {
-          id: `${token2.accountId}:${token2.id}`,
+          id: `account_token:${token2.accountId}:${token2.id}`,
           accountName: token2.accountId,
-          tokenName: String(token2.id),
+          runtimeKeyName: String(token2.id),
           success: false,
           skipped: false,
         },
@@ -552,12 +554,20 @@ describe("TokenList batch export selection", () => {
       expect.objectContaining({
         items: [
           expect.objectContaining({
-            account: expect.objectContaining({ id: account.id }),
-            token: expect.objectContaining({ id: token1.id }),
+            id: "runtime_key:account_token:acc-1:1",
+            runtimeKey: expect.objectContaining({
+              id: "account_token:acc-1:1",
+              account: expect.objectContaining({ id: account.id }),
+              token: expect.objectContaining({ id: token1.id }),
+            }),
           }),
           expect.objectContaining({
-            account: expect.objectContaining({ id: account.id }),
-            token: expect.objectContaining({ id: token2.id }),
+            id: "runtime_key:account_token:acc-1:2",
+            runtimeKey: expect.objectContaining({
+              id: "account_token:acc-1:2",
+              account: expect.objectContaining({ id: account.id }),
+              token: expect.objectContaining({ id: token2.id }),
+            }),
           }),
         ],
         source: "TokenListBatchAction",
@@ -577,43 +587,33 @@ describe("TokenList batch export selection", () => {
       baseUrl: "https://sharedchat.example.invalid",
     })
 
+    const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
+      sharedChatAccount as any,
+      {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex API Key",
+        key: "sk-sharedchat",
+        baseUrl: "https://sharedchat.example.invalid/v1",
+        isAuthenticated: true,
+      },
+      { canRotate: true },
+    )
+    const serviceCredentialEntry = {
+      id: "runtime_key:service_credential:sharedchat-account:codex",
+      runtimeKey: serviceCredentialRuntimeKey,
+      uiState: {
+        isRotating: false,
+      },
+    }
+
     renderTokenList({
       selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
       displayData: [sharedChatAccount] as any,
       tokens: [],
       filteredTokens: [],
-      entries: [
-        {
-          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
-          id: "service_credential:sharedchat-account:codex",
-          account: sharedChatAccount as any,
-          credential: {
-            kind: "singleton_service_key",
-            service: "codex",
-            label: "Codex API Key",
-            key: "sk-sharedchat",
-            baseUrl: "https://sharedchat.example.invalid/v1",
-            isAuthenticated: true,
-          },
-          isRotating: false,
-        },
-      ] as any,
-      filteredEntries: [
-        {
-          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
-          id: "service_credential:sharedchat-account:codex",
-          account: sharedChatAccount as any,
-          credential: {
-            kind: "singleton_service_key",
-            service: "codex",
-            label: "Codex API Key",
-            key: "sk-sharedchat",
-            baseUrl: "https://sharedchat.example.invalid/v1",
-            isAuthenticated: true,
-          },
-          isRotating: false,
-        },
-      ] as any,
+      entries: [serviceCredentialEntry] as any,
+      filteredEntries: [serviceCredentialEntry] as any,
       onCopyServiceCredential: vi.fn(),
       onRotateServiceCredential: vi.fn(),
     })
@@ -647,7 +647,9 @@ describe("TokenList batch export selection", () => {
     expect(managedSiteExportButton).toBeEnabled()
 
     await user.click(managedSiteExportButton)
+
     expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("1")
+    expect(mockBuildBatchExportResult).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole("button", { name: "Close batch export" }))
 
@@ -657,13 +659,7 @@ describe("TokenList batch export selection", () => {
 
     expect(mockSaveApiCredentialProfiles).toHaveBeenCalledWith(
       expect.objectContaining({
-        items: [
-          expect.objectContaining({
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
-            account: expect.objectContaining({ id: sharedChatAccount.id }),
-            credential: expect.objectContaining({ service: "codex" }),
-          }),
-        ],
+        items: [serviceCredentialEntry],
       }),
     )
   })

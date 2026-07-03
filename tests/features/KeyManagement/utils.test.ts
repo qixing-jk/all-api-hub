@@ -2,12 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
-  buildServiceCredentialTransientToken,
+  buildAccountRuntimeKeyEntryIdentityKey,
+  buildAccountTokenKeyManagementEntry,
+  buildServiceCredentialKeyManagementEntry,
   buildTokenIdentityKey,
   formatKey,
   formatQuota,
 } from "~/features/KeyManagement/utils"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import {
+  ACCOUNT_RUNTIME_KEY_SOURCES,
+  ACCOUNT_RUNTIME_KEY_STATUSES,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
+  buildApiToken,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 
 const { tMock } = vi.hoisted(() => ({
   tMock: vi.fn((key: string) => key),
@@ -30,6 +39,90 @@ describe("KeyManagement utils", () => {
   describe("buildTokenIdentityKey", () => {
     it("combines account and token identifiers into a collision-safe key", () => {
       expect(buildTokenIdentityKey("account-a", 7)).toBe("account-a:7")
+    })
+  })
+
+  describe("runtime key entry identity", () => {
+    it("uses runtime-key ids for entry identity", () => {
+      expect(
+        buildAccountRuntimeKeyEntryIdentityKey(
+          "service_credential:account-1:codex",
+        ),
+      ).toBe("runtime_key:service_credential:account-1:codex")
+    })
+
+    it("builds account-token entries with the shared runtime-key shape", () => {
+      const account = buildDisplaySiteData({
+        id: "account-1",
+        name: "Example Account",
+      })
+      const token = buildApiToken({
+        id: 42,
+        name: "Primary token",
+        key: "sk-token-secret",
+      })
+
+      const entry = buildAccountTokenKeyManagementEntry(account, {
+        ...token,
+        accountId: account.id,
+        accountName: account.name,
+      })
+
+      expect(entry).toMatchObject({
+        id: "runtime_key:account_token:account-1:42",
+        runtimeKey: {
+          source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+          accountId: "account-1",
+          label: "Primary token",
+          secret: "sk-token-secret",
+        },
+        uiState: {},
+      })
+    })
+
+    it("builds loaded service-credential entries and skips unavailable states", () => {
+      const account = buildDisplaySiteData({
+        id: "account-1",
+        name: "Example Account",
+      })
+
+      expect(
+        buildServiceCredentialKeyManagementEntry({
+          account,
+          serviceCredential: { status: "loading" },
+          canRotate: true,
+        }),
+      ).toBeNull()
+
+      const entry = buildServiceCredentialKeyManagementEntry({
+        account,
+        serviceCredential: {
+          status: "loaded",
+          isRotating: true,
+          credential: {
+            kind: "singleton_service_key",
+            service: "codex",
+            label: "Codex",
+            key: "service-secret",
+            isAuthenticated: true,
+          },
+        },
+        canRotate: true,
+      })
+
+      expect(entry).toMatchObject({
+        id: "runtime_key:service_credential:account-1:codex",
+        runtimeKey: {
+          source: ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential,
+          status: ACCOUNT_RUNTIME_KEY_STATUSES.Active,
+          capabilities: {
+            rotate: true,
+          },
+        },
+        uiState: {
+          isRotating: true,
+        },
+      })
     })
   })
 
@@ -73,28 +166,6 @@ describe("KeyManagement utils", () => {
       const quota = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR * 1.25
 
       expect(formatQuota(quota, false)).toBe("$1.25")
-    })
-  })
-
-  describe("buildServiceCredentialTransientToken", () => {
-    it("uses the shared no-expiry sentinel for service credentials", () => {
-      const account = buildDisplaySiteData({
-        id: "account-a",
-        name: "SharedChat",
-      })
-
-      expect(
-        buildServiceCredentialTransientToken(account, {
-          kind: "singleton_service_key",
-          service: "codex",
-          label: "Codex",
-          key: "sk-service-key",
-          isAuthenticated: true,
-          baseUrl: "https://codex.example.invalid",
-        }),
-      ).toMatchObject({
-        expired_time: -1,
-      })
     })
   })
 })

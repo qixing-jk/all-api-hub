@@ -113,7 +113,7 @@ vi.mock("~/utils/navigation", () => ({
 vi.mock(
   "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction",
   () => ({
-    saveApiTokensToApiCredentialProfiles: (...args: unknown[]) =>
+    saveAccountRuntimeKeysToApiCredentialProfiles: (...args: unknown[]) =>
       mockSaveApiCredentialProfiles(...args),
   }),
 )
@@ -411,8 +411,13 @@ describe("ServiceCredentialCard", () => {
         source: "ServiceCredentialCard",
         items: [
           expect.objectContaining({
-            account: expect.objectContaining({ id: "sharedchat-account" }),
-            credential: expect.objectContaining({ service: "codex" }),
+            runtimeKey: expect.objectContaining({
+              account: expect.objectContaining({ id: "sharedchat-account" }),
+              baseUrl: "https://sharedchat.example.invalid/v1",
+              label: "Codex API Key",
+              secret: "sk-service-credential",
+              service: "codex",
+            }),
           }),
         ],
       }),

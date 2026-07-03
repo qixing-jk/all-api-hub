@@ -37,7 +37,8 @@ import {
   createExportAccount,
   createExportToken,
 } from "~/features/ApiCredentialProfiles/utils/exportShims"
-import { saveApiTokensToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
@@ -68,7 +69,6 @@ import { showResultToast } from "~/utils/core/toastHelpers"
 import { openSettingsTab } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
-import { KEY_MANAGEMENT_ENTRY_KINDS } from "../types"
 import { formatKey } from "../utils"
 import {
   getManagedSiteSettingsActionLabel,
@@ -170,13 +170,15 @@ export function ServiceCredentialCard({
   ])
 
   const handleSaveToApiCredentialProfiles = async () => {
+    const runtimeKey = buildServiceCredentialRuntimeKey(account, credential, {
+      canRotate: onRotate !== undefined,
+    })
+
     try {
-      await saveApiTokensToApiCredentialProfiles({
+      await saveAccountRuntimeKeysToApiCredentialProfiles({
         items: [
           {
-            kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
-            account,
-            credential,
+            runtimeKey,
           },
         ],
         t,

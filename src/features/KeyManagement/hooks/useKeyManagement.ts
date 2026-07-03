@@ -6,12 +6,18 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
+  accountRuntimeKeyToLegacyAccountToken,
+  buildServiceCredentialRuntimeKey,
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+  type ServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/accountTokens/apiTokenKey"
-import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
@@ -36,15 +42,11 @@ import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
+import { type KeyManagementEntry, type ServiceCredentialState } from "../types"
 import {
-  KEY_MANAGEMENT_ENTRY_KINDS,
-  type KeyManagementEntry,
-  type ServiceCredentialState,
-} from "../types"
-import {
-  buildAccountTokenEntryIdentityKey,
-  buildServiceCredentialEntryIdentityKey,
-  buildServiceCredentialTransientToken,
+  buildAccountRuntimeKeyEntryIdentityKey,
+  buildAccountTokenKeyManagementEntry,
+  buildServiceCredentialKeyManagementEntry,
   buildTokenIdentityKey,
 } from "../utils"
 
@@ -178,20 +180,20 @@ interface ManagedSiteStatusCheckTargetInput {
 
 const buildServiceCredentialManagedSiteStatusTarget = (
   account: DisplaySiteData,
-  credential: AccountServiceCredential,
+  runtimeKey: ServiceCredentialRuntimeKey,
 ): ManagedSiteStatusCheckTargetInput => {
   const statusAccount = {
     ...account,
-    baseUrl: credential.baseUrl || account.baseUrl,
+    baseUrl: runtimeKey.baseUrl,
   }
 
   return {
-    identityKey: buildServiceCredentialEntryIdentityKey(
-      account.id,
-      credential.service,
-    ),
+    identityKey: buildAccountRuntimeKeyEntryIdentityKey(runtimeKey.id),
     account: statusAccount,
-    token: buildServiceCredentialTransientToken(statusAccount, credential),
+    token: accountRuntimeKeyToLegacyAccountToken({
+      ...runtimeKey,
+      account: statusAccount,
+    }),
   }
 }
 
@@ -220,12 +222,12 @@ const tokenMatchesSearch = (token: AccountToken, searchLower: string) => {
 }
 
 const serviceCredentialMatchesSearch = (
-  credential: AccountServiceCredential,
+  runtimeKey: AccountRuntimeKey,
   searchLower: string,
 ) => {
   if (!searchLower) return true
 
-  return credential.label.toLowerCase().includes(searchLower)
+  return runtimeKey.label.toLowerCase().includes(searchLower)
 }
 
 const normalizeOrigin = (baseUrl: string) => {
@@ -758,12 +760,19 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             },
           }))
           delete tokenLoadErrorCategoriesRef.current[accountId]
+          const runtimeKey = buildServiceCredentialRuntimeKey(
+            account,
+            credential,
+            {
+              canRotate: typeof serviceCredential.rotate === "function",
+            },
+          )
           void runManagedSiteStatusChecks({
             tokens: [],
             targets: [
               buildServiceCredentialManagedSiteStatusTarget(
                 account,
-                credential,
+                runtimeKey,
               ),
             ],
           })
@@ -1250,13 +1259,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       .map((token): KeyManagementEntry | null => {
         const account = accountById.get(token.accountId)
         if (!account) return null
-
-        return {
-          kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-          id: buildAccountTokenEntryIdentityKey(token.accountId, token.id),
-          account,
-          token,
-        } satisfies KeyManagementEntry
+        return buildAccountTokenKeyManagementEntry(account, token)
       })
       .filter((entry): entry is KeyManagementEntry => entry !== null)
 
@@ -1266,24 +1269,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           selectedAccountIds === null || selectedAccountIds.has(account.id),
       )
       .map((account): KeyManagementEntry | null => {
-        const serviceCredential = serviceCredentials[account.id]
-        if (
-          serviceCredential?.status !== "loaded" ||
-          !serviceCredential.credential
-        ) {
-          return null
-        }
-
-        return {
-          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
-          id: buildServiceCredentialEntryIdentityKey(
-            account.id,
-            serviceCredential.credential.service,
-          ),
+        return buildServiceCredentialKeyManagementEntry({
           account,
-          credential: serviceCredential.credential,
-          isRotating: serviceCredential.isRotating === true,
-        }
+          serviceCredential: serviceCredentials[account.id],
+          canRotate:
+            typeof createDisplayAccountApiContext(account).serviceCredential
+              ?.rotate === "function",
+        })
       })
       .filter((entry): entry is KeyManagementEntry => entry !== null)
 
@@ -1300,12 +1292,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
   const filteredEntries = useMemo(() => {
     return entries.filter((entry) => {
-      if (entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken) {
-        return tokenMatchesSearch(entry.token, normalizedSearchTerm)
+      if (isAccountTokenRuntimeKey(entry.runtimeKey)) {
+        return tokenMatchesSearch(entry.runtimeKey.token, normalizedSearchTerm)
       }
 
       return serviceCredentialMatchesSearch(
-        entry.credential,
+        entry.runtimeKey,
         normalizedSearchTerm,
       )
     })
@@ -1383,10 +1375,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
     const countMap = new Map<string, number>()
     filteredEntries.forEach((entry) => {
-      const accountId =
-        entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
-          ? entry.token.accountId
-          : entry.account.id
+      const accountId = entry.runtimeKey.accountId
       countMap.set(accountId, (countMap.get(accountId) ?? 0) + 1)
     })
 
@@ -1623,18 +1612,17 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           isRotating: false,
         },
       }))
+      const runtimeKey = buildServiceCredentialRuntimeKey(account, credential, {
+        canRotate: true,
+      })
       invalidateManagedSiteStatuses(
         (identityKey) =>
-          identityKey ===
-          buildServiceCredentialEntryIdentityKey(
-            account.id,
-            credential.service,
-          ),
+          identityKey === buildAccountRuntimeKeyEntryIdentityKey(runtimeKey.id),
       )
       void runManagedSiteStatusChecks({
         tokens: [],
         targets: [
-          buildServiceCredentialManagedSiteStatusTarget(account, credential),
+          buildServiceCredentialManagedSiteStatusTarget(account, runtimeKey),
         ],
         force: true,
       })

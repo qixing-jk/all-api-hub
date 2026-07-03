@@ -1,49 +1,57 @@
 import { UI_CONSTANTS } from "~/constants/ui"
-import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
+import {
+  buildAccountTokenRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import type { AccountToken, DisplaySiteData } from "~/types"
 import { t } from "~/utils/i18n/core"
 
-import { KEY_MANAGEMENT_ENTRY_KINDS } from "./types"
+import type { KeyManagementEntry, ServiceCredentialState } from "./types"
 
 // 构建 token 在 UI 中的唯一标识 (accountId + tokenId)，避免跨账号 tokenId 冲突
 export const buildTokenIdentityKey = (accountId: string, tokenId: number) =>
   `${accountId}:${tokenId}`
 
-export const buildAccountTokenEntryIdentityKey = (
-  accountId: string,
-  tokenId: number,
-) =>
-  [
-    KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-    buildTokenIdentityKey(accountId, tokenId),
-  ].join(":")
+export const buildAccountRuntimeKeyEntryIdentityKey = (runtimeKeyId: string) =>
+  ["runtime_key", runtimeKeyId].join(":")
 
-export const buildServiceCredentialEntryIdentityKey = (
-  accountId: string,
-  service: AccountServiceCredential["service"],
-) =>
-  [KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential, accountId, service].join(":")
-
-const SERVICE_CREDENTIAL_TRANSIENT_TOKEN_ID = -1
-
-export const buildServiceCredentialTransientToken = (
+export const buildAccountTokenKeyManagementEntry = (
   account: DisplaySiteData,
-  credential: AccountServiceCredential,
-): AccountToken => ({
-  id: SERVICE_CREDENTIAL_TRANSIENT_TOKEN_ID,
-  user_id: 0,
-  key: credential.key,
-  status: credential.isAuthenticated ? 1 : 2,
-  name: credential.label,
-  created_time: 0,
-  accessed_time: 0,
-  expired_time: -1,
-  remain_quota: 0,
-  unlimited_quota: true,
-  used_quota: 0,
-  accountId: account.id,
-  accountName: account.name,
-})
+  token: AccountToken,
+): KeyManagementEntry => {
+  const runtimeKey = buildAccountTokenRuntimeKey(account, token)
+
+  return {
+    id: buildAccountRuntimeKeyEntryIdentityKey(runtimeKey.id),
+    runtimeKey,
+    uiState: {},
+  }
+}
+
+export const buildServiceCredentialKeyManagementEntry = (params: {
+  account: DisplaySiteData
+  serviceCredential: ServiceCredentialState | undefined
+  canRotate: boolean
+}): KeyManagementEntry | null => {
+  const { account, serviceCredential, canRotate } = params
+  if (serviceCredential?.status !== "loaded" || !serviceCredential.credential) {
+    return null
+  }
+
+  const runtimeKey = buildServiceCredentialRuntimeKey(
+    account,
+    serviceCredential.credential,
+    { canRotate },
+  )
+
+  return {
+    id: buildAccountRuntimeKeyEntryIdentityKey(runtimeKey.id),
+    runtimeKey,
+    uiState: {
+      isRotating: serviceCredential.isRotating === true,
+    },
+  }
+}
 
 export const formatKey = (
   key: string,

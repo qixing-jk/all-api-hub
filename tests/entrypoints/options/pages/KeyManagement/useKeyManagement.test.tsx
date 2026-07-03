@@ -152,7 +152,17 @@ const createAdapterWithServiceCredential = (
           isAuthenticated: true,
           baseUrl: "https://codex.example.invalid",
         }),
-      rotate: overrides.rotate,
+      rotate:
+        "rotate" in overrides
+          ? overrides.rotate
+          : vi.fn().mockResolvedValue({
+              kind: "singleton_service_key",
+              service: "codex",
+              label: "Codex",
+              key: "rotated-service-key",
+              isAuthenticated: true,
+              baseUrl: "https://codex.example.invalid",
+            }),
     },
   },
 })
@@ -767,6 +777,24 @@ describe("useKeyManagement enabled account filtering", () => {
       isAuthenticated: true,
       baseUrl: "https://codex.example.invalid",
     })
+    expect(result.current.entries).toContainEqual(
+      expect.objectContaining({
+        id: "runtime_key:service_credential:sharedchat-acc:codex",
+        runtimeKey: expect.objectContaining({
+          id: "service_credential:sharedchat-acc:codex",
+          source: "service_credential",
+          label: "Codex",
+          capabilities: expect.objectContaining({
+            updateToken: false,
+            deleteToken: false,
+            rotate: true,
+          }),
+        }),
+        uiState: expect.objectContaining({
+          isRotating: false,
+        }),
+      }),
+    )
     expect(fetchServiceCredential).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://new.sharedchat.cc",
@@ -865,7 +893,7 @@ describe("useKeyManagement enabled account filtering", () => {
     await waitFor(() =>
       expect(
         result.current.managedSiteTokenStatuses[
-          "service_credential:sharedchat-status-acc:codex"
+          "runtime_key:service_credential:sharedchat-status-acc:codex"
         ]?.result,
       ).toEqual({
         status: managedSiteTokenChannelStatuses.NOT_ADDED,

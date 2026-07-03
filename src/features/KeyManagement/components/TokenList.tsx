@@ -15,9 +15,13 @@ import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { Badge, Button, Card, Checkbox, EmptyState } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { saveApiTokensToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { cn } from "~/lib/utils"
-import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
+import {
+  accountRuntimeKeyToLegacyAccountToken,
+  isAccountTokenRuntimeKey,
+  isServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -34,21 +38,20 @@ import type {
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
-import { MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS } from "~/types/managedSiteTokenBatchExport"
 import { createTab } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import {
-  KEY_MANAGEMENT_ENTRY_KINDS,
   type ApiCredentialProfileSaveEntry,
   type CliProxyExportEntry,
   type KeyManagementEntry,
+  type ServiceCredentialState,
 } from "../types"
 import {
-  buildAccountTokenEntryIdentityKey,
-  buildServiceCredentialEntryIdentityKey,
+  buildAccountTokenKeyManagementEntry,
+  buildServiceCredentialKeyManagementEntry,
   buildTokenIdentityKey,
 } from "../utils"
 import { BatchCliProxyExportDialog } from "./BatchCliProxyExportDialog"
@@ -57,6 +60,12 @@ import { ServiceCredentialCard } from "./ServiceCredentialCard"
 import { TokenListItem } from "./TokenListItem"
 
 const logger = createLogger("TokenList")
+
+const isAccountTokenEntry = (
+  entry: KeyManagementEntry,
+): entry is KeyManagementEntry & {
+  runtimeKey: Extract<KeyManagementEntry["runtimeKey"], { token: AccountToken }>
+} => isAccountTokenRuntimeKey(entry.runtimeKey)
 
 interface TokenListProps {
   isLoading: boolean
@@ -95,15 +104,7 @@ interface TokenListProps {
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => void | Promise<void>
   allAccountsFilterAccountIds?: string[]
-  serviceCredentials?: Record<
-    string,
-    {
-      status: "idle" | "loading" | "loaded" | "error"
-      credential?: AccountServiceCredential
-      errorMessage?: string
-      isRotating?: boolean
-    }
-  >
+  serviceCredentials?: Record<string, ServiceCredentialState>
   onCopyServiceCredential?: (account: DisplaySiteData) => Promise<void>
   onRotateServiceCredential?: (account: DisplaySiteData) => Promise<void>
 }
@@ -353,14 +354,8 @@ export function TokenList(props: TokenListProps) {
     const tokenEntries = filteredTokens
       .map((token): KeyManagementEntry | null => {
         const account = accountById.get(token.accountId)
-        return account
-          ? {
-              kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-              id: buildAccountTokenEntryIdentityKey(token.accountId, token.id),
-              account,
-              token,
-            }
-          : null
+        if (!account) return null
+        return buildAccountTokenKeyManagementEntry(account, token)
       })
       .filter((entry): entry is KeyManagementEntry => entry !== null)
 
@@ -371,16 +366,11 @@ export function TokenList(props: TokenListProps) {
           return null
         }
 
-        return {
-          kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
-          id: buildServiceCredentialEntryIdentityKey(
-            account.id,
-            entry.credential.service,
-          ),
+        return buildServiceCredentialKeyManagementEntry({
           account,
-          credential: entry.credential,
-          isRotating: entry.isRotating === true,
-        }
+          serviceCredential: entry,
+          canRotate: onRotateServiceCredential !== undefined,
+        })
       })
       .filter((entry): entry is KeyManagementEntry => entry !== null)
 
@@ -389,6 +379,7 @@ export function TokenList(props: TokenListProps) {
     accountById,
     displayData,
     filteredTokens,
+    onRotateServiceCredential,
     providedEntries,
     serviceCredentials,
   ])
@@ -450,10 +441,7 @@ export function TokenList(props: TokenListProps) {
 
     const entriesByAccountId = new Map<string, KeyManagementEntry[]>()
     for (const entry of filteredEntries) {
-      const accountId =
-        entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
-          ? entry.token.accountId
-          : entry.account.id
+      const accountId = entry.runtimeKey.accountId
       const list = entriesByAccountId.get(accountId) ?? []
       list.push(entry)
       entriesByAccountId.set(accountId, list)
@@ -465,15 +453,8 @@ export function TokenList(props: TokenListProps) {
         const total = totalTokensByAccountId.get(account.id) ?? []
         const filteredAccountEntries = entriesByAccountId.get(account.id) ?? []
         const filteredAccountTokens = filteredAccountEntries
-          .filter(
-            (
-              entry,
-            ): entry is Extract<
-              KeyManagementEntry,
-              { kind: typeof KEY_MANAGEMENT_ENTRY_KINDS.AccountToken }
-            > => entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-          )
-          .map((entry) => entry.token)
+          .filter(isAccountTokenEntry)
+          .map((entry) => entry.runtimeKey.token)
         return {
           account,
           totalTokens: total,
@@ -512,41 +493,19 @@ export function TokenList(props: TokenListProps) {
   )
   const selectedManagedSiteBatchItems = useMemo(
     (): ManagedSiteTokenBatchExportItemInput[] =>
-      selectedEntries.map((entry) =>
-        entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
-          ? {
-              kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.AccountToken,
-              account: entry.account,
-              token: entry.token,
-            }
-          : {
-              kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential,
-              account: entry.account,
-              credential: entry.credential,
-            },
-      ),
+      selectedEntries.map((entry) => ({
+        account: entry.runtimeKey.account as DisplaySiteData,
+        runtimeKey: entry.runtimeKey,
+      })),
     [selectedEntries],
   )
   const selectedApiProfileItems = useMemo(
-    (): ApiCredentialProfileSaveEntry[] =>
-      selectedEntries.map((entry) =>
-        entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.AccountToken
-          ? {
-              kind: KEY_MANAGEMENT_ENTRY_KINDS.AccountToken,
-              account: entry.account,
-              token: entry.token,
-            }
-          : {
-              kind: KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential,
-              account: entry.account,
-              credential: entry.credential,
-            },
-      ),
+    (): ApiCredentialProfileSaveEntry[] => selectedEntries,
     [selectedEntries],
   )
   const selectedCliProxyItems = useMemo(
-    (): CliProxyExportEntry[] => selectedApiProfileItems,
-    [selectedApiProfileItems],
+    (): CliProxyExportEntry[] => selectedEntries,
+    [selectedEntries],
   )
 
   useEffect(() => {
@@ -666,7 +625,7 @@ export function TokenList(props: TokenListProps) {
 
     setIsBatchApiProfilesSaving(true)
     try {
-      await saveApiTokensToApiCredentialProfiles({
+      await saveAccountRuntimeKeysToApiCredentialProfiles({
         items: selectedApiProfileItems,
         t,
         logger,
@@ -690,15 +649,9 @@ export function TokenList(props: TokenListProps) {
 
     const selectedTokenByIdentity = new Map(
       batchExportItems.flatMap((item) =>
-        item.kind ===
-        MANAGED_SITE_TOKEN_BATCH_EXPORT_ITEM_KINDS.ServiceCredential
-          ? []
-          : [
-              [
-                buildTokenIdentityKey(item.token.accountId, item.token.id),
-                item.token,
-              ] as const,
-            ],
+        isAccountTokenRuntimeKey(item.runtimeKey)
+          ? [[item.runtimeKey.id, item.runtimeKey.token] as const]
+          : [],
       ),
     )
 
@@ -725,25 +678,22 @@ export function TokenList(props: TokenListProps) {
     return <LoadingSkeleton />
   }
 
-  const renderServiceCredentialCard = (
-    entry: Extract<
-      KeyManagementEntry,
-      { kind: typeof KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential }
-    >,
-  ) => {
+  const renderServiceCredentialCard = (entry: KeyManagementEntry) => {
+    if (!isServiceCredentialRuntimeKey(entry.runtimeKey)) return null
+
     const managedSiteStatusEntry = managedSiteTokenStatuses?.[entry.id]
 
     return onCopyServiceCredential ? (
       <ServiceCredentialCard
-        account={entry.account}
-        credential={entry.credential}
-        isRotating={entry.isRotating}
+        account={entry.runtimeKey.account as DisplaySiteData}
+        credential={entry.runtimeKey.credential}
+        isRotating={entry.uiState.isRotating}
         isSelected={selectedEntryIds.has(entry.id)}
         managedSiteStatus={managedSiteStatusEntry?.result}
         isManagedSiteStatusChecking={
           managedSiteStatusEntry?.isChecking === true
         }
-        selectionLabel={entry.credential.label}
+        selectionLabel={entry.runtimeKey.label}
         onSelectionChange={(checked) => toggleEntrySelection(entry.id, checked)}
         onCopy={onCopyServiceCredential}
         onRotate={onRotateServiceCredential}
@@ -950,10 +900,7 @@ export function TokenList(props: TokenListProps) {
                   {!isCollapsed ? (
                     <div className="space-y-3 p-3">
                       {group.filteredEntries.map((entry) => {
-                        if (
-                          entry.kind ===
-                          KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential
-                        ) {
+                        if (isServiceCredentialRuntimeKey(entry.runtimeKey)) {
                           return (
                             <div key={entry.id}>
                               {renderServiceCredentialCard(entry)}
@@ -961,7 +908,11 @@ export function TokenList(props: TokenListProps) {
                           )
                         }
 
-                        const { token } = entry
+                        const token = isAccountTokenRuntimeKey(entry.runtimeKey)
+                          ? entry.runtimeKey.token
+                          : accountRuntimeKeyToLegacyAccountToken(
+                              entry.runtimeKey,
+                            )
                         const tokenIdentityKey = buildTokenIdentityKey(
                           token.accountId,
                           token.id,
@@ -971,7 +922,7 @@ export function TokenList(props: TokenListProps) {
 
                         return (
                           <TokenListItem
-                            key={tokenIdentityKey}
+                            key={entry.id}
                             token={token}
                             displayTokenKey={getVisibleTokenKey(token)}
                             visibleKeys={visibleKeys}
@@ -1013,13 +964,15 @@ export function TokenList(props: TokenListProps) {
       ) : (
         <div className="space-y-3">
           {filteredEntries.map((entry) => {
-            if (entry.kind === KEY_MANAGEMENT_ENTRY_KINDS.ServiceCredential) {
+            if (isServiceCredentialRuntimeKey(entry.runtimeKey)) {
               return (
                 <div key={entry.id}>{renderServiceCredentialCard(entry)}</div>
               )
             }
 
-            const { token } = entry
+            const token = isAccountTokenRuntimeKey(entry.runtimeKey)
+              ? entry.runtimeKey.token
+              : accountRuntimeKeyToLegacyAccountToken(entry.runtimeKey)
             const account = accountById.get(token.accountId)
             if (!account) {
               return null
@@ -1034,7 +987,7 @@ export function TokenList(props: TokenListProps) {
 
             return (
               <TokenListItem
-                key={tokenIdentityKey}
+                key={entry.id}
                 token={token}
                 displayTokenKey={getVisibleTokenKey(token)}
                 visibleKeys={visibleKeys}
