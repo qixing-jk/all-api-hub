@@ -1,5 +1,6 @@
 import {
   ArrowPathIcon,
+  CalendarDaysIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
   NoSymbolIcon,
@@ -39,9 +40,11 @@ interface ResultsTableProps {
   openingManualAccountId?: string | null
   disablingAccountId?: string | null
   deletingAccountId?: string | null
+  externalCheckInAccountIds?: Set<string>
   onRetryAccount?: (accountId: string) => void | Promise<void>
   onOpenAccountSite?: (accountId: string) => void | Promise<void>
   onOpenManualSignIn?: (accountId: string) => void | Promise<void>
+  onOpenExternalCheckIn?: (accountId: string) => void | Promise<void>
   onDisableAccount?: (accountId: string) => void | Promise<void>
   onDeleteAccount?: (accountId: string) => void | Promise<void>
 }
@@ -61,9 +64,11 @@ export default function ResultsTable({
   openingManualAccountId,
   disablingAccountId,
   deletingAccountId,
+  externalCheckInAccountIds,
   onRetryAccount,
   onOpenAccountSite,
   onOpenManualSignIn,
+  onOpenExternalCheckIn,
   onDisableAccount,
   onDeleteAccount,
 }: ResultsTableProps) {
@@ -198,6 +203,8 @@ export default function ResultsTable({
                 pendingOpeningSiteAccountIds?.has(result.accountId) ?? false
               const isFailedResult =
                 result.status === CHECKIN_RESULT_STATUS.FAILED
+              const canOpenExternalCheckIn =
+                externalCheckInAccountIds?.has(result.accountId) ?? false
 
               return (
                 <tr
@@ -278,6 +285,20 @@ export default function ResultsTable({
                                 {t("execution.actions.openManual")}
                               </Button>
                             )}
+                          {onOpenExternalCheckIn && canOpenExternalCheckIn && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                onOpenExternalCheckIn(result.accountId)
+                              }
+                              leftIcon={
+                                <CalendarDaysIcon className="h-3.5 w-3.5" />
+                              }
+                            >
+                              {t("execution.actions.openExternal")}
+                            </Button>
+                          )}
                         </ProductAnalyticsScope>
                         <ProductAnalyticsScope
                           featureId={

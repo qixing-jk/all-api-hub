@@ -3,6 +3,7 @@
   "execution": {
     "actions": {
       "devModeHint": "開發模式：為便於測試，操作按鈕將始終顯示。",
+      "openExternal": "外部簽到",
       "openFailedManual": "開啟失敗帳號的手動簽到頁",
       "openManual": "手動簽到",
       "openSite": "開啟網站",
@@ -41,6 +42,7 @@
       "invalidAccessToken": "解決方案：Access Token 可能已失效。請重新登入該站點，然後在「帳號管理 → 編輯帳號」中重新自動識別/重新整理 Access Token；如自動識別後仍出現此問題，請手動獲取並修改 Access Token。",
       "manualVerificationRequired": "建議先點擊「開啟網站」，在站點頁面完成登入、Turnstile/PoW 等基礎驗證，讓瀏覽器建立有效工作階段後再重試自動簽到。如果完成驗證後仍多次失敗，可能是目前自動簽到流程尚未適配該站點，請暫時改用手動簽到。",
       "noTabWithId": "提示：請不要關閉擴充套件自動建立的標籤頁/視窗，擴充套件會在一段時間後自動關閉。如需手動關閉，請至少等待 1 分鐘後再關閉。",
+      "openExternalCheckIn": "預設僅開啟今日未開啟過的外部簽到；Ctrl/Cmd 開啟全部；Shift 在新視窗開啟。",
       "openFailedManualNewWindow": "提示：按住 Shift 點擊“開啟失敗帳號的手動簽到頁”，可在新視窗中開啟。",
       "siteTypeCheckinUnsupported": "解決方案：先到「帳號管理 → 編輯帳號」檢查「站點型別」是否與實際站點一致；如果先前是自動識別出的結果，可在目標站點重新登入後再重新識別一次。若確認站點型別正確但仍顯示不支援，表示該站點目前可能尚未適配自動簽到，請改用「開啟網站」或「手動簽到」處理。"
     },

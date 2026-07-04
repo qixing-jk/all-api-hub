@@ -2,6 +2,7 @@ import { CalendarCheck2 } from "lucide-react"
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type MouseEvent,
@@ -18,6 +19,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
+import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
@@ -224,6 +226,10 @@ export default function AutoCheckin(props: {
   )
   const [deleteDialogAccount, setDeleteDialogAccount] =
     useState<DisplaySiteData | null>(null)
+  const [accountInfoById, setAccountInfoById] = useState<
+    Record<string, DisplaySiteData>
+  >({})
+  const prefetchingAccountInfoIdsRef = useRef<Set<string>>(new Set())
 
   // Dev-only: diagnostics and simulation state for the UI-open pre-trigger flow.
   // These controls are shown only in development mode.
@@ -607,12 +613,32 @@ export default function AutoCheckin(props: {
 
   // Keep the bulk action tied to the full latest failure set rather than the
   // currently filtered table rows, so "open all failed" has a stable meaning.
-  const accountResults = status?.perAccount
-    ? Object.values(status.perAccount)
-    : []
+  const accountResults = useMemo(
+    () => (status?.perAccount ? Object.values(status.perAccount) : []),
+    [status?.perAccount],
+  )
   const failedManualAccountIds = accountResults
     .filter((result) => result.status === CHECKIN_RESULT_STATUS.FAILED)
     .map((result) => result.accountId)
+  const accountResultIds = useMemo(
+    () => accountResults.map((result) => result.accountId),
+    [accountResults],
+  )
+  const externalCheckInAccounts = useMemo(
+    () =>
+      accountResultIds
+        .map((accountId) => accountInfoById[accountId])
+        .filter((account): account is DisplaySiteData => {
+          const customUrl = account?.checkIn?.customCheckIn?.url
+          return typeof customUrl === "string" && customUrl.trim() !== ""
+        }),
+    [accountInfoById, accountResultIds],
+  )
+  const canOpenExternalCheckIns = externalCheckInAccounts.length > 0
+  const externalCheckInAccountIds = useMemo(
+    () => new Set(externalCheckInAccounts.map((account) => account.id)),
+    [externalCheckInAccounts],
+  )
 
   const handleRefresh = () => {
     const tracker = startProductAnalyticsAction({
@@ -720,10 +746,73 @@ export default function AutoCheckin(props: {
         throw new Error(response.error || "Unknown error")
       }
 
-      return response.data as DisplaySiteData
+      const displayData = response.data as DisplaySiteData | undefined
+      if (!displayData) {
+        throw new Error("Account info not found")
+      }
+
+      setAccountInfoById((prev) =>
+        prev[accountId] === displayData
+          ? prev
+          : {
+              ...prev,
+              [accountId]: displayData,
+            },
+      )
+      return displayData
     },
     [],
   )
+
+  useEffect(() => {
+    const missingAccountIds = accountResultIds.filter(
+      (accountId) =>
+        !accountInfoById[accountId] &&
+        !prefetchingAccountInfoIdsRef.current.has(accountId),
+    )
+
+    if (!missingAccountIds.length) {
+      return
+    }
+
+    let cancelled = false
+    for (const accountId of missingAccountIds) {
+      prefetchingAccountInfoIdsRef.current.add(accountId)
+    }
+
+    void Promise.allSettled(
+      missingAccountIds.map((accountId) =>
+        resolveAutoCheckinAccount(accountId),
+      ),
+    )
+      .then((results) => {
+        if (cancelled) return
+
+        const loadedAccounts = results.flatMap((result) =>
+          result.status === "fulfilled" ? [result.value] : [],
+        )
+
+        if (!loadedAccounts.length) {
+          return
+        }
+
+        setAccountInfoById((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            loadedAccounts.map((account) => [account.id, account]),
+          ),
+        }))
+      })
+      .finally(() => {
+        for (const accountId of missingAccountIds) {
+          prefetchingAccountInfoIdsRef.current.delete(accountId)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [accountInfoById, accountResultIds, resolveAutoCheckinAccount])
 
   const openAccountSiteForAccount = useCallback(
     async (accountId: string) => {
@@ -1023,6 +1112,110 @@ export default function AutoCheckin(props: {
     }
   }
 
+  const refreshExternalCheckInAccounts = async (
+    accountsToOpen: DisplaySiteData[],
+  ) => {
+    await Promise.allSettled(
+      accountsToOpen.map((account) => resolveAutoCheckinAccount(account.id)),
+    )
+  }
+
+  const handleOpenExternalCheckIns = async (
+    event: MouseEvent<HTMLButtonElement>,
+  ) => {
+    const { openAll, openInNewWindow } = getExternalCheckInOpenOptions(event)
+
+    const result = await openExternalCheckIns(externalCheckInAccounts, {
+      openAll,
+      openInNewWindow,
+      analyticsContext: {
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAllExternalCheckIns,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+      onSkipped: () => {
+        toast.error(t("messages:toast.error.externalCheckInNonePending"))
+      },
+      onSuccess: refreshExternalCheckInAccounts,
+      onPartialFailure: (failedCount, totalCount) => {
+        toast.error(
+          t("messages:errors.operation.failed", {
+            error: `${failedCount}/${totalCount} failed`,
+          }),
+        )
+      },
+      onFailure: (error) => {
+        logger.error("Error opening external check-ins", error)
+        toast.error(
+          t("messages:errors.operation.failed", {
+            error: getErrorMessage(error),
+          }),
+        )
+      },
+    })
+
+    if (!result || result.skipped || result.partialFailure || result.failed) {
+      return
+    }
+
+    toast.success(
+      t("messages:toast.success.externalCheckInOpened", {
+        count: result.openedAccountCount,
+        mode: openAll
+          ? t("messages:toast.success.externalCheckInModeAll")
+          : t("messages:toast.success.externalCheckInModeUnchecked"),
+      }),
+    )
+  }
+
+  const handleOpenAccountExternalCheckIn = async (accountId: string) => {
+    const account = accountInfoById[accountId]
+    if (!account) {
+      return
+    }
+
+    const result = await openExternalCheckIns([account], {
+      openAll: true,
+      analyticsContext: {
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAllExternalCheckIns,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+      onSkipped: () => {
+        toast.error(t("messages:toast.error.externalCheckInNonePending"))
+      },
+      onSuccess: refreshExternalCheckInAccounts,
+      onPartialFailure: (failedCount, totalCount) => {
+        toast.error(
+          t("messages:errors.operation.failed", {
+            error: `${failedCount}/${totalCount} failed`,
+          }),
+        )
+      },
+      onFailure: (error) => {
+        logger.error("Error opening account external check-in", error)
+        toast.error(
+          t("messages:errors.operation.failed", {
+            error: getErrorMessage(error),
+          }),
+        )
+      },
+    })
+
+    if (!result || result.skipped || result.partialFailure || result.failed) {
+      return
+    }
+
+    toast.success(
+      t("messages:toast.success.externalCheckInOpened", {
+        count: result.openedAccountCount,
+        mode: t("messages:toast.success.externalCheckInModeAll"),
+      }),
+    )
+  }
+
   const filteredResults = accountResults.filter((result) => {
     // Filter by status
     if (
@@ -1102,9 +1295,11 @@ export default function AutoCheckin(props: {
           isDebugTriggering={isDebugTriggering}
           isOpeningFailedManualSignIns={isOpeningFailedManualSignIns}
           canOpenFailedManualSignIns={failedManualAccountIds.length > 0}
+          canOpenExternalCheckIns={canOpenExternalCheckIns}
           onRunNow={handleRunNow}
           onRefresh={handleRefresh}
           onOpenFailedManualSignIns={handleOpenFailedManualSignIns}
+          onOpenExternalCheckIns={handleOpenExternalCheckIns}
           showDebugButtons={showDebugButtons}
           onDebugTriggerDailyAlarmNow={handleDebugTriggerDailyAlarmNow}
           onDebugTriggerRetryAlarmNow={handleDebugTriggerRetryAlarmNow}
@@ -1149,6 +1344,8 @@ export default function AutoCheckin(props: {
           onDeleteAccount={handleDeleteAccount}
           onOpenAccountSite={handleOpenAccountSite}
           onOpenManualSignIn={handleOpenManualSignIn}
+          externalCheckInAccountIds={externalCheckInAccountIds}
+          onOpenExternalCheckIn={handleOpenAccountExternalCheckIn}
         />
       )}
 

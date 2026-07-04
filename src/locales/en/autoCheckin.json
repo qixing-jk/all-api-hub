@@ -3,6 +3,7 @@
   "execution": {
     "actions": {
       "devModeHint": "Dev mode: action buttons are always shown for testing.",
+      "openExternal": "External check-in",
       "openFailedManual": "Open failed manual sign-ins",
       "openManual": "Manual sign-in",
       "openSite": "Open site",
@@ -41,6 +42,7 @@
       "invalidAccessToken": "Solution: The Access Token may have expired. Please log in to the site again, then in 'Account Management → Edit Account', automatically re-identify/refresh the Access Token. If this issue still occurs after automatic identification, please manually obtain and modify the Access Token.",
       "manualVerificationRequired": "Try clicking \"Open site\" first, then complete login, Turnstile, PoW, or other basic verification on the site so the browser has a valid session before retrying auto check-in. If it still fails repeatedly after verification, the current auto check-in flow may not support this site yet, so use manual sign-in for now.",
       "noTabWithId": "Tip: Don't close any tab/window opened automatically by the extension. The extension will close them after a short time. If you must close them manually, wait at least 1 minute before closing.",
+      "openExternalCheckIn": "Open unchecked external check-ins by default. Ctrl/Cmd opens all; Shift opens in a new window.",
       "openFailedManualNewWindow": "Tip: Shift-click \"Open failed manual sign-ins\" to open them in a new window.",
       "siteTypeCheckinUnsupported": "Solution: In 'Account Management → Edit Account', first verify that the selected site type matches the real site. If the type was auto-detected before, log back into the target site and run detection again. If the site type is correct but this message still appears, the site likely does not support automatic check-in yet, so use 'Open site' or 'Manual sign-in' instead."
     },

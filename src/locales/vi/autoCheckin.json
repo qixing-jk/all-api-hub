@@ -3,6 +3,7 @@
   "execution": {
     "actions": {
       "devModeHint": "Chế độ phát triển: Để thuận tiện cho việc kiểm tra, các nút thao tác sẽ luôn hiển thị.",
+      "openExternal": "Điểm danh bên ngoài",
       "openFailedManual": "Mở trang điểm danh thủ công cho tài khoản thất bại",
       "openManual": "Điểm danh thủ công",
       "openSite": "Mở trang web",
@@ -41,6 +42,7 @@
       "invalidAccessToken": "Giải pháp: Access Token có thể đã hết hạn. Vui lòng đăng nhập lại trang web này, sau đó tự động nhận diện/làm mới lại Access Token trong \"Quản lý tài khoản → Chỉnh sửa tài khoản\"; nếu sự cố này vẫn xảy ra sau khi nhận diện tự động, vui lòng lấy và sửa đổi Access Token theo cách thủ công.",
       "manualVerificationRequired": "Trước tiên hãy nhấp vào \"Mở trang web\", hoàn tất đăng nhập, Turnstile/PoW hoặc các bước xác minh cơ bản khác trên trang web để trình duyệt có phiên hợp lệ, rồi thử lại điểm danh tự động. Nếu sau khi xác minh vẫn thất bại nhiều lần, quy trình điểm danh tự động hiện tại có thể chưa phù hợp với trang web này, vui lòng tạm thời dùng điểm danh thủ công.",
       "noTabWithId": "Mẹo: Vui lòng không đóng thẻ/cửa sổ do tiện ích mở rộng tự động tạo, tiện ích mở rộng sẽ tự động đóng sau một khoảng thời gian. Nếu bạn cần đóng thủ công, vui lòng đợi ít nhất 1 phút trước khi đóng.",
+      "openExternalCheckIn": "Mặc định chỉ mở điểm danh bên ngoài chưa mở hôm nay. Ctrl/Cmd mở tất cả; Shift mở trong cửa sổ mới.",
       "openFailedManualNewWindow": "Mẹo: Nhấn giữ Shift và nhấp vào \"Mở trang điểm danh thủ công cho tài khoản thất bại\" để mở trong cửa sổ mới.",
       "siteTypeCheckinUnsupported": "Giải pháp: Trước tiên hãy kiểm tra xem \"Loại trang web\" trong \"Quản lý tài khoản → Chỉnh sửa tài khoản\" có khớp với trang web thực tế hay không; nếu đây là kết quả của việc nhận diện tự động trước đó, bạn có thể đăng nhập lại vào trang web đích và nhận diện lại. Nếu bạn xác nhận rằng loại trang web là chính xác nhưng hệ thống vẫn báo không hỗ trợ, điều đó có nghĩa là trang web này hiện có thể chưa được điều chỉnh cho điểm danh tự động, vui lòng chuyển sang sử dụng \"Mở trang web\" hoặc \"Điểm danh thủ công\" để xử lý."
     },

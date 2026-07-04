@@ -517,8 +517,12 @@ describe("AutoCheckin account actions", () => {
     const accountInfoRequests = sendRuntimeMessageSpy.mock.calls.filter(
       ([message]) => message === AutoCheckinMessageTypes.GetAccountInfo,
     )
+    const includeDisabledAccountInfoRequests = accountInfoRequests.filter(
+      ([, payload]) =>
+        (payload as { includeDisabled?: boolean })?.includeDisabled,
+    )
 
-    expect(accountInfoRequests).toEqual([
+    expect(includeDisabledAccountInfoRequests).toEqual([
       [
         AutoCheckinMessageTypes.GetAccountInfo,
         { accountId: "alpha", includeDisabled: true },

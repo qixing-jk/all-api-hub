@@ -849,6 +849,7 @@ describe("AccountActionsContext", () => {
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:errors.operation.failed",
     )
+    expect(mockToast.success).not.toHaveBeenCalled()
     expectExternalCheckInAnalyticsStarted()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
@@ -883,6 +884,7 @@ describe("AccountActionsContext", () => {
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:errors.operation.failed",
     )
+    expect(mockToast.success).not.toHaveBeenCalled()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
@@ -925,6 +927,7 @@ describe("AccountActionsContext", () => {
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:errors.operation.failed",
     )
+    expect(mockToast.success).not.toHaveBeenCalled()
     expectExternalCheckInAnalyticsStarted()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,

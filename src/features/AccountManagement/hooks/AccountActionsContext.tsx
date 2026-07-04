@@ -8,11 +8,8 @@ import {
 } from "react"
 import toast from "react-hot-toast"
 
+import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import {
-  ExternalCheckInMessageTypes,
-  sendExternalCheckInMessage,
-} from "~/services/checkin/externalCheckInMessaging"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import {
   startProductAnalyticsAction,
@@ -22,15 +19,12 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FAILURE_REASONS,
-  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -351,93 +345,38 @@ export const AccountActionsProvider = ({
         analyticsContext?: ProductAnalyticsActionContext
       },
     ) => {
-      const tracker = options?.analyticsContext
-        ? startProductAnalyticsAction(options.analyticsContext)
-        : undefined
-      let analyticsCompleted = false
-
-      const enabledAccounts = accounts.filter((account) => !account.disabled)
-      const accountsToOpen = options?.openAll
-        ? enabledAccounts
-        : enabledAccounts.filter(
-            (account) => !account.checkIn?.customCheckIn?.isCheckedInToday,
-          )
-
-      if (!accountsToOpen.length) {
-        analyticsCompleted = true
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
-        toast.error(t("messages:toast.error.externalCheckInNonePending"))
-        return
-      }
-
-      try {
-        const response = await sendExternalCheckInMessage(
-          ExternalCheckInMessageTypes.OpenAndMark,
-          {
-            accountIds: accountsToOpen.map((account) => account.id),
-            openInNewWindow: Boolean(options?.openInNewWindow),
-          },
-        )
-
-        if (!response?.success || !response.data) {
-          analyticsCompleted = true
-          const failure = buildActionFailureDiagnostics({
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
-            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Response,
-          })
-          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            diagnostics: { failure },
-            errorCategory: failure.category,
-          })
-          throw new Error(
-            response?.success === false ? response.error : "Empty response",
-          )
-        }
-
-        await loadAccountData()
-
-        if (response.data.failedCount > 0) {
-          analyticsCompleted = true
-          const failure = buildActionFailureDiagnostics({
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
-          })
-          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            diagnostics: { failure },
-            errorCategory: failure.category,
-          })
+      const result = await openExternalCheckIns(accounts, {
+        openAll: options?.openAll,
+        openInNewWindow: options?.openInNewWindow,
+        analyticsContext: options?.analyticsContext,
+        onSkipped: () => {
+          toast.error(t("messages:toast.error.externalCheckInNonePending"))
+        },
+        onSuccess: loadAccountData,
+        onPartialFailure: (failedCount, totalCount) => {
           toast.error(
             t("messages:errors.operation.failed", {
-              error: `${response.data.failedCount}/${response.data.totalCount} failed`,
+              error: `${failedCount}/${totalCount} failed`,
             }),
           )
-          return
-        }
-        analyticsCompleted = true
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-      } catch (error) {
-        logger.error("Error opening external check-ins", error)
-        if (!analyticsCompleted) {
-          analyticsCompleted = true
-          const failure = buildActionFailureDiagnostics({ error })
-          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            diagnostics: { failure },
-            errorCategory: failure.category,
-          })
-        }
-        toast.error(
-          t("messages:errors.operation.failed", {
-            error: getErrorMessage(error),
-          }),
-        )
+        },
+        onFailure: (error) => {
+          logger.error("Error opening external check-ins", error)
+          toast.error(
+            t("messages:errors.operation.failed", {
+              error: getErrorMessage(error),
+            }),
+          )
+        },
+      })
+
+      if (!result || result.skipped || result.partialFailure || result.failed) {
         return
       }
 
       toast.success(
         t("messages:toast.success.externalCheckInOpened", {
-          count: accountsToOpen.length,
+          count: result.openedAccountCount,
           mode: options?.openAll
             ? t("messages:toast.success.externalCheckInModeAll")
             : t("messages:toast.success.externalCheckInModeUnchecked"),
