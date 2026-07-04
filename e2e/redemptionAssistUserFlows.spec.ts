@@ -442,7 +442,10 @@ test("opens Redemption Assist settings from the content prompt", async ({
 
   const contentHost = page.locator("all-api-hub-redemption-toast")
   await expect(
-    contentHost.getByRole("heading", { name: "Redemption Assist" }),
+    contentHost.getByRole("heading", {
+      name: "Redemption Assist",
+      exact: true,
+    }),
   ).toBeVisible()
 
   const settingsPagePromise = waitForExtensionPage(context, {

@@ -25,6 +25,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
+  expectPlasmoStorageJsonValueToBecome,
   getPlasmoStorageJsonValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
@@ -413,19 +414,15 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   ).toBeVisible()
   await page.getByRole("button", { name: "Start check and fill gaps" }).click()
 
-  await expect
-    .poll(
-      async () => {
-        const progress =
-          await getPlasmoStorageJsonValue<AccountKeyRepairProgress>(
-            serviceWorker,
-            ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
-          )
-        return progress?.state
-      },
-      { timeout: 30_000 },
-    )
-    .toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
+  await expectPlasmoStorageJsonValueToBecome<
+    AccountKeyRepairProgress,
+    string | undefined
+  >(
+    serviceWorker,
+    ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+    (progress) => progress?.state,
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+  )
 
   const completedProgress =
     await getPlasmoStorageJsonValue<AccountKeyRepairProgress>(
@@ -491,19 +488,16 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   await expect(page.getByTestId("repair-missing-keys-result-count")).toHaveText(
     "0/0",
   )
-  await expect
-    .poll(
-      async () => {
-        const progress =
-          await getPlasmoStorageJsonValue<AccountKeyRepairProgress>(
-            serviceWorker,
-            ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
-          )
-        return progress?.summary.invalidKeys
-      },
-      { timeout: 10_000 },
-    )
-    .toBe(0)
+  await expectPlasmoStorageJsonValueToBecome<
+    AccountKeyRepairProgress,
+    number | undefined
+  >(
+    serviceWorker,
+    ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+    (progress) => progress?.summary.invalidKeys,
+    0,
+    10_000,
+  )
 })
 
 test("saves a key to API credential profiles and opens the profiles page", async ({

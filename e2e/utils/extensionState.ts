@@ -141,6 +141,22 @@ export async function getStoredUserPreferences(
   )
 }
 
+export async function expectPlasmoStorageJsonValueToBecome<T, V>(
+  serviceWorker: Worker,
+  key: string,
+  selectValue: (value: T | null) => V,
+  expectedValue: V,
+  timeout = 30_000,
+) {
+  await expect
+    .poll(
+      async () =>
+        selectValue(await getPlasmoStorageJsonValue<T>(serviceWorker, key)),
+      { timeout },
+    )
+    .toBe(expectedValue)
+}
+
 async function getManifestPermissionsField(
   page: Page,
   field: "permissions" | "optional_permissions",
