@@ -22,6 +22,7 @@ interface ActionBarProps {
   isRefreshing?: boolean
   isDebugTriggering?: boolean
   isOpeningFailedManualSignIns?: boolean
+  isOpeningExternalCheckIns?: boolean
   canOpenFailedManualSignIns?: boolean
   canOpenExternalCheckIns?: boolean
   onRunNow: () => void
@@ -44,6 +45,7 @@ interface ActionBarProps {
  * @param props.isRefreshing Shows a loading state while the latest snapshot is being refreshed.
  * @param props.isDebugTriggering Disables actions while triggering debug alarm handlers.
  * @param props.isOpeningFailedManualSignIns Disables actions while bulk-opening failed manual sign-in pages.
+ * @param props.isOpeningExternalCheckIns Disables actions while opening configured external check-in URLs.
  * @param props.canOpenFailedManualSignIns Whether the current status contains failed accounts that can be bulk-opened.
  * @param props.canOpenExternalCheckIns Whether any visible account has a configured external check-in URL.
  * @param props.onRunNow Handler triggered to start a manual execution.
@@ -63,6 +65,7 @@ export default function ActionBar({
   isRefreshing,
   isDebugTriggering,
   isOpeningFailedManualSignIns,
+  isOpeningExternalCheckIns,
   canOpenFailedManualSignIns,
   canOpenExternalCheckIns,
   onRunNow,
@@ -81,7 +84,8 @@ export default function ActionBar({
   const isBusy =
     isRunning ||
     isDebugTriggering === true ||
-    isOpeningFailedManualSignIns === true
+    isOpeningFailedManualSignIns === true ||
+    isOpeningExternalCheckIns === true
   const bulkManualHint = t("execution.hints.openFailedManualNewWindow")
   const externalCheckInHint = t("execution.hints.openExternalCheckIn")
   const toolbarSurface =
@@ -131,6 +135,7 @@ export default function ActionBar({
               onClick={onOpenExternalCheckIns}
               variant="outline"
               disabled={isBusy}
+              loading={isOpeningExternalCheckIns}
               leftIcon={<CalendarDaysIcon className="h-4 w-4" />}
               title={externalCheckInHint}
             >

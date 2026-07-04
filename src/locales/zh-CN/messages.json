@@ -157,6 +157,7 @@
       "copyFailed": "复制失败",
       "duplicateCleanupFailed": "删除重复账号失败：{{error}}",
       "externalCheckInNonePending": "没有今日未打开过的外部签到站。",
+      "externalCheckInPartialFailed": "{{totalCount}} 个外部签到中有 {{failedCount}} 个打开失败。",
       "findAccountDetailsFailed": "找不到账户详情",
       "operationFailed": "操作失败：{{error}}",
       "operationFailedGeneric": "操作失败",

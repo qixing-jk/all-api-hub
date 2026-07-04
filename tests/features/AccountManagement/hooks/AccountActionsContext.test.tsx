@@ -364,6 +364,26 @@ describe("AccountActionsContext", () => {
     )
   })
 
+  it("skips unchecked external check-ins without analytics context", async () => {
+    const { getContext } = await renderContext()
+
+    await act(async () => {
+      await getContext().handleOpenExternalCheckIns([
+        createAccount({
+          id: "checked-without-analytics",
+          checkIn: { customCheckIn: { isCheckedInToday: true } },
+        }),
+      ])
+    })
+
+    expect(mockSendExternalCheckInMessage).not.toHaveBeenCalled()
+    expect(mockStartProductAnalyticsAction).not.toHaveBeenCalled()
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalled()
+    expect(mockToast.error).toHaveBeenCalledWith(
+      "messages:toast.error.externalCheckInNonePending",
+    )
+  })
+
   it("refreshes enabled accounts, exposes the in-flight id, and skips concurrent refreshes", async () => {
     const { getContext } = await renderContext()
     let resolveRefresh: ((value: { refreshed: boolean }) => void) | undefined
@@ -808,7 +828,7 @@ describe("AccountActionsContext", () => {
 
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.error).toHaveBeenCalledWith(
-      "messages:errors.operation.failed",
+      "messages:toast.error.externalCheckInPartialFailed",
     )
     expect(mockToast.success).not.toHaveBeenCalled()
     expectExternalCheckInAnalyticsStarted()
@@ -863,6 +883,38 @@ describe("AccountActionsContext", () => {
         },
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       },
+    )
+  })
+
+  it("keeps successful external check-in feedback when account reload fails", async () => {
+    const { getContext } = await renderContext()
+
+    mockLoadAccountData.mockRejectedValueOnce(new Error("reload failed"))
+
+    await act(async () => {
+      mockSendExternalCheckInMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          results: [],
+          openedCount: 1,
+          markedCount: 1,
+          failedCount: 0,
+          totalCount: 1,
+        },
+      })
+      await getContext().handleOpenExternalCheckIns(
+        [createAccount({ id: "reload-fails" })],
+        withExternalCheckInAnalytics(),
+      )
+    })
+
+    expect(mockLoadAccountData).toHaveBeenCalled()
+    expect(mockToast.error).not.toHaveBeenCalled()
+    expect(mockToast.success).toHaveBeenCalledWith(
+      "messages:toast.success.externalCheckInOpened",
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
     )
   })
 

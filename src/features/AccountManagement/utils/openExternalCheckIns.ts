@@ -25,6 +25,17 @@ interface OpenExternalCheckInsOptions {
   onPartialFailure?: (failedCount: number, totalCount: number) => void
 }
 
+const runPostOpenSuccessCallback = async (
+  callback: OpenExternalCheckInsOptions["onSuccess"],
+  accountsToOpen: DisplaySiteData[],
+) => {
+  try {
+    await callback?.(accountsToOpen)
+  } catch {
+    // A post-open refresh failure must not change the already completed open result.
+  }
+}
+
 const getOpenableExternalCheckInAccounts = (
   accounts: DisplaySiteData[],
   options?: { openAll?: boolean },
@@ -92,8 +103,6 @@ export async function openExternalCheckIns(
       )
     }
 
-    await options?.onSuccess?.(accountsToOpen)
-
     if (response.data.failedCount > 0) {
       analyticsCompleted = true
       const failure = buildActionFailureDiagnostics({
@@ -109,6 +118,7 @@ export async function openExternalCheckIns(
         response.data.failedCount,
         response.data.totalCount,
       )
+      await runPostOpenSuccessCallback(options?.onSuccess, accountsToOpen)
       return {
         openedAccountCount: accountsToOpen.length,
         skipped: false,
@@ -119,6 +129,7 @@ export async function openExternalCheckIns(
 
     analyticsCompleted = true
     tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+    await runPostOpenSuccessCallback(options?.onSuccess, accountsToOpen)
   } catch (error) {
     if (!analyticsCompleted) {
       analyticsCompleted = true

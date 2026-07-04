@@ -141,11 +141,37 @@ const mockExternalCheckInSuccess = () => {
   })
 }
 
+const mockExternalCheckInPartialFailure = () => {
+  vi.mocked(sendExternalCheckInMessage).mockResolvedValue({
+    success: true,
+    data: {
+      results: [],
+      openedCount: 1,
+      markedCount: 1,
+      failedCount: 1,
+      totalCount: 2,
+    },
+  })
+}
+
 const mockExternalCheckInFailure = () => {
   vi.mocked(sendExternalCheckInMessage).mockResolvedValue({
     success: false,
     error: "background unavailable",
   })
+}
+
+const createDeferredExternalCheckInResponse = () => {
+  let resolve: (
+    value: Awaited<ReturnType<typeof sendExternalCheckInMessage>>,
+  ) => void = () => {}
+  const promise = new Promise<
+    Awaited<ReturnType<typeof sendExternalCheckInMessage>>
+  >((promiseResolve) => {
+    resolve = promiseResolve
+  })
+
+  return { promise, resolve }
 }
 
 afterEach(() => {
@@ -203,7 +229,7 @@ describe("AutoCheckin external check-in actions", () => {
       await screen.findByTitle(
         "autoCheckin:execution.hints.openExternalCheckIn",
       ),
-      { ctrlKey: true, shiftKey: true },
+      { ctrlKey: true },
     )
 
     await waitFor(() => {
@@ -211,10 +237,89 @@ describe("AutoCheckin external check-in actions", () => {
         ExternalCheckInMessageTypes.OpenAndMark,
         {
           accountIds: ["alpha", "beta"],
+          openInNewWindow: false,
+        },
+      )
+    })
+  })
+
+  it("opens unchecked external check-ins in a new window on shift click", async () => {
+    mockAutoCheckinMessages()
+    mockExternalCheckInSuccess()
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    fireEvent.click(
+      await screen.findByTitle(
+        "autoCheckin:execution.hints.openExternalCheckIn",
+      ),
+      { shiftKey: true },
+    )
+
+    await waitFor(() => {
+      expect(sendExternalCheckInMessage).toHaveBeenCalledWith(
+        ExternalCheckInMessageTypes.OpenAndMark,
+        {
+          accountIds: ["alpha"],
           openInNewWindow: true,
         },
       )
     })
+  })
+
+  it("blocks duplicate action bar external check-in clicks while opening", async () => {
+    const user = userEvent.setup()
+    const deferred = createDeferredExternalCheckInResponse()
+    mockAutoCheckinMessages()
+    vi.mocked(sendExternalCheckInMessage).mockReturnValue(deferred.promise)
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    const button = await screen.findByTitle(
+      "autoCheckin:execution.hints.openExternalCheckIn",
+    )
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(button).toBeDisabled()
+    })
+    await user.click(button)
+
+    expect(sendExternalCheckInMessage).toHaveBeenCalledTimes(1)
+    deferred.resolve({
+      success: true,
+      data: {
+        results: [],
+        openedCount: 1,
+        markedCount: 1,
+        failedCount: 0,
+        totalCount: 1,
+      },
+    })
+    await waitFor(() => {
+      expect(button).not.toBeDisabled()
+    })
+  })
+
+  it("shows localized partial-failure feedback from the action bar", async () => {
+    const user = userEvent.setup()
+    mockAutoCheckinMessages()
+    mockExternalCheckInPartialFailure()
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByTitle(
+        "autoCheckin:execution.hints.openExternalCheckIn",
+      ),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "messages:toast.error.externalCheckInPartialFailed",
+      )
+    })
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it("does not show success feedback when action bar external check-in fails", async () => {
@@ -264,6 +369,48 @@ describe("AutoCheckin external check-in actions", () => {
           openInNewWindow: false,
         },
       )
+    })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountExternalCheckIn,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("blocks duplicate row external check-in clicks while opening", async () => {
+    const user = userEvent.setup()
+    const deferred = createDeferredExternalCheckInResponse()
+    mockAutoCheckinMessages()
+    vi.mocked(sendExternalCheckInMessage).mockReturnValue(deferred.promise)
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    const alphaRow = await screen.findByRole("row", { name: /Alpha/ })
+    const button = await within(alphaRow).findByRole("button", {
+      name: "autoCheckin:execution.actions.openExternal",
+    })
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(button).toBeDisabled()
+    })
+    await user.click(button)
+
+    expect(sendExternalCheckInMessage).toHaveBeenCalledTimes(1)
+    deferred.resolve({
+      success: true,
+      data: {
+        results: [],
+        openedCount: 1,
+        markedCount: 1,
+        failedCount: 0,
+        totalCount: 1,
+      },
+    })
+    await waitFor(() => {
+      expect(button).not.toBeDisabled()
     })
   })
 })

@@ -157,6 +157,8 @@
       "copyFailed": "コピーに失敗しました",
       "duplicateCleanupFailed": "重複アカウントの削除に失敗しました: {{error}}",
       "externalCheckInNonePending": "本日まだ開いていない外部チェックイン先はありません。",
+      "externalCheckInPartialFailed_one": "{{totalCount}} 件の外部チェックインのうち {{failedCount}} 件を開けませんでした。",
+      "externalCheckInPartialFailed_other": "{{totalCount}} 件の外部チェックインのうち {{failedCount}} 件を開けませんでした。",
       "findAccountDetailsFailed": "アカウント詳細が見つかりませんでした",
       "operationFailed": "操作に失敗しました: {{error}}",
       "operationFailedGeneric": "操作に失敗しました",

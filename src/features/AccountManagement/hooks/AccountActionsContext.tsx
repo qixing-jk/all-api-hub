@@ -355,8 +355,10 @@ export const AccountActionsProvider = ({
         onSuccess: loadAccountData,
         onPartialFailure: (failedCount, totalCount) => {
           toast.error(
-            t("messages:errors.operation.failed", {
-              error: `${failedCount}/${totalCount} failed`,
+            t("messages:toast.error.externalCheckInPartialFailed", {
+              count: failedCount,
+              failedCount,
+              totalCount,
             }),
           )
         },

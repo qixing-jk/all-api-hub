@@ -157,6 +157,8 @@
       "copyFailed": "Sao chép thất bại",
       "duplicateCleanupFailed": "Xóa tài khoản trùng lặp thất bại: {{error}}",
       "externalCheckInNonePending": "Không có trang điểm danh bên ngoài nào chưa mở hôm nay.",
+      "externalCheckInPartialFailed_one": "{{failedCount}}/{{totalCount}} điểm danh bên ngoài mở thất bại.",
+      "externalCheckInPartialFailed_other": "{{failedCount}}/{{totalCount}} điểm danh bên ngoài mở thất bại.",
       "findAccountDetailsFailed": "Không tìm thấy chi tiết tài khoản",
       "operationFailed": "Thao tác thất bại: {{error}}",
       "operationFailedGeneric": "Thao tác thất bại",

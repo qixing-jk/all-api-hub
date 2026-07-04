@@ -414,6 +414,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenAnnouncementSource: "open_announcement_source",
   OpenAutoCheckinAccountSite: "open_auto_checkin_account_site",
   OpenAutoCheckinAccountSetup: "open_auto_checkin_account_setup",
+  OpenAutoCheckinAccountExternalCheckIn:
+    "open_auto_checkin_account_external_check_in",
   OpenAutoCheckinManualSignIn: "open_auto_checkin_manual_sign_in",
   OpenBookmark: "open_bookmark",
   OpenBatchModelVerifyDialog: "open_batch_model_verify_dialog",

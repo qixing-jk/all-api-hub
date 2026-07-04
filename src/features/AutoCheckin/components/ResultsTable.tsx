@@ -38,6 +38,7 @@ interface ResultsTableProps {
   retryingAccountId?: string | null
   pendingOpeningSiteAccountIds?: Set<string>
   openingManualAccountId?: string | null
+  openingExternalCheckInAccountId?: string | null
   disablingAccountId?: string | null
   deletingAccountId?: string | null
   externalCheckInAccountIds?: Set<string>
@@ -62,6 +63,7 @@ export default function ResultsTable({
   retryingAccountId,
   pendingOpeningSiteAccountIds,
   openingManualAccountId,
+  openingExternalCheckInAccountId,
   disablingAccountId,
   deletingAccountId,
   externalCheckInAccountIds,
@@ -289,6 +291,14 @@ export default function ResultsTable({
                             <Button
                               size="sm"
                               variant="outline"
+                              loading={
+                                openingExternalCheckInAccountId ===
+                                result.accountId
+                              }
+                              disabled={
+                                openingExternalCheckInAccountId ===
+                                result.accountId
+                              }
                               onClick={() =>
                                 onOpenExternalCheckIn(result.accountId)
                               }

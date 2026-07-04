@@ -157,6 +157,8 @@
       "copyFailed": "複製失敗",
       "duplicateCleanupFailed": "刪除重複帳號失敗：{{error}}",
       "externalCheckInNonePending": "沒有今日未開啟過的外部簽到站。",
+      "externalCheckInPartialFailed_one": "{{totalCount}} 個外部簽到中有 {{failedCount}} 個開啟失敗。",
+      "externalCheckInPartialFailed_other": "{{totalCount}} 個外部簽到中有 {{failedCount}} 個開啟失敗。",
       "findAccountDetailsFailed": "找不到帳戶詳情",
       "operationFailed": "操作失敗：{{error}}",
       "operationFailedGeneric": "操作失敗",

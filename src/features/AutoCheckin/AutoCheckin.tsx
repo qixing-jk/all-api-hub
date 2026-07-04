@@ -210,6 +210,8 @@ export default function AutoCheckin(props: {
   const [isDebugTriggering, setIsDebugTriggering] = useState(false)
   const [isOpeningFailedManualSignIns, setIsOpeningFailedManualSignIns] =
     useState(false)
+  const [isOpeningExternalCheckIns, setIsOpeningExternalCheckIns] =
+    useState(false)
   const [retryingAccountId, setRetryingAccountId] = useState<string | null>(
     null,
   )
@@ -221,6 +223,8 @@ export default function AutoCheckin(props: {
   const [openingManualAccountId, setOpeningManualAccountId] = useState<
     string | null
   >(null)
+  const [openingExternalCheckInAccountId, setOpeningExternalCheckInAccountId] =
+    useState<string | null>(null)
   const [deletingAccountId, setDeletingAccountId] = useState<string | null>(
     null,
   )
@@ -1120,40 +1124,58 @@ export default function AutoCheckin(props: {
     )
   }
 
+  const getExternalCheckInPartialFailureMessage = (
+    failedCount: number,
+    totalCount: number,
+  ) =>
+    t("messages:toast.error.externalCheckInPartialFailed", {
+      count: failedCount,
+      failedCount,
+      totalCount,
+    })
+
   const handleOpenExternalCheckIns = async (
     event: MouseEvent<HTMLButtonElement>,
   ) => {
+    if (isOpeningExternalCheckIns) {
+      return
+    }
+
     const { openAll, openInNewWindow } = getExternalCheckInOpenOptions(event)
 
-    const result = await openExternalCheckIns(externalCheckInAccounts, {
-      openAll,
-      openInNewWindow,
-      analyticsContext: {
-        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAllExternalCheckIns,
-        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      },
-      onSkipped: () => {
-        toast.error(t("messages:toast.error.externalCheckInNonePending"))
-      },
-      onSuccess: refreshExternalCheckInAccounts,
-      onPartialFailure: (failedCount, totalCount) => {
-        toast.error(
-          t("messages:errors.operation.failed", {
-            error: `${failedCount}/${totalCount} failed`,
-          }),
-        )
-      },
-      onFailure: (error) => {
-        logger.error("Error opening external check-ins", error)
-        toast.error(
-          t("messages:errors.operation.failed", {
-            error: getErrorMessage(error),
-          }),
-        )
-      },
-    })
+    setIsOpeningExternalCheckIns(true)
+    let result: Awaited<ReturnType<typeof openExternalCheckIns>> | undefined
+    try {
+      result = await openExternalCheckIns(externalCheckInAccounts, {
+        openAll,
+        openInNewWindow,
+        analyticsContext: {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAllExternalCheckIns,
+          surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+        onSkipped: () => {
+          toast.error(t("messages:toast.error.externalCheckInNonePending"))
+        },
+        onSuccess: refreshExternalCheckInAccounts,
+        onPartialFailure: (failedCount, totalCount) => {
+          toast.error(
+            getExternalCheckInPartialFailureMessage(failedCount, totalCount),
+          )
+        },
+        onFailure: (error) => {
+          logger.error("Error opening external check-ins", error)
+          toast.error(
+            t("messages:errors.operation.failed", {
+              error: getErrorMessage(error),
+            }),
+          )
+        },
+      })
+    } finally {
+      setIsOpeningExternalCheckIns(false)
+    }
 
     if (!result || result.skipped || result.partialFailure || result.failed) {
       return
@@ -1170,39 +1192,49 @@ export default function AutoCheckin(props: {
   }
 
   const handleOpenAccountExternalCheckIn = async (accountId: string) => {
+    if (openingExternalCheckInAccountId) {
+      return
+    }
+
     const account = accountInfoById[accountId]
     if (!account) {
       return
     }
 
-    const result = await openExternalCheckIns([account], {
-      openAll: true,
-      analyticsContext: {
-        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAllExternalCheckIns,
-        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      },
-      onSkipped: () => {
-        toast.error(t("messages:toast.error.externalCheckInNonePending"))
-      },
-      onSuccess: refreshExternalCheckInAccounts,
-      onPartialFailure: (failedCount, totalCount) => {
-        toast.error(
-          t("messages:errors.operation.failed", {
-            error: `${failedCount}/${totalCount} failed`,
-          }),
-        )
-      },
-      onFailure: (error) => {
-        logger.error("Error opening account external check-in", error)
-        toast.error(
-          t("messages:errors.operation.failed", {
-            error: getErrorMessage(error),
-          }),
-        )
-      },
-    })
+    setOpeningExternalCheckInAccountId(accountId)
+    let result: Awaited<ReturnType<typeof openExternalCheckIns>> | undefined
+    try {
+      result = await openExternalCheckIns([account], {
+        openAll: true,
+        analyticsContext: {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountExternalCheckIn,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+        onSkipped: () => {
+          toast.error(t("messages:toast.error.externalCheckInNonePending"))
+        },
+        onSuccess: refreshExternalCheckInAccounts,
+        onPartialFailure: (failedCount, totalCount) => {
+          toast.error(
+            getExternalCheckInPartialFailureMessage(failedCount, totalCount),
+          )
+        },
+        onFailure: (error) => {
+          logger.error("Error opening account external check-in", error)
+          toast.error(
+            t("messages:errors.operation.failed", {
+              error: getErrorMessage(error),
+            }),
+          )
+        },
+      })
+    } finally {
+      setOpeningExternalCheckInAccountId(null)
+    }
 
     if (!result || result.skipped || result.partialFailure || result.failed) {
       return
@@ -1294,6 +1326,7 @@ export default function AutoCheckin(props: {
           isRefreshing={isLoading && status !== null}
           isDebugTriggering={isDebugTriggering}
           isOpeningFailedManualSignIns={isOpeningFailedManualSignIns}
+          isOpeningExternalCheckIns={isOpeningExternalCheckIns}
           canOpenFailedManualSignIns={failedManualAccountIds.length > 0}
           canOpenExternalCheckIns={canOpenExternalCheckIns}
           onRunNow={handleRunNow}
@@ -1339,6 +1372,7 @@ export default function AutoCheckin(props: {
           deletingAccountId={deletingAccountId}
           pendingOpeningSiteAccountIds={pendingOpeningSiteAccountIds}
           openingManualAccountId={openingManualAccountId}
+          openingExternalCheckInAccountId={openingExternalCheckInAccountId}
           onRetryAccount={handleRetryAccount}
           onDisableAccount={handleDisableAccount}
           onDeleteAccount={handleDeleteAccount}
