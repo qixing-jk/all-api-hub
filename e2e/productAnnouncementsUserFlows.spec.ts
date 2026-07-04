@@ -6,7 +6,7 @@ import {
   PRODUCT_ANNOUNCEMENT_TEST_IDS,
 } from "~/features/ProductAnnouncements/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
-import { PRODUCT_ANNOUNCEMENT_REMOTE_URL } from "~/services/productAnnouncements/constants"
+import { PRODUCT_ANNOUNCEMENT_REMOTE_URL } from "~/services/productAnnouncements/remoteFeed"
 import type {
   ProductAnnouncementState,
   RawProductAnnouncementFeed,

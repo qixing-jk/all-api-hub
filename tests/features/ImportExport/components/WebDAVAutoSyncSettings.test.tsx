@@ -279,7 +279,9 @@ describe("WebDAVAutoSyncSettings", () => {
         WebdavAutoSyncMessageTypes.SyncNow,
       )
     })
-    expect(toast.success).toHaveBeenCalledWith("custom sync ok")
+    expect(toast.success).toHaveBeenCalledWith(
+      "importExport:webdav.syncSuccess",
+    )
     expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncWebDavNow,

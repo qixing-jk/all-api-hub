@@ -1137,7 +1137,9 @@ describe("WebDAVSettings", () => {
     )
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("custom sync ok")
+      expect(toast.success).toHaveBeenCalledWith(
+        "importExport:webdav.syncSuccess",
+      )
     })
 
     fireEvent.click(
@@ -1185,7 +1187,9 @@ describe("WebDAVSettings", () => {
     )
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("custom sync ok")
+      expect(toast.success).toHaveBeenCalledWith(
+        "importExport:webdav.syncSuccess",
+      )
     })
 
     clickWebdavAction("webdav-test-connection")
