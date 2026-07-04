@@ -213,6 +213,21 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+const expectPartialFailureToast = (failedCount: number, totalCount: number) => {
+  expect(toast.error).toHaveBeenCalledWith(
+    "messages:toast.error.externalCheckInPartialFailed",
+  )
+  expect(tMock).toHaveBeenCalledWith(
+    "messages:toast.error.externalCheckInPartialFailed",
+    {
+      count: failedCount,
+      failedCount,
+      totalCount,
+    },
+    ["autoCheckin", "messages", "account", "common"],
+  )
+}
+
 describe("AutoCheckin external check-in actions", () => {
   beforeEach(() => {
     startProductAnalyticsActionMock.mockReturnValue({
@@ -349,19 +364,8 @@ describe("AutoCheckin external check-in actions", () => {
     )
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
-        "messages:toast.error.externalCheckInPartialFailed",
-      )
+      expectPartialFailureToast(1, 2)
     })
-    expect(tMock).toHaveBeenCalledWith(
-      "messages:toast.error.externalCheckInPartialFailed",
-      {
-        count: 1,
-        failedCount: 1,
-        totalCount: 2,
-      },
-      ["autoCheckin", "messages", "account", "common"],
-    )
     expect(toast.success).not.toHaveBeenCalled()
   })
 
@@ -543,19 +547,8 @@ describe("AutoCheckin external check-in actions", () => {
     )
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
-        "messages:toast.error.externalCheckInPartialFailed",
-      )
+      expectPartialFailureToast(1, 2)
     })
-    expect(tMock).toHaveBeenCalledWith(
-      "messages:toast.error.externalCheckInPartialFailed",
-      {
-        count: 1,
-        failedCount: 1,
-        totalCount: 2,
-      },
-      ["autoCheckin", "messages", "account", "common"],
-    )
     expect(toast.success).not.toHaveBeenCalled()
   })
 
