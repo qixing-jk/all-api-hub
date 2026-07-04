@@ -103,15 +103,7 @@ export async function getPlasmoStorageRawValue<T>(
   }, key)
 }
 
-/**
- * Read and JSON-normalize a Plasmo-backed storage value.
- */
-export async function getPlasmoStorageJsonValue<T>(
-  serviceWorker: Worker,
-  key: string,
-): Promise<T | null> {
-  const raw = await getPlasmoStorageRawValue<unknown>(serviceWorker, key)
-
+export function normalizePlasmoStorageJsonValue<T>(raw: unknown): T | null {
   if (typeof raw === "string") {
     try {
       return JSON.parse(raw) as T
@@ -120,11 +112,22 @@ export async function getPlasmoStorageJsonValue<T>(
     }
   }
 
-  if (raw && typeof raw === "object") {
-    return raw as T
+  if (raw === null || typeof raw === "undefined") {
+    return null
   }
 
-  return null
+  return raw as T
+}
+
+/**
+ * Read and JSON-normalize a Plasmo-backed storage value.
+ */
+export async function getPlasmoStorageJsonValue<T>(
+  serviceWorker: Worker,
+  key: string,
+): Promise<T | null> {
+  const raw = await getPlasmoStorageRawValue<unknown>(serviceWorker, key)
+  return normalizePlasmoStorageJsonValue<T>(raw)
 }
 
 /**
