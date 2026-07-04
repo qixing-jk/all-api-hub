@@ -8,6 +8,7 @@ import type { TFunction } from "i18next"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { RELEASE_UPDATE_STATUS_PANEL_TEST_IDS } from "~/components/ReleaseUpdateStatusPanel.testIds"
 import { BodySmall, Button, Card, CardItem, CardList } from "~/components/ui"
 import { useReleaseUpdateStatus } from "~/contexts/ReleaseUpdateStatusContext"
 import {
@@ -242,7 +243,10 @@ export function ReleaseUpdateStatusPanel() {
   }
 
   return (
-    <Card padding="none">
+    <Card
+      padding="none"
+      data-testid={RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.panel}
+    >
       <CardList>
         <CardItem
           icon={
@@ -278,6 +282,9 @@ export function ReleaseUpdateStatusPanel() {
                 onClick={() => void handleCheckNow()}
                 loading={isChecking}
                 leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                data-testid={
+                  RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.checkNowButton
+                }
               >
                 {t("settings:releaseUpdate.checkNow")}
               </Button>
@@ -288,6 +295,9 @@ export function ReleaseUpdateStatusPanel() {
                   size="sm"
                   rightIcon={actionIcon}
                   onClick={reloadRuntime}
+                  data-testid={
+                    RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.primaryAction
+                  }
                 >
                   {actionLabel}
                 </Button>
@@ -297,6 +307,9 @@ export function ReleaseUpdateStatusPanel() {
                   variant={hasUpdate ? "default" : "secondary"}
                   size="sm"
                   rightIcon={actionIcon}
+                  data-testid={
+                    RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.primaryAction
+                  }
                 >
                   <a
                     href={actionHref}

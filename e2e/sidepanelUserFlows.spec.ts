@@ -3,7 +3,10 @@ import {
   SIDEPANEL_PAGE_PATH,
 } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getPopupViewTestId, POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
+import { SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
@@ -11,6 +14,7 @@ import {
   normalizeAccountStorageConfigForWrite,
 } from "~/services/accounts/accountDefaults"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { AuthTypeEnum } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -24,6 +28,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
+  getPlasmoStorageRawValue,
   getServiceWorker,
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
@@ -284,4 +289,55 @@ test("sidepanel opens the model list for a saved API credential profile", async 
       .getByText("Profile: Sidepanel Model Profile", { exact: false })
       .first(),
   ).toBeVisible()
+})
+
+test("sidepanel consumes pending sponsor add-account prefill", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await setPlasmoStorageValue(
+    serviceWorker,
+    STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL,
+    {
+      createdAt: Date.now(),
+      prefill: {
+        source: SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE,
+        sponsorId: "e2e-supported-provider",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrl: "https://sponsor-prefill.example.invalid",
+        authType: AuthTypeEnum.AccessToken,
+      },
+    },
+  )
+
+  await page.goto(SIDEPANEL_URL(extensionId))
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  const accountDialog = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog,
+  )
+  await expect(accountDialog).toBeVisible()
+  await expect(
+    accountDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput),
+  ).toHaveValue("https://sponsor-prefill.example.invalid")
+  await expect(
+    accountDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger),
+  ).toHaveAttribute("data-auth-type", AuthTypeEnum.AccessToken)
+  await accountDialog
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton)
+    .click()
+  await expect(
+    accountDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger),
+  ).toHaveAttribute("data-site-type", SITE_TYPES.NEW_API)
+  await expect
+    .poll(() =>
+      getPlasmoStorageRawValue(
+        serviceWorker,
+        STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL,
+      ),
+    )
+    .toBeUndefined()
 })

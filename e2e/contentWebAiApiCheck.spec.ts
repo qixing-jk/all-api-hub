@@ -24,6 +24,7 @@ import {
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 const TEST_PAGE_URL = "https://api-console.example.test/console"
+const TEST_PAGE_ORIGIN = "https://api-console.example.test"
 const API_BASE_URL = "https://api-console.example.test/api"
 const API_KEY = "sk-e2e-content-api-check-key"
 
@@ -71,6 +72,29 @@ async function openApiCheckModalFromCopiedCredentials(page: Page): Promise<{
       }),
     )
   }, selectedCredentialText)
+
+  const contentHost = page.locator("all-api-hub-redemption-toast")
+  await contentHost.getByRole("button", { name: "Open" }).click()
+
+  const modal = contentHost.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
+  await expect(modal).toBeVisible()
+  await expect(modal.locator("input").nth(0)).toHaveValue(API_BASE_URL)
+
+  return { contentHost, modal }
+}
+
+async function openApiCheckModalFromClipboardRead(page: Page): Promise<{
+  contentHost: Locator
+  modal: Locator
+}> {
+  await page.goto(TEST_PAGE_URL)
+  await page.evaluate(
+    (clipboardText) => navigator.clipboard.writeText(clipboardText),
+    `base_url=${API_BASE_URL}\napi_key=${API_KEY}`,
+  )
+  await page.evaluate(() => window.getSelection()?.removeAllRanges())
+
+  await page.getByRole("button", { name: "Copy credentials" }).click()
 
   const contentHost = page.locator("all-api-hub-redemption-toast")
   await contentHost.getByRole("button", { name: "Open" }).click()
@@ -155,6 +179,51 @@ async function sendApiCheckContextMenuTrigger(
     .toMatchObject({ success: true })
 }
 
+async function installClipboardReadPermissionBridge(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+) {
+  await serviceWorker.evaluate(() => {
+    const chromeApi = (globalThis as any).chrome
+    const browserApi = (globalThis as any).browser
+    const originalChromeContains = chromeApi?.permissions?.contains?.bind(
+      chromeApi.permissions,
+    )
+    const originalBrowserContains = browserApi?.permissions?.contains?.bind(
+      browserApi.permissions,
+    )
+
+    const containsWithClipboardRead = (
+      details: { permissions?: string[] },
+      callback?: (result: boolean) => void,
+    ) => {
+      // Chromium does not resolve this optional-permission prompt reliably in the
+      // headless extension harness; keep the test focused on the content read path.
+      if (details.permissions?.includes("clipboardRead")) {
+        callback?.(true)
+        return Promise.resolve(true)
+      }
+
+      if (originalChromeContains) {
+        return originalChromeContains(details, callback)
+      }
+
+      if (originalBrowserContains) {
+        return originalBrowserContains(details, callback)
+      }
+
+      callback?.(false)
+      return Promise.resolve(false)
+    }
+
+    if (chromeApi?.permissions) {
+      chromeApi.permissions.contains = containsWithClipboardRead
+    }
+    if (browserApi?.permissions) {
+      browserApi.permissions.contains = containsWithClipboardRead
+    }
+  })
+}
+
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
@@ -172,6 +241,9 @@ test.beforeEach(async ({ context, page }) => {
             <button id="copy-credentials">
               base_url=${API_BASE_URL}
               api_key=${API_KEY}
+            </button>
+            <button id="copy-from-clipboard" data-copy>
+              Copy credentials
             </button>
           </body>
         </html>`,
@@ -320,6 +392,22 @@ test("opens the API check modal from the background context-menu message path", 
   const modal = contentHost.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
   await expect(modal).toBeVisible()
   await expect(modal.locator("input").nth(0)).toHaveValue(API_BASE_URL)
+})
+
+test("reads copied web API credentials from the clipboard after clicking a copy-like control", async ({
+  context,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedAutoDetectApiCheckPreferences(serviceWorker)
+  await installClipboardReadPermissionBridge(serviceWorker)
+
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: TEST_PAGE_ORIGIN,
+  })
+
+  const { modal } = await openApiCheckModalFromClipboardRead(page)
+  await expect(modal.locator("input").nth(1)).toHaveValue(API_KEY)
 })
 
 test("opens API credential profiles from the content save success toast", async ({

@@ -1,3 +1,4 @@
+import fs from "node:fs/promises"
 import type { Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
@@ -34,6 +35,9 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
+const SHARE_SNAPSHOT_CAPTION_WRITES_KEY =
+  "__aah_e2e_share_snapshot_caption_writes__"
+
 async function readStoredBookmarks(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
 ): Promise<SiteBookmark[]> {
@@ -68,6 +72,50 @@ async function readStoredAccounts(
   } catch {
     return []
   }
+}
+
+async function installShareSnapshotDownloadFallback(page: Page) {
+  await page.addInitScript((storageKey) => {
+    window.sessionStorage.setItem(storageKey, JSON.stringify([]))
+
+    let writeTextCalls = 0
+    const readWrites = (): string[] => {
+      try {
+        const raw = window.sessionStorage.getItem(storageKey)
+        return raw ? (JSON.parse(raw) as string[]) : []
+      } catch {
+        return []
+      }
+    }
+
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          writeTextCalls += 1
+          if (writeTextCalls === 1) {
+            throw new Error("caption clipboard unavailable during export")
+          }
+
+          window.sessionStorage.setItem(
+            storageKey,
+            JSON.stringify([...readWrites(), text]),
+          )
+        },
+      },
+    })
+  }, SHARE_SNAPSHOT_CAPTION_WRITES_KEY)
+}
+
+async function readShareSnapshotCaptionWrites(page: Page): Promise<string[]> {
+  return await page.evaluate((storageKey) => {
+    try {
+      const raw = window.sessionStorage.getItem(storageKey)
+      return raw ? (JSON.parse(raw) as string[]) : []
+    } catch {
+      return []
+    }
+  }, SHARE_SNAPSHOT_CAPTION_WRITES_KEY)
 }
 
 async function expectBrowserTabOpened(
@@ -371,6 +419,108 @@ test("updates popup account totals after disabling an account from management", 
       getAccountManagementListItemTestId("popup-disable-account"),
     ),
   ).toContainText("Disabled")
+})
+
+test("downloads an overview share snapshot from the popup and copies the fallback caption", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    currencyType: "USD",
+    showTodayCashflow: true,
+  })
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "popup-share-included",
+      site_name: "Popup Share Included",
+      site_url: "https://share-included.example.com",
+      last_sync_time: 1_765_000_000_000,
+      account_info: {
+        id: "731",
+        username: "share-included-user",
+        access_token: "share-included-token",
+        quota: 500000,
+        today_income: 200000,
+        today_quota_consumption: 100000,
+      },
+    }),
+    createStoredAccount({
+      id: "popup-share-excluded",
+      site_name: "Popup Share Excluded",
+      site_url: "https://share-excluded.example.com",
+      excludeFromTotalBalance: true,
+      excludeFromTodayIncome: true,
+      last_sync_time: 1_765_000_100_000,
+      account_info: {
+        id: "732",
+        username: "share-excluded-user",
+        access_token: "share-excluded-token",
+        quota: 700000,
+        today_income: 300000,
+        today_quota_consumption: 200000,
+      },
+    }),
+    createStoredAccount({
+      id: "popup-share-disabled",
+      site_name: "Popup Share Disabled",
+      site_url: "https://share-disabled.example.com",
+      disabled: true,
+      last_sync_time: 1_765_000_200_000,
+      account_info: {
+        id: "733",
+        username: "share-disabled-user",
+        access_token: "share-disabled-token",
+        quota: 900000,
+        today_income: 400000,
+        today_quota_consumption: 300000,
+      },
+    }),
+  ])
+
+  await installShareSnapshotDownloadFallback(page)
+  await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
+  await waitForExtensionRoot(page)
+
+  await expect(page.getByTestId(getPopupViewTestId("accounts"))).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Popup Share Included" }),
+  ).toBeVisible()
+
+  const downloadPromise = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Share overview snapshot" }).click()
+  const download = await downloadPromise
+
+  expect(download.suggestedFilename()).toMatch(
+    /^all-api-hub-snapshot-overview-\d{4}-\d{2}-\d{2}\.png$/,
+  )
+  const downloadPath = await download.path()
+  if (!downloadPath) {
+    throw new Error("Share snapshot download did not produce a readable file")
+  }
+  const pngBytes = await fs.readFile(downloadPath)
+  expect([...pngBytes.subarray(0, 8)]).toEqual([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ])
+
+  await expect(page.getByText("Snapshot downloaded")).toBeVisible()
+  await expect(
+    page.getByText("Caption wasn't copied automatically."),
+  ).toBeVisible()
+
+  const captionTextArea = page.locator("textarea").first()
+  await expect(captionTextArea).toHaveValue(/All API Hub.*Overview/s)
+  await expect(captionTextArea).toHaveValue(/Total balance: \$1\.00/)
+  await expect(captionTextArea).toHaveValue(/Accounts: 2/)
+  await expect(captionTextArea).not.toHaveValue(/Popup Share Included/)
+  await expect(captionTextArea).not.toHaveValue(/share-included\.example/)
+
+  await page.getByRole("button", { name: "Copy caption" }).click()
+  await expect(page.getByText("Caption copied")).toBeVisible()
+  await expect
+    .poll(() => readShareSnapshotCaptionWrites(page))
+    .toEqual([await captionTextArea.inputValue()])
 })
 
 test("opens a saved account site from the popup accounts tab", async ({
