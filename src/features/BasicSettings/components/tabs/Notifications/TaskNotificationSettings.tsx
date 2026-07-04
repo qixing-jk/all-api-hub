@@ -20,6 +20,7 @@ import {
 } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import {
   sendTaskNotificationMessage,
   TaskNotificationMessageTypes,
@@ -116,6 +117,7 @@ interface NotificationChannelActionsProps {
   loading: boolean
   testDisabled: boolean
   testLabel: string
+  testButtonTestId?: string
   onToggle: (enabled: boolean) => void
   onTest: () => void
 }
@@ -129,6 +131,7 @@ function NotificationChannelActions({
   loading,
   testDisabled,
   testLabel,
+  testButtonTestId,
   onToggle,
   onTest,
 }: NotificationChannelActionsProps) {
@@ -141,6 +144,7 @@ function NotificationChannelActions({
         className="h-8 shadow-none"
         loading={loading}
         disabled={testDisabled}
+        data-testid={testButtonTestId}
         onClick={onTest}
       >
         {testLabel}
@@ -704,6 +708,9 @@ export default function TaskNotificationSettings() {
                       variant="outline"
                       className="h-8 shadow-none"
                       loading={isRequestingPermission}
+                      data-testid={
+                        BASIC_SETTINGS_TEST_IDS.taskNotificationsPermissionGrantButton
+                      }
                       onClick={() => void handleRequestPermission()}
                     >
                       {t("taskNotifications.permission.request")}
@@ -738,6 +745,9 @@ export default function TaskNotificationSettings() {
                   }
                   testDisabled={!canSendBrowserTest}
                   testLabel={t("taskNotifications.test.action")}
+                  testButtonTestId={
+                    BASIC_SETTINGS_TEST_IDS.taskNotificationsBrowserTestButton
+                  }
                   onToggle={(enabled) =>
                     void handleBrowserChannelToggle(enabled)
                   }

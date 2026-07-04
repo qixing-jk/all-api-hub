@@ -1,6 +1,7 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -42,6 +43,27 @@ async function readRecentSearchItemIds(
   } catch {
     return []
   }
+}
+
+async function readProductAnalyticsPreferences(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+): Promise<{ enabled?: boolean; updatedAt?: number } | null> {
+  const raw = await getPlasmoStorageRawValue<unknown>(
+    serviceWorker,
+    STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
+  )
+
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as { enabled?: boolean; updatedAt?: number }
+    } catch {
+      return null
+    }
+  }
+
+  return raw && typeof raw === "object"
+    ? (raw as { enabled?: boolean; updatedAt?: number })
+    : null
 }
 
 test("opens a common options page from settings search", async ({
@@ -147,6 +169,120 @@ test("opens a searched settings control and preserves its tab and anchor in the 
     page.getByRole("button", { name: "Data Refresh" }),
   ).toHaveAttribute("aria-pressed", "true")
   await expect(page.getByText("Refresh Interval").first()).toBeVisible()
+})
+
+test("opens product analytics from settings search and persists opt-out", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  await page.getByRole("button", { name: "Open settings search" }).click()
+
+  const dialog = page.getByRole("dialog", { name: "Search settings" })
+  await expect(dialog).toBeVisible()
+  await dialog
+    .getByPlaceholder("Search settings...")
+    .fill("anonymous product analytics")
+  await dialog
+    .getByRole("option", { name: /Enable anonymous product analytics/ })
+    .first()
+    .click()
+
+  await expect(dialog).toHaveCount(0)
+  await expect(page).toHaveURL(/options\.html\?.*#basic$/)
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return {
+        hash: url.hash,
+        tab: url.searchParams.get("tab"),
+        anchor: url.searchParams.get("anchor"),
+      }
+    })
+    .toEqual({
+      hash: "#basic",
+      tab: "general",
+      anchor: "product-analytics-enabled",
+    })
+
+  await expect(page.locator("#product-analytics-enabled")).toBeInViewport()
+  const productAnalyticsSwitch = page
+    .locator("#product-analytics")
+    .getByRole("switch", { name: "Toggle" })
+  await expect(productAnalyticsSwitch).toHaveAttribute("aria-checked", "true")
+
+  await productAnalyticsSwitch.click()
+
+  await expect
+    .poll(async () => {
+      const preferences = await readProductAnalyticsPreferences(serviceWorker)
+
+      return {
+        enabled: preferences?.enabled,
+        hasUpdatedAt: typeof preferences?.updatedAt === "number",
+      }
+    })
+    .toEqual({
+      enabled: false,
+      hasUpdatedAt: true,
+    })
+  await expect(productAnalyticsSwitch).toHaveAttribute("aria-checked", "false")
+
+  await page.reload()
+  await waitForExtensionRoot(page)
+
+  await expect(
+    page.locator("#product-analytics").getByRole("switch", { name: "Toggle" }),
+  ).toHaveAttribute("aria-checked", "false")
+})
+
+test("opens an import export WebDAV control from settings search", async ({
+  extensionId,
+  page,
+}) => {
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  await page.getByRole("button", { name: "Open settings search" }).click()
+
+  const dialog = page.getByRole("dialog", { name: "Search settings" })
+  await expect(dialog).toBeVisible()
+  await dialog.getByPlaceholder("Search settings...").fill("webdav url")
+  await dialog
+    .getByRole("option", { name: /Webdav URL/ })
+    .filter({ hasText: "Import/Export" })
+    .click()
+
+  await expect(dialog).toHaveCount(0)
+  await expect(page).toHaveURL(/options\.html\?.*#importExport$/)
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return {
+        hash: url.hash,
+        anchor: url.searchParams.get("anchor"),
+        highlight: url.searchParams.get("highlight"),
+      }
+    })
+    .toEqual({
+      hash: "#importExport",
+      anchor: WEBDAV_TARGET_IDS.url,
+      highlight: null,
+    })
+
+  await expect(page.locator(`#${WEBDAV_TARGET_IDS.url}`)).toBeInViewport()
 })
 
 test("persists selected settings search results as recent items across page reloads", async ({

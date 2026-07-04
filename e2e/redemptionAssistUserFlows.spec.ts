@@ -1,4 +1,5 @@
-import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getPopupViewTestId } from "~/entrypoints/popup/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -11,6 +12,7 @@ import {
   seedStoredAccounts,
   seedUserPreferences,
   stubNewApiSiteRoutes,
+  waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
 import {
   getPlasmoStorageRawValue,
@@ -351,4 +353,122 @@ test("forwards selected redemption text from the background context-menu path to
       )?.account_info.quota
     })
     .toBe(2_250_000)
+})
+
+test("opens Redemption Assist settings from the content prompt", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await context.route(REDEEM_PAGE_URL, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: `<!doctype html>
+        <html lang="en">
+          <head>
+            <title>Redeem Settings Fixture</title>
+          </head>
+          <body>
+            <main>
+              <h1>Redeem Settings Center</h1>
+              <button id="copy-code">Copy ${REDEMPTION_CODE}</button>
+            </main>
+          </body>
+        </html>`,
+    })
+  })
+
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    language: "en",
+    redemptionAssist: {
+      enabled: true,
+      contextMenu: {
+        enabled: true,
+      },
+      relaxedCodeValidation: false,
+      urlWhitelist: {
+        enabled: true,
+        patterns: ["^https://redeem\\.example\\.test/console/redeem"],
+        includeAccountSiteUrls: false,
+        includeCheckInAndRedeemUrls: false,
+      },
+    },
+  })
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "redeem-settings-account",
+      site_name: "Redeem Settings Hub",
+      site_url: REDEEM_SITE_URL,
+      account_info: {
+        id: "903",
+        username: "redeem-settings-user",
+        access_token: "redeem-settings-access-token",
+        quota: 1_000_000,
+      },
+      checkIn: {
+        enableDetection: false,
+        customCheckIn: {
+          url: REDEEM_PAGE_URL,
+          redeemUrl: REDEEM_PAGE_URL,
+        },
+      },
+    }),
+  ])
+
+  await page.goto(REDEEM_PAGE_URL)
+
+  await page.locator("#copy-code").evaluate((target, code) => {
+    const selection = window.getSelection()
+    const range = document.createRange()
+    range.selectNodeContents(target)
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+
+    const clipboardData = new DataTransfer()
+    clipboardData.setData("text", code)
+    target.dispatchEvent(
+      new ClipboardEvent("copy", {
+        bubbles: true,
+        cancelable: true,
+        clipboardData,
+      }),
+    )
+  }, REDEMPTION_CODE)
+
+  const contentHost = page.locator("all-api-hub-redemption-toast")
+  await expect(
+    contentHost.getByRole("heading", { name: "Redemption Assist" }),
+  ).toBeVisible()
+
+  const settingsPagePromise = waitForExtensionPage(context, {
+    extensionId,
+    path: OPTIONS_PAGE_PATH,
+    hash: `#${MENU_ITEM_IDS.BASIC}`,
+    searchParams: {
+      tab: "checkinRedeem",
+      anchor: "redemption-assist",
+    },
+  })
+
+  await contentHost
+    .getByRole("link", { name: "Open Redemption Assist settings" })
+    .click()
+
+  const settingsPage = await settingsPagePromise
+  installExtensionPageGuards(settingsPage)
+  await waitForExtensionRoot(settingsPage)
+
+  const targetUrl = new URL(settingsPage.url())
+  expect(targetUrl.hash).toBe(`#${MENU_ITEM_IDS.BASIC}`)
+  expect(targetUrl.searchParams.get("tab")).toBe("checkinRedeem")
+  expect(targetUrl.searchParams.get("anchor")).toBe("redemption-assist")
+
+  await expect(
+    settingsPage.getByRole("heading", {
+      name: "Redemption Assist",
+      exact: true,
+    }),
+  ).toBeInViewport()
 })
