@@ -247,7 +247,7 @@ test("sends a browser task notification from notification settings", async ({
   await expect(
     page
       .locator(`#${SETTINGS_ANCHORS.TASK_NOTIFICATIONS_PERMISSION}`)
-      .getByText("Granted"),
+      .getByText("Granted", { exact: true }),
   ).toBeVisible()
 
   const testButton = page.getByTestId(
