@@ -211,7 +211,7 @@ export default function WebDAVAutoSyncSettings() {
           }),
         })
         await loadStatus()
-        toast.success(response.data?.message || t("webdav.syncSuccess"))
+        toast.success(t("webdav.syncSuccess"))
       } else {
         toast.error(response.error || t("webdav.syncFailed"))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {

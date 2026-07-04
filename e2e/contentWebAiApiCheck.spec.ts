@@ -78,7 +78,9 @@ async function openApiCheckModalFromCopiedCredentials(page: Page): Promise<{
 
   const modal = contentHost.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
   await expect(modal).toBeVisible()
-  await expect(modal.locator("input").nth(0)).toHaveValue(API_BASE_URL)
+  await expect(modal.getByRole("textbox", { name: "Base URL" })).toHaveValue(
+    API_BASE_URL,
+  )
 
   return { contentHost, modal }
 }
@@ -101,7 +103,9 @@ async function openApiCheckModalFromClipboardRead(page: Page): Promise<{
 
   const modal = contentHost.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
   await expect(modal).toBeVisible()
-  await expect(modal.locator("input").nth(0)).toHaveValue(API_BASE_URL)
+  await expect(modal.getByRole("textbox", { name: "Base URL" })).toHaveValue(
+    API_BASE_URL,
+  )
 
   return { contentHost, modal }
 }
@@ -391,7 +395,9 @@ test("opens the API check modal from the background context-menu message path", 
   const contentHost = page.locator("all-api-hub-redemption-toast")
   const modal = contentHost.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
   await expect(modal).toBeVisible()
-  await expect(modal.locator("input").nth(0)).toHaveValue(API_BASE_URL)
+  await expect(modal.getByRole("textbox", { name: "Base URL" })).toHaveValue(
+    API_BASE_URL,
+  )
 })
 
 test("reads copied web API credentials from the clipboard after clicking a copy-like control", async ({
@@ -407,7 +413,9 @@ test("reads copied web API credentials from the clipboard after clicking a copy-
   })
 
   const { modal } = await openApiCheckModalFromClipboardRead(page)
-  await expect(modal.locator("input").nth(1)).toHaveValue(API_KEY)
+  await expect(modal.getByRole("textbox", { name: "API key" })).toHaveValue(
+    API_KEY,
+  )
 })
 
 test("opens API credential profiles from the content save success toast", async ({

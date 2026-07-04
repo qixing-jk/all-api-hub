@@ -1,7 +1,12 @@
 import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { PRODUCT_ANNOUNCEMENT_TEST_IDS } from "~/features/ProductAnnouncements/testIds"
+import {
+  getProductAnnouncementDismissButtonTestId,
+  getProductAnnouncementRestoreButtonTestId,
+  PRODUCT_ANNOUNCEMENT_TEST_IDS,
+} from "~/features/ProductAnnouncements/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { PRODUCT_ANNOUNCEMENT_REMOTE_URL } from "~/services/productAnnouncements/constants"
 import type {
   ProductAnnouncementState,
   RawProductAnnouncementFeed,
@@ -24,8 +29,6 @@ const RISK_ANNOUNCEMENT_ID = "e2e-critical-product-risk"
 const INFO_ANNOUNCEMENT_ID = "e2e-info-product-update"
 const RISK_ANNOUNCEMENT_TITLE = "Critical extension compatibility notice"
 const INFO_ANNOUNCEMENT_TITLE = "New dashboard overview available"
-const PRODUCT_ANNOUNCEMENT_REMOTE_URL =
-  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/public/product-announcements.json"
 
 const PRODUCT_ANNOUNCEMENT_FEED: RawProductAnnouncementFeed = {
   schemaVersion: 1,
@@ -168,7 +171,9 @@ test("persists product announcement seen, dismiss, and restore state across opti
 
   await page
     .getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.activeList)
-    .getByRole("button", { name: `Dismiss ${RISK_ANNOUNCEMENT_TITLE}` })
+    .getByTestId(
+      getProductAnnouncementDismissButtonTestId(RISK_ANNOUNCEMENT_ID),
+    )
     .click()
 
   await expect
@@ -198,14 +203,16 @@ test("persists product announcement seen, dismiss, and restore state across opti
   ).toHaveCount(0)
   await popupPage.close()
 
-  await page.getByRole("button", { name: "Dismissed" }).click()
+  await page.getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.dismissedTab).click()
   await expect(
     page.getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.dismissedList),
   ).toContainText(RISK_ANNOUNCEMENT_TITLE)
 
   await page
     .getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.dismissedList)
-    .getByRole("button", { name: `Restore ${RISK_ANNOUNCEMENT_TITLE}` })
+    .getByTestId(
+      getProductAnnouncementRestoreButtonTestId(RISK_ANNOUNCEMENT_ID),
+    )
     .click()
 
   await expect

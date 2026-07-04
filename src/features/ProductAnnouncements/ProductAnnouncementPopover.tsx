@@ -104,6 +104,7 @@ function ProductAnnouncementPanel({
           )}
           aria-pressed={filter === "active"}
           onClick={() => setFilter("active")}
+          data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.activeTab}
         >
           <Bell className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">{t("filters.active")}</span>
@@ -119,6 +120,7 @@ function ProductAnnouncementPanel({
           )}
           aria-pressed={filter === "dismissed"}
           onClick={() => setFilter("dismissed")}
+          data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.dismissedTab}
         >
           <Archive className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">{t("filters.dismissed")}</span>

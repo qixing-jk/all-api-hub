@@ -21,7 +21,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
-  getPlasmoStorageRawValue,
+  getPlasmoStorageJsonValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
@@ -32,33 +32,21 @@ const BALANCE_HISTORY_URL = (extensionId: string) =>
 async function readStoredPreferences(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
 ) {
-  const raw = await getPlasmoStorageRawValue<unknown>(
-    serviceWorker,
-    STORAGE_KEYS.USER_PREFERENCES,
+  return (
+    (await getPlasmoStorageJsonValue<Record<string, unknown>>(
+      serviceWorker,
+      STORAGE_KEYS.USER_PREFERENCES,
+    )) ?? {}
   )
-
-  if (typeof raw !== "string") return {}
-
-  return JSON.parse(raw) as Record<string, unknown>
 }
 
 async function readDailyBalanceHistoryStore(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
 ) {
-  const raw = await getPlasmoStorageRawValue<unknown>(
+  return await getPlasmoStorageJsonValue<DailyBalanceHistoryStore>(
     serviceWorker,
     STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
   )
-
-  if (typeof raw === "string") {
-    return JSON.parse(raw) as DailyBalanceHistoryStore
-  }
-
-  if (raw && typeof raw === "object") {
-    return raw as DailyBalanceHistoryStore
-  }
-
-  return null
 }
 
 function createBalanceSnapshots(): DailyBalanceHistoryStore["snapshotsByAccountId"] {
@@ -267,7 +255,8 @@ test("refreshes balance snapshots through the background runtime", async ({
       }),
     ])
   await expect(
-    page.getByTestId(BALANCE_HISTORY_TEST_IDS.accountSummary),
+    page
+      .getByTestId(BALANCE_HISTORY_TEST_IDS.accountSummary)
+      .getByText("Balance Refresh Hub", { exact: true }),
   ).toBeVisible()
-  await expect(page.getByText("Balance Refresh Hub").first()).toBeVisible()
 })

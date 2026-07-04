@@ -360,7 +360,7 @@ test("opens an LDOH site lookup search from the account row action", async ({
     STORAGE_KEYS.SITE_LIST_CACHE,
     ldohCache,
   )
-  await context.route(/^https:\/\/ldoh\.105117\.xyz\/.*/, async (route) => {
+  await context.route(`${LDOH_ORIGIN}/**`, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/html",

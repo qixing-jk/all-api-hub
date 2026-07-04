@@ -80,6 +80,8 @@ test("overview action center opens disabled auto check-in settings", async ({
     page.locator(`#${SETTINGS_ANCHORS.AUTO_CHECKIN}`),
   ).toBeInViewport()
   await expect(
-    page.getByRole("heading", { name: "Auto Check-in" }).first(),
+    page
+      .locator(`#${SETTINGS_ANCHORS.AUTO_CHECKIN}`)
+      .getByRole("heading", { name: "Auto Check-in" }),
   ).toBeVisible()
 })

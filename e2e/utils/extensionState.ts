@@ -102,6 +102,30 @@ export async function getPlasmoStorageRawValue<T>(
   }, key)
 }
 
+/**
+ * Read and JSON-normalize a Plasmo-backed storage value.
+ */
+export async function getPlasmoStorageJsonValue<T>(
+  serviceWorker: Worker,
+  key: string,
+): Promise<T | null> {
+  const raw = await getPlasmoStorageRawValue<unknown>(serviceWorker, key)
+
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return null
+    }
+  }
+
+  if (raw && typeof raw === "object") {
+    return raw as T
+  }
+
+  return null
+}
+
 async function getManifestPermissionsField(
   page: Page,
   field: "permissions" | "optional_permissions",

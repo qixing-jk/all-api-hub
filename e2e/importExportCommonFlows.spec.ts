@@ -1543,7 +1543,9 @@ test("runs WebDAV auto-sync from settings and uploads the local snapshot", async
   ).toBeVisible()
 
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}`).click()
-  await expect(page.getByText("同步成功")).toBeVisible()
+  await expect(
+    page.locator("#_rht_toaster").getByText("Sync successful", { exact: true }),
+  ).toBeVisible()
 
   await expect.poll(() => uploadedPayloads.length).toBe(1)
   expect(tempDeleteUrls).toEqual([])
@@ -1571,5 +1573,9 @@ test("runs WebDAV auto-sync from settings and uploads the local snapshot", async
     }),
   })
 
-  await expect(page.getByText("Sync successful")).toBeVisible()
+  await expect(
+    page
+      .locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.root}`)
+      .getByText("Sync successful", { exact: true }),
+  ).toBeVisible()
 })

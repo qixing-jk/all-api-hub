@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "~/components/ui/table"
 import { Z_INDEX } from "~/constants/designTokens"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { cn } from "~/lib/utils"
 
 import UsageHistorySyncRowActions from "./UsageHistorySyncRowActions"
@@ -125,6 +126,7 @@ export default function UsageHistorySyncStateTable({
             aria-label={t("syncTab.table.selectRow", {
               name: row.original.accountName,
             })}
+            data-testid={`${BASIC_SETTINGS_TEST_IDS.usageHistorySyncAccountCheckboxPrefix}-${row.original.id}`}
             disabled={isSyncingAll}
           />
         ),
@@ -245,6 +247,7 @@ export default function UsageHistorySyncStateTable({
             size="sm"
             onClick={() => void onSyncAccounts(selectedAccountIds)}
             disabled={!selectedAccountIds.length || isSyncingAll}
+            data-testid={BASIC_SETTINGS_TEST_IDS.usageHistorySyncSelectedButton}
           >
             {t("syncTab.actions.syncSelected")}
           </Button>

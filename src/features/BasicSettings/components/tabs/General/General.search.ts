@@ -285,7 +285,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:product-analytics-enabled",
     "general",
-    "product-analytics-enabled",
+    SETTINGS_ANCHORS.PRODUCT_ANALYTICS_ENABLED,
     "settings:productAnalytics.enableLabel",
     512,
     {

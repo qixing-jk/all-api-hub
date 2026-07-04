@@ -422,6 +422,9 @@ export function BookmarkTreeSelector({
             size="sm"
             disabled={!hasVisibleNodes}
             onClick={() => onSetNodeSelection(visibleNodeIds, "select")}
+            data-testid={
+              ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportSelectAllButton
+            }
           >
             {t("ui:dialog.bookmarkAccountImport.actions.selectAll")}
           </Button>

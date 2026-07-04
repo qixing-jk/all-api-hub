@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState } from "react"
 
+import { SHARE_SNAPSHOT_TEST_IDS } from "~/features/ShareSnapshots/testIds"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -66,6 +67,7 @@ export const ShareSnapshotCaptionToast = ({
       <textarea
         readOnly
         value={caption}
+        data-testid={SHARE_SNAPSHOT_TEST_IDS.captionTextarea}
         className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary dark:text-dark-text-primary mb-3 h-28 w-full resize-none rounded-md border border-gray-200 bg-gray-50 p-2 text-xs text-gray-900 focus:outline-none"
       />
       {copyError ? (

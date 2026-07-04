@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next"
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -90,6 +91,7 @@ export default function ActionBar({
             onClick={onRunNow}
             disabled={isBusy}
             leftIcon={<PlayIcon className="h-4 w-4" />}
+            data-testid={BASIC_SETTINGS_TEST_IDS.autoCheckinRunNowButton}
           >
             {t("execution.runNow")}
           </Button>

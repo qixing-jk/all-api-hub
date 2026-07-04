@@ -25,7 +25,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
-  getPlasmoStorageRawValue,
+  getPlasmoStorageJsonValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
@@ -115,18 +115,6 @@ async function stubSharedChatServiceCredentialRoutes(
       body: JSON.stringify({ error: "Unhandled SharedChat E2E route" }),
     })
   })
-}
-
-async function readJsonStorageValue<T>(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-  storageKey: string,
-): Promise<T | null> {
-  const raw = await getPlasmoStorageRawValue<unknown>(serviceWorker, storageKey)
-  if (typeof raw !== "string") {
-    return null
-  }
-
-  return JSON.parse(raw) as T
 }
 
 test.beforeEach(async ({ context, page }) => {
@@ -428,10 +416,11 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   await expect
     .poll(
       async () => {
-        const progress = await readJsonStorageValue<AccountKeyRepairProgress>(
-          serviceWorker,
-          ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
-        )
+        const progress =
+          await getPlasmoStorageJsonValue<AccountKeyRepairProgress>(
+            serviceWorker,
+            ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+          )
         return progress?.state
       },
       { timeout: 30_000 },
@@ -439,7 +428,7 @@ test("repairs missing account keys and deletes invalid group keys", async ({
     .toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
 
   const completedProgress =
-    await readJsonStorageValue<AccountKeyRepairProgress>(
+    await getPlasmoStorageJsonValue<AccountKeyRepairProgress>(
       serviceWorker,
       ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
     )
@@ -505,10 +494,11 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   await expect
     .poll(
       async () => {
-        const progress = await readJsonStorageValue<AccountKeyRepairProgress>(
-          serviceWorker,
-          ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
-        )
+        const progress =
+          await getPlasmoStorageJsonValue<AccountKeyRepairProgress>(
+            serviceWorker,
+            ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+          )
         return progress?.summary.invalidKeys
       },
       { timeout: 10_000 },

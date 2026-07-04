@@ -1,4 +1,4 @@
-import type { Worker } from "@playwright/test"
+import type { BrowserContext, Page, Worker } from "@playwright/test"
 
 import { RELEASE_UPDATE_STATUS_PANEL_TEST_IDS } from "~/components/ReleaseUpdateStatusPanel.testIds"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
@@ -42,6 +42,42 @@ async function readReleaseUpdateStatus(
   return null
 }
 
+async function openAboutPageAndCheckForReleaseUpdate(params: {
+  context: BrowserContext
+  extensionId: string
+  page: Page
+  responseStatus: number
+  responseBody: unknown
+}): Promise<() => number> {
+  let githubReleaseRequests = 0
+
+  await params.context.route(GITHUB_LATEST_RELEASE_API_URL, (route) => {
+    githubReleaseRequests += 1
+    return route.fulfill({
+      status: params.responseStatus,
+      contentType: "application/json",
+      body: JSON.stringify(params.responseBody),
+    })
+  })
+
+  await params.page.goto(
+    `chrome-extension://${params.extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ABOUT}`,
+  )
+  await waitForExtensionRoot(params.page)
+  await expectPermissionOnboardingHidden(params.page)
+
+  const panel = params.page.getByTestId(
+    RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.panel,
+  )
+  await expect(panel).toBeVisible()
+
+  await panel
+    .getByTestId(RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.checkNowButton)
+    .click()
+
+  return () => githubReleaseRequests
+}
+
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
@@ -54,32 +90,19 @@ test("checks for a GitHub release update from the About page", async ({
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
-  let githubReleaseRequests = 0
-
-  await context.route(GITHUB_LATEST_RELEASE_API_URL, (route) => {
-    githubReleaseRequests += 1
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
+  const readGithubReleaseRequests = await openAboutPageAndCheckForReleaseUpdate(
+    {
+      context,
+      extensionId,
+      page,
+      responseStatus: 200,
+      responseBody: {
         tag_name: "v9.9.9",
         html_url: LATEST_RELEASE_URL,
-      }),
-    })
-  })
-
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ABOUT}`,
+      },
+    },
   )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
-
   const panel = page.getByTestId(RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.panel)
-  await expect(panel).toBeVisible()
-
-  await panel
-    .getByTestId(RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.checkNowButton)
-    .click()
 
   await expect(
     panel.getByText("A newer version is available to upgrade"),
@@ -90,7 +113,7 @@ test("checks for a GitHub release update from the About page", async ({
   ).toHaveAttribute("href", LATEST_RELEASE_URL)
 
   await expect
-    .poll(() => githubReleaseRequests, {
+    .poll(readGithubReleaseRequests, {
       message: "manual check should call the GitHub latest-release API",
     })
     .toBeGreaterThanOrEqual(1)
@@ -118,29 +141,16 @@ test("shows a failed GitHub release check from the About page", async ({
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
-  let githubReleaseRequests = 0
-
-  await context.route(GITHUB_LATEST_RELEASE_API_URL, (route) => {
-    githubReleaseRequests += 1
-    return route.fulfill({
-      status: 503,
-      contentType: "application/json",
-      body: JSON.stringify({ message: "Service unavailable" }),
-    })
-  })
-
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ABOUT}`,
+  const readGithubReleaseRequests = await openAboutPageAndCheckForReleaseUpdate(
+    {
+      context,
+      extensionId,
+      page,
+      responseStatus: 503,
+      responseBody: { message: "Service unavailable" },
+    },
   )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
-
   const panel = page.getByTestId(RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.panel)
-  await expect(panel).toBeVisible()
-
-  await panel
-    .getByTestId(RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.checkNowButton)
-    .click()
 
   await expect(
     panel.getByText(
@@ -150,7 +160,7 @@ test("shows a failed GitHub release check from the About page", async ({
   await expect(panel.getByText("Latest stable: unavailable")).toBeVisible()
 
   await expect
-    .poll(() => githubReleaseRequests, {
+    .poll(readGithubReleaseRequests, {
       message: "manual check should call the GitHub latest-release API",
     })
     .toBeGreaterThanOrEqual(1)

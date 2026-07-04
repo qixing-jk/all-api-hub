@@ -11,6 +11,7 @@ import {
   Input,
   Modal,
 } from "~/components/ui"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { isEmptyModelMapping } from "~/services/models/modelRedirect/utils"
 import type { ManagedSiteChannel } from "~/types/managedSite"
@@ -316,6 +317,9 @@ export function ClearModelRedirectMappingsDialog({
                 variant="destructive"
                 onClick={() => setIsConfirmOpen(true)}
                 disabled={!canContinue || isClearing}
+                data-testid={
+                  BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearContinueButton
+                }
               >
                 {t("bulkClear.actions.continue")}
               </Button>
@@ -398,6 +402,7 @@ export function ClearModelRedirectMappingsDialog({
                       <div className="flex items-start gap-3">
                         <Checkbox
                           aria-label={`${channel.name} (#${channel.id})`}
+                          data-testid={`${BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearChannelCheckboxPrefix}-${channel.id}`}
                           checked={checked}
                           onCheckedChange={() =>
                             handleToggleSelected(channel.id)
@@ -497,6 +502,9 @@ export function ClearModelRedirectMappingsDialog({
           isClearing
             ? t("bulkClear.status.clearing")
             : t("bulkClear.actions.confirm")
+        }
+        confirmButtonTestId={
+          BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearConfirmButton
         }
         onConfirm={() => {
           void handleConfirm()

@@ -269,7 +269,9 @@ test("sends a browser task notification from notification settings", async ({
         isClickable: true,
       },
     })
-  await expect(page.getByText("Test notification sent")).toBeVisible()
+  await expect(
+    page.getByText("Test notification sent", { exact: true }),
+  ).toBeVisible()
 })
 
 test("keeps browser task notification disabled when notification permission is denied", async ({

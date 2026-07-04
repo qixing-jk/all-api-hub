@@ -5,6 +5,7 @@ import type { Worker } from "@playwright/test"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
@@ -247,7 +248,9 @@ test("New API native page fallback clicks the site page and confirms checked-in 
     await waitForExtensionRoot(page)
     await expectPermissionOnboardingHidden(page)
 
-    await page.getByRole("button", { name: "Run now" }).click()
+    await page
+      .getByTestId(BASIC_SETTINGS_TEST_IDS.autoCheckinRunNowButton)
+      .click()
 
     try {
       await expect

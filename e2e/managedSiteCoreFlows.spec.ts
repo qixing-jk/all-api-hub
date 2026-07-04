@@ -4,6 +4,7 @@ import { ChannelType } from "~/constants"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -1043,16 +1044,32 @@ test("clears selected model redirect mappings from managed-site settings", async
   await expect(
     page.locator("#managed-site-model-redirect-bulk-clear"),
   ).toBeEnabled()
-  await page.locator("#managed-site-model-redirect-bulk-clear").click()
+  await page
+    .getByTestId(
+      BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearButton,
+    )
+    .click()
 
   await expect(page.getByText("Channels", { exact: true })).toBeVisible()
   await expect(page.getByText("Redirect OpenAI")).toBeVisible()
   await expect(page.getByText("Keep Gemini")).toBeVisible()
-  await page.getByRole("checkbox", { name: "Keep Gemini (#303)" }).click()
-  await page.getByRole("button", { name: "Continue" }).click()
+  await page
+    .getByTestId(
+      `${BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearChannelCheckboxPrefix}-303`,
+    )
+    .click()
+  await page
+    .getByTestId(
+      BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearContinueButton,
+    )
+    .click()
 
   await expect(page.getByText("Clear model redirect maps?")).toBeVisible()
-  await page.getByRole("button", { name: "Clear", exact: true }).click()
+  await page
+    .getByTestId(
+      BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearConfirmButton,
+    )
+    .click()
 
   await expect(
     page.getByText("Cleared 1 channel(s); 1 already empty."),

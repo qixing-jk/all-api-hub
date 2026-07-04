@@ -6,6 +6,7 @@ import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardContent, CompactMultiSelect } from "~/components/ui"
 import { Switch } from "~/components/ui/Switch"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import {
   getManagedSiteServiceForType,
   hasValidManagedSiteConfig,
@@ -217,6 +218,9 @@ export default function ModelRedirectSettings() {
               variant="destructive"
               disabled={!canUseManagedSiteAdmin}
               onClick={() => setIsBulkClearOpen(true)}
+              data-testid={
+                BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearButton
+              }
             >
               {t("bulkClear.action")}
             </Button>

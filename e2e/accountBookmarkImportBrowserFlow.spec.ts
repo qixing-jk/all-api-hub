@@ -19,6 +19,7 @@ import {
 import {
   E2E_BUILD_VARIANT_ENV,
   E2E_BUILD_VARIANTS,
+  readE2eBuildVariant,
 } from "~~/e2e/utils/e2eBuildVariants"
 import {
   expectPermissionOnboardingHidden,
@@ -345,7 +346,9 @@ test("opens bookmark import from the add account dialog", async ({
         ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScopeTree,
       ),
     ).toBeVisible()
-    await importDialog.getByRole("button", { name: "Select all" }).click()
+    await importDialog
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportSelectAllButton)
+      .click()
     await importDialog
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScanSelectedButton)
       .click()
@@ -397,7 +400,9 @@ test("imports an account from a native browser bookmark", async ({
     await expect(
       dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScopeTree),
     ).toBeVisible()
-    await dialog.getByRole("button", { name: "Select all" }).click()
+    await dialog
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportSelectAllButton)
+      .click()
     await dialog
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScanSelectedButton)
       .click()
@@ -493,7 +498,9 @@ test("opens add account recovery for a failed bookmark import", async ({
         ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScopeTree,
       ),
     ).toBeVisible()
-    await importDialog.getByRole("button", { name: "Select all" }).click()
+    await importDialog
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportSelectAllButton)
+      .click()
     await importDialog
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScanSelectedButton)
       .click()
@@ -531,7 +538,7 @@ test("opens add account recovery for a failed bookmark import", async ({
 
 function skipUnlessBookmarksRequiredVariant() {
   test.skip(
-    process.env[E2E_BUILD_VARIANT_ENV] !== E2E_BUILD_VARIANTS.BookmarksRequired,
+    readE2eBuildVariant() !== E2E_BUILD_VARIANTS.BookmarksRequired,
     [
       "Native browser bookmark import requires the E2E-only bookmarks-required manifest variant.",
       `Run with ${E2E_BUILD_VARIANT_ENV}=${E2E_BUILD_VARIANTS.BookmarksRequired}.`,

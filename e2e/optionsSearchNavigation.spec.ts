@@ -1,5 +1,6 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -12,6 +13,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
+  getPlasmoStorageJsonValue,
   getPlasmoStorageRawValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
@@ -48,22 +50,10 @@ async function readRecentSearchItemIds(
 async function readProductAnalyticsPreferences(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
 ): Promise<{ enabled?: boolean; updatedAt?: number } | null> {
-  const raw = await getPlasmoStorageRawValue<unknown>(
-    serviceWorker,
-    STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
-  )
-
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw) as { enabled?: boolean; updatedAt?: number }
-    } catch {
-      return null
-    }
-  }
-
-  return raw && typeof raw === "object"
-    ? (raw as { enabled?: boolean; updatedAt?: number })
-    : null
+  return await getPlasmoStorageJsonValue<{
+    enabled?: boolean
+    updatedAt?: number
+  }>(serviceWorker, STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES)
 }
 
 test("opens a common options page from settings search", async ({
@@ -210,12 +200,14 @@ test("opens product analytics from settings search and persists opt-out", async 
     .toEqual({
       hash: "#basic",
       tab: "general",
-      anchor: "product-analytics-enabled",
+      anchor: SETTINGS_ANCHORS.PRODUCT_ANALYTICS_ENABLED,
     })
 
-  await expect(page.locator("#product-analytics-enabled")).toBeInViewport()
+  await expect(
+    page.locator(`#${SETTINGS_ANCHORS.PRODUCT_ANALYTICS_ENABLED}`),
+  ).toBeInViewport()
   const productAnalyticsSwitch = page
-    .locator("#product-analytics")
+    .locator(`#${SETTINGS_ANCHORS.PRODUCT_ANALYTICS}`)
     .getByRole("switch", { name: "Toggle" })
   await expect(productAnalyticsSwitch).toHaveAttribute("aria-checked", "true")
 
@@ -240,7 +232,9 @@ test("opens product analytics from settings search and persists opt-out", async 
   await waitForExtensionRoot(page)
 
   await expect(
-    page.locator("#product-analytics").getByRole("switch", { name: "Toggle" }),
+    page
+      .locator(`#${SETTINGS_ANCHORS.PRODUCT_ANALYTICS}`)
+      .getByRole("switch", { name: "Toggle" }),
   ).toHaveAttribute("aria-checked", "false")
 })
 

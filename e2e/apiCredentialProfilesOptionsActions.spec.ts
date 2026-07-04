@@ -1,5 +1,5 @@
 import fs from "node:fs/promises"
-import type { Page } from "@playwright/test"
+import type { BrowserContext, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -69,6 +69,27 @@ async function openProfilesPage(page: Page, extensionId: string) {
   )
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
+}
+
+async function installOpenAiCompatibleModelsRoute(
+  context: BrowserContext,
+  params: {
+    baseUrl: string
+    modelId: string
+    onRequest?: () => void
+  },
+) {
+  const normalizedBaseUrl = params.baseUrl.replace(/\/+$/, "")
+  await context.route(`${normalizedBaseUrl}/v1/models`, async (route) => {
+    params.onRequest?.()
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: [{ id: params.modelId }],
+      }),
+    })
+  })
 }
 
 test.beforeEach(async ({ context, page }) => {
@@ -311,15 +332,10 @@ test("downloads Kilo Code settings for an API credential profile", async ({
     }),
   ])
 
-  await context.route("https://kilo-export.example.com/v1/models", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        data: [{ id: "gpt-kilo-export" }],
-      }),
-    }),
-  )
+  await installOpenAiCompatibleModelsRoute(context, {
+    baseUrl: "https://kilo-export.example.com",
+    modelId: "gpt-kilo-export",
+  })
 
   await openProfilesPage(page, extensionId)
 
@@ -395,15 +411,10 @@ test("imports an API credential profile into CLI Proxy", async ({
     }),
   ])
 
-  await context.route("https://cli-source.example.com/v1/models", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        data: [{ id: "gpt-cli-proxy" }],
-      }),
-    }),
-  )
+  await installOpenAiCompatibleModelsRoute(context, {
+    baseUrl: "https://cli-source.example.com",
+    modelId: "gpt-cli-proxy",
+  })
   await context.route(
     "https://cli-proxy.example.com/v0/management/openai-compatibility",
     async (route) => {
@@ -502,19 +513,13 @@ test("imports an API credential profile into Claude Code Router", async ({
     }),
   ])
 
-  await context.route(
-    "https://claude-source.example.invalid/v1/models",
-    async (route) => {
+  await installOpenAiCompatibleModelsRoute(context, {
+    baseUrl: "https://claude-source.example.invalid",
+    modelId: "gpt-claude-router-profile",
+    onRequest: () => {
       sourceModelsRequested = true
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          data: [{ id: "gpt-claude-router-profile" }],
-        }),
-      })
     },
-  )
+  })
   await context.route(
     "https://router.example.invalid/api/config",
     async (route) => {

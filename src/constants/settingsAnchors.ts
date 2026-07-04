@@ -42,5 +42,7 @@ export const SETTINGS_ANCHORS = {
   BALANCE_HISTORY: "balance-history",
   MANAGED_SITE_MODEL_SYNC: "managed-site-model-sync",
   MANAGED_SITE_SELECTOR: "managed-site-selector",
+  PRODUCT_ANALYTICS: "product-analytics",
+  PRODUCT_ANALYTICS_ENABLED: "product-analytics-enabled",
   USAGE_HISTORY_SYNC: "usage-history-sync",
 } as const

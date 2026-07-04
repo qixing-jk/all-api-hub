@@ -10,6 +10,10 @@ import {
   getProductAnnouncementSeverityLabel,
   PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES,
 } from "./presentation"
+import {
+  getProductAnnouncementDismissButtonTestId,
+  getProductAnnouncementRestoreButtonTestId,
+} from "./testIds"
 
 interface ProductAnnouncementListProps {
   notices: ProductAnnouncement[]
@@ -138,6 +142,9 @@ export function ProductAnnouncementList({
                   className="h-6 shrink-0 px-2 text-xs leading-none"
                   aria-label={restoreAriaLabel}
                   onClick={() => onRestore(notice.id)}
+                  data-testid={getProductAnnouncementRestoreButtonTestId(
+                    notice.id,
+                  )}
                 >
                   {t("actions.restore")}
                 </Button>
@@ -149,6 +156,9 @@ export function ProductAnnouncementList({
                   className="h-6 shrink-0 px-2 text-xs leading-none"
                   aria-label={dismissAriaLabel}
                   onClick={() => onDismiss(notice.id, notice.revision)}
+                  data-testid={getProductAnnouncementDismissButtonTestId(
+                    notice.id,
+                  )}
                 >
                   {t("actions.dismiss")}
                 </Button>

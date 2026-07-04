@@ -14,6 +14,7 @@ import {
   SelectValue,
   Switch,
 } from "~/components/ui"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import type { UsageHistoryScheduleMode } from "~/types/usageHistory"
 
@@ -115,7 +116,12 @@ export default function UsageHistorySyncSettingsSection({
                 <SelectItem value={USAGE_HISTORY_SCHEDULE_MODE.MANUAL}>
                   {t("settings.scheduleModes.manual")}
                 </SelectItem>
-                <SelectItem value={USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH}>
+                <SelectItem
+                  value={USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH}
+                  data-testid={
+                    BASIC_SETTINGS_TEST_IDS.usageHistorySyncScheduleModeAfterRefreshOption
+                  }
+                >
                   {t("settings.scheduleModes.afterRefresh")}
                 </SelectItem>
                 <SelectItem

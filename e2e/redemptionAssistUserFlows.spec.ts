@@ -206,7 +206,10 @@ test("detects a redemption code on a real page, redeems it for the matched accou
 
   const contentHost = page.locator("all-api-hub-redemption-toast")
   await expect(
-    contentHost.getByRole("heading", { name: "Redemption Assist" }),
+    contentHost.getByRole("heading", {
+      name: "Redemption Assist",
+      exact: true,
+    }),
   ).toBeVisible()
   await expect(
     contentHost.getByText("a1b2****c5d6", { exact: true }),

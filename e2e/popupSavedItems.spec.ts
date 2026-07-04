@@ -9,6 +9,7 @@ import {
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import { SHARE_SNAPSHOT_TEST_IDS } from "~/features/ShareSnapshots/testIds"
 import {
   getSiteBookmarkListItemTestId,
   SITE_BOOKMARKS_TEST_IDS,
@@ -509,7 +510,9 @@ test("downloads an overview share snapshot from the popup and copies the fallbac
     page.getByText("Caption wasn't copied automatically."),
   ).toBeVisible()
 
-  const captionTextArea = page.locator("textarea").first()
+  const captionTextArea = page.getByTestId(
+    SHARE_SNAPSHOT_TEST_IDS.captionTextarea,
+  )
   await expect(captionTextArea).toHaveValue(/All API Hub.*Overview/s)
   await expect(captionTextArea).toHaveValue(/Total balance: \$1\.00/)
   await expect(captionTextArea).toHaveValue(/Accounts: 2/)
@@ -612,6 +615,10 @@ test("opens pending external check-ins from the popup and marks them checked in"
     .getByRole("button", { name: "Open all external check-ins" })
     .click()
 
+  await expect(
+    page.getByText("Opened external check-in for 1 account (unchecked only)."),
+  ).toBeVisible()
+
   await expectBrowserTabOpened(
     serviceWorker,
     "https://benefits.example.com/pending/redeem",
@@ -628,10 +635,6 @@ test("opens pending external check-ins from the popup and marks them checked in"
     serviceWorker,
     "https://benefits.example.com/done/checkin",
   )
-
-  await expect(
-    page.getByText("Opened external check-in for 1 account (unchecked only)."),
-  ).toBeVisible()
 
   await expect
     .poll(async () => {
@@ -699,6 +702,10 @@ test("ctrl-clicking popup external check-ins opens already checked accounts too"
     .getByRole("button", { name: "Open all external check-ins" })
     .click({ modifiers: ["Control"] })
 
+  await expect(
+    page.getByText("Opened external check-ins for 2 accounts (all)."),
+  ).toBeVisible()
+
   for (const targetUrl of [
     "https://benefits.example.com/ctrl-pending/redeem",
     "https://benefits.example.com/ctrl-pending/checkin",
@@ -707,10 +714,6 @@ test("ctrl-clicking popup external check-ins opens already checked accounts too"
   ]) {
     await expectBrowserTabOpened(serviceWorker, targetUrl)
   }
-
-  await expect(
-    page.getByText("Opened external check-ins for 2 accounts (all)."),
-  ).toBeVisible()
 
   await expect
     .poll(async () => {
@@ -787,6 +790,10 @@ test("shift-clicking popup external check-ins groups opened pages into one brows
     .getByRole("button", { name: "Open all external check-ins" })
     .click({ modifiers: ["Shift"] })
 
+  await expect(
+    page.getByText("Opened external check-in for 1 account (unchecked only)."),
+  ).toBeVisible()
+
   await expectBrowserTabsOpenedInSameWindow(serviceWorker, [
     "https://benefits.example.com/shift-pending/redeem",
     "https://benefits.example.com/shift-pending/checkin",
@@ -799,10 +806,6 @@ test("shift-clicking popup external check-ins groups opened pages into one brows
     serviceWorker,
     "https://benefits.example.com/shift-done/checkin",
   )
-
-  await expect(
-    page.getByText("Opened external check-in for 1 account (unchecked only)."),
-  ).toBeVisible()
 
   await expect
     .poll(async () => {

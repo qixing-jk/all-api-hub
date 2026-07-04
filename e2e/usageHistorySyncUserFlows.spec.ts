@@ -1,7 +1,8 @@
-import type { BrowserContext, Worker } from "@playwright/test"
+import type { BrowserContext } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { USAGE_HISTORY_STORAGE_KEYS } from "~/services/history/usageHistory/constants"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
@@ -23,24 +24,13 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
-  getPlasmoStorageRawValue,
+  getPlasmoStorageJsonValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 const USAGE_HISTORY_SYNC_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=accountUsage&anchor=usage-history-sync#${MENU_ITEM_IDS.BASIC}`
-
-async function readJsonStorageValue<T>(
-  serviceWorker: Worker,
-  storageKey: string,
-): Promise<T | null> {
-  const raw = await getPlasmoStorageRawValue<unknown>(serviceWorker, storageKey)
-  if (typeof raw !== "string") {
-    return null
-  }
-  return JSON.parse(raw) as T
-}
 
 async function stubUsageHistoryLogRoute(
   context: BrowserContext,
@@ -55,7 +45,7 @@ async function stubUsageHistoryLogRoute(
     quota: number
     promptTokens: number
     completionTokens: number
-    onLogRequest?: () => void
+    onLogRequest?: (type: string | null) => void
   },
 ) {
   const origin = new URL(params.baseUrl).origin
@@ -65,8 +55,7 @@ async function stubUsageHistoryLogRoute(
     const url = new URL(request.url())
 
     if (request.method() === "GET" && url.pathname === "/api/log/self") {
-      params.onLogRequest?.()
-      expect(url.searchParams.get("type")).toBe(String(LogType.Consume))
+      params.onLogRequest?.(url.searchParams.get("type"))
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -133,8 +122,8 @@ test("updates usage-history sync settings and syncs only the selected account", 
   const unselectedBaseUrl = "https://usage-sync-b.example.com"
   const logCreatedAt = Math.floor(Date.now() / 1000) - 60
   const usageDayKey = getDayKeyFromUnixSeconds(logCreatedAt)
-  let selectedLogRequests = 0
-  let unselectedLogRequests = 0
+  const selectedLogRequestTypes: Array<string | null> = []
+  const unselectedLogRequestTypes: Array<string | null> = []
 
   await seedStoredAccounts(serviceWorker, [
     createStoredAccount({
@@ -185,8 +174,8 @@ test("updates usage-history sync settings and syncs only the selected account", 
     quota: 654,
     promptTokens: 123,
     completionTokens: 456,
-    onLogRequest: () => {
-      selectedLogRequests += 1
+    onLogRequest: (type) => {
+      selectedLogRequestTypes.push(type)
     },
   })
   await stubUsageHistoryLogRoute(context, {
@@ -200,8 +189,8 @@ test("updates usage-history sync settings and syncs only the selected account", 
     quota: 999,
     promptTokens: 900,
     completionTokens: 90,
-    onLogRequest: () => {
-      unselectedLogRequests += 1
+    onLogRequest: (type) => {
+      unselectedLogRequestTypes.push(type)
     },
   })
 
@@ -213,16 +202,19 @@ test("updates usage-history sync settings and syncs only the selected account", 
   await page.locator("#usage-history-sync").getByRole("switch").click()
   await page.locator("#usage-history-sync-retention-days input").fill("14")
   await page.locator("#usage-history-sync-schedule-mode").click()
-  await page.getByRole("option", { name: "After account refresh" }).click()
+  await page
+    .getByTestId(
+      BASIC_SETTINGS_TEST_IDS.usageHistorySyncScheduleModeAfterRefreshOption,
+    )
+    .click()
   await page.locator("#usage-history-sync-interval-hours input").fill("2")
   await page.locator("#usage-history-sync-apply-settings").click()
 
   await expect
     .poll(async () => {
-      const preferences = await readJsonStorageValue<Record<string, unknown>>(
-        serviceWorker,
-        STORAGE_KEYS.USER_PREFERENCES,
-      )
+      const preferences = await getPlasmoStorageJsonValue<
+        Record<string, unknown>
+      >(serviceWorker, STORAGE_KEYS.USER_PREFERENCES)
       return preferences?.usageHistory
     })
     .toMatchObject({
@@ -233,13 +225,17 @@ test("updates usage-history sync settings and syncs only the selected account", 
     })
 
   await page
-    .getByRole("checkbox", { name: "Select account: Usage Sync Hub A" })
+    .getByTestId(
+      `${BASIC_SETTINGS_TEST_IDS.usageHistorySyncAccountCheckboxPrefix}-${selectedAccountId}`,
+    )
     .click()
-  await page.getByRole("button", { name: "Sync selected" }).click()
+  await page
+    .getByTestId(BASIC_SETTINGS_TEST_IDS.usageHistorySyncSelectedButton)
+    .click()
 
   await expect
     .poll(async () => {
-      const store = await readJsonStorageValue<UsageHistoryStore>(
+      const store = await getPlasmoStorageJsonValue<UsageHistoryStore>(
         serviceWorker,
         USAGE_HISTORY_STORAGE_KEYS.STORE,
       )
@@ -271,7 +267,7 @@ test("updates usage-history sync settings and syncs only the selected account", 
       }),
     )
 
-  const store = await readJsonStorageValue<UsageHistoryStore>(
+  const store = await getPlasmoStorageJsonValue<UsageHistoryStore>(
     serviceWorker,
     USAGE_HISTORY_STORAGE_KEYS.STORE,
   )
@@ -281,6 +277,6 @@ test("updates usage-history sync settings and syncs only the selected account", 
       daily: {},
     }),
   )
-  expect(selectedLogRequests).toBeGreaterThanOrEqual(1)
-  expect(unselectedLogRequests).toBe(0)
+  expect(selectedLogRequestTypes).toContain(String(LogType.Consume))
+  expect(unselectedLogRequestTypes).toHaveLength(0)
 })

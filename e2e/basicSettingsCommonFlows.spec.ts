@@ -9,7 +9,7 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import {
-  getPlasmoStorageRawValue,
+  getPlasmoStorageJsonValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
@@ -17,41 +17,12 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 async function readStoredPreferences(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
 ): Promise<Record<string, unknown>> {
-  const raw = await getPlasmoStorageRawValue<unknown>(
-    serviceWorker,
-    STORAGE_KEYS.USER_PREFERENCES,
+  return (
+    (await getPlasmoStorageJsonValue<Record<string, unknown>>(
+      serviceWorker,
+      STORAGE_KEYS.USER_PREFERENCES,
+    )) ?? {}
   )
-
-  if (typeof raw !== "string") {
-    return {}
-  }
-
-  try {
-    return JSON.parse(raw) as Record<string, unknown>
-  } catch {
-    return {}
-  }
-}
-
-async function readJsonStorageValue<T>(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-  storageKey: string,
-): Promise<T | null> {
-  const raw = await getPlasmoStorageRawValue<unknown>(serviceWorker, storageKey)
-
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw) as T
-    } catch {
-      return null
-    }
-  }
-
-  if (raw && typeof raw === "object") {
-    return raw as T
-  }
-
-  return null
 }
 
 async function expectStoredPreference(
@@ -203,7 +174,7 @@ test("persists product analytics opt-out through dedicated storage and reload", 
 
   await expect
     .poll(async () => {
-      const preferences = await readJsonStorageValue<{
+      const preferences = await getPlasmoStorageJsonValue<{
         enabled?: boolean
         updatedAt?: number
       }>(serviceWorker, STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES)

@@ -63,6 +63,8 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
     "account-management-bookmark-import-scan-selected-button",
   bookmarkImportBackToScopeButton:
     "account-management-bookmark-import-back-to-scope-button",
+  bookmarkImportSelectAllButton:
+    "account-management-bookmark-import-select-all-button",
   bookmarkImportScopeCheckbox:
     "account-management-bookmark-import-scope-checkbox",
   bookmarkImportScopeTree: "account-management-bookmark-import-scope-tree",

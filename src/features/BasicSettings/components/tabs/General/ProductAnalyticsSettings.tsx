@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -95,14 +96,14 @@ export default function ProductAnalyticsSettings() {
 
   return (
     <SettingSection
-      id="product-analytics"
+      id={SETTINGS_ANCHORS.PRODUCT_ANALYTICS}
       title={t("productAnalytics.title")}
       description={t("productAnalytics.description")}
     >
       <Card padding="none">
         <CardList>
           <CardItem
-            id="product-analytics-enabled"
+            id={SETTINGS_ANCHORS.PRODUCT_ANALYTICS_ENABLED}
             icon={
               <ChartBarIcon className="h-5 w-5 text-slate-600 dark:text-slate-300" />
             }
