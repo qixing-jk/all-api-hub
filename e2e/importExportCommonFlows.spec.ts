@@ -1,5 +1,5 @@
 import fs from "node:fs/promises"
-import type { Page } from "@playwright/test"
+import type { BrowserContext, Page } from "@playwright/test"
 
 import {
   OPTIONS_PAGE_PATH,
@@ -9,6 +9,7 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { getPopupViewTestId, POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { IMPORT_EXPORT_TEST_IDS } from "~/features/ImportExport/testIds"
 import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
@@ -22,6 +23,7 @@ import {
   type ApiCredentialProfilesConfig,
 } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigMap } from "~/types/channelConfig"
+import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -158,6 +160,121 @@ function buildAccountBackup(accounts: SiteAccount[]) {
       },
       now,
     ),
+  }
+}
+
+async function installWebdavBackupRoute(
+  context: BrowserContext,
+  webdavFileUrl: string,
+) {
+  const uploadedPayloads: unknown[] = []
+  const stagedBackups = new Map<string, string>()
+  const tempDeleteUrls: string[] = []
+  let remoteBackup = ""
+  const webdavBackupFile = new URL(webdavFileUrl)
+  const webdavBackupDirectoryPath = webdavBackupFile.pathname.replace(
+    /\/[^/]*$/,
+    "",
+  )
+  const webdavBackupFileName = webdavBackupFile.pathname.split("/").pop() ?? ""
+
+  await context.route(`${webdavBackupFile.origin}/**`, async (route) => {
+    const method = route.request().method()
+    const url = new URL(route.request().url())
+    const isBackupFile = url.href === webdavFileUrl
+    const requestDirectoryPath = url.pathname.replace(/\/[^/]*$/, "")
+    const requestFileName = url.pathname.split("/").pop() ?? ""
+    const isTempBackupFile =
+      requestDirectoryPath === webdavBackupDirectoryPath &&
+      (requestFileName.startsWith(`${webdavBackupFileName}.tmp.`) ||
+        requestFileName.startsWith(`.${webdavBackupFileName}.tmp.`))
+
+    if (method === "GET" && (isBackupFile || isTempBackupFile)) {
+      const body = isTempBackupFile ? stagedBackups.get(url.href) : remoteBackup
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: body || "{}",
+      })
+      return
+    }
+
+    if (method === "PUT" && (isBackupFile || isTempBackupFile)) {
+      const body = route.request().postData() ?? ""
+      if (isTempBackupFile) {
+        stagedBackups.set(url.href, body)
+      } else {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "direct final backup PUT rejected" }),
+        })
+        return
+      }
+      await route.fulfill({
+        status: 204,
+        contentType: "application/json",
+        body: "{}",
+      })
+      return
+    }
+
+    if (method === "PROPFIND") {
+      await route.fulfill({
+        status: 207,
+        contentType: "application/xml",
+        body: `<?xml version="1.0" encoding="utf-8"?><d:multistatus xmlns:d="DAV:" />`,
+      })
+      return
+    }
+
+    if (method === "MOVE" && isTempBackupFile) {
+      const destination = route.request().headers()["destination"]
+      const body = stagedBackups.get(url.href)
+      if (destination !== webdavFileUrl || body === undefined) {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "missing staged backup" }),
+        })
+        return
+      }
+
+      remoteBackup = body
+      stagedBackups.delete(url.href)
+      uploadedPayloads.push(JSON.parse(remoteBackup))
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: "{}",
+      })
+      return
+    }
+
+    if (method === "DELETE" && isTempBackupFile) {
+      tempDeleteUrls.push(url.href)
+      stagedBackups.delete(url.href)
+      await route.fulfill({
+        status: 204,
+        contentType: "text/plain",
+        body: "",
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: method === "MKCOL" ? 201 : 204,
+      contentType: "text/plain",
+      body: "",
+    })
+  })
+
+  return {
+    uploadedPayloads,
+    tempDeleteUrls,
+    setRemoteBackup(body: string) {
+      remoteBackup = body
+    },
   }
 }
 
@@ -1160,116 +1277,10 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   const serviceWorker = await getServiceWorker(context)
   const now = Date.parse("2026-03-30T18:00:00.000Z")
   const webdavFileUrl = "https://webdav.example.com/all-api-hub-e2e.json"
-  const uploadedPayloads: unknown[] = []
-  const stagedBackups = new Map<string, string>()
-  const tempDeleteUrls: string[] = []
-  let remoteBackup = ""
-  const webdavBackupFile = new URL(webdavFileUrl)
-  const webdavBackupDirectoryPath = webdavBackupFile.pathname.replace(
-    /\/[^/]*$/,
-    "",
+  const { uploadedPayloads, tempDeleteUrls } = await installWebdavBackupRoute(
+    context,
+    webdavFileUrl,
   )
-  const webdavBackupFileName = webdavBackupFile.pathname.split("/").pop() ?? ""
-
-  await context.route("https://webdav.example.com/**", async (route) => {
-    const method = route.request().method()
-    const url = new URL(route.request().url())
-    const isBackupFile = url.href === webdavFileUrl
-    const requestDirectoryPath = url.pathname.replace(/\/[^/]*$/, "")
-    const requestFileName = url.pathname.split("/").pop() ?? ""
-    const isTempBackupFile =
-      requestDirectoryPath === webdavBackupDirectoryPath &&
-      (requestFileName.startsWith(`${webdavBackupFileName}.tmp.`) ||
-        requestFileName.startsWith(`.${webdavBackupFileName}.tmp.`))
-
-    if (method === "GET" && (isBackupFile || isTempBackupFile)) {
-      const body = isTempBackupFile ? stagedBackups.get(url.href) : remoteBackup
-      if (!body) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: "{}",
-        })
-        return
-      }
-
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body,
-      })
-      return
-    }
-
-    if (method === "PUT" && (isBackupFile || isTempBackupFile)) {
-      const body = route.request().postData() ?? ""
-      if (isTempBackupFile) {
-        stagedBackups.set(url.href, body)
-      } else {
-        await route.fulfill({
-          status: 500,
-          contentType: "application/json",
-          body: JSON.stringify({ error: "direct final backup PUT rejected" }),
-        })
-        return
-      }
-      await route.fulfill({
-        status: isTempBackupFile ? 204 : 201,
-        contentType: "application/json",
-        body: "{}",
-      })
-      return
-    }
-
-    if (method === "PROPFIND") {
-      await route.fulfill({
-        status: 207,
-        contentType: "application/xml",
-        body: `<?xml version="1.0" encoding="utf-8"?><d:multistatus xmlns:d="DAV:" />`,
-      })
-      return
-    }
-
-    if (method === "MOVE" && isTempBackupFile) {
-      const destination = route.request().headers()["destination"]
-      const body = stagedBackups.get(url.href)
-      if (destination !== webdavFileUrl || body === undefined) {
-        await route.fulfill({
-          status: 404,
-          contentType: "application/json",
-          body: JSON.stringify({ error: "missing staged backup" }),
-        })
-        return
-      }
-
-      remoteBackup = body
-      stagedBackups.delete(url.href)
-      uploadedPayloads.push(JSON.parse(remoteBackup))
-      await route.fulfill({
-        status: 201,
-        contentType: "application/json",
-        body: "{}",
-      })
-      return
-    }
-
-    if (method === "DELETE" && isTempBackupFile) {
-      tempDeleteUrls.push(url.href)
-      stagedBackups.delete(url.href)
-      await route.fulfill({
-        status: 204,
-        contentType: "text/plain",
-        body: "",
-      })
-      return
-    }
-
-    await route.fulfill({
-      status: method === "MKCOL" ? 201 : 204,
-      contentType: "text/plain",
-      body: "",
-    })
-  })
 
   const webdavAccount = createStoredAccount({
     id: "webdav-account",
@@ -1454,4 +1465,111 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   await expect(
     restorePage.getByRole("heading", { name: "WebDAV Profile" }),
   ).toBeVisible()
+})
+
+test("runs WebDAV auto-sync from settings and uploads the local snapshot", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const now = Date.parse("2026-03-30T19:00:00.000Z")
+  const webdavFileUrl =
+    "https://webdav-auto-sync.example.invalid/all-api-hub-auto-sync.json"
+  const { uploadedPayloads, tempDeleteUrls } = await installWebdavBackupRoute(
+    context,
+    webdavFileUrl,
+  )
+
+  const syncedAccount = createStoredAccount({
+    id: "webdav-auto-sync-account",
+    site_name: "WebDAV Auto Sync Account",
+    site_url: "https://webdav-auto-sync-account.example.invalid",
+    account_info: {
+      id: "901",
+      username: "auto-sync-user",
+      access_token: "auto-sync-token",
+    },
+  })
+  const syncedProfile = createStoredApiCredentialProfile({
+    id: "webdav-auto-sync-profile",
+    name: "WebDAV Auto Sync Profile",
+    baseUrl: "https://webdav-auto-sync-profile.example.invalid",
+    apiKey: "sk-webdav-auto-sync-profile",
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  await setPlasmoStorageValue(
+    serviceWorker,
+    STORAGE_KEYS.ACCOUNTS,
+    normalizeAccountStorageConfigForWrite(
+      {
+        ...createDefaultAccountStorageConfig(now),
+        accounts: [syncedAccount],
+        pinnedAccountIds: [syncedAccount.id],
+        orderedAccountIds: [syncedAccount.id],
+      } as AccountStorageConfig,
+      now,
+    ),
+  )
+  await seedApiCredentialProfiles(serviceWorker, [syncedProfile])
+  await seedUserPreferences(serviceWorker, {
+    currencyType: "CNY",
+    actionClickBehavior: "sidepanel",
+    webdav: {
+      url: webdavFileUrl,
+      username: "webdav-user",
+      password: "webdav-password",
+      autoSync: false,
+      syncInterval: 3600,
+      syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
+    },
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=dataBackup&anchor=${WEBDAV_AUTO_SYNC_TARGET_IDS.root}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  await waitForExtensionRoot(page)
+
+  await expect(
+    page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.root}`),
+  ).toBeVisible()
+  await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.enable} button`).click()
+  await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.interval}`).fill("120")
+  await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings}`).click()
+  await expect(
+    page.getByText("WebDAV Auto Sync Update successful"),
+  ).toBeVisible()
+
+  await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}`).click()
+  await expect(page.getByText("同步成功")).toBeVisible()
+
+  await expect.poll(() => uploadedPayloads.length).toBe(1)
+  expect(tempDeleteUrls).toEqual([])
+  expect(uploadedPayloads[0]).toMatchObject({
+    version: "2.0",
+    accounts: {
+      accounts: [
+        expect.objectContaining({
+          id: "webdav-auto-sync-account",
+          site_name: "WebDAV Auto Sync Account",
+        }),
+      ],
+    },
+    apiCredentialProfiles: {
+      profiles: [
+        expect.objectContaining({
+          id: "webdav-auto-sync-profile",
+          name: "WebDAV Auto Sync Profile",
+        }),
+      ],
+    },
+    preferences: expect.objectContaining({
+      currencyType: "CNY",
+      actionClickBehavior: "sidepanel",
+    }),
+  })
+
+  await expect(page.getByText("Sync successful")).toBeVisible()
 })
