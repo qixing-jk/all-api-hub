@@ -12,6 +12,7 @@ export const E2E_BUILD_VARIANTS = SHARED_E2E_BUILD_VARIANTS
 const _E2E_BUILD_VARIANT_VALUES = [
   E2E_BUILD_VARIANTS.Default,
   E2E_BUILD_VARIANTS.DnrRequired,
+  E2E_BUILD_VARIANTS.BookmarksRequired,
 ] as const
 
 type E2eBuildVariant = (typeof _E2E_BUILD_VARIANT_VALUES)[number]

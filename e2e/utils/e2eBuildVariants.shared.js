@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 export const E2E_BUILD_VARIANTS = {
   Default: "default",
   DnrRequired: "dnr-required",
+  BookmarksRequired: "bookmarks-required",
 }
 
 const E2E_BUILD_VARIANT_VALUES = Object.values(E2E_BUILD_VARIANTS)

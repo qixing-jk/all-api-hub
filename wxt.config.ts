@@ -122,12 +122,13 @@ function getManifestOptionalPermissions(browser: BrowserTarget) {
   const browserOptionalPermissions = isFirefoxManifestTarget(browser)
     ? FIREFOX_COOKIE_OPTIONAL_PERMISSIONS
     : getChromiumOptionalPermissions()
+  const requiredPermissions = getManifestRequiredPermissions(browser)
 
   return [
     ...browserOptionalPermissions,
     ...COMMON_OPTIONAL_PERMISSIONS,
     ...BOOKMARK_IMPORT_OPTIONAL_PERMISSIONS,
-  ]
+  ].filter((permission) => !requiredPermissions.includes(permission))
 }
 
 function getChromiumOptionalPermissions() {
