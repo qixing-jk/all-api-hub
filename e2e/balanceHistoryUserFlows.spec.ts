@@ -23,22 +23,12 @@ import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageJsonValue,
   getServiceWorker,
+  getStoredUserPreferences,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 const BALANCE_HISTORY_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BALANCE_HISTORY}`
-
-async function readStoredPreferences(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-) {
-  return (
-    (await getPlasmoStorageJsonValue<Record<string, unknown>>(
-      serviceWorker,
-      STORAGE_KEYS.USER_PREFERENCES,
-    )) ?? {}
-  )
-}
 
 async function readDailyBalanceHistoryStore(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
@@ -183,7 +173,7 @@ test("filters balance history by tag/account and persists the selected currency"
   await page.getByRole("button", { name: "CNY (¥)" }).click()
 
   await expect
-    .poll(async () => readStoredPreferences(serviceWorker))
+    .poll(async () => getStoredUserPreferences(serviceWorker))
     .toMatchObject({ currencyType: "CNY" })
   await expect(page.getByRole("button", { name: "CNY (¥)" })).toHaveAttribute(
     "aria-pressed",

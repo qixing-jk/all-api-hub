@@ -5,7 +5,6 @@ import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -18,6 +17,7 @@ import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageRawValue,
   getServiceWorker,
+  getStoredUserPreferences,
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
@@ -159,20 +159,7 @@ async function readStoredPreferences(
   context: BrowserContext,
 ): Promise<Record<string, unknown>> {
   const serviceWorker = await getServiceWorker(context)
-  const raw = await getPlasmoStorageRawValue<unknown>(
-    serviceWorker,
-    STORAGE_KEYS.USER_PREFERENCES,
-  )
-
-  if (typeof raw !== "string") {
-    return {}
-  }
-
-  try {
-    return JSON.parse(raw) as Record<string, unknown>
-  } catch {
-    return {}
-  }
+  return await getStoredUserPreferences(serviceWorker)
 }
 
 async function readStoredManagedSiteModelSync(

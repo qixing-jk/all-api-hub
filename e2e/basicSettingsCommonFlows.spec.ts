@@ -11,19 +11,9 @@ import {
 import {
   getPlasmoStorageJsonValue,
   getServiceWorker,
+  getStoredUserPreferences,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
-
-async function readStoredPreferences(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-): Promise<Record<string, unknown>> {
-  return (
-    (await getPlasmoStorageJsonValue<Record<string, unknown>>(
-      serviceWorker,
-      STORAGE_KEYS.USER_PREFERENCES,
-    )) ?? {}
-  )
-}
 
 async function expectStoredPreference(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
@@ -32,7 +22,7 @@ async function expectStoredPreference(
 ) {
   await expect
     .poll(async () => {
-      const preferences = await readStoredPreferences(serviceWorker)
+      const preferences = await getStoredUserPreferences(serviceWorker)
       return preferences[key]
     })
     .toEqual(value)

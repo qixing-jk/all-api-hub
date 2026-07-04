@@ -40,6 +40,7 @@ import {
 import {
   getPlasmoStorageRawValue,
   getServiceWorker,
+  getStoredUserPreferences,
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
@@ -76,25 +77,6 @@ async function readStoredAccountConfig(
     return JSON.parse(raw) as AccountStorageConfig
   } catch {
     return createDefaultAccountStorageConfig()
-  }
-}
-
-async function readStoredPreferences(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-): Promise<Record<string, unknown>> {
-  const raw = await getPlasmoStorageRawValue<unknown>(
-    serviceWorker,
-    STORAGE_KEYS.USER_PREFERENCES,
-  )
-
-  if (typeof raw !== "string") {
-    return {}
-  }
-
-  try {
-    return JSON.parse(raw) as Record<string, unknown>
-  } catch {
-    return {}
   }
 }
 
@@ -578,7 +560,7 @@ test("round-trips a full backup through export download and file import", async 
       const [accountConfig, profileConfig, preferences] = await Promise.all([
         readStoredAccountConfig(serviceWorker),
         readStoredApiCredentialProfiles(serviceWorker),
-        readStoredPreferences(serviceWorker),
+        getStoredUserPreferences(serviceWorker),
       ])
       const channelConfigs = await readStoredChannelConfigs(serviceWorker)
 
@@ -969,7 +951,7 @@ test("restores a full backup and keeps common popup workflows available", async 
       now,
     ),
     preferences: {
-      ...(await readStoredPreferences(serviceWorker)),
+      ...(await getStoredUserPreferences(serviceWorker)),
       currencyType: "CNY",
       actionClickBehavior: "sidepanel",
     },
@@ -1002,7 +984,7 @@ test("restores a full backup and keeps common popup workflows available", async 
       const [accountConfig, profileConfig, preferences] = await Promise.all([
         readStoredAccountConfig(serviceWorker),
         readStoredApiCredentialProfiles(serviceWorker),
-        readStoredPreferences(serviceWorker),
+        getStoredUserPreferences(serviceWorker),
       ])
 
       return {
@@ -1094,7 +1076,7 @@ test("restores a full backup and keeps the sidepanel model workflow available", 
       now,
     ),
     preferences: {
-      ...(await readStoredPreferences(serviceWorker)),
+      ...(await getStoredUserPreferences(serviceWorker)),
       currencyType: "CNY",
       actionClickBehavior: "sidepanel",
     },
@@ -1158,7 +1140,7 @@ test("restores a full backup and keeps the sidepanel model workflow available", 
       const [accountConfig, profileConfig, preferences] = await Promise.all([
         readStoredAccountConfig(serviceWorker),
         readStoredApiCredentialProfiles(serviceWorker),
-        readStoredPreferences(serviceWorker),
+        getStoredUserPreferences(serviceWorker),
       ])
 
       return {
@@ -1222,7 +1204,7 @@ test("imports preference backup JSON and applies settings after reload", async (
     type: "preferences",
     timestamp: Date.parse("2026-03-30T12:30:00.000Z"),
     preferences: {
-      ...(await readStoredPreferences(serviceWorker)),
+      ...(await getStoredUserPreferences(serviceWorker)),
       currencyType: "CNY",
       actionClickBehavior: "sidepanel",
       themeMode: "dark",
@@ -1245,7 +1227,7 @@ test("imports preference backup JSON and applies settings after reload", async (
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
   await expect
-    .poll(() => readStoredPreferences(serviceWorker))
+    .poll(() => getStoredUserPreferences(serviceWorker))
     .toMatchObject({
       currencyType: "CNY",
       actionClickBehavior: "sidepanel",
@@ -1424,7 +1406,7 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
       const [accountConfig, profileConfig, preferences] = await Promise.all([
         readStoredAccountConfig(serviceWorker),
         readStoredApiCredentialProfiles(serviceWorker),
-        readStoredPreferences(serviceWorker),
+        getStoredUserPreferences(serviceWorker),
       ])
 
       return {
