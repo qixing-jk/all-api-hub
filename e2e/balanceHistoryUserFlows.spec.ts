@@ -17,6 +17,7 @@ import {
   seedTagStore,
   seedUserPreferences,
   stubLlmMetadataIndex,
+  stubNewApiSiteRoutes,
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
@@ -39,6 +40,25 @@ async function readStoredPreferences(
   if (typeof raw !== "string") return {}
 
   return JSON.parse(raw) as Record<string, unknown>
+}
+
+async function readDailyBalanceHistoryStore(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+) {
+  const raw = await getPlasmoStorageRawValue<unknown>(
+    serviceWorker,
+    STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
+  )
+
+  if (typeof raw === "string") {
+    return JSON.parse(raw) as DailyBalanceHistoryStore
+  }
+
+  if (raw && typeof raw === "object") {
+    return raw as DailyBalanceHistoryStore
+  }
+
+  return null
 }
 
 function createBalanceSnapshots(): DailyBalanceHistoryStore["snapshotsByAccountId"] {
@@ -181,4 +201,73 @@ test("filters balance history by tag/account and persists the selected currency"
     "aria-pressed",
     "true",
   )
+})
+
+test("refreshes balance snapshots through the background runtime", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const accountId = "balance-refresh-account"
+  const siteUrl = "https://balance-refresh.example.com"
+
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: accountId,
+      site_name: "Balance Refresh Hub",
+      site_url: siteUrl,
+      account_info: {
+        id: "31",
+        username: "balance-refresh-user",
+        access_token: "balance-refresh-token",
+      },
+    }),
+  ])
+  await seedDailyBalanceHistoryStore(serviceWorker, { [accountId]: {} })
+  await seedUserPreferences(serviceWorker, {
+    currencyType: "USD",
+    showTodayCashflow: true,
+    balanceHistory: {
+      enabled: true,
+      endOfDayCapture: { enabled: false },
+      retentionDays: 365,
+    },
+  })
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: siteUrl,
+    userId: "31",
+    username: "balance-refresh-user",
+    accessToken: "balance-refresh-token",
+    initialQuota: 12_345_678,
+    todayQuotaConsumption: 234_567,
+  })
+
+  await page.goto(BALANCE_HISTORY_URL(extensionId))
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+  await expect(
+    page.getByRole("heading", { name: "Balance History" }),
+  ).toBeVisible()
+
+  await page.getByRole("button", { name: "Refresh now" }).click()
+
+  await expect
+    .poll(async () => {
+      const store = await readDailyBalanceHistoryStore(serviceWorker)
+      return Object.values(store?.snapshotsByAccountId[accountId] ?? {})
+    })
+    .toEqual([
+      expect.objectContaining({
+        quota: 12_345_678,
+        today_income: 0,
+        today_quota_consumption: 234_567,
+        source: "refresh",
+        capturedAt: expect.any(Number),
+      }),
+    ])
+  await expect(
+    page.getByTestId(BALANCE_HISTORY_TEST_IDS.accountSummary),
+  ).toBeVisible()
+  await expect(page.getByText("Balance Refresh Hub").first()).toBeVisible()
 })

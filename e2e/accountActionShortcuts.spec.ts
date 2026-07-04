@@ -7,6 +7,9 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
+import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
+import type { LdohSiteListCache } from "~/services/integrations/ldohSiteLookup/types"
 import type { ApiToken } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { verifyAccountProviderDestinationUsage } from "~~/e2e/scenarios/accountUsage"
@@ -22,6 +25,7 @@ import {
 import {
   expectPermissionOnboardingHidden,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
@@ -100,6 +104,59 @@ async function openAccountActionsMenu(page: Page, accountName: string) {
   await row
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
     .click()
+}
+
+async function expectBrowserTabOpenedAtOrigin(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+  origin: string,
+) {
+  await expect
+    .poll(async () => {
+      return await serviceWorker.evaluate(async (targetOrigin) => {
+        const chromeApi = (globalThis as any).chrome
+        const tabs = await chromeApi.tabs.query({})
+        return tabs.some((tab: { url?: string }) =>
+          tab.url?.startsWith(`${targetOrigin}/`),
+        )
+      }, origin)
+    })
+    .toBe(true)
+}
+
+async function installTabsCreateRecorder(page: Page) {
+  await page.evaluate(() => {
+    const browserApi = (globalThis as any).browser ?? (globalThis as any).chrome
+    const originalCreate = browserApi.tabs.create.bind(browserApi.tabs)
+    ;(globalThis as any).__aahTabsCreateCalls = []
+    browserApi.tabs.create = async (
+      createProperties: browser.tabs._CreateCreateProperties,
+    ) => {
+      ;(globalThis as any).__aahTabsCreateCalls.push(createProperties)
+      return await originalCreate(createProperties)
+    }
+  })
+}
+
+async function expectTabsCreateCalledWithUrl(page: Page, url: string) {
+  await expect
+    .poll(async () => {
+      return await page.evaluate((targetUrl) => {
+        const calls = (globalThis as any).__aahTabsCreateCalls
+        return Array.isArray(calls)
+          ? calls.some(
+              (call: browser.tabs._CreateCreateProperties) =>
+                call.url === targetUrl,
+            )
+          : false
+      }, url)
+    })
+    .toBe(true)
+}
+
+function buildLdohSearchUrl(hostname: string) {
+  const url = new URL(LDOH_ORIGIN)
+  url.searchParams.set("q", hostname)
+  return url.toString()
 }
 
 test.beforeEach(async ({ context, page }) => {
@@ -262,6 +319,72 @@ test("opens per-account key and model management from the row menu", async ({
   await expect(
     modelsPage.getByRole("heading", { name: "gpt-shortcut" }),
   ).toBeVisible()
+})
+
+test("opens an LDOH site lookup search from the account row action", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const now = Date.now()
+  const accountHostname = "ldoh-account.example.invalid"
+  const expectedLdohSearchUrl = buildLdohSearchUrl(accountHostname)
+  const ldohCache: LdohSiteListCache = {
+    version: 1,
+    fetchedAt: now,
+    expiresAt: now + 60 * 60 * 1000,
+    items: [
+      {
+        id: "ldoh-e2e-site",
+        name: "LDOH E2E Site",
+        apiBaseUrl: `https://${accountHostname}/api`,
+      },
+    ],
+  }
+
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "ldoh-shortcut-account",
+      site_name: "LDOH Shortcut Account",
+      site_url: `https://${accountHostname}`,
+      account_info: {
+        id: "301",
+        username: "ldoh-shortcut-user",
+        access_token: "ldoh-shortcut-token",
+      },
+    }),
+  ])
+  await setPlasmoStorageValue(
+    serviceWorker,
+    STORAGE_KEYS.SITE_LIST_CACHE,
+    ldohCache,
+  )
+  await context.route(/^https:\/\/ldoh\.105117\.xyz\/.*/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<!doctype html><title>LDOH lookup</title>",
+    })
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+  await installTabsCreateRecorder(page)
+
+  const row = getAccountRow(page, "LDOH Shortcut Account")
+  await row.hover()
+  const ldohLookupButton = row.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.rowLdohLookupButton,
+  )
+  await expect(ldohLookupButton).toBeVisible()
+  await ldohLookupButton.click()
+
+  await expectTabsCreateCalledWithUrl(page, expectedLdohSearchUrl)
+  await expectBrowserTabOpenedAtOrigin(serviceWorker, LDOH_ORIGIN)
 })
 
 test("opens provider usage and redeem destinations from the account row menu", async ({

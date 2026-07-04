@@ -994,3 +994,91 @@ test("applies model redirect mapping during selected managed-site model sync thr
     }),
   ])
 })
+
+test("clears selected model redirect mappings from managed-site settings", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await seedManagedSitePreferences(context)
+  const { updatePayloads } = await stubManagedSiteAdminRoutes(context, {
+    channels: [
+      createManagedSiteChannel({
+        id: 101,
+        name: "Redirect OpenAI",
+        models: "legacy-openai",
+        model_mapping: JSON.stringify({
+          "gpt-4o-mini": "openai/gpt-4o-mini",
+        }),
+      }),
+      createManagedSiteChannel({
+        id: 202,
+        name: "Empty Anthropic",
+        models: "legacy-anthropic",
+        model_mapping: "{}",
+      }),
+      createManagedSiteChannel({
+        id: 303,
+        name: "Keep Gemini",
+        models: "legacy-gemini",
+        model_mapping: JSON.stringify({
+          "gemini-pro": "google/gemini-pro",
+        }),
+      }),
+    ],
+  })
+
+  await page.goto(
+    basicSettingsUrl(extensionId, {
+      tab: "managedSite",
+      anchor: "managed-site-model-redirect",
+    }),
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  await expect(page.locator("#managed-site-model-redirect")).toContainText(
+    "Model Redirect",
+  )
+  await expect(
+    page.locator("#managed-site-model-redirect-bulk-clear"),
+  ).toBeEnabled()
+  await page.locator("#managed-site-model-redirect-bulk-clear").click()
+
+  await expect(page.getByText("Channels", { exact: true })).toBeVisible()
+  await expect(page.getByText("Redirect OpenAI")).toBeVisible()
+  await expect(page.getByText("Keep Gemini")).toBeVisible()
+  await page.getByRole("checkbox", { name: "Keep Gemini (#303)" }).click()
+  await page.getByRole("button", { name: "Continue" }).click()
+
+  await expect(page.getByText("Clear model redirect maps?")).toBeVisible()
+  await page.getByRole("button", { name: "Clear", exact: true }).click()
+
+  await expect(
+    page.getByText("Cleared 1 channel(s); 1 already empty."),
+  ).toBeVisible()
+  await expect
+    .poll(() =>
+      updatePayloads.some(
+        (payload) =>
+          typeof payload === "object" &&
+          payload !== null &&
+          "id" in payload &&
+          payload.id === 101 &&
+          "models" in payload &&
+          payload.models === "legacy-openai" &&
+          "model_mapping" in payload &&
+          payload.model_mapping === "{}",
+      ),
+    )
+    .toBe(true)
+  expect(
+    updatePayloads.some(
+      (payload) =>
+        typeof payload === "object" &&
+        payload !== null &&
+        "id" in payload &&
+        (payload.id === 202 || payload.id === 303),
+    ),
+  ).toBe(false)
+})

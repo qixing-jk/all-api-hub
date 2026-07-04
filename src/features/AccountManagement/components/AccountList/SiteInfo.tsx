@@ -565,6 +565,7 @@ export default function SiteInfo({
                   variant="ghost"
                   size="xs"
                   aria-label={t("actions.viewOnLdoh")}
+                  data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowLdohLookupButton}
                 >
                   <span aria-hidden="true">
                     <LdohIcon />

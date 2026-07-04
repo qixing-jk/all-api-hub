@@ -4,7 +4,10 @@ import {
   getKeyManagementTokenRowTestId,
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
+import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AuthTypeEnum, type ApiToken } from "~/types"
+import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
+import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   verifyAccountKeyLifecycleUsage,
@@ -22,6 +25,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
+  getPlasmoStorageRawValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
@@ -111,6 +115,18 @@ async function stubSharedChatServiceCredentialRoutes(
       body: JSON.stringify({ error: "Unhandled SharedChat E2E route" }),
     })
   })
+}
+
+async function readJsonStorageValue<T>(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+  storageKey: string,
+): Promise<T | null> {
+  const raw = await getPlasmoStorageRawValue<unknown>(serviceWorker, storageKey)
+  if (typeof raw !== "string") {
+    return null
+  }
+
+  return JSON.parse(raw) as T
 }
 
 test.beforeEach(async ({ context, page }) => {
@@ -346,6 +362,158 @@ test("filters keys by search query and shows the no-results state", async ({
   await searchInput.fill("")
   await expect(page.getByRole("heading", { name: "Alpha Key" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "Beta Key" })).toBeVisible()
+})
+
+test("repairs missing account keys and deletes invalid group keys", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const accountId = "e2e-key-repair-account"
+  const baseUrl = "https://key-repair.example.com"
+
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: accountId,
+      site_name: "Key Repair Source",
+      site_url: baseUrl,
+      account_info: {
+        id: "1",
+        access_token: "repair-token",
+        username: "repair-user",
+      },
+    }),
+  ])
+  await stubNewApiSiteRoutes(context, {
+    baseUrl,
+    accessToken: "repair-token",
+    username: "repair-user",
+    groups: {
+      default: { desc: "Default", ratio: 1 },
+      vip: { desc: "VIP", ratio: 1.5 },
+    },
+    initialTokens: [
+      createStubApiToken({
+        id: 1,
+        name: "Default Key",
+        key: "sk-default-token",
+        group: "default",
+      }),
+      createStubApiToken({
+        id: 2,
+        name: "Legacy Group Key",
+        key: "sk-legacy-token",
+        group: "legacy",
+      }),
+    ],
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=${accountId}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+  await expect(page.getByRole("heading", { name: "Default Key" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Legacy Group Key" }),
+  ).toBeVisible()
+
+  await page.getByRole("button", { name: "Key check" }).click()
+  await expect(
+    page.getByRole("heading", { name: "Key coverage check" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Start check and fill gaps" }).click()
+
+  await expect
+    .poll(
+      async () => {
+        const progress = await readJsonStorageValue<AccountKeyRepairProgress>(
+          serviceWorker,
+          ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+        )
+        return progress?.state
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
+
+  const completedProgress =
+    await readJsonStorageValue<AccountKeyRepairProgress>(
+      serviceWorker,
+      ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+    )
+
+  expect(completedProgress?.summary).toMatchObject({
+    created: 1,
+    availableGroups: 2,
+    coveredGroups: 2,
+    createdKeys: 1,
+    invalidKeys: 1,
+  })
+  expect(completedProgress?.results[0]).toMatchObject({
+    accountId,
+    accountName: "Key Repair Source",
+    availableGroups: ["default", "vip"],
+    coveredGroups: ["default", "vip"],
+    createdGroups: ["vip"],
+    invalidTokens: [
+      expect.objectContaining({
+        tokenId: 2,
+        tokenName: "Legacy Group Key",
+        group: "legacy",
+      }),
+    ],
+  })
+
+  await expect(page.getByText("Covered 2/2 groups")).toBeVisible()
+  await expect(page.getByText("Created: vip")).toBeVisible()
+  await expect(page.getByTestId("repair-missing-keys-result-count")).toHaveText(
+    "1/1",
+  )
+
+  await page.getByRole("button", { name: /Invalid keys/ }).click()
+  await expect(page.getByTestId("repair-missing-keys-result-count")).toHaveText(
+    "1/1",
+  )
+  await expect(
+    page.getByRole("checkbox", { name: "Legacy Group Key", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByText("Group legacy is currently unavailable"),
+  ).toBeVisible()
+
+  await page
+    .getByRole("checkbox", { name: "Legacy Group Key", exact: true })
+    .click()
+  await page.getByRole("button", { name: "Delete selected" }).click()
+  await expect(
+    page.getByText(
+      "These keys will also be deleted from the corresponding sites and cannot be restored through the extension.",
+    ),
+  ).toBeVisible()
+  await page.getByTestId("repair-invalid-keys-confirm-delete").click()
+
+  await expect(page.getByText("Deleted 1 invalid key")).toBeVisible()
+  await expect(page.getByText("No invalid keys")).toBeVisible()
+  await expect(
+    page.getByRole("checkbox", { name: "Legacy Group Key", exact: true }),
+  ).toHaveCount(0)
+  await expect(page.getByTestId("repair-missing-keys-result-count")).toHaveText(
+    "0/0",
+  )
+  await expect
+    .poll(
+      async () => {
+        const progress = await readJsonStorageValue<AccountKeyRepairProgress>(
+          serviceWorker,
+          ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+        )
+        return progress?.summary.invalidKeys
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(0)
 })
 
 test("saves a key to API credential profiles and opens the profiles page", async ({
