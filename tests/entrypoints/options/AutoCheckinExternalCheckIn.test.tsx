@@ -19,18 +19,46 @@ import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageType
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { toast } = vi.hoisted(() => ({
+const { toast, tMock } = vi.hoisted(() => ({
   toast: {
     loading: vi.fn(),
     dismiss: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
   },
+  tMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
   default: toast,
 }))
+
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>()
+
+  return {
+    ...actual,
+    useTranslation: (namespaces?: string | string[]) => ({
+      t: (key: string, options?: Record<string, unknown>) => {
+        tMock(key, options, namespaces)
+
+        if (key.includes(":")) {
+          return key
+        }
+
+        const namespace =
+          typeof options?.ns === "string"
+            ? options.ns
+            : Array.isArray(namespaces)
+              ? namespaces[0]
+              : namespaces ?? "translation"
+
+        return `${namespace}:${key}`
+      },
+      i18n: { language: "zh-CN", changeLanguage: vi.fn() },
+    }),
+  }
+})
 
 vi.mock("~/services/checkin/autoCheckin/messaging", () => ({
   sendAutoCheckinMessage: vi.fn(),
@@ -106,20 +134,26 @@ const accountById = {
   },
 }
 
-const mockAutoCheckinMessages = () => {
+const mockAutoCheckinMessages = ({
+  accounts = accountById,
+  status = statusWithExternalCheckIns,
+}: {
+  accounts?: Record<string, (typeof accountById)[keyof typeof accountById]>
+  status?: typeof statusWithExternalCheckIns
+} = {}) => {
   vi.mocked(sendAutoCheckinMessage).mockImplementation(
     async (type: string, data?: any) => {
       if (type === AutoCheckinMessageTypes.GetStatus) {
         return {
           success: true,
-          data: statusWithExternalCheckIns,
+          data: status,
         }
       }
 
       if (type === AutoCheckinMessageTypes.GetAccountInfo) {
         return {
           success: true,
-          data: accountById[data?.accountId as keyof typeof accountById],
+          data: accounts[data?.accountId as string],
         }
       }
 
@@ -319,6 +353,49 @@ describe("AutoCheckin external check-in actions", () => {
         "messages:toast.error.externalCheckInPartialFailed",
       )
     })
+    expect(tMock).toHaveBeenCalledWith(
+      "messages:toast.error.externalCheckInPartialFailed",
+      {
+        count: 1,
+        failedCount: 1,
+        totalCount: 2,
+      },
+      ["autoCheckin", "messages", "account", "common"],
+    )
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("shows skipped feedback when no action-bar external check-ins are pending", async () => {
+    const user = userEvent.setup()
+    mockAutoCheckinMessages({
+      accounts: {
+        ...accountById,
+        alpha: {
+          ...accountById.alpha,
+          checkIn: {
+            customCheckIn: {
+              ...accountById.alpha.checkIn.customCheckIn,
+              isCheckedInToday: true,
+            },
+          },
+        },
+      },
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByTitle(
+        "autoCheckin:execution.hints.openExternalCheckIn",
+      ),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "messages:toast.error.externalCheckInNonePending",
+      )
+    })
+    expect(sendExternalCheckInMessage).not.toHaveBeenCalled()
     expect(toast.success).not.toHaveBeenCalled()
   })
 
@@ -398,6 +475,13 @@ describe("AutoCheckin external check-in actions", () => {
     })
     await user.click(button)
 
+    const betaRow = await screen.findByRole("row", { name: /Beta/ })
+    await user.click(
+      await within(betaRow).findByRole("button", {
+        name: "autoCheckin:execution.actions.openExternal",
+      }),
+    )
+
     expect(sendExternalCheckInMessage).toHaveBeenCalledTimes(1)
     deferred.resolve({
       success: true,
@@ -412,5 +496,92 @@ describe("AutoCheckin external check-in actions", () => {
     await waitFor(() => {
       expect(button).not.toBeDisabled()
     })
+  })
+
+  it("shows skipped feedback when the row external check-in account is disabled", async () => {
+    const user = userEvent.setup()
+    mockAutoCheckinMessages({
+      accounts: {
+        ...accountById,
+        alpha: {
+          ...accountById.alpha,
+          disabled: true,
+        },
+      },
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    const alphaRow = await screen.findByRole("row", { name: /Alpha/ })
+    await user.click(
+      await within(alphaRow).findByRole("button", {
+        name: "autoCheckin:execution.actions.openExternal",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "messages:toast.error.externalCheckInNonePending",
+      )
+    })
+    expect(sendExternalCheckInMessage).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("shows partial-failure feedback from a results-row external check-in", async () => {
+    const user = userEvent.setup()
+    mockAutoCheckinMessages()
+    mockExternalCheckInPartialFailure()
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    const alphaRow = await screen.findByRole("row", { name: /Alpha/ })
+    await user.click(
+      await within(alphaRow).findByRole("button", {
+        name: "autoCheckin:execution.actions.openExternal",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "messages:toast.error.externalCheckInPartialFailed",
+      )
+    })
+    expect(tMock).toHaveBeenCalledWith(
+      "messages:toast.error.externalCheckInPartialFailed",
+      {
+        count: 1,
+        failedCount: 1,
+        totalCount: 2,
+      },
+      ["autoCheckin", "messages", "account", "common"],
+    )
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("does not show success feedback when a results-row external check-in fails", async () => {
+    const user = userEvent.setup()
+    mockAutoCheckinMessages()
+    mockExternalCheckInFailure()
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    const alphaRow = await screen.findByRole("row", { name: /Alpha/ })
+    await user.click(
+      await within(alphaRow).findByRole("button", {
+        name: "autoCheckin:execution.actions.openExternal",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "messages:errors.operation.failed",
+      )
+    })
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.any(Object),
+    )
   })
 })
