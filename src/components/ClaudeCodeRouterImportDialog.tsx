@@ -94,6 +94,8 @@ export function ClaudeCodeRouterImportDialog(
     () => `claude-code-router-import-form-${token.id}`,
     [token.id],
   )
+  const providerNameInputId = `${formId}-provider-name`
+  const providerApiBaseUrlInputId = `${formId}-provider-api-base-url`
 
   useEffect(() => {
     if (!isOpen) return
@@ -254,8 +256,10 @@ export function ClaudeCodeRouterImportDialog(
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <FormField
             label={t("ui:dialog.claudeCodeRouter.fields.providerName")}
+            htmlFor={providerNameInputId}
           >
             <Input
+              id={providerNameInputId}
               value={providerName}
               onChange={(e) => setProviderName(e.target.value)}
               placeholder={t(
@@ -266,11 +270,13 @@ export function ClaudeCodeRouterImportDialog(
 
           <FormField
             label={t("ui:dialog.claudeCodeRouter.fields.providerApiBaseUrl")}
+            htmlFor={providerApiBaseUrlInputId}
             description={t(
               "ui:dialog.claudeCodeRouter.descriptions.providerApiBaseUrl",
             )}
           >
             <Input
+              id={providerApiBaseUrlInputId}
               value={providerApiBaseUrl}
               onChange={(e) => setProviderApiBaseUrl(e.target.value)}
               placeholder={t(

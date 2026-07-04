@@ -636,6 +636,9 @@ export function ApiCredentialProfileListItem({
                     {t("keyManagement:actions.exportToCCSwitch")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    data-testid={
+                      API_CREDENTIAL_PROFILES_TEST_IDS.exportToKiloCodeMenuItem
+                    }
                     onSelect={() => onExport(profile, "kiloCode")}
                   >
                     <span aria-hidden="true">
@@ -645,6 +648,9 @@ export function ApiCredentialProfileListItem({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    data-testid={
+                      API_CREDENTIAL_PROFILES_TEST_IDS.exportToCliProxyMenuItem
+                    }
                     onSelect={() => onExport(profile, "cliProxy")}
                   >
                     <span aria-hidden="true">
@@ -653,6 +659,9 @@ export function ApiCredentialProfileListItem({
                     {t("keyManagement:actions.importToCliProxy")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    data-testid={
+                      API_CREDENTIAL_PROFILES_TEST_IDS.exportToClaudeCodeRouterMenuItem
+                    }
                     onSelect={() => onExport(profile, "claudeCodeRouter")}
                   >
                     <span aria-hidden="true">

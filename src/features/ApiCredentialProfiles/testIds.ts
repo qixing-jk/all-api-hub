@@ -10,6 +10,12 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   exportMenuButton: "api-credential-profile-export-menu-button",
   exportToCCSwitchMenuItem:
     "api-credential-profile-export-to-cc-switch-menu-item",
+  exportToKiloCodeMenuItem:
+    "api-credential-profile-export-to-kilo-code-menu-item",
+  exportToCliProxyMenuItem:
+    "api-credential-profile-export-to-cli-proxy-menu-item",
+  exportToClaudeCodeRouterMenuItem:
+    "api-credential-profile-export-to-claude-code-router-menu-item",
   openModelManagementButton:
     "api-credential-profile-open-model-management-button",
   popupView: "api-credential-profiles-popup-view",

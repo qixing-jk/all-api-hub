@@ -1,3 +1,4 @@
+import fs from "node:fs/promises"
 import type { Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
@@ -11,6 +12,7 @@ import {
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedApiCredentialProfiles,
+  seedUserPreferences,
   stubLlmMetadataIndex,
   waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
@@ -292,4 +294,348 @@ test("opens the CC Switch model picker for an API credential profile", async ({
     expectedBaseUrl: "https://cc-switch-profile.example.com",
     expectedApiKey: "sk-cc-switch-profile",
   })
+})
+
+test("downloads Kilo Code settings for an API credential profile", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedApiCredentialProfiles(serviceWorker, [
+    createStoredApiCredentialProfile({
+      id: "profile-kilo-export",
+      name: "Kilo Export Profile",
+      baseUrl: "https://kilo-export.example.com",
+      apiKey: "sk-kilo-export-profile",
+    }),
+  ])
+
+  await context.route("https://kilo-export.example.com/v1/models", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: [{ id: "gpt-kilo-export" }],
+      }),
+    }),
+  )
+
+  await openProfilesPage(page, extensionId)
+
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton)
+    .click()
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.exportToKiloCodeMenuItem)
+    .click()
+
+  await expect(page.getByText("Export Kilo Code JSON")).toBeVisible()
+  await expect(page.getByText("gpt-kilo-export")).toBeVisible()
+
+  const downloadPromise = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Download settings" }).click()
+  const download = await downloadPromise
+
+  expect(download.suggestedFilename()).toBe("kilo-code-settings.json")
+  const downloadPath = await download.path()
+  if (!downloadPath) {
+    throw new Error(
+      "Kilo Code settings export did not produce a readable download",
+    )
+  }
+
+  const settings = JSON.parse(await fs.readFile(downloadPath, "utf8")) as {
+    providerProfiles?: {
+      currentApiConfigName?: string
+      apiConfigs?: Record<
+        string,
+        {
+          id?: string
+          apiProvider?: string
+          openAiBaseUrl?: string
+          openAiApiKey?: string
+          openAiModelId?: string
+        }
+      >
+    }
+  }
+
+  const profileName = "Kilo Export Profile - API Key"
+  expect(settings.providerProfiles?.currentApiConfigName).toBe(profileName)
+  expect(settings.providerProfiles?.apiConfigs?.[profileName]).toMatchObject({
+    apiProvider: "openai",
+    openAiBaseUrl: "https://kilo-export.example.com/v1",
+    openAiApiKey: "sk-kilo-export-profile",
+    openAiModelId: "gpt-kilo-export",
+  })
+  expect(settings.providerProfiles?.apiConfigs?.[profileName]?.id).toEqual(
+    expect.any(String),
+  )
+})
+
+test("imports an API credential profile into CLI Proxy", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    cliProxy: {
+      baseUrl: "https://cli-proxy.example.com/v0/management",
+      managementKey: "mgmt-cli-proxy",
+    },
+  })
+  await seedApiCredentialProfiles(serviceWorker, [
+    createStoredApiCredentialProfile({
+      id: "profile-cli-proxy",
+      name: "CLI Proxy Profile",
+      baseUrl: "https://cli-source.example.com",
+      apiKey: "sk-cli-proxy-profile",
+    }),
+  ])
+
+  await context.route("https://cli-source.example.com/v1/models", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: [{ id: "gpt-cli-proxy" }],
+      }),
+    }),
+  )
+  await context.route(
+    "https://cli-proxy.example.com/v0/management/openai-compatibility",
+    async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ "openai-compatibility": [] }),
+        })
+        return
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      })
+    },
+  )
+
+  await openProfilesPage(page, extensionId)
+
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton)
+    .click()
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.exportToCliProxyMenuItem)
+    .click()
+
+  const dialog = page.getByRole("dialog")
+  await expect(dialog.getByText("Import to CLIProxyAPI")).toBeVisible()
+  await expect(page.getByLabel("Provider name")).toHaveValue(
+    "CLI Proxy Profile",
+  )
+  await expect(page.getByLabel("Provider base URL")).toHaveValue(
+    "https://cli-source.example.com/v1",
+  )
+
+  const importRequestPromise = page.waitForRequest((request) => {
+    return (
+      request.method() === "PUT" &&
+      request.url() ===
+        "https://cli-proxy.example.com/v0/management/openai-compatibility"
+    )
+  })
+  await dialog.getByRole("button", { name: "Import", exact: true }).click()
+  const importRequest = await importRequestPromise
+
+  expect(importRequest.headers()["authorization"]).toBe("Bearer mgmt-cli-proxy")
+  expect(JSON.parse(importRequest.postData() ?? "[]")).toEqual([
+    {
+      name: "CLI Proxy Profile",
+      "base-url": "https://cli-source.example.com/v1",
+      "api-key-entries": [
+        {
+          "api-key": "sk-cli-proxy-profile",
+          "proxy-url": "",
+        },
+      ],
+      headers: {},
+    },
+  ])
+  await expect(
+    page.getByText(
+      "Successfully imported provider CLI Proxy Profile to CLIProxyAPI",
+    ),
+  ).toBeVisible()
+})
+
+test("imports an API credential profile into Claude Code Router", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const routerConfigRequests: Array<{
+    method: string
+    authorization?: string
+    body: unknown
+  }> = []
+  const restartRequests: Array<{ authorization?: string }> = []
+  let sourceModelsRequested = false
+
+  await seedUserPreferences(serviceWorker, {
+    claudeCodeRouter: {
+      baseUrl: "https://router.example.invalid",
+      apiKey: "mgmt-claude-router",
+    },
+  })
+  await seedApiCredentialProfiles(serviceWorker, [
+    createStoredApiCredentialProfile({
+      id: "profile-claude-code-router",
+      name: "Claude Router Profile",
+      baseUrl: "https://claude-source.example.invalid",
+      apiKey: "sk-claude-router-profile",
+    }),
+  ])
+
+  await context.route(
+    "https://claude-source.example.invalid/v1/models",
+    async (route) => {
+      sourceModelsRequested = true
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: [{ id: "gpt-claude-router-profile" }],
+        }),
+      })
+    },
+  )
+  await context.route(
+    "https://router.example.invalid/api/config",
+    async (route) => {
+      const request = route.request()
+
+      if (request.method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            LOG: true,
+            Providers: [
+              {
+                name: "Existing Provider",
+                api_base_url:
+                  "https://existing.example.invalid/v1/chat/completions",
+                api_key: "sk-existing",
+                models: ["existing-model"],
+              },
+            ],
+          }),
+        })
+        return
+      }
+
+      routerConfigRequests.push({
+        method: request.method(),
+        authorization: request.headers()["authorization"],
+        body: JSON.parse(request.postData() ?? "{}"),
+      })
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      })
+    },
+  )
+  await context.route(
+    "https://router.example.invalid/api/restart",
+    async (route) => {
+      restartRequests.push({
+        authorization: route.request().headers()["authorization"],
+      })
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      })
+    },
+  )
+
+  await openProfilesPage(page, extensionId)
+
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton)
+    .click()
+  await page
+    .getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.exportToClaudeCodeRouterMenuItem,
+    )
+    .click()
+
+  const dialog = page.getByRole("dialog")
+  await expect(dialog.getByText("Import to Claude Code Router")).toBeVisible()
+  await expect(page.getByLabel("Provider name")).toHaveValue(
+    "Claude Router Profile",
+  )
+  await expect(page.getByLabel("Provider API endpoint")).toHaveValue(
+    "https://claude-source.example.invalid/v1/chat/completions",
+  )
+
+  const modelsInput = dialog.getByPlaceholder("Type to add models")
+  await expect(modelsInput).toBeVisible()
+  await expect.poll(() => sourceModelsRequested).toBe(true)
+  await modelsInput.fill("gpt-claude-router-profile")
+  await page.keyboard.press("Enter")
+  await expect(
+    dialog.getByRole("button", {
+      name: "Copy gpt-claude-router-profile",
+    }),
+  ).toBeVisible()
+
+  await dialog.getByRole("button", { name: "Import", exact: true }).click()
+
+  await expect
+    .poll(() => routerConfigRequests)
+    .toEqual([
+      {
+        method: "POST",
+        authorization: "Bearer mgmt-claude-router",
+        body: {
+          LOG: true,
+          Providers: [
+            {
+              name: "Existing Provider",
+              api_base_url:
+                "https://existing.example.invalid/v1/chat/completions",
+              api_key: "sk-existing",
+              models: ["existing-model"],
+            },
+            {
+              name: "Claude Router Profile",
+              api_base_url:
+                "https://claude-source.example.invalid/v1/chat/completions",
+              api_key: "sk-claude-router-profile",
+              models: ["gpt-claude-router-profile"],
+            },
+          ],
+        },
+      },
+    ])
+  await expect
+    .poll(() => restartRequests)
+    .toEqual([
+      {
+        authorization: "Bearer mgmt-claude-router",
+      },
+    ])
+  await expect(
+    page.getByText(
+      "Successfully imported provider Claude Router Profile to Claude Code Router",
+    ),
+  ).toBeVisible()
 })
