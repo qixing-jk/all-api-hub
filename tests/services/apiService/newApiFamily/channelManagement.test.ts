@@ -252,6 +252,32 @@ describe("newApiFamily channel management APIs", () => {
     })
   })
 
+  it("updateChannel reports partial success with a fallback when status failure has no message", async () => {
+    mockFetchApi
+      .mockResolvedValueOnce({
+        success: true,
+        message: "updated",
+        data: { id: 1 },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        message: "",
+        data: false,
+      })
+
+    await expect(
+      updateChannel(baseRequest, {
+        id: 1,
+        name: "Updated",
+        status: 1,
+      } as any),
+    ).resolves.toEqual({
+      success: false,
+      message: "Channel fields were updated, but status update failed.",
+      data: { id: 1 },
+    })
+  })
+
   it("updateChannel omits auto-disabled status without calling the manual status endpoint", async () => {
     mockFetchApi.mockResolvedValueOnce({ success: true })
 
