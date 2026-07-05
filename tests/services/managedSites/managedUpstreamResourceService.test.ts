@@ -126,25 +126,77 @@ describe("managed upstream resource service", () => {
     })
   })
 
-  it("keeps unrelated feature resource slices unsupported by default", () => {
+  it("keeps still-unmigrated feature resource slices unsupported by default", () => {
     expect(
       isManagedSiteFeatureResourceSliceEnabled(
         SITE_TYPES.NEW_API,
-        MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
+        MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelRedirect,
       ),
     ).toBe(false)
 
     expect(
       resolveManagedUpstreamResourceFeatureCapabilities(
         SITE_TYPES.NEW_API,
-        MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
+        MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelRedirect,
       ),
     ).toEqual({
       supported: false,
       siteType: SITE_TYPES.NEW_API,
-      feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
+      feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelRedirect,
       reason: "feature-slice-disabled",
     })
+  })
+
+  it("enables model sync resource slices only for channel-model-safe migrated sites by default", () => {
+    const resources = buildResourcesCapability()
+    getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
+      siteType,
+      managedSites: {
+        channels: {} as NonNullable<
+          NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
+        >,
+        resources,
+      },
+    }))
+    const migratedChannelModelSafeSiteTypes = [
+      SITE_TYPES.NEW_API,
+      SITE_TYPES.VELOERA,
+      SITE_TYPES.DONE_HUB,
+    ]
+
+    expect(
+      migratedChannelModelSafeSiteTypes.map((siteType) =>
+        resolveManagedUpstreamResourceFeatureCapabilities(
+          siteType,
+          MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
+        ),
+      ),
+    ).toEqual(
+      migratedChannelModelSafeSiteTypes.map((siteType) => ({
+        supported: true,
+        siteType,
+        feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
+        capabilities: resources,
+      })),
+    )
+    expect(
+      [SITE_TYPES.OCTOPUS, SITE_TYPES.AXON_HUB, SITE_TYPES.CLAUDE_CODE_HUB].map(
+        (siteType) =>
+          resolveManagedUpstreamResourceFeatureCapabilities(
+            siteType,
+            MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
+          ),
+      ),
+    ).toEqual(
+      [SITE_TYPES.OCTOPUS, SITE_TYPES.AXON_HUB, SITE_TYPES.CLAUDE_CODE_HUB].map(
+        (siteType) => ({
+          supported: false,
+          siteType,
+          feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
+          reason: "feature-slice-disabled",
+        }),
+      ),
+    )
   })
 
   it("enables duplicate matching resource slices for channel-shaped migrated sites by default", () => {

@@ -170,6 +170,9 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
 
     await modelSyncScheduler.executeSync([1])
 
+    expect(mockListChannels).toHaveBeenCalledWith({
+      preferResourceBacked: false,
+    })
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,
     ).toHaveBeenCalledWith(channel, {}, expect.anything(), {
