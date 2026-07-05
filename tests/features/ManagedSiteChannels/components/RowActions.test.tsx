@@ -200,6 +200,26 @@ describe("ManagedSiteChannels RowActions", () => {
     expect(screen.queryByRole("menuitem", { name: labels.sync })).toBeNull()
   })
 
+  it("does not coerce string native ids for edit and delete row actions", async () => {
+    const user = userEvent.setup()
+    const nativeIdChannel = {
+      ...channel,
+      id: "gid://axonhub/Channel/native-string-id" as unknown as number,
+    }
+    const props = setup({
+      channel: nativeIdChannel,
+      showNewApiOnlyActions: false,
+    })
+
+    await user.click(screen.getByRole("menuitem", { name: labels.edit }))
+    await user.click(screen.getByRole("menuitem", { name: labels.delete }))
+
+    expect(props.onEdit).toHaveBeenCalledWith(nativeIdChannel)
+    expect(props.onDelete).toHaveBeenCalledWith([
+      "gid://axonhub/Channel/native-string-id",
+    ])
+  })
+
   it("renders migration actions and disables migration without targets", async () => {
     const user = userEvent.setup()
     const props = setup({

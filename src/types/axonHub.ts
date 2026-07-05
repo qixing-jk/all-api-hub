@@ -54,4 +54,9 @@ export interface AxonHubCreateChannelInput {
   remark?: string | null
 }
 
-export type AxonHubUpdateChannelInput = Partial<AxonHubCreateChannelInput>
+export type AxonHubUpdateChannelInput = Partial<
+  Omit<AxonHubCreateChannelInput, "defaultTestModel" | "supportedModels">
+> & {
+  defaultTestModel?: string | null
+  supportedModels?: string[] | null
+}

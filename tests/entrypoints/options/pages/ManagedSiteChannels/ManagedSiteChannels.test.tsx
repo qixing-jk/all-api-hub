@@ -1917,6 +1917,155 @@ describe("ManagedSiteChannels", () => {
     expect(updateChannel).not.toHaveBeenCalled()
   })
 
+  it("opens AxonHub edits through native string resource ids when its core slice is migrated", async () => {
+    const user = userEvent.setup()
+    const nativeAxonHubChannel = {
+      id: "gid://axonhub/Channel/native-string-id",
+      name: "Axon Alpha Detail",
+      type: "anthropic_gcp",
+      status: "enabled",
+      baseURL: "https://axon-alpha.example.invalid/v1",
+      credentials: {
+        apiKeys: ["sk-********"],
+      },
+      supportedModels: ["claude-3-5-sonnet"],
+      manualModels: ["claude-3-opus"],
+      defaultTestModel: "claude-3-opus",
+      settings: {
+        hideMappedModels: true,
+      },
+      orderingWeight: 9,
+      remark: "native remark",
+    }
+    const row = buildCompleteChannelRow({
+      id: 408,
+      name: "Axon Alpha",
+      type: "anthropic_gcp",
+      key: "sk-********",
+      base_url: "https://axon-alpha.example.invalid/v1",
+      models: "claude-3-5-sonnet,claude-3-opus",
+      group: "",
+      _axonHubData: nativeAxonHubChannel,
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.AXON_HUB,
+          scopeKey: "https://axonhub.example",
+          resourceId: "gid://axonhub/Channel/native-string-id",
+        },
+        displayName: "Axon Alpha Detail",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: nativeAxonHubChannel,
+    } as const
+    const getDetail = vi.fn().mockResolvedValue(detail)
+    const resourceUpdate = vi.fn().mockResolvedValue({
+      success: true,
+      message: "",
+      data: null,
+    })
+    const updateChannel = vi.fn().mockResolvedValue({
+      success: true,
+      message: "legacy update",
+    })
+    const service = mockChannels([row], {
+      managedSiteType: SITE_TYPES.AXON_HUB,
+      messagesKey: "axonhub",
+    })
+    service.getConfig = vi.fn().mockResolvedValue({
+      baseUrl: "https://axonhub.example",
+      email: "admin@example.com",
+      password: "axonhub-password",
+    })
+    service.updateChannel = updateChannel
+    mockResolveManagedUpstreamResourceCapabilities.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.AXON_HUB,
+      capabilities: {
+        items: {
+          getDetail,
+          update: resourceUpdate,
+        },
+        drafts: {
+          prepareEditDraft: vi.fn(() => ({
+            name: "Axon Alpha Detail",
+            type: "anthropic_gcp",
+            key: "sk-********",
+            base_url: "https://axon-alpha.example.invalid/v1",
+            models: ["claude-3-5-sonnet", "claude-3-opus"],
+            groups: [],
+            priority: 0,
+            weight: 9,
+            status: 1,
+          })),
+          describeFields: vi.fn(() => [
+            { name: "name", label: "Name", type: "text", required: true },
+          ]),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    })
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForRowText("Axon Alpha")
+    const rowElement = screen.getByText("Axon Alpha").closest("tr")
+    expect(rowElement).toBeTruthy()
+    await openRowActionsMenu(rowElement!, user)
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(getDetail).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://axonhub.example",
+          email: "admin@example.com",
+          password: "axonhub-password",
+        },
+        detail.summary.ref,
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)).toHaveValue(
+        "Axon Alpha Detail",
+      )
+    })
+    expect(
+      screen.queryByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+
+    await waitFor(() => {
+      expect(resourceUpdate).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://axonhub.example",
+          email: "admin@example.com",
+          password: "axonhub-password",
+        },
+        detail,
+        expect.objectContaining({
+          name: "Axon Alpha Detail",
+          key: "sk-********",
+          type: "anthropic_gcp",
+        }),
+      )
+    })
+    expect(updateChannel).not.toHaveBeenCalled()
+  })
+
   it("keeps unmigrated managed-site edits on the legacy channel update path", async () => {
     const user = userEvent.setup()
     const row = buildCompleteChannelRow({

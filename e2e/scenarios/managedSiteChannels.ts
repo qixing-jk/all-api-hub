@@ -41,6 +41,12 @@ type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
 const CRUD_MODEL = "gpt-4o-mini"
 const CRUD_UPDATED_MODEL = "gpt-4.1-mini"
 
+export function shouldEditModelsInManagedSiteCrudScenario(
+  siteType: ManagedSiteType,
+): boolean {
+  return siteType !== SITE_TYPES.AXON_HUB
+}
+
 const channelsUrl = (extensionId: string, params?: Record<string, string>) => {
   const url = new URL(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
 
@@ -127,7 +133,9 @@ export async function runManagedSiteChannelsCrudScenario<
     await context.page
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
       .fill(editedChannelName)
-    await fillModelInput(context.page, CRUD_UPDATED_MODEL)
+    if (shouldEditModelsInManagedSiteCrudScenario(context.siteType)) {
+      await fillModelInput(context.page, CRUD_UPDATED_MODEL)
+    }
     await submitChannelDialogAndWaitForClose(context.page)
 
     await expect(channelRowByName(context.page, editedChannelName)).toBeVisible(

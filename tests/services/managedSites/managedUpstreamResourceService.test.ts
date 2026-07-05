@@ -48,12 +48,13 @@ describe("managed upstream resource service", () => {
           siteType === SITE_TYPES.VELOERA ||
           siteType === SITE_TYPES.DONE_HUB ||
           siteType === SITE_TYPES.OCTOPUS ||
+          siteType === SITE_TYPES.AXON_HUB ||
           siteType === SITE_TYPES.CLAUDE_CODE_HUB,
       })),
     )
   })
 
-  it("does not enable resource mode from capability presence alone for unmigrated sites", () => {
+  it("resolves AxonHub core resources after its migration gate is enabled", () => {
     const resources = buildResourcesCapability()
     getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.AXON_HUB,
@@ -68,9 +69,9 @@ describe("managed upstream resource service", () => {
     expect(
       resolveManagedUpstreamResourceCapabilities(SITE_TYPES.AXON_HUB),
     ).toEqual({
-      supported: false,
+      supported: true,
       siteType: SITE_TYPES.AXON_HUB,
-      reason: "core-slice-disabled",
+      capabilities: resources,
     })
   })
 

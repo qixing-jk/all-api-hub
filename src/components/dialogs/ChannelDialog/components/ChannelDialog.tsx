@@ -178,6 +178,11 @@ export function ChannelDialog({
     resourceEdit && !isResourceEditReady,
   )
   const isFormInteractionDisabled = isSaving || isResourceEditUnavailable
+  const shouldShowGenericModelsField = !(
+    isAxonHub &&
+    mode === DIALOG_MODES.EDIT &&
+    resourceEdit
+  )
 
   const channelTypeOptions = isClaudeCodeHub
     ? ClaudeCodeHubProviderTypeOptions
@@ -683,85 +688,87 @@ export function ChannelDialog({
         </div>
 
         {/* Models */}
-        <div>
-          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <Label className="mb-0">
-              {t("channelDialog:fields.models.label")}
-            </Label>
-            {!isViewMode && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSelectAllModels}
-                  disabled={
-                    isFormInteractionDisabled ||
-                    isLoadingModels ||
-                    availableModels.length === 0
-                  }
-                  type="button"
-                >
-                  {t("channelDialog:actions.selectAll")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleInverseModels}
-                  disabled={
-                    isFormInteractionDisabled ||
-                    isLoadingModels ||
-                    availableModels.length === 0
-                  }
-                  type="button"
-                >
-                  {t("channelDialog:actions.inverse")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDeselectAllModels}
-                  disabled={
-                    isFormInteractionDisabled ||
-                    isLoadingModels ||
-                    formData.models.length === 0
-                  }
-                  type="button"
-                >
-                  {t("channelDialog:actions.deselectAll")}
-                </Button>
-              </div>
-            )}
-          </div>
-          {showModelPrefillWarning ? (
-            <Alert
-              variant="warning"
-              title={t("channelDialog:warnings.modelsPrefillFailed.title")}
-              description={t(
-                "channelDialog:warnings.modelsPrefillFailed.description",
+        {shouldShowGenericModelsField ? (
+          <div>
+            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <Label className="mb-0">
+                {t("channelDialog:fields.models.label")}
+              </Label>
+              {!isViewMode && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAllModels}
+                    disabled={
+                      isFormInteractionDisabled ||
+                      isLoadingModels ||
+                      availableModels.length === 0
+                    }
+                    type="button"
+                  >
+                    {t("channelDialog:actions.selectAll")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleInverseModels}
+                    disabled={
+                      isFormInteractionDisabled ||
+                      isLoadingModels ||
+                      availableModels.length === 0
+                    }
+                    type="button"
+                  >
+                    {t("channelDialog:actions.inverse")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeselectAllModels}
+                    disabled={
+                      isFormInteractionDisabled ||
+                      isLoadingModels ||
+                      formData.models.length === 0
+                    }
+                    type="button"
+                  >
+                    {t("channelDialog:actions.deselectAll")}
+                  </Button>
+                </div>
               )}
-              className="mb-3"
+            </div>
+            {showModelPrefillWarning ? (
+              <Alert
+                variant="warning"
+                title={t("channelDialog:warnings.modelsPrefillFailed.title")}
+                description={t(
+                  "channelDialog:warnings.modelsPrefillFailed.description",
+                )}
+                className="mb-3"
+              />
+            ) : null}
+            <CompactMultiSelect
+              options={availableModels}
+              selected={formData.models}
+              onChange={(models) => updateField("models", models)}
+              size="default"
+              inputTestId={CHANNEL_DIALOG_TEST_IDS.modelsInput}
+              placeholder={
+                isLoadingModels
+                  ? t("channelDialog:fields.models.loading")
+                  : t("channelDialog:fields.models.placeholder")
+              }
+              disabled={
+                isViewMode || isFormInteractionDisabled || isLoadingModels
+              }
+              allowCustom
             />
-          ) : null}
-          <CompactMultiSelect
-            options={availableModels}
-            selected={formData.models}
-            onChange={(models) => updateField("models", models)}
-            size="default"
-            inputTestId={CHANNEL_DIALOG_TEST_IDS.modelsInput}
-            placeholder={
-              isLoadingModels
-                ? t("channelDialog:fields.models.loading")
-                : t("channelDialog:fields.models.placeholder")
-            }
-            disabled={
-              isViewMode || isFormInteractionDisabled || isLoadingModels
-            }
-            allowCustom
-          />
-          <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-            {t("channelDialog:fields.models.hint")}
-          </p>
-        </div>
+            <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
+              {t("channelDialog:fields.models.hint")}
+            </p>
+          </div>
+        ) : null}
 
         {/* Groups - Octopus/AxonHub do not expose New API group semantics here. */}
         {!isOctopus && !isAxonHub && (

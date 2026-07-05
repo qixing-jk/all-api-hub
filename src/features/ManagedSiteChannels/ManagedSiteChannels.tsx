@@ -283,6 +283,22 @@ function getManagedSiteChannelStatusFilterLabel(t: TFunction, value: string) {
   }
 }
 
+const getManagedUpstreamResourceId = (
+  managedSiteType: ManagedSiteType,
+  channel: ChannelRow,
+) => {
+  if (managedSiteType === SITE_TYPES.AXON_HUB) {
+    const nativeId = (
+      channel as ChannelRow & { _axonHubData?: { id?: string | number } }
+    )._axonHubData?.id
+    if (nativeId !== undefined && nativeId !== null) {
+      return nativeId
+    }
+  }
+
+  return channel.id
+}
+
 /**
  * Render the managed site channels page with data loading, filtering, and actions.
  */
@@ -667,7 +683,10 @@ export default function ManagedSiteChannels({
                       scopeKey: normalizeManagedSiteResourceScopeKey(
                         String((config as { baseUrl?: string }).baseUrl ?? ""),
                       ),
-                      resourceId: channel.id,
+                      resourceId: getManagedUpstreamResourceId(
+                        managedSiteType,
+                        channel,
+                      ),
                     })
                     const result =
                       await resourceResolution.capabilities.secrets.revealSecret(
@@ -772,7 +791,10 @@ export default function ManagedSiteChannels({
                   scopeKey: normalizeManagedSiteResourceScopeKey(
                     String((config as { baseUrl?: string }).baseUrl ?? ""),
                   ),
-                  resourceId: channel.id,
+                  resourceId: getManagedUpstreamResourceId(
+                    managedSiteType,
+                    channel,
+                  ),
                 }),
                 capabilities: resourceResolution.capabilities,
               },
