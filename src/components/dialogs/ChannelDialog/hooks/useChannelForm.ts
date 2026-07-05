@@ -434,6 +434,8 @@ export function useChannelForm({
   }
 
   const isKeyFieldRequired = mode === DIALOG_MODES.ADD
+  const isResourceBackedEdit =
+    mode === DIALOG_MODES.EDIT && Boolean(resourceEdit)
   const requiresRealClaudeCodeHubKey =
     managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB && mode === DIALOG_MODES.ADD
 
@@ -474,7 +476,7 @@ export function useChannelForm({
       return
     }
 
-    if (formData.models.length === 0) {
+    if (!isResourceBackedEdit && formData.models.length === 0) {
       toast.error(t("channelDialog:validation.modelsRequired"))
       return
     }
@@ -595,9 +597,18 @@ export function useChannelForm({
         resourceFieldDescriptors),
   )
 
+  const resourceDraftValidation =
+    isResourceBackedEdit && isResourceEditReady && resourceEdit
+      ? resourceEdit.capabilities.drafts.validateDraft(formData)
+      : null
+  const isResourceDraftValid =
+    !isResourceBackedEdit || resourceDraftValidation?.valid === true
+
   const isFormValid = Boolean(
     formData.name.trim() &&
-      formData.models.length > 0 &&
+      (isResourceBackedEdit
+        ? isResourceDraftValid
+        : formData.models.length > 0) &&
       (!isKeyFieldRequired || formData.key.trim()) &&
       (!requiresRealClaudeCodeHubKey ||
         hasUsableManagedSiteChannelKey(formData.key)) &&

@@ -65,6 +65,7 @@ const defaultManagedUpstreamResourceMigrationGates =
       SITE_TYPES.VELOERA,
       SITE_TYPES.DONE_HUB,
       SITE_TYPES.OCTOPUS,
+      SITE_TYPES.CLAUDE_CODE_HUB,
     ],
   })
 

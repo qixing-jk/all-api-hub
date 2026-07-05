@@ -3083,6 +3083,128 @@ describe("ManagedSiteChannels", () => {
     })
   })
 
+  it("loads the real Claude Code Hub provider key through resource reveal support", async () => {
+    const user = userEvent.setup()
+    const row = buildCompleteChannelRow({
+      id: 408,
+      name: "Claude Provider",
+      base_url: "https://cch-source.example",
+      type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+      models: "claude-3-5-sonnet",
+      group: "vip",
+      status: 1,
+      priority: 2,
+      weight: 5,
+      key: "sk-********",
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+          scopeKey: "https://admin.example",
+          resourceId: "408",
+        },
+        displayName: "Claude Provider",
+        nativeKind: "provider",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true, canRevealSecret: true },
+      },
+      native: {
+        id: 408,
+        name: "Claude Provider",
+        url: "https://cch-source.example",
+        maskedKey: "sk-********",
+        providerType: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+        allowedModels: [{ matchType: "exact", pattern: "claude-3-5-sonnet" }],
+        groupTag: "vip",
+        isEnabled: true,
+        priority: 2,
+        weight: 5,
+      },
+    } as const
+    const getDetail = vi.fn().mockResolvedValue(detail)
+    const revealSecret = vi.fn().mockResolvedValue({
+      status: "available",
+      secret: "sk-resource-real-provider-key",
+    })
+    mockChannels([row], {
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      messagesKey: "claudecodehub",
+    })
+    mockResolveManagedUpstreamResourceCapabilities.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      capabilities: {
+        items: {
+          getDetail,
+          update: vi.fn(),
+        },
+        drafts: {
+          prepareEditDraft: vi.fn(() => ({
+            name: "Claude Provider",
+            type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+            key: "sk-********",
+            base_url: "https://cch-source.example",
+            models: ["claude-3-5-sonnet"],
+            groups: ["vip"],
+            priority: 2,
+            weight: 5,
+            status: 1,
+          })),
+          describeFields: vi.fn(() => [
+            { name: "key", label: "API key", type: "secret" },
+          ]),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+        secrets: {
+          revealSecret,
+        },
+      },
+    })
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForRowText("Claude Provider")
+    const rowElement = screen.getByText("Claude Provider").closest("tr")
+    expect(rowElement).toBeTruthy()
+    await openRowActionsMenu(rowElement!, user)
+
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+
+    await screen.findByText("channelDialog:title.edit")
+    await user.click(
+      await screen.findByRole("button", {
+        name: "channelDialog:actions.loadRealKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(revealSecret).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        },
+        detail.summary.ref,
+      )
+    })
+    await waitFor(() => {
+      expect(
+        screen.getByDisplayValue("sk-resource-real-provider-key"),
+      ).toBeInTheDocument()
+    })
+  })
+
   it("hides the migration entry when no target is configured", async () => {
     mockChannels(
       [{ id: 1, name: "Alpha", base_url: "https://example.com", key: "k" }],

@@ -47,7 +47,8 @@ describe("managed upstream resource service", () => {
           siteType === SITE_TYPES.NEW_API ||
           siteType === SITE_TYPES.VELOERA ||
           siteType === SITE_TYPES.DONE_HUB ||
-          siteType === SITE_TYPES.OCTOPUS,
+          siteType === SITE_TYPES.OCTOPUS ||
+          siteType === SITE_TYPES.CLAUDE_CODE_HUB,
       })),
     )
   })

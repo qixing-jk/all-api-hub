@@ -631,6 +631,227 @@ describe("useChannelForm", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("lets resource-backed Claude Code Hub edits submit empty visible models when resource validation allows it", async () => {
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      messagesKey: "claudecodehub",
+      checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
+      getConfig: mockGetConfig,
+      buildChannelPayload: mockBuildChannelPayload,
+      createChannel: mockCreateChannel,
+      updateChannel: mockUpdateChannel,
+    } as any)
+
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const preventDefault = vi.fn()
+    const channel = buildManagedSiteChannel({
+      id: 34,
+      type: "claude",
+      key: "sk-********",
+      name: "Prefix Provider",
+      base_url: "https://source.example.com",
+      models: "",
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+          scopeKey: "https://managed.example.com",
+          resourceId: "34",
+        },
+        displayName: "Prefix Provider",
+        nativeKind: "provider",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: {
+        id: 34,
+        name: "Prefix Provider",
+        allowedModels: [{ matchType: "prefix", pattern: "claude-" }],
+      },
+    } as const
+    const update = vi.fn().mockResolvedValue({
+      success: true,
+      message: "",
+      data: null,
+    })
+    const validateDraft = vi.fn(() => ({ valid: true, errors: [] }))
+    const resourceEdit = {
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+      },
+      ref: detail.summary.ref,
+      capabilities: {
+        items: {
+          getDetail: vi.fn().mockResolvedValue(detail),
+          update,
+        },
+        drafts: {
+          prepareEditDraft: vi.fn(() => ({
+            name: "Prefix Provider",
+            type: "claude",
+            key: "sk-********",
+            base_url: "https://source.example.com",
+            models: [],
+            groups: ["default"],
+            priority: 0,
+            weight: 1,
+            status: 1,
+            _claudeCodeHubNativeAllowedModels: [
+              { matchType: "prefix", pattern: "claude-" },
+            ],
+          })),
+          describeFields: vi.fn(() => [
+            { name: "models", label: "Models", type: "multi_select" as const },
+          ]),
+          validateDraft,
+        },
+      },
+    }
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose,
+        onSuccess,
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.models).toEqual([])
+      expect(result.current.isFormValid).toBe(true)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(validateDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Prefix Provider",
+        models: [],
+      }),
+    )
+    expect(update).toHaveBeenCalledWith(
+      resourceEdit.config,
+      detail,
+      expect.objectContaining({
+        name: "Prefix Provider",
+        models: [],
+      }),
+    )
+    expect(mockUpdateChannel).not.toHaveBeenCalled()
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalledWith(
+      "channelDialog:validation.modelsRequired",
+    )
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: "managedSiteChannels:toasts.channelUpdated",
+      }),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("marks resource-backed edits invalid when adapter draft validation fails", async () => {
+    const preventDefault = vi.fn()
+    const channel = buildManagedSiteChannel({
+      id: 35,
+      name: "Invalid Resource Channel",
+      key: "sk-********",
+      models: "",
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.com",
+          resourceId: "35",
+        },
+        displayName: "Invalid Resource Channel",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: channel,
+    } as const
+    const update = vi.fn()
+    const validateDraft = vi.fn(() => ({
+      valid: false,
+      errors: [{ field: "models", message: "At least one model is required" }],
+    }))
+    const resourceEdit = {
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+      },
+      ref: detail.summary.ref,
+      capabilities: {
+        items: {
+          getDetail: vi.fn().mockResolvedValue(detail),
+          update,
+        },
+        drafts: {
+          prepareEditDraft: vi.fn(() => ({
+            name: "Invalid Resource Channel",
+            type: ChannelType.OpenAI,
+            key: "sk-********",
+            base_url: "https://source.example.com",
+            models: [],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: 1,
+          })),
+          describeFields: vi.fn(() => [
+            { name: "models", label: "Models", type: "multi_select" as const },
+          ]),
+          validateDraft,
+        },
+      },
+    }
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose: vi.fn(),
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.models).toEqual([])
+      expect(result.current.isFormValid).toBe(false)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(validateDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        models: [],
+      }),
+    )
+    expect(update).not.toHaveBeenCalled()
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      "At least one model is required",
+    )
+  })
+
   it("exposes resource detail load errors and retries the detail request", async () => {
     const channel = buildManagedSiteChannel({
       id: 33,

@@ -602,6 +602,10 @@ export default function ManagedSiteChannels({
         channel.group?.split(",").map((value) => value.trim()) ?? []
       const models =
         channel.models?.split(",").map((value) => value.trim()) ?? []
+      const resourceResolution =
+        mode === DIALOG_MODES.EDIT
+          ? resolveManagedUpstreamResourceCapabilities(managedSiteType)
+          : null
       const shouldOfferRealKeyLoading =
         needsManagedSiteChannelKeyResolution(channel.key) &&
         (isNewApiManagedSite || supportsDetailBackedRealKeyLoading)
@@ -652,6 +656,37 @@ export default function ManagedSiteChannels({
                         service.messagesKey,
                       ),
                     )
+                  }
+
+                  if (
+                    resourceResolution?.supported &&
+                    resourceResolution.capabilities.secrets?.revealSecret
+                  ) {
+                    const resourceRef = createManagedUpstreamResourceRef({
+                      managedSiteType,
+                      scopeKey: normalizeManagedSiteResourceScopeKey(
+                        String((config as { baseUrl?: string }).baseUrl ?? ""),
+                      ),
+                      resourceId: channel.id,
+                    })
+                    const result =
+                      await resourceResolution.capabilities.secrets.revealSecret(
+                        config,
+                        resourceRef,
+                      )
+                    if (result.status === "available") {
+                      setKey(result.secret)
+                      return
+                    }
+
+                    const revealFailureMessage =
+                      result.message ??
+                      (result.status === "masked"
+                        ? "Channel key is still masked"
+                        : result.status === "unsupported"
+                          ? "Channel key reveal is not supported"
+                          : "Channel key is unavailable")
+                    throw new Error(revealFailureMessage)
                   }
 
                   if (!service.fetchChannelSecretKey) {
@@ -716,11 +751,6 @@ export default function ManagedSiteChannels({
               }
             : undefined,
       }
-
-      const resourceResolution =
-        mode === DIALOG_MODES.EDIT
-          ? resolveManagedUpstreamResourceCapabilities(managedSiteType)
-          : null
 
       if (resourceResolution?.supported) {
         void (async () => {
