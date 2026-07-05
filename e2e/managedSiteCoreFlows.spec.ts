@@ -243,6 +243,7 @@ async function stubManagedSiteAdminRoutes(
   let nextChannelId = 303
   const createPayloads: unknown[] = []
   const updatePayloads: unknown[] = []
+  const statusPayloads: unknown[] = []
   const origin = new URL(MANAGED_SITE_BASE_URL).origin
 
   await context.route(`${origin}/**`, async (route: Route) => {
@@ -415,6 +416,41 @@ async function stubManagedSiteAdminRoutes(
       return
     }
 
+    if (
+      method === "POST" &&
+      /^\/api\/channel\/\d+\/status$/.test(url.pathname)
+    ) {
+      const payload = request.postDataJSON()
+      const channelId = Number(url.pathname.split("/").filter(Boolean)[2])
+      statusPayloads.push({ id: channelId, ...payload })
+
+      const channel = channels.find((item) => item.id === channelId)
+      const status =
+        payload && typeof payload === "object" && "status" in payload
+          ? (payload as { status?: unknown }).status
+          : undefined
+
+      if (
+        channel &&
+        (status === CHANNEL_STATUS.Enable ||
+          status === CHANNEL_STATUS.ManuallyDisabled ||
+          status === CHANNEL_STATUS.AutoDisabled)
+      ) {
+        channel.status = status
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          message: "status updated",
+          data: true,
+        }),
+      })
+      return
+    }
+
     if (method === "DELETE" && url.pathname.startsWith("/api/channel/")) {
       const channelId = Number(url.pathname.split("/").filter(Boolean).pop())
       const channelIndex = channels.findIndex((item) => item.id === channelId)
@@ -448,6 +484,7 @@ async function stubManagedSiteAdminRoutes(
   return {
     createPayloads,
     updatePayloads,
+    statusPayloads,
   }
 }
 
@@ -786,7 +823,8 @@ test("edits a managed-site channel from row actions", async ({
   page,
 }) => {
   await seedManagedSitePreferences(context)
-  const { updatePayloads } = await stubManagedSiteAdminRoutes(context)
+  const { statusPayloads, updatePayloads } =
+    await stubManagedSiteAdminRoutes(context)
 
   await page.goto(channelsUrl(extensionId, { search: "Production" }))
   await waitForExtensionRoot(page)
@@ -830,9 +868,13 @@ test("edits a managed-site channel from row actions", async ({
     group: "default,vip",
     priority: 3,
     weight: 2,
-    status: 1,
   })
+  expect(editedPayload).not.toHaveProperty("status")
   expect(editedPayload).not.toHaveProperty("groups")
+  expect(statusPayloads).toContainEqual({
+    id: 101,
+    status: CHANNEL_STATUS.Enable,
+  })
 })
 
 test("loads managed-site channels, deep-links into manual model sync, and runs a selected sync", async ({

@@ -2,7 +2,10 @@ import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type {
+  ApiResponse,
+  ApiServiceRequest,
+} from "~/services/apiTransport/type"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import type {
   CreateChannelPayload,
@@ -43,7 +46,7 @@ const serializeUpdateChannelPayload = (payload: UpdateChannelPayload) => {
     }
   }
 
-  const { key, ...payloadWithoutEmptyKey } = payloadWithoutStatus
+  const { key: _key, ...payloadWithoutEmptyKey } = payloadWithoutStatus
   return {
     payload: payloadWithoutEmptyKey,
     status,
@@ -72,6 +75,17 @@ const updateChannelStatus = async (
 
 const isNewApiManualStatus = (status: number) =>
   status === CHANNEL_STATUS.Enable || status === CHANNEL_STATUS.ManuallyDisabled
+
+const buildPartialStatusUpdateFailureResponse = <T>(
+  updateResponse: ApiResponse<T>,
+  statusResponse: ApiResponse<unknown>,
+): ApiResponse<T> => ({
+  ...updateResponse,
+  success: false,
+  message: statusResponse.message
+    ? `Channel fields were updated, but status update failed: ${statusResponse.message}`
+    : "Channel fields were updated, but status update failed.",
+})
 
 /**
  * 搜索指定关键词的渠道。
@@ -158,7 +172,9 @@ export async function updateChannel(
       status,
     )
 
-    return statusResponse.success ? updateResponse : statusResponse
+    return statusResponse.success
+      ? updateResponse
+      : buildPartialStatusUpdateFailureResponse(updateResponse, statusResponse)
   } catch (error) {
     logger.error("更新渠道失败", error)
     throw new Error("更新渠道失败，请检查网络或 New API 配置。")

@@ -194,6 +194,64 @@ describe("newApiFamily channel management APIs", () => {
     )
   })
 
+  it("updateChannel sends manually disabled status through the New API status endpoint", async () => {
+    mockFetchApi
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true, data: true })
+
+    await updateChannel(baseRequest, {
+      id: 1,
+      name: "Updated",
+      status: 2,
+    } as any)
+
+    const updateBody = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
+    expect(updateBody).toMatchObject({
+      id: 1,
+      name: "Updated",
+    })
+    expect(updateBody.status).toBeUndefined()
+    expect(mockFetchApi).toHaveBeenNthCalledWith(
+      2,
+      baseRequest,
+      expect.objectContaining({
+        endpoint: "/api/channel/1/status",
+        options: {
+          method: "POST",
+          body: JSON.stringify({ status: 2 }),
+        },
+      }),
+      false,
+    )
+  })
+
+  it("updateChannel reports partial success when the status endpoint fails after the update", async () => {
+    mockFetchApi
+      .mockResolvedValueOnce({
+        success: true,
+        message: "updated",
+        data: { id: 1 },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        message: "status rejected",
+        data: false,
+      })
+
+    await expect(
+      updateChannel(baseRequest, {
+        id: 1,
+        name: "Updated",
+        status: 1,
+      } as any),
+    ).resolves.toEqual({
+      success: false,
+      message:
+        "Channel fields were updated, but status update failed: status rejected",
+      data: { id: 1 },
+    })
+  })
+
   it("updateChannel omits auto-disabled status without calling the manual status endpoint", async () => {
     mockFetchApi.mockResolvedValueOnce({ success: true })
 

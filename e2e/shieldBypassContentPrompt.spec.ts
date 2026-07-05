@@ -49,60 +49,73 @@ async function sendShieldBypassUiMessage(
 ): Promise<ShieldBypassMessageResult> {
   let lastResult: ShieldBypassMessageResult | undefined
 
-  await expect
-    .poll(async () => {
-      lastResult = await serviceWorker.evaluate(
-        async ({ action, origin, pageUrl, requestId }) => {
-          const chromeApi = (globalThis as any).chrome
-          const tabs = await chromeApi.tabs.query({})
-          const targetTab = tabs.find(
-            (tab: { id?: number; url?: string }) => tab.url === pageUrl,
-          )
-
-          if (targetTab?.id == null) {
-            return { success: false, error: "Target tab not found" }
-          }
-
-          return await new Promise<ShieldBypassMessageResult>((resolve) => {
-            chromeApi.tabs.sendMessage(
-              targetTab.id,
-              {
-                action,
-                origin,
-                requestId,
-              },
-              (response?: { success?: boolean; error?: string }) => {
-                const error = chromeApi.runtime?.lastError
-                const errorMessage =
-                  typeof error?.message === "string" ? error.message : ""
-
-                if (errorMessage) {
-                  resolve({ success: false, error: errorMessage })
-                  return
-                }
-
-                resolve(
-                  response?.success === false
-                    ? { success: false, error: response.error }
-                    : { success: true },
-                )
-              },
+  try {
+    await expect
+      .poll(async () => {
+        lastResult = await serviceWorker.evaluate(
+          async ({ action, origin, pageUrl, requestId }) => {
+            const chromeApi = (globalThis as any).chrome
+            const tabs = await chromeApi.tabs.query({})
+            const targetTab = tabs.find(
+              (tab: { id?: number; url?: string }) => tab.url === pageUrl,
             )
-          })
-        },
-        {
-          action: RuntimeActionIds.ContentShowShieldBypassUi,
-          origin: SHIELD_FIXTURE_ORIGIN,
-          pageUrl,
-          requestId: "e2e-shield-bypass-prompt",
-        },
-      )
 
-      return getShieldBypassMessageStatus(lastResult)
-    })
-    .toMatch(/^(success|message-port-closed)$/)
+            if (targetTab?.id == null) {
+              return { success: false, error: "Target tab not found" }
+            }
 
-  return lastResult ?? { success: false, error: "No message result" }
+            return await new Promise<ShieldBypassMessageResult>((resolve) => {
+              chromeApi.tabs.sendMessage(
+                targetTab.id,
+                {
+                  action,
+                  origin,
+                  requestId,
+                },
+                (response?: { success?: boolean; error?: string }) => {
+                  const error = chromeApi.runtime?.lastError
+                  const errorMessage =
+                    typeof error?.message === "string" ? error.message : ""
+
+                  if (errorMessage) {
+                    resolve({ success: false, error: errorMessage })
+                    return
+                  }
+
+                  resolve(
+                    response?.success === false
+                      ? { success: false, error: response.error }
+                      : { success: true },
+                  )
+                },
+              )
+            })
+          },
+          {
+            action: RuntimeActionIds.ContentShowShieldBypassUi,
+            origin: SHIELD_FIXTURE_ORIGIN,
+            pageUrl,
+            requestId: "e2e-shield-bypass-prompt",
+          },
+        )
+
+        return getShieldBypassMessageStatus(lastResult)
+      })
+      .toMatch(/^(success|message-port-closed)$/)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(
+      `Timed out waiting for shield bypass content message; last result: ${JSON.stringify(
+        lastResult,
+      )}\n${message}`,
+    )
+  }
+
+  if (!lastResult) {
+    throw new Error("Shield bypass content message did not produce a result")
+  }
+
+  return lastResult
 }
 
 test.beforeEach(async ({ context, page }) => {
