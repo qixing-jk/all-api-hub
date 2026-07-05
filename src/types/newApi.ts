@@ -124,6 +124,11 @@ export interface UpdateChannelPayload {
   remark?: string | null
   key?: string
   /**
+   * QuantumNous/new-api rejects status in the ordinary channel update endpoint.
+   * Adapters that accept this field must send it through the dedicated status endpoint.
+   */
+  status?: ChannelStatus
+  /**
    * 多密钥模式下专用
    * @see https://github.com/QuantumNous/new-api/blob/7156bf238276d2089435eacc3efb266403f27c8e/controller/channel.go#L769
    */

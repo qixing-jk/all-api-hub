@@ -161,6 +161,57 @@ describe("newApiFamily channel management APIs", () => {
     expect(body.groups).toBeUndefined()
   })
 
+  it("updateChannel sends status through the New API status endpoint", async () => {
+    mockFetchApi
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true, data: true })
+
+    await updateChannel(baseRequest, {
+      id: 1,
+      name: "Updated",
+      status: 1,
+      groups: ["default"],
+    } as any)
+
+    const updateBody = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
+    expect(updateBody).toMatchObject({
+      id: 1,
+      name: "Updated",
+      group: "default",
+    })
+    expect(updateBody.status).toBeUndefined()
+    expect(mockFetchApi).toHaveBeenNthCalledWith(
+      2,
+      baseRequest,
+      expect.objectContaining({
+        endpoint: "/api/channel/1/status",
+        options: {
+          method: "POST",
+          body: JSON.stringify({ status: 1 }),
+        },
+      }),
+      false,
+    )
+  })
+
+  it("updateChannel omits auto-disabled status without calling the manual status endpoint", async () => {
+    mockFetchApi.mockResolvedValueOnce({ success: true })
+
+    await updateChannel(baseRequest, {
+      id: 1,
+      name: "Updated",
+      status: 3,
+    } as any)
+
+    const updateBody = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
+    expect(updateBody).toMatchObject({
+      id: 1,
+      name: "Updated",
+    })
+    expect(updateBody.status).toBeUndefined()
+    expect(mockFetchApi).toHaveBeenCalledTimes(1)
+  })
+
   it("listAllChannels should paginate and aggregate type_counts", async () => {
     const baseUrl = "https://example.com"
     const token = "token"

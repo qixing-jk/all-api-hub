@@ -3,6 +3,7 @@ import { ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { CHANNEL_STATUS } from "~/types/managedSite"
 import type {
   CreateChannelPayload,
   ManagedSiteChannel,
@@ -31,15 +32,46 @@ const serializeChannelGroups = <T extends { groups?: string[] }>(
 
 const serializeUpdateChannelPayload = (payload: UpdateChannelPayload) => {
   const serializedPayload = serializeChannelGroups(payload)
+  const { status, ...payloadWithoutStatus } = serializedPayload
 
-  // New API v1.0.0-rc.16 rejects an empty update key; omitting it preserves the existing secret.
-  if (serializedPayload.key?.trim() !== "") {
-    return serializedPayload
+  // QuantumNous/new-api omits blank edit keys; sending an empty key can
+  // overwrite or reject the secret.
+  if (payloadWithoutStatus.key?.trim() !== "") {
+    return {
+      payload: payloadWithoutStatus,
+      status,
+    }
   }
 
-  const { key, ...payloadWithoutEmptyKey } = serializedPayload
-  return payloadWithoutEmptyKey
+  const { key, ...payloadWithoutEmptyKey } = payloadWithoutStatus
+  return {
+    payload: payloadWithoutEmptyKey,
+    status,
+  }
 }
+
+const updateChannelStatus = async (
+  request: ApiServiceRequest,
+  channelId: number,
+  status: number,
+) => {
+  // QuantumNous/new-api router/channel-router.go maps manual status changes to
+  // POST /api/channel/:id/status and rejects `status` in PUT /api/channel/.
+  return await fetchApi<boolean>(
+    request,
+    {
+      endpoint: `${CHANNEL_API_BASE}${channelId}/status`,
+      options: {
+        method: "POST",
+        body: JSON.stringify({ status }),
+      },
+    },
+    false,
+  )
+}
+
+const isNewApiManualStatus = (status: number) =>
+  status === CHANNEL_STATUS.Enable || status === CHANNEL_STATUS.ManuallyDisabled
 
 /**
  * 搜索指定关键词的渠道。
@@ -102,15 +134,31 @@ export async function updateChannel(
   channelData: UpdateChannelPayload,
 ) {
   try {
-    const payload = serializeUpdateChannelPayload(channelData)
+    const { payload, status } = serializeUpdateChannelPayload(channelData)
 
-    return await fetchApi<void>(request, {
+    const updateResponse = await fetchApi<void>(request, {
       endpoint: CHANNEL_API_BASE,
       options: {
         method: "PUT",
         body: JSON.stringify(payload),
       },
     })
+
+    if (
+      !updateResponse.success ||
+      typeof status !== "number" ||
+      !isNewApiManualStatus(status)
+    ) {
+      return updateResponse
+    }
+
+    const statusResponse = await updateChannelStatus(
+      request,
+      channelData.id,
+      status,
+    )
+
+    return statusResponse.success ? updateResponse : statusResponse
   } catch (error) {
     logger.error("更新渠道失败", error)
     throw new Error("更新渠道失败，请检查网络或 New API 配置。")
