@@ -5,16 +5,30 @@
  */
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import {
+  MANAGED_UPSTREAM_RESOURCE_FEATURES,
+  type ManagedUpstreamResourceFeature,
+} from "~/services/managedSites/managedUpstreamResourceMigration"
+import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import type {
+  ManagedSiteRuntimeConfig,
+  ManagedSiteRuntimeConfigValue,
+} from "~/services/managedSites/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelSyncService } from "~/services/models/modelSync"
 import { toModelTokenKey } from "~/services/models/utils/modelName"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
+import type {
+  ManagedUpstreamResourceDetail,
+  ManagedUpstreamResourceRef,
+} from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -30,6 +44,137 @@ import { isEmptyModelMapping } from "./utils"
  * Unified logger scoped to model redirect generation and application.
  */
 const logger = createLogger("ModelRedirect")
+
+type ModelRedirectMappingWriter = {
+  updateChannelModelMapping(
+    channel: ManagedSiteChannel,
+    modelMapping: Record<string, string>,
+  ): Promise<void>
+}
+
+type ModelRedirectResourceCapabilities = ManagedUpstreamResourcesCapability<
+  ManagedSiteRuntimeConfigValue,
+  unknown,
+  ChannelFormData
+>
+
+const appendMissingValues = (
+  baseValues: readonly string[],
+  valuesToAppend: readonly string[],
+): string[] => {
+  const result = baseValues
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+
+  for (const value of valuesToAppend) {
+    const normalizedValue = value.trim()
+    if (normalizedValue && !result.includes(normalizedValue)) {
+      result.push(normalizedValue)
+    }
+  }
+
+  return result
+}
+
+const splitChannelModels = (models?: string | null): string[] =>
+  models
+    ?.split(",")
+    .map((model) => model.trim())
+    .filter(Boolean) ?? []
+
+class ResourceBackedModelRedirectMappingWriter
+  implements ModelRedirectMappingWriter
+{
+  private refsByChannelId: Map<number, ManagedUpstreamResourceRef> | null = null
+
+  constructor(
+    private readonly runtimeConfig: ManagedSiteRuntimeConfig,
+    private readonly capabilities: ModelRedirectResourceCapabilities,
+    private readonly legacyWriter: ModelRedirectMappingWriter,
+  ) {}
+
+  async updateChannelModelMapping(
+    channel: ManagedSiteChannel,
+    modelMapping: Record<string, string>,
+  ): Promise<void> {
+    const resourceRef = await this.getResourceRef(channel.id)
+
+    if (!resourceRef) {
+      logger.debug("Falling back to legacy model redirect mapping update", {
+        siteType: this.runtimeConfig.siteType,
+        channelId: channel.id,
+        reason: "resource-ref-missing",
+      })
+      await this.legacyWriter.updateChannelModelMapping(channel, modelMapping)
+      return
+    }
+
+    const detail = await this.capabilities.items.getDetail(
+      this.runtimeConfig.config,
+      resourceRef,
+    )
+    const draft = this.capabilities.drafts.prepareEditDraft(detail)
+    const nextModels = appendMissingValues(
+      draft.models.length ? draft.models : splitChannelModels(channel.models),
+      Object.keys(modelMapping),
+    )
+    const nextDetail = this.withUpdatedNativeModelMapping(
+      detail,
+      nextModels,
+      JSON.stringify(modelMapping),
+    )
+    const response = await this.capabilities.items.update(
+      this.runtimeConfig.config,
+      nextDetail,
+      {
+        ...draft,
+        models: nextModels,
+      },
+    )
+
+    if (!response.success) {
+      throw new Error(response.message || "Failed to update channel mapping")
+    }
+  }
+
+  private async getResourceRef(
+    channelId: number,
+  ): Promise<ManagedUpstreamResourceRef | null> {
+    if (!this.refsByChannelId) {
+      const resourceList = await this.capabilities.items.list(
+        this.runtimeConfig.config,
+      )
+      this.refsByChannelId = new Map(
+        resourceList.items
+          .map((item) => [Number(item.ref.resourceId), item.ref] as const)
+          .filter(([resourceId]) => Number.isSafeInteger(resourceId)),
+      )
+    }
+
+    return this.refsByChannelId.get(channelId) ?? null
+  }
+
+  private withUpdatedNativeModelMapping(
+    detail: ManagedUpstreamResourceDetail<unknown>,
+    models: readonly string[],
+    modelMappingJson: string,
+  ): ManagedUpstreamResourceDetail<unknown> {
+    const native = detail.native
+
+    if (!native || typeof native !== "object") {
+      throw new Error("Resource detail cannot preserve channel fields")
+    }
+
+    return {
+      ...detail,
+      native: {
+        ...(native as Record<string, unknown>),
+        models: models.join(","),
+        model_mapping: modelMappingJson,
+      },
+    }
+  }
+}
 
 interface ModelRedirectChannelResult {
   channelId: number
@@ -142,7 +287,11 @@ export class ModelRedirectService {
   private static async getManagedSiteModelSyncService(
     prefs?: UserPreferences,
   ): Promise<
-    | { ok: true; service: ModelSyncService }
+    | {
+        ok: true
+        runtimeConfig: ManagedSiteRuntimeConfig
+        service: ModelSyncService
+      }
     | { ok: false; errors: string[]; message: string }
   > {
     const resolvedPrefs = prefs ?? (await userPreferences.getPreferences())
@@ -175,8 +324,31 @@ export class ModelRedirectService {
 
     return {
       ok: true,
+      runtimeConfig,
       service: new ModelSyncService(runtimeConfig),
     }
+  }
+
+  private static createModelMappingWriter(
+    runtimeConfig: ManagedSiteRuntimeConfig,
+    service: ModelSyncService,
+  ): ModelRedirectMappingWriter {
+    const feature: ManagedUpstreamResourceFeature =
+      MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelRedirect
+    const resolution = resolveManagedUpstreamResourceFeatureCapabilities(
+      runtimeConfig.siteType,
+      feature,
+    )
+
+    if (!resolution.supported) {
+      return service
+    }
+
+    return new ResourceBackedModelRedirectMappingWriter(
+      runtimeConfig,
+      resolution.capabilities as ModelRedirectResourceCapabilities,
+      service,
+    )
   }
 
   /**
@@ -184,12 +356,12 @@ export class ModelRedirectService {
    * Merges new mapping with existing mapping (new keys override old keys)
    * @param channel Target New API channel.
    * @param newMapping Mapping of standard model -> upstream model.
-   * @param service ModelSyncService instance used to update channel.
+   * @param service Model mapping writer used to update channel.
    */
   static async applyModelMappingToChannel(
     channel: ManagedSiteChannel,
     newMapping: Record<string, string>,
-    service: ModelSyncService,
+    service: ModelRedirectMappingWriter,
     options?: {
       availableModels?: string[]
       pruneMissingTargets?: boolean
@@ -329,6 +501,10 @@ export class ModelRedirectService {
       }
 
       const channelList = await serviceResult.service.listChannels()
+      const modelMappingWriter = ModelRedirectService.createModelMappingWriter(
+        serviceResult.runtimeConfig,
+        serviceResult.service,
+      )
 
       let successCount = 0
       const errors: string[] = []
@@ -360,7 +536,7 @@ export class ModelRedirectService {
           await ModelRedirectService.applyModelMappingToChannel(
             channel,
             newMapping,
-            serviceResult.service,
+            modelMappingWriter,
           )
           successCount += 1
         } catch (error) {
@@ -471,6 +647,10 @@ export class ModelRedirectService {
       }
 
       const channelList = await serviceResult.service.listChannels()
+      const modelMappingWriter = ModelRedirectService.createModelMappingWriter(
+        serviceResult.runtimeConfig,
+        serviceResult.service,
+      )
       const channelsById = new Map<number, ManagedSiteChannel>(
         (channelList.items ?? []).map((channel) => [channel.id, channel]),
       )
@@ -500,7 +680,7 @@ export class ModelRedirectService {
         }
 
         try {
-          await serviceResult.service.updateChannelModelMapping(channel, {})
+          await modelMappingWriter.updateChannelModelMapping(channel, {})
           results.push({
             channelId,
             channelName: channel.name,
