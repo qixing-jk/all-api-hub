@@ -44,7 +44,9 @@ describe("managed upstream resource service", () => {
       MANAGED_SITE_TYPES.map((siteType) => ({
         siteType,
         enabled:
-          siteType === SITE_TYPES.NEW_API || siteType === SITE_TYPES.VELOERA,
+          siteType === SITE_TYPES.NEW_API ||
+          siteType === SITE_TYPES.VELOERA ||
+          siteType === SITE_TYPES.DONE_HUB,
       })),
     )
   })
@@ -52,7 +54,7 @@ describe("managed upstream resource service", () => {
   it("does not enable resource mode from capability presence alone for unmigrated sites", () => {
     const resources = buildResourcesCapability()
     getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.DONE_HUB,
+      siteType: SITE_TYPES.OCTOPUS,
       managedSites: {
         channels: {} as NonNullable<
           NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
@@ -62,10 +64,10 @@ describe("managed upstream resource service", () => {
     })
 
     expect(
-      resolveManagedUpstreamResourceCapabilities(SITE_TYPES.DONE_HUB),
+      resolveManagedUpstreamResourceCapabilities(SITE_TYPES.OCTOPUS),
     ).toEqual({
       supported: false,
-      siteType: SITE_TYPES.DONE_HUB,
+      siteType: SITE_TYPES.OCTOPUS,
       reason: "core-slice-disabled",
     })
   })
