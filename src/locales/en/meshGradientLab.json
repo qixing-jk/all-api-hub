@@ -13,7 +13,10 @@
     "seed": "Seed",
     "view": "View"
   },
-  "summary": "{{paletteCount}} palettes · {{layoutCount}} layouts",
+  "summaryLayout_one": "{{count}} layout",
+  "summaryLayout_other": "{{count}} layouts",
+  "summaryPalette_one": "{{count}} palette",
+  "summaryPalette_other": "{{count}} palettes",
   "title": "Mesh Gradient Lab (Dev)",
   "view": {
     "layouts": "Layouts",

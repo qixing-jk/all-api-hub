@@ -13,7 +13,8 @@
     "seed": "シード",
     "view": "表示"
   },
-  "summary": "{{paletteCount}} パレット・{{layoutCount}} レイアウト",
+  "summaryLayout_other": "{{count}} レイアウト",
+  "summaryPalette_other": "{{count}} パレット",
   "title": "Mesh Gradient Lab（開発用）",
   "view": {
     "layouts": "レイアウト",

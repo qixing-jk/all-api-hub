@@ -5,8 +5,8 @@
   },
   "billing": {
     "notProvided": "No proporcionado",
-    "perCall": "Facturacion por llamada",
-    "tokenBased": "Facturacion por tokens"
+    "perCall": "Facturación por llamada",
+    "tokenBased": "Facturación por tokens"
   },
   "dialog": {
     "bookmarkAccountImport": {
@@ -57,8 +57,8 @@
       "resultSummary": "Importadas {{success}}, fallidas {{failed}}, omitidas {{skipped}}.",
       "scanning": "Escaneando marcadores del navegador...",
       "scopeHelp": "El escaneo solo crea una vista previa. Puedes volver aquí para ajustar la selección antes de importar.",
-      "searchEmpty": "No hay ambitos de marcadores coincidentes",
-      "searchLabel": "Buscar ambitos de marcadores",
+      "searchEmpty": "No hay ámbitos de marcadores coincidentes",
+      "searchLabel": "Buscar ámbitos de marcadores",
       "searchPlaceholder": "Buscar marcadores...",
       "selectedBookmarkCount_one": "{{count}} marcador seleccionado",
       "selectedBookmarkCount_many": "{{count}} marcadores seleccionados",
@@ -140,9 +140,9 @@
       },
       "description": "Crea o actualiza una entrada de proveedor en CLIProxyAPI.",
       "descriptions": {
-        "baseUrlClaudeApiKey": "Normalmente la URL raiz de Anthropic API sin /v1/messages.",
-        "baseUrlCodexApiKey": "Normalmente la URL raiz del proveedor. Un valor predeterminado comun es https://api.openai.com.",
-        "baseUrlGeminiApiKey": "Normalmente la URL raiz de Gemini API sin /v1/models/....",
+        "baseUrlClaudeApiKey": "Normalmente la URL raíz de Anthropic API sin /v1/messages.",
+        "baseUrlCodexApiKey": "Normalmente la URL raíz del proveedor. Un valor predeterminado común es https://api.openai.com.",
+        "baseUrlGeminiApiKey": "Normalmente la URL raíz de Gemini API sin /v1/models/....",
         "baseUrlOpenAICompatibility": "Normalmente la Base URL compatible con OpenAI upstream que termina en /v1.",
         "models": "Asigna nombres de modelos upstream a alias opcionales (nombre -> alias). Cuando están disponibles, los modelos upstream se cargan desde /v1/models para seleccionarlos.",
         "modelsManual": "Asigna nombres de modelos upstream a alias opcionales (nombre -> alias). Ingresa valores manualmente para esta familia de proveedor en esta versión.",
@@ -202,7 +202,7 @@
       "defaultGroup": "Grupo predeterminado",
       "disabled": "Deshabilitado",
       "enabled": "Habilitado",
-      "expireTime": "Hora de expiracion: {{time}}",
+      "expireTime": "Hora de expiración: {{time}}",
       "exportToCCSwitch": "Exportar a CC Switch",
       "getFailed": "No se pudo obtener",
       "keyCopied": "Clave copiada al portapapeles",
@@ -333,7 +333,7 @@
         "accountNotFound": "Cuenta no encontrada.",
         "copiedApiConfigs": "apiConfigs copiado al portapapeles",
         "copyFailed": "Error al copiar",
-        "createTokenBlockedFallback": "La creación de token fue bloqueada. Revisa la politica del sitio e inténtalo de nuevo.",
+        "createTokenBlockedFallback": "La creación de token fue bloqueada. Revisa la política del sitio e inténtalo de nuevo.",
         "createTokenFailed": "No se pudo crear el token.",
         "downloadedSettings": "Archivo de ajustes descargado",
         "downloadFailed": "No se pudo descargar el archivo de ajustes",
@@ -360,7 +360,7 @@
       },
       "title": "Exportar JSON de Kilo Code",
       "warning": {
-        "description": "El JSON exportado contiene API keys en texto plano. Guardalo de forma segura y no lo compartas.",
+        "description": "El JSON exportado contiene API keys en texto plano. Guárdalo de forma segura y no lo compartas.",
         "title": "API keys en texto plano"
       }
     },
@@ -371,9 +371,9 @@
         "openSettings": "Abrir ajustes"
       },
       "descriptionDisabledTempWindowOnly": "{{accountName}} necesita abrir una ventana emergente temporal y pasar la protección para que las solicitudes se completen correctamente. Habilítala en Ajustes > Actualización de datos",
-      "descriptionDisabledWithCookieInterceptor": "{{accountName}} necesita el flujo de omisión de protección en Firefox. Se abrirá una ventana emergente temporal para obtener cookies y Cookie Interceptor las adjuntara a las solicitudes. Habilitalo en Ajustes > Actualización de datos",
+      "descriptionDisabledWithCookieInterceptor": "{{accountName}} necesita el flujo de omisión de protección en Firefox. Se abrirá una ventana emergente temporal para obtener cookies y Cookie Interceptor las adjuntará a las solicitudes. Habilítalo en Ajustes > Actualización de datos",
       "descriptionPermissionTempWindowOnly": "{{accountName}} necesita permiso para abrir una ventana emergente temporal para que las solicitudes se completen correctamente. Concédelo en Ajustes > Permisos",
-      "descriptionPermissionWithCookieInterceptor": "{{accountName}} necesita permisos de Cookie Interceptor en Firefox. La ventana emergente temporal debe abrirse para obtener cookies y las solicitudes las adjuntaran. Concédelo en Ajustes > Permisos",
+      "descriptionPermissionWithCookieInterceptor": "{{accountName}} necesita permisos de Cookie Interceptor en Firefox. La ventana emergente temporal debe abrirse para obtener cookies y las solicitudes las adjuntarán. Concédelo en Ajustes > Permisos",
       "titleTempWindowOnly": "Habilitar modo de ventana temporal para solicitudes",
       "titleWithCookieInterceptor": "Habilitar omisión de protección para solicitudes"
     },

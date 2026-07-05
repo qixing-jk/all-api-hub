@@ -200,10 +200,10 @@
       "externalCheckInOpened_other": "Se abrieron check-ins externos para {{count}} cuentas ({{mode}}).",
       "operationCompleted": "Operación completada",
       "refreshAccount": "{{accountName}} se actualizó correctamente.",
-      "refreshSkipped": "No se alcanzo el intervalo de actualización; se omitió",
+      "refreshSkipped": "No se alcanzó el intervalo de actualización; se omitió",
       "shareSnapshotCaptionCopied": "Leyenda copiada",
-      "shareSnapshotCopied": "Instantanea copiada al portapapeles",
-      "shareSnapshotDownloaded": "Instantanea descargada",
+      "shareSnapshotCopied": "Instantánea copiada al portapapeles",
+      "shareSnapshotDownloaded": "Instantánea descargada",
       "urlCopied": "URL de {{accountName}} copiada al portapapeles"
     }
   },

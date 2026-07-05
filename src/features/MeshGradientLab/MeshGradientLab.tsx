@@ -293,7 +293,9 @@ export default function MeshGradientLab() {
               </div>
 
               <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
-                {t("meshGradientLab:summary", { paletteCount, layoutCount })}
+                {t("meshGradientLab:summaryPalette", { count: paletteCount })}
+                {" · "}
+                {t("meshGradientLab:summaryLayout", { count: layoutCount })}
               </div>
             </div>
           </CardContent>

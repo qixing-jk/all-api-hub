@@ -13,7 +13,8 @@
     "seed": "Hạt giống",
     "view": "Chế độ xem"
   },
-  "summary": "{{paletteCount}} bảng màu · {{layoutCount}} bố cục",
+  "summaryLayout_other": "{{count}} bố cục",
+  "summaryPalette_other": "{{count}} bảng màu",
   "title": "Phòng thí nghiệm Mesh Gradient (Dev)",
   "view": {
     "layouts": "Bố cục",

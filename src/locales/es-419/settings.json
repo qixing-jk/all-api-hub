@@ -178,8 +178,8 @@
     "currencyUnit": "Unidad de moneda",
     "defaultTab": "Pestaña predeterminada",
     "defaultTabDesc": "Define la pestaña predeterminada que se muestra al iniciar el plugin",
-    "description": "Personaliza la apariencia y las preferencias de visualizacion del plugin",
-    "title": "Ajustes de visualizacion",
+    "description": "Personaliza la apariencia y las preferencias de visualización de la extensión",
+    "title": "Ajustes de visualización",
     "todayCashflow": "Flujo de efectivo de hoy",
     "todayCashflowEnabled": "Mostrar flujo de efectivo de hoy",
     "todayCashflowEnabledDesc": "Controla si se muestran y obtienen las estadísticas de consumo/ingresos de hoy. Cuando está deshabilitado, las estadísticas de hoy se ocultan y la actualización omite las solicitudes de datos usadas para calcularlas.",
@@ -202,9 +202,9 @@
       "userIdLabel": "ID de usuario administrador"
     },
     "title": "Ajustes de integración de Done Hub",
-    "tokenDesc": "Token de acceso del sistema para el usuario administrador. Encuentralo en el panel de Done Hub → Ajustes personales → Token.",
+    "tokenDesc": "Token de acceso del sistema para el usuario administrador. Encuéntralo en el panel de Done Hub → Ajustes personales → Token.",
     "urlDesc": "Define la Base URL para la integración de Done Hub",
-    "userIdDesc": "ID de usuario administrador (solo numerico). El administrador root suele ser 1."
+    "userIdDesc": "ID de usuario administrador (solo numérico). El administrador root suele ser 1."
   },
   "duplicateAccountWarningOnAdd": {
     "description": "Controla si All API Hub pide confirmación cuando agregas una cuenta para un sitio que ya existe.",
@@ -286,7 +286,7 @@
     "title": "Ajustes de integración de New API",
     "tokenDesc": "Token de acceso del sistema para el usuario administrador",
     "urlDesc": "Define la Base URL para la integración de New API",
-    "userIdDesc": "ID de usuario administrador (solo numerico)"
+    "userIdDesc": "ID de usuario administrador (solo numérico)"
   },
   "octopus": {
     "description": "Configura ajustes de integración para conectarte a sitios Octopus autohospedados. El sistema iniciará sesión automáticamente con tus credenciales y administrará el JWT Token.",
@@ -337,7 +337,7 @@
         "title": "Cookies"
       },
       "declarativeNetRequestWithHostAccess": {
-        "description": "Permite aplicar reglas de headers de solicitud al presionar Tab durante la protección de ventana temporal, adjuntar las cookies correctas para distintas cuentas y evitar anomalias de datos con varias cuentas.",
+        "description": "Permite aplicar reglas de headers de solicitud al presionar Tab durante la protección de ventana temporal, adjuntar las cookies correctas para distintas cuentas y evitar anomalías de datos con varias cuentas.",
         "title": "Declarative Net Request"
       },
       "notifications": {
@@ -502,9 +502,9 @@
     "customRedeemDesc": "Coloca al frente los sitios que usan enlaces de canje personalizados",
     "customRedeemUrl": "URL de canje personalizada",
     "customSortDesc": "Ordena según el campo (como saldo) seleccionado por el usuario en la vista de lista",
-    "description": "Define la prioridad de ordenamiento de cuentas en la lista para organizar su visualizacion",
+    "description": "Define la prioridad de ordenamiento de cuentas en la lista para organizar su visualización",
     "disabledAccount": "Mover cuentas deshabilitadas al final",
-    "disabledAccountDesc": "Las cuentas deshabilitadas se moveran uniformemente al final de la lista",
+    "disabledAccountDesc": "Las cuentas deshabilitadas se moverán uniformemente al final de la lista",
     "healthDesc": "Ordenar por estado de salud del sitio (Error > Advertencia > Desconocido > Saludable)",
     "healthStatus": "Estado de salud",
     "manualOrder": "Orden manual",
@@ -578,7 +578,7 @@
       },
       "webhook": {
         "description": "Enviar notificaciones JSON a un webhook HTTP(S) personalizado. La URL admite variables de plantilla para servicios como Bark que colocan el texto de notificación en la ruta.",
-        "title": "Webhook generico",
+        "title": "Webhook genérico",
         "url": "URL de webhook",
         "urlDescription": "Usa {title}, {message}, {task}, {status}, {total}, {success}, {failed} o {skipped} en la URL. Los valores se codifican para URL antes de enviarse. Para Bark, usa https://api.day.app/your-key/{title}/{message}.",
         "urlPlaceholder": "https://api.day.app/your-key/{title}/{message}"
@@ -614,7 +614,7 @@
         "partialSuccess": "{{task}} se completó parcialmente.",
         "success": "{{task}} se completó correctamente."
       },
-      "counts": "Total {{total}}, exitosas {{success}}, fallidas {{failed}}, omitidas {{skipped}}.",
+      "counts": "Total: {{total}}, correctas: {{success}}, fallidas: {{failed}}, omitidas: {{skipped}}.",
       "title": {
         "failure": "{{task}} falló",
         "partialSuccess": "{{task}} tuvo éxito parcial",
@@ -701,6 +701,6 @@
     "title": "Ajustes de integración de Veloera",
     "tokenDesc": "Token de acceso del sistema para el usuario administrador",
     "urlDesc": "Define la Base URL para la integración de Veloera",
-    "userIdDesc": "ID de usuario administrador (solo numerico)"
+    "userIdDesc": "ID de usuario administrador (solo numérico)"
   }
 }

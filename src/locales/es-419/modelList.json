@@ -1,12 +1,12 @@
 {
   "accountGroupFilterAllIncluded": "Incluir todos los grupos para esta cuenta",
   "accountGroupFilterClearAll": "Borrar todo",
-  "accountGroupFilterDescription": "Excluye grupos especificos de la cuenta de la comparación de precios. De forma predeterminada, cada cuenta conserva todos sus grupos disponibles.",
+  "accountGroupFilterDescription": "Excluye grupos específicos de la cuenta de la comparación de precios. De forma predeterminada, cada cuenta conserva todos sus grupos disponibles.",
   "accountGroupFilterNoGroups": "No hay grupos de cuenta disponibles para filtrar en este momento.",
   "accountGroupFilterNoGroupsIncluded": "No hay grupos incluidos para esta cuenta",
   "accountGroupFilterResetAll": "Restablecer todo",
   "accountGroupFilterSelectAll": "Seleccionar todo",
-  "accountGroupFilterSelectedSummary": "{{selected}} seleccionados / {{total}}",
+  "accountGroupFilterSelectedSummary": "{{selected}} grupos seleccionados / {{total}}",
   "accountGroupFilterTitle": "Filtro de grupos de cuenta",
   "accountGroupFilterTrigger": "Filtrar grupos de cuenta",
   "accountGroupFilterTriggerCount_one": "{{count}} cuenta filtrada",
@@ -62,7 +62,7 @@
       "skipped": "Omitidos {{value}}",
       "total": "Total {{value}}"
     },
-    "idleHint": "Esto verificara por lotes los modelos filtrados actualmente con los elementos de prueba seleccionados.",
+    "idleHint": "Esto verificará por lotes los modelos filtrados actualmente con los elementos de prueba seleccionados.",
     "messages": {
       "noApplicableProbes": "Ninguno de los elementos de prueba seleccionados aplica a este modelo.",
       "noCompatibleRuntimeKey": "No se encontró ninguna clave compatible habilitada para este modelo.",
@@ -115,7 +115,7 @@
   "copyAllNames": "Copiar todos los nombres de modelos",
   "description": "Ver y administrar modelos de IA disponibles",
   "detailedPricing": "Precios detallados",
-  "displayOptions": "Opciones de visualizacion:",
+  "displayOptions": "Opciones de visualización:",
   "endpointType": "Tipo de endpoint",
   "endpointTypes": "Tipos de endpoint",
   "estimatedPrice": "Estimado",
@@ -123,9 +123,9 @@
   "expandDetails": "Expandir detalles",
   "fallbackSourceNotice": {
     "description": "Este catálogo se carga actualmente mediante una alternativa con clave de cuenta, por lo que solo admite descubrimiento y verificación de modelos. Actualizar datos reintentará la ruta directa de la cuenta.",
-    "title": "Catalogo alternativo con clave de cuenta"
+    "title": "Catálogo alternativo con clave de cuenta"
   },
-  "groupRatioTooltip": "Ratio del grupo {{group}}: {{ratio}}x",
+  "groupRatioTooltip": "Proporción del grupo {{group}}: {{ratio}}x",
   "groupSelectionHint": "Deja esto vacío para comparar entre todos los grupos; el ordenamiento por precio usa el mejor precio dentro del conjunto de grupos seleccionado",
   "input": "Entrada:",
   "input1MTokens": "Entrada (1M tokens)",
@@ -154,7 +154,7 @@
     "keyCopied": "Clave copiada",
     "loadFailed": "No se pudieron cargar las claves: {{error}}",
     "loading": "Cargando claves...",
-    "noCompatibleDescription": "Crea una clave para este modelo o ajusta los limites de modelos de una clave existente.",
+    "noCompatibleDescription": "Crea una clave para este modelo o ajusta los límites de modelos de una clave existente.",
     "noCompatibleFoundAfterCreate": "La clave se creó, pero no se encontró ninguna clave compatible para {{modelId}}.",
     "noCompatibleTitle": "No hay claves compatibles para {{modelId}}",
     "openKeyManagement": "Abrir gestión de claves para {{accountName}}",
@@ -190,18 +190,18 @@
   "pricingNote": "Nota sobre precios de modelos",
   "profileSourceNotice": {
     "description": "Las credenciales de API guardadas solo proporcionan descubrimiento y verificación de modelos. Los precios, filtros de grupo, resúmenes de cuenta y compatibilidad de claves no están disponibles para esta fuente.",
-    "title": "Catalogo de modelos respaldado por perfil"
+    "title": "Catálogo de modelos respaldado por perfil"
   },
   "providerTabs": {
     "scrollLeft": "Desplazar pestañas de proveedor a la izquierda",
     "scrollRight": "Desplazar pestañas de proveedor a la derecha"
   },
-  "ratio": "Ratio:",
+  "ratio": "Proporción:",
   "realAmount": "Monto real de recarga",
   "refreshData": "Actualizar datos",
   "runtimeKeyFallbackSourceNotice": {
     "description": "Este catálogo se carga mediante una clave existente para esta cuenta, por lo que solo admite descubrimiento y verificación de modelos. Esta cuenta no puede crear nuevas claves de API aquí; Actualizar datos reintentará la ruta directa de la cuenta.",
-    "title": "Catalogo de modelos con clave de cuenta"
+    "title": "Catálogo de modelos con clave de cuenta"
   },
   "searchModels": "Buscar modelos",
   "searchPlaceholder": "Ingresa nombre o descripción del modelo...",
@@ -210,7 +210,7 @@
   "showing_one": "Mostrando {{count}} modelo",
   "showing_many": "Mostrando {{count}} modelos",
   "showing_other": "Mostrando {{count}} modelos",
-  "showRatio": "Mostrar ratio",
+  "showRatio": "Mostrar proporción",
   "sortBy": "Ordenar por",
   "sortOptions": {
     "default": "Orden predeterminado",
@@ -246,7 +246,7 @@
     "formatNotStandard": "El formato de datos de modelos del sitio actual no cumple el estándar; revisa manualmente la página de precios del sitio",
     "genericLoadFailedTitle": "No se pudieron cargar los datos de modelos",
     "goToSitePricing": "Ir al sitio para ver la información de precios",
-    "incompatibleDesc": "La interfaz de datos de modelos del sitio actual no cumple con la especificacion estándar, posiblemente por desarrollo secundario del sitio. Por ahora, la extensión no puede analizar la información de precios de modelos de este sitio",
+    "incompatibleDesc": "La interfaz de datos de modelos del sitio actual no cumple con la especificación estándar, posiblemente por desarrollo secundario del sitio. Por ahora, la extensión no puede analizar la información de precios de modelos de este sitio",
     "incompatibleFormat": "Formato de datos incompatible",
     "loadFailed": "No se pudieron cargar los datos de modelos; inténtalo de nuevo más tarde",
     "loadFailedWithReason": "No se pudieron cargar los datos de modelos: {{reason}}",

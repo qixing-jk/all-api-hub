@@ -5,7 +5,7 @@
     "feedback": "Reportar problema",
     "open": "Abrir",
     "settings": "Abrir ajustes",
-    "title": "URL de AI API y API Key detectadas"
+    "title": "URL de AI API y clave de API detectadas"
   },
   "messages": {
     "success": {
@@ -33,16 +33,16 @@
     },
     "errors": {
       "fetchModelsFailed": "No se pudieron obtener los modelos.",
-      "missingBaseUrlOrKey": "Primero proporciona la Base URL y la API key.",
+      "missingBaseUrlOrKey": "Primero proporciona la URL base y la clave de API.",
       "runProbeFailed": "La prueba falló.",
       "saveToProfilesFailed": "No se pudo guardar en la biblioteca de credenciales API."
     },
     "fields": {
-      "apiKey": "API key",
+      "apiKey": "Clave de API",
       "apiType": "Tipo de API",
-      "baseUrl": "Base URL",
-      "expiresAt": "Fecha de expiracion",
-      "modelId": "Model ID",
+      "baseUrl": "URL base",
+      "expiresAt": "Fecha de expiración",
+      "modelId": "ID de modelo",
       "notes": "Notas",
       "tags": "Etiquetas"
     },
@@ -64,14 +64,14 @@
     },
     "optionalProfileFields": {
       "hasInput": "Detalles opcionales de guardado agregados",
-      "hint": "Las etiquetas, notas y fecha de expiracion no afectan los resultados de prueba.",
+      "hint": "Las etiquetas, notas y fecha de expiración no afectan los resultados de prueba.",
       "title": "Opciones de guardado (opcional)"
     },
     "placeholders": {
       "notes": "Notas opcionales",
       "tags": "Seleccionar etiquetas"
     },
-    "privacyHint": "Las API Keys se considerarán información sensible: se ocultan de forma predeterminada y no se almacena nada a menos que elijas guardar en la biblioteca de credenciales API.",
+    "privacyHint": "Las claves de API se considerarán información sensible: se ocultan de forma predeterminada y no se almacena nada a menos que elijas guardar en la biblioteca de credenciales API.",
     "probes": {
       "notRunYet": "Aún no ejecutado"
     },

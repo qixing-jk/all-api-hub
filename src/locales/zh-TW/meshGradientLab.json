@@ -13,7 +13,8 @@
     "seed": "種子",
     "view": "檢視"
   },
-  "summary": "{{paletteCount}} 個調色盤 · {{layoutCount}} 種佈局",
+  "summaryLayout_other": "{{count}} 種佈局",
+  "summaryPalette_other": "{{count}} 個調色盤",
   "title": "Mesh Gradient 實驗室（Dev）",
   "view": {
     "layouts": "佈局",

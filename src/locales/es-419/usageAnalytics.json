@@ -16,7 +16,7 @@
     },
     "common": {
       "chartType": {
-        "ariaLabel": "Tipo de grafica",
+        "ariaLabel": "Tipo de gráfica",
         "histogram": "Histograma",
         "pie": "Circular"
       }
@@ -26,7 +26,7 @@
         "requests": "Solicitudes",
         "tokens": "Tokens / Cuota"
       },
-      "description": "Tendencias con varias metricas, tooltip y zoom.",
+      "description": "Tendencias con varias métricas, tooltip y zoom.",
       "series": {
         "completionTokens": "Tokens de salida",
         "promptTokens": "Tokens de entrada",
@@ -41,7 +41,7 @@
       "series": {
         "count": "Conteo"
       },
-      "title": "Distribucion de latencia"
+      "title": "Distribución de latencia"
     },
     "latencyTrend": {
       "axes": {
@@ -61,21 +61,21 @@
       "series": {
         "usd": "Costo (USD)"
       },
-      "title": "Distribucion de costo por modelo"
+      "title": "Distribución de costo por modelo"
     },
     "modelDistribution": {
       "description": "Modelos principales por tokens totales en el rango de fechas seleccionado.",
       "series": {
         "tokens": "Tokens totales"
       },
-      "title": "Distribucion de modelos"
+      "title": "Distribución de modelos"
     },
     "modelHeatmap": {
       "description": "Intensidad de uso de tokens en el tiempo para modelos principales (haz clic en un modelo para enfocarlo).",
       "series": {
         "tokens": "Tokens totales"
       },
-      "title": "Mapa de calor modelo x día"
+      "title": "Mapa de calor modelo por día"
     },
     "other": "Otros",
     "slowModels": {
@@ -141,16 +141,16 @@
     "success": {
       "exported": "Exportado",
       "settingsSaved": "Ajustes guardados",
-      "syncCompleted": "Sincronización completada (exitosas: {{success}}, omitidas: {{skipped}}, error: {{error}}, no compatibles: {{unsupported}})",
+      "syncCompleted": "Sincronización completada (exitosas: {{success}}, omitidas: {{skipped}}, errores: {{error}}, no compatibles: {{unsupported}})",
       "syncCompletedNoSummary": "Sincronización completada"
     },
     "warning": {
       "scheduleFallback": "Este navegador no admite sincronización programada, así que se cambió a \"Después de actualizar la cuenta\": {{warning}}",
-      "syncCompletedWithIssues": "Sincronización completada con seguimiento necesario (exitosas: {{success}}, omitidas: {{skipped}}, error: {{error}}, no compatibles: {{unsupported}})"
+      "syncCompletedWithIssues": "Sincronización completada con seguimiento necesario (exitosas: {{success}}, omitidas: {{skipped}}, errores: {{error}}, no compatibles: {{unsupported}})"
     }
   },
   "settings": {
-    "alarmUnsupported": "La API Alarms no es compatible con este navegador; la programación tipo cron no está disponible.",
+    "alarmUnsupported": "La API de alarmas no es compatible con este navegador; la programación tipo cron no está disponible.",
     "enabled": "Sincronización del historial de uso",
     "enabledHint": "Cuando está habilitada, la extensión almacena agregados diarios acotados (sin logs sin procesar).",
     "retentionDays": "Retención (días)",
@@ -206,9 +206,9 @@
       "noMessage": "—",
       "rowActions": "Acciones de fila",
       "selectAll": "Seleccionar todas las cuentas",
-      "selectedCount_one": "Seleccionadas: {{count}}",
-      "selectedCount_many": "Seleccionadas: {{count}}",
-      "selectedCount_other": "Seleccionadas: {{count}}",
+      "selectedCount_one": "Cuentas seleccionadas: {{count}}",
+      "selectedCount_many": "Cuentas seleccionadas: {{count}}",
+      "selectedCount_other": "Cuentas seleccionadas: {{count}}",
       "selectRow": "Seleccionar cuenta: {{name}}"
     }
   },
@@ -216,10 +216,10 @@
   "weekdays": {
     "fri": "Vie",
     "mon": "Lun",
-    "sat": "Sab",
+    "sat": "Sáb",
     "sun": "Dom",
     "thu": "Jue",
     "tue": "Mar",
-    "wed": "Mie"
+    "wed": "Mié"
   }
 }

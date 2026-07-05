@@ -209,9 +209,9 @@
     }
   },
   "stats": {
-    "completion": "Completion",
+    "completion": "Salida",
     "estimatedTodayIncome": "Ingresos estimados",
-    "prompt": "Prompt",
+    "prompt": "Entrada",
     "subscriptionInactive": "Inactiva o vencida",
     "subscriptionRemainingCount": "Solicitudes de suscripción restantes",
     "subscriptionStatus": "Estado de suscripción",

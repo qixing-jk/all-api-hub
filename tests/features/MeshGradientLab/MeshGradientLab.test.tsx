@@ -164,7 +164,11 @@ describe("MeshGradientLab", () => {
     expect(
       screen.getByRole("button", { name: "meshGradientLab:view.palettes" }),
     ).toHaveAttribute("aria-pressed", "true")
-    expect(screen.getByText("meshGradientLab:summary")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "meshGradientLab:summaryPalette · meshGradientLab:summaryLayout",
+      ),
+    ).toBeInTheDocument()
 
     expect(mockDrawMeshGradientBackground).toHaveBeenCalledTimes(2)
     expect(mockDrawMeshGradientBackground).toHaveBeenNthCalledWith(
