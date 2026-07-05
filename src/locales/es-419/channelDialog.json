@@ -1,0 +1,111 @@
+{
+  "actions": {
+    "create": "Crear canal",
+    "deselectAll": "Deseleccionar todo",
+    "hideKey": "Ocultar clave",
+    "inverse": "Invertir",
+    "loadingRealKey": "Cargando clave real...",
+    "loadRealKey": "Cargar clave real",
+    "selectAll": "Seleccionar todo",
+    "showKey": "Mostrar clave",
+    "update": "Guardar cambios"
+  },
+  "description": {
+    "add": "Configura un canal nuevo para tu sitio administrado",
+    "edit": "Actualiza la configuración del canal y la información de enrutamiento",
+    "view": "Revisa la configuración actual del canal y la información de enrutamiento"
+  },
+  "fields": {
+    "baseUrl": {
+      "label": "URL base",
+      "placeholder": "https://api.example.com"
+    },
+    "groups": {
+      "hint": "Los grupos se obtienen de tu sitio administrado",
+      "label": "Grupos del canal",
+      "loading": "Cargando grupos...",
+      "placeholder": "Selecciona grupos"
+    },
+    "key": {
+      "label": "Clave API",
+      "placeholder": "Ingresa la clave API del proveedor upstream",
+      "realKeyHint": "Si la lista de canales omitió o enmascaró la clave completa, carga aquí la clave real. Algunos tipos de sitios administrados pueden requerir verificación adicional."
+    },
+    "models": {
+      "hint": "Escribe para buscar o presiona Enter para agregar un nombre de modelo personalizado",
+      "label": "Modelos disponibles",
+      "loading": "Cargando modelos...",
+      "placeholder": "Selecciona o escribe nombres de modelos"
+    },
+    "name": {
+      "label": "Nombre del canal",
+      "placeholder": "Ingresa un nombre descriptivo para el canal"
+    },
+    "priority": {
+      "hint": "Los canales con números de prioridad más altos se usan antes que los demás",
+      "label": "Prioridad"
+    },
+    "status": {
+      "disabled": "Deshabilitado",
+      "enabled": "Habilitado",
+      "label": "Estado"
+    },
+    "type": {
+      "hint": "Elige el proveedor upstream al que este canal reenviará solicitudes",
+      "label": "Tipo de canal",
+      "placeholder": "Selecciona el tipo de canal"
+    },
+    "weight": {
+      "hint": "Controla el balanceo de carga dentro de la misma prioridad (0 = distribución igual)",
+      "label": "Peso"
+    }
+  },
+  "messages": {
+    "loadRealKeyFailed": "No se pudo cargar la clave real del canal: {{error}}",
+    "missingChannelId": "Falta el ID del canal existente",
+    "saveFailed": "No se pudo guardar el canal: {{error}}"
+  },
+  "sections": {
+    "advanced": "Configuración avanzada"
+  },
+  "title": {
+    "add": "Crear canal",
+    "edit": "Editar canal",
+    "view": "Ver canal"
+  },
+  "validation": {
+    "baseUrlRequired": "La URL base es obligatoria para este tipo de canal",
+    "keyRequired": "La clave API es obligatoria",
+    "modelsRequired": "Se requiere al menos un modelo",
+    "nameRequired": "El nombre del canal es obligatorio"
+  },
+  "warnings": {
+    "channelExists": {
+      "actions": {
+        "continue": "Continuar"
+      },
+      "description": "Ya existe un canal llamado {{channelName}} en tu sitio administrado. Aun así puedes crear otro canal, pero puede producirse enrutamiento duplicado. ¿Continuar de todos modos?",
+      "title": "El canal ya existe",
+      "warningTitle": "Posible duplicado"
+    },
+    "exactDuplicate": {
+      "description": "Ahora se confirmó un canal candidato duplicado {{channelName}} en el sitio administrado. Si quieres evitar duplicación, ajusta el nombre, los modelos o la clave antes de guardar; de lo contrario, aún puedes continuar creando el canal.",
+      "title": "Canal duplicado confirmado"
+    },
+    "modelsPrefillFailed": {
+      "description": "No se cargó ninguna lista de modelos upstream utilizable para esta clave API. Aún puedes crear el canal, pero ingresa y confirma los modelos manualmente antes de guardar.",
+      "title": "Los modelos requieren entrada manual"
+    },
+    "reviewSuggested": {
+      "description": "Se encontraron canales candidatos con la misma URL upstream o configuración de modelos, pero no se pudo confirmar automáticamente un duplicado exacto. Aún puedes continuar creando el canal, pero revisa el nombre, los modelos y la clave antes de guardar.",
+      "title": "Revisa posibles candidatos duplicados"
+    },
+    "verificationRequired": {
+      "actions": {
+        "verifyNow": "Verificar ahora"
+      },
+      "description": "Se encontraron canales candidatos, pero New API requiere un paso de verificación adicional antes de poder leer la clave real del canal, por lo que la confirmación exacta de duplicados no está disponible actualmente. Aún puedes continuar creando el canal; completa primero la verificación si necesitas una comprobación exacta de deduplicación.",
+      "title": "El posible duplicado necesita verificación"
+    }
+  }
+}

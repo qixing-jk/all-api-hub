@@ -1,0 +1,224 @@
+{
+  "actions": {
+    "open": "Abrir"
+  },
+  "attention": {
+    "accountUnhealthy": {
+      "description": "{{reason}}",
+      "title": "{{name}} tiene un problema de salud"
+    },
+    "addAccount": {
+      "description": "Agrega una cuenta antes de resumir saldos, uso y automatización.",
+      "title": "Aún no hay cuentas"
+    },
+    "addProfile": {
+      "description": "Agrega credenciales de API para que las herramientas y los flujos de exportación puedan reutilizarlas.",
+      "title": "Aún no hay perfiles de API"
+    }
+  },
+  "autoCheckin": {
+    "actions": {
+      "open": "Ver check-in",
+      "retryFailed": "Reintentar fallidos"
+    },
+    "empty": {
+      "disabled": {
+        "description": "El check-in automático está desactivado. Vuelve a activarlo cuando quieras que la extensión reclame recompensas de check-in por ti."
+      },
+      "notRun": {
+        "description": "Aún no se ha ejecutado ningún check-in. Después de habilitar la detección de cuentas, la próxima programación lo manejará, o puedes abrir el check-in automático para ejecutarlo manualmente."
+      }
+    },
+    "lastRun": "Última ejecución",
+    "metrics": {
+      "failed": "Fallidos",
+      "skipped": "Omitidos",
+      "success": "Correctos"
+    },
+    "nextRetry": "Próximo reintento",
+    "nextRun": "Próxima ejecución",
+    "notRunYet": "Aún no ejecutado",
+    "notScheduled": "No programado",
+    "status": {
+      "disabled": "Deshabilitado",
+      "failed": "Fallido",
+      "not_run": "Esperando la primera ejecución",
+      "partial": "Éxito parcial",
+      "ready": "Listo",
+      "success": "Correcto"
+    },
+    "summary": "Resumen de ejecución de check-in automático"
+  },
+  "automation": {
+    "empty": {
+      "autoCheckin": {
+        "disabled": "Activa el check-in automático cuando quieras reclamar recompensas automáticamente. Las programaciones y resultados futuros aparecerán aquí."
+      },
+      "managedSiteModelSync": {
+        "disabled": "Activa la sincronización de modelos cuando quieras actualizar automáticamente los modelos de sitios administrados. El intervalo y alcance de sincronización aparecerán aquí."
+      },
+      "siteAnnouncements": {
+        "disabled": "Activa el sondeo de anuncios cuando quieras ver actualizaciones del sitio aquí. Las comprobaciones recientes y los conteos de anuncios aparecerán aquí."
+      },
+      "webdavAutoSync": {
+        "disabled": "Configura la sincronización automática de WebDAV cuando quieras copias de seguridad entre dispositivos. La estrategia y el alcance de sincronización aparecerán aquí."
+      }
+    },
+    "items": {
+      "autoCheckin": {
+        "label": "Check-in automático"
+      },
+      "managedSiteModelSync": {
+        "allowedModels": "Modelos permitidos",
+        "concurrency": "Concurrencia",
+        "interval": "Intervalo de sincronización (horas)",
+        "label": "Sincronización de modelos de sitio administrado",
+        "open": "Abrir sincronización"
+      },
+      "siteAnnouncements": {
+        "interval": "Intervalo de sondeo (minutos)",
+        "label": "Sondeo de anuncios del sitio",
+        "lastChecked": "Última comprobación",
+        "openPage": "Ver anuncios",
+        "openSettings": "Configuración de sondeo",
+        "records": "Total de anuncios",
+        "unread": "Anuncios no leídos"
+      },
+      "webdavAutoSync": {
+        "domains": "Alcances de sincronización",
+        "interval": "Intervalo de sincronización (minutos)",
+        "label": "Sincronización de copias WebDAV",
+        "open": "Abrir sincronización de copias",
+        "strategy": "Estrategia de sincronización"
+      }
+    },
+    "neverChecked": "Aún no comprobado",
+    "openItem": "Abrir {{name}}",
+    "status": {
+      "enabled": "Habilitado"
+    }
+  },
+  "configurationOverview": {
+    "accountFoundation": {
+      "description": "Cuentas, saldos y estado de salud de los que dependen otras funciones.",
+      "label": "Base de cuentas",
+      "state": {
+        "disabled": "El estado de la cuenta aún no se puede leer. Revisa que la configuración de la cuenta esté completa.",
+        "needs_setup": "Agrega al menos una cuenta para que el resumen pueda mostrar saldos, uso y estado de automatización.",
+        "not_applicable": "Puedes continuar sin agregar una cuenta en este entorno."
+      }
+    },
+    "automation": {
+      "description": "Si el check-in automático y el sondeo de anuncios están listos para ejecutarse.",
+      "label": "Automatización",
+      "state": {
+        "disabled": "Por ahora no se ejecutará ninguna tarea automáticamente. Activa el check-in o el sondeo de anuncios cuando los necesites.",
+        "needs_setup": "La automatización aún necesita una cuenta elegible o configuración de detección antes de poder ejecutarse.",
+        "not_applicable": "Aún no hay tareas de automatización disponibles en este entorno."
+      }
+    },
+    "backupSync": {
+      "description": "Configuración de copia de seguridad local y sincronización entre dispositivos.",
+      "label": "Copia y sincronización",
+      "state": {
+        "disabled": "Tus datos permanecen en este dispositivo. Activa la sincronización WebDAV cuando quieras una copia entre dispositivos.",
+        "needs_setup": "Conecta WebDAV primero para poder respaldar los datos locales de forma remota.",
+        "not_applicable": "La copia y sincronización no está disponible aún en este entorno."
+      }
+    },
+    "credentialAssets": {
+      "description": "Perfiles de API y claves de cuenta preparados para usar.",
+      "label": "Credenciales",
+      "state": {
+        "disabled": "Aún no hay credenciales reutilizables. Revisa la configuración de cuenta o perfil de API.",
+        "needs_setup": "Agrega perfiles de API para que las herramientas y flujos de exportación puedan reutilizarlos directamente.",
+        "not_applicable": "Este entorno no necesita perfiles de API separados."
+      }
+    },
+    "dataHistory": {
+      "description": "Si el historial de uso y saldo tiene datos para revisar.",
+      "label": "Historial de datos",
+      "state": {
+        "disabled": "El historial aún no se está guardando. Actívalo para conservar cambios futuros de uso y saldo.",
+        "needs_setup": "El historial está habilitado, pero aún necesita una cuenta o el primer dato. Esta sección se actualizará cuando aparezcan datos.",
+        "not_applicable": "Aún no hay historial de datos para ver en este entorno."
+      }
+    },
+    "managedSite": {
+      "description": "Administración de canales de sitios administrados y capacidades de sincronización de modelos.",
+      "label": "Sitio administrado",
+      "state": {
+        "disabled": "Aún no hay ningún sitio administrado conectado. Conecta uno cuando necesites administrar canales o modelos.",
+        "needs_setup": "Conecta primero un sitio administrado; luego podrás administrar canales o sincronizar modelos aquí.",
+        "not_applicable": "Este tipo de sitio aún no admite administración de sitios administrados."
+      }
+    },
+    "subItems": {
+      "accounts": "Cuentas",
+      "apiKeys": "Claves de API",
+      "apiProfiles": "Perfiles de API",
+      "autoCheckin": "Check-in automático",
+      "balanceHistory": "Historial de saldo",
+      "managedSiteChannels": "Administración de canales",
+      "managedSiteModelSync": "Sincronización de modelos",
+      "siteAnnouncements": "Anuncios del sitio",
+      "usageAnalytics": "Analítica de uso",
+      "webdavAutoSync": "Sincronización automática WebDAV",
+      "webdavManual": "Copia manual WebDAV"
+    }
+  },
+  "coverageStatus": {
+    "configured": "Configurado",
+    "disabled": "No habilitado",
+    "needs_setup": "Requiere configuración",
+    "not_applicable": "No aplica"
+  },
+  "description": "Revisa el estado actual de cuentas, claves, uso y tareas automatizadas.",
+  "sections": {
+    "automationOverview": "Ejecuciones de automatización",
+    "configurationOverview": "Resumen de configuración",
+    "needsAttention": "Requiere atención",
+    "recentUsage": "Uso reciente"
+  },
+  "severity": {
+    "error": "Error",
+    "info": "Info",
+    "warning": "Advertencia"
+  },
+  "states": {
+    "allClear": "No hay nada que requiera atención en este momento.",
+    "loadedWithError": "No se pudo cargar parte de la información. Se muestran los datos disponibles.",
+    "loading": "Cargando resumen..."
+  },
+  "status": {
+    "accounts": {
+      "label": "Cuentas"
+    },
+    "attention": {
+      "label": "Atención"
+    },
+    "profiles": {
+      "label": "Perfiles"
+    },
+    "todayUsage": {
+      "label": "Hoy"
+    }
+  },
+  "title": "Resumen",
+  "usage": {
+    "activityMix": "Tendencia reciente",
+    "empty": {
+      "description": "Después de enviar una solicitud o sincronizar el historial de uso, esta tarjeta resumirá las solicitudes, tokens, costo de hoy y la tendencia más reciente de 7 días.",
+      "title": "Aún no hay uso registrado"
+    },
+    "noRecentActivity": "No hay uso reciente registrado.",
+    "requestShare": "Proporción de solicitudes",
+    "sevenDayRequests": "Solicitudes de 7 días",
+    "sevenDayTokens": "Tokens de 7 días",
+    "todayCost": "Costo de hoy",
+    "todayRequests": "Solicitudes de hoy",
+    "todayShare": "Proporción de hoy en los últimos 7 días",
+    "todayTokens": "Tokens de hoy",
+    "tokenShare": "Proporción de tokens"
+  }
+}

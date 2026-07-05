@@ -1,0 +1,218 @@
+{
+  "actions": {
+    "autoConfigAriaLabel": "Guardar cuenta y abrir configuración de canal de {{managedSite}}",
+    "autoConfigRequiresValidAccount": "Completa primero el formulario de la cuenta",
+    "autoConfigTitle": "Guardar esta cuenta y abrir un formulario de canal prellenado en {{managedSite}}",
+    "configToManagedSite": "Guardar y configurar en {{managedSite}}",
+    "configuring": "Configurando...",
+    "confirmAdd": "Confirmar agregado",
+    "helpDocument": "Documento de ayuda",
+    "reloadCurrentPage": "Recargar página actual",
+    "reloadExtensionAndRetry": "Recargar extensión y reintentar",
+    "reportUnsupportedSite": "Reportar sitio no compatible",
+    "saveAccount": "Guardar cuenta",
+    "saveChanges": "Guardar cambios",
+    "workflow": {
+      "checkingToken": "Comprobando claves de API...",
+      "creatingToken": "Creando clave predeterminada...",
+      "loadingSavedAccount": "Cargando cuenta guardada...",
+      "openingManagedSiteDialog": "Abriendo configuración de canal...",
+      "savingAccount": "Guardando cuenta...",
+      "waitingForOneTimeKey": "Guarda primero la clave de un solo uso...",
+      "waitingForSub2ApiGroup": "Elige un grupo de Sub2API..."
+    }
+  },
+  "aihubmixDefaultKeyPrompt": {
+    "cancel": "Crear después",
+    "cancelHint": "Cancelar no afecta la cuenta guardada. Puedes crear manualmente una clave de API de AIHubMix más tarde en Administración de claves.",
+    "confirm": "Crear y ver ahora",
+    "creating": "Creando...",
+    "description": "{{accountName}} se guardó. Las claves de API de AIHubMix solo se muestran una vez después de crearlas, así que asegúrate de poder copiar y guardar la clave completa ahora.",
+    "title": "¿Crear una clave predeterminada de AIHubMix?",
+    "warningTitle": "La clave completa se muestra solo una vez"
+  },
+  "bookmarkImportBatch": {
+    "action": "Importación por lotes desde marcadores",
+    "prompt": "¿Guardaste varios sitios como marcadores del navegador?"
+  },
+  "form": {
+    "accessToken": "Access Token",
+    "autoCheckInEnabled": "Habilitar check-in automático diario",
+    "autoCheckInEnabledDesc": "Define si esta cuenta participa en el check-in diario cuando el check-in automático global está habilitado",
+    "checkInStatus": "Estado de check-in",
+    "checkInStatusDesc": "El sistema comprueba y muestra el estado de check-in de hoy durante la actualización de la cuenta. Solo muestra el estado y no realiza el check-in.",
+    "checkInStatusUnsupported": "{{siteType}} no admite mostrar estado de check-in ni check-in automático.",
+    "cookieAuthSessionCookie": "Cookie de sesión",
+    "cookieAuthSessionCookieDesc": "Importa la cookie de sesión de esta cuenta desde una pestaña del navegador con sesión iniciada (importar por separado para varias cuentas)",
+    "cookieAuthSessionCookiePlaceholder": "Pega el valor del encabezado Cookie",
+    "cookiePermissionEnableCookieAuth": "Conceder permisos para autenticación multi-cuenta con Cookie",
+    "cookiePermissionHelpAction": "Abrir configuración de permisos",
+    "cookiePermissionRecommendationDesc": "Se usa para leer cookies desde la página actual con sesión iniciada y adjuntar la Cookie correcta por cuenta al actualizar, hacer check-in y realizar solicitudes relacionadas para un uso estable de varias cuentas en el mismo sitio.",
+    "customCheckInDesc": "URL de sitio externo de check-in/beneficios donde puedes obtener saldo de cuenta o canjear códigos",
+    "customCheckInUrl": "URL de sitio externo de check-in (opcional)",
+    "customRedeemUrl": "URL personalizada de página de recarga/canje (opcional)",
+    "customRedeemUrlDesc": "URL de la página de recarga/canje",
+    "exchangeRate": "Relación de monto de recarga (CNY/USD)",
+    "exchangeRateDesc": "Indica cuántos RMB se necesitan para recargar 1 USD. El sistema intentará obtenerla automáticamente; complétala manualmente si no se obtiene",
+    "exchangeRatePlaceholder": "Ingresa el tipo de cambio",
+    "excludeFromTodayIncome": "Excluir de ingresos de hoy",
+    "excludeFromTodayIncomeDesc": "Omite esta cuenta en los totales de ingresos de hoy sin deshabilitar actualización, check-in ni visualización de cuenta",
+    "excludeFromTotalBalance": "Excluir del saldo total",
+    "excludeFromTotalBalanceDesc": "Omite esta cuenta en el agregado de saldo total sin deshabilitar actualización ni check-in",
+    "hideAccessToken": "Ocultar Access Token",
+    "hideRefreshToken": "Ocultar Refresh Token",
+    "importCookieAuthSessionCookie": "Importar desde sesión actual",
+    "manualBalanceUsd": "Saldo manual (USD)",
+    "manualBalanceUsdDesc": "Úsalo cuando el sitio no pueda obtener saldo/cuota automáticamente",
+    "manualBalanceUsdError": "Ingresa un monto válido (>= 0)",
+    "manualBalanceUsdPlaceholder": "Deja en blanco para obtener automáticamente",
+    "notes": "Notas",
+    "notesPlaceholder": "Opcional, ingresa notas",
+    "openRedeemWithCheckIn": "Abrir también la página de canje al usar check-in externo",
+    "showAccessToken": "Mostrar Access Token",
+    "showRefreshToken": "Mostrar Refresh Token",
+    "siteName": "Nombre del sitio",
+    "siteType": "Tipo de sitio",
+    "sub2apiImportRefreshToken": "Importar desde la cuenta con sesión iniciada actual",
+    "sub2apiRefreshToken": "Refresh Token",
+    "sub2apiRefreshTokenMode": "Sesión alojada por el plugin (multi-cuenta)",
+    "sub2apiRefreshTokenModeDesc": "Opcional. Guarda el refresh_token de la sesión actual del dashboard en la extensión para que cada cuenta de Sub2API pueda actualizar y renovar la autenticación de forma independiente en segundo plano (admite varias cuentas en un mismo sitio).",
+    "sub2apiRefreshTokenPlaceholder": "Pega el valor de refresh_token",
+    "sub2apiRefreshTokenWarningDesc": "Los refresh tokens son credenciales de larga duración usadas para sesiones alojadas por el plugin. Se guardan con la cuenta (por ejemplo, en respaldos/exportaciones). Para evitar conflictos de rotación, importa desde una ventana incógnita/privada y ciérrala; evita usar la misma sesión del dashboard en paralelo.",
+    "sub2apiRefreshTokenWarningTitle": "Nota",
+    "sub2apiTokenExpiresAt": "Access token vence el",
+    "tags": "Etiquetas",
+    "tagsCreate": "Crear \"{{name}}\"",
+    "tagsDelete": "Eliminar",
+    "tagsDeleteCancel": "Cancelar",
+    "tagsDeleteConfirm": "Eliminar",
+    "tagsDeleteDescription": "Eliminar \"{{name}}\" globalmente. Esto la quitará de todas las cuentas.",
+    "tagsDeleteTitle": "Eliminar etiqueta",
+    "tagsDescription": "Usa etiquetas para categorizar cuentas y filtrarlas rápidamente",
+    "tagsNoResults": "No se encontraron etiquetas",
+    "tagsPlaceholder": "Agregar o seleccionar etiquetas",
+    "tagsRemove": "Quitar {{name}}",
+    "tagsRename": "Renombrar",
+    "tagsRenameCancel": "Cancelar",
+    "tagsRenameSave": "Guardar",
+    "tagsSearchPlaceholder": "Buscar etiquetas...",
+    "tagsSelectedCount_one": "{{count}} etiqueta seleccionada",
+    "tagsSelectedCount_many": "{{count}} etiquetas seleccionadas",
+    "tagsSelectedCount_other": "{{count}} etiquetas seleccionadas",
+    "userId": "ID de usuario",
+    "username": "Nombre de usuario",
+    "validRateError": "Ingresa un tipo de cambio válido, mayor que 0"
+  },
+  "infoPanel": {
+    "autoDetect": "Detección automática",
+    "autoDetectInfo": "Primero inicia sesión en el sitio de destino. La extensión detectará y completará automáticamente la información necesaria para agregar la cuenta.",
+    "confirmAddInfo": "Confirma que la información de la cuenta sea correcta antes de hacer clic en el botón 'Confirmar agregado'",
+    "confirmation": "Confirmación de información de la cuenta",
+    "editInfo": "Editar información de cuenta",
+    "editInfoDesc": "Después de modificar la información de la cuenta, el sistema volverá a verificarla y obtendrá los datos de saldo más recientes",
+    "ldohSiteListHint": "¿Aún no tienes sitio? LDOH ofrece un directorio de muchos sitios de IA de beneficio público de la comunidad Linux.do.",
+    "manualAdd": "Agregado manual",
+    "manualInfo": "Completa manualmente la información de la cuenta. La cuenta se guardará de forma segura en el almacenamiento local",
+    "openLdohSiteList": "Abrir lista de sitios LDOH",
+    "reDetectInfo": "Si cambia la información del sitio, se recomienda hacer clic en el botón 'Volver a detectar' (debes iniciar sesión por tu cuenta en el sitio de destino primero)"
+  },
+  "messages": {
+    "addSuccess": "La cuenta {{name}} se agregó correctamente.",
+    "autoDetectCookiePermissionReloadHint": "Si la primera detección sigue esperando justo después de conceder permisos de Cookie multi-cuenta, recarga la extensión e inténtalo de nuevo.",
+    "autoDetectFailed": "Falló la detección automática: {{error}}",
+    "autoDetectSuccess": "Detección automática correcta.",
+    "autoDetectTakingTooLong": "La detección automática está tardando más de lo esperado. Abre la guía de solución de problemas.",
+    "cookiePermissionGranted": "Permiso concedido",
+    "cookiePermissionGrantFailed": "No se concedió el permiso",
+    "importCookiesEmpty": "No se encontraron cookies del navegador para este sitio. Inicia sesión en este sitio y vuelve a intentarlo.",
+    "importCookiesFailed": "No se pudieron importar las cookies: {{error}}",
+    "importCookiesFailedUnknown": "No se pudieron importar las cookies por un error desconocido.",
+    "importCookiesLoading": "Importando cookies...",
+    "importCookiesPermissionDenied": "La extensión no pudo leer las cookies de este sitio. Revisa los permisos de cookies/sitio del navegador para este sitio y vuelve a intentarlo.",
+    "importCookiesSuccess": "Cookies importadas",
+    "importSub2apiSessionMissing": "No se encontró refresh_token. Inicia sesión en el dashboard de Sub2API y vuelve a intentarlo.",
+    "importSub2apiSessionSuccess": "Sesión de Sub2API importada",
+    "loadFailed": "No se pudieron cargar los datos de la cuenta",
+    "newApiConfigFailed": "Falló la configuración automática en New API: {{error}}",
+    "operationFailed": "Operación fallida: {{error}}",
+    "reloadExtensionConfirm": "Recargar la extensión cerrará la página actual de la extensión. Asegúrate de haber guardado cualquier información necesaria.",
+    "saveAccountFailed": "No se pudo guardar la cuenta",
+    "saveFailed": "Error al guardar",
+    "updateSuccess": "La cuenta {{name}} se actualizó correctamente.",
+    "urlRequired": "Ingresa primero una URL"
+  },
+  "mode": {
+    "autoDetect": "Detección automática",
+    "detecting": "Detectando...",
+    "manualAdd": "Agregado manual",
+    "reDetect": "Volver a detectar"
+  },
+  "sections": {
+    "accountAuth": {
+      "title": "Autenticación de cuenta"
+    },
+    "balanceAndStats": {
+      "title": "Saldo y estadísticas"
+    },
+    "checkInConfig": {
+      "title": "Configuración de check-in"
+    },
+    "siteInfo": {
+      "title": "Información del sitio"
+    },
+    "tagsAndNotes": {
+      "description": "Las etiquetas ayudan a organizar, filtrar e identificar cuentas rápidamente, mientras que las notas agregan contexto de apoyo.",
+      "title": "Etiquetas y notas"
+    }
+  },
+  "siteInfo": {
+    "alreadyAdded": "Ya existen cuentas para este sitio",
+    "authMethod": "Método de autenticación",
+    "authMethodPlaceholder": "Método de autenticación",
+    "authType": {
+      "accessToken": "Autenticación con Access Token",
+      "cookieAuth": "Autenticación con Cookie"
+    },
+    "cookieWarning": "Prefiere access tokens. La autenticación con Cookie requiere importar una cookie de sesión, que puede vencer/renovarse y dejar de funcionar, lo que exige reimportarla; para varias cuentas en el mismo sitio, importa una cookie de sesión por cuenta. Úsala solo cuando sea necesario.",
+    "currentLoginAlreadyAdded": "El inicio de sesión actual ya fue agregado",
+    "currentSite": "Sitio actual",
+    "editNow": "Editar ahora",
+    "siteUrl": "URL del sitio",
+    "sub2apiAuthOnly": "Sub2API solo admite autenticación con Access Token (JWT)",
+    "sub2apiHint": "Sub2API usa JWTs de corta duración. Cuando vencen, la extensión intentará obtener automáticamente un JWT nuevo mediante una ventana temporal (requiere que tengas sesión iniciada en el sitio). Con \"Sesión alojada por el plugin\" habilitada, cada cuenta puede actualizar y renovar la autenticación automáticamente en segundo plano de forma independiente, admitiendo varias cuentas en el mismo sitio.",
+    "unknown": "No se puede obtener",
+    "useCurrent": "Usar sitio actual"
+  },
+  "title": {
+    "add": "Agregar cuenta",
+    "edit": "Editar cuenta"
+  },
+  "warnings": {
+    "duplicateAccount": {
+      "actions": {
+        "continue": "Continuar",
+        "disableAndContinue": "No volver a recordarme y continuar"
+      },
+      "description_one": "Ya tienes {{count}} cuenta para {{siteUrl}}. Agregar otra puede crear duplicados. ¿Quieres continuar?",
+      "description_many": "Ya tienes {{count}} cuentas para {{siteUrl}}. Agregar otra puede crear duplicados. ¿Quieres continuar?",
+      "description_other": "Ya tienes {{count}} cuentas para {{siteUrl}}. Agregar otra puede crear duplicados. ¿Quieres continuar?",
+      "descriptionExact": "Ya existe una cuenta para {{siteUrl}} con ID de usuario {{userId}} ({{username}}). Agregar otra puede crear duplicados. ¿Quieres continuar?",
+      "title": "Cuenta duplicada",
+      "warningTitle": "Este sitio ya tiene cuentas"
+    },
+    "managedSiteConfig": {
+      "actions": {
+        "later": "Quizá después",
+        "openSettings": "Abrir configuración"
+      },
+      "description": "{{message}}",
+      "guide": "Esta función primero guarda la cuenta actual, luego prepara una clave de API utilizable y la precarga en un canal nuevo de {{managedSite}}, para ayudarte a terminar la creación del canal más rápido. Estará disponible cuando se complete la configuración del sitio gestionado.",
+      "title": "Configura primero {{managedSite}}",
+      "warningTitle": "{{managedSite}} aún no está configurado"
+    },
+    "reloadExtension": {
+      "title": "Recargar extensión",
+      "warningTitle": "¿Confirmar recarga de la extensión?"
+    }
+  }
+}

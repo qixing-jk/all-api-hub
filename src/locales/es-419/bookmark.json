@@ -1,0 +1,57 @@
+{
+  "actions": {
+    "add": "Agregar marcador",
+    "copyUrl": "Copiar URL",
+    "open": "Abrir",
+    "pin": "Fijar",
+    "unpin": "Desfijar"
+  },
+  "addFirstBookmark": "Agrega tu primer marcador",
+  "delete": {
+    "description": "Esto eliminará permanentemente \"{{name}}\".",
+    "title": "¿Eliminar marcador?"
+  },
+  "description": "Guarda enlaces rápidos (consola/docs/páginas de administración) sin crear cuentas completas.",
+  "dialog": {
+    "currentPageLabel": "Página actual",
+    "currentPageUnavailable": "Página actual no disponible",
+    "description": "Los marcadores pueden ser cualquier enlace, como a una consola de sitio, documentación o una página de administración. Esto es útil cuando no se puede crear una cuenta completa.",
+    "titleAdd": "Agregar marcador",
+    "titleEdit": "Editar marcador",
+    "useCurrentPage": "Usar página actual"
+  },
+  "emptyState": "Todavía no hay marcadores",
+  "filter": {
+    "tagsAllLabel": "Todas las etiquetas"
+  },
+  "form": {
+    "nameLabel": "Nombre",
+    "namePlaceholder": "p. ej., Consola de administración",
+    "notesLabel": "Notas",
+    "notesPlaceholder": "Notas opcionales...",
+    "tagsLabel": "Etiquetas",
+    "tagsPlaceholder": "Seleccionar etiquetas...",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://example.com/..."
+  },
+  "list": {
+    "dragHandle": "Reordenar marcadores"
+  },
+  "search": {
+    "placeholder": "Buscar marcadores..."
+  },
+  "stats": {
+    "pinnedBookmarks": "Fijados",
+    "totalBookmarks": "Marcadores totales",
+    "usedTags": "Etiquetas"
+  },
+  "switch": {
+    "accounts": "Cuentas",
+    "bookmarks": "Marcadores"
+  },
+  "title": "Administración de marcadores",
+  "validation": {
+    "nameRequired": "El nombre no puede estar vacío",
+    "urlRequired": "La URL no puede estar vacía"
+  }
+}

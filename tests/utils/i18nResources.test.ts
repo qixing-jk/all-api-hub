@@ -51,5 +51,6 @@ describe("i18n resources", () => {
     expect(mapToDayjsLocale("zh_TW")).toBe("zh-tw")
     expect(mapToDayjsLocale("ja-JP")).toBe("ja-jp")
     expect(mapToDayjsLocale("vi_VN")).toBe("vi-vn")
+    expect(mapToDayjsLocale("es-419")).toBe("es")
   })
 })

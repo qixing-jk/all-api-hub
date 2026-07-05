@@ -32,6 +32,10 @@
           "label": "EN",
           "name": "English"
         },
+        "es-419": {
+          "label": "ES",
+          "name": "Spanish (Latin America)"
+        },
         "ja": {
           "label": "JA",
           "name": "Japanese"

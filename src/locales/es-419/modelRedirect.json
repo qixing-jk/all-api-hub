@@ -1,0 +1,79 @@
+{
+  "bulkClear": {
+    "action": "Borrar mapas de redirección de modelos",
+    "actionDesc": "Establece model_mapping de los canales seleccionados como un objeto vacío ({}). Esta acción no se puede deshacer.",
+    "actions": {
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "confirm": "Borrar",
+      "continue": "Continuar",
+      "selectAll": "Seleccionar todo",
+      "selectNone": "No seleccionar nada"
+    },
+    "confirm": {
+      "description_one": "Esto borrará los mapas de redirección de modelos de {{count}} canal. Esta acción no se puede deshacer.",
+      "description_many": "Esto borrará los mapas de redirección de modelos de {{count}} canales. Esta acción no se puede deshacer.",
+      "description_other": "Esto borrará los mapas de redirección de modelos de {{count}} canales. Esta acción no se puede deshacer.",
+      "details_one": "Canal seleccionado: {{count}}",
+      "details_many": "Canales seleccionados: {{count}}",
+      "details_other": "Canales seleccionados: {{count}}",
+      "title": "¿Borrar mapas de redirección de modelos?",
+      "warningTitle": "Acción destructiva"
+    },
+    "messages": {
+      "allSuccess_one": "Se borraron los mapas de redirección de modelos de {{count}} canal.",
+      "allSuccess_many": "Se borraron los mapas de redirección de modelos de {{count}} canales.",
+      "allSuccess_other": "Se borraron los mapas de redirección de modelos de {{count}} canales.",
+      "failed": "No se pudieron borrar los mapas de redirección de modelos: {{error}}",
+      "nothingToClear": "No hay nada que borrar (los canales seleccionados ya están vacíos).",
+      "partialFailure": "Se borraron {{success}}/{{total}} canal(es); {{failed}} fallaron.",
+      "successWithSkips": "Se borraron {{cleared}} canal(es); {{skipped}} ya estaban vacíos."
+    },
+    "preview": {
+      "channelListLabel": "Canales",
+      "description": "Selecciona qué canales borrar. Los canales no seleccionados no cambiarán.",
+      "mappingCount_one": "Asignación: {{count}}",
+      "mappingCount_many": "Asignaciones: {{count}}",
+      "mappingCount_other": "Asignaciones: {{count}}",
+      "mappingEmptyInline": "El model_mapping actual está vacío ({}).",
+      "mappingInvalid": "El model_mapping actual no es JSON válido; se muestra texto sin procesar.",
+      "mappingInvalidBadge": "JSON no válido",
+      "mappingToggle": "Previsualizar model_mapping actual",
+      "selectedCount": "{{selected}}/{{total}} seleccionados",
+      "title": "Borrar mapas de redirección de modelos"
+    },
+    "result": {
+      "title": "Canales fallidos"
+    },
+    "search": {
+      "filteredCount": "Mostrando {{filtered}}/{{total}}",
+      "label": "Buscar canales",
+      "noResults": "No hay canales coincidentes.",
+      "placeholder": "Buscar canales (nombre o ID)..."
+    },
+    "status": {
+      "clearing": "Borrando...",
+      "emptySelection": "Selecciona al menos un canal para continuar.",
+      "loadFailed": "No se pudieron cargar los canales: {{error}}",
+      "loading": "Cargando canales...",
+      "noChannels": "No se encontraron canales."
+    }
+  },
+  "description": "Asignación automática de redirección de modelos para resolver el problema de no poder llamar modelos de forma uniforme debido a sus nombres",
+  "enable": "Habilitar redirección de modelos",
+  "enableDesc": "Habilita la función de asignación de redirección de modelos, que se ejecutará automáticamente durante la sincronización de modelos y permitirá la ejecución manual",
+  "messages": {
+    "regenerateFailed": "No se pudo regenerar la asignación de modelos: {{error}}",
+    "regenerateSuccess": "Asignación de modelos regenerada correctamente",
+    "updateFailed": "No se pudo actualizar la configuración de redirección de modelos",
+    "updateSuccess": "Configuración de redirección de modelos actualizada"
+  },
+  "pruneMissingTargetsOnModelSync": "Eliminar destinos de redirección no válidos después de sincronizar",
+  "pruneMissingTargetsOnModelSyncDesc": "Destructivo: después de actualizar la sincronización de modelos, elimina las entradas existentes de model_mapping cuyos modelos de destino no estén en la lista de modelos actualizada",
+  "regenerateButton": "Regenerar asignación ahora",
+  "regenerating": "Regenerando...",
+  "standardModels": "Modelos estándar",
+  "standardModelsDesc": "Selecciona los modelos estándar para generar asignaciones de redirección",
+  "standardModelsPlaceholder": "Seleccionar modelos...",
+  "title": "Redirección de modelos"
+}

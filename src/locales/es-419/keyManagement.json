@@ -1,0 +1,419 @@
+{
+  "accountSummary": {
+    "keys_one": "{{count}} clave",
+    "keys_many": "{{count}} claves",
+    "keys_other": "{{count}} claves",
+    "loadFailed": "Error al cargar",
+    "title": "Resumen de cuentas"
+  },
+  "actions": {
+    "collapseAll": "Contraer todo",
+    "deleteKey": "Eliminar clave",
+    "disable": "Deshabilitar",
+    "editKey": "Editar clave",
+    "enable": "Habilitar",
+    "expandAll": "Expandir todo",
+    "exportToCCSwitch": "Exportar a CC Switch",
+    "exportToKiloCode": "Exportar a Kilo Code",
+    "hideKey": "Ocultar clave",
+    "importToClaudeCodeRouter": "Importar a Claude Code Router",
+    "importToCliProxy": "Importar a CLIProxyAPI",
+    "importToManagedSite": "Importar a {{site}}",
+    "openApiProfiles": "Abrir biblioteca de credenciales API",
+    "openSelectedAccountModels": "Ver modelos de la cuenta",
+    "retryFailed": "Reintentar fallidos",
+    "saveToApiProfiles": "Guardar en biblioteca de credenciales API",
+    "saveToApiProfilesHint": "Guarda esta clave en la biblioteca de credenciales API para copiarla, verificarla y exportarla rápidamente.",
+    "showKey": "Mostrar clave",
+    "useInCherry": "Usar en Cherry Studio",
+    "verifyApi": "Verificar API",
+    "verifyCliSupport": "Verificar compatibilidad con CLI"
+  },
+  "allAccounts": "Todas las cuentas",
+  "allAccountsFailed_one": "{{count}} fallida",
+  "allAccountsFailed_many": "{{count}} fallidas",
+  "allAccountsFailed_other": "{{count}} fallidas",
+  "allAccountsLoading_one": "{{count}} cargando",
+  "allAccountsLoading_many": "{{count}} cargando",
+  "allAccountsLoading_other": "{{count}} cargando",
+  "allAccountsProgress": "{{loaded}}/{{total}} cuentas cargadas",
+  "batchApiCredentialProfiles": {
+    "actions": {
+      "open": "Guardar en biblioteca de credenciales API ({{selectedCount}})"
+    }
+  },
+  "batchCliProxyExport": {
+    "actions": {
+      "open": "Importar por lote a CLIProxyAPI ({{selectedCount}})",
+      "running": "Importando...",
+      "start": "Iniciar importación"
+    },
+    "description": "Importa {{selectedCount}} claves seleccionadas a CLIProxyAPI con una política de proveedor.",
+    "results": {
+      "failed": "Falló",
+      "pending": "Pendiente",
+      "running": "Importando",
+      "success": "Correcto"
+    },
+    "summary": "{{total}} en total, {{success}} correctas, {{failed}} fallidas.",
+    "title": "Importación por lote a CLIProxyAPI"
+  },
+  "batchManagedSiteExport": {
+    "actions": {
+      "clearSelection": "Limpiar selección",
+      "open": "Importar por lote a {{site}} ({{selectedCount}})",
+      "refreshPreview": "Actualizar vista previa",
+      "running": "Importando...",
+      "selectAll": "{{selected}}/{{total}} seleccionadas",
+      "start": "Iniciar importación"
+    },
+    "blockedReasons": {
+      "baseUrlRequired": "El sitio administrado de destino requiere una URL base.",
+      "configMissing": "Falta la configuración de administrador del sitio administrado.",
+      "inputPreparationFailed": "No se pudieron preparar los datos de canal para esta clave.",
+      "keyRequired": "La clave de canal generada está vacía.",
+      "modelsRequired": "No se resolvieron modelos para esta clave.",
+      "nameRequired": "El nombre de canal generado está vacío.",
+      "realKeyRequired": "El sitio administrado de destino requiere una clave real del proveedor.",
+      "secretResolutionFailed": "No se pudo resolver el secreto real del token."
+    },
+    "confirm": {
+      "description": "Esto creará canales para {{selectedCount}} claves seleccionadas. Las coincidencias exactas existentes y las filas bloqueadas no se crearán.",
+      "title": "Importar claves seleccionadas"
+    },
+    "description": "Revisa {{selectedCount}} claves seleccionadas antes de crear canales en {{site}}.",
+    "fields": {
+      "baseUrl": "URL base",
+      "editModelsLabel": "Editar modelos para {{name}}",
+      "groups": "Grupos",
+      "models": "Modelos"
+    },
+    "loadingDescription": "Preparando vista previa para {{selectedCount}} claves seleccionadas.",
+    "messages": {
+      "completed": "Importación por lote completada: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos.",
+      "duplicate": "Ya existe una coincidencia exacta: {{channel}}",
+      "executionFailed": "No se pudo ejecutar la importación por lote: {{error}}"
+    },
+    "preview": {
+      "loadFailed": "No se pudo cargar la vista previa: {{error}}",
+      "loading": "Preparando vista previa de canales...",
+      "selected": "{{selectedCount}} claves seleccionadas",
+      "summary": "Vista previa: {{ready}} listas, {{warning}} advertencias, {{skipped}} omitidas, {{blocked}} bloqueadas, {{total}} en total."
+    },
+    "results": {
+      "channelCreationFailed": "Falló la creación del canal.",
+      "status": {
+        "failed": "Falló",
+        "skipped": "Omitido",
+        "success": "Creado"
+      },
+      "summary": "Resultado: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos, {{total}} en total."
+    },
+    "selection": {
+      "accountGroup": "Seleccionar claves visibles para la cuenta {{name}}",
+      "rowLabel": "Seleccionar {{name}} para importación por lote",
+      "visible": "{{selected}}/{{total}} visibles seleccionadas"
+    },
+    "status": {
+      "blocked": "Bloqueado",
+      "ready": "Listo",
+      "skipped": "Omitido",
+      "warning": "Advertencia"
+    },
+    "title": "Importación por lote a sitio administrado",
+    "warnings": {
+      "backendSearchFailed": "La comprobación de duplicados no pudo llegar al backend de destino.",
+      "dedupeUnsupported": "El sitio administrado actual no puede comprobar duplicados por URL base de forma confiable.",
+      "exactVerificationUnavailable": "Puede haber un canal existente coincidente, pero la verificación exacta de clave no está disponible.",
+      "matchRequiresConfirmation": "Existe un canal similar; revísalo antes de crear.",
+      "modelPrefillFailed": "Falló el prerrelleno de modelos; se usará la mejor lista de modelos disponible."
+    }
+  },
+  "createFirstKey": "Crear primera clave",
+  "description": "Esta página muestra información de claves API para todas las cuentas, incluido el uso y la fecha de expiración. Puedes crear claves nuevas para cuentas específicas haciendo clic en el botón 'Agregar clave' en la esquina superior derecha o en el botón '+' junto a cada elemento de clave. Mantén tus claves API seguras y evita filtrarlas a otras personas",
+  "dialog": {
+    "accountSelect": "Seleccionar cuenta",
+    "addToken": "Agregar clave API",
+    "advancedSettings": "Configuración avanzada",
+    "availableModels": "Modelos disponibles",
+    "basicInfo": "Información básica",
+    "createFailed": "No se pudo crear la clave, inténtalo de nuevo más tarde",
+    "createNotSupported": "Esta cuenta no admite crear claves API.",
+    "createSuccess": "Clave creada correctamente",
+    "createToken": "Crear clave",
+    "editModeNoChange": "No se puede cambiar la cuenta en modo de edición",
+    "editToken": "Editar clave API",
+    "expiration": "Hora de expiración",
+    "expirationPlaceholder": "Deja vacío para que nunca expire",
+    "groupLabel": "Grupo",
+    "groupRate": "Tarifa:",
+    "groupRestrictedNote": "Solo se pueden seleccionar grupos compatibles con este modelo.",
+    "ipExample": "Ejemplo: 192.168.1.1,10.0.0.1 o usa * para no limitar",
+    "ipLimits": "Límites de IP",
+    "ipPlaceholder": "Deja vacío para no limitar, separa varias IP con comas",
+    "loadDataFailed": "No se pudieron cargar los datos, inténtalo de nuevo más tarde",
+    "modelLimits": "Límites de modelo",
+    "modelSelectHint_one": "{{count}} modelo seleccionado",
+    "modelSelectHint_many": "{{count}} modelos seleccionados",
+    "modelSelectHint_other": "{{count}} modelos seleccionados",
+    "nameRequired": "El nombre de la clave no puede estar vacío",
+    "quotaPlaceholder": "Ingresa el monto de cuota (USD)",
+    "quotaRate": "1 USD = {{rate}} puntos de cuota",
+    "quotaSettings": "Configuración de cuota",
+    "selectAccountError": "Selecciona una cuenta",
+    "selectModels": "Seleccionar modelos",
+    "subnetExample": "Ejemplo: 192.168.1.0/24",
+    "subnetLimits": "Límites de subred",
+    "subnetPlaceholder": "Deja vacío para no limitar, o ingresa una subred o CIDR",
+    "tokenName": "Nombre del token",
+    "unlimitedQuota": "Cuota ilimitada",
+    "updateFailed": "No se pudo actualizar la clave, inténtalo de nuevo más tarde",
+    "updateNotSupported": "Esta cuenta no admite actualizar claves API.",
+    "updateSuccess": "Clave actualizada correctamente",
+    "updateToken": "Actualizar clave",
+    "validExpiration": "La hora de expiración debe ser posterior a la hora actual",
+    "validIp": "Ingresa direcciones IP válidas, separa varias IP con comas",
+    "validQuota": "Ingresa un monto de cuota válido",
+    "warningText": "Mantén las claves API seguras y evita filtrarlas",
+    "warningTitle": "Notas"
+  },
+  "enabledCount_one": "{{count}} habilitada",
+  "enabledCount_many": "{{count}} habilitadas",
+  "enabledCount_other": "{{count}} habilitadas",
+  "keyDetails": {
+    "createTime": "Hora de creación:",
+    "expireTime": "Hora de expiración:",
+    "group": "Grupo:",
+    "key": "Clave:",
+    "neverExpires": "Nunca expira",
+    "remainingQuota": "Cuota restante:",
+    "usedQuota": "Cuota usada:"
+  },
+  "loadError": {
+    "description": "La extensión no pudo cargar las claves de esta cuenta. Es posible que la sesión haya expirado, que los permisos sean insuficientes o que el sitio no esté disponible temporalmente. Inicia sesión de nuevo en el sitio y vuelve a intentar.\n\nError: {{error}}",
+    "openSite": "Abrir sitio",
+    "title": "No se pudieron cargar las claves"
+  },
+  "managedSiteStatus": {
+    "actions": {
+      "configureChecks": "Configurar comprobaciones de sitio administrado",
+      "refresh": "Actualizar estado de canales del sitio administrado",
+      "refreshing": "Actualizando estado de canales del sitio administrado",
+      "reviewChannels": "Revisar canales",
+      "verifyNow": "Verificar ahora"
+    },
+    "badges": {
+      "added": "Agregado",
+      "checkFailed": "Comprobación fallida",
+      "checking": "Comprobando",
+      "configMissing": "No configurado",
+      "notAdded": "No agregado",
+      "requiresConfirmation": "Necesita confirmación",
+      "unknown": "Desconocido",
+      "verificationUnavailable": "No se puede verificar completamente"
+    },
+    "descriptions": {
+      "backendSearchFailed": "No se pudieron completar las comprobaciones del sitio administrado.",
+      "baseUrlSearchUnsupported": "Esta función no es compatible con el sitio administrado actual porque no admite búsqueda de canales por URL base.",
+      "configMissingOptional": "Las comprobaciones opcionales de canales del sitio administrado aún no están habilitadas. Ver, copiar y crear claves siguen funcionando.",
+      "inputPreparationFailed": "La verificación no pudo preparar entradas de canal comparables.",
+      "newApiRetrieveKeyHint": "En New API, la comparación completa de claves depende de la clave del canal, y ver esa clave del canal requiere verificación 2FA, por lo que la comparación completa de claves no está disponible actualmente."
+    },
+    "pageUnsupported": "Las comprobaciones de canales del sitio administrado no están disponibles en esta página porque el sitio administrado actual no admite buscar canales por URL.",
+    "recovery": {
+      "configureLogin": "Primero agrega en Configuración los campos de inicio de sesión de New API y asistencia 2FA. Hasta entonces, la clave del canal no se puede leer y la comparación completa de claves no se puede completar.",
+      "verificationRequired": "La comparación completa de claves primero necesita un paso breve de verificación de New API, porque ver una clave de canal de New API requiere 2FA."
+    },
+    "signals": {
+      "key": {
+        "matched": "Clave coincidente",
+        "noMatch": "La clave no coincide",
+        "notProvided": "Falta la clave",
+        "tooltipMatched": "Un canal bajo el mismo grupo de URL normalizada coincidió con esta clave: {{channelName}}.",
+        "tooltipNoMatch": "Había claves de canal comparables disponibles, pero ninguna coincidió con esta clave.",
+        "tooltipNotProvided": "No había ninguna clave comparable disponible para este token.",
+        "tooltipUnavailable": "La comparación de claves no se pudo completar porque las claves de canal comparables no estaban disponibles.",
+        "unavailable": "Clave no disponible"
+      },
+      "models": {
+        "contained": "Modelos contenidos",
+        "exact": "Modelos exactos",
+        "noMatch": "Los modelos no coinciden",
+        "notProvided": "Faltan modelos",
+        "similar": "Modelos similares",
+        "tooltipContained": "El conjunto de modelos normalizado coincidió con el canal {{channelName}} por contención.",
+        "tooltipExact": "El conjunto de modelos normalizado coincidió exactamente con el canal {{channelName}}.",
+        "tooltipNoMatch": "No se confirmó ninguna coincidencia de modelos dentro del grupo de URL normalizada.",
+        "tooltipNotProvided": "No había ninguna lista de modelos comparable disponible para este token.",
+        "tooltipSimilar": "El conjunto de modelos normalizado coincidió con el canal {{channelName}} por similitud ({{score}}%).",
+        "tooltipUnavailable": "La comparación de modelos no se pudo completar porque no había ningún grupo de URL comparable disponible.",
+        "unavailable": "Modelos no disponibles"
+      },
+      "url": {
+        "matched": "URL coincidente",
+        "noMatch": "URL no encontrada",
+        "tooltipMatched_one": "Se encontró {{count}} canal candidato bajo el mismo grupo de URL normalizada. Candidato de ejemplo: {{channelName}}.",
+        "tooltipMatched_many": "Se encontraron {{count}} canales candidatos bajo el mismo grupo de URL normalizada. Candidato de ejemplo: {{channelName}}.",
+        "tooltipMatched_other": "Se encontraron {{count}} canales candidatos bajo el mismo grupo de URL normalizada. Candidato de ejemplo: {{channelName}}.",
+        "tooltipNoMatch": "No se encontró ningún canal bajo el mismo grupo de URL normalizada."
+      }
+    }
+  },
+  "messages": {
+    "accountNotFound": "No se encontró información de la cuenta",
+    "batchSavedToApiProfiles": "Las claves seleccionadas se guardaron en la biblioteca de credenciales API",
+    "batchSaveToApiProfilesFailed": "No se pudieron guardar las claves seleccionadas en la biblioteca de credenciales API",
+    "batchSaveToApiProfilesPartialFailed": "Se guardaron {{savedCount}} de {{totalCount}} claves seleccionadas. {{failedCount}} no se pudieron guardar.",
+    "copyFailed": "No se pudo copiar",
+    "deleteConfirm": "¿Seguro que quieres eliminar la clave {{name}}? Esta acción no se puede deshacer",
+    "deleteSuccess": "La clave {{name}} se eliminó correctamente",
+    "keyCopied": "La clave {{name}} se copió al portapapeles",
+    "loadFailed": "No se pudo cargar la lista de claves",
+    "revealFailed": "No se pudo revelar la clave",
+    "savedToApiProfiles": "{{name}} se guardó en la biblioteca de credenciales API",
+    "saveToApiProfilesFailed": "No se pudo guardar en la biblioteca de credenciales API",
+    "serviceCredentialCopied": "Clave de servicio copiada al portapapeles",
+    "serviceCredentialRotated": "Clave de servicio restablecida",
+    "serviceCredentialRotateFailed": "No se pudo restablecer la clave de servicio",
+    "verifyApiFailed": "No se pudo abrir la verificación de API",
+    "verifyCliSupportFailed": "No se pudo abrir la verificación de compatibilidad con CLI"
+  },
+  "noKeys": "Aún no hay datos de claves",
+  "noMatchingKeys": "No se encontraron claves coincidentes",
+  "oneTimeKey": {
+    "close": "Ya la guardé, cerrar",
+    "copied": "Clave completa copiada al portapapeles",
+    "copiedAction": "Copiada",
+    "copy": "Copiar clave completa",
+    "copyFailed": "No se pudo copiar la clave completa",
+    "keyLabel": "Clave completa",
+    "subtitle": "El valor completo de la clave {{name}} solo se muestra después de esta creación.",
+    "subtitleUnnamed": "La clave completa solo se muestra después de esta creación.",
+    "title": "Guarda la clave completa ahora",
+    "warningDescription": "AIHubMix no admite ver la clave completa otra vez. Después de cerrar este diálogo, las listas o detalles pueden mostrar solo un valor enmascarado.",
+    "warningTitle": "Esta clave solo se puede ver una vez"
+  },
+  "pleaseAddAccount": "Agrega una cuenta primero",
+  "pleaseSelectAccount": "Selecciona una cuenta",
+  "refreshTokenList": "Actualizar lista de claves",
+  "repairMissingKeys": {
+    "action": "Comprobación de claves",
+    "actions": {
+      "cancel": "Cancelar comprobación",
+      "rerun": "Comprobar de nuevo",
+      "start": "Iniciar comprobación y completar faltantes"
+    },
+    "coverage": {
+      "createdGroup": "Creado: {{group}}",
+      "groupsCovered": "Cubiertos {{covered}}/{{total}} grupos",
+      "missingGroup": "Falta: {{group}}"
+    },
+    "deleteConfirm": {
+      "confirm": "Eliminar claves seleccionadas",
+      "description": "Estas claves también se eliminarán de los sitios correspondientes y no podrán restaurarse desde la extensión. Confirma que sus grupos ya no se usan.",
+      "more_one": "Y {{count}} más",
+      "more_many": "Y {{count}} más",
+      "more_other": "Y {{count}} más",
+      "title_one": "¿Eliminar {{count}} clave inválida?",
+      "title_many": "¿Eliminar {{count}} claves inválidas?",
+      "title_other": "¿Eliminar {{count}} claves inválidas?"
+    },
+    "description": "Comprueba los grupos disponibles de cada cuenta, crea claves predeterminadas para grupos sin claves y lista claves inusuales cuyos grupos no están disponibles.",
+    "historyNote": "Esto muestra el resultado de la comprobación anterior. No hay ningún trabajo en ejecución y puedes volver a ejecutar la comprobación.",
+    "initialNotice": "Después de iniciar, se comprobarán las cuentas guardadas para buscar grupos disponibles y se crearán claves predeterminadas para grupos sin claves.",
+    "invalidKeys": {
+      "badge": "Inválida",
+      "deleteFailed": "No se pudieron eliminar las claves inválidas",
+      "deletePartial": "Eliminadas {{deleted}}, {{failed}} fallidas",
+      "deleteSelected": "Eliminar seleccionadas",
+      "deleteSuccess_one": "Se eliminó {{count}} clave inválida",
+      "deleteSuccess_many": "Se eliminaron {{count}} claves inválidas",
+      "deleteSuccess_other": "Se eliminaron {{count}} claves inválidas",
+      "emptyDescription": "Esta comprobación no encontró claves cuyos grupos no estén disponibles.",
+      "emptyTitle": "No hay claves inválidas",
+      "groupUnavailable": "El grupo {{group}} no está disponible actualmente",
+      "selectAll": "Seleccionar todos los resultados actuales",
+      "selectedCount_one": "{{count}} clave inválida seleccionada",
+      "selectedCount_many": "{{count}} claves inválidas seleccionadas",
+      "selectedCount_other": "{{count}} claves inválidas seleccionadas"
+    },
+    "messages": {
+      "cancelFailed": "No se pudo cancelar el trabajo de reparación",
+      "loadFailed": "No se pudo cargar el progreso de reparación",
+      "startFailed": "No se pudo iniciar el trabajo de reparación"
+    },
+    "noMatchingResults": "No hay resultados coincidentes",
+    "outcomes": {
+      "alreadyHad": "Ya tenía claves",
+      "created": "Creado",
+      "failed": "Falló",
+      "skipped": "Omitido"
+    },
+    "previousResult": {
+      "backToSetup": "Volver a la comprobación",
+      "description": "Puedes ver el resultado de la comprobación anterior. Las nuevas comprobaciones usan la configuración actual.",
+      "title": "Resultado de comprobación anterior disponible",
+      "view": "Ver resultado anterior"
+    },
+    "progressLabel": "Progreso",
+    "remoteWriteNotice": "Esta acción puede crear claves nuevas en los sitios correspondientes. No eliminará automáticamente ninguna clave.",
+    "renameOption": {
+      "helper": "Solo aplica a claves creadas automáticamente por la extensión. Durante la comprobación, sus nombres seguirán el grupo actual.",
+      "infoLabel": "Ver detalles de alineación de nombres de claves",
+      "label": "Mantener los nombres de claves alineados con los grupos",
+      "tooltip": "Solo se manejan claves con un estilo de nombre creado automáticamente, como “grupo user (auto)” o “grupo vip (auto)”. Después de la reparación, el nombre sigue el grupo actual de la clave. Los demás nombres no cambian."
+    },
+    "renameSummary": {
+      "accountFailed_one": "{{count}} nombre no sincronizado",
+      "accountFailed_many": "{{count}} nombres no sincronizados",
+      "accountFailed_other": "{{count}} nombres no sincronizados",
+      "accountRenamed_one": "{{count}} nombre sincronizado",
+      "accountRenamed_many": "{{count}} nombres sincronizados",
+      "accountRenamed_other": "{{count}} nombres sincronizados",
+      "failed": "Nombres no sincronizados",
+      "renamed": "Nombres sincronizados",
+      "summarySeparator": ", "
+    },
+    "resultsTitle": "Resultados",
+    "runningNote": "Este trabajo se ejecuta en segundo plano. Puedes cerrar este diálogo y revisar más tarde, o cancelarlo desde la tarjeta de progreso.",
+    "searchLabel": "Buscar",
+    "searchPlaceholder": "Buscar cuenta, origen o tipo de sitio...",
+    "skipReasons": {
+      "aihubmixOneTimeKey": "Las claves de AIHubMix solo se pueden ver una vez. Crea la clave manualmente y guarda la clave completa de inmediato.",
+      "noneAuth": "Sin credenciales (tipo de autenticación: none)",
+      "sub2api": "Requiere seleccionar un grupo de Sub2API; crea la clave manualmente",
+      "tokenAutomationUnsupported": "Este sitio expone una credencial de servicio en lugar de administración de tokens API; se omite la reparación automática de claves."
+    },
+    "title": "Comprobación de cobertura de claves",
+    "totalsLabels": {
+      "eligibleAccounts": "Cuentas elegibles",
+      "enabledAccounts": "Cuentas habilitadas",
+      "processedAccounts": "Procesadas"
+    },
+    "views": {
+      "accountCoverage": "Cobertura de cuentas",
+      "invalidKeys": "Claves inválidas",
+      "label": "Vista de resultados"
+    }
+  },
+  "searchPlaceholder": "Buscar nombre de clave...",
+  "selectAccount": "Seleccionar cuenta",
+  "selectAccountToContinue": "Selecciona una cuenta arriba antes de ver o crear claves.",
+  "serviceCredential": {
+    "authenticated": "Autenticado",
+    "baseUrl": "URL base:",
+    "copy": "Copiar",
+    "notAuthenticated": "No autenticado",
+    "rotate": "Restablecer",
+    "rotateUnsupported": "Este sitio no admite restablecer la clave de servicio",
+    "rotating": "Restableciendo...",
+    "singleton": "Clave de servicio"
+  },
+  "showingCount_one": "Mostrando {{count}}",
+  "showingCount_many": "Mostrando {{count}}",
+  "showingCount_other": "Mostrando {{count}}",
+  "title": "Administración de claves",
+  "totalKeys_one": "Total {{count}} clave",
+  "totalKeys_many": "Total {{count}} claves",
+  "totalKeys_other": "Total {{count}} claves"
+}

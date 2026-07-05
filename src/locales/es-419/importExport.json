@@ -1,0 +1,192 @@
+{
+  "description": "Respalda y restaura los datos del plugin",
+  "export": {
+    "accountData": "Datos de cuenta",
+    "accountDataDescription": "Exporta solo información de cuentas y datos relacionados",
+    "accountsExported": "Los datos de cuenta se exportaron correctamente",
+    "dataExported": "Los datos se exportaron correctamente",
+    "description": "Exporta datos como archivo JSON para respaldo",
+    "exportFailed": "La exportación falló, inténtalo de nuevo",
+    "fullBackup": "Exportación completa",
+    "fullBackupDescription": "Exporta datos de cuenta y configuración del usuario. Usa exportación/importación manual cuando necesites migrar configuraciones locales del dispositivo en lugar de sincronización WebDAV.",
+    "settingsExported": "La configuración del usuario se exportó correctamente",
+    "title": "Exportar datos",
+    "userSettings": "Configuración del usuario",
+    "userSettingsDescription": "Exporta solo configuración de interfaz y preferencias"
+  },
+  "import": {
+    "backupTime": "Hora del respaldo",
+    "containsAccountData": "Contiene datos de cuenta",
+    "containsApiCredentialProfiles": "Contiene biblioteca de credenciales API",
+    "containsChannelConfigs": "Contiene configuración de canales",
+    "containsUserSettings": "Contiene configuración del usuario",
+    "dataInvalid": "Error de formato de datos, revisa el formato JSON",
+    "dataPreview": "Vista previa de datos",
+    "dataValid": "El formato de datos es correcto",
+    "description": "Restaura datos desde un archivo de respaldo",
+    "downloadImportFailed": "Falló la importación desde WebDAV",
+    "formatError": "Error de formato de datos, revisa el formato JSON",
+    "formatNotCorrect": "El formato de datos no es correcto",
+    "importFailed": "La importación falló: {{error}}",
+    "importSelectedSuccess": "El contenido seleccionado se importó correctamente",
+    "importSuccess": "Los datos se importaron correctamente",
+    "noImportableData": "No se encontraron datos importables",
+    "pasteJsonData": "Pega datos JSON o importa mediante el selector de archivos de arriba...",
+    "replaceWarning": "Algunos datos de este dispositivo se reemplazarán. Exporta un respaldo primero si es necesario.",
+    "sections": {
+      "accounts": {
+        "description": "Incluye cuentas, marcadores y etiquetas.",
+        "title": "Cuentas y marcadores"
+      },
+      "apiCredentialProfiles": {
+        "description": "Incluye URL de API, claves y notas guardadas.",
+        "title": "Biblioteca de credenciales API"
+      },
+      "channelConfigs": {
+        "description": "Incluye reglas de canal como filtros de modelos.",
+        "title": "Configuración de canales"
+      },
+      "label": "Elige qué importar",
+      "preferences": {
+        "description": "Incluye tema, idioma, comportamiento de clic y otras preferencias.",
+        "title": "Configuración del usuario"
+      }
+    },
+    "sectionStrategy": {
+      "accounts": {
+        "merge": "Agregar",
+        "replace": "Reemplazar"
+      },
+      "apiCredentialProfiles": {
+        "merge": "Agregar",
+        "replace": "Reemplazar"
+      },
+      "channelConfigs": {
+        "merge": "Agregar",
+        "replace": "Reemplazar",
+        "skip": "Omitir"
+      },
+      "preferences": {
+        "replace": "Reemplazar",
+        "skip": "Omitir"
+      }
+    },
+    "sectionStrategyHelp": {
+      "accounts": {
+        "merge": "Útil al traer cuentas de otra computadora; las cuentas y marcadores existentes se conservan aquí.",
+        "replace": "Tus cuentas y marcadores actuales coincidirán con la lista del respaldo."
+      },
+      "apiCredentialProfiles": {
+        "merge": "Agrega credenciales API del respaldo; las credenciales existentes se conservan aquí.",
+        "replace": "Tu biblioteca de credenciales API actual coincidirá con el respaldo."
+      },
+      "channelConfigs": {
+        "merge": "Agrega o actualiza reglas por canal; se aplicarán las reglas más recientes del respaldo.",
+        "replace": "Tu configuración de canales actual coincidirá con el respaldo.",
+        "skip": "Conserva las reglas de canal actuales."
+      },
+      "preferences": {
+        "replace": "Reemplaza la configuración actual de este dispositivo con la configuración del respaldo.",
+        "skip": "Conserva el tema, idioma y hábitos actuales de este dispositivo."
+      }
+    },
+    "selectBackupFile": "Seleccionar archivo de respaldo",
+    "selectFileImport": "Selecciona un archivo o ingresa datos para importar",
+    "title": "Importar datos"
+  },
+  "notice": {
+    "importantNotice": "Aviso importante",
+    "importWarning1": "Antes de importar, elige por tipo de datos si quieres agregarlos, reemplazarlos u omitirlos. Las cuentas/credenciales API se agregan de forma predeterminada, mientras que la configuración actual se conserva",
+    "importWarning2": "Se recomienda exportar los datos actuales como respaldo antes de importar",
+    "importWarning3": "Solo admite archivos en formato JSON exportados por esta extensión",
+    "importWarning4": "Los datos importados pueden contener información sensible (tokens de cuenta y claves API). Mantén los respaldos seguros e importa solo desde fuentes confiables"
+  },
+  "title": "Importar/Exportar",
+  "webdav": {
+    "actionState": {
+      "saved": "La configuración está guardada. Probar conexión, subir a WebDAV e importar desde WebDAV usan la configuración guardada actualmente.",
+      "unsaved": "La configuración tiene cambios sin guardar. Probar conexión, subir a WebDAV e importar desde WebDAV guardarán estos cambios primero."
+    },
+    "autoSync": {
+      "actionState": {
+        "saved": "Sincronizar ahora usa la configuración guardada de WebDAV y de sincronización automática.",
+        "unsaved": "La configuración de sincronización automática tiene cambios sin guardar. Sincronizar ahora no los usará; guarda primero la configuración de sincronización automática."
+      },
+      "description": "Configura la sincronización automática para datos compartidos. La configuración local del dispositivo permanece en el dispositivo actual.",
+      "enable": "Habilitar sincronización automática",
+      "enableDesc": "Cuando está habilitada, los datos compartidos se sincronizarán con WebDAV en intervalos definidos.",
+      "interval": "Intervalo de sincronización (segundos)",
+      "intervalDesc": "Define cada cuánto se ejecuta la sincronización automática",
+      "intervalHint": "Aproximadamente {{minutes}} minutos",
+      "lastSync": "Última sincronización",
+      "saveSettings": "Guardar configuración",
+      "strategy": "Estrategia de sincronización",
+      "strategyDesc": "Elige cómo se deben sincronizar los datos",
+      "strategyLocalFirst": "Local primero - los datos locales reemplazan los datos remotos",
+      "strategyMerge": "Fusión inteligente - combina datos locales y remotos según marcas de tiempo",
+      "strategyRemoteFirst": "Remoto primero - los datos remotos sobrescriben los datos locales",
+      "syncNow": "Sincronizar ahora",
+      "title": "Sincronización automática WebDAV"
+    },
+    "configDesc": "Configura WebDAV para sincronizar datos compartidos. Algunas configuraciones locales del dispositivo permanecen en este dispositivo y no se suben ni sobrescriben.",
+    "downloadImport": "Importar desde WebDAV",
+    "downloadImportWithSave": "Guardar e importar desde WebDAV",
+    "encryption": {
+      "decryptAction": "Descifrar e importar",
+      "decryptDialogDesc": "Estos datos de sincronización WebDAV están cifrados. Prueba una contraseña para importarlos.",
+      "decryptDialogTitle": "Descifrar datos de WebDAV",
+      "decryptFailed": "Falló el descifrado",
+      "decryptPassword": "Contraseña",
+      "decryptPrompt": "No se puede descifrar automáticamente. Ingresa tu contraseña.",
+      "enableDesc": "Cifra con una contraseña los datos de sincronización WebDAV subidos al servidor. Necesitarás la misma contraseña para restaurarlos.",
+      "password": "Contraseña de cifrado",
+      "passwordDesc": "Se usa para cifrar los datos subidos a WebDAV y descifrar los datos descargados de WebDAV.",
+      "passwordPlaceholder": "Ingresa la contraseña",
+      "savePassword": "Guardar contraseña para descifrar en el futuro",
+      "title": "Cifrado de datos WebDAV"
+    },
+    "hidePassword": "Ocultar contraseña",
+    "notSynced": "Sin sincronizar",
+    "password": "Contraseña",
+    "rebuildDialog": {
+      "cancel": "Ahora no",
+      "confirm": "Reconstruir desde este dispositivo",
+      "description": "El archivo de respaldo en WebDAV está incompleto. Continuar con la sincronización podría mezclar datos incorrectamente. Puedes crear un nuevo respaldo en la nube desde los datos de este dispositivo.",
+      "fullSelectionNote": "Esta reconstrucción incluirá todos los datos sincronizables solo para esta subida. Tu alcance de sincronización guardado no cambiará.",
+      "title": "Tu respaldo en la nube puede estar dañado",
+      "warningDescription": "Reconstruir reemplazará el respaldo WebDAV con los datos actuales de este dispositivo. Si a este dispositivo le faltan cuentas, marcadores o preferencias, sube los datos desde otro dispositivo con información completa o importa primero un respaldo completo.",
+      "warningTitle": "Asegúrate de que este dispositivo tenga datos completos"
+    },
+    "restorePolicy": {
+      "description": "WebDAV está pensado para sincronización de datos compartidos, no para un respaldo completo del dispositivo. La configuración de conexión/cifrado WebDAV, la selección de sincronización y la configuración de actualización automática de cuentas del dispositivo actual permanecen locales y no se subirán ni sobrescribirán desde WebDAV. Usa exportación/importación manual cuando necesites migrar esas configuraciones locales del dispositivo.",
+      "title": "Aviso de alcance de sincronización"
+    },
+    "saveConfig": "Guardar configuración",
+    "showPassword": "Mostrar contraseña",
+    "syncData": {
+      "accounts": "Cuentas",
+      "apiCredentialProfiles": "Biblioteca de credenciales API",
+      "bookmarks": "Marcadores",
+      "description": "Elige qué dominios de datos compartidos participan en la sincronización WebDAV. Los elementos de preferencia locales del dispositivo, como configuración WebDAV, selección de sincronización y actualización automática de cuentas, permanecen en el dispositivo actual, mientras que las configuraciones de canales siguen sincronizadas por compatibilidad.",
+      "preferences": "Preferencias",
+      "selectionRequired": "Selecciona al menos un dominio de datos para sincronizar",
+      "title": "Datos de sincronización"
+    },
+    "syncError": "Falló la sincronización",
+    "syncFailed": "Falló la sincronización",
+    "syncing": "Sincronizando",
+    "syncSuccess": "Sincronización correcta",
+    "testConnection": "Probar conexión",
+    "testConnectionWithSave": "Guardar y probar conexión",
+    "testFailed": "Falló la prueba de conexión",
+    "testSuccess": "Prueba de conexión correcta",
+    "title": "Sincronización WebDAV",
+    "uploadBackup": "Subir a WebDAV",
+    "uploadBackupWithSave": "Guardar y subir a WebDAV",
+    "uploadFailed": "Falló la subida a WebDAV",
+    "uploadSuccess": "Subido a WebDAV",
+    "username": "Nombre de usuario",
+    "webdavUrl": "URL de WebDAV",
+    "webdavUrlExample": "Por ejemplo: https://dav.example.com/{{filename}} URL completa del archivo o URL del directorio raíz de WebDAV"
+  }
+}

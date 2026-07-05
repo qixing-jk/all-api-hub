@@ -1,0 +1,115 @@
+{
+  "confirmToast": {
+    "body": "¿Quieres abrir el panel de prueba de AI API para comprobar y probar la disponibilidad de la AI API?",
+    "enhancedInfo": "Activado por la autodetección mejorada. Si esto parece incorrecto, repórtalo o desactiva la autodetección mejorada en ajustes.",
+    "feedback": "Reportar problema",
+    "open": "Abrir",
+    "settings": "Abrir ajustes",
+    "title": "URL de AI API y API Key detectadas"
+  },
+  "messages": {
+    "success": {
+      "settingsSaved": "Los ajustes de AI API Check se guardaron."
+    }
+  },
+  "modal": {
+    "actions": {
+      "fetchingModels": "Obteniendo…",
+      "fetchModels": "Obtener modelos",
+      "hideKey": "Ocultar clave",
+      "openApiProfiles": "Abrir biblioteca de credenciales API",
+      "retry": "Reintentar",
+      "running": "Probando…",
+      "runOne": "Probar",
+      "saveToProfiles": "Guardar en biblioteca de credenciales API",
+      "saving": "Guardando…",
+      "showKey": "Mostrar clave",
+      "stopping": "Deteniendo…",
+      "stopTest": "Detener prueba",
+      "test": "Probar"
+    },
+    "candidates": {
+      "apiKey": "Clave candidata {{index}}"
+    },
+    "errors": {
+      "fetchModelsFailed": "No se pudieron obtener los modelos.",
+      "missingBaseUrlOrKey": "Primero proporciona la Base URL y la API key.",
+      "runProbeFailed": "La prueba falló.",
+      "saveToProfilesFailed": "No se pudo guardar en la biblioteca de credenciales API."
+    },
+    "fields": {
+      "apiKey": "API key",
+      "apiType": "Tipo de API",
+      "baseUrl": "Base URL",
+      "expiresAt": "Fecha de expiracion",
+      "modelId": "Model ID",
+      "notes": "Notas",
+      "tags": "Etiquetas"
+    },
+    "hints": {
+      "expiresAt": "Opcional. Registra cuándo se espera que expire esta clave.",
+      "saveWithoutTest": "Consejo: puedes guardar una vez que se proporcionen Base URL + API key (no necesitas probar ni obtener modelos primero). La prueba es opcional y solo ayuda a verificar la disponibilidad.",
+      "tags": "Opcional. Se comparten con las etiquetas globales de cuentas y marcadores."
+    },
+    "history": {
+      "empty": "Aún no hay historial de Base URL",
+      "label": "Base URLs recientes",
+      "remove": "Quitar del historial de Base URL",
+      "trigger": "Elegir del historial de Base URL"
+    },
+    "messages": {
+      "savedToProfiles": "{{name}} se guardó en la biblioteca de credenciales API.",
+      "stoppingTest": "Deteniendo la prueba. La solicitud actual se interrumpirá tan pronto como sea posible.",
+      "testStopped": "Prueba detenida. Se conservaron los resultados completados y los elementos no iniciados no continuarán."
+    },
+    "optionalProfileFields": {
+      "hasInput": "Detalles opcionales de guardado agregados",
+      "hint": "Las etiquetas, notas y fecha de expiracion no afectan los resultados de prueba.",
+      "title": "Opciones de guardado (opcional)"
+    },
+    "placeholders": {
+      "notes": "Notas opcionales",
+      "tags": "Seleccionar etiquetas"
+    },
+    "privacyHint": "Las API Keys se considerarán información sensible: se ocultan de forma predeterminada y no se almacena nada a menos que elijas guardar en la biblioteca de credenciales API.",
+    "probes": {
+      "notRunYet": "Aún no ejecutado"
+    },
+    "sourceText": {
+      "label": "Texto del cual extraer",
+      "placeholder": "Pega aquí una Base URL y API key, o usa el menú contextual para rellenar desde la selección."
+    },
+    "title": "Prueba de disponibilidad de funcionalidad de AI API"
+  },
+  "settings": {
+    "autoDetect": {
+      "enable": "Habilitar autodetección",
+      "enableDesc": "Cuando está habilitada, la extensión puede detectar credenciales a partir de acciones de copiado y pedirá confirmación antes de abrir el modal.",
+      "enhanced": {
+        "enable": "Habilitar autodetección mejorada",
+        "enableDesc": "Reconoce dominios sueltos, formatos de clave no estándar y claves mezcladas con caracteres inválidos en contenido copiado. Las coincidencias mejoradas muestran un aviso en el modal y se pueden desactivar rápidamente."
+      },
+      "whitelist": {
+        "invalidMore": "…y más",
+        "invalidTitle": "Patrones inválidos",
+        "patterns": "Patrones de lista permitida de URL",
+        "patternsDesc": "Un patrón RegExp de JavaScript por línea. Se aplica coincidencia sin distinguir mayúsculas/minúsculas. Los patrones inválidos se ignoran (se tratan como no coincidentes).",
+        "patternsPlaceholder": "^https://example\\.com/console"
+      }
+    },
+    "contextMenu": {
+      "enable": "Mostrar en el menú contextual del navegador",
+      "enableDesc": "Agrega un elemento “AI API Check” al menú contextual del navegador."
+    },
+    "description": "El disparador manual del menú contextual siempre está disponible. La autodetección es opcional y solo se ejecuta en páginas permitidas. Las API keys extraídas no se guardan de forma predeterminada.",
+    "keyCleanup": {
+      "invalidMore": "…y más",
+      "invalidTitle": "Patrones de limpieza inválidos",
+      "patterns": "Patrones de limpieza de API key",
+      "patternsDesc": "Usa esto cuando las claves copiadas incluyan etiquetas, corchetes o separadores adicionales. Agrega una expresión regular por línea; las reglas inválidas se muestran antes de guardar.",
+      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
+      "save": "Guardar patrones de limpieza"
+    },
+    "title": "Prueba de disponibilidad de funcionalidad de Web AI API"
+  }
+}

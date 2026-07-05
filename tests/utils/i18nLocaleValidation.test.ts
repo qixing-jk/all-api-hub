@@ -10,6 +10,7 @@ import {
 
 const REPO_ROOT = process.cwd()
 const LOCALES_DIR = path.join(REPO_ROOT, "src", "locales")
+const MANIFEST_LOCALES_DIR = path.join(REPO_ROOT, "src", "public", "_locales")
 const SRC_DIR = path.join(REPO_ROOT, "src")
 const PLURAL_CATEGORIES_BY_LANGUAGE = Object.fromEntries(
   SUPPORTED_UI_LANGUAGES.map((language) => [
@@ -503,5 +504,22 @@ describe("i18n locale validation", () => {
     }
 
     expect(missingKeys).toEqual([])
+  })
+
+  it("keeps the generic Spanish manifest locale aligned with Latin American Spanish", async () => {
+    const genericSpanishManifest = JSON.parse(
+      await fs.readFile(
+        path.join(MANIFEST_LOCALES_DIR, "es", "messages.json"),
+        "utf8",
+      ),
+    )
+    const latinAmericanSpanishManifest = JSON.parse(
+      await fs.readFile(
+        path.join(MANIFEST_LOCALES_DIR, "es_419", "messages.json"),
+        "utf8",
+      ),
+    )
+
+    expect(genericSpanishManifest).toEqual(latinAmericanSpanishManifest)
   })
 })

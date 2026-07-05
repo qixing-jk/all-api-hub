@@ -16,5 +16,6 @@ for (const path in modules) {
  * Convert i18next language codes into dayjs-compatible locale names.
  */
 export function mapToDayjsLocale(lng: string): string {
-  return lng.toLowerCase().replace("_", "-")
+  const normalized = lng.toLowerCase().replace("_", "-")
+  return normalized === "es-419" ? "es" : normalized
 }

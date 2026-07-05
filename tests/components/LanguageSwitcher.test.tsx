@@ -279,6 +279,21 @@ describe("LanguageSwitcher", () => {
     })
   })
 
+  it("shows and persists latin american spanish from the select variant", async () => {
+    render(<LanguageSwitcher variant="select" />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:appearanceLanguage.switcher.options.es-419.name",
+      }),
+    )
+
+    expect(changeLanguageMock).toHaveBeenCalledWith("es-419")
+    await waitFor(() => {
+      expect(setLanguageMock).toHaveBeenCalledWith("es-419")
+    })
+  })
+
   it("renders the icon-dropdown trigger label and changes language from the radio menu", () => {
     render(<LanguageSwitcher variant="icon-dropdown" />)
 

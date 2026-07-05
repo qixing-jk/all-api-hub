@@ -1,0 +1,284 @@
+{
+  "accountGroupFilterAllIncluded": "Incluir todos los grupos para esta cuenta",
+  "accountGroupFilterClearAll": "Borrar todo",
+  "accountGroupFilterDescription": "Excluye grupos especificos de la cuenta de la comparación de precios. De forma predeterminada, cada cuenta conserva todos sus grupos disponibles.",
+  "accountGroupFilterNoGroups": "No hay grupos de cuenta disponibles para filtrar en este momento.",
+  "accountGroupFilterNoGroupsIncluded": "No hay grupos incluidos para esta cuenta",
+  "accountGroupFilterResetAll": "Restablecer todo",
+  "accountGroupFilterSelectAll": "Seleccionar todo",
+  "accountGroupFilterSelectedSummary": "{{selected}} seleccionados / {{total}}",
+  "accountGroupFilterTitle": "Filtro de grupos de cuenta",
+  "accountGroupFilterTrigger": "Filtrar grupos de cuenta",
+  "accountGroupFilterTriggerCount_one": "{{count}} cuenta filtrada",
+  "accountGroupFilterTriggerCount_many": "{{count}} cuentas filtradas",
+  "accountGroupFilterTriggerCount_other": "{{count}} cuentas filtradas",
+  "accountSummary": {
+    "failureReasons": {
+      "invalidFormat": "La lista de modelos devolvió un formato no compatible.",
+      "unknown": "Error desconocido"
+    },
+    "incompatible": "formato incompatible",
+    "loadFailed": "error al cargar",
+    "loading": "cargando",
+    "models_one": "{{count}} modelo",
+    "models_many": "{{count}} modelos",
+    "models_other": "{{count}} modelos",
+    "partialLoadFailed": "parcial",
+    "partialLoadFailedReason": "No se pudieron cargar algunas claves. Primer error: {{reason}}",
+    "title": "Resumen de cuentas"
+  },
+  "actions": {
+    "copyModelName": "Copiar nombre del modelo",
+    "copySiteUrl": "Copiar URL del sitio",
+    "keyForModel": "Clave para este modelo",
+    "openSelectedAccountKeys": "Administrar claves de cuenta",
+    "openSite": "Abrir sitio",
+    "verifyApi": "Verificar API",
+    "verifyCliSupport": "Verificar compatibilidad con CLI"
+  },
+  "aihubmixCatalogFallbackNotice": {
+    "description": "No se pudo confirmar el alcance real de modelos disponibles de esta cuenta, por lo que se muestra el catálogo completo de modelos de AIHubMix. Es posible que algunos modelos no se puedan llamar con esta cuenta; usa los permisos de la cuenta del sitio y los resultados reales de verificación como fuente final de verdad.",
+    "title": "Se recurrió al catálogo completo de modelos de AIHubMix"
+  },
+  "allAccounts": "Todas las cuentas",
+  "allBillingModes": "Todos los modos de facturación",
+  "allGroups": "Todos los grupos",
+  "allProviders": "Todos los proveedores",
+  "availableGroups": "Grupos disponibles",
+  "batchVerify": {
+    "actions": {
+      "open": "Prueba por lotes",
+      "rerun": "Ejecutar lote de nuevo",
+      "start": "Iniciar prueba por lotes",
+      "stop": "Detener prueba"
+    },
+    "apiType": {
+      "auto": "Detección automática",
+      "label": "Tipo de API"
+    },
+    "counts": {
+      "fail": "Fallidos {{value}}",
+      "pass": "Aprobados {{value}}",
+      "skipped": "Omitidos {{value}}",
+      "total": "Total {{value}}"
+    },
+    "idleHint": "Esto verificara por lotes los modelos filtrados actualmente con los elementos de prueba seleccionados.",
+    "messages": {
+      "noApplicableProbes": "Ninguno de los elementos de prueba seleccionados aplica a este modelo.",
+      "noCompatibleRuntimeKey": "No se encontró ninguna clave compatible habilitada para este modelo.",
+      "notSelected": "Este modelo no fue seleccionado, por lo que se omitió en esta ejecución por lotes.",
+      "pending": "Esperando prueba",
+      "probeSummary_one": "Se ejecutó {{count}} elemento, aprobados {{pass}}, fallidos {{fail}}, no compatibles {{unsupported}}",
+      "probeSummary_many": "Se ejecutaron {{count}} elementos, aprobados {{pass}}, fallidos {{fail}}, no compatibles {{unsupported}}",
+      "probeSummary_other": "Se ejecutaron {{count}} elementos, aprobados {{pass}}, fallidos {{fail}}, no compatibles {{unsupported}}",
+      "stopped": "Se detuvo antes de iniciar esta prueba de modelo.",
+      "unexpected": "La prueba falló"
+    },
+    "modelSelection": {
+      "clearAll": "Borrar selección",
+      "label": "Modelos a ejecutar",
+      "noneSelected": "Selecciona al menos un modelo para probar.",
+      "selectAll": "Seleccionar todos los modelos",
+      "selectedSummary_one": "{{selected}} modelo seleccionado / {{total}}",
+      "selectedSummary_many": "{{selected}} modelos seleccionados / {{total}}",
+      "selectedSummary_other": "{{selected}} modelos seleccionados / {{total}}",
+      "toggle": "Seleccionar modelo {{model}}"
+    },
+    "probes": {
+      "label": "Elementos de prueba",
+      "noneSelected": "Selecciona al menos un elemento de prueba."
+    },
+    "runtimeKeyUsed": "Clave: {{name}}",
+    "status": {
+      "fail": "Falló",
+      "pass": "Aprobado",
+      "pending": "Pendiente",
+      "running": "Probando",
+      "skipped": "Omitido"
+    },
+    "subtitle_one": "{{count}} modelo filtrado",
+    "subtitle_many": "{{count}} modelos filtrados",
+    "subtitle_other": "{{count}} modelos filtrados",
+    "summary_one": "Completado {{completed}} / {{count}} modelo, aprobados {{pass}}, fallidos {{fail}}, omitidos {{skipped}}",
+    "summary_many": "Completados {{completed}} / {{count}} modelos, aprobados {{pass}}, fallidos {{fail}}, omitidos {{skipped}}",
+    "summary_other": "Completados {{completed}} / {{count}} modelos, aprobados {{pass}}, fallidos {{fail}}, omitidos {{skipped}}",
+    "title": "Prueba por lotes de modelos",
+    "warning": "La prueba por lotes ejecuta los elementos seleccionados según el tipo de API resuelto de cada modelo. Los elementos no aplicables se omiten automáticamente. Los resultados son orientativos; usa llamadas reales de herramientas para la confirmación final."
+  },
+  "billingMode": "Modo de facturación",
+  "clickSwitchGroup": "Haz clic para cambiar al grupo {{group}}",
+  "collapseDetails": "Contraer detalles",
+  "comparison": {
+    "cta": "Comparar precios",
+    "tooltip": "Borra los filtros actuales, cambia a todas las cuentas y ordena cada modelo por el precio más bajo."
+  },
+  "copyAllNames": "Copiar todos los nombres de modelos",
+  "description": "Ver y administrar modelos de IA disponibles",
+  "detailedPricing": "Precios detallados",
+  "displayOptions": "Opciones de visualizacion:",
+  "endpointType": "Tipo de endpoint",
+  "endpointTypes": "Tipos de endpoint",
+  "estimatedPrice": "Estimado",
+  "estimatedPriceTitle": "Estimado a partir de la tabla oficial de precios y la tarifa de grupo de Sub2API de esta clave.",
+  "expandDetails": "Expandir detalles",
+  "fallbackSourceNotice": {
+    "description": "Este catálogo se carga actualmente mediante una alternativa con clave de cuenta, por lo que solo admite descubrimiento y verificación de modelos. Actualizar datos reintentará la ruta directa de la cuenta.",
+    "title": "Catalogo alternativo con clave de cuenta"
+  },
+  "groupRatioTooltip": "Ratio del grupo {{group}}: {{ratio}}x",
+  "groupSelectionHint": "Deja esto vacío para comparar entre todos los grupos; el ordenamiento por precio usa el mejor precio dentro del conjunto de grupos seleccionado",
+  "input": "Entrada:",
+  "input1MTokens": "Entrada (1M tokens)",
+  "keyDialog": {
+    "copyFailed": "Error al copiar",
+    "createAnotherKey": "Crear otra clave",
+    "createCustomKey": "Crear clave personalizada",
+    "createDisabledTitle": "Creación de claves no disponible",
+    "createErrorTitle": "No se pudo crear la clave",
+    "createFailed": "Creación fallida: {{error}}",
+    "createGroupAutoSelectedHint": "Este modelo solo admite este grupo. Se usará automáticamente al crear la clave.",
+    "createGroupHint": "Selecciona un grupo. Solo se muestran los grupos que admiten este modelo.",
+    "createGroupLabel": "Grupo para la nueva clave",
+    "createGroupPlaceholder": "Seleccionar un grupo",
+    "createGroupRequired": "Selecciona un grupo para crear la clave.",
+    "createKey": "Creación rápida",
+    "createNotSupported": "La creación de claves no está disponible para esta cuenta.",
+    "createSuccess": "Clave creada",
+    "getFailed": "No se pudieron cargar las claves",
+    "ineligible": {
+      "accountDisabled": "Esta cuenta está deshabilitada.",
+      "missingAuth": "Esta cuenta no tiene autenticación configurada.",
+      "missingCredentials": "A esta cuenta le faltan credenciales requeridas.",
+      "readOnlyRuntimeKeys": "Esta cuenta puede leer claves existentes, pero no puede crear nuevas claves de API."
+    },
+    "keyCopied": "Clave copiada",
+    "loadFailed": "No se pudieron cargar las claves: {{error}}",
+    "loading": "Cargando claves...",
+    "noCompatibleDescription": "Crea una clave para este modelo o ajusta los limites de modelos de una clave existente.",
+    "noCompatibleFoundAfterCreate": "La clave se creó, pero no se encontró ninguna clave compatible para {{modelId}}.",
+    "noCompatibleTitle": "No hay claves compatibles para {{modelId}}",
+    "openKeyManagement": "Abrir gestión de claves para {{accountName}}",
+    "selectHint": "Selecciona qué clave quieres usar para este modelo.",
+    "selectLabel": "Clave compatible",
+    "selectPlaceholder": "Seleccionar una clave",
+    "subtitle": "Cuenta: {{accountName}} · Modelo: {{modelId}}",
+    "title": "Clave para modelo"
+  },
+  "lowestPrice": "Precio más bajo",
+  "lowestPriceWithinAccountFilters": "Esta fila tiene el precio más bajo dentro de los filtros de cuenta actuales y el mismo modo de facturación.",
+  "lowestPriceWithinBillingMode": "Esta fila tiene el precio más bajo dentro del mismo modo de facturación.",
+  "messages": {
+    "copyFailed": "Error al copiar",
+    "modelNameCopied": "Nombre del modelo copiado",
+    "modelNamesCopied": "Nombres de modelos copiados",
+    "siteUrlCopied": "URL del sitio copiada"
+  },
+  "noMatchingModels": "No se encontraron modelos coincidentes",
+  "noSourcesDescription": "Agrega una cuenta de sitio o una credencial de API antes de ver la lista de modelos.",
+  "noSourcesTitle": "Aún no hay fuentes de modelos",
+  "optimalGroup": "Mejor grupo: {{group}}",
+  "optimalGroupLowestPriceWithinAccountFilters": "Mejor grupo dentro del filtro actual de grupos de cuenta: {{group}}. Esta fila también tiene el precio más bajo dentro del mismo modo de facturación.",
+  "optimalGroupLowestPriceWithinBillingMode": "Mejor grupo dentro de los grupos seleccionados: {{group}}. Esta fila también tiene el precio más bajo dentro del mismo modo de facturación.",
+  "optimalGroupWithinAccountFilters": "Mejor grupo dentro del filtro actual de grupos de cuenta: {{group}}",
+  "optimalGroupWithinSelectedGroups": "Mejor grupo dentro de los grupos seleccionados: {{group}}",
+  "output": "Salida:",
+  "output1MTokens": "Salida (1M tokens)",
+  "perCall": "Por llamada:",
+  "pleaseSelectFirst": "Primero selecciona una cuenta o credencial de API para ver la lista de modelos",
+  "pleaseSelectSource": "Selecciona una fuente",
+  "pricingDescription": "La información de precios proviene de la interfaz de API proporcionada por el sitio, y el costo real depende de los precios publicados por cada sitio. El precio de los modelos de pago por uso es el costo por 1M tokens, y los modelos de pago por llamada muestran el costo por llamada",
+  "pricingNote": "Nota sobre precios de modelos",
+  "profileSourceNotice": {
+    "description": "Las credenciales de API guardadas solo proporcionan descubrimiento y verificación de modelos. Los precios, filtros de grupo, resúmenes de cuenta y compatibilidad de claves no están disponibles para esta fuente.",
+    "title": "Catalogo de modelos respaldado por perfil"
+  },
+  "providerTabs": {
+    "scrollLeft": "Desplazar pestañas de proveedor a la izquierda",
+    "scrollRight": "Desplazar pestañas de proveedor a la derecha"
+  },
+  "ratio": "Ratio:",
+  "realAmount": "Monto real de recarga",
+  "refreshData": "Actualizar datos",
+  "runtimeKeyFallbackSourceNotice": {
+    "description": "Este catálogo se carga mediante una clave existente para esta cuenta, por lo que solo admite descubrimiento y verificación de modelos. Esta cuenta no puede crear nuevas claves de API aquí; Actualizar datos reintentará la ruta directa de la cuenta.",
+    "title": "Catalogo de modelos con clave de cuenta"
+  },
+  "searchModels": "Buscar modelos",
+  "searchPlaceholder": "Ingresa nombre o descripción del modelo...",
+  "selectSource": "Seleccionar fuente",
+  "selectSourceToContinue": "Selecciona una fuente arriba antes de ver la lista de modelos.",
+  "showing_one": "Mostrando {{count}} modelo",
+  "showing_many": "Mostrando {{count}} modelos",
+  "showing_other": "Mostrando {{count}} modelos",
+  "showRatio": "Mostrar ratio",
+  "sortBy": "Ordenar por",
+  "sortOptions": {
+    "default": "Orden predeterminado",
+    "modelCheapestFirst": "Más barato primero por modelo",
+    "priceAsc": "Precio: de menor a mayor",
+    "priceDesc": "Precio: de mayor a menor",
+    "verificationLatencyAsc": "Latencia de prueba: de menor a mayor"
+  },
+  "sourceLabels": {
+    "profileBadge": "Perfil: {{name}} · {{host}}",
+    "profileOption": "Credencial de API: {{name}} · {{host}}"
+  },
+  "status": {
+    "dataLoaded": "Datos de modelos cargados correctamente",
+    "fallback": {
+      "catalogLoadFailedTitle": "No se pudieron cargar modelos con la clave seleccionada",
+      "description": "Si el endpoint de precios de la cuenta no está disponible temporalmente, puedes cargar un catálogo solo de exploración con una de las claves de esta cuenta.",
+      "loadingKeys": "Cargando claves de cuenta...",
+      "loadKeysFailed": "No se pudieron cargar las claves de cuenta: {{errorMessage}}",
+      "loadKeysFailedFallback": "No se pudieron cargar las claves de cuenta. Inténtalo de nuevo más tarde.",
+      "loadModelsFailedFallback": "No se pudieron cargar modelos con la clave seleccionada. Inténtalo de nuevo más tarde.",
+      "loadWithKey": "Cargar con la clave seleccionada",
+      "noKeysDescription": "Actualmente no hay claves habilitadas disponibles en esta cuenta para la carga alternativa.",
+      "noKeysTitle": "No se encontraron claves disponibles",
+      "reloadKeys": "Recargar claves",
+      "retryLoadWithKey": "Reintentar clave seleccionada",
+      "runtimeKeysLoadFailedTitle": "No se pudieron cargar las claves de cuenta",
+      "selectHint": "Esta cuenta tiene varias claves elegibles. Elige la que quieres usar antes de cargar el catálogo alternativo.",
+      "selectLabel": "Clave para carga alternativa",
+      "selectPlaceholder": "Seleccionar una clave",
+      "title": "Cargar modelos con una clave de cuenta"
+    },
+    "formatNotStandard": "El formato de datos de modelos del sitio actual no cumple el estándar; revisa manualmente la página de precios del sitio",
+    "genericLoadFailedTitle": "No se pudieron cargar los datos de modelos",
+    "goToSitePricing": "Ir al sitio para ver la información de precios",
+    "incompatibleDesc": "La interfaz de datos de modelos del sitio actual no cumple con la especificacion estándar, posiblemente por desarrollo secundario del sitio. Por ahora, la extensión no puede analizar la información de precios de modelos de este sitio",
+    "incompatibleFormat": "Formato de datos incompatible",
+    "loadFailed": "No se pudieron cargar los datos de modelos; inténtalo de nuevo más tarde",
+    "loadFailedWithReason": "No se pudieron cargar los datos de modelos: {{reason}}",
+    "loading": "Cargando datos de modelos...",
+    "profileLoadFailed": "No se pudieron cargar modelos para esta credencial de API: {{errorMessage}}",
+    "profileLoadFailedTitle": "No se pudieron cargar modelos para esta credencial de API",
+    "retryLoad": "Reintentar carga",
+    "runtimeKeyScopedCatalogDescription": "Esta cuenta de origen no proporciona una lista de modelos a nivel de cuenta. La extensión obtiene los modelos disponibles para esta cuenta mediante sus claves de API.",
+    "runtimeKeyScopedCatalogFallbackDescription": "Selecciona una clave de API. Si solo existe una clave disponible, la extensión la usará automáticamente.",
+    "runtimeKeyScopedCatalogFallbackTitle": "Obtener modelos mediante una clave",
+    "runtimeKeyScopedCatalogTitle": "Obteniendo la lista de modelos mediante una clave de API"
+  },
+  "title": "Lista de modelos",
+  "totalModels_one": "Total {{count}} modelo",
+  "totalModels_many": "Total {{count}} modelos",
+  "totalModels_other": "Total {{count}} modelos",
+  "unavailable": "No disponible",
+  "unavailablePriceReasons": {
+    "keyGroupUnknown": "Los precios no están disponibles porque no se pudo resolver el grupo de Sub2API de esta clave.",
+    "modelListOnly": "Los modelos están disponibles para esta clave. Los precios no están disponibles.",
+    "officialPriceMissing": "Este modelo no está en la tabla de precios.",
+    "pricingSourceUnavailable": "Los datos de precios no están disponibles para esta fuente."
+  },
+  "userGroup": "Grupo de usuario",
+  "verificationResults": {
+    "all": "Todos los resultados de prueba",
+    "filters": {
+      "fail": "Fallidos",
+      "pass": "Aprobados",
+      "unverified": "Sin probar"
+    },
+    "label": "Resultado de prueba",
+    "none": "No hay resultados de prueba seleccionados"
+  }
+}

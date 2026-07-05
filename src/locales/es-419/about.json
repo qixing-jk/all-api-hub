@@ -1,0 +1,73 @@
+{
+  "copyrightAck": "Derechos de autor y agradecimientos",
+  "devMaintenance": "Desarrollo y mantenimiento",
+  "features": "Funciones",
+  "feedbackSection": {
+    "bugReport": {
+      "button": "Abrir reporte de error",
+      "description": "Reporta comportamientos rotos, errores o resultados inesperados con la plantilla de reporte de errores."
+    },
+    "community": {
+      "button": "Abrir centro de la comunidad",
+      "description": "Consulta el código QR de WeChat, el grupo de QQ, la comunidad multilingüe de Discord, el grupo de Telegram y otros canales para preguntas, conversaciones de configuración y solución de problemas."
+    },
+    "discussion": {
+      "button": "Abrir debates",
+      "description": "Haz preguntas, compara configuraciones o inicia una conversación más amplia de la comunidad en GitHub Discussions."
+    },
+    "featureRequest": {
+      "button": "Abrir solicitud de función",
+      "description": "Comparte una idea de mejora o una solicitud de flujo de trabajo mediante la plantilla de solicitud de funciones."
+    },
+    "languageRequest": {
+      "button": "Abrir solicitud de idioma",
+      "description": "Pídenos que agreguemos soporte para un nuevo idioma de interfaz en All API Hub."
+    },
+    "title": "Comentarios y soporte"
+  },
+  "githubDesc": "Ver el código fuente, enviar issues o participar en el desarrollo del proyecto",
+  "githubRepo": "Repositorio de GitHub",
+  "homepage": "Página principal del proyecto",
+  "homepageDesc": "Ver documentación detallada, guías de usuario y más información",
+  "implementedFeatures": "Funciones implementadas",
+  "intro": "All API Hub es una extensión de navegador para administrar sitios relay de terceros compatibles con New API y tu propia instancia de New API. Centraliza el monitoreo de cuentas y saldos, el ordenamiento inteligente y la detección de sitios, y ofrece automatizaciones como actualización automática y omisión de firewall con ventana temporal. Para New API autohospedado, también ofrece administración de canales y sincronización de lista de modelos, además de integrarse con CLIProxyAPI, respaldo WebDAV y herramientas de importación/exportación.",
+  "privacyText": "Los datos sensibles, como cuentas, claves de API, cookies, saldos, contenido de solicitudes y entradas del usuario, permanecen locales de forma predeterminada. Los análisis anónimos opcionales del producto se usan solo para priorizar correcciones de problemas comunes, mejorar los flujos principales y la compatibilidad, y reducir fricciones innecesarias; no recopilan esos datos sensibles.",
+  "privacyTitle": "Protección de privacidad",
+  "projectLinks": "Enlaces del proyecto",
+  "releaseUpdate": {
+    "currentVersion": "Versión actual: v{{version}}",
+    "latestVersion": "Última estable: v{{version}}",
+    "title": "Actualizaciones de versión"
+  },
+  "starRepo": "Darle estrella",
+  "stores": {
+    "chrome": "Chrome Web Store",
+    "edge": "Microsoft Edge Add-ons",
+    "firefox": "Firefox Add-ons"
+  },
+  "storesSection": {
+    "download": {
+      "button": "Abrir tienda",
+      "description": "Descargar desde {{store}}."
+    },
+    "review": {
+      "button": "Calificar en {{store}}",
+      "description": "Si All API Hub te ayuda, una reseña positiva en {{store}} ayuda mucho.",
+      "title": "Dejar una reseña positiva"
+    },
+    "title": "Calificar y descargar"
+  },
+  "techStack": {
+    "headlessui": "Componentes de UI sin estilos",
+    "react": "Biblioteca de interfaz de usuario",
+    "tailwindcss": "Framework CSS atómico",
+    "title": "Stack técnico",
+    "typescript": "JavaScript con seguridad de tipos",
+    "wxt": "Framework de desarrollo de extensiones de navegador"
+  },
+  "thanksDesc": "Gracias a todos los desarrolladores que han contribuido a la comunidad open source; el desarrollo de este plugin se beneficia de estos excelentes proyectos y herramientas open source",
+  "title": "Acerca de",
+  "upcomingFeatures": "Próximas funciones",
+  "version": "Versión:",
+  "visitHomepage": "Visitar página principal"
+}

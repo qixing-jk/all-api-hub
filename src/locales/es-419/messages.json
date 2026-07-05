@@ -1,0 +1,237 @@
+{
+  "accountOperations": {
+    "autoProvisionAlreadyHad": "{{accountName}} ya tiene una clave de API. Se omitió la creación automática.",
+    "autoProvisionCreated": "Se creó una clave de API predeterminada para {{accountName}}.",
+    "autoProvisionFailed": "La cuenta se guardó, pero no se pudo crear automáticamente una clave de API. Puedes usar “{{actionLabel}}” en Gestión de claves para reintentar.",
+    "checkingApiKeys": "Comprobando clave de API...",
+    "createTokenFailed": "No se pudo crear el token de API",
+    "tokenNotFound": "No se pudo crear ni encontrar un token de API"
+  },
+  "aihubmix": {
+    "createRequiresOneTimeKeyDialog": "Las claves de AIHubMix solo se pueden ver una vez. Crea la clave manualmente en Gestión de claves y guarda la clave completa de inmediato.",
+    "oneTimeKeyPromptCancelled": "Cuenta guardada. Puedes crear una clave de API de AIHubMix manualmente en Gestión de claves más tarde.",
+    "oneTimeKeyUnavailableAfterCreate": "La cuenta se guardó, pero no se pudo recuperar la clave de API completa de AIHubMix. Las claves de AIHubMix solo se muestran una vez después de crearlas; crea una clave nueva en Gestión de claves y guarda la clave completa de inmediato."
+  },
+  "autodetect": {
+    "currentTabNeedsReload": "Es posible que esta página se haya abierto antes de instalar o actualizar la extensión, por lo que la extensión todavía no puede leer datos de esta pestaña. Recarga la página actual y vuelve a intentar la detección automática.",
+    "failed": "La detección automática falló: {{error}}",
+    "forbidden": "Acceso denegado. Confirma si el firewall del sitio web está bloqueando la solicitud",
+    "loginThisSite": "Iniciar sesión en este sitio",
+    "networkError": "Falló la conexión de red; revisa tu conexión e inténtalo de nuevo",
+    "notFound": "Recurso no encontrado. Confirma si la dirección del sitio ingresada es correcta",
+    "notLoggedIn": "No has iniciado sesión en el sitio actual, o la información de inicio de sesión expiró. No se puede agregar automáticamente. Revisa la documentación de ayuda o haz clic para iniciar sesión primero",
+    "serverError": "Error del servidor. Inténtalo de nuevo más tarde",
+    "timeout": "Tiempo de espera agotado en la detección automática; intenta agregar manualmente",
+    "unexpectedData": "La detección automática falló; el sitio devolvió datos inesperados. Ingresa la información manualmente o asegúrate de haber iniciado sesión en el sitio de destino"
+  },
+  "axonhub": {
+    "channelExists": "El canal {{channelName}} ya existe; no hace falta importarlo de nuevo",
+    "configMissing": "Primero configura la dirección de AxonHub, el correo de administrador y la contraseña en la configuración básica",
+    "deleteFailed": "No se pudo eliminar el canal de AxonHub",
+    "importFailed": "La importación falló; ocurrió un error desconocido",
+    "importSuccess": "Se importó correctamente el nuevo canal {{channelName}}",
+    "modelsMissing": "Proporciona al menos un modelo",
+    "noChannelsToSync": "No hay canales para sincronizar",
+    "unsupportedModelSync": "AxonHub no admite la sincronización de modelos de sitios administrados en esta versión"
+  },
+  "background": {
+    "cannotCreateWindow": "No se puede crear la ventana",
+    "cannotCreateWindowOrTab": "No se puede crear la ventana ni obtener la pestaña",
+    "incognitoAccessRequired": "Se requiere acceso de incógnito para usar una ventana temporal privada. Habilita \"Permitir en incógnito\" para esta extensión y vuelve a intentarlo.",
+    "invalidFetchRequest": "Solicitud fetch no válida",
+    "pageLoadTimeout": "Tiempo de carga de la página agotado",
+    "windowCreationUnavailable": "Este flujo necesita que el navegador abra una ventana temporal, pero la creación de ventanas no está disponible. Permite ventanas creadas por extensiones o reintenta en un navegador que las admita.",
+    "windowNotFound": "No se encontró la ventana o pestaña"
+  },
+  "ccswitch": {
+    "attemptingRedirect": "Intentando redirigir a CC Switch",
+    "invalidApp": "Aplicación de destino de CC Switch no compatible",
+    "invalidEndpoint": "Endpoint de API no válido o faltante",
+    "invalidHomepage": "URL de página principal no válida o faltante",
+    "missingCredentials": "Falta información requerida de cuenta o clave",
+    "unableToOpen": "No se puede abrir CC Switch; asegúrate de que esté instalado"
+  },
+  "cherryStudio": {
+    "attemptingRedirect": "Intentando redirigir a Cherry Studio",
+    "missingCredentials": "Falta información requerida de cuenta o clave",
+    "unableToOpen": "No se puede abrir; asegúrate de que Cherry Studio esté instalado"
+  },
+  "claudecodehub": {
+    "configMissing": "Primero configura la dirección de Claude Code Hub y el token de administrador en la configuración básica",
+    "deleteFailed": "No se pudo eliminar el proveedor de Claude Code Hub",
+    "importFailed": "La importación falló; ocurrió un error desconocido",
+    "modelsMissing": "Proporciona al menos un modelo",
+    "noChannelsToSync": "No hay proveedores para sincronizar",
+    "realProviderKeyRequired": "Claude Code Hub requiere una clave real del proveedor upstream. Las claves vacías o enmascaradas no se pueden usar para crear proveedores.",
+    "unsupportedModelSync": "Claude Code Hub no admite la sincronización de modelos de sitios administrados en esta versión",
+    "updateFailed": "No se pudo actualizar el proveedor de Claude Code Hub"
+  },
+  "claudeCodeRouter": {
+    "configMissing": "Primero configura la URL base de Claude Code Router en la configuración",
+    "importFailed": "No se pudo importar el proveedor a Claude Code Router",
+    "importSuccess": "Se importó correctamente el proveedor {{name}} a Claude Code Router",
+    "modelsMissing": "Proporciona al menos un modelo",
+    "updateSuccess": "Se actualizó correctamente el proveedor {{name}} de Claude Code Router"
+  },
+  "cliproxy": {
+    "configMissing": "Primero configura la URL base y la clave de la API de administración de CLIProxyAPI en la configuración",
+    "importFailed": "No se pudo importar el proveedor a CLIProxyAPI",
+    "importSuccess": "Se importó correctamente el proveedor {{name}} a CLIProxyAPI",
+    "managementApiConnectionSuccess": "La conexión con la API de administración de CLIProxyAPI se realizó correctamente",
+    "managementApiForbidden": "CLIProxyAPI rechazó la solicitud. Revisa si la clave de administración se ingresó incorrectamente demasiadas veces o si el acceso está restringido en el servidor.",
+    "managementApiHttpError": "La API de administración de CLIProxyAPI devolvió un código de estado inesperado (HTTP {{status}})",
+    "managementApiInvalidKey": "La clave de administración de CLIProxyAPI no es válida. Verifica la clave en la configuración.",
+    "managementApiNotFound": "No se encontró la API de administración de CLIProxyAPI. Asegúrate de que la URL base termine en /v0/management y de que CLIProxyAPI tenga configurada una clave de administración.",
+    "managementApiRemoteAccessDisabled": "CLIProxyAPI rechazó el acceso de administración remota. Revisa si remote-management.allow-remote: true está habilitado en la configuración de CLIProxyAPI, o si la administración remota está habilitada mediante MANAGEMENT_PASSWORD, y vuelve a intentarlo.",
+    "managementApiServerError": "La API de administración de CLIProxyAPI devolvió un error del servidor (HTTP {{status}})",
+    "managementApiUnreachable": "No se pudo acceder a la API de administración de CLIProxyAPI. Revisa la URL base, el estado del servicio y el acceso de red del navegador a esa dirección.",
+    "updateSuccess": "Se actualizó correctamente el proveedor de CLIProxy {{name}}"
+  },
+  "content": {
+    "userInfoNotFound": "No se encontró información del usuario; asegúrate de haber iniciado sesión",
+    "waitUserInfoTimeout": "Se agotó el tiempo de espera para la información del usuario; asegúrate de haber iniciado sesión"
+  },
+  "donehub": {
+    "configMissing": "Primero configura la dirección de Done Hub, el token de administrador y el ID de usuario en la configuración básica",
+    "noChannelsToSync": "No hay canales para sincronizar"
+  },
+  "errors": {
+    "api": {
+      "invalidResponseFormat": "Formato de respuesta no válido",
+      "onlyJsonSupported": "Solo se admiten respuestas JSON",
+      "requestFailed": "La solicitud falló: {{status}}"
+    },
+    "operation": {
+      "accountDataFetchTimeout": "Se agotó el tiempo al obtener datos de la cuenta ({{seconds}}s)",
+      "failed": "La operación falló: {{error}}",
+      "saveFailed": "Error al guardar: {{error}}"
+    },
+    "tokenSecretUnavailable": "Esta plataforma no permite volver a ver la clave completa. Cópiala y guárdala cuando la crees.",
+    "unknown": "Error desconocido",
+    "validation": {
+      "bookmarkNameRequired": "El nombre del marcador no puede estar vacío",
+      "bookmarkUrlRequired": "La URL del marcador no puede estar vacía",
+      "incompleteAccountInfo": "Completa toda la información de la cuenta",
+      "updateAccountFailed": "No se pudo actualizar la cuenta {{error}}",
+      "urlRequired": "La URL del sitio no puede estar vacía",
+      "userIdNumeric": "El ID de usuario debe ser un número"
+    }
+  },
+  "newapi": {
+    "channelExists": "El canal {{channelName}} ya existe; no hace falta importarlo de nuevo",
+    "channelMatchUnresolved": "Existe un posible canal duplicado, pero confirmarlo requiere un paso de verificación de New API. Completa la verificación primero y luego reintenta la importación.",
+    "configMissing": "Primero configura la dirección de New API, el token de administrador y el ID de usuario en la configuración básica",
+    "importFailed": "La importación falló; ocurrió un error desconocido",
+    "importSuccess": "Se importó correctamente el nuevo canal {{channelName}}",
+    "noChannelsToSync": "No hay canales para sincronizar"
+  },
+  "octopus": {
+    "configMissing": "Primero configura la dirección, el nombre de usuario y la contraseña de Octopus en la configuración básica",
+    "corsError": "Esto puede deberse a la configuración de CORS. Revisa la lista de permitidos de CORS en la configuración de Octopus.",
+    "noChannelsToSync": "No hay canales para sincronizar"
+  },
+  "operations": {
+    "detection": {
+      "failed": "La detección automática falló; ingresa la información manualmente o asegúrate de haber iniciado sesión en el sitio de destino",
+      "getAccessTokenFailedDetailed": "La cuenta fue detectada, pero no se pudo recuperar ningún token de acceso. Confirma que la cuenta pueda crear o ver tokens de API, o ingresa el token manualmente.",
+      "getInfoFailed": "No se pudo obtener el nombre de usuario o el token de acceso",
+      "getSiteStatusFailedDetailed": "La cuenta fue detectada, pero no se pudo leer el estado del sitio. Inténtalo más tarde; si sigue fallando, guarda la cuenta manualmente primero.",
+      "getUserIdFailed": "No se pudo obtener el ID de usuario",
+      "getUserIdFailedDetailed": "Se conectó al sitio, pero no se pudo leer el ID de usuario. Asegúrate de haber iniciado sesión en el sitio de destino y vuelve a intentarlo.",
+      "getUsernameFailedDetailed": "La cuenta fue detectada, pero el sitio no devolvió un nombre de usuario. Asegúrate de haber iniciado sesión o ingresa la cuenta manualmente."
+    }
+  },
+  "storage": {
+    "accountDisabled": "La cuenta {{id}} está deshabilitada",
+    "accountNotFound": "La cuenta {{id}} no existe",
+    "updateFailed": "No se pudo actualizar la cuenta"
+  },
+  "sub2api": {
+    "createRequiresAvailableGroup": "Esta cuenta no tiene ningún grupo disponible para crear claves. Revisa los grupos disponibles de la cuenta y vuelve a intentarlo.",
+    "groupMissing": "El grupo de Sub2API '{{group}}' ya no está disponible. Actualiza la lista de grupos y vuelve a intentarlo.",
+    "loginRequired": "Primero inicia sesión en el panel de Sub2API (para que la extensión pueda leer auth_token/auth_user desde localStorage) y vuelve a intentarlo.",
+    "refreshTokenInvalid": "El refresh token de Sub2API no es válido o fue rotado. Vuelve a importar la sesión desde el panel (recomendado: ventana de incógnito/privada) o pega un refresh_token actualizado, y vuelve a intentarlo."
+  },
+  "toast": {
+    "error": {
+      "copyFailed": "Error al copiar",
+      "duplicateCleanupFailed": "No se pudieron eliminar cuentas duplicadas: {{error}}",
+      "externalCheckInNonePending": "No hay estaciones externas de check-in que no se hayan abierto hoy.",
+      "externalCheckInPartialFailed_one": "Falló {{failedCount}} de {{totalCount}} check-in externo.",
+      "externalCheckInPartialFailed_many": "Fallaron {{failedCount}} de {{totalCount}} check-ins externos.",
+      "externalCheckInPartialFailed_other": "Fallaron {{failedCount}} de {{totalCount}} check-ins externos.",
+      "findAccountDetailsFailed": "No se pudieron encontrar los detalles de la cuenta",
+      "operationFailed": "La operación falló: {{error}}",
+      "operationFailedGeneric": "La operación falló",
+      "refreshAccount": "No se pudo actualizar {{accountName}}",
+      "saveFailed": "Error al guardar",
+      "shareSnapshotAccountDisabled": "Esta cuenta está deshabilitada",
+      "shareSnapshotNoEnabledAccounts": "No hay cuentas habilitadas para compartir"
+    },
+    "loading": {
+      "refreshingAccount": "Actualizando {{accountName}}..."
+    },
+    "success": {
+      "accountDisabled": "{{accountName}} deshabilitada",
+      "accountEnabled": "{{accountName}} habilitada",
+      "accountPinned": "{{accountName}} fijada",
+      "accountSaveSuccess": "Cuenta guardada correctamente",
+      "accountsDisabled_one": "{{count}} cuenta deshabilitada",
+      "accountsDisabled_many": "{{count}} cuentas deshabilitadas",
+      "accountsDisabled_other": "{{count}} cuentas deshabilitadas",
+      "accountsEnabled_one": "{{count}} cuenta habilitada",
+      "accountsEnabled_many": "{{count}} cuentas habilitadas",
+      "accountsEnabled_other": "{{count}} cuentas habilitadas",
+      "accountUnpinned": "{{accountName}} desfijada",
+      "accountUpdateSuccess": "Cuenta actualizada correctamente",
+      "bookmarkAdded": "Marcador {{name}} agregado correctamente.",
+      "bookmarkDeleted": "Marcador {{name}} eliminado",
+      "bookmarkPinned": "{{name}} fijado",
+      "bookmarkUnpinned": "{{name}} desfijado",
+      "bookmarkUpdated": "Marcador {{name}} actualizado correctamente.",
+      "bookmarkUrlCopied": "URL de {{name}} copiada al portapapeles",
+      "duplicateCleanupSuccess_one": "Se eliminó {{count}} cuenta de {{groups}} conjunto(s) duplicado(s).",
+      "duplicateCleanupSuccess_many": "Se eliminaron {{count}} cuentas de {{groups}} conjunto(s) duplicado(s).",
+      "duplicateCleanupSuccess_other": "Se eliminaron {{count}} cuentas de {{groups}} conjunto(s) duplicado(s).",
+      "externalCheckInModeAll": "todos",
+      "externalCheckInModeUnchecked": "solo no revisados",
+      "externalCheckInOpened_one": "Se abrió el check-in externo para {{count}} cuenta ({{mode}}).",
+      "externalCheckInOpened_many": "Se abrieron check-ins externos para {{count}} cuentas ({{mode}}).",
+      "externalCheckInOpened_other": "Se abrieron check-ins externos para {{count}} cuentas ({{mode}}).",
+      "operationCompleted": "Operación completada",
+      "refreshAccount": "{{accountName}} se actualizó correctamente.",
+      "refreshSkipped": "No se alcanzo el intervalo de actualización; se omitió",
+      "shareSnapshotCaptionCopied": "Leyenda copiada",
+      "shareSnapshotCopied": "Instantanea copiada al portapapeles",
+      "shareSnapshotDownloaded": "Instantanea descargada",
+      "urlCopied": "URL de {{accountName}} copiada al portapapeles"
+    }
+  },
+  "tokenProvisioning": {
+    "createRequiresGroup": "La creación de claves requiere un grupo confirmado. Elige un grupo disponible antes de continuar.",
+    "createRequiresGroupSelection": "Esta cuenta tiene varios grupos disponibles. Elige uno antes de crear la clave."
+  },
+  "veloera": {
+    "configMissing": "Primero configura la dirección de Veloera, el token de administrador y el ID de usuario en la configuración básica",
+    "noChannelsToSync": "No hay canales para sincronizar"
+  },
+  "warnings": {
+    "accountSavedWithoutDataRefresh": "La cuenta se guardó, pero no se pudieron obtener el saldo, la cuota y el uso de hoy más recientes. Los valores actuales pueden ser marcadores de posición. Actualiza esta cuenta más tarde desde la lista de cuentas.",
+    "accountUpdatedWithoutDataRefresh": "La configuración de la cuenta se guardó, pero no se pudieron actualizar el saldo, la cuota y el uso de hoy más recientes. Los valores actuales podrían seguir desactualizados. Actualiza esta cuenta más tarde desde la lista de cuentas."
+  },
+  "webdav": {
+    "authFailed": "La autenticación falló; revisa el nombre de usuario y la contraseña",
+    "configIncomplete": "Completa la URL de WebDAV, el nombre de usuario y la contraseña",
+    "connectionFailed": "La conexión falló, código de estado: {{status}}",
+    "decryptFailed": "No se pudo descifrar la copia de seguridad; revisa tu contraseña",
+    "decryptFailedNoPassword": "La copia de seguridad está cifrada, pero no hay contraseña configurada",
+    "downloadFailed": "La descarga falló, código de estado: {{status}}",
+    "encryptFailedNoPassword": "El cifrado está habilitado, pero no hay contraseña configurada",
+    "fileNotFound": "El archivo remoto de copia de seguridad no existe",
+    "invalidBackupJson": "El archivo de copia de seguridad en la nube está incompleto y no se puede usar para sincronizar. La sincronización se detuvo para evitar fusionar datos dañados. Si este dispositivo tiene datos locales completos, usa Subir a WebDAV para recrear la copia en la nube. Si no, sube desde otro dispositivo que tenga datos completos o importa primero un archivo de copia de seguridad completo.",
+    "safeCommitFailed": "Este servicio WebDAV no pudo guardar la copia de seguridad de forma segura. Se conservó tu copia de seguridad existente en la nube. Inténtalo de nuevo más tarde o usa un servicio WebDAV que admita mover o renombrar archivos.",
+    "syncDataSelectionRequired": "Selecciona al menos un dominio de datos para sincronizar",
+    "uploadFailed": "La carga falló, código de estado: {{status}}",
+    "uploadVerificationFailed": "La verificación de la copia de seguridad falló después de la carga. Es posible que el servicio en la nube no haya guardado el archivo por completo. Se conservó tu copia de seguridad existente en la nube."
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "description": "Sincroniza automáticamente las listas de modelos de todos los canales en tu sitio administrado, asegurando consistencia con upstream",
+  "execution": {
+    "actions": {
+      "refresh": "Actualizar resultados",
+      "retryFailed": "Reintentar solo fallidos",
+      "runAll": "Ejecutar todo",
+      "runSelected": "Ejecutar seleccionados"
+    },
+    "empty": {
+      "noData": "Aún no hay historial de ejecución",
+      "noDataDesc": "Haz clic en \"Ejecutar todo\" para comenzar a sincronizar todos los canales",
+      "noResults": "No hay resultados coincidentes",
+      "noResultsDesc": "Intenta ajustar tus filtros o consulta de búsqueda"
+    },
+    "errors": {
+      "channelTimeout_one": "El procesamiento del canal superó {{count}} segundo",
+      "channelTimeout_many": "El procesamiento del canal superó {{count}} segundos",
+      "channelTimeout_other": "El procesamiento del canal superó {{count}} segundos"
+    },
+    "filters": {
+      "all": "Todos",
+      "failed": "Fallidos",
+      "searchPlaceholder": "Busca por nombre de canal, ID o mensaje de error...",
+      "success": "Correctos"
+    },
+    "lastExecution": "Última ejecución",
+    "manual": {
+      "description": "Elige canales abajo para activar una sincronización puntual. Las selecciones no se guardan.",
+      "empty": {
+        "description": "Actualiza la lista o ajusta tus filtros para encontrar canales.",
+        "title": "No hay canales disponibles"
+      },
+      "loading": "Cargando canales...",
+      "reload": "Recargar canales",
+      "searchPlaceholder": "Busca canales por nombre o ID..."
+    },
+    "overview": {
+      "autoSync": "Sincronización automática",
+      "disabled": "Deshabilitada",
+      "disabledHint": "Las listas de modelos solo se sincronizan cuando las ejecutas manualmente. Habilita la sincronización automática para que la extensión se ejecute según el calendario.",
+      "enableAutoSync": "Habilitar sincronización automática",
+      "enabled": "Habilitada",
+      "everyHours_one": "Cada {{count}} h",
+      "everyHours_many": "Cada {{count}} h",
+      "everyHours_other": "Cada {{count}} h",
+      "everyMinutes_one": "Cada {{count}} min",
+      "everyMinutes_many": "Cada {{count}} min",
+      "everyMinutes_other": "Cada {{count}} min",
+      "lastRun": "Última ejecución",
+      "never": "Nunca"
+    },
+    "progress": {
+      "running": "Sincronizando... {{completed}}/{{total}}"
+    },
+    "statistics": {
+      "duration": "Duración",
+      "endTime": "Hora de finalización",
+      "failed": "Fallidos",
+      "nextRun": "Próxima ejecución programada",
+      "notScheduled": "No programada",
+      "startTime": "Hora de inicio",
+      "success": "Correctos",
+      "total": "Canales totales"
+    },
+    "status": {
+      "failed": "Falló",
+      "running": "Ejecutándose...",
+      "success": "Correcto"
+    },
+    "table": {
+      "actions": "Acciones",
+      "attempts": "Intentos",
+      "channelId": "ID del canal",
+      "channelName": "Nombre del canal",
+      "finishedAt": "Finalizado a las",
+      "manageChannel": "Administrar canal",
+      "message": "Mensaje",
+      "selectAllChannels": "Seleccionar todos los canales",
+      "selectChannel": "Seleccionar canal {{name}}",
+      "status": "Estado",
+      "syncChannel": "Sincronizar"
+    },
+    "tabs": {
+      "history": "Historial de ejecución",
+      "manual": "Ejecución manual"
+    },
+    "title": "Sincronización de listas de modelos",
+    "unsupported": {
+      "title": "La sincronización de modelos no es compatible con este sitio"
+    }
+  },
+  "messages": {
+    "error": {
+      "loadFailed": "No se pudieron cargar los datos: {{error}}",
+      "noSelection": "Selecciona al menos un canal",
+      "syncFailed": "Falló la sincronización: {{error}}"
+    },
+    "success": {
+      "settingsSaved": "La configuración se guardó correctamente",
+      "syncCompleted": "Sincronización completada: {{success}}/{{total}} correctos"
+    },
+    "warning": {
+      "syncCompletedWithFailures": "La sincronización terminó, pero {{failed}} canal(es) aún fallaron ({{success}}/{{total}} correctos). Puedes reintentar solo los elementos fallidos."
+    }
+  },
+  "settings": {
+    "allowedModels": "Lista de modelos permitidos",
+    "allowedModelsDesc": "Lista de permitidos opcional. Déjala vacía para sincronizar todos los modelos upstream.",
+    "allowedModelsHint": "Solo los modelos listados aquí se escribirán en cada canal durante la sincronización.",
+    "allowedModelsLoadFailed": "No se pudieron cargar los metadatos de modelos: {{error}}",
+    "allowedModelsLoading": "Cargando metadatos de modelos...",
+    "allowedModelsPlaceholder": "Busca y selecciona modelos, o escribe para agregar uno personalizado",
+    "burst": "Capacidad de ráfaga",
+    "burstDesc": "Tamaño del token bucket: solicitudes de ráfaga permitidas antes de limitar",
+    "channelProcessingTimeout": "Tiempo de espera por canal",
+    "channelProcessingTimeoutDesc": "Marca un canal como fallido y continúa cuando el procesamiento supere esta duración. Usa 0 para no limitar.",
+    "channelProcessingTimeoutUnit": "segundos",
+    "concurrency": "Concurrencia",
+    "concurrencyDesc": "Número de canales a procesar en paralelo (se recomienda 1-3 para evitar límites de tasa)",
+    "enable": "Habilitar sincronización automática",
+    "enableDesc": "Sincroniza automáticamente las listas de modelos en intervalos especificados",
+    "globalChannelModelFilters": "Filtros globales",
+    "globalChannelModelFiltersButton": "Editar filtros globales",
+    "globalChannelModelFiltersDesc": "Reglas de inclusión/exclusión aplicadas a todos los canales antes de los filtros por canal.",
+    "globalChannelModelFiltersDialogSubtitle": "Las reglas definidas aquí se aplican a cada canal antes de sus propios filtros específicos.",
+    "globalChannelModelFiltersDialogTitle": "Filtros globales de modelos",
+    "interval": "Intervalo de sincronización",
+    "intervalDesc": "Tiempo entre sincronizaciones automáticas",
+    "intervalUnit": "horas",
+    "maxRetries": "Máx. reintentos",
+    "maxRetriesDesc": "Número máximo de reintentos automáticos ante fallas",
+    "requestsPerMinute": "Solicitudes por minuto",
+    "requestsPerMinuteDesc": "Límite de tasa: número máximo de solicitudes por minuto (se recomienda 10-30)",
+    "title": "Configuración de sincronización de listas de modelos",
+    "viewExecution": "Ver ejecución y resultados",
+    "viewExecutionButton": "Abrir",
+    "viewExecutionDesc": "Ver resultados detallados de ejecución y activar sincronizaciones manuales"
+  }
+}

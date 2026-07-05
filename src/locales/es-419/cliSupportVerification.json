@@ -1,0 +1,61 @@
+{
+  "verifyDialog": {
+    "actions": {
+      "close": "Cerrar",
+      "retry": "Reintentar",
+      "run": "Ejecutar simulación",
+      "runOne": "Ejecutar",
+      "stop": "Detener",
+      "stopTool": "Detener {{tool}}"
+    },
+    "details": {
+      "input": "Entrada",
+      "output": "Salida"
+    },
+    "idleHint": "Selecciona una clave y luego ejecuta la simulación. Proporciona un ID de modelo si la clave no permite inferir uno.",
+    "loadingModelsHint": "Cargando modelos...",
+    "loadingRuntimeKeysHint": "Cargando claves...",
+    "meta": {
+      "model": "Modelo",
+      "modelPlaceholder": "Ingresa el ID del modelo",
+      "runtimeKey": "Clave",
+      "runtimeKeyPlaceholder": "Selecciona una clave"
+    },
+    "modelHint": "Sugerencia de modelo del token: {{modelId}}",
+    "modelPickerPlaceholder": "Selecciona o ingresa un ID de modelo",
+    "modelsFetchFailed": "No se pudieron obtener los modelos",
+    "notRunYet": "Aún no se ejecutó",
+    "profileIdleHint": "Elige un modelo y luego ejecuta la simulación. También puedes ingresar manualmente un ID de modelo si no aparece en la lista obtenida.",
+    "requiresModelId": "Proporciona un ID de modelo antes de ejecutar esta comprobación.",
+    "status": {
+      "fail": "Falla",
+      "pass": "Pasa",
+      "pending": "Pendiente",
+      "unsupported": "No compatible"
+    },
+    "summaries": {
+      "endpointNotFound": "Endpoint no encontrado (404): es posible que esta API no sea compatible",
+      "forbidden": "Prohibido (403): acceso denegado",
+      "httpError": "Error HTTP ({{status}})",
+      "invalidResponse": "Formato de respuesta inesperado",
+      "networkError": "Error de red / solicitud bloqueada",
+      "noModelIdProvided": "No hay ID de modelo disponible",
+      "noRuntimeKeySecret": "No hay ninguna clave API disponible para la clave seleccionada.",
+      "noToolCallDetected": "No se detectó ninguna llamada a herramienta (es posible que tool calling no sea compatible)",
+      "stopped": "Detenido por el usuario.",
+      "supported": "Compatible",
+      "supportedStreaming": "Compatible (streaming)",
+      "toolCallSucceeded": "La llamada a herramienta se completó correctamente.",
+      "unauthorized": "No autorizado (401): clave inválida o autenticación faltante",
+      "unexpectedError": "Error inesperado: {{message}}",
+      "unsupportedForApiType": "No compatible con el tipo de API seleccionado ({{apiType}})"
+    },
+    "title": "Simulación de compatibilidad con CLI",
+    "tools": {
+      "claude": "Claude Code",
+      "codex": "Codex (Codex CLI)",
+      "gemini": "Gemini CLI"
+    },
+    "warning": "Una aprobación detectada probablemente es real; una falla aún puede funcionar en algunos clientes. Usa el resultado como orientación y verifica con la CLI real cuando sea posible."
+  }
+}

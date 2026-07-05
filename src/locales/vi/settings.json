@@ -32,6 +32,10 @@
           "label": "EN",
           "name": "Tiếng Anh"
         },
+        "es-419": {
+          "label": "ES",
+          "name": "Tiếng Tây Ban Nha Mỹ Latinh"
+        },
         "ja": {
           "label": "JA",
           "name": "Tiếng Nhật"

@@ -1,0 +1,220 @@
+{
+  "description": "Realiza automáticamente el check-in de cuentas elegibles todos los días dentro de una ventana de tiempo configurable. La lista de resultados de abajo muestra registros de ejecuciones completadas, no una cola pendiente.",
+  "execution": {
+    "actions": {
+      "devModeHint": "Modo dev: los botones de acción siempre se muestran para pruebas.",
+      "openExternal": "Check-in externo",
+      "openFailedManual": "Abrir inicios de sesión manuales fallidos",
+      "openManual": "Inicio de sesión manual",
+      "openSite": "Abrir sitio",
+      "retryAccount": "Reintentar"
+    },
+    "debug": {
+      "evaluateUiOpenPretrigger": "Dev: Evaluar si se cumplen las condiciones de 'Preactivar el check-in de hoy al abrir la UI'",
+      "resetLastDailyRunDay": "Dev: Borrar marca de 'El check-in diario ya se ejecutó hoy'",
+      "scheduleDailyAlarmForToday": "Dev: Programar alarma diaria para más tarde hoy",
+      "triggerDailyAlarmNow": "Dev: Ejecutar check-in diario ahora (simular callback de alarma de check-in diario)",
+      "triggerRetryAlarmNow": "Dev: Ejecutar reintento de check-in ahora (simular callback de alarma de reintento de check-in)",
+      "triggerUiOpenPretrigger": "Dev: Intentar inmediatamente 'Preactivar el check-in de hoy al abrir la UI'",
+      "uiOpenPretriggerDiagnosticsDesc": "Muestra si las condiciones se cumplen y la información de entrada usada para la evaluación.",
+      "uiOpenPretriggerDiagnosticsTitle": "Preactivar el check-in de hoy al abrir la UI"
+    },
+    "empty": {
+      "addAccount": "Agregar cuenta",
+      "noAccounts": "Agrega una cuenta antes del check-in automático",
+      "noAccountsDesc": "El check-in automático necesita al menos una cuenta habilitada antes de poder ejecutarse.",
+      "noDetectionAccounts": "Habilita la detección de check-in para una cuenta",
+      "noDetectionAccountsDesc": "Las cuentas existentes aún no están configuradas para detección de check-in. Abre la administración de cuentas y habilita la detección de check-in en las cuentas que quieras incluir.",
+      "noHistory": "Sin historial de ejecución",
+      "noHistoryDesc": "Todavía no hay registros de ejecuciones de check-in. Haz clic en \"Ejecutar ahora\" para iniciar las cuentas elegibles; aparecerán en la lista de resultados cuando termine la ejecución.",
+      "noResults": "No hay resultados coincidentes",
+      "noResultsDesc": "Intenta ajustar los filtros o la búsqueda",
+      "openAccounts": "Abrir cuentas"
+    },
+    "filters": {
+      "all": "Todos",
+      "failed": "Fallidos",
+      "searchPlaceholder": "Buscar por nombre de cuenta o mensaje...",
+      "skipped": "Omitidos",
+      "success": "Correctos"
+    },
+    "hints": {
+      "invalidAccessToken": "Solución: es posible que el Access Token haya vencido. Vuelve a iniciar sesión en el sitio y luego, en 'Administración de cuentas → Editar cuenta', vuelve a identificar/actualizar automáticamente el Access Token. Si el problema continúa después de la identificación automática, obtén y modifica manualmente el Access Token.",
+      "manualVerificationRequired": "Intenta hacer clic primero en \"Abrir sitio\" y luego completa el inicio de sesión, Turnstile, PoW u otra verificación básica en el sitio para que el navegador tenga una sesión válida antes de reintentar el check-in automático. Si sigue fallando repetidamente después de la verificación, es posible que el flujo actual de check-in automático aún no admita este sitio, así que usa el inicio de sesión manual por ahora.",
+      "noTabWithId": "Consejo: no cierres ninguna pestaña/ventana abierta automáticamente por la extensión. La extensión las cerrará después de poco tiempo. Si debes cerrarlas manualmente, espera al menos 1 minuto antes de hacerlo.",
+      "openExternalCheckIn": "Abrir de forma predeterminada los check-ins externos pendientes. Ctrl/Cmd abre todos; Shift abre en una ventana nueva.",
+      "openFailedManualNewWindow": "Consejo: Shift-clic en \"Abrir inicios de sesión manuales fallidos\" para abrirlos en una ventana nueva.",
+      "siteTypeCheckinUnsupported": "Solución: en 'Administración de cuentas → Editar cuenta', primero verifica que el tipo de sitio seleccionado coincida con el sitio real. Si el tipo se detectó automáticamente antes, vuelve a iniciar sesión en el sitio de destino y ejecuta la detección otra vez. Si el tipo de sitio es correcto pero este mensaje sigue apareciendo, probablemente el sitio aún no admita check-in automático, así que usa 'Abrir sitio' o 'Inicio de sesión manual' en su lugar."
+    },
+    "refresh": "Actualizar",
+    "runNow": "Ejecutar ahora",
+    "statistics": {
+      "result": "Resultado"
+    },
+    "status": {
+      "alreadyChecked": "Ya hizo check-in",
+      "failed": "Fallido",
+      "skipped": "Omitido",
+      "success": "Correcto"
+    },
+    "table": {
+      "accountName": "Nombre de cuenta",
+      "actions": "Acciones",
+      "message": "Mensaje",
+      "status": "Estado",
+      "time": "Hora"
+    },
+    "title": "Check-in automático"
+  },
+  "messages": {
+    "error": {
+      "accountDisabled": "La cuenta está deshabilitada",
+      "dailyAlarmScheduleForTodayFailed": "No se pudo programar la alarma diaria para hoy: {{error}}",
+      "dailyAlarmTriggerFailed": "No se pudo activar la alarma diaria: {{error}}",
+      "deterministicTimeOutsideWindow": "La hora determinista debe estar dentro de la ventana configurada.",
+      "invalidDeterministicTime": "Proporciona una hora determinista válida en formato HH:mm.",
+      "invalidNumber": "Ingresa un número positivo válido.",
+      "invalidTimeWindow": "Ventana de tiempo no válida. El inicio y el fin no pueden ser iguales.",
+      "lastDailyRunDayResetFailed": "No se pudo restablecer la última marca diaria: {{error}}",
+      "openFailedManualFailed": "No se pudieron abrir páginas de inicio de sesión manual para {{failedCount}} cuentas fallidas.",
+      "openFailedManualNone": "No hay cuentas fallidas disponibles para inicio de sesión manual.",
+      "openFailedManualPartial": "Se abrieron páginas de inicio de sesión manual para {{openedCount}} cuentas fallidas, pero {{failedCount}} no se pudieron abrir.",
+      "openManualFailed": "No se pudo abrir la página de inicio de sesión manual: {{error}}",
+      "openSiteFailed": "No se pudo abrir la página del sitio: {{error}}",
+      "retryAlarmTriggerFailed": "No se pudo activar la alarma de reintento: {{error}}",
+      "retryFailed": "Falló el reintento: {{error}}",
+      "runFailed": "No se pudo ejecutar el check-in automático: {{error}}",
+      "uiOpenPretriggerDidNotStart": "La preactivación al abrir la UI no inició: {{reason}}",
+      "uiOpenPretriggerEvaluationFailed": "No se pudo evaluar la preactivación al abrir la UI: {{error}}",
+      "uiOpenPretriggerIneligible": "La preactivación al abrir la UI no es elegible: {{reason}}",
+      "uiOpenPretriggerTriggerFailed": "No se pudo activar la preactivación al abrir la UI: {{error}}"
+    },
+    "loading": {
+      "evaluatingUiOpenPretrigger": "Evaluando preactivación al abrir la UI...",
+      "openingFailedManual_one": "Abriendo la página de inicio de sesión manual para {{count}} cuenta fallida...",
+      "openingFailedManual_many": "Abriendo páginas de inicio de sesión manual para {{count}} cuentas fallidas...",
+      "openingFailedManual_other": "Abriendo páginas de inicio de sesión manual para {{count}} cuentas fallidas...",
+      "resettingLastDailyRunDay": "Restableciendo última marca diaria...",
+      "running": "Ejecutando check-in automático...",
+      "schedulingDailyAlarmForToday": "Programando alarma diaria para hoy...",
+      "triggeringDailyAlarm": "Activando alarma diaria...",
+      "triggeringRetryAlarm": "Activando alarma de reintento...",
+      "triggeringUiOpenPretrigger": "Activando preactivación al abrir la UI..."
+    },
+    "success": {
+      "dailyAlarmScheduledForToday": "Alarma diaria programada para hoy.",
+      "dailyAlarmTriggered": "Ejecución de alarma diaria activada.",
+      "lastDailyRunDayReset": "Última marca diaria restablecida.",
+      "openFailedManualCompleted_one": "Se abrió la página de inicio de sesión manual para {{count}} cuenta fallida.",
+      "openFailedManualCompleted_many": "Se abrieron páginas de inicio de sesión manual para {{count}} cuentas fallidas.",
+      "openFailedManualCompleted_other": "Se abrieron páginas de inicio de sesión manual para {{count}} cuentas fallidas.",
+      "pretriggerStarted": "El check-in automático comenzó antes.",
+      "retryAlarmTriggered": "Ejecución de alarma de reintento activada.",
+      "retryCompleted": "Reintento completado.",
+      "runCompleted": "Check-in automático completado.",
+      "settingsSaved": "La configuración de check-in automático se guardó.",
+      "uiOpenPretriggerEligible": "La preactivación al abrir la UI es elegible."
+    }
+  },
+  "providerFallback": {
+    "alreadyCheckedToday": "Ya hizo check-in hoy",
+    "checkinFailed": "Check-in fallido",
+    "checkinSuccessful": "Check-in correcto",
+    "endpointNotSupported": "Este endpoint de check-in no es compatible. Comprueba si el tipo de sitio de tu cuenta coincide con el sitio real.",
+    "nativePageIdentityMismatch": "La página temporal de check-in inició sesión con una cuenta distinta. Abre la página de check-in con la cuenta de destino y reintenta: {{checkInUrl}}",
+    "nativePageIdentityMissing": "No se pudo confirmar el inicio de sesión de la página temporal de check-in. Abre la página de check-in, inicia sesión con la cuenta de destino y reintenta: {{checkInUrl}}",
+    "nativePageStatusUnconfirmed": "Se hizo clic en la acción de check-in de la página, pero no se confirmó el estado de la cuenta de destino. Abre la página de check-in y revisa manualmente: {{checkInUrl}}",
+    "nativePageTargetNotFound": "No se pudo encontrar el botón de check-in en la página. Abre la página de check-in y completa el check-in manualmente: {{checkInUrl}}",
+    "nativePageTriggerFailed": "No se pudo activar la acción de check-in de la página. Abre la página de check-in y completa el check-in manualmente: {{checkInUrl}}",
+    "turnstileIncognitoAccessRequired": "La extensión debe tener permiso para ejecutarse en ventanas de incógnito/privadas para obtener el token de Turnstile en una ventana temporal privada (escenario multi-cuenta). Habilita \"Permitir en incógnito\" para esta extensión y reintenta, o abre la página de check-in para completar la verificación: {{checkInUrl}}",
+    "turnstileManualRequired": "Se requiere verificación de Cloudflare Turnstile. Abre la página de check-in para completar la verificación: {{checkInUrl}}",
+    "unknownError": "Ocurrió un error desconocido"
+  },
+  "providerWong": {
+    "checkinDisabled": "La función de check-in está deshabilitada"
+  },
+  "settings": {
+    "deterministicTimeDesc": "Elige la hora exacta (HH:mm) para iniciar el check-in cuando el modo determinista esté habilitado.",
+    "deterministicTimeTitle": "Hora determinista",
+    "enable": "Habilitar check-in automático",
+    "enableDesc": "Activa o desactiva la función global de check-in automático. Cuando está deshabilitada, no se ejecutan tareas de check-in.",
+    "notifyUiOnCompletion": "Actualizar datos e interfaz al completar el check-in automático",
+    "notifyUiOnCompletionDesc": "Cuando se complete el check-in automático, actualiza inmediatamente los datos de la cuenta de check-in y las interfaces relevantes.",
+    "pretriggerDailyOnUiOpen": "Preactivar ejecución diaria al abrir la UI",
+    "pretriggerDailyOnUiOpenDesc": "Cuando abras la UI de la extensión durante la ventana de tiempo de hoy y la ejecución diaria aún no se haya ejecutado, iniciarla de inmediato.",
+    "retryDesc": "Reintenta automáticamente las cuentas fallidas algunas veces durante el mismo día.",
+    "retryInterval": "Intervalo de reintento (minutos)",
+    "retryIntervalDesc": "Cuánto esperar antes del siguiente intento de reintento.",
+    "retryMaxAttempts": "Intentos máximos por día",
+    "retryMaxAttemptsDesc": "Intentos máximos por cuenta por día (inicial + reintentos).",
+    "retryTitle": "Estrategia de reintento",
+    "scheduleModeDesc": "Elige cómo se calcula la próxima hora de ejecución dentro de la ventana.",
+    "scheduleModeDeterministic": "Determinista",
+    "scheduleModeRandom": "Aleatorio",
+    "scheduleModeTitle": "Modo de programación",
+    "title": "Check-in automático",
+    "viewExecution": "Historial de check-in automático",
+    "viewExecutionButton": "Abrir resultados",
+    "viewExecutionDesc": "Ver resultados completados de check-in automático, motivos de omisión y preparación de cuentas. No es una lista de cuentas pendientes.",
+    "windowEnd": "Fin de ventana de tiempo",
+    "windowEndDesc": "La hora local más tardía en la que puede iniciar el check-in diario.",
+    "windowStart": "Inicio de ventana de tiempo",
+    "windowStartDesc": "La hora local más temprana en la que puede iniciar el check-in diario."
+  },
+  "skipReasons": {
+    "account_disabled": "La cuenta está deshabilitada",
+    "already_checked_today": "Ya hizo check-in hoy",
+    "auto_checkin_disabled": "Check-in automático deshabilitado",
+    "detection_disabled": "Detección deshabilitada",
+    "no_provider": "El tipo de sitio de la cuenta actualmente no admite check-in",
+    "provider_not_ready": "La configuración de la cuenta actualmente no admite check-in"
+  },
+  "snapshot": {
+    "badges": {
+      "disabled": "Deshabilitada",
+      "enabled": "Habilitada",
+      "pending": "Pendiente",
+      "providerAvailable": "Disponible",
+      "providerUnavailable": "No disponible"
+    },
+    "description": "Todas las cuentas con detección habilitada y su preparación se listan abajo. Las cuentas pendientes entran al check-in cuando haces clic en \"Ejecutar ahora\" o cuando llega la hora programada.",
+    "table": {
+      "autoCheckin": "Check-in automático",
+      "detection": "Detección",
+      "lastResult": "Último resultado",
+      "provider": "Proveedor",
+      "skipReason": "Motivo de omisión",
+      "status": "Estado"
+    },
+    "title": "Preparación de cuentas"
+  },
+  "status": {
+    "disabled": "Deshabilitado",
+    "lastRun": "Última ejecución",
+    "nextDaily": "Próxima ejecución diaria",
+    "nextRetry": "Próximo reintento",
+    "noPendingRetry": "Sin reintentos pendientes",
+    "notScheduled": "No programado",
+    "pendingRetry": "Reintento pendiente",
+    "result": {
+      "failed": "Fallido",
+      "partial": "Parcial",
+      "success": "Correcto"
+    },
+    "retryDisabled": "Reintento deshabilitado",
+    "summary": {
+      "eligible": "Elegibles",
+      "executed": "Ejecutadas",
+      "failed": "Fallidas",
+      "skipped": "Omitidas",
+      "success": "Correctas",
+      "title": "Resumen de ejecución"
+    }
+  },
+  "uiOpenPretrigger": {
+    "close": "Cerrar",
+    "dialogDescription": "La ejecución diaria programada de hoy se activó antes al abrir la UI.",
+    "dialogTitle": "Check-in automático terminado",
+    "viewDetails": "Ver detalles"
+  }
+}

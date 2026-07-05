@@ -1,0 +1,48 @@
+{
+  "dialog": {
+    "actions": {
+      "close": "Cerrar",
+      "openSite": "Abrir sitio",
+      "retry": "Reintentar",
+      "retryAfterPasskey": "Reintentar después de la passkey",
+      "saveAndRetry": "Guardar y reintentar",
+      "submitLoginCode": "Enviar código de inicio de sesión",
+      "submitVerificationCode": "Enviar código de verificación"
+    },
+    "body": {
+      "credentialsMissing": "Agrega un nombre de usuario y una contraseña de inicio de sesión de New API en Configuración antes de ejecutar la verificación asistida por sesión.",
+      "failure": "No se pudo completar el flujo de verificación de New API.",
+      "loggingIn": "Comprobando la sesión actual de New API y preparando la verificación si es necesaria.",
+      "loginTwoFactor": "El paso de inicio de sesión de New API requiere un código de verificación antes de que la sesión de administrador respaldada por el navegador pueda continuar.",
+      "passkeyManual": "Esta cuenta expone actualmente verificación con passkey para el paso seguro. Completa la comprobación de passkey en el sitio, vuelve aquí y reintenta.",
+      "secureVerification": "La sesión de administrador ya inició sesión, pero New API todavía requiere un código de verificación seguro antes de poder leer las claves ocultas de canales.",
+      "successChannel": "La verificación de {{label}} se completó correctamente. Se cargó la clave real del canal.",
+      "successSettings": "El flujo de inicio de sesión y verificación de New API se completó correctamente. Ahora puedes continuar con acciones que requieren inicio de sesión y verificación.",
+      "successToken": "La verificación de {{label}} se completó correctamente. Se actualizó el estado del sitio administrado."
+    },
+    "fields": {
+      "codeLabel": "Código de verificación"
+    },
+    "hints": {
+      "manualFallback": "La entrada manual del código sigue disponible incluso cuando el TOTP automático está configurado.",
+      "openSettingsShortcut": "Puedes completar aquí la configuración faltante y continuar la verificación de inmediato.",
+      "passkey": "Abre el sitio, completa allí la solicitud de passkey, vuelve aquí y reintenta."
+    },
+    "messages": {
+      "completeRequiredConfig": "Primero completa los campos de configuración faltantes.",
+      "finishing": "Finalizando la comprobación de sesión de New API...",
+      "missingBaseUrl": "Agrega la URL base de New API antes de probar el flujo de sesión.",
+      "missingCode": "Primero ingresa el código de verificación.",
+      "quickConfigSaveFailed": "No se pudo guardar la configuración rápida. Inténtalo de nuevo.",
+      "refreshingChannel": "Cargando la clave real del canal...",
+      "refreshingToken": "Actualizando el estado de sitio administrado de este token...",
+      "starting": "Iniciando el flujo de verificación de New API...",
+      "submitting": "Enviando código de verificación..."
+    },
+    "title": {
+      "channel": "Verificación de clave de canal de New API",
+      "settings": "Comprobación de sesión de New API",
+      "token": "Reintento de verificación de New API"
+    }
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "actions": {
+    "channelLocateConfigMissing": "La configuración de administración del sitio gestionado no está disponible. Se filtraron los canales por URL para revisión.",
+    "channelLocateFailed": "No se pudo localizar el canal",
+    "channelLocateFuzzyUrlOnly": "Solo se encontró una coincidencia aproximada a nivel de URL. Se filtraron los canales por URL para revisión.",
+    "channelLocateInputPreparationFallback": "No se pudieron preparar las entradas coincidentes clasificadas. Se filtraron los canales solo por URL.",
+    "channelLocateKeyMatchedModelsDrifted": "El mismo canal coincidió con la clave, pero el conjunto de modelos solo coincidió aproximadamente. Se filtraron los canales por URL para revisión.",
+    "channelLocateKeyMatchOnly": "Se encontró una coincidencia de clave en el mismo grupo de URL, pero el conjunto de modelos no coincidió. Se filtraron los canales por URL para revisión.",
+    "channelLocateMultipleKeysFallback": "Se encontraron varias claves. Se filtraron los canales solo por URL.",
+    "channelLocateNoKeyFallback": "No hay clave de API disponible para la coincidencia clasificada. Se filtraron los canales solo por URL.",
+    "channelLocateSecondaryExactModels": "Se encontró una coincidencia secundaria por conjunto exacto de modelos. Se filtraron los canales por URL para revisión.",
+    "channelLocateSecondaryModelsContained": "Se encontró una coincidencia secundaria por contención de modelos. Se filtraron los canales por URL para revisión.",
+    "channelLocateSecondaryModelsSimilar": "Se encontró una coincidencia secundaria por similitud de modelos. Se filtraron los canales por URL para revisión.",
+    "channelLocateSignalsConflict": "Las comprobaciones de clave y modelo apuntaron a candidatos de canal distintos. Se filtraron los canales por URL para revisión.",
+    "channelLocateUnresolved": "No se pudo confirmar ningún canal probable. Se filtraron los canales solo por URL.",
+    "copyKey": "Copiar clave",
+    "copyUrl": "Copiar URL",
+    "delete": "Eliminar",
+    "disableAccount": "Deshabilitar cuenta",
+    "edit": "Editar",
+    "enableAccount": "Habilitar cuenta",
+    "fetchKeyInfoFailed": "No se pudo obtener la información de la clave",
+    "fetchKeyListFailed": "No se pudo obtener la lista de claves: {{errorMessage}}",
+    "importFromBookmarks": "Importación por lotes desde marcadores",
+    "importFromBookmarksHint": "Escanea por lotes los marcadores del navegador para encontrar sitios de cuenta en lugar de agregarlos uno por uno",
+    "keyCopied": "Clave copiada al portapapeles",
+    "keyList": "Lista de claves",
+    "keyManagement": "Administración de claves",
+    "locateManagedSiteChannel": "Localizar canal",
+    "locateManagedSiteChannelUnsupported": "Estas funciones no están disponibles porque el sitio gestionado actual todavía no admite buscar canales por URL.",
+    "locateManagedSiteChannelUnsupportedHint": "No compatible",
+    "modelManagement": "Lista de modelos",
+    "openAllExternalCheckIn": "Abrir todos los check-ins externos",
+    "openAllExternalCheckInHint": "Abrir check-ins externos pendientes. Ctrl/Cmd: abrir todos. Shift: abrir en ventana nueva. Ctrl/Cmd+Shift: abrir todos en una ventana nueva.",
+    "pin": "Fijar cuenta",
+    "pinned": "Fijada",
+    "quickCheckin": "Check-in rápido",
+    "redeemPage": "Recargar/Canjear",
+    "refresh": "Actualizar",
+    "refreshDisabledAccounts": "Actualizar cuentas deshabilitadas",
+    "scanDuplicates": "Buscar duplicados",
+    "scanDuplicatesHint": "Busca cuentas duplicadas (origen + ID de usuario upstream) y las limpia de forma segura.",
+    "unpin": "Desfijar cuenta",
+    "urlCopied": "URL copiada al portapapeles",
+    "usageLog": "Registro de uso",
+    "viewOnLdoh": "Ver en LDOH"
+  },
+  "addAccount": "Agregar cuenta",
+  "addFirstAccount": "Agrega tu primera cuenta",
+  "bulk": {
+    "clearAll": "Borrar toda la selección",
+    "clearVisible": "Borrar selección visible",
+    "deleteConfirmAction": "Eliminar seleccionadas",
+    "deleteConfirmDescription_one": "Estás por eliminar {{count}} cuenta seleccionada. Revisa la selección con cuidado antes de confirmar.",
+    "deleteConfirmDescription_many": "Estás por eliminar {{count}} cuentas seleccionadas. Revisa la selección con cuidado antes de confirmar.",
+    "deleteConfirmDescription_other": "Estás por eliminar {{count}} cuentas seleccionadas. Revisa la selección con cuidado antes de confirmar.",
+    "deleteConfirmTitle": "Eliminar cuentas seleccionadas",
+    "deleteConfirmWarningTitle": "Confirmación de eliminación por lotes",
+    "deleteHiddenSelectedHint_one": "Incluye {{count}} cuenta seleccionada oculta por la búsqueda/filtro actual.",
+    "deleteHiddenSelectedHint_many": "Incluye {{count}} cuentas seleccionadas ocultas por la búsqueda/filtro actual.",
+    "deleteHiddenSelectedHint_other": "Incluye {{count}} cuentas seleccionadas ocultas por la búsqueda/filtro actual.",
+    "deletePreviewRemainder_one": "Y {{count}} cuenta seleccionada más.",
+    "deletePreviewRemainder_many": "Y {{count}} cuentas seleccionadas más.",
+    "deletePreviewRemainder_other": "Y {{count}} cuentas seleccionadas más.",
+    "deletePreviewTitle": "Cuentas para eliminar",
+    "deleteSelected": "Eliminar seleccionadas",
+    "deleteSuccess_one": "Se eliminó {{count}} cuenta seleccionada.",
+    "deleteSuccess_many": "Se eliminaron {{count}} cuentas seleccionadas.",
+    "deleteSuccess_other": "Se eliminaron {{count}} cuentas seleccionadas.",
+    "deleting_one": "Eliminando {{count}} cuenta seleccionada...",
+    "deleting_many": "Eliminando {{count}} cuentas seleccionadas...",
+    "deleting_other": "Eliminando {{count}} cuentas seleccionadas...",
+    "disableSelected": "Deshabilitar seleccionadas",
+    "exit": "Salir del modo por lotes",
+    "hiddenSelectedHint_one": "{{count}} cuenta seleccionada está oculta por la búsqueda/filtro actual y aun así se verá afectada.",
+    "hiddenSelectedHint_many": "{{count}} cuentas seleccionadas están ocultas por la búsqueda/filtro actual y aun así se verán afectadas.",
+    "hiddenSelectedHint_other": "{{count}} cuentas seleccionadas están ocultas por la búsqueda/filtro actual y aun así se verán afectadas.",
+    "manage": "Administrar por lotes",
+    "selectAccount": "Seleccionar {{accountName}}",
+    "selectedSummary_one": "{{selected}} seleccionada ({{visibleSelected}} visible)",
+    "selectedSummary_many": "{{selected}} seleccionadas ({{visibleSelected}} visibles)",
+    "selectedSummary_other": "{{selected}} seleccionadas ({{visibleSelected}} visibles)",
+    "selectVisible": "Seleccionar resultados visibles"
+  },
+  "currentLoginAdded": "⚠️El inicio de sesión actual de {{siteName}} ya está en tu lista",
+  "currentSiteAdded": "⚠️{{siteName}} ya tiene una cuenta guardada",
+  "currentSiteAddedCount_one": "⚠️Este sitio ya tiene {{count}} cuenta guardada",
+  "currentSiteAddedCount_many": "⚠️Este sitio ya tiene {{count}} cuentas guardadas",
+  "currentSiteAddedCount_other": "⚠️Este sitio ya tiene {{count}} cuentas guardadas",
+  "description": "Administra todas las estaciones de redistribución de IA con un clic",
+  "emptyState": "Todavía no hay cuentas",
+  "filter": {
+    "checkIn": {
+      "all": "Todos los estados de check-in",
+      "checked-in": "Con check-in",
+      "not-checked-in": "Sin check-in",
+      "outdated": "Estado desactualizado",
+      "placeholder": "Estado de check-in",
+      "unsupported": "No compatible"
+    },
+    "disabled": {
+      "all": "Todas las cuentas",
+      "placeholder": "Estado de la cuenta"
+    },
+    "refresh": {
+      "all": "Todos los estados de actualización",
+      "neverSynced": "Nunca sincronizada",
+      "placeholder": "Estado de actualización"
+    },
+    "siteType": {
+      "all": "Todos los tipos de sitio",
+      "placeholder": "Tipo de sitio"
+    },
+    "summary_one": "{{count}} cuenta",
+    "summary_many": "{{count}} cuentas",
+    "summary_other": "{{count}} cuentas",
+    "tagsAllLabel": "Todas"
+  },
+  "filteredTotals": {
+    "balance": "Saldo",
+    "consumption": "Consumo de hoy",
+    "income": "Ingresos de hoy"
+  },
+  "healthStatus": {
+    "apiError": "Error de API",
+    "error": "Error",
+    "healthy": "Correcta",
+    "httpError": "HTTP {{statusCode}}: {{message}}",
+    "networkFailed": "Falló la conexión de red",
+    "normal": "El estado de la cuenta es normal",
+    "tempWindowDisabled": "La omisión de protección está deshabilitada. Actívala en Configuración > Actualización de datos",
+    "tempWindowPermissionRequired": "La omisión de protección necesita permisos de interceptor de cookies en Firefox. Concédelos en Configuración > Permisos",
+    "unknown": "Desconocido",
+    "unknownError": "Error desconocido",
+    "warning": "Advertencia"
+  },
+  "list": {
+    "balance": {
+      "refreshBalance": "Haz clic para actualizar el saldo",
+      "refreshCashflow": "Haz clic para actualizar el consumo de hoy",
+      "refreshIncome": "Haz clic para actualizar los ingresos de hoy"
+    },
+    "clearSort": "Borrar orden",
+    "dragHandle": "Arrastra para reordenar",
+    "header": {
+      "account": "Cuenta",
+      "balance": "Saldo",
+      "createdAt": "Creada el",
+      "todayConsumption": "Consumo de hoy",
+      "todayIncome": "Ingresos de hoy"
+    },
+    "site": {
+      "checkedInToday": "Check-in realizado hoy, haz clic para ver",
+      "checkInStatusOutdated": "El estado de check-in no se detectó hoy (última comprobación: {{time}}). Haz clic para actualizar",
+      "checkInUnsupported": "Es posible que el sitio no admita check-in",
+      "currentSite": "Sitio actual",
+      "currentSiteExists": "Mismo sitio que la pestaña actual",
+      "disabled": "Deshabilitada",
+      "lastSync": "Última sincronización",
+      "notAvailable": "N/D",
+      "notCheckedInToday": "Sin check-in hoy, haz clic para ir",
+      "reason": "Motivo",
+      "refreshHealthStatus": "Haz clic para actualizar el estado de salud",
+      "siteType": "Tipo de sitio",
+      "status": "Estado",
+      "unknown": "Desconocido"
+    },
+    "sort": "Ordenar"
+  },
+  "newcomerSupport": {
+    "actions": {
+      "about": "Visitar sitio web",
+      "docs": "Abrir guía de inicio",
+      "star": "Ver en GitHub"
+    },
+    "description": "Puedes darle estrella al proyecto y revisar las guías para aprender a administrar tus cuentas relay y New API",
+    "hint": "Puedes explorar el sitio web y la documentación antes de agregar cuentas",
+    "title": "Te damos la bienvenida a All API Hub"
+  },
+  "refresh": {
+    "refreshComplete": "Actualización completa: {{success}} correctas, {{failed}} fallidas",
+    "refreshDisabledComplete": "Sondeo de cuentas deshabilitadas completo: {{restored}} restauradas, {{stillDisabled}} aún deshabilitadas",
+    "refreshDisabledCompleteWithFailures": "Sondeo de cuentas deshabilitadas completo: {{restored}} restauradas, {{stillDisabled}} aún deshabilitadas, {{failed}} fallidas",
+    "refreshDisabledFailed": "No se pudieron actualizar las cuentas deshabilitadas. Inténtalo de nuevo más tarde.",
+    "refreshFailed": "Error al actualizar, inténtalo de nuevo más tarde",
+    "refreshingAll": "Actualizando todas las cuentas...",
+    "refreshingDisabled": "Actualizando cuentas deshabilitadas...",
+    "refreshPartialSkipped": "Actualización completa: {{success}} correctas, {{skipped}} omitidas",
+    "refreshSuccess": "Todas las cuentas se actualizaron correctamente."
+  },
+  "search": {
+    "noResults": "No se encontraron cuentas coincidentes",
+    "placeholder": "Ingresa información del sitio o de la cuenta para buscar"
+  },
+  "sponsor": {
+    "actions": {
+      "continueAddAccount": "Continuar agregando esta cuenta",
+      "openApiCredentialProfilesFallback": "Agregar la clave de API de este proveedor como credencial de API",
+      "openBookmarkManagerFallback": "Guardar proveedor en marcadores en lugar de agregar una cuenta",
+      "visitProvider": "Visitar proveedor"
+    },
+    "recommendedProviders": "Proveedores recomendados",
+    "supportStatus": {
+      "fallbackApiCredentialProfiles": "Agregar como credencial",
+      "fallbackBookmark": "Guardar marcador primero",
+      "fallbackBookmarkAndApi": "Guardar marcador / agregar credencial",
+      "supported": "Se puede agregar directamente",
+      "unsupported": "Puede requerir configuración manual"
+    }
+  },
+  "stats": {
+    "completion": "Completion",
+    "estimatedTodayIncome": "Ingresos estimados",
+    "prompt": "Prompt",
+    "subscriptionInactive": "Inactiva o vencida",
+    "subscriptionRemainingCount": "Solicitudes de suscripción restantes",
+    "subscriptionStatus": "Estado de suscripción",
+    "subscriptionTitle": "Suscripción",
+    "todayConsumption": "Consumo de hoy",
+    "todayIncome": "Ingresos de hoy",
+    "totalBalance": "Saldo total",
+    "trustedTodayIncome": "Ingresos confiables",
+    "usageRequests": "Solicitudes del periodo",
+    "usageTokens": "Tokens del periodo"
+  },
+  "title": "Administración de cuentas"
+}

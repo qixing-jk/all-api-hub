@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "shareAccountSnapshot": "Compartir captura de cuenta",
+    "shareOverviewSnapshot": "Compartir captura general"
+  },
+  "labels": {
+    "accounts": "Cuentas",
+    "asOf": "Al",
+    "balance": "Saldo",
+    "income": "Ingresos",
+    "net": "Neto",
+    "outcome": "Gasto",
+    "overview": "Resumen",
+    "site": "Sitio",
+    "today": "Hoy",
+    "totalBalance": "Saldo total"
+  },
+  "toast": {
+    "captionHint": "El texto no se copió automáticamente. Copiarlo puede reemplazar la imagen del portapapeles.",
+    "copyCaption": "Copiar texto"
+  }
+}

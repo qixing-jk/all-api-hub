@@ -1,0 +1,163 @@
+{
+  "actions": {
+    "applySettings": "Aplicar configuración",
+    "prune": "Depurar",
+    "refreshNow": "Actualizar ahora"
+  },
+  "breakdown": {
+    "chartTypes": {
+      "histogram": "Histograma",
+      "pie": "Circular"
+    },
+    "controls": {
+      "chartType": "Tipo de gráfico",
+      "reference": "Referencia"
+    },
+    "coverage": "{{covered}}/{{total}} cuentas con datos",
+    "empty": "No hay datos para mostrar en este desglose.",
+    "hints": {
+      "pieDisabledForNegative": "Los gráficos circulares no están disponibles para valores negativos."
+    },
+    "title": "Desglose de cuentas"
+  },
+  "description": "Registra instantáneas diarias de saldo y flujo de caja, y visualiza tendencias a lo largo del tiempo.",
+  "empty": {
+    "description": "Habilita Historial de saldo y actualiza una cuenta para registrar la primera instantánea.",
+    "title": "Aún no hay instantáneas"
+  },
+  "emptyRange": {
+    "description": "Existen instantáneas, pero ninguna cae dentro del rango de fechas seleccionado. Intenta ampliar el rango o actualizar una cuenta.",
+    "title": "No hay instantáneas en este rango"
+  },
+  "filters": {
+    "accounts": "Cuentas",
+    "accountsHint": "Selecciona cuentas para incluir en los gráficos.",
+    "allAccounts": "Todas las cuentas",
+    "allTags": "Todas las etiquetas",
+    "endDay": "Fecha de fin",
+    "noDataInRange": "No hay datos en este rango",
+    "quickRanges": {
+      "180d": "180 días",
+      "30d": "30 días",
+      "365d": "1 año",
+      "7d": "7 días",
+      "90d": "90 días"
+    },
+    "range": "Rango de fechas",
+    "rangeHint": "Limitado por la ventana de retención ({{days}} días).",
+    "startDay": "Fecha de inicio",
+    "tags": "Etiquetas",
+    "tagsHint": "Filtra cuentas por etiquetas."
+  },
+  "hints": {
+    "disabled": {
+      "actions": {
+        "openSettings": "Abrir configuración"
+      },
+      "description": "Habilita Historial de saldo en la configuración para empezar a registrar instantáneas.",
+      "title": "Historial de saldo está deshabilitado"
+    },
+    "incompleteSelection": {
+      "description": "Los totales se calculan con el mejor esfuerzo sumando las cuentas que tienen datos cada día. Cuando la cobertura está incompleta ({{minCovered}}-{{maxCovered}}/{{totalAccounts}} cuentas), los totales pueden estar subestimados.",
+      "title": "El total puede estar incompleto"
+    }
+  },
+  "messages": {
+    "error": {
+      "pruneFailed": "Error al depurar: {{error}}",
+      "refreshFailed": "Error al actualizar: {{error}}",
+      "settingsSaveFailed": "No se pudo guardar la configuración: {{error}}"
+    },
+    "loading": {
+      "loadingData": "Cargando…",
+      "pruning": "Depurando…",
+      "refreshing": "Actualizando…",
+      "savingSettings": "Guardando configuración…"
+    },
+    "success": {
+      "pruneCompleted": "Depuración completada",
+      "refreshCompleted": "Actualización completada",
+      "settingsSaved": "Configuración guardada"
+    }
+  },
+  "metrics": {
+    "balance": "Saldo",
+    "estimatedIncome": "Ingresos estimados",
+    "income": "Ingresos",
+    "net": "Cambió neto",
+    "outcome": "Egresos"
+  },
+  "overview": {
+    "kpis": {
+      "coverageAccounts": "{{covered}}/{{total}} cuentas",
+      "endBalance": {
+        "label": "Saldo final"
+      },
+      "incomeTotal": {
+        "label": "Ingresos totales"
+      },
+      "outcomeTotal": {
+        "label": "Egresos totales"
+      },
+      "rangeNet": {
+        "label": "Neto del rango"
+      }
+    },
+    "title": "Resumen"
+  },
+  "settings": {
+    "alarmUnsupported": "La API de alarmas no está disponible en este navegador; no se puede habilitar la captura de fin de día.",
+    "enabled": "Habilitar Historial de saldo",
+    "enabledHint": "Cuando está deshabilitado, no se registran instantáneas y se desactiva la captura programada.",
+    "endOfDayCapture": "Captura de fin de día",
+    "endOfDayCaptureHint": "Captura diaria de mejor esfuerzo cerca de {{time}} (requiere API de alarmas).",
+    "estimatedTodayIncome": "Mostrar ingresos estimados de hoy",
+    "estimatedTodayIncomeHint": "Usa el historial de saldo para estimar recompensas que no aparecen en los registros de ingresos del sitio. No disponible cuando falta la línea base del día anterior.",
+    "retentionDays": "Retención (días)"
+  },
+  "summary": {
+    "coverage": "Días con datos: saldo {{snapshotAvailableDays}}/{{totalDays}} (completos {{snapshotCompleteDays}}/{{totalDays}}), flujo de caja {{cashflowAvailableDays}}/{{totalDays}} (completos {{cashflowCompleteDays}}/{{totalDays}})."
+  },
+  "table": {
+    "columns": {
+      "account": "Cuenta",
+      "cashflowCoverage": "Cobertura de flujo de caja",
+      "endBalance": "Saldo final",
+      "estimatedIncomeTotal": "Ingresos estimados totales",
+      "incomeTotal": "Ingresos totales",
+      "outcomeTotal": "Egresos totales",
+      "rangeNet": "Neto del rango",
+      "snapshotCoverage": "Cobertura de instantáneas",
+      "startBalance": "Saldo inicial"
+    },
+    "coverageFormat": "{{covered}}/{{total}}",
+    "empty": "No hay resúmenes de cuenta para mostrar.",
+    "loading": "Cargando…",
+    "title": "Resumen de cuentas"
+  },
+  "title": "Historial de saldo",
+  "trend": {
+    "chartTypes": {
+      "bar": "Barras",
+      "line": "Línea"
+    },
+    "controls": {
+      "chartType": "Tipo de gráfico",
+      "scope": "Vista"
+    },
+    "emptyMetric": "No hay datos de {{metric}} en este rango.",
+    "scopes": {
+      "accounts": "Por cuenta",
+      "total": "Total"
+    },
+    "subtitle": "Series por cuenta con huecos para días sin datos.",
+    "subtitleTotal": "Total (suma) en las cuentas seleccionadas; los valores pueden estar subestimados en días con cobertura incompleta.",
+    "title": "Tendencia"
+  },
+  "warnings": {
+    "cashflowDisabled": {
+      "description": "La obtención del flujo de caja de hoy está deshabilitada y la captura de fin de día está deshabilitada. Habilita \"Mostrar flujo de caja de hoy\" o \"Captura de fin de día\" para registrar valores de ingresos/egresos.",
+      "title": "El historial de ingresos/egresos estará vacío"
+    }
+  }
+}

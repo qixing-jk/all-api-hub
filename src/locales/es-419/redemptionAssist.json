@@ -1,0 +1,55 @@
+{
+  "accountSelect": {
+    "confirm": "Confirmar canje",
+    "noResults": "No se encontraron cuentas coincidentes",
+    "title": "Selecciona una cuenta para usar en el canje",
+    "titleFallback": "Ninguna cuenta coincidió con este sitio; selecciona una manualmente",
+    "titleMultiple": "Hay varias cuentas disponibles; selecciona una para el canje"
+  },
+  "actions": {
+    "autoRedeem": "Canjear automáticamente"
+  },
+  "messages": {
+    "batchResultSummary": "Total {{total}}. Correctos {{success}}. Fallidos {{failed}}.",
+    "batchResultTitle": "Resultados del canje",
+    "cancelled": "Cancelado",
+    "noAccountForUrl": "No se encontró ninguna cuenta coincidente para este sitio. Agrega el sitio como cuenta en All API Hub y vuelve a intentarlo.",
+    "promptConfirm": "Se detectó un posible código de canje {{code}} en esta página. ¿Intentar canje automático para este sitio?",
+    "promptConfirmBatch_one": "Se detectó {{count}} posible código de canje en esta página. Selecciona códigos para canjear automáticamente en este sitio.",
+    "promptConfirmBatch_many": "Se detectaron {{count}} posibles códigos de canje en esta página. Selecciona códigos para canjear automáticamente en este sitio.",
+    "promptConfirmBatch_other": "Se detectaron {{count}} posibles códigos de canje en esta página. Selecciona códigos para canjear automáticamente en este sitio.",
+    "promptSettingsLink": "Abrir configuración de Asistente de canje",
+    "promptSource": "Este aviso lo proporciona la extensión All API Hub",
+    "promptTitle": "Asistente de canje",
+    "redeemFailed": "El canje falló. Inténtalo de nuevo más tarde.",
+    "redeemLoading": "Intentando canjear...",
+    "redeemSuccess": "Canje realizado correctamente. Monto acreditado: {{amount}}",
+    "selectAll": "Seleccionar todo",
+    "success": {
+      "settingsSaved": "La configuración del asistente de canje se guardó"
+    }
+  },
+  "settings": {
+    "contextMenu": {
+      "enable": "Mostrar en el menú contextual del navegador",
+      "enableDesc": "Agrega un elemento “Asistente de canje” al menú contextual del navegador."
+    },
+    "description": "Configura cómo la extensión detecta y ayuda a canjear códigos en páginas compatibles",
+    "enable": "Habilitar asistente de canje",
+    "enableDesc": "Detecta automáticamente códigos de canje en páginas compatibles y muestra un aviso de canje",
+    "relaxedCodeValidation": "Relajar restricciones de formato del código",
+    "relaxedCodeValidationDesc": "Cuando está habilitado, cualquier código de 32 caracteres se tratará como un posible código de canje (sin comprobar el conjunto de caracteres).",
+    "title": "Asistente de canje",
+    "urlWhitelist": {
+      "enable": "Habilitar lista de URL permitidas",
+      "enableDesc": "Cuando está habilitada, el asistente de canje solo se ejecuta en URLs permitidas por las reglas siguientes.",
+      "includeAccountSiteUrls": "Incluir URLs de sitios de cuentas",
+      "includeAccountSiteUrlsDesc": "Permite todas las páginas bajo el origen de la URL del sitio de cada cuenta.",
+      "includeCheckInAndRedeemUrls": "Incluir URLs de check-in y canje",
+      "includeCheckInAndRedeemUrlsDesc": "Permite las páginas de check-in y canje (personalizadas o predeterminadas) para cada cuenta.",
+      "patterns": "Patrones regex personalizados",
+      "patternsDesc": "Un patrón RegExp de JavaScript por línea. Se aplica coincidencia sin distinguir mayúsculas/minúsculas.",
+      "patternsPlaceholder": "^https://example\\.com/console/topup"
+    }
+  }
+}

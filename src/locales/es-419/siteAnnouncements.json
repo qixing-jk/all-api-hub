@@ -1,0 +1,75 @@
+{
+  "actions": {
+    "checkNow": "Comprobar ahora",
+    "collapse": "Contraer",
+    "expand": "Expandir",
+    "markAllRead": "Marcar todo como leído",
+    "markRead": "Marcar como leído",
+    "pollingSettings": "Ajustes de sondeo",
+    "viewSource": "Ver anuncio del sitio"
+  },
+  "badges": {
+    "notified": "Notificado",
+    "unread": "Sin leer"
+  },
+  "description": {
+    "disabledSummary": "El sondeo automático está desactivado; aún puedes ejecutar una comprobación manual.",
+    "enabledInterval": "Intervalo actual: cada {{intervalMinutes}} minutos.",
+    "enabledSummary": "El sondeo automático está activado; revisa los anuncios obtenidos, administra el estado de lectura y ejecuta una comprobación manual.",
+    "pollingSettingsLink": "Configurar sondeo automático"
+  },
+  "empty": {
+    "addAccount": "Agregar cuenta",
+    "description": "Los anuncios nuevos descubiertos por las comprobaciones en segundo plano aparecerán aquí.",
+    "descriptionWhenPollingDisabled": "Puedes comprobar manualmente ahora; el sondeo automático se puede administrar en ajustes.",
+    "filtered": "Ningún anuncio coincide con los filtros actuales",
+    "noAccounts": "Agrega una cuenta antes de comprobar anuncios",
+    "noAccountsDesc": "Las comprobaciones de anuncios necesitan al menos una cuenta habilitada para saber qué sitios deben sondearse.",
+    "pollingSettingsLink": "Configurar sondeo automático",
+    "title": "No hay registros de anuncios"
+  },
+  "filters": {
+    "allReadStates": "Todos los estados",
+    "allSites": "Todos los sitios",
+    "allSiteTypes": "Todos los tipos",
+    "read": "Leídos",
+    "readState": "Estado de lectura",
+    "searchSite": "Buscar sitios",
+    "site": "Sitio",
+    "siteType": "Tipo de sitio",
+    "unread": "Sin leer"
+  },
+  "loading": "Cargando anuncios...",
+  "messages": {
+    "checkCompleted": "Comprobación de anuncios completada",
+    "checkFailed": "Error al comprobar anuncios",
+    "loadFailed": "No se pudieron cargar los anuncios",
+    "markAllReadFailed": "No se pudieron marcar los anuncios como leídos",
+    "markReadFailed": "No se pudo marcar el anuncio como leído"
+  },
+  "notification": {
+    "multipleUnread_one": "{{title}}, más {{count}} anuncio sin leer",
+    "multipleUnread_many": "{{title}}, más {{count}} anuncios sin leer",
+    "multipleUnread_other": "{{title}}, más {{count}} anuncios sin leer",
+    "title": "{{site}} tiene anuncios nuevos"
+  },
+  "status": {
+    "failed": "La última comprobación de anuncios falló: {{error}}",
+    "failedTitle": "Comprobación fallida",
+    "lastChecked": "Última comprobación: {{time}}",
+    "unsupported": "La última comprobación no encontró un endpoint de anuncios utilizable para este sitio.",
+    "unsupportedTitle": "Endpoint de anuncios no compatible"
+  },
+  "summary": {
+    "filtered_one": "Mostrando {{count}} de {{total}} anuncio",
+    "filtered_many": "Mostrando {{count}} de {{total}} anuncios",
+    "filtered_other": "Mostrando {{count}} de {{total}} anuncios",
+    "notified_one": "{{count}} notificación del sistema enviada",
+    "notified_many": "{{count}} notificaciones del sistema enviadas",
+    "notified_other": "{{count}} notificaciones del sistema enviadas",
+    "sites": "Sitios",
+    "total": "Total",
+    "unread": "Sin leer"
+  },
+  "title": "Anuncios del sitio"
+}

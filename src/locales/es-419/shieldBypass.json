@@ -1,0 +1,11 @@
+{
+  "titlePrefix": "All API Hub · Omisión de protección",
+  "toast": {
+    "actions": {
+      "dismiss": "Descartar",
+      "openSettings": "Abrir ajustes de omisión de protección"
+    },
+    "body": "All API Hub abrió esta página automáticamente para pasar páginas de protección (por ejemplo, desafíos de Cloudflare) y obtener las cookies/sesión necesarias.\n\nEsto es necesario para que All API Hub pueda realizar solicitudes correctamente y detectar datos en sitios protegidos.\n\nSi aparece un paso de verificación, complétalo en esta ventana; una vez aprobado, All API Hub continuará y esta ventana podría cerrarse automáticamente.",
+    "title": "Ayudante de omisión protegida de All API Hub (ventana temporal)"
+  }
+}

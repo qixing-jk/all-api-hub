@@ -1,0 +1,68 @@
+{
+  "actions": {
+    "cancel": "Cancelar",
+    "clear": "Limpiar",
+    "close": "Cerrar",
+    "copyKey": "Copiar clave",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "export": "Exportar",
+    "goToSettings": "Ir a configuración",
+    "import": "Importar",
+    "more": "Más",
+    "openSidePanel": "Abrir en SidePanel",
+    "refresh": "Actualizar",
+    "reset": "Restablecer",
+    "retry": "Reintentar",
+    "save": "Guardar"
+  },
+  "currency": {
+    "clickToSwitch": "Haz clic para cambiar a {{currency}}",
+    "cny": "CNY",
+    "usd": "USD"
+  },
+  "labels": {
+    "apiKey": "Clave API",
+    "notAvailable": "N/D",
+    "settings": "Configuración",
+    "token": "Token",
+    "unknown": "Desconocido"
+  },
+  "quota": {
+    "unlimited": "Ilimitado"
+  },
+  "rootErrorBoundary": {
+    "genericDescription": "La página no se pudo mostrar correctamente. Recárgala primero. Si esto sigue ocurriendo, reporta el problema para que podamos ayudar.",
+    "reload": "Recargar página",
+    "reportIssue": "Reportar problema",
+    "requestLanguage": "Solicitar un idioma",
+    "title": "Falló la visualización de la página",
+    "translationDescription": "Si estás usando traducción automática, desactívala para esta página o cambia al idioma que necesitas en la configuración de la extensión."
+  },
+  "status": {
+    "cancelled": "Cancelado",
+    "configurationRequired": "Configuración requerida",
+    "creating": "Creando...",
+    "disabled": "Deshabilitado",
+    "enabled": "Habilitado",
+    "error": "Error",
+    "exporting": "Exportando...",
+    "failed": "Falló",
+    "importing": "Importando...",
+    "loading": "Cargando...",
+    "processing": "Procesando...",
+    "refreshing": "Actualizando...",
+    "resetting": "Restableciendo...",
+    "saving": "Guardando...",
+    "success": "Correcto",
+    "testing": "Probando...",
+    "updating": "Actualizando...",
+    "uploading": "Subiendo..."
+  },
+  "time": {
+    "neverExpires": "Nunca expira",
+    "seconds": "segundos",
+    "updatedAt": "Actualizado a las {{time}}"
+  },
+  "total": "Total"
+}

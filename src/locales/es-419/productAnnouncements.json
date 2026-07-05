@@ -1,0 +1,33 @@
+{
+  "actions": {
+    "close": "Cerrar anuncios del producto",
+    "dismiss": "Descartar",
+    "dismissFor": "Descartar {{title}}",
+    "open": "Anuncios del producto",
+    "openWithRiskCount": "Anuncios del producto, {{riskCount}} avisos de riesgo activos",
+    "restore": "Restaurar",
+    "restoreFor": "Restaurar {{title}}",
+    "viewAll": "Ver todo"
+  },
+  "empty": {
+    "active": "No hay anuncios del producto",
+    "dismissed": "No hay anuncios descartados"
+  },
+  "filters": {
+    "active": "Activos",
+    "dismissed": "Descartados"
+  },
+  "labels": {
+    "critical": "Crítico",
+    "info": "Info",
+    "unread": "No leído",
+    "warning": "Advertencia"
+  },
+  "loading": "Cargando anuncios del producto...",
+  "summary": {
+    "additional_one": "{{riskCount}} aviso de riesgo más",
+    "additional_many": "{{riskCount}} avisos de riesgo más",
+    "additional_other": "{{riskCount}} avisos de riesgo más"
+  },
+  "title": "Anuncios del producto"
+}

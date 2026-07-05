@@ -1,0 +1,706 @@
+{
+  "accountManagement": {
+    "description": "Administra cuentas, saldos, API keys y configura prioridades de ordenamiento en la consola de gestión dedicada.",
+    "openPage": "Abrir página de Gestión de cuentas",
+    "title": "Gestión de cuentas"
+  },
+  "actionClick": {
+    "actionIconClickDesc": "Elige si los clics en la barra de herramientas abren el popup, el panel lateral o la página completa de opciones.",
+    "actionIconClickTitle": "Destino predeterminado",
+    "description": "Define qué se abre al hacer clic en el ícono de la extensión en la barra de herramientas del navegador.",
+    "optionsLabel": "Página de opciones",
+    "optionsTitle": "Abrir página completa de opciones",
+    "popupLabel": "Popup",
+    "popupTitle": "Abrir popup",
+    "sidepanelFallbackToast": "Preferencia de panel lateral guardada. Este navegador no admite paneles laterales, así que los clics en la barra de herramientas abrirán el popup.",
+    "sidepanelLabel": "Panel lateral",
+    "sidepanelTitle": "Abrir panel lateral",
+    "sidepanelUnsupportedHelper": "Este navegador no admite paneles laterales; las selecciones de panel lateral usarán el popup como alternativa.",
+    "title": "Clic en ícono de extensión"
+  },
+  "appearanceLanguage": {
+    "language": "Idioma",
+    "languageDesc": "Elige tu idioma preferido",
+    "onboardingHelper": "Actualiza el texto de bienvenida de inmediato y conserva este idioma para páginas de ajustes posteriores.",
+    "onboardingLabel": "Elige tu idioma",
+    "onboardingLanguageRequest": "¿No ves tu idioma? Dinos cuál agregar",
+    "switcher": {
+      "currentLanguage": "Idioma actual de la interfaz: {{language}}",
+      "groupLabel": "Selector de idioma de interfaz",
+      "options": {
+        "en": {
+          "label": "EN",
+          "name": "Inglés"
+        },
+        "es-419": {
+          "label": "ES",
+          "name": "Español (Latinoamérica)"
+        },
+        "ja": {
+          "label": "JA",
+          "name": "Japonés"
+        },
+        "vi": {
+          "label": "VI",
+          "name": "Vietnamita"
+        },
+        "zh-CN": {
+          "label": "SC",
+          "name": "Chino simplificado"
+        },
+        "zh-TW": {
+          "label": "TC",
+          "name": "Chino tradicional"
+        }
+      },
+      "switchToLanguage": "Cambiar idioma de la interfaz a {{language}}"
+    }
+  },
+  "autoFillCurrentSiteUrlOnAccountAdd": {
+    "description": "Controla si Agregar cuenta inicia con la URL del sitio actual ya completada.",
+    "title": "Cuentas",
+    "toggleDesc": "Cuando está habilitado, al abrir Agregar cuenta se completa el campo URL con el origen del sitio de la pestaña actual del navegador. La detección sigue usando el siguiente paso existente.",
+    "toggleLabel": "Completar URL del sitio actual al agregar cuentas"
+  },
+  "autoProvisionKeyOnAccountAdd": {
+    "description": "Controla si All API Hub aprovisiona automáticamente una API key predeterminada después de agregar una cuenta.",
+    "title": "API keys",
+    "toggleDesc": "Cuando está habilitado, All API Hub revisa tu inventario de tokens después de guardar una cuenta y crea un token predeterminado si no existe ninguno.",
+    "toggleLabel": "Crear automáticamente una clave predeterminada al agregar cuenta"
+  },
+  "axonHub": {
+    "cors": {
+      "description": "Las instancias nuevas de AxonHub normalmente requieren una actualización CORS del lado del servidor antes de que la extensión del navegador pueda acceder a AxonHub. Prefiere permitir solo el origen confiable del navegador / extensión en AXONHUB_SERVER_CORS_ALLOWED_ORIGINS y usa \"*\" solo como alternativa temporal de desarrollo local.",
+      "title": "Configuración CORS requerida"
+    },
+    "description": "Configura ajustes de integración para conectarte a un sitio administrador de AxonHub.",
+    "fields": {
+      "baseUrlDesc": "Define la Base URL del sitio AxonHub",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://axonhub.example.com",
+      "emailDesc": "Correo de administrador de AxonHub usado para /admin/auth/signin",
+      "emailLabel": "Correo de administrador",
+      "emailPlaceholder": "admin@example.com",
+      "hidePassword": "Ocultar contraseña",
+      "passwordDesc": "Contraseña de administrador de AxonHub usada para obtener un token de sesión GraphQL de administrador",
+      "passwordLabel": "Contraseña de administrador",
+      "passwordPlaceholder": "Ingresa la contraseña",
+      "showPassword": "Mostrar contraseña"
+    },
+    "title": "Ajustes de integración de AxonHub",
+    "validation": {
+      "corsFailed": "La validación de AxonHub falló: {{error}}. Esto normalmente significa que la instancia de AxonHub aún no ha permitido el origen del navegador de la extensión. Actualiza AXONHUB_SERVER_CORS_ALLOWED_ORIGINS para permitir el origen confiable del navegador / extensión y usa \"*\" solo como alternativa temporal de desarrollo local; luego reintenta.",
+      "description": "Prueba si el correo y la contraseña pueden iniciar sesión en AxonHub admin GraphQL",
+      "failed": "La validación de AxonHub falló: {{error}}",
+      "missingFields": "Completa todos los campos obligatorios",
+      "success": "Configuración de AxonHub validada correctamente",
+      "title": "Validar configuración",
+      "validate": "Validar",
+      "validating": "Validando..."
+    }
+  },
+  "changelogOnUpdate": {
+    "description": "Controla si All API Hub muestra un diálogo de Novedades la primera vez que abres la UI de la extensión después de actualizaciones.",
+    "title": "Changelog",
+    "toggleDesc": "Cuando está habilitado, el registro de actualización se muestra integrado al abrir la UI por primera vez después de una actualización (una vez por versión). Aún puedes abrir manualmente el changelog completo de la documentación.",
+    "toggleLabel": "Mostrar Novedades después de actualizaciones"
+  },
+  "claudeCodeHub": {
+    "description": "Configura ajustes de conexión para un sitio administrador de Claude Code Hub.",
+    "fields": {
+      "adminTokenDesc": "Token de administrador o API key aceptada por la API de acciones de Claude Code Hub",
+      "adminTokenLabel": "Token de administrador",
+      "adminTokenPlaceholder": "Ingresa el token de administrador",
+      "baseUrlDesc": "Define la Base URL del sitio Claude Code Hub",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://claude-code-hub.example.com",
+      "hideAdminToken": "Ocultar token de administrador",
+      "showAdminToken": "Mostrar token de administrador"
+    },
+    "title": "Ajustes de integración de Claude Code Hub",
+    "unsupported": {
+      "description": "La sincronización de modelos y la redirección de modelos no están disponibles para Claude Code Hub en esta versión.",
+      "title": "Acciones de canal no compatibles"
+    },
+    "validation": {
+      "description": "Prueba si el token puede leer proveedores de Claude Code Hub mediante la API de acciones",
+      "failed": "La validación de Claude Code Hub falló: {{error}}",
+      "missingFields": "Completa todos los campos obligatorios",
+      "success": "Configuración de Claude Code Hub validada correctamente",
+      "title": "Validar configuración",
+      "validate": "Validar",
+      "validating": "Validando..."
+    }
+  },
+  "claudeCodeRouter": {
+    "apiKeyLabel": "API key",
+    "apiKeyPlaceholder": "sk-123456",
+    "baseUrlLabel": "Base URL",
+    "baseUrlPlaceholder": "http://localhost:3000",
+    "description": "Configura la conexión a la API de administración de Claude Code Router",
+    "keyDesc": "API key opcional para /api/config (APIKEY)",
+    "title": "Claude Code Router",
+    "urlDesc": "Base URL del servidor Claude Code Router, p. ej. http://localhost:3000"
+  },
+  "cliProxy": {
+    "baseUrlLabel": "Base URL de Management API",
+    "checkConnectionAction": "Comprobar conexión",
+    "checkConnectionDesc": "Después de guardar, verifica que la URL actual y la clave de gestión puedan acceder a CLIProxyAPI Management API.",
+    "checkConnectionLabel": "Comprobación de conexión",
+    "description": "Configura la conexión a CLIProxyAPI Management API",
+    "hideKey": "Ocultar clave",
+    "keyDesc": "Clave de gestión para autenticación de acceso a la interfaz",
+    "managementDocsLinkLabel": "Abrir docs de Management API",
+    "managementKeyLabel": "Clave de gestión",
+    "showKey": "Mostrar clave",
+    "title": "Ajustes de CLIProxyAPI",
+    "urlDesc": "Define la Base URL de Management API, p. ej. http://localhost:8317/v0/management"
+  },
+  "danger": {
+    "resetAllSettings": "Restablecer todos los ajustes",
+    "resetDesc": "Restablece todas las configuraciones a sus valores predeterminados; esta operación no se puede deshacer",
+    "resetFailed": "No se pudieron restablecer los ajustes",
+    "resetSettings": "Restablecer ajustes",
+    "title": "Zona peligrosa"
+  },
+  "dataBackup": {
+    "importExport": {
+      "description": "Accede a la página dedicada para importar y exportar datos.",
+      "info": "La página Importar/Exportar ofrece acceso completo a importación de datos, exportación a distintos formatos y gestión de copias de seguridad.",
+      "openPage": "Abrir página Importar / Exportar",
+      "title": "Importar y exportar"
+    }
+  },
+  "description": "Administra las opciones básicas de configuración del plugin",
+  "display": {
+    "cny": "CNY (¥)",
+    "currencyDesc": "Define la unidad de moneda predeterminada para mostrar saldo y flujo de efectivo",
+    "currencyUnit": "Unidad de moneda",
+    "defaultTab": "Pestaña predeterminada",
+    "defaultTabDesc": "Define la pestaña predeterminada que se muestra al iniciar el plugin",
+    "description": "Personaliza la apariencia y las preferencias de visualizacion del plugin",
+    "title": "Ajustes de visualizacion",
+    "todayCashflow": "Flujo de efectivo de hoy",
+    "todayCashflowEnabled": "Mostrar flujo de efectivo de hoy",
+    "todayCashflowEnabledDesc": "Controla si se muestran y obtienen las estadísticas de consumo/ingresos de hoy. Cuando está deshabilitado, las estadísticas de hoy se ocultan y la actualización omite las solicitudes de datos usadas para calcularlas.",
+    "totalBalance": "Saldo total",
+    "usd": "USD ($)"
+  },
+  "doneHub": {
+    "adminCredentialsLink": {
+      "description": "Abre la página de perfil para encontrar el token de acceso del sistema y el ID de usuario.",
+      "open": "Abrir página",
+      "title": "Acceso rápido"
+    },
+    "description": "Configura ajustes de integración para conectarte a servicios compatibles con Done Hub.",
+    "fields": {
+      "adminTokenLabel": "Token de acceso del sistema del administrador",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hideToken": "Ocultar token de acceso del sistema",
+      "showToken": "Mostrar token de acceso del sistema",
+      "userIdLabel": "ID de usuario administrador"
+    },
+    "title": "Ajustes de integración de Done Hub",
+    "tokenDesc": "Token de acceso del sistema para el usuario administrador. Encuentralo en el panel de Done Hub → Ajustes personales → Token.",
+    "urlDesc": "Define la Base URL para la integración de Done Hub",
+    "userIdDesc": "ID de usuario administrador (solo numerico). El administrador root suele ser 1."
+  },
+  "duplicateAccountWarningOnAdd": {
+    "description": "Controla si All API Hub pide confirmación cuando agregas una cuenta para un sitio que ya existe.",
+    "title": "Cuentas",
+    "toggleDesc": "Cuando está habilitado, All API Hub muestra un diálogo de confirmación si intentas agregar otra cuenta para la misma URL de sitio.",
+    "toggleLabel": "Advertir antes de agregar duplicados"
+  },
+  "logging": {
+    "consoleEnabled": "Habilitar registro en consola",
+    "consoleEnabledDesc": "Cuando está deshabilitado, All API Hub no emitirá ninguna salida de consola en ningún nivel (incluidos errores).",
+    "description": "Controla el registro en consola para diagnóstico y solución de problemas.",
+    "levels": {
+      "debug": "Debug",
+      "error": "Error",
+      "info": "Info",
+      "warn": "Warn"
+    },
+    "minLevel": "Nivel mínimo de registro",
+    "minLevelDesc": "Cuando el registro en consola está habilitado, los logs por debajo de este nivel se suprimen.",
+    "title": "Registro"
+  },
+  "managedSite": {
+    "axonHub": "AxonHub",
+    "claudeCodeHub": "Claude Code Hub",
+    "description": "Selecciona qué plataforma agregadora de API quieres administrar. Esto determina qué configuración se usará para la gestión de canales y la sincronización de modelos.",
+    "doneHub": "Done Hub",
+    "newApi": "New API",
+    "octopus": "Octopus",
+    "siteTypeDesc": "Elige la plataforma usada para gestión de canales y sincronización de modelos",
+    "siteTypeLabel": "Tipo de sitio administrado",
+    "title": "Configuración de sitio administrado",
+    "veloera": "Veloera"
+  },
+  "messages": {
+    "confirmReset": "Confirmar restablecimiento",
+    "preferencesChangedExternally": "Las preferencias cambiaron externamente. Actualiza e inténtalo de nuevo.",
+    "resetConfirmDesc": "¿Seguro que quieres restablecer {{name}} a los ajustes predeterminados? Esta operación no se puede deshacer.",
+    "resetFailed": "No se pudo restablecer {{name}}",
+    "resetSuccess": "{{name}} se restableció a los ajustes predeterminados",
+    "runtimeRequestFailed": "La solicitud de runtime falló. Inténtalo más tarde.",
+    "saveSettingsFailed": "No se pudieron guardar los ajustes",
+    "updateFailed": "Error al actualizar {{name}}",
+    "updateSuccess": "{{name}} se actualizó correctamente"
+  },
+  "newApi": {
+    "adminCredentialsLink": {
+      "description": "Abre la página de ajustes personales de administrador para encontrar el token de acceso del sistema y el ID de usuario.",
+      "open": "Abrir página",
+      "title": "Acceso rápido"
+    },
+    "description": "Configura ajustes de integración para conectarte a servicios compatibles con New API.",
+    "fields": {
+      "adminTokenLabel": "Token de acceso del sistema del administrador",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hidePassword": "Ocultar contraseña de inicio de sesión",
+      "hideToken": "Ocultar token de acceso del sistema",
+      "hideTotpSecret": "Ocultar secreto TOTP",
+      "passwordDesc": "Opcional. Se usa junto con el nombre de usuario de inicio de sesión para acceder a la consola admin de New API y establecer una sesión cuando se ve una clave de canal o se ejecuta una comparación completa de claves.",
+      "passwordLabel": "Contraseña de inicio de sesión",
+      "passwordPlaceholder": "Ingresa la contraseña",
+      "showPassword": "Mostrar contraseña de inicio de sesión",
+      "showToken": "Mostrar token de acceso del sistema",
+      "showTotpSecret": "Mostrar secreto TOTP",
+      "totpSecretDesc": "Opcional. Cuando se proporciona, All API Hub puede generar automáticamente códigos TOTP para 2FA de inicio de sesión y la verificación segura requerida para ver claves de canal.",
+      "totpSecretLabel": "Secreto TOTP",
+      "totpSecretPlaceholder": "Pega el secreto TOTP Base32",
+      "userIdLabel": "ID de usuario administrador",
+      "usernameDesc": "Opcional. Se usa para iniciar sesión en la consola admin de New API y completar 2FA cuando sea necesario. Se usa principalmente para ver la clave real del canal en Gestión de canales y para comprobar si una clave ya se usa en un canal en Gestión de claves.",
+      "usernameLabel": "Usuario de inicio de sesión",
+      "usernamePlaceholder": "admin"
+    },
+    "sessionTest": {
+      "action": "Probar configuración",
+      "description": "Prueba si el usuario, contraseña y secreto TOTP ingresados son correctos y utilizables. Después de una comprobación exitosa, puedes continuar con acciones que requieren inicio de sesión y 2FA.",
+      "testing": "Probando configuración...",
+      "title": "Probar configuración de inicio de sesión y 2FA"
+    },
+    "title": "Ajustes de integración de New API",
+    "tokenDesc": "Token de acceso del sistema para el usuario administrador",
+    "urlDesc": "Define la Base URL para la integración de New API",
+    "userIdDesc": "ID de usuario administrador (solo numerico)"
+  },
+  "octopus": {
+    "description": "Configura ajustes de integración para conectarte a sitios Octopus autohospedados. El sistema iniciará sesión automáticamente con tus credenciales y administrará el JWT Token.",
+    "fields": {
+      "baseUrlDesc": "Define la Base URL del sitio Octopus",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://octopus.example.com",
+      "hidePassword": "Ocultar contraseña",
+      "passwordDesc": "Contraseña de administrador de Octopus para inicio de sesión automático",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "Ingresa la contraseña",
+      "showPassword": "Mostrar contraseña",
+      "usernameDesc": "Usuario administrador de Octopus para inicio de sesión automático",
+      "usernameLabel": "Usuario",
+      "usernamePlaceholder": "admin"
+    },
+    "title": "Ajustes de integración de Octopus",
+    "validation": {
+      "description": "Prueba si el usuario y la contraseña son correctos",
+      "error": "Ocurrió un error durante la validación",
+      "failed": "La validación de configuración falló; revisa el usuario y la contraseña",
+      "missingFields": "Completa todos los campos obligatorios",
+      "success": "Configuración validada correctamente, la conexión funciona",
+      "title": "Validar configuración",
+      "validate": "Validar",
+      "validating": "Validando..."
+    }
+  },
+  "permissions": {
+    "actions": {
+      "allow": "Permitir (recomendado)",
+      "refresh": "Actualizar estado",
+      "remove": "Revocar"
+    },
+    "description": "Concede estas capacidades opcionales solo cuando necesites que All API Hub maneje cookies, headers o flujos de omisión con ventana temporal por ti.",
+    "helper": "Una vez habilitadas, la extensión simplemente adjunta tus cookies y headers de sesión existentes en segundo plano. Puedes deshabilitar cualquier permiso después sin afectar las funciones principales.",
+    "items": {
+      "bookmarks": {
+        "description": "Leer marcadores del navegador solo al importar sitios de cuenta desde URLs de marcadores guardados.",
+        "title": "Marcadores del navegador"
+      },
+      "clipboardRead": {
+        "description": "Permite que el asistente de canje detecte códigos de canje copiados y así sugiera canjearlos automáticamente.",
+        "title": "Lectura del portapapeles"
+      },
+      "cookies": {
+        "description": "Permite que All API Hub lea las cookies necesarias de tus cuentas conectadas para agregar headers de autenticación cuando sea necesario.",
+        "title": "Cookies"
+      },
+      "declarativeNetRequestWithHostAccess": {
+        "description": "Permite aplicar reglas de headers de solicitud al presionar Tab durante la protección de ventana temporal, adjuntar las cookies correctas para distintas cuentas y evitar anomalias de datos con varias cuentas.",
+        "title": "Declarative Net Request"
+      },
+      "notifications": {
+        "description": "Permite que tareas programadas en segundo plano envíen notificaciones del sistema después de finalizar.",
+        "title": "Notificaciones del sistema"
+      },
+      "webRequest": {
+        "description": "Permite que la extensión observe solicitudes salientes solo cuando la omisión de ventana temporal o la actualización automática necesite agregar headers requeridos.",
+        "title": "Web Request"
+      },
+      "webRequestBlocking": {
+        "description": "Permite modificación sincrónica para que las cookies se adjunten antes de que una solicitud salga del navegador, manteniendo confiables los flujos de omisión de firewall.",
+        "title": "Web Request Blocking"
+      }
+    },
+    "messages": {
+      "granted": "{{name}} habilitado. Los flujos relacionados ahora se ejecutarán como se espera.",
+      "grantFailed": "No se pudo habilitar {{name}}. Reintenta más tarde si aún lo necesitas.",
+      "revoked": "Permiso {{name}} revocado",
+      "revokeFailed": "No se pudo revocar el permiso {{name}}"
+    },
+    "status": {
+      "checking": "Comprobando…",
+      "denied": "No concedido",
+      "granted": "Concedido"
+    },
+    "statusCaption": "El estado de permisos se sincroniza con el navegador. Haz clic en actualizar si cambiaste permisos fuera de esta página.",
+    "title": "Permisos"
+  },
+  "permissionsOnboarding": {
+    "actions": {
+      "allowAll": "Permitir permisos recomendados",
+      "maybeLater": "Quizas después"
+    },
+    "analyticsDisclosure": "La extensión incluye analítica anónima opcional de producto que nos ayuda a priorizar correcciones de problemas comunes, mejorar flujos principales y compatibilidad, y reducir fricción innecesaria. No recopila API keys, cookies, URLs de cuenta, saldos, contenido de solicitudes ni entradas del usuario.",
+    "intro": "Como proyecto open-source, solo pedimos los permisos opcionales mínimos necesarios para habilitar flujos avanzados. Tú mantienes el control.",
+    "openSourceBadge": "Open-source e impulsado por la comunidad",
+    "permissionListDescription": "Estos permisos son necesarios para flujos de omisión de firewall, de modo que las tareas de actualización de datos sigan funcionando en sitios protegidos.",
+    "permissionListTitle": "Que hacen estos permisos",
+    "project": {
+      "cta": "Ve al repositorio para seguir versiones, enviar issues o participar en el desarrollo.",
+      "label": "Proyecto",
+      "starCta": "Danos una estrella en GitHub para apoyar el proyecto!"
+    },
+    "reason": {
+      "newPermissions": "Agregamos nuevos permisos opcionales para soportar funciones recientes. Revísalos y confirma para que todo siga funcionando."
+    },
+    "subtitle": "Esta extensión open-source necesita algunos permisos opcionales para habilitar funciones como la omisión con ventana temporal y otros flujos avanzados.",
+    "title": "Bienvenido a All API Hub",
+    "toasts": {
+      "error": "La solicitud de permisos fue descartada",
+      "success": "Todos los permisos recomendados fueron concedidos"
+    }
+  },
+  "productAnalytics": {
+    "description": "Estadísticas anónimas que nos ayudan a detectar problemas comunes antes, mejorar flujos cotidianos y fortalecer la compatibilidad. No recopilamos API keys, cookies, URLs de cuenta, saldos, contenido de solicitudes ni entradas del usuario.",
+    "enableDescription": "Permitir estadísticas limitadas de uso de funciones, categorías de error y tipos de sitio generales para enfocarnos en las partes que más afectan tu experiencia.",
+    "enableLabel": "Habilitar analítica anónima de producto",
+    "title": "Analítica anónima de producto"
+  },
+  "refresh": {
+    "autoRefresh": "Actualización automática",
+    "autoRefreshDesc": "Actualizar automáticamente datos de cuenta con regularidad",
+    "description": "Configura ajustes relacionados con actualización automática, como intervalo y comportamiento al iniciar",
+    "minRefreshInterval": "Intervalo mínimo de actualización",
+    "minRefreshIntervalDesc": "Tiempo mínimo entre actualizaciones para evitar solicitudes frecuentes (al menos {{minSeconds}} segundos)",
+    "minRefreshIntervalInvalid": "Ingresa un intervalo mínimo de actualización válido (al menos {{minSeconds}} segundos).",
+    "refreshInterval": "Intervalo de actualización",
+    "refreshIntervalDesc": "Define el intervalo de tiempo para actualización automática (predeterminado {{defaultInterval}} segundos; se recomienda no configurarlo demasiado pequeño para evitar solicitudes frecuentes)",
+    "refreshIntervalInvalid": "Ingresa un intervalo de actualización válido (al menos {{minSeconds}} segundos).",
+    "refreshOnOpen": "Actualizar automáticamente al abrir el plugin",
+    "refreshOnOpenDesc": "Actualizar automáticamente los datos de cuenta al abrir el popup del plugin",
+    "shieldAutoRefresh": "Usar para actualización automática",
+    "shieldContextsDesc": "Elige dónde se permite la omisión de protección con ventana temporal. Las opciones individuales se ignoran cuando el interruptor principal está deshabilitado.",
+    "shieldContextsTitle": "Usar omisión de protección en estos contextos",
+    "shieldDescriptionTempWindowOnly": "Cuando está habilitado, una ventana emergente temporal puede abrirse brevemente para omitir páginas de protección del sitio web (p. ej., el escudo de 5 segundos de Cloudflare) antes de que la extensión recupere datos.",
+    "shieldDescriptionWithCookieInterceptor": "En Firefox, una ventana emergente temporal puede abrirse brevemente para pasar páginas de protección y obtener cookies. Luego Cookie Interceptor adjunta esas cookies a las solicitudes.",
+    "shieldEnabled": "Habilitar omisión de protección (ventana temporal)",
+    "shieldEnabledDescTempWindowOnly": "Cuando está deshabilitado, la extensión no abrirá la ventana emergente temporal para omitir páginas de protección del sitio web.",
+    "shieldEnabledDescWithCookieInterceptor": "Cuando está deshabilitado, Firefox no abrirá la ventana emergente temporal para obtener cookies para solicitudes basadas en Cookie Interceptor.",
+    "shieldManualRefresh": "Usar para actualización manual",
+    "shieldMethodComposite": "Ventana compartida (pestañas)",
+    "shieldMethodDesc": "Elige qué contexto temporal usar al ejecutar la omisión de protección.",
+    "shieldMethodHintComposite": "Usa una ventana compartida y abre cada ejecución de omisión como una pestaña dentro de ella.",
+    "shieldMethodHintTab": "Usa la pestaña en segundo plano de la ventana actual para completar el escudo, con menos interferencia de interfaz.",
+    "shieldMethodHintWindow": "Usa varias ventanas nuevas para completar el escudo; aparecerá una ventana nueva cada vez que se complete.",
+    "shieldMethodTab": "Pestaña temporal",
+    "shieldMethodTitle": "Método de omisión",
+    "shieldMethodWindow": "Ventana emergente",
+    "shieldOptions": "Usar en página de opciones",
+    "shieldPermissionAction": "Abrir pestaña de permisos",
+    "shieldPermissionWarningDesc": "Concede los permisos Cookies/Web Request para que la omisión con ventana temporal pueda adjuntar cookies autenticadas antes de enviar solicitudes.",
+    "shieldPermissionWarningTitle": "Se requieren permisos de Cookie Interceptor",
+    "shieldPopup": "Usar en popup",
+    "shieldPopupFirefoxNote": "En el popup de Firefox, las solicitudes de datos protegidas siempre están deshabilitadas para evitar cerrar el popup. Este ajuste se guarda para otros navegadores.",
+    "shieldSidepanel": "Usar en panel lateral",
+    "shieldTitle": "Omisión de protección con ventana temporal",
+    "title": "Ajustes de actualización"
+  },
+  "releaseUpdate": {
+    "checkNow": "Comprobar ahora",
+    "downloadUpdate": "Descargar actualización",
+    "helpers": {
+      "checkFailed": "Inténtalo más tarde o abre la página de releases para verificar manualmente la versión más reciente.",
+      "manualUpdate": "Esta instalación se actualiza manualmente. Abre la página de releases para obtener la nueva versión.",
+      "manualUpdateGeneric": "Actualiza desde tu canal de instalación actual o abre la página de releases si necesitas actualizar manualmente.",
+      "notChecked": "Ejecuta “Comprobar ahora” para confirmar si tu versión actual necesita una actualización.",
+      "openLatest": "Abre la página de releases para revisar la última versión estable y las notas de versión.",
+      "storeUpdate": "Esta instalación de tienda se actualiza mediante el navegador. Si GitHub tiene una versión más nueva pero la tienda aún no está lista, normalmente la revisión o despliegue sigue en curso.",
+      "storeUpdateReady": "El navegador encontró una actualización de tienda. Recarga la extensión para empezar a usar la nueva versión.",
+      "unavailable": "Inténtalo más tarde o abre directamente la página de releases para revisar la última versión estable.",
+      "upToDate": "Abre la página de releases si quieres revisar qué cambió en esta versión."
+    },
+    "lastChecked": "Última comprobación: {{time}}",
+    "latestVersionPending": "Última estable: aún no comprobada",
+    "latestVersionUnavailable": "Última estable: no disponible",
+    "openLatest": "Abrir último release",
+    "reasons": {
+      "api-unavailable": "Este entorno de navegador no admite detección automática. Aún puedes comprobar manualmente la última versión estable",
+      "chromium-development": "Este canal de instalación puede comprobar la última versión estable. Ejecuta una comprobación manual para comparar versiones",
+      "firefox-ambiguous": "Firefox no puede determinar de forma confiable el canal de instalación ahora. Comprueba manualmente la última versión estable cuando sea necesario",
+      "safari-unsupported": "Safari aún no admite detección automática. Abre la página de releases para revisar la última versión estable",
+      "store-build": "Esta es una instalación de tienda del navegador. Puedes comprobar actualizaciones de tienda y compararlas con el último release de GitHub",
+      "unknown": "Este canal de instalación actualmente no admite detección automática. Aún puedes comprobar manualmente la última versión estable"
+    },
+    "reloadToUpdate": "Recargar para actualizar",
+    "states": {
+      "checkFailed": "La comprobación falló, así que no se pudo obtener la última versión estable",
+      "notChecked": "La última versión estable aún no se ha comprobado. Ejecuta una comprobación manual para comparar versiones",
+      "storeUpdateReady": "La actualización de tienda está lista. Recarga para aplicarla",
+      "unavailable": "El estado de actualización no está disponible actualmente",
+      "updateAvailable": "Hay una versión más nueva disponible para actualizar",
+      "upToDate": "Comprobación completada. Tu versión actual ya es la última estable"
+    },
+    "versionBadge": {
+      "changelogAriaLabel": "Changelog de la versión {{version}}",
+      "updateAvailableAriaLabel": "Actualización disponible para la versión {{version}}"
+    }
+  },
+  "siteAnnouncementNotifications": {
+    "description": "Controla si los sitios de cuenta habilitados se revisan en segundo plano para anuncios del sitio.",
+    "page": {
+      "description": "Comprueba en segundo plano cada {{intervalMinutes}} minutos. También puedes ejecutar una comprobación manual.",
+      "open": "Ver anuncios",
+      "title": "Página de anuncios"
+    },
+    "polling": {
+      "enable": "Habilitar sondeo de anuncios del sitio",
+      "enableDesc": "Cuando está deshabilitado, el sondeo programado en segundo plano se detiene. Los registros locales existentes se conservan y la página de anuncios aún puede ejecutar una comprobación manual.",
+      "interval": "Intervalo de sondeo",
+      "intervalDesc": "Define el intervalo de sondeo de anuncios del sitio en segundo plano en minutos, de 15 a 1440."
+    },
+    "title": "Anuncios del sitio"
+  },
+  "sorting": {
+    "checkInDesc": "Coloca al frente los sitios que necesitan check-in",
+    "checkInRequirement": "Requisito de check-in",
+    "currentSiteDesc": "Coloca arriba en la lista la cuenta actualmente iniciada en el navegador",
+    "currentSitePriority": "Priorizar cuenta actualmente iniciada",
+    "customCheckInDesc": "Coloca al frente los sitios que usan enlaces externos de check-in",
+    "customCheckInUrl": "URL externa de check-in",
+    "customRedeemDesc": "Coloca al frente los sitios que usan enlaces de canje personalizados",
+    "customRedeemUrl": "URL de canje personalizada",
+    "customSortDesc": "Ordena según el campo (como saldo) seleccionado por el usuario en la vista de lista",
+    "description": "Define la prioridad de ordenamiento de cuentas en la lista para organizar su visualizacion",
+    "disabledAccount": "Mover cuentas deshabilitadas al final",
+    "disabledAccountDesc": "Las cuentas deshabilitadas se moveran uniformemente al final de la lista",
+    "healthDesc": "Ordenar por estado de salud del sitio (Error > Advertencia > Desconocido > Saludable)",
+    "healthStatus": "Estado de salud",
+    "manualOrder": "Orden manual",
+    "manualOrderDesc": "Ordena cuentas según tu orden de lista definido manualmente",
+    "matchedOpenTabs": "Pestañas abiertas coincidentes",
+    "matchedOpenTabsDesc": "Coloca al frente cuentas relacionadas que coincidan con las pestañas abiertas actuales (por título o URL)",
+    "pinnedDesc": "Coloca cuentas fijadas arriba de la lista en el orden en que fueron fijadas",
+    "pinnedPriority": "Prioridad fijada",
+    "priority": "Prioridad",
+    "title": "Ajustes de prioridad de ordenamiento",
+    "unknownSortRule": "Regla de ordenamiento desconocida",
+    "userCustomSort": "Orden personalizado del usuario"
+  },
+  "tabs": {
+    "accountManagement": "Gestión de cuentas",
+    "accountUsage": "Uso de cuenta",
+    "balanceHistory": "Historial de saldos",
+    "checkinRedeem": "Check-in y canje",
+    "claudeCodeRouter": "Claude Code Router",
+    "cliProxy": "CLIProxyAPI",
+    "dataBackup": "Datos y copia de seguridad",
+    "general": "General",
+    "managedSite": "Sitio administrado",
+    "notifications": "Notificaciones",
+    "permissions": "Permisos",
+    "refresh": "Actualización de datos",
+    "select": "Selecciona una pestaña",
+    "webAiApiCheck": "Prueba de AI API"
+  },
+  "taskNotifications": {
+    "channels": {
+      "browser": {
+        "description": "Enviar mediante notificaciones del sistema del navegador. Requiere el permiso de notificaciones.",
+        "title": "Notificaciones del sistema del navegador"
+      },
+      "dingtalk": {
+        "description": "Enviar notificaciones de tareas mediante un bot personalizado de grupo DingTalk. Se recomienda pegar la URL completa del webhook de DingTalk; el valor access_token sigue siendo compatible.",
+        "docsLink": "Ver docs de configuración",
+        "secret": "Secreto de firma (opcional)",
+        "secretPlaceholder": "SECxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "title": "Bot de DingTalk",
+        "webhookKey": "URL de webhook o access_token",
+        "webhookKeyDescription": "Copia la URL del webhook desde la página de ajustes del bot personalizado de DingTalk y pégala aquí. Si ingresas solo el valor después de `access_token=`, All API Hub completará la URL automáticamente. Si la seguridad firmada está habilitada, ingresa también el secreto.",
+        "webhookKeyPlaceholder": "https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "feishu": {
+        "description": "Enviar notificaciones de tareas mediante un bot personalizado de Feishu. Se recomienda pegar la URL completa del webhook de Feishu; el segmento final de clave sigue siendo compatible.",
+        "docsLink": "Ver docs de configuración",
+        "title": "Bot de Feishu",
+        "webhookKey": "URL de webhook o clave",
+        "webhookKeyDescription": "Copia la URL del webhook desde la página de ajustes del bot personalizado de Feishu y pégala aquí. Si ingresas solo la clave después de `/hook/`, All API Hub completará la URL automáticamente.",
+        "webhookKeyPlaceholder": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      },
+      "ntfy": {
+        "accessToken": "Token de acceso (opcional)",
+        "accessTokenPlaceholder": "tk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "description": "Enviar notificaciones de tareas mediante un tópico ntfy, usando ntfy.sh o un servidor ntfy autohospedado.",
+        "docsLink": "Ver docs de configuración",
+        "title": "ntfy",
+        "topicUrl": "URL de tópico o nombre de tópico",
+        "topicUrlDescription": "Ingresa una URL completa de tópico como `https://ntfy.sh/mytopic`, o ingresa solo un nombre de tópico de ntfy.sh. Agrega un token de acceso cuando tu servidor autohospedado o tópico privado lo requiera.",
+        "topicUrlPlaceholder": "https://ntfy.sh/mytopic"
+      },
+      "telegram": {
+        "botToken": "Token del bot",
+        "botTokenPlaceholder": "123456:ABC-DEF...",
+        "chatId": "Chat ID",
+        "chatIdPlaceholder": "123456789 or -1001234567890",
+        "description": "Enviar notificaciones de tareas mediante un Telegram Bot.",
+        "title": "Telegram Bot"
+      },
+      "webhook": {
+        "description": "Enviar notificaciones JSON a un webhook HTTP(S) personalizado. La URL admite variables de plantilla para servicios como Bark que colocan el texto de notificación en la ruta.",
+        "title": "Webhook generico",
+        "url": "URL de webhook",
+        "urlDescription": "Usa {title}, {message}, {task}, {status}, {total}, {success}, {failed} o {skipped} en la URL. Los valores se codifican para URL antes de enviarse. Para Bark, usa https://api.day.app/your-key/{title}/{message}.",
+        "urlPlaceholder": "https://api.day.app/your-key/{title}/{message}"
+      },
+      "wecom": {
+        "description": "Enviar notificaciones de tareas mediante push de mensajes de grupo WeCom. Se recomienda pegar la URL completa del webhook de WeCom; el valor key sigue siendo compatible.",
+        "docsLink": "Ver docs de configuración",
+        "title": "Bot de WeCom",
+        "webhookKey": "URL de webhook o clave",
+        "webhookKeyDescription": "Copia la URL del webhook desde los ajustes de push de mensajes del grupo WeCom y pégala aquí. Si ingresas solo la clave después de `key=`, All API Hub completará la URL automáticamente.",
+        "webhookKeyPlaceholder": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      }
+    },
+    "enable": "Habilitar notificaciones de tareas",
+    "enableDesc": "Cuando está habilitado, las tareas seleccionadas envían notificaciones de éxito, éxito parcial o error después de que finalicen las ejecuciones programadas.",
+    "groups": {
+      "channels": {
+        "description": "Elige dónde se entregan las notificaciones. Las notificaciones del navegador necesitan permiso, mientras que Telegram, Feishu, DingTalk, WeCom, ntfy y webhook pueden configurarse y probarse por separado.",
+        "title": "Canales de notificación"
+      },
+      "setup": {
+        "description": "Activa o desactiva las notificaciones de tareas programadas antes de elegir canales y tipos de evento.",
+        "title": "Ajustes"
+      },
+      "tasks": {
+        "description": "Selecciona qué finalizaciones de tareas programadas o actualizaciones de anuncios del sitio deben notificarte.",
+        "title": "Eventos de notificación"
+      }
+    },
+    "notification": {
+      "body": {
+        "failure": "{{task}} falló.",
+        "partialSuccess": "{{task}} se completó parcialmente.",
+        "success": "{{task}} se completó correctamente."
+      },
+      "counts": "Total {{total}}, exitosas {{success}}, fallidas {{failed}}, omitidas {{skipped}}.",
+      "title": {
+        "failure": "{{task}} falló",
+        "partialSuccess": "{{task}} tuvo éxito parcial",
+        "success": "{{task}} completada"
+      }
+    },
+    "permission": {
+      "description": "Las notificaciones del sistema requieren el permiso opcional de notificaciones del navegador. También puedes revocarlo desde Permisos.",
+      "request": "Conceder permiso de notificaciones",
+      "requestFailed": "No se concedió el permiso de notificaciones",
+      "requestSuccess": "Permiso de notificaciones concedido",
+      "title": "Permiso de notificaciones"
+    },
+    "siteAnnouncements": {
+      "enable": "Notificaciones de anuncios del sitio",
+      "enableDesc": "Cuando está habilitado, los anuncios del sitio recién obtenidos envían notificaciones de tarea. Los registros locales de anuncios se siguen guardando cuando está deshabilitado."
+    },
+    "taskDescriptions": {
+      "autoCheckin": "Notificar después de que finalicen el check-in automático diario y los reintentos automáticos.",
+      "balanceHistoryCapture": "Notificar después de que finalice la captura de historial de saldo al cierre del día.",
+      "managedSiteModelSync": "Notificar después de que finalice la sincronización programada de modelos de sitio administrado.",
+      "usageHistorySync": "Notificar después de que finalice la sincronización programada de historial de uso.",
+      "webdavAutoSync": "Notificar después de que finalice la sincronización automática programada de WebDAV."
+    },
+    "tasks": {
+      "autoCheckin": "Check-in automático",
+      "balanceHistoryCapture": "Captura de saldo de cierre del día",
+      "managedSiteModelSync": "Sincronización de modelos",
+      "usageHistorySync": "Sincronización de historial de uso",
+      "webdavAutoSync": "Sincronización automática WebDAV"
+    },
+    "tasksLabel": "Notificaciones de tareas",
+    "test": {
+      "action": "Enviar notificación de prueba",
+      "browserFailed": "La prueba de notificación del navegador falló. Asegúrate de que el canal de notificaciones del navegador esté habilitado y que el permiso de notificación esté concedido.",
+      "channelDisabled": "No se pudo enviar la notificación de prueba. Primero habilita y configura este canal de notificación.",
+      "dingtalkMissingConfig": "La URL de webhook o access_token del bot de DingTalk no está configurada.",
+      "failed": "No se pudo enviar la notificación de prueba. Revisa la configuración de este canal de notificación.",
+      "feishuMissingConfig": "La URL de webhook o clave del bot de Feishu no está configurada.",
+      "httpError": "{{label}} devolvió HTTP {{status}}.",
+      "httpErrorWithDetail": "{{label}} devolvió HTTP {{status}}: {{detail}}",
+      "message": "Esta es una notificación de prueba de tareas de All API Hub.",
+      "ntfyInvalidUrl": "El tópico ntfy debe ser una URL con http:// o https://, o un nombre de tópico ntfy.sh válido.",
+      "ntfyMissingConfig": "La URL de tópico o el nombre de tópico ntfy no está configurado.",
+      "sent": "Notificación de prueba enviada",
+      "telegramMissingConfig": "El token del Telegram Bot o Chat ID no está configurado.",
+      "title": "Notificación de prueba de All API Hub",
+      "webhookInvalidUrl": "La URL de webhook debe usar http:// o https://.",
+      "webhookMissingConfig": "La URL de webhook no está configurada.",
+      "wecomMissingConfig": "La URL de webhook o clave del bot de WeCom no está configurada."
+    }
+  },
+  "theme": {
+    "appearance": "Apariencia",
+    "clickSwitch": "Haz clic para cambiar al modo {{nextMode}}",
+    "current": "Actual: {{theme}} ({{resolvedTheme}})",
+    "currentTheme": "Actual: seguir sistema ({{theme}})",
+    "dark": "Oscuro",
+    "followSystem": "Seguir sistema",
+    "followSystemTheme": "Seguir ajustes de tema del sistema",
+    "light": "Claro",
+    "selectTheme": "Selecciona un tema de apariencia",
+    "switchTo": "Cambiar al tema {{theme}}: {{description}}",
+    "toggle": "Alternador de tema, modo actual {{currentMode}}, haz clic para cambiar al modo {{nextMode}}",
+    "useDarkTheme": "Usar tema oscuro",
+    "useLightTheme": "Usar tema claro"
+  },
+  "title": "Ajustes",
+  "veloera": {
+    "adminCredentialsLink": {
+      "description": "Abre la página de ajustes personales de administrador para encontrar el token de acceso del sistema y el ID de usuario.",
+      "open": "Abrir página",
+      "title": "Acceso rápido"
+    },
+    "description": "Configura ajustes de integración para conectarte a servicios compatibles con Veloera.",
+    "fields": {
+      "adminTokenLabel": "Token de acceso del sistema del administrador",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hideToken": "Ocultar token de acceso del sistema",
+      "showToken": "Mostrar token de acceso del sistema",
+      "userIdLabel": "ID de usuario administrador"
+    },
+    "title": "Ajustes de integración de Veloera",
+    "tokenDesc": "Token de acceso del sistema para el usuario administrador",
+    "urlDesc": "Define la Base URL para la integración de Veloera",
+    "userIdDesc": "ID de usuario administrador (solo numerico)"
+  }
+}

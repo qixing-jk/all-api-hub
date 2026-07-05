@@ -1,0 +1,248 @@
+{
+  "alerts": {
+    "loadError": {
+      "description": "{{error}}",
+      "title": "No se pudieron cargar los canales"
+    }
+  },
+  "description": "Busca, edita, elimina y sincroniza manualmente canales conectados a tu sitio administrado.",
+  "dialog": {
+    "cancel": "Cancelar",
+    "confirm": "Eliminar",
+    "deleteDescription": "Esta acción no se puede deshacer. Los canales seleccionados se eliminarán permanentemente.",
+    "deleteTitle": "¿Eliminar canal?",
+    "deleteTitlePlural": "¿Eliminar canales?"
+  },
+  "filter": {
+    "statusLabel": "Filtrar por estado"
+  },
+  "filters": {
+    "actionOptions": {
+      "exclude": "Excluir modelos coincidentes",
+      "include": "Incluir modelos coincidentes"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "moveDown": "Mover filtro hacia abajo",
+      "moveUp": "Mover filtro hacia arriba",
+      "save": "Guardar filtros"
+    },
+    "addPatternRule": "Agregar regla de patrón",
+    "addProbeRule": "Agregar regla de prueba",
+    "empty": {
+      "description": "Agrega reglas de inclusión/exclusión con regex opcional para controlar los modelos sincronizados.",
+      "title": "Aún no hay filtros"
+    },
+    "hints": {
+      "probesAllPass": "Un modelo coincide con esta regla solo cuando todas las pruebas seleccionadas pasan. Las pruebas usan la URL base del canal y la clave de canal resuelta.",
+      "regex": "Las reglas regex admiten coincidencias avanzadas con sintaxis de JavaScript.",
+      "substring": "Las reglas simples coinciden con subcadenas sensibles a mayúsculas dentro de los nombres de modelos.",
+      "unsupportedChannelType": "Las reglas de prueba no están disponibles para este tipo de canal porque no se puede asignar a una API de verificación compatible."
+    },
+    "jsonEditor": {
+      "hint": "El JSON debe ser un arreglo de objetos de reglas de patrón o prueba. Las reglas de patrón usan kind: 'pattern', name y pattern. Las reglas de prueba usan kind: 'probe', name y probeIds. Los campos de credenciales como apiKey, key y baseUrl se ignoran.",
+      "label": "Editor JSON avanzado",
+      "placeholder": "Pega o edita aquí un arreglo de objetos de reglas de filtro para reutilizar rápidamente la misma configuración entre canales."
+    },
+    "labels": {
+      "action": "Acción",
+      "delete": "Eliminar filtro",
+      "description": "Descripción",
+      "enabled": "Habilitado",
+      "name": "Nombre del filtro",
+      "pattern": "Patrón de coincidencia",
+      "probes": "Pruebas de verificación",
+      "regex": "Modo regex",
+      "ruleType": "Tipo de regla"
+    },
+    "loading": "Cargando filtros de canal...",
+    "messages": {
+      "jsonArrayRequired": "El JSON debe ser un arreglo de reglas de filtro.",
+      "jsonInvalid": "JSON de filtro inválido: {{error}}",
+      "jsonItemNotObject": "El filtro en el índice {{index}} debe ser un objeto.",
+      "loadFailed": "No se pudieron cargar los filtros: {{error}}",
+      "saved": "Filtros guardados",
+      "saveFailed": "No se pudieron guardar los filtros: {{error}}",
+      "validationName": "Proporciona un nombre para cada filtro.",
+      "validationPattern": "El patrón del filtro no puede estar vacío.",
+      "validationProbeIds": "Selecciona al menos una prueba de verificación para cada regla de prueba.",
+      "validationRegex": "Patrón regex inválido: {{error}}"
+    },
+    "placeholders": {
+      "description": "Notas opcionales sobre esta regla",
+      "name": "p. ej., Permitir GPT-4",
+      "pattern": "Cadena exacta o patrón regex",
+      "probes": "Selecciona pruebas",
+      "probeSearch": "Buscar pruebas"
+    },
+    "probes": {
+      "empty": "No se encontraron pruebas",
+      "options": {
+        "structured-output": "Salida estructurada",
+        "text-generation": "Generación de texto",
+        "tool-calling": "Tool calling",
+        "web-search": "Búsqueda web"
+      }
+    },
+    "ruleTypeOptions": {
+      "pattern": "Patrón",
+      "probe": "Prueba"
+    },
+    "subtitle": "Personaliza las reglas de filtrado para {{channel}}",
+    "title": "Filtros de canal",
+    "viewMode": {
+      "json": "Edición JSON",
+      "label": "Modo de edición",
+      "visual": "Edición visual"
+    }
+  },
+  "migration": {
+    "actions": {
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "refreshPreview": "Actualizar vista previa",
+      "running": "Migrando...",
+      "start": "Iniciar migración"
+    },
+    "alerts": {
+      "noTargets": {
+        "description": "Configura otro destino de sitio administrado en la configuración antes de usar la migración de canales."
+      }
+    },
+    "betaBadge": "Beta",
+    "blockedReasons": {
+      "sourceKeyMissing": "La clave del canal de origen no está disponible, por lo que este canal aún no se puede migrar.",
+      "sourceKeyResolutionFailed": "No se pudo cargar la clave del canal de origen. Si acabas de completar la verificación, actualiza la vista previa e inténtalo de nuevo."
+    },
+    "confirm": {
+      "confirm": "Confirmar migración",
+      "description": "Esto creará nuevos canales de destino para {{ready}} canales listos de {{total}} canales seleccionados.",
+      "title": "¿Iniciar migración de canales?",
+      "warningTitle": "Este flujo solo crea canales nuevos. No sincroniza, deduplica ni revierte."
+    },
+    "description": "Copia {{selectedCount}} canales del sitio administrado actual a otro sitio administrado configurado.",
+    "generalWarnings": {
+      "compactSummary": "Solo crea. Pasa el cursor para ver detalles.",
+      "createOnly": "Esta migración solo crea canales nuevos en el sitio de destino y no modifica los canales de origen.",
+      "noDedupeOrSync": "Esta migración no comprueba duplicados, sobrescribe canales de destino existentes ni sincroniza canales de destino existentes.",
+      "noRollback": "La reversión automática no está disponible en este flujo. Usa la lista de resultados para revisar cualquier seguimiento manual.",
+      "title": "Limitaciones de migración"
+    },
+    "itemWarnings": {
+      "dropsAdvancedSettings": "La configuración avanzada específica del proveedor no se puede copiar directamente y se descartará.",
+      "dropsModelMapping": "Las asignaciones de redirección de modelos no se copiarán.",
+      "dropsMultiKeyState": "El estado de ejecución con múltiples claves no se copiará.",
+      "dropsStatusCodeMapping": "Las configuraciones de asignación de códigos de estado no se copiarán.",
+      "targetForcesDefaultGroup": "El sitio de destino reemplazará los grupos de origen con su grupo predeterminado.",
+      "targetIgnoresPriority": "El sitio de destino no conservará el valor de prioridad de origen.",
+      "targetIgnoresWeight": "El sitio de destino no conservará el valor de peso de origen.",
+      "targetNormalizesBaseUrl": "El sitio de destino normalizará la URL base antes de crear.",
+      "targetRemapsChannelType": "El sitio de destino reasignará el tipo de canal al tipo compatible más cercano.",
+      "targetSimplifiesStatus": "El sitio de destino simplificará el estado de origen a habilitado o deshabilitado."
+    },
+    "preview": {
+      "badges": {
+        "limitsLabel": "límites",
+        "warningsLabel": "advertencias"
+      },
+      "compare": {
+        "fieldLabel": "Campo"
+      },
+      "loadFailed": "No se pudo cargar la vista previa de migración: {{error}}",
+      "loading": "Construyendo vista previa de migración...",
+      "selectedCount": "{{selectedCount}} canales seleccionados",
+      "status": {
+        "blocked": "Bloqueado",
+        "ready": "Listo"
+      },
+      "summary": "Vista previa: {{ready}} listos, {{blocked}} bloqueados, {{total}} seleccionados."
+    },
+    "results": {
+      "status": {
+        "failed": "Falló",
+        "skipped": "Omitido",
+        "success": "Creado"
+      },
+      "summary": "Resultados: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos, {{total}} en total.",
+      "title": "Resultados de migración"
+    },
+    "target": {
+      "destinationLabel": "Sitio de destino",
+      "label": "Destino de migración",
+      "placeholder": "Selecciona un destino de sitio administrado",
+      "sourceLabel": "Sitio de origen",
+      "unselected": "No seleccionado"
+    },
+    "title": "Migrar canales"
+  },
+  "statusLabels": {
+    "autoDisabled": "Deshabilitado automáticamente",
+    "enabled": "Habilitado",
+    "manualPause": "Pausa manual",
+    "unknown": "Desconocido"
+  },
+  "table": {
+    "columns": {
+      "actions": "Acciones",
+      "group": "Grupos disponibles",
+      "id": "ID",
+      "models": "Modelos",
+      "name": "Canal",
+      "priority": "Prioridad",
+      "status": "Estado",
+      "type": "Tipo",
+      "weight": "Peso"
+    },
+    "emptyFiltered": "No se encontraron canales coincidentes. Intenta ajustar la búsqueda o los filtros.",
+    "emptyNoChannels": "Aún no hay canales. Agrega un canal o actualiza la lista.",
+    "loading": "Cargando canales...",
+    "noEntries": "Sin entradas",
+    "paginationNext": "Página siguiente",
+    "paginationPrev": "Página anterior",
+    "paginationSummary": "{{start}} - {{end}} de {{total}} canales",
+    "rowActions": {
+      "delete": "Eliminar",
+      "edit": "Editar",
+      "filters": "Editar reglas de filtrado del canal",
+      "migrate": "Migrar a otro sitio",
+      "openSync": "Abrir interfaz de sincronización de modelos",
+      "sync": "Sincronizar lista de modelos inmediatamente",
+      "syncing": "Sincronizando...",
+      "view": "Ver canal"
+    },
+    "rowsPerPage": "Filas por página",
+    "selectAll": "Seleccionar todas las filas",
+    "selectRow": "Seleccionar fila"
+  },
+  "title": "Administración de canales",
+  "toasts": {
+    "channelDeleted": "Canal eliminado",
+    "channelSaved": "Canal guardado",
+    "channelsDeleted_one": "{{count}} canal eliminado",
+    "channelsDeleted_many": "{{count}} canales eliminados",
+    "channelsDeleted_other": "{{count}} canales eliminados",
+    "channelUpdated": "Canal actualizado",
+    "revealKeyFailed": "No se pudo cargar la clave real del canal: {{error}}",
+    "someDeletesFailed_one": "No se pudo eliminar {{count}} canal: {{error}}",
+    "someDeletesFailed_many": "No se pudieron eliminar {{count}} canales: {{error}}",
+    "someDeletesFailed_other": "No se pudieron eliminar {{count}} canales: {{error}}",
+    "syncCompleted": "Sincronización de modelos completada ({{success}}/{{total}})",
+    "syncFailed": "Falló la sincronización de modelos: {{error}}"
+  },
+  "toolbar": {
+    "addChannel": "Agregar canal",
+    "cancelRefresh": "Detener actualización",
+    "clearSearch": "Limpiar búsqueda",
+    "columns": "Columnas",
+    "deleteSelected": "Eliminar seleccionados",
+    "enterMigrationMode": "Migración de canales",
+    "exitMigrationMode": "Salir del modo de migración",
+    "migrateFiltered": "Migrar todos los canales filtrados",
+    "migrateSelected": "Migrar seleccionados",
+    "refresh": "Actualizar",
+    "searchPlaceholder": "Buscar por nombre, URL o grupo",
+    "status": "Estado",
+    "syncSelected": "Sincronizar modelos de los canales seleccionados",
+    "toggleColumns": "Alternar columnas"
+  }
+}

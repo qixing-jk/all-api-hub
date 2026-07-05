@@ -1,6 +1,7 @@
 import {
   DEFAULT_LANG,
   JAPANESE_LANG,
+  SPANISH_LATIN_AMERICA_LANG,
   TRADITIONAL_CHINESE_LANG,
   VIETNAMESE_LANG,
   type SupportedUiLanguage,
@@ -19,6 +20,9 @@ const isLanguageFamily = (
 export const UI_LANGUAGE_OPTIONS = [
   {
     code: ENGLISH_LANG,
+  },
+  {
+    code: SPANISH_LATIN_AMERICA_LANG,
   },
   {
     code: JAPANESE_LANG,
@@ -91,12 +95,20 @@ function isVietnameseLanguage(language?: string | null): boolean {
 }
 
 /**
+ * Return true when the language belongs to the Spanish locale family.
+ */
+function isSpanishLanguage(language?: string | null): boolean {
+  return isLanguageFamily(normalizeLanguageTag(language), "es")
+}
+
+/**
  * Normalize runtime/browser language codes to the app's supported locale keys.
  */
 export function normalizeAppLanguage(
   language?: string | null,
 ): SupportedUiLanguage | undefined {
   if (isEnglishLanguage(language)) return ENGLISH_LANG
+  if (isSpanishLanguage(language)) return SPANISH_LATIN_AMERICA_LANG
   if (isJapaneseLanguage(language)) return JAPANESE_LANG
   if (isVietnameseLanguage(language)) return VIETNAMESE_LANG
   if (isTraditionalChineseLanguage(language)) return TRADITIONAL_CHINESE_LANG

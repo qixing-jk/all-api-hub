@@ -15,6 +15,10 @@ describe("i18n language helpers", () => {
     expect(normalizeAppLanguage("vi")).toBe("vi")
     expect(normalizeAppLanguage("vi-VN")).toBe("vi")
     expect(normalizeAppLanguage("vi_VN")).toBe("vi")
+    expect(normalizeAppLanguage("es")).toBe("es-419")
+    expect(normalizeAppLanguage("es-419")).toBe("es-419")
+    expect(normalizeAppLanguage("es_MX")).toBe("es-419")
+    expect(normalizeAppLanguage("es-AR")).toBe("es-419")
     expect(normalizeAppLanguage("zh-CN")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh_CN")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh-SG")).toBe("zh-CN")
@@ -78,6 +82,14 @@ describe("i18n language helpers", () => {
         detectedLanguage: "vi-VN",
       }),
     ).toBe("vi")
+  })
+
+  it("keeps detected latin american spanish when no explicit preference exists", () => {
+    expect(
+      resolveInitialAppLanguage({
+        detectedLanguage: "es-MX",
+      }),
+    ).toBe("es-419")
   })
 
   it("falls back to English when detection is unsupported", () => {
