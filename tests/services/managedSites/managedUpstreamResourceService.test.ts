@@ -179,6 +179,58 @@ describe("managed upstream resource service", () => {
     )
   })
 
+  it("enables token batch export resource target matching only for channel-shaped migrated sites by default", () => {
+    const resources = buildResourcesCapability()
+    getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
+      siteType,
+      managedSites: {
+        channels: {} as NonNullable<
+          NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
+        >,
+        resources,
+      },
+    }))
+    const migratedChannelShapedSiteTypes = [
+      SITE_TYPES.NEW_API,
+      SITE_TYPES.VELOERA,
+      SITE_TYPES.DONE_HUB,
+    ]
+
+    expect(
+      migratedChannelShapedSiteTypes.map((siteType) =>
+        resolveManagedUpstreamResourceFeatureCapabilities(
+          siteType,
+          MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
+        ),
+      ),
+    ).toEqual(
+      migratedChannelShapedSiteTypes.map((siteType) => ({
+        supported: true,
+        siteType,
+        feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
+        capabilities: resources,
+      })),
+    )
+    expect(
+      [SITE_TYPES.OCTOPUS, SITE_TYPES.AXON_HUB, SITE_TYPES.CLAUDE_CODE_HUB].map(
+        (siteType) =>
+          resolveManagedUpstreamResourceFeatureCapabilities(
+            siteType,
+            MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
+          ),
+      ),
+    ).toEqual(
+      [SITE_TYPES.OCTOPUS, SITE_TYPES.AXON_HUB, SITE_TYPES.CLAUDE_CODE_HUB].map(
+        (siteType) => ({
+          supported: false,
+          siteType,
+          feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
+          reason: "feature-slice-disabled",
+        }),
+      ),
+    )
+  })
+
   it("enables channel migration resource slices for migrated managed sites by default", () => {
     const resources = buildResourcesCapability()
     getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
