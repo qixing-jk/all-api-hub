@@ -4,7 +4,10 @@ import { useTranslation } from "react-i18next"
 
 import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
-import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
+import {
+  useChannelForm,
+  type ChannelResourceEditContext,
+} from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
   buildChannelDialogAdvisoryWarning,
@@ -72,6 +75,7 @@ export interface ChannelDialogProps {
     setKey: (key: string) => void
   }) => Promise<void>
   onMutationOutcome?: Parameters<typeof useChannelForm>[0]["onMutationOutcome"]
+  resourceEdit?: ChannelResourceEditContext | null
 }
 
 /**
@@ -91,6 +95,7 @@ export interface ChannelDialogProps {
  * @param props.onRequestRealKey Optional edit-mode hook that can load the real
  * managed-site key into the dialog when the list payload only provides a masked value.
  * @param props.onMutationOutcome Optional opt-in callback for callers that track real save outcomes.
+ * @param props.resourceEdit Optional resource-backed edit context for migrated managed sites.
  */
 export function ChannelDialog({
   isOpen,
@@ -105,8 +110,14 @@ export function ChannelDialog({
   advisoryWarning,
   onRequestRealKey,
   onMutationOutcome,
+  resourceEdit,
 }: ChannelDialogProps) {
-  const { t } = useTranslation(["channelDialog", "common", "messages"])
+  const { t } = useTranslation([
+    "channelDialog",
+    "common",
+    "messages",
+    "managedSiteChannels",
+  ])
   const { requestDuplicateChannelWarning } = useChannelDialogContext()
   const [showKey, setShowKey] = useState(false)
   const [isLoadingRealKey, setIsLoadingRealKey] = useState(false)
@@ -142,6 +153,10 @@ export function ChannelDialog({
     isSaving,
     isLoadingGroups,
     isLoadingModels,
+    isResourceEditLoading,
+    isResourceEditReady,
+    resourceEditLoadError,
+    retryResourceEditLoad,
     availableGroups,
     availableModels,
     isKeyFieldRequired,
@@ -156,7 +171,13 @@ export function ChannelDialog({
     initialModels,
     initialGroups,
     onMutationOutcome,
+    resourceEdit,
   })
+
+  const isResourceEditUnavailable = Boolean(
+    resourceEdit && !isResourceEditReady,
+  )
+  const isFormInteractionDisabled = isSaving || isResourceEditUnavailable
 
   const channelTypeOptions = isClaudeCodeHub
     ? ClaudeCodeHubProviderTypeOptions
@@ -446,7 +467,7 @@ export function ChannelDialog({
       {!isViewMode && (
         <Button
           onClick={handleSubmit}
-          disabled={!isFormValid || isSaving}
+          disabled={!isFormValid || isSaving || isResourceEditUnavailable}
           loading={isSaving}
           type="submit"
           data-testid={CHANNEL_DIALOG_TEST_IDS.submitButton}
@@ -504,6 +525,28 @@ export function ChannelDialog({
           </div>
         </Alert>
       ) : null}
+      {resourceEditLoadError ? (
+        <Alert
+          variant="warning"
+          title={t("managedSiteChannels:alerts.loadError.title")}
+          description={t("managedSiteChannels:alerts.loadError.description", {
+            error: resourceEditLoadError.message,
+          })}
+          className="mb-4"
+        >
+          <div className="mt-3">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={retryResourceEditLoad}
+              disabled={isResourceEditLoading}
+            >
+              {t("common:actions.retry")}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
       <form
         onSubmit={isViewMode ? (event) => event.preventDefault() : handleSubmit}
         className="space-y-4"
@@ -520,7 +563,7 @@ export function ChannelDialog({
             value={formData.name}
             onChange={(e) => updateField("name", e.target.value)}
             placeholder={t("channelDialog:fields.name.placeholder")}
-            disabled={isSaving}
+            disabled={isFormInteractionDisabled}
             readOnly={isViewMode}
             required={!isViewMode}
           />
@@ -546,7 +589,7 @@ export function ChannelDialog({
                   : (Number(value) as ChannelType | OctopusOutboundType),
               )
             }
-            disabled={isSaving || !isAddMode}
+            disabled={isFormInteractionDisabled || !isAddMode}
             required={!isViewMode}
           >
             <SelectTrigger id="channel-type">
@@ -594,7 +637,7 @@ export function ChannelDialog({
             value={formData.key}
             onChange={(e) => updateField("key", e.target.value)}
             placeholder={t("channelDialog:fields.key.placeholder")}
-            disabled={isSaving}
+            disabled={isFormInteractionDisabled}
             readOnly={isViewMode}
             required={!isViewMode && isKeyFieldRequired}
           />
@@ -608,7 +651,7 @@ export function ChannelDialog({
                 size="sm"
                 variant="outline"
                 onClick={() => void handleLoadRealKey()}
-                disabled={isSaving || isLoadingRealKey}
+                disabled={isFormInteractionDisabled || isLoadingRealKey}
               >
                 {isLoadingRealKey
                   ? t("channelDialog:actions.loadingRealKey")
@@ -633,7 +676,7 @@ export function ChannelDialog({
             value={formData.base_url}
             onChange={(e) => updateField("base_url", e.target.value)}
             placeholder={t("channelDialog:fields.baseUrl.placeholder")}
-            disabled={isSaving}
+            disabled={isFormInteractionDisabled}
             readOnly={isViewMode}
             required={!isViewMode && isBaseUrlRequired}
           />
@@ -652,7 +695,9 @@ export function ChannelDialog({
                   size="sm"
                   onClick={handleSelectAllModels}
                   disabled={
-                    isSaving || isLoadingModels || availableModels.length === 0
+                    isFormInteractionDisabled ||
+                    isLoadingModels ||
+                    availableModels.length === 0
                   }
                   type="button"
                 >
@@ -663,7 +708,9 @@ export function ChannelDialog({
                   size="sm"
                   onClick={handleInverseModels}
                   disabled={
-                    isSaving || isLoadingModels || availableModels.length === 0
+                    isFormInteractionDisabled ||
+                    isLoadingModels ||
+                    availableModels.length === 0
                   }
                   type="button"
                 >
@@ -674,7 +721,9 @@ export function ChannelDialog({
                   size="sm"
                   onClick={handleDeselectAllModels}
                   disabled={
-                    isSaving || isLoadingModels || formData.models.length === 0
+                    isFormInteractionDisabled ||
+                    isLoadingModels ||
+                    formData.models.length === 0
                   }
                   type="button"
                 >
@@ -704,7 +753,9 @@ export function ChannelDialog({
                 ? t("channelDialog:fields.models.loading")
                 : t("channelDialog:fields.models.placeholder")
             }
-            disabled={isViewMode || isSaving || isLoadingModels}
+            disabled={
+              isViewMode || isFormInteractionDisabled || isLoadingModels
+            }
             allowCustom
           />
           <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
@@ -726,7 +777,9 @@ export function ChannelDialog({
                   ? t("channelDialog:fields.groups.loading")
                   : t("channelDialog:fields.groups.placeholder")
               }
-              disabled={isViewMode || isSaving || isLoadingGroups}
+              disabled={
+                isViewMode || isFormInteractionDisabled || isLoadingGroups
+              }
               allowCustom
             />
             <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
@@ -755,7 +808,7 @@ export function ChannelDialog({
                     updateField("priority", parseInt(e.target.value) || 0)
                   }
                   placeholder="0"
-                  disabled={isSaving}
+                  disabled={isFormInteractionDisabled}
                   readOnly={isViewMode}
                   min="0"
                 />
@@ -779,7 +832,7 @@ export function ChannelDialog({
                     updateField("weight", parseInt(e.target.value) || 0)
                   }
                   placeholder="0"
-                  disabled={isSaving}
+                  disabled={isFormInteractionDisabled}
                   readOnly={isViewMode}
                   min="0"
                 />
@@ -803,7 +856,7 @@ export function ChannelDialog({
                 onValueChange={(value) =>
                   updateField("status", Number(value) as ChannelStatus)
                 }
-                disabled={isViewMode || isSaving}
+                disabled={isViewMode || isFormInteractionDisabled}
               >
                 <SelectTrigger id="channel-status">
                   <SelectValue />

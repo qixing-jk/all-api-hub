@@ -106,6 +106,7 @@ import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
+import { resolveManagedUpstreamResourceCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,
@@ -130,6 +131,7 @@ import {
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
+import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
 import {
   navigateWithinOptionsPage,
@@ -216,6 +218,19 @@ export function upsertChannelRow(rows: ChannelRow[], channel: ChannelRow) {
   }
 
   return rows.map((row, index) => (index === existingIndex ? channel : row))
+}
+
+const normalizeManagedSiteResourceScopeKey = (baseUrl: string): string => {
+  const trimmed = baseUrl.trim()
+  if (!trimmed) {
+    return ""
+  }
+
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    return trimmed.replace(/\/+$/, "")
+  }
 }
 
 /**
@@ -591,7 +606,7 @@ export default function ManagedSiteChannels({
         needsManagedSiteChannelKeyResolution(channel.key) &&
         (isNewApiManagedSite || supportsDetailBackedRealKeyLoading)
 
-      openWithCustom({
+      const dialogOptions: Parameters<typeof openWithCustom>[0] = {
         mode,
         channel,
         initialValues: {
@@ -700,10 +715,50 @@ export default function ManagedSiteChannels({
                 })
               }
             : undefined,
-      })
+      }
+
+      const resourceResolution =
+        mode === DIALOG_MODES.EDIT && isNewApiManagedSite
+          ? resolveManagedUpstreamResourceCapabilities(managedSiteType)
+          : null
+
+      if (resourceResolution?.supported) {
+        void (async () => {
+          try {
+            const service = await getManagedSiteService()
+            const config = await service.getConfig()
+            if (!config) {
+              throw new Error(
+                getManagedSiteConfigMissingMessage(t, service.messagesKey),
+              )
+            }
+
+            await openWithCustom({
+              ...dialogOptions,
+              resourceEdit: {
+                config,
+                ref: createManagedUpstreamResourceRef({
+                  managedSiteType,
+                  scopeKey: normalizeManagedSiteResourceScopeKey(
+                    String((config as { baseUrl?: string }).baseUrl ?? ""),
+                  ),
+                  resourceId: channel.id,
+                }),
+                capabilities: resourceResolution.capabilities,
+              },
+            })
+          } catch (error) {
+            toast.error(getErrorMessage(error))
+          }
+        })()
+        return
+      }
+
+      void openWithCustom(dialogOptions)
     },
     [
       isNewApiManagedSite,
+      managedSiteType,
       managedSiteAnalyticsType,
       newApiBaseUrl,
       newApiPassword,

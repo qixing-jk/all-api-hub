@@ -12,6 +12,10 @@ import { DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS } from "~/constants/claudeCodeHu
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import type {
+  ManagedUpstreamResourceDraftsCapability,
+  ManagedUpstreamResourceItemsCapability,
+} from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
@@ -22,6 +26,11 @@ import type {
   ManagedSiteChannel,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import type {
+  ManagedUpstreamResourceDetail,
+  ManagedUpstreamResourceFieldDescriptor,
+  ManagedUpstreamResourceRef,
+} from "~/types/managedUpstreamResource"
 import type { OctopusOutboundType } from "~/types/octopus"
 import { createLogger } from "~/utils/core/logger"
 
@@ -50,6 +59,22 @@ export interface UseChannelFormProps {
   initialValues?: Partial<ChannelFormData>
   initialModels?: string[]
   initialGroups?: string[]
+  resourceEdit?: ChannelResourceEditContext | null
+}
+
+export type ChannelResourceEditContext = {
+  config: unknown
+  ref: ManagedUpstreamResourceRef
+  capabilities: {
+    items: Pick<
+      ManagedUpstreamResourceItemsCapability<unknown, unknown, unknown>,
+      "getDetail" | "update"
+    >
+    drafts: Pick<
+      ManagedUpstreamResourceDraftsCapability<unknown, unknown>,
+      "prepareEditDraft" | "describeFields" | "validateDraft"
+    >
+  }
 }
 
 /**
@@ -77,6 +102,7 @@ export function useChannelForm({
   initialValues,
   initialModels,
   initialGroups,
+  resourceEdit,
 }: UseChannelFormProps) {
   const { t } = useTranslation([
     "channelDialog",
@@ -148,6 +174,15 @@ export function useChannelForm({
   const [availableModels, setAvailableModels] = useState<
     CompactMultiSelectOption[]
   >([])
+  const [resourceDetail, setResourceDetail] =
+    useState<ManagedUpstreamResourceDetail<unknown> | null>(null)
+  const [resourceFieldDescriptors, setResourceFieldDescriptors] = useState<
+    ManagedUpstreamResourceFieldDescriptor[] | null
+  >(null)
+  const [resourceEditLoadError, setResourceEditLoadError] =
+    useState<Error | null>(null)
+  const [isLoadingResourceEdit, setIsLoadingResourceEdit] = useState(false)
+  const [resourceEditLoadAttempt, setResourceEditLoadAttempt] = useState(0)
 
   const loadManagedSiteType = useCallback(async () => {
     const service = await getManagedSiteService()
@@ -208,6 +243,65 @@ export function useChannelForm({
     loadManagedSiteType,
     applyManagedSiteDefaults,
   ])
+
+  useEffect(() => {
+    if (!isOpen || mode !== DIALOG_MODES.EDIT || !resourceEdit) {
+      setResourceDetail(null)
+      setResourceFieldDescriptors(null)
+      setResourceEditLoadError(null)
+      setIsLoadingResourceEdit(false)
+      return
+    }
+
+    let cancelled = false
+    setResourceDetail(null)
+    setResourceFieldDescriptors(null)
+    setResourceEditLoadError(null)
+    setIsLoadingResourceEdit(true)
+
+    void (async () => {
+      try {
+        const detail = await resourceEdit.capabilities.items.getDetail(
+          resourceEdit.config,
+          resourceEdit.ref,
+        )
+        if (cancelled) {
+          return
+        }
+
+        const descriptors = resourceEdit.capabilities.drafts.describeFields({
+          mode: "edit",
+          detail,
+        })
+        const draft = resourceEdit.capabilities.drafts.prepareEditDraft(
+          detail,
+        ) as ChannelFormData
+
+        setResourceDetail(detail)
+        setResourceFieldDescriptors(descriptors)
+        setFormData(draft)
+      } catch (error) {
+        if (!cancelled) {
+          const normalizedError =
+            error instanceof Error ? error : new Error(String(error ?? ""))
+          setResourceEditLoadError(normalizedError)
+          logger.error("Failed to load channel detail", normalizedError)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingResourceEdit(false)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, mode, resourceEdit, resourceEditLoadAttempt])
+
+  const retryResourceEditLoad = useCallback(() => {
+    setResourceEditLoadAttempt((attempt) => attempt + 1)
+  }, [])
 
   const resetForm = useCallback(() => {
     setFormData(buildInitialFormData())
@@ -391,33 +485,61 @@ export function useChannelForm({
     try {
       const service = await getManagedSiteService()
       submissionSiteType = service.siteType
-      const apiConfig = await service.getConfig()
-      if (!apiConfig) {
-        throw new Error(
-          getManagedSiteConfigMissingMessage(t, service.messagesKey),
-        )
-      }
 
       let response
-      if (mode === DIALOG_MODES.EDIT && channel) {
-        const channelId = channel.id
-        if (!channelId) {
-          throw new Error(t("channelDialog:messages.missingChannelId"))
+      if (mode === DIALOG_MODES.EDIT && resourceEdit) {
+        if (
+          isLoadingResourceEdit ||
+          resourceEditLoadError ||
+          !resourceDetail ||
+          !resourceFieldDescriptors
+        ) {
+          return
         }
-        const updatePayload: UpdateChannelPayload = (() => {
-          return {
-            id: channelId,
-            ...formData,
-            models: formData.models.join(","),
-            groups: formData.groups,
-            // 实际只有这个group参数生效
-            group: formData.groups.join(","),
-          }
-        })()
-        response = await service.updateChannel(apiConfig, updatePayload)
+
+        const validation =
+          resourceEdit.capabilities.drafts.validateDraft(formData)
+        if (!validation.valid) {
+          toast.error(
+            validation.errors[0]?.message ??
+              t("channelDialog:messages.saveFailed", { error: "" }),
+          )
+          return
+        }
+
+        response = await resourceEdit.capabilities.items.update(
+          resourceEdit.config,
+          resourceDetail,
+          formData,
+        )
       } else {
-        const payload = service.buildChannelPayload(formData)
-        response = await service.createChannel(apiConfig, payload)
+        const apiConfig = await service.getConfig()
+        if (!apiConfig) {
+          throw new Error(
+            getManagedSiteConfigMissingMessage(t, service.messagesKey),
+          )
+        }
+
+        if (mode === DIALOG_MODES.EDIT && channel) {
+          const channelId = channel.id
+          if (!channelId) {
+            throw new Error(t("channelDialog:messages.missingChannelId"))
+          }
+          const updatePayload: UpdateChannelPayload = (() => {
+            return {
+              id: channelId,
+              ...formData,
+              models: formData.models.join(","),
+              groups: formData.groups,
+              // 实际只有这个group参数生效
+              group: formData.groups.join(","),
+            }
+          })()
+          response = await service.updateChannel(apiConfig, updatePayload)
+        } else {
+          const payload = service.buildChannelPayload(formData)
+          response = await service.createChannel(apiConfig, payload)
+        }
       }
 
       if (response.success) {
@@ -464,13 +586,23 @@ export function useChannelForm({
     }
   }
 
+  const isResourceEditReady = Boolean(
+    !resourceEdit ||
+      (mode === DIALOG_MODES.EDIT &&
+        !isLoadingResourceEdit &&
+        !resourceEditLoadError &&
+        resourceDetail &&
+        resourceFieldDescriptors),
+  )
+
   const isFormValid = Boolean(
     formData.name.trim() &&
       formData.models.length > 0 &&
       (!isKeyFieldRequired || formData.key.trim()) &&
       (!requiresRealClaudeCodeHubKey ||
         hasUsableManagedSiteChannelKey(formData.key)) &&
-      (!isBaseUrlRequired || formData?.base_url?.trim()),
+      (!isBaseUrlRequired || formData?.base_url?.trim()) &&
+      isResourceEditReady,
   )
 
   return {
@@ -482,6 +614,10 @@ export function useChannelForm({
     isSaving,
     isLoadingGroups,
     isLoadingModels,
+    isResourceEditLoading: isLoadingResourceEdit,
+    isResourceEditReady,
+    resourceEditLoadError,
+    retryResourceEditLoad,
     availableGroups,
     availableModels,
     resetForm,

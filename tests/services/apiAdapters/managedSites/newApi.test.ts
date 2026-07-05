@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { AuthTypeEnum } from "~/types"
-import type { CreateChannelPayload } from "~/types/managedSite"
+import type {
+  CreateChannelPayload,
+  ManagedSiteChannel,
+} from "~/types/managedSite"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -66,6 +70,48 @@ describe("newApi managed-site channel capability", () => {
     adminToken: "admin-token",
     userId: "42",
   }
+  const buildManagedSiteChannel = (
+    overrides: Partial<ManagedSiteChannel> = {},
+  ): ManagedSiteChannel =>
+    ({
+      id: 7,
+      type: 1,
+      key: "sk-live-channel-key",
+      name: "Example Channel",
+      base_url: "https://upstream.example.invalid",
+      models: "gpt-4o,gpt-4o-mini",
+      status: 1,
+      weight: 11,
+      priority: 13,
+      openai_organization: null,
+      test_model: null,
+      created_time: 0,
+      test_time: 0,
+      response_time: 0,
+      other: "advanced",
+      balance: 0,
+      balance_updated_time: 0,
+      group: "default,vip",
+      used_quota: 0,
+      model_mapping: '{"gpt-4o":"upstream-gpt-4o"}',
+      status_code_mapping: '{"429":"quota"}',
+      auto_ban: 1,
+      other_info: '{"status_reason":"ok"}',
+      tag: "tag-a",
+      param_override: { temperature: 0.2 },
+      header_override: { "x-provider": "example" },
+      remark: "keep me",
+      channel_info: {
+        is_multi_key: false,
+        multi_key_size: 0,
+        multi_key_status_list: null,
+        multi_key_polling_index: 0,
+        multi_key_mode: "",
+      },
+      setting: '{"proxy":"on"}',
+      settings: '{"retry":2}',
+      ...overrides,
+    }) satisfies ManagedSiteChannel
 
   it("delegates channel operations to direct New API family helpers", async () => {
     const { newApiManagedSiteChannels } = await import(
@@ -251,6 +297,164 @@ describe("newApi managed-site channel capability", () => {
       {
         fetchAccountAvailableModels: keyManagement.fetchAccountAvailableModels,
       },
+    )
+  })
+
+  it("maps channels to core resource summaries and resolves detail through list fallback", async () => {
+    const { newApiManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+    const channel = buildManagedSiteChannel({
+      id: 12,
+      key: "sk-********",
+      name: "Masked Channel",
+      status: 3,
+    })
+    channelManagement.listAllChannels.mockResolvedValue({
+      items: [channel],
+      total: 1,
+      type_counts: {},
+    })
+
+    const list =
+      await newApiManagedSiteCapabilities.resources.items.list(config)
+
+    expect(list.total).toBe(1)
+    expect(list.items[0]).toEqual(
+      expect.objectContaining({
+        displayName: "Masked Channel",
+        nativeKind: "channel",
+        status: "auto_disabled",
+        endpointLabel: "https://upstream.example.invalid",
+        modelCount: 2,
+        secretState: "masked",
+        ref: {
+          managedSiteType: "new-api",
+          scopeKey: "https://new-api.example.invalid",
+          resourceId: "12",
+        },
+      }),
+    )
+
+    await expect(
+      newApiManagedSiteCapabilities.resources.items.getDetail(
+        config,
+        list.items[0].ref,
+      ),
+    ).resolves.toEqual({
+      summary: list.items[0],
+      native: channel,
+    })
+  })
+
+  it("updates resource drafts by preserving native fields and omitting masked keys", async () => {
+    const { newApiManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+    channelManagement.updateChannel.mockResolvedValue({
+      success: true,
+      message: "ok",
+    })
+    const native = buildManagedSiteChannel({
+      id: 19,
+      key: "sk-********",
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://new-api.example.invalid",
+          resourceId: "19",
+        },
+        displayName: native.name,
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native,
+    } as const
+
+    await newApiManagedSiteCapabilities.resources.items.update(config, detail, {
+      name: "Edited Channel",
+      type: native.type,
+      key: "sk-********",
+      base_url: "https://edited-upstream.example.invalid",
+      models: ["gpt-4o-mini"],
+      groups: ["vip"],
+      priority: 21,
+      weight: 34,
+      status: 2,
+    })
+
+    expect(channelManagement.updateChannel).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        id: 19,
+        name: "Edited Channel",
+        base_url: "https://edited-upstream.example.invalid",
+        models: "gpt-4o-mini",
+        groups: ["vip"],
+        group: "vip",
+        priority: 21,
+        weight: 34,
+        status: 2,
+        model_mapping: '{"gpt-4o":"upstream-gpt-4o"}',
+        status_code_mapping: '{"429":"quota"}',
+        setting: '{"proxy":"on"}',
+        settings: '{"retry":2}',
+      }),
+    )
+    expect(
+      channelManagement.updateChannel.mock.calls.at(-1)?.[1],
+    ).not.toHaveProperty("key")
+  })
+
+  it("delegates resource create and delete to channel operations", async () => {
+    const { newApiManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+    channelManagement.createChannel.mockResolvedValue({
+      success: true,
+      message: "ok",
+    })
+    channelManagement.deleteChannel.mockResolvedValue({
+      success: true,
+      message: "ok",
+    })
+    newApiProvider.buildChannelPayload.mockReturnValue({
+      mode: "single",
+      channel: {
+        name: "Created",
+        key: "sk-created",
+        status: 1,
+      },
+    })
+
+    await newApiManagedSiteCapabilities.resources.items.create(config, {
+      name: "Created",
+      type: 1,
+      key: "sk-created",
+      base_url: "https://created.example.invalid",
+      models: ["gpt-4o"],
+      groups: ["default"],
+      priority: 0,
+      weight: 0,
+      status: 1,
+    })
+    await newApiManagedSiteCapabilities.resources.items.delete(config, {
+      managedSiteType: SITE_TYPES.NEW_API,
+      scopeKey: "https://new-api.example.invalid",
+      resourceId: "25",
+    })
+
+    expect(channelManagement.createChannel).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ mode: "single" }),
+    )
+    expect(channelManagement.deleteChannel).toHaveBeenCalledWith(
+      expect.anything(),
+      25,
     )
   })
 })

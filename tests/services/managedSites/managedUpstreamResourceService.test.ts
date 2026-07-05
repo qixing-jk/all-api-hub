@@ -34,21 +34,24 @@ describe("managed upstream resource service", () => {
     }))
   })
 
-  it("keeps every managed site on the legacy core path by default", () => {
+  it("enables only the New API core resource path by default", () => {
     expect(
       MANAGED_SITE_TYPES.map((siteType) => ({
         siteType,
         enabled: isManagedSiteCoreResourceSliceEnabled(siteType),
       })),
     ).toEqual(
-      MANAGED_SITE_TYPES.map((siteType) => ({ siteType, enabled: false })),
+      MANAGED_SITE_TYPES.map((siteType) => ({
+        siteType,
+        enabled: siteType === SITE_TYPES.NEW_API,
+      })),
     )
   })
 
-  it("does not enable resource mode from capability presence alone", () => {
+  it("does not enable resource mode from capability presence alone for unmigrated sites", () => {
     const resources = buildResourcesCapability()
     getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
+      siteType: SITE_TYPES.VELOERA,
       managedSites: {
         channels: {} as NonNullable<
           NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
@@ -58,10 +61,10 @@ describe("managed upstream resource service", () => {
     })
 
     expect(
-      resolveManagedUpstreamResourceCapabilities(SITE_TYPES.NEW_API),
+      resolveManagedUpstreamResourceCapabilities(SITE_TYPES.VELOERA),
     ).toEqual({
       supported: false,
-      siteType: SITE_TYPES.NEW_API,
+      siteType: SITE_TYPES.VELOERA,
       reason: "core-slice-disabled",
     })
   })
@@ -134,7 +137,7 @@ describe("managed upstream resource service", () => {
       supported: false,
       siteType: SITE_TYPES.NEW_API,
       feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
-      reason: "core-slice-disabled",
+      reason: "feature-slice-disabled",
     })
   })
 

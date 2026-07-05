@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
+import type { ChannelResourceEditContext } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import {
   buildChannelDialogAdvisoryWarning,
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
@@ -683,6 +684,7 @@ export function useChannelDialog() {
     }) => Promise<void>
     onSuccess?: (channel: any) => void
     onMutationOutcome?: Parameters<typeof openDialog>[0]["onMutationOutcome"]
+    resourceEdit?: ChannelResourceEditContext | null
   }) => {
     openDialog(options)
   }

@@ -1,4 +1,5 @@
 import type { ManagedSiteType } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 
 export const MANAGED_UPSTREAM_RESOURCE_FEATURES = {
   DuplicateMatching: "duplicateMatching",
@@ -58,7 +59,9 @@ export function createManagedUpstreamResourceMigrationGates(
 }
 
 const defaultManagedUpstreamResourceMigrationGates =
-  createManagedUpstreamResourceMigrationGates()
+  createManagedUpstreamResourceMigrationGates({
+    coreSiteTypes: [SITE_TYPES.NEW_API],
+  })
 
 /**
  * Checks whether the production core resource path is enabled for a site.
@@ -85,7 +88,7 @@ export function isManagedSiteFeatureResourceSliceEnabled(
 }
 
 /**
- * Returns the production migration gates, which default to legacy channel mode.
+ * Returns the production migration gates for resource-backed managed-site slices.
  */
 export function getDefaultManagedUpstreamResourceMigrationGates(): ManagedUpstreamResourceMigrationGates {
   return defaultManagedUpstreamResourceMigrationGates
