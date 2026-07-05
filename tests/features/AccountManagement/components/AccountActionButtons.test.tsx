@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -17,6 +19,12 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
+  MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
+  MANAGED_UPSTREAM_RESOURCE_STATUSES,
+  type ManagedUpstreamResourceSummary,
+} from "~/types/managedUpstreamResource"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
 
@@ -44,6 +52,7 @@ const {
   completeProductAnalyticsActionMock,
   resolveProductAnalyticsErrorCategoryFromErrorMock,
   resolveDisplayAccountRuntimeKeySecretMock,
+  resolveManagedUpstreamResourceFeatureCapabilitiesMock,
 } = vi.hoisted(() => ({
   mockHandleSetAccountDisabled: vi.fn(),
   mockTogglePinAccount: vi.fn(),
@@ -84,6 +93,7 @@ const {
   completeProductAnalyticsActionMock: vi.fn(),
   resolveProductAnalyticsErrorCategoryFromErrorMock: vi.fn(),
   resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
+  resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -99,6 +109,11 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: getManagedSiteServiceMock,
   hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
+}))
+
+vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
+  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -259,6 +274,14 @@ describe("AccountActionButtons", () => {
     resolveDisplayAccountRuntimeKeySecretMock.mockImplementation(
       async (_account: unknown, runtimeKey: unknown) => runtimeKey,
     )
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockImplementation(
+      (siteType, feature) => ({
+        supported: false,
+        siteType,
+        feature,
+        reason: "feature-slice-disabled",
+      }),
+    )
     exportShareSnapshotWithToastMock.mockResolvedValue(undefined)
   })
 
@@ -274,6 +297,7 @@ describe("AccountActionButtons", () => {
     } as Partial<UserPreferences>
     userPreferencesContextValue.showTodayCashflow = true
     hasValidManagedSiteConfigMock.mockReturnValue(true)
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReset()
   })
 
   it("tracks controlled analytics for primary account action buttons", async () => {
@@ -1751,6 +1775,190 @@ describe("AccountActionButtons", () => {
     expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
   })
 
+  it("uses legacy channel search for account shortcut locate when token status resources are not feature-gated", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-legacy" }])
+
+    const staleResourceSearch = vi
+      .fn()
+      .mockRejectedValue(new Error("stale duplicate-matching resource path"))
+    const managedService = {
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "sk-legacy",
+      }),
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 321,
+            name: "Legacy Managed Channel",
+            base_url: "https://api.example.com",
+            models: "gpt-4",
+            key: "sk-legacy",
+          },
+        ],
+        total: 1,
+        type_counts: {},
+      }),
+      searchResourceDuplicateChannels: staleResourceSearch,
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-6-legacy",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(321)
+    })
+    expect(staleResourceSearch).not.toHaveBeenCalled()
+    expect(managedService.searchChannel).toHaveBeenCalledWith(
+      expect.any(Object),
+      "https://api.example.com",
+    )
+    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+  })
+
+  it("uses resource-backed channel candidates for account shortcut locate when feature-gated", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-resource" }])
+
+    const resourceSummary = buildResourceSummary({
+      id: 654,
+      name: "Resource Managed Channel",
+      baseUrl: "https://api.example.com",
+      models: ["gpt-4"],
+    })
+    const resources: ManagedUpstreamResourcesCapability = {
+      items: {
+        list: vi.fn(),
+        search: vi.fn().mockResolvedValue({
+          items: [resourceSummary],
+          total: 1,
+        }),
+        getDetail: vi.fn().mockResolvedValue({
+          summary: resourceSummary,
+          native: {
+            id: 654,
+            name: "Resource Managed Channel",
+            base_url: "https://api.example.com",
+            models: "gpt-4",
+            key: "sk-resource",
+          },
+        }),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+      drafts: {
+        prepareImportDraft: vi.fn(),
+        prepareEditDraft: vi.fn(),
+        describeFields: vi.fn(),
+        validateDraft: vi.fn(),
+      },
+    }
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.NEW_API,
+      feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
+      capabilities: resources,
+    })
+    const managedService = {
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "sk-resource",
+      }),
+      searchChannel: vi
+        .fn()
+        .mockRejectedValue(new Error("legacy search should not run")),
+      searchResourceDuplicateChannels: vi
+        .fn()
+        .mockRejectedValue(new Error("stale duplicate-matching resource path")),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-6-resource",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(654)
+    })
+    expect(
+      managedService.searchResourceDuplicateChannels,
+    ).not.toHaveBeenCalled()
+    expect(managedService.searchChannel).not.toHaveBeenCalled()
+    expect(resources.items.search).toHaveBeenCalledWith(
+      expect.any(Object),
+      "https://api.example.com",
+    )
+    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+  })
+
   it("uses a secondary exact-model explanation when the account key is blank", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "" }])
 
@@ -2305,4 +2513,29 @@ describe("AccountActionButtons", () => {
     })
     expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
   })
+})
+
+const buildResourceSummary = ({
+  id,
+  name,
+  baseUrl,
+  models,
+}: {
+  id: number
+  name: string
+  baseUrl: string
+  models: string[]
+}): ManagedUpstreamResourceSummary => ({
+  ref: {
+    managedSiteType: SITE_TYPES.NEW_API,
+    scopeKey: "https://admin.example",
+    resourceId: String(id),
+  },
+  displayName: name,
+  nativeKind: MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS.Channel,
+  status: MANAGED_UPSTREAM_RESOURCE_STATUSES.Enabled,
+  endpointLabel: baseUrl,
+  modelPreview: models,
+  secretState: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available,
+  capabilities: {},
 })
