@@ -68,6 +68,20 @@ const defaultManagedUpstreamResourceMigrationGates =
       SITE_TYPES.AXON_HUB,
       SITE_TYPES.CLAUDE_CODE_HUB,
     ],
+    featureSlices: [
+      {
+        siteType: SITE_TYPES.NEW_API,
+        feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.DuplicateMatching,
+      },
+      {
+        siteType: SITE_TYPES.VELOERA,
+        feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.DuplicateMatching,
+      },
+      {
+        siteType: SITE_TYPES.DONE_HUB,
+        feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.DuplicateMatching,
+      },
+    ],
   })
 
 /**

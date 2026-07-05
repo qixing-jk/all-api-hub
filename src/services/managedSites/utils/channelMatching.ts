@@ -6,6 +6,7 @@ import {
   formatOptionalSkPrefixTokenComparableKey,
   hasOptionalSkPrefixSiteTokenSemantics,
 } from "~/services/accountTokens/apiTokenKey"
+import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MATCH_LEVELS,
@@ -17,7 +18,14 @@ import {
   type ManagedSiteChannelModelsAssessment,
 } from "~/services/managedSites/channelMatch"
 import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/extractCredentials"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type {
+  ManagedSiteChannel,
+  ManagedSiteChannelListData,
+} from "~/types/managedSite"
+import type {
+  ManagedUpstreamResourceDetail,
+  ManagedUpstreamResourceSummary,
+} from "~/types/managedUpstreamResource"
 import { isArraysEqual } from "~/utils"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
@@ -44,6 +52,14 @@ interface FindBestManagedSiteChannelMatchParams {
   channels: ManagedSiteChannel[]
   accountBaseUrl: string
   models: string[]
+}
+
+interface SearchManagedUpstreamResourceChannelsForDuplicateMatchingParams<
+  TConfig = unknown,
+> {
+  resources: ManagedUpstreamResourcesCapability<TConfig>
+  config: TConfig
+  accountBaseUrl: string
 }
 
 interface InspectManagedSiteChannelKeyMatchParams {
@@ -90,6 +106,78 @@ const MODEL_MATCH_REASON_PRIORITY: Record<
 
 const toNormalizedModelList = (models: string[] | string): string[] =>
   normalizeList(Array.isArray(models) ? models : parseDelimitedList(models))
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null
+
+const toIntegerId = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isInteger(value)) {
+    return value
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+    return Number.isInteger(parsed) ? parsed : null
+  }
+
+  return null
+}
+
+const toChannelLikeNative = (value: unknown): ManagedSiteChannel | null => {
+  if (!isObject(value)) {
+    return null
+  }
+
+  const id = toIntegerId(value.id)
+
+  if (
+    id == null ||
+    typeof value.name !== "string" ||
+    typeof value.base_url !== "string" ||
+    typeof value.models !== "string"
+  ) {
+    return null
+  }
+
+  return {
+    ...value,
+    id,
+  } as ManagedSiteChannel
+}
+
+const toNumericResourceId = (
+  resource: ManagedUpstreamResourceSummary,
+): number | null => toIntegerId(resource.ref.resourceId)
+
+const toChannelFromResourceSummary = (
+  resource: ManagedUpstreamResourceSummary,
+): ManagedSiteChannel | null => {
+  const id = toNumericResourceId(resource)
+
+  if (id == null) {
+    return null
+  }
+
+  return {
+    id,
+    name: resource.displayName,
+    base_url: resource.endpointLabel ?? "",
+    models: (resource.modelPreview ?? []).join(","),
+    key: "",
+  } as ManagedSiteChannel
+}
+
+const toChannelFromResourceDetail = (
+  detail: ManagedUpstreamResourceDetail,
+): ManagedSiteChannel | null => {
+  const nativeChannel = toChannelLikeNative(detail.native)
+
+  if (nativeChannel) {
+    return nativeChannel
+  }
+
+  return toChannelFromResourceSummary(detail.summary)
+}
 
 export const MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES = {
   EXACT: "exact",
@@ -200,6 +288,54 @@ const toManagedSiteChannelModelsMatchReason = (
  */
 export function normalizeManagedSiteChannelBaseUrl(baseUrl: string): string {
   return normalizeOpenAiFamilyBaseUrl(baseUrl) ?? baseUrl.trim()
+}
+
+/**
+ * Uses migrated resource listing/detail APIs to produce the channel-shaped
+ * candidates expected by the existing duplicate warning contract.
+ */
+export async function searchManagedUpstreamResourceChannelsForDuplicateMatching<
+  TConfig,
+>(
+  params: SearchManagedUpstreamResourceChannelsForDuplicateMatchingParams<TConfig>,
+): Promise<ManagedSiteChannelListData | null> {
+  const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(
+    params.accountBaseUrl,
+  )
+  const searchResults = await params.resources.items.search(
+    params.config,
+    searchBaseUrl,
+  )
+
+  if (!searchResults) {
+    return null
+  }
+
+  const channels: ManagedSiteChannel[] = []
+
+  for (const resource of searchResults.items) {
+    let channel: ManagedSiteChannel | null = null
+
+    try {
+      const detail = await params.resources.items.getDetail(
+        params.config,
+        resource.ref,
+      )
+      channel = toChannelFromResourceDetail(detail)
+    } catch {
+      channel = toChannelFromResourceSummary(resource)
+    }
+
+    if (channel) {
+      channels.push(channel)
+    }
+  }
+
+  return {
+    items: channels,
+    total: channels.length,
+    type_counts: {},
+  }
 }
 
 /**

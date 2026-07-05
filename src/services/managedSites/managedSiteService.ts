@@ -5,11 +5,14 @@ import type {
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiResponse } from "~/services/apiTransport/type"
+import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
+import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import {
   getCurrentManagedSiteRuntimeConfig,
   type ManagedSiteRuntimeConfigValue,
   type ManagedSiteRuntimeConfigValueForType,
 } from "~/services/managedSites/runtimeConfig"
+import { searchManagedUpstreamResourceChannelsForDuplicateMatching } from "~/services/managedSites/utils/channelMatching"
 import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   getManagedSiteAdminConfig,
@@ -89,6 +92,11 @@ export interface ManagedSiteService<
     formData: ChannelFormData,
     mode?: ChannelMode,
   ): CreateChannelPayload
+
+  searchResourceDuplicateChannels?(
+    config: TConfig,
+    params: { accountBaseUrl: string },
+  ): Promise<ManagedSiteChannelListData | null>
 
   hydrateComparableChannelKeys?(
     config: TConfig,
@@ -204,6 +212,11 @@ export function getManagedSiteServiceForType(
   const messagesKey: ManagedSiteMessagesKey =
     getManagedSiteMessagesKeyFromSiteType(siteType)
   const capabilities = requireManagedSiteCapabilities(siteType)
+  const resourceDuplicateMatching =
+    resolveManagedUpstreamResourceFeatureCapabilities(
+      siteType,
+      MANAGED_UPSTREAM_RESOURCE_FEATURES.DuplicateMatching,
+    )
 
   return {
     siteType,
@@ -228,6 +241,16 @@ export function getManagedSiteServiceForType(
     buildChannelName: capabilities.channelDrafts.buildName,
     prepareChannelFormData: capabilities.channelDrafts.prepareFormData,
     buildChannelPayload: capabilities.channelDrafts.buildPayload,
+    ...(resourceDuplicateMatching.supported
+      ? {
+          searchResourceDuplicateChannels: async (config, params) =>
+            await searchManagedUpstreamResourceChannelsForDuplicateMatching({
+              resources: resourceDuplicateMatching.capabilities,
+              config,
+              accountBaseUrl: params.accountBaseUrl,
+            }),
+        }
+      : {}),
     hydrateComparableChannelKeys: capabilities.channels.hydrateComparableKeys,
     fetchChannelSecretKey: capabilities.channels.fetchSecretKey,
   }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -18,6 +18,7 @@ import {
   inspectManagedSiteChannelKeyValueMatch,
   inspectManagedSiteChannelModelsMatch,
   MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES,
+  searchManagedUpstreamResourceChannelsForDuplicateMatching,
 } from "~/services/managedSites/utils/channelMatching"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
@@ -705,5 +706,175 @@ describe("channelMatching", () => {
       reason: MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_ONLY,
       channel: blankModelChannel,
     })
+  })
+
+  it("hydrates resource search results into channel-shaped duplicate candidates", async () => {
+    const channel = buildManagedSiteChannel({
+      id: 81,
+      name: "Resource-backed channel",
+      base_url: "https://api.example.com/v1",
+      models: "gpt-4o",
+      key: "sk-resource",
+    })
+    const resource = {
+      ref: {
+        managedSiteType: SITE_TYPES.NEW_API,
+        scopeKey: "https://managed.example.com",
+        resourceId: "81",
+      },
+      displayName: "Resource-backed channel",
+      nativeKind: "channel",
+      status: "enabled",
+      endpointLabel: "https://api.example.com/v1",
+      modelPreview: ["gpt-4o"],
+      secretState: "available",
+      capabilities: {},
+    } as const
+    const resources = {
+      items: {
+        search: vi.fn(async () => ({
+          items: [resource],
+          total: 1,
+        })),
+        getDetail: vi.fn(async () => ({
+          summary: resource,
+          native: channel,
+        })),
+      },
+    } as any
+
+    const result =
+      await searchManagedUpstreamResourceChannelsForDuplicateMatching({
+        resources,
+        config: {},
+        accountBaseUrl: "https://api.example.com",
+      })
+
+    expect(resources.items.search).toHaveBeenCalledWith(
+      {},
+      "https://api.example.com",
+    )
+    expect(resources.items.getDetail).toHaveBeenCalledWith({}, resource.ref)
+    expect(result).toEqual({
+      items: [channel],
+      total: 1,
+      type_counts: {},
+    })
+  })
+
+  it("falls back to summary-derived candidates when resource detail lookup fails", async () => {
+    const staleResource = {
+      ref: {
+        managedSiteType: SITE_TYPES.NEW_API,
+        scopeKey: "https://managed.example.com",
+        resourceId: "82",
+      },
+      displayName: "Summary fallback channel",
+      nativeKind: "channel",
+      status: "enabled",
+      endpointLabel: "https://api.example.com/v1",
+      modelPreview: ["gpt-4o"],
+      secretState: "masked",
+      capabilities: {},
+    } as const
+    const channel = buildManagedSiteChannel({
+      id: 83,
+      name: "Detailed channel",
+      base_url: "https://api.example.com/v1",
+      models: "gpt-4o-mini",
+      key: "sk-detail",
+    })
+    const detailedResource = {
+      ...staleResource,
+      ref: {
+        ...staleResource.ref,
+        resourceId: "83",
+      },
+      displayName: "Detailed channel",
+      modelPreview: ["gpt-4o-mini"],
+    } as const
+    const resources = {
+      items: {
+        search: vi.fn(async () => ({
+          items: [staleResource, detailedResource],
+          total: 2,
+        })),
+        getDetail: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("detail missing"))
+          .mockResolvedValueOnce({
+            summary: detailedResource,
+            native: channel,
+          }),
+      },
+    } as any
+
+    const result =
+      await searchManagedUpstreamResourceChannelsForDuplicateMatching({
+        resources,
+        config: {},
+        accountBaseUrl: "https://api.example.com",
+      })
+
+    expect(result?.items).toEqual([
+      expect.objectContaining({
+        id: 82,
+        name: "Summary fallback channel",
+        base_url: "https://api.example.com/v1",
+        models: "gpt-4o",
+      }),
+      channel,
+    ])
+  })
+
+  it("preserves full models from channel-shaped raw details with numeric string ids", async () => {
+    const resource = {
+      ref: {
+        managedSiteType: SITE_TYPES.DONE_HUB,
+        scopeKey: "https://managed.example.com",
+        resourceId: "84",
+      },
+      displayName: "DoneHub raw channel",
+      nativeKind: "channel",
+      status: "enabled",
+      endpointLabel: "https://api.example.com/v1",
+      modelPreview: ["gpt-4o", "gpt-4o-mini", "claude-3"],
+      secretState: "available",
+      capabilities: {},
+    } as const
+    const resources = {
+      items: {
+        search: vi.fn(async () => ({
+          items: [resource],
+          total: 1,
+        })),
+        getDetail: vi.fn(async () => ({
+          summary: resource,
+          native: {
+            id: "84",
+            name: "DoneHub raw channel",
+            base_url: "https://api.example.com/v1",
+            models: "gpt-4o,gpt-4o-mini,claude-3,gemini-2.0",
+            key: "sk-donehub",
+          },
+        })),
+      },
+    } as any
+
+    const result =
+      await searchManagedUpstreamResourceChannelsForDuplicateMatching({
+        resources,
+        config: {},
+        accountBaseUrl: "https://api.example.com",
+      })
+
+    expect(result?.items[0]).toEqual(
+      expect.objectContaining({
+        id: 84,
+        name: "DoneHub raw channel",
+        models: "gpt-4o,gpt-4o-mini,claude-3,gemini-2.0",
+        key: "sk-donehub",
+      }),
+    )
   })
 })

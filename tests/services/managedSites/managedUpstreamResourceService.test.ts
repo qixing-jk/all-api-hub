@@ -126,7 +126,7 @@ describe("managed upstream resource service", () => {
     })
   })
 
-  it("keeps every feature resource slice unsupported by default", () => {
+  it("keeps unrelated feature resource slices unsupported by default", () => {
     expect(
       isManagedSiteFeatureResourceSliceEnabled(
         SITE_TYPES.NEW_API,
@@ -145,6 +145,38 @@ describe("managed upstream resource service", () => {
       feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
       reason: "feature-slice-disabled",
     })
+  })
+
+  it("enables duplicate matching resource slices for channel-shaped migrated sites by default", () => {
+    const resources = buildResourcesCapability()
+    getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
+      siteType,
+      managedSites: {
+        channels: {} as NonNullable<
+          NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
+        >,
+        resources,
+      },
+    }))
+
+    expect(
+      [SITE_TYPES.NEW_API, SITE_TYPES.VELOERA, SITE_TYPES.DONE_HUB].map(
+        (siteType) =>
+          resolveManagedUpstreamResourceFeatureCapabilities(
+            siteType,
+            MANAGED_UPSTREAM_RESOURCE_FEATURES.DuplicateMatching,
+          ),
+      ),
+    ).toEqual(
+      [SITE_TYPES.NEW_API, SITE_TYPES.VELOERA, SITE_TYPES.DONE_HUB].map(
+        (siteType) => ({
+          supported: true,
+          siteType,
+          feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.DuplicateMatching,
+          capabilities: resources,
+        }),
+      ),
+    )
   })
 
   it("requires both core and feature gates before resolving feature resources", () => {

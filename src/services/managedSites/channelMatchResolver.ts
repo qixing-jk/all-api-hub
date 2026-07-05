@@ -23,6 +23,7 @@ export type ManagedSiteChannelMatchService = Pick<
   ManagedSiteService,
   | "siteType"
   | "searchChannel"
+  | "searchResourceDuplicateChannels"
   | "hydrateComparableChannelKeys"
   | "fetchChannelSecretKey"
 >
@@ -157,7 +158,12 @@ export async function resolveManagedSiteChannelMatch(
 
   if (!searchResultsPromise) {
     const cache = requestCache
-    searchResultsPromise = service.searchChannel(managedConfig, searchBaseUrl)
+    searchResultsPromise =
+      typeof service.searchResourceDuplicateChannels === "function"
+        ? service.searchResourceDuplicateChannels(managedConfig, {
+            accountBaseUrl: searchBaseUrl,
+          })
+        : service.searchChannel(managedConfig, searchBaseUrl)
     cache?.searchResultsByBaseUrl.set(searchBaseUrl, searchResultsPromise)
     searchResultsPromise.catch(() => {
       if (

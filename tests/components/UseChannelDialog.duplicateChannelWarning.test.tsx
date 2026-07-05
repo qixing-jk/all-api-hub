@@ -345,6 +345,53 @@ describe("useChannelDialog", () => {
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
   })
 
+  it("shows duplicate channel warning from migrated resource candidates", async () => {
+    const searchChannel = vi.fn(async () => ({
+      items: [],
+      total: 0,
+      type_counts: {},
+    }))
+    const mockService = buildManagedSiteServiceMock({
+      searchChannel,
+      searchResourceDuplicateChannels: vi.fn(async () => ({
+        items: [
+          buildManagedSiteChannel({
+            id: 81,
+            name: "Resource duplicate channel",
+          }),
+        ],
+        total: 1,
+        type_counts: {},
+      })),
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+
+    const { result } = await renderChannelDialogHook()
+
+    const openPromise = result.current.dialog.openWithAccount(
+      buildDisplaySiteData(),
+      buildApiToken(),
+    )
+
+    await waitFor(() => {
+      expect(result.current.context.duplicateChannelWarning).toEqual({
+        isOpen: true,
+        existingChannelName: "Resource duplicate channel",
+      })
+    })
+
+    await act(async () => {
+      result.current.context.resolveDuplicateChannelWarning(false)
+      await openPromise
+    })
+
+    expect(searchChannel).not.toHaveBeenCalled()
+    expect(mockService.searchResourceDuplicateChannels).toHaveBeenCalled()
+    expect(result.current.context.state.isOpen).toBe(false)
+  })
+
   it("opens ChannelDialog when user continues despite duplicate", async () => {
     const existingChannel = buildManagedSiteChannel()
     const mockService: Partial<ManagedSiteService> = {
