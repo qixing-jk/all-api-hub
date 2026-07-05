@@ -112,7 +112,8 @@
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "Thiếu khóa kênh nguồn, hiện không thể di chuyển.",
-      "sourceKeyResolutionFailed": "Không thể lấy khóa kênh nguồn. Nếu bạn vừa hoàn tất xác thực, hãy làm mới bản xem trước và thử lại."
+      "sourceKeyResolutionFailed": "Không thể lấy khóa kênh nguồn. Nếu bạn vừa hoàn tất xác thực, hãy làm mới bản xem trước và thử lại.",
+      "targetDraftPreparationFailed": "Không thể chuẩn bị bản nháp kênh đích. Hãy kiểm tra thông tin kênh, làm mới bản xem trước rồi thử lại."
     },
     "confirm": {
       "confirm": "Xác nhận di chuyển",

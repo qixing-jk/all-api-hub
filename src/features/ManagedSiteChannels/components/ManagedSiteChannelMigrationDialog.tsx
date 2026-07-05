@@ -148,6 +148,10 @@ const getBlockedReasonText = (
   switch (code) {
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING:
       return t("managedSiteChannels:migration.blockedReasons.sourceKeyMissing")
+    case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED:
+      return t(
+        "managedSiteChannels:migration.blockedReasons.targetDraftPreparationFailed",
+      )
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED:
     default:
       return t(

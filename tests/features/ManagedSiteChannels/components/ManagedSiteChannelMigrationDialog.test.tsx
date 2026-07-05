@@ -453,6 +453,44 @@ describe("ManagedSiteChannelMigrationDialog", () => {
     expect(screen.getByText("future-provider")).toBeInTheDocument()
   })
 
+  it("renders target draft preparation blockers with channel wording", async () => {
+    mockedPreparePreview.mockResolvedValueOnce({
+      ...previewPayload,
+      readyCount: 0,
+      blockedCount: 1,
+      totalCount: 1,
+      items: [
+        {
+          ...previewPayload.items[0],
+          status: "blocked",
+          draft: null,
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+          blockingMessage: "Target draft failed",
+          warningCodes: [],
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    expect(
+      await screen.findAllByText(
+        "managedSiteChannels:migration.blockedReasons.targetDraftPreparationFailed",
+      ),
+    ).not.toHaveLength(0)
+    expect(screen.getAllByText("Target draft failed").length).toBeGreaterThan(0)
+  })
+
   it("shows preview errors and allows refreshing the preview", async () => {
     mockedPreparePreview
       .mockRejectedValueOnce(new Error("preview failed"))

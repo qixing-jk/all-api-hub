@@ -112,7 +112,8 @@
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "The source channel key is unavailable, so this channel cannot be migrated yet.",
-      "sourceKeyResolutionFailed": "The source channel key could not be loaded. If you just completed verification, refresh the preview and try again."
+      "sourceKeyResolutionFailed": "The source channel key could not be loaded. If you just completed verification, refresh the preview and try again.",
+      "targetDraftPreparationFailed": "The target channel draft could not be prepared. Review the channel details, refresh the preview, and try again."
     },
     "confirm": {
       "confirm": "Confirm migration",

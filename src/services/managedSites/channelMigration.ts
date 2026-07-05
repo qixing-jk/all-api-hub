@@ -2,16 +2,22 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
   getManagedSiteServiceForType,
   type ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
+import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
+import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import {
   buildOctopusBaseUrl,
   mapChannelTypeToOctopusOutboundType,
   mapOctopusOutboundTypeToChannelType,
 } from "~/services/managedSites/providers/octopus"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import {
+  resolveManagedSiteRuntimeConfigForType,
+  type ManagedSiteRuntimeConfigValue,
+} from "~/services/managedSites/runtimeConfig"
 import { needsManagedSiteChannelKeyResolution } from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
@@ -26,6 +32,7 @@ import {
   type ManagedSiteChannelMigrationPreview,
   type ManagedSiteChannelMigrationPreviewItem,
 } from "~/types/managedSiteMigration"
+import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
 import { normalizeList } from "~/utils/core/string"
 
@@ -50,6 +57,12 @@ interface SourceKeyResolutionResult {
   blockingMessage?: string
 }
 
+type ChannelMigrationResourceCapabilities = ManagedUpstreamResourcesCapability<
+  ManagedSiteRuntimeConfigValue,
+  unknown,
+  ChannelFormData
+>
+
 const parseDelimitedValues = (value: string | null | undefined) =>
   normalizeList(value?.split(",") ?? [])
 
@@ -69,6 +82,31 @@ const hasMultiKeyState = (channel: ManagedSiteChannel) =>
   )
 
 const PREVIEW_BUILD_CONCURRENCY = 5
+
+const normalizeResourceScopeKey = (baseUrl: string): string => {
+  const trimmed = baseUrl.trim()
+
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    return trimmed.replace(/\/+$/, "")
+  }
+}
+
+const resolveChannelMigrationResourceCapabilities = (
+  siteType: ManagedSiteType,
+): ChannelMigrationResourceCapabilities | null => {
+  const resolution = resolveManagedUpstreamResourceFeatureCapabilities(
+    siteType,
+    MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
+  )
+
+  if (!resolution.supported) {
+    return null
+  }
+
+  return resolution.capabilities as ChannelMigrationResourceCapabilities
+}
 
 const AXON_HUB_TO_SHARED_CHANNEL_TYPE: Partial<Record<string, ChannelType>> = {
   [AXON_HUB_CHANNEL_TYPE.OPENAI]: ChannelType.OpenAI,
@@ -430,6 +468,97 @@ const buildDraftFromSourceChannel = (params: {
   }
 }
 
+const prepareTargetDraftFromSourceChannel = async (params: {
+  sourceSiteType: ManagedSiteType
+  targetSiteType: ManagedSiteType
+  channel: ManagedSiteChannel
+  key: string
+}): Promise<ChannelFormData> => {
+  const draft = buildDraftFromSourceChannel(params)
+  const resources = resolveChannelMigrationResourceCapabilities(
+    params.targetSiteType,
+  )
+
+  if (!resources) {
+    return draft
+  }
+
+  // The resource path owns any native target conversion before create; the UI
+  // still shows the resulting data with channel terminology.
+  return await resources.drafts.prepareImportDraft({ source: draft })
+}
+
+const buildManagedUpstreamResourceRefForChannel = (params: {
+  siteType: ManagedSiteType
+  config: ManagedSiteRuntimeConfigValue
+  channelId: number
+}) =>
+  createManagedUpstreamResourceRef({
+    managedSiteType: params.siteType,
+    scopeKey: normalizeResourceScopeKey(params.config.baseUrl),
+    resourceId: params.channelId,
+  })
+
+const resolveSourceChannelKeyFromResources = async (params: {
+  preferences: UserPreferences
+  sourceSiteType: ManagedSiteType
+  channel: ManagedSiteChannel
+}): Promise<SourceKeyResolutionResult | null> => {
+  const resources = resolveChannelMigrationResourceCapabilities(
+    params.sourceSiteType,
+  )
+
+  if (!resources?.secrets?.revealSecret) {
+    return null
+  }
+
+  const sourceRuntimeConfig = resolveManagedSiteRuntimeConfigForType(
+    params.preferences,
+    params.sourceSiteType,
+  )
+  if (!sourceRuntimeConfig) {
+    return {
+      key: null,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+      blockingMessage: "Source managed-site configuration is missing.",
+    }
+  }
+
+  try {
+    const result = await resources.secrets.revealSecret(
+      sourceRuntimeConfig.config,
+      buildManagedUpstreamResourceRefForChannel({
+        siteType: params.sourceSiteType,
+        config: sourceRuntimeConfig.config,
+        channelId: params.channel.id,
+      }),
+    )
+
+    if (
+      result.status === "available" &&
+      !needsManagedSiteChannelKeyResolution(result.secret)
+    ) {
+      return { key: result.secret.trim() }
+    }
+
+    return {
+      key: null,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+      blockingMessage:
+        result.status === "available" ? undefined : result.message,
+    }
+  } catch (error) {
+    return {
+      key: null,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+      blockingMessage: getErrorMessage(error),
+    }
+  }
+}
+
 const resolveSourceChannelKey = async (params: {
   preferences: UserPreferences
   sourceSiteType: ManagedSiteType
@@ -459,6 +588,15 @@ const resolveSourceChannelKey = async (params: {
     ) {
       return { key: rawProviderKey }
     }
+  }
+
+  const resourceKeyResolution = await resolveSourceChannelKeyFromResources({
+    preferences,
+    sourceSiteType,
+    channel,
+  })
+  if (resourceKeyResolution) {
+    return resourceKeyResolution
   }
 
   if (sourceSiteType === SITE_TYPES.NEW_API) {
@@ -593,16 +731,30 @@ async function buildPreviewItem(
     })
   }
 
-  return {
-    channelId: channel.id,
-    channelName: channel.name,
-    sourceChannel: channel,
-    draft: buildDraftFromSourceChannel({
+  let draft: ChannelFormData
+  try {
+    draft = await prepareTargetDraftFromSourceChannel({
       sourceSiteType,
       targetSiteType,
       channel,
       key: keyResolution.key,
-    }),
+    })
+  } catch (error) {
+    return buildBlockedPreviewItem({
+      channel,
+      sourceSiteType,
+      targetSiteType,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+      blockingMessage: getErrorMessage(error),
+    })
+  }
+
+  return {
+    channelId: channel.id,
+    channelName: channel.name,
+    sourceChannel: channel,
+    draft,
     status: "ready",
     warningCodes: collectItemWarningCodes({
       sourceSiteType,
@@ -651,6 +803,27 @@ const buildCreateFailureResults = (
     skippedCount: preview.blockedCount,
     items,
   }
+}
+
+const createTargetChannelForMigration = async (params: {
+  targetSiteType: ManagedSiteType
+  targetService: ManagedSiteService
+  targetConfig: ManagedSiteRuntimeConfigValue
+  draft: ChannelFormData
+}) => {
+  const targetResources = resolveChannelMigrationResourceCapabilities(
+    params.targetSiteType,
+  )
+
+  if (!targetResources) {
+    const payload = params.targetService.buildChannelPayload(params.draft)
+    return await params.targetService.createChannel(
+      params.targetConfig,
+      payload,
+    )
+  }
+
+  return await targetResources.items.create(params.targetConfig, params.draft)
 }
 
 /**
@@ -728,8 +901,12 @@ export async function executeManagedSiteChannelMigration(
     attemptedCount += 1
 
     try {
-      const payload = targetService.buildChannelPayload(item.draft)
-      const response = await targetService.createChannel(targetConfig, payload)
+      const response = await createTargetChannelForMigration({
+        targetSiteType: preview.targetSiteType,
+        targetService,
+        targetConfig,
+        draft: item.draft,
+      })
 
       if (!response.success) {
         failedCount += 1

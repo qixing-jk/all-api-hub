@@ -179,6 +179,43 @@ describe("managed upstream resource service", () => {
     )
   })
 
+  it("enables channel migration resource slices for migrated managed sites by default", () => {
+    const resources = buildResourcesCapability()
+    getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
+      siteType,
+      managedSites: {
+        channels: {} as NonNullable<
+          NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
+        >,
+        resources,
+      },
+    }))
+    const migratedSiteTypes = [
+      SITE_TYPES.NEW_API,
+      SITE_TYPES.VELOERA,
+      SITE_TYPES.DONE_HUB,
+      SITE_TYPES.OCTOPUS,
+      SITE_TYPES.AXON_HUB,
+      SITE_TYPES.CLAUDE_CODE_HUB,
+    ]
+
+    expect(
+      migratedSiteTypes.map((siteType) =>
+        resolveManagedUpstreamResourceFeatureCapabilities(
+          siteType,
+          MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
+        ),
+      ),
+    ).toEqual(
+      migratedSiteTypes.map((siteType) => ({
+        supported: true,
+        siteType,
+        feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
+        capabilities: resources,
+      })),
+    )
+  })
+
   it("requires both core and feature gates before resolving feature resources", () => {
     const resources = buildResourcesCapability()
     getSiteTypeCapabilitiesMock.mockReturnValue({

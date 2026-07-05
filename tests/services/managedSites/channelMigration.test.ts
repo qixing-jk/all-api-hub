@@ -4,6 +4,7 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
@@ -28,9 +29,15 @@ const mockAxonHubGetConfig = vi.fn()
 const mockClaudeCodeHubBuildChannelPayload = vi.fn()
 const mockClaudeCodeHubCreateChannel = vi.fn()
 const mockClaudeCodeHubGetConfig = vi.fn()
+const mockResolveManagedUpstreamResourceFeatureCapabilities = vi.fn()
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteServiceForType: mockGetManagedSiteServiceForType,
+}))
+
+vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
+  resolveManagedUpstreamResourceFeatureCapabilities:
+    mockResolveManagedUpstreamResourceFeatureCapabilities,
 }))
 
 const buildManagedSiteChannel = (
@@ -161,6 +168,14 @@ describe("channelMigration", () => {
       success: true,
       message: "ok",
     })
+    mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+      (siteType: string) => ({
+        supported: false,
+        siteType,
+        feature: "channelMigration",
+        reason: "feature-slice-disabled",
+      }),
+    )
     mockGetManagedSiteServiceForType.mockImplementation((siteType: string) => {
       if (siteType === SITE_TYPES.DONE_HUB) {
         return {
@@ -371,6 +386,108 @@ describe("channelMigration", () => {
     )
     expect(preview.readyCount).toBe(1)
     expect(preview.items[0].draft?.key).toBe("real-veloera-key")
+  })
+
+  it("uses feature-gated resource secrets for migrated source preview key hydration", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const revealSecret = vi.fn().mockResolvedValue({
+      status: "available",
+      secret: "resource-revealed-key",
+    })
+    mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+      (siteType: string, feature: string) =>
+        siteType === SITE_TYPES.DONE_HUB &&
+        feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration
+          ? {
+              supported: true,
+              siteType,
+              feature,
+              capabilities: {
+                items: {
+                  list: vi.fn(),
+                  search: vi.fn(),
+                  getDetail: vi.fn(),
+                  create: vi.fn(),
+                  update: vi.fn(),
+                  delete: vi.fn(),
+                },
+                drafts: {
+                  prepareImportDraft: vi.fn(),
+                  prepareEditDraft: vi.fn(),
+                  describeFields: vi.fn(),
+                  validateDraft: vi.fn(),
+                },
+                secrets: {
+                  revealSecret,
+                },
+              },
+            }
+          : {
+              supported: false,
+              siteType,
+              feature,
+              reason: "feature-slice-disabled",
+            },
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.DONE_HUB,
+      targetSiteType: SITE_TYPES.VELOERA,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_01,
+          key: "sk-********",
+        }),
+      ],
+    })
+
+    expect(revealSecret).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://donehub.example.com",
+        adminToken: "donehub-token",
+        userId: "9",
+      },
+      {
+        managedSiteType: SITE_TYPES.DONE_HUB,
+        scopeKey: "https://donehub.example.com",
+        resourceId: "2201",
+      },
+    )
+    expect(mockDoneHubFetchChannelSecretKey).not.toHaveBeenCalled()
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft?.key).toBe("resource-revealed-key")
+  })
+
+  it("falls back to legacy source key hydration when the channel migration resource feature is unavailable", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.DONE_HUB,
+      targetSiteType: SITE_TYPES.VELOERA,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_02,
+          key: "sk-********",
+        }),
+      ],
+    })
+
+    expect(mockDoneHubFetchChannelSecretKey).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://donehub.example.com",
+        adminToken: "donehub-token",
+        userId: "9",
+      },
+      22_02,
+    )
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft?.key).toBe("real-donehub-key")
   })
 
   it("blocks managed-site preview items when source admin config is missing", async () => {
@@ -656,6 +773,184 @@ describe("channelMigration", () => {
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
       ]),
     )
+  })
+
+  it("lets feature-gated target resources prepare the migration preview draft", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const prepareImportDraft = vi.fn(async ({ source }) => ({
+      ...(source as Record<string, unknown>),
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+      weight: 6,
+    }))
+    mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+      (siteType: string, feature: string) =>
+        siteType === SITE_TYPES.AXON_HUB &&
+        feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration
+          ? {
+              supported: true,
+              siteType,
+              feature,
+              capabilities: {
+                items: {
+                  list: vi.fn(),
+                  search: vi.fn(),
+                  getDetail: vi.fn(),
+                  create: vi.fn(),
+                  update: vi.fn(),
+                  delete: vi.fn(),
+                },
+                drafts: {
+                  prepareImportDraft,
+                  prepareEditDraft: vi.fn(),
+                  describeFields: vi.fn(),
+                  validateDraft: vi.fn(),
+                },
+              },
+            }
+          : {
+              supported: false,
+              siteType,
+              feature,
+              reason: "feature-slice-disabled",
+            },
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        axonHub: {
+          baseUrl: "https://axonhub.example.com",
+          email: "admin@example.com",
+          password: "secret",
+        },
+      }),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_61,
+          type: ChannelType.OpenAI,
+          key: "source-key",
+          weight: 2,
+        }),
+      ],
+    })
+
+    expect(prepareImportDraft).toHaveBeenCalledWith({
+      source: expect.objectContaining({
+        name: "Alpha",
+        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+        key: "source-key",
+        weight: 2,
+      }),
+    })
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft).toMatchObject({
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+      weight: 6,
+    })
+  })
+
+  it("blocks only the row whose resource target draft preparation fails", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const prepareImportDraft = vi.fn(async ({ source }) => {
+      const draft = source as { name: string }
+      if (draft.name === "Broken") {
+        throw new Error("Target draft failed")
+      }
+
+      return {
+        ...(source as Record<string, unknown>),
+        preparedByPreview: true,
+      }
+    })
+    mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+      (siteType: string, feature: string) =>
+        siteType === SITE_TYPES.AXON_HUB &&
+        feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration
+          ? {
+              supported: true,
+              siteType,
+              feature,
+              capabilities: {
+                items: {
+                  list: vi.fn(),
+                  search: vi.fn(),
+                  getDetail: vi.fn(),
+                  create: vi.fn(),
+                  update: vi.fn(),
+                  delete: vi.fn(),
+                },
+                drafts: {
+                  prepareImportDraft,
+                  prepareEditDraft: vi.fn(),
+                  describeFields: vi.fn(),
+                  validateDraft: vi.fn(),
+                },
+              },
+            }
+          : {
+              supported: false,
+              siteType,
+              feature,
+              reason: "feature-slice-disabled",
+            },
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        axonHub: {
+          baseUrl: "https://axonhub.example.com",
+          email: "admin@example.com",
+          password: "secret",
+        },
+      }),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_64,
+          name: "Broken",
+          type: ChannelType.OpenAI,
+          key: "broken-key",
+        }),
+        buildManagedSiteChannel({
+          id: 22_65,
+          name: "Ready",
+          type: ChannelType.OpenAI,
+          key: "ready-key",
+        }),
+      ],
+    })
+
+    expect(prepareImportDraft).toHaveBeenCalledTimes(2)
+    expect(preview).toMatchObject({
+      readyCount: 1,
+      blockedCount: 1,
+      items: [
+        {
+          channelId: 22_64,
+          channelName: "Broken",
+          status: "blocked",
+          draft: null,
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+          blockingMessage: "Target draft failed",
+        },
+        {
+          channelId: 22_65,
+          channelName: "Ready",
+          status: "ready",
+          draft: expect.objectContaining({
+            key: "ready-key",
+            preparedByPreview: true,
+          }),
+        },
+      ],
+    })
   })
 
   it("warns about AxonHub default group forcing only when the emitted group differs", async () => {
@@ -1232,6 +1527,397 @@ describe("channelMigration", () => {
       ],
     })
   })
+
+  it("creates feature-gated target resources without using legacy channel payloads", async () => {
+    const { executeManagedSiteChannelMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const prepareImportDraft = vi.fn(async ({ source }) => ({
+      ...(source as Record<string, unknown>),
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+    }))
+    const create = vi.fn().mockResolvedValue({
+      success: true,
+      message: "created",
+    })
+    mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+      (siteType: string, feature: string) =>
+        siteType === SITE_TYPES.AXON_HUB &&
+        feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration
+          ? {
+              supported: true,
+              siteType,
+              feature,
+              capabilities: {
+                items: {
+                  list: vi.fn(),
+                  search: vi.fn(),
+                  getDetail: vi.fn(),
+                  create,
+                  update: vi.fn(),
+                  delete: vi.fn(),
+                },
+                drafts: {
+                  prepareImportDraft,
+                  prepareEditDraft: vi.fn(),
+                  describeFields: vi.fn(),
+                  validateDraft: vi.fn(),
+                },
+              },
+            }
+          : {
+              supported: false,
+              siteType,
+              feature,
+              reason: "feature-slice-disabled",
+            },
+    )
+
+    const result = await executeManagedSiteChannelMigration({
+      preview: {
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.AXON_HUB,
+        generalWarningCodes: [],
+        totalCount: 1,
+        readyCount: 1,
+        blockedCount: 0,
+        items: [
+          {
+            channelId: 81,
+            channelName: "Resource Target",
+            sourceChannel: buildManagedSiteChannel({
+              id: 81,
+              name: "Resource Target",
+            }),
+            draft: {
+              name: "Resource Target",
+              type: AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+              key: "ready-key",
+              base_url: "https://source.example.com",
+              models: ["gpt-4o"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            },
+            status: "ready",
+            warningCodes: [],
+          },
+        ],
+      },
+    })
+
+    expect(prepareImportDraft).not.toHaveBeenCalled()
+    expect(create).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "axonhub-password",
+      },
+      expect.objectContaining({
+        type: AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+        key: "ready-key",
+      }),
+    )
+    expect(mockAxonHubBuildChannelPayload).not.toHaveBeenCalled()
+    expect(mockAxonHubCreateChannel).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      skippedCount: 0,
+    })
+  })
+
+  it("executes resource target drafts prepared during preview without preparing them again", async () => {
+    const {
+      executeManagedSiteChannelMigration,
+      prepareManagedSiteChannelMigrationPreview,
+    } = await import("~/services/managedSites/channelMigration")
+    const prepareImportDraft = vi.fn(async ({ source }) => ({
+      ...(source as Record<string, unknown>),
+      preparedByPreview: true,
+    }))
+    const create = vi.fn().mockResolvedValue({
+      success: true,
+      message: "created",
+    })
+    mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+      (siteType: string, feature: string) =>
+        siteType === SITE_TYPES.AXON_HUB &&
+        feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration
+          ? {
+              supported: true,
+              siteType,
+              feature,
+              capabilities: {
+                items: {
+                  list: vi.fn(),
+                  search: vi.fn(),
+                  getDetail: vi.fn(),
+                  create,
+                  update: vi.fn(),
+                  delete: vi.fn(),
+                },
+                drafts: {
+                  prepareImportDraft,
+                  prepareEditDraft: vi.fn(),
+                  describeFields: vi.fn(),
+                  validateDraft: vi.fn(),
+                },
+              },
+            }
+          : {
+              supported: false,
+              siteType,
+              feature,
+              reason: "feature-slice-disabled",
+            },
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        axonHub: {
+          baseUrl: "https://axonhub.example.com",
+          email: "admin@example.com",
+          password: "secret",
+        },
+      }),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 82,
+          name: "Preview Prepared",
+          type: ChannelType.OpenAI,
+          key: "source-key",
+        }),
+      ],
+    })
+
+    expect(preview.items[0].draft).toMatchObject({
+      preparedByPreview: true,
+    })
+
+    const result = await executeManagedSiteChannelMigration({ preview })
+
+    expect(prepareImportDraft).toHaveBeenCalledTimes(1)
+    expect(create).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "axonhub-password",
+      },
+      expect.objectContaining({
+        name: "Preview Prepared",
+        preparedByPreview: true,
+        key: "source-key",
+      }),
+    )
+    expect(result).toMatchObject({
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+    })
+  })
+
+  it.each([
+    {
+      label: "Done Hub",
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      targetConfig: {
+        baseUrl: "https://donehub.example.com",
+        adminToken: "donehub-token",
+        userId: "9",
+      },
+      draftType: ChannelType.OpenAI,
+      legacyBuild: mockDoneHubBuildChannelPayload,
+      legacyCreate: mockDoneHubCreateChannel,
+    },
+    {
+      label: "Claude Code Hub",
+      targetSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      targetConfig: {
+        baseUrl: "https://cch.example.com",
+        adminToken: "cch-token",
+      },
+      draftType: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+      legacyBuild: mockClaudeCodeHubBuildChannelPayload,
+      legacyCreate: mockClaudeCodeHubCreateChannel,
+    },
+  ])(
+    "creates feature-gated target resources for $label without legacy channel creation",
+    async ({
+      targetSiteType,
+      targetConfig,
+      draftType,
+      legacyBuild,
+      legacyCreate,
+    }) => {
+      const { executeManagedSiteChannelMigration } = await import(
+        "~/services/managedSites/channelMigration"
+      )
+      const create = vi.fn().mockResolvedValue({
+        success: true,
+        message: "created",
+      })
+      const previewDraft = {
+        name: "Prepared Target",
+        type: draftType,
+        key: "ready-key",
+        base_url: "https://source.example.com",
+        models: ["gpt-4o"],
+        groups: ["default"],
+        priority: 0,
+        weight: 1,
+        status: 1 as const,
+      }
+      mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+        (siteType: string, feature: string) =>
+          siteType === targetSiteType &&
+          feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration
+            ? {
+                supported: true,
+                siteType,
+                feature,
+                capabilities: {
+                  items: {
+                    list: vi.fn(),
+                    search: vi.fn(),
+                    getDetail: vi.fn(),
+                    create,
+                    update: vi.fn(),
+                    delete: vi.fn(),
+                  },
+                  drafts: {
+                    prepareImportDraft: vi.fn(),
+                    prepareEditDraft: vi.fn(),
+                    describeFields: vi.fn(),
+                    validateDraft: vi.fn(),
+                  },
+                },
+              }
+            : {
+                supported: false,
+                siteType,
+                feature,
+                reason: "feature-slice-disabled",
+              },
+      )
+
+      const result = await executeManagedSiteChannelMigration({
+        preview: {
+          sourceSiteType: SITE_TYPES.NEW_API,
+          targetSiteType,
+          generalWarningCodes: [],
+          totalCount: 1,
+          readyCount: 1,
+          blockedCount: 0,
+          items: [
+            {
+              channelId: 84,
+              channelName: "Prepared Target",
+              sourceChannel: buildManagedSiteChannel({
+                id: 84,
+                name: "Prepared Target",
+              }),
+              draft: previewDraft,
+              status: "ready",
+              warningCodes: [],
+            },
+          ],
+        },
+      })
+
+      expect(create).toHaveBeenCalledWith(targetConfig, previewDraft)
+      expect(legacyBuild).not.toHaveBeenCalled()
+      expect(legacyCreate).not.toHaveBeenCalled()
+      expect(result).toMatchObject({
+        attemptedCount: 1,
+        createdCount: 1,
+        failedCount: 0,
+      })
+    },
+  )
+
+  it.each([
+    { status: "masked" as const, message: "Secret is still masked" },
+    { status: "unavailable" as const, message: "Secret cannot be revealed" },
+  ])(
+    "blocks resource-backed source key hydration when revealSecret returns $status",
+    async (secretResult) => {
+      const { prepareManagedSiteChannelMigrationPreview } = await import(
+        "~/services/managedSites/channelMigration"
+      )
+      const revealSecret = vi.fn().mockResolvedValue(secretResult)
+      mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+        (siteType: string, feature: string) =>
+          siteType === SITE_TYPES.DONE_HUB &&
+          feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration
+            ? {
+                supported: true,
+                siteType,
+                feature,
+                capabilities: {
+                  items: {
+                    list: vi.fn(),
+                    search: vi.fn(),
+                    getDetail: vi.fn(),
+                    create: vi.fn(),
+                    update: vi.fn(),
+                    delete: vi.fn(),
+                  },
+                  drafts: {
+                    prepareImportDraft: vi.fn(),
+                    prepareEditDraft: vi.fn(),
+                    describeFields: vi.fn(),
+                    validateDraft: vi.fn(),
+                  },
+                  secrets: {
+                    revealSecret,
+                  },
+                },
+              }
+            : {
+                supported: false,
+                siteType,
+                feature,
+                reason: "feature-slice-disabled",
+              },
+      )
+
+      const preview = await prepareManagedSiteChannelMigrationPreview({
+        preferences: buildPreferences(),
+        sourceSiteType: SITE_TYPES.DONE_HUB,
+        targetSiteType: SITE_TYPES.VELOERA,
+        channels: [
+          buildManagedSiteChannel({
+            id: 83,
+            name: "Masked Source",
+            key: "sk-********",
+          }),
+        ],
+      })
+
+      expect(revealSecret).toHaveBeenCalledTimes(1)
+      expect(mockDoneHubFetchChannelSecretKey).not.toHaveBeenCalled()
+      expect(preview).toMatchObject({
+        readyCount: 0,
+        blockedCount: 1,
+        items: [
+          {
+            channelId: 83,
+            channelName: "Masked Source",
+            status: "blocked",
+            draft: null,
+            blockingReasonCode:
+              MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+            blockingMessage: secretResult.message,
+          },
+        ],
+      })
+    },
+  )
 
   it("creates Claude Code Hub targets through the managed-site service and keeps failures per row", async () => {
     const { executeManagedSiteChannelMigration } = await import(

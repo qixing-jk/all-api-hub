@@ -30,6 +30,7 @@ export type ManagedSiteChannelMigrationItemWarningCode =
 export const MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES = {
   SOURCE_KEY_MISSING: "source-key-missing",
   SOURCE_KEY_RESOLUTION_FAILED: "source-key-resolution-failed",
+  TARGET_DRAFT_PREPARATION_FAILED: "target-draft-preparation-failed",
 } as const
 
 export type ManagedSiteChannelMigrationBlockedReasonCode =

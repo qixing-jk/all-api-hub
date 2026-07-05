@@ -112,7 +112,8 @@
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "缺少源渠道密钥，当前无法迁移。",
-      "sourceKeyResolutionFailed": "无法获取源渠道密钥。若刚完成验证，请刷新预览后重试。"
+      "sourceKeyResolutionFailed": "无法获取源渠道密钥。若刚完成验证，请刷新预览后重试。",
+      "targetDraftPreparationFailed": "无法准备目标渠道草稿。请检查渠道信息并刷新预览后重试。"
     },
     "confirm": {
       "confirm": "确认迁移",
