@@ -718,7 +718,7 @@ export default function ManagedSiteChannels({
       }
 
       const resourceResolution =
-        mode === DIALOG_MODES.EDIT && isNewApiManagedSite
+        mode === DIALOG_MODES.EDIT
           ? resolveManagedUpstreamResourceCapabilities(managedSiteType)
           : null
 

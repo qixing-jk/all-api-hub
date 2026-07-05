@@ -60,7 +60,7 @@ export function createManagedUpstreamResourceMigrationGates(
 
 const defaultManagedUpstreamResourceMigrationGates =
   createManagedUpstreamResourceMigrationGates({
-    coreSiteTypes: [SITE_TYPES.NEW_API],
+    coreSiteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.VELOERA],
   })
 
 /**

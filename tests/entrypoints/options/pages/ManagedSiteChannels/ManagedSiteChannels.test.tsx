@@ -1788,6 +1788,135 @@ describe("ManagedSiteChannels", () => {
     expect(updateChannel).not.toHaveBeenCalled()
   })
 
+  it("opens Veloera channel edits through the resource detail path when its core slice is migrated", async () => {
+    const user = userEvent.setup()
+    const row = buildCompleteChannelRow({
+      id: 42,
+      name: "Veloera Alpha",
+      key: "sk-********",
+      base_url: "https://veloera-alpha.example.invalid",
+      models: "gpt-4o",
+      group: "default",
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.VELOERA,
+          scopeKey: "https://veloera.example",
+          resourceId: "42",
+        },
+        displayName: "Veloera Alpha Detail",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: {
+        ...row,
+        name: "Veloera Alpha Detail",
+        model_mapping: '{"gpt-4o":"veloera-gpt-4o"}',
+      },
+    } as const
+    const getDetail = vi.fn().mockResolvedValue(detail)
+    const resourceUpdate = vi.fn().mockResolvedValue({
+      success: true,
+      message: "",
+      data: null,
+    })
+    const updateChannel = vi.fn().mockResolvedValue({
+      success: true,
+      message: "legacy update",
+    })
+    const service = mockChannels([row], {
+      managedSiteType: SITE_TYPES.VELOERA,
+      messagesKey: "veloera",
+    })
+    service.getConfig = vi.fn().mockResolvedValue({
+      baseUrl: "https://veloera.example",
+      adminToken: "veloera-token",
+      userId: "5",
+    })
+    service.updateChannel = updateChannel
+    mockResolveManagedUpstreamResourceCapabilities.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.VELOERA,
+      capabilities: {
+        items: {
+          getDetail,
+          update: resourceUpdate,
+        },
+        drafts: {
+          prepareEditDraft: vi.fn(() => ({
+            name: "Veloera Alpha Detail",
+            type: ChannelType.OpenAI,
+            key: "sk-********",
+            base_url: "https://veloera-alpha.example.invalid",
+            models: ["gpt-4o"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: 1,
+          })),
+          describeFields: vi.fn(() => [
+            { name: "name", label: "Name", type: "text", required: true },
+          ]),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    })
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForRowText("Veloera Alpha")
+    const rowElement = screen.getByText("Veloera Alpha").closest("tr")
+    expect(rowElement).toBeTruthy()
+    await openRowActionsMenu(rowElement!, user)
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(getDetail).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://veloera.example",
+          adminToken: "veloera-token",
+          userId: "5",
+        },
+        detail.summary.ref,
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)).toHaveValue(
+        "Veloera Alpha Detail",
+      )
+    })
+    await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+
+    await waitFor(() => {
+      expect(resourceUpdate).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://veloera.example",
+          adminToken: "veloera-token",
+          userId: "5",
+        },
+        detail,
+        expect.objectContaining({
+          name: "Veloera Alpha Detail",
+          key: "sk-********",
+        }),
+      )
+    })
+    expect(updateChannel).not.toHaveBeenCalled()
+  })
+
   it("keeps unmigrated managed-site edits on the legacy channel update path", async () => {
     const user = userEvent.setup()
     const row = buildCompleteChannelRow({
@@ -1810,18 +1939,9 @@ describe("ManagedSiteChannels", () => {
     })
     service.updateChannel = updateChannel
     mockResolveManagedUpstreamResourceCapabilities.mockReturnValue({
-      supported: true,
+      supported: false,
       siteType: SITE_TYPES.DONE_HUB,
-      capabilities: {
-        items: {
-          getDetail,
-        },
-        drafts: {
-          prepareEditDraft: vi.fn(),
-          describeFields: vi.fn(),
-          validateDraft: vi.fn(),
-        },
-      },
+      reason: "core-slice-disabled",
     })
 
     render(
