@@ -139,6 +139,28 @@ describe("newApiFamily channel management APIs", () => {
     expect(body.groups).toBeUndefined()
   })
 
+  it("updateChannel omits an empty key so New API preserves the existing secret", async () => {
+    mockFetchApi.mockResolvedValueOnce({ success: true })
+
+    await updateChannel(baseRequest, {
+      id: 1,
+      name: "Updated",
+      key: "",
+      base_url: "https://upstream.example.invalid/v1",
+      groups: ["default"],
+    } as any)
+
+    const body = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
+    expect(body).toMatchObject({
+      id: 1,
+      name: "Updated",
+      base_url: "https://upstream.example.invalid/v1",
+      group: "default",
+    })
+    expect(body.key).toBeUndefined()
+    expect(body.groups).toBeUndefined()
+  })
+
   it("listAllChannels should paginate and aggregate type_counts", async () => {
     const baseUrl = "https://example.com"
     const token = "token"

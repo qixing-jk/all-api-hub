@@ -29,6 +29,18 @@ const serializeChannelGroups = <T extends { groups?: string[] }>(
   }
 }
 
+const serializeUpdateChannelPayload = (payload: UpdateChannelPayload) => {
+  const serializedPayload = serializeChannelGroups(payload)
+
+  // New API v1.0.0-rc.16 rejects an empty update key; omitting it preserves the existing secret.
+  if (serializedPayload.key?.trim() !== "") {
+    return serializedPayload
+  }
+
+  const { key, ...payloadWithoutEmptyKey } = serializedPayload
+  return payloadWithoutEmptyKey
+}
+
 /**
  * 搜索指定关键词的渠道。
  * @param request ApiServiceRequest（包含 baseUrl + 认证信息）。
@@ -90,7 +102,7 @@ export async function updateChannel(
   channelData: UpdateChannelPayload,
 ) {
   try {
-    const payload = serializeChannelGroups(channelData)
+    const payload = serializeUpdateChannelPayload(channelData)
 
     return await fetchApi<void>(request, {
       endpoint: CHANNEL_API_BASE,
