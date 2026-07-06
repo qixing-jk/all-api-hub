@@ -12,7 +12,9 @@ import {
 } from "./batchKeys.js"
 import {
   buildAwsInferenceProfileMappings,
+  getAwsEntryChannelSettings,
   getAwsRuntimeBaseUrl,
+  inferAwsCredentialMode,
   resolveChannelInput,
   validateBatchCredentialEntries,
 } from "./channelConfig.js"
@@ -234,9 +236,14 @@ const buildEntryModelPlan = (preview, modelPlan, entry) => {
   return { ...modelPlan, modelMapping }
 }
 
+const buildEntryChannelSettings = (preview, entry) =>
+  preview.provider.id === "aws" && preview.awsAutoCredentialMode
+    ? getAwsEntryChannelSettings(entry.apiKey, preview.channelSettings)
+    : preview.channelSettings
+
 const buildEntryBaseUrl = (preview, entry) =>
   preview.provider.id === "aws" &&
-  preview.channelSettings?.aws_key_type === "api_key"
+  buildEntryChannelSettings(preview, entry)?.aws_key_type === "api_key"
     ? getAwsRuntimeBaseUrl(entry.apiKey)
     : preview.baseUrl
 
@@ -477,10 +484,12 @@ async function handleApi(request, response, url, port) {
     if (String(body.quotaLines || "").trim()) {
       keys = applyQuotaLines(keys, body.quotaLines)
     }
-    const credentialMode =
-      template?.channelSettings?.aws_key_type ||
-      template?.channelSettings?.vertex_key_type ||
-      String(body.credentialMode || "")
+    const awsAutoCredentialMode = provider.id === "aws" && useRawCredentials
+    const credentialMode = awsAutoCredentialMode
+      ? "auto"
+      : template?.channelSettings?.aws_key_type ||
+        template?.channelSettings?.vertex_key_type ||
+        String(body.credentialMode || "")
     validateBatchCredentialEntries(provider, credentialMode, keys)
     keys = [...new Map(keys.map((entry) => [entry.apiKey, entry])).values()]
     if (!provider.keyOptional && keys.some(({ apiKey }) => apiKey.length < 8)) {
@@ -555,7 +564,13 @@ async function handleApi(request, response, url, port) {
       channelSettings:
         template?.channelSettings ?? channelInput.channelSettings,
       providerMappings,
-      awsEntryRouting: template ? false : channelInput.awsEntryRouting,
+      awsAutoCredentialMode,
+      awsEntryRouting:
+        provider.id === "aws" && useRawCredentials
+          ? true
+          : template
+            ? false
+            : channelInput.awsEntryRouting,
       templateConfig: template?.advanced || null,
       templateChannelId: template?.id || null,
       templateChannelName: template?.name || "",
@@ -701,6 +716,24 @@ async function handleApi(request, response, url, port) {
       ) {
         throw new Error("Vertex API Key 模式不支持合并为多 Key 渠道")
       }
+      if (preview.provider.id === "aws" && preview.awsAutoCredentialMode) {
+        const credentialModes = new Set(
+          preview.keys.map((entry) => inferAwsCredentialMode(entry.apiKey)),
+        )
+        if (credentialModes.size > 1) {
+          throw new Error(
+            "AWS API Key 与 AK/SK 不能合并到同一个多 Key 渠道，请使用每条 Key 独立渠道",
+          )
+        }
+        const baseUrls = new Set(
+          preview.keys.map((entry) => buildEntryBaseUrl(preview, entry)),
+        )
+        if (baseUrls.size > 1) {
+          throw new Error(
+            "不同 AWS 地区不能合并到同一个多 Key 渠道，请使用每条 Key 独立渠道",
+          )
+        }
+      }
       const routedModelPlans = preview.keys.map((entry) =>
         buildEntryModelPlan(preview, modelPlan, entry),
       )
@@ -715,6 +748,8 @@ async function handleApi(request, response, url, port) {
       const createInput = {
         ...preview,
         apiKeys: preview.keys.map((entry) => entry.apiKey),
+        baseUrl: buildEntryBaseUrl(preview, preview.keys[0]),
+        channelSettings: buildEntryChannelSettings(preview, preview.keys[0]),
         ...routedModelPlans[0],
       }
       await createNewApiMultiKeyChannel(runtimeConfig, createInput)
@@ -776,6 +811,7 @@ async function handleApi(request, response, url, port) {
               ...preview,
               apiKey: entry.apiKey,
               baseUrl: buildEntryBaseUrl(preview, entry),
+              channelSettings: buildEntryChannelSettings(preview, entry),
               name: preview.automaticName
                 ? buildResourceChannelName(preview.provider.name, [entry], {
                     index,

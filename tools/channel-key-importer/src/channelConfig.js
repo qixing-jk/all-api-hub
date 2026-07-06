@@ -276,6 +276,24 @@ export function getAwsRuntimeBaseUrl(apiKey) {
   return region ? `https://bedrock-runtime.${region}.amazonaws.com` : ""
 }
 
+export function inferAwsCredentialMode(apiKey) {
+  const parts = String(apiKey || "")
+    .split("|")
+    .map((value) => value.trim())
+  if (parts.some((value) => !value)) return ""
+  if (parts.length === 2) return "api_key"
+  if (parts.length === 3) return "ak_sk"
+  return ""
+}
+
+export function getAwsEntryChannelSettings(apiKey, channelSettings = {}) {
+  const awsKeyType = inferAwsCredentialMode(apiKey)
+  if (!awsKeyType) {
+    throw new Error("AWS 凭证必须是 APIKey|Region 或 AK|SK|Region")
+  }
+  return { ...channelSettings, aws_key_type: awsKeyType }
+}
+
 export function getPublicChannelConfig(providerId, channelType) {
   const config = CHANNEL_CONFIGS[providerId] || {}
   return {
@@ -427,12 +445,27 @@ export function validateBatchCredentialEntries(
   entries,
 ) {
   if (provider.id === "aws") {
-    const mode = credentialMode === "api_key" ? "api_key" : "ak_sk"
-    const expectedParts = mode === "api_key" ? 2 : 3
     for (const [index, entry] of entries.entries()) {
+      const inferredMode = inferAwsCredentialMode(entry.apiKey)
+      const mode =
+        credentialMode === "auto"
+          ? inferredMode
+          : credentialMode === "api_key"
+            ? "api_key"
+            : "ak_sk"
+      const expectedParts = mode === "api_key" ? 2 : 3
       const parts = entry.apiKey.split("|").map((value) => value.trim())
-      if (parts.length !== expectedParts || parts.some((value) => !value)) {
-        const format = mode === "api_key" ? "APIKey|Region" : "AK|SK|Region"
+      if (
+        !mode ||
+        parts.length !== expectedParts ||
+        parts.some((value) => !value)
+      ) {
+        const format =
+          credentialMode === "auto"
+            ? "APIKey|Region 或 AK|SK|Region"
+            : mode === "api_key"
+              ? "APIKey|Region"
+              : "AK|SK|Region"
         throw new Error(`第 ${index + 1} 条 AWS 凭证必须是 ${format}`)
       }
       const region = parts.at(-1)

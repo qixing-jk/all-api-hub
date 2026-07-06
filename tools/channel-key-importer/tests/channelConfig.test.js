@@ -3,8 +3,10 @@ import test from "node:test"
 
 import {
   buildAwsInferenceProfileMappings,
+  getAwsEntryChannelSettings,
   getAwsRuntimeBaseUrl,
   getPublicChannelConfig,
+  inferAwsCredentialMode,
   resolveChannelInput,
   validateBatchCredentialEntries,
 } from "../src/channelConfig.js"
@@ -123,6 +125,19 @@ test("builds the reference AWS runtime endpoint from the credential region", () 
   )
 })
 
+test("infers each AWS batch credential mode independently", () => {
+  assert.equal(inferAwsCredentialMode("bedrock-key|us-east-2"), "api_key")
+  assert.equal(inferAwsCredentialMode("AKIAEXAMPLE|secret|eu-west-1"), "ak_sk")
+  assert.equal(inferAwsCredentialMode("invalid"), "")
+  assert.deepEqual(
+    getAwsEntryChannelSettings("bedrock-key|us-east-2", {
+      copied_setting: true,
+      aws_key_type: "ak_sk",
+    }),
+    { copied_setting: true, aws_key_type: "api_key" },
+  )
+})
+
 test("keeps an explicit AWS application profile ahead of global mode", () => {
   const result = resolveChannelInput(provider("aws", 33), {
     credentialMode: "ak_sk",
@@ -226,6 +241,19 @@ test("validates AWS batch credential format and inference region", () => {
         { apiKey: "bedrock-key|not-a-region" },
       ]),
     /推理地区/,
+  )
+  assert.doesNotThrow(() =>
+    validateBatchCredentialEntries(provider("aws", 33), "auto", [
+      { apiKey: "ABSKEXAMPLE|us-east-2" },
+      { apiKey: "AKIAEXAMPLE|secret|eu-central-1" },
+    ]),
+  )
+  assert.throws(
+    () =>
+      validateBatchCredentialEntries(provider("aws", 33), "auto", [
+        { apiKey: "invalid" },
+      ]),
+    /APIKey\|Region 或 AK\|SK\|Region/,
   )
 })
 
