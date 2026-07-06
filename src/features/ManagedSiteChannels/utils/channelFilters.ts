@@ -5,6 +5,7 @@ import {
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { getRuntimeMessageFailureMessage } from "~/services/runtimeMessaging/result"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import type { ManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { isMessageReceiverUnavailableError } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
@@ -12,6 +13,20 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to channel filter load/save helpers in the options UI.
  */
 const logger = createLogger("ChannelFilters")
+
+export type ChannelFilterStorageIdentity =
+  | number
+  | {
+      channelId?: number
+      resourceRef?: ManagedUpstreamResourceRef
+    }
+
+/**
+ * Normalizes legacy numeric ids and resource-aware identities into requests.
+ */
+function toChannelFilterRequest(identity: ChannelFilterStorageIdentity) {
+  return typeof identity === "number" ? { channelId: identity } : identity
+}
 
 /**
  * Load channel filter rules for the given channel.
@@ -23,13 +38,14 @@ const logger = createLogger("ChannelFilters")
  *    locally so editing is still possible.
  */
 export async function fetchChannelFilters(
-  channelId: number,
+  identity: ChannelFilterStorageIdentity,
 ): Promise<ChannelModelFilterRule[]> {
   let response: Awaited<ReturnType<typeof sendChannelConfigMessage>>
+  const request = toChannelFilterRequest(identity)
 
   try {
     response = await sendChannelConfigMessage(ChannelConfigMessageTypes.Get, {
-      channelId,
+      ...request,
     })
   } catch (runtimeError) {
     if (!isMessageReceiverUnavailableError(runtimeError)) {
@@ -37,10 +53,16 @@ export async function fetchChannelFilters(
     }
 
     logger.warn("Runtime fetch failed for channel, using fallback storage", {
-      channelId,
+      channelId: request.channelId,
+      resourceRef: request.resourceRef,
       error: runtimeError,
     })
-    const config = await channelConfigStorage.getConfig(channelId)
+    const config = request.resourceRef
+      ? await channelConfigStorage.getConfigByResourceRef(
+          request.resourceRef,
+          request.channelId,
+        )
+      : await channelConfigStorage.getConfig(request.channelId!)
     return config.modelFilterSettings?.rules ?? []
   }
 
@@ -61,15 +83,16 @@ export async function fetchChannelFilters(
  * local `channelConfigStorage` as a best-effort fallback.
  */
 export async function saveChannelFilters(
-  channelId: number,
+  identity: ChannelFilterStorageIdentity,
   filters: ChannelModelFilterRule[],
 ): Promise<void> {
   let response: Awaited<ReturnType<typeof sendChannelConfigMessage>>
+  const request = toChannelFilterRequest(identity)
 
   try {
     response = await sendChannelConfigMessage(
       ChannelConfigMessageTypes.UpsertFilters,
-      { channelId, filters },
+      { ...request, filters },
     )
   } catch (runtimeError) {
     if (!isMessageReceiverUnavailableError(runtimeError)) {
@@ -77,10 +100,17 @@ export async function saveChannelFilters(
     }
 
     logger.warn("Runtime save failed for channel, persisting locally", {
-      channelId,
+      channelId: request.channelId,
+      resourceRef: request.resourceRef,
       error: runtimeError,
     })
-    const success = await channelConfigStorage.upsertFilters(channelId, filters)
+    const success = request.resourceRef
+      ? await channelConfigStorage.upsertResourceFilters(
+          request.resourceRef,
+          filters,
+          request.channelId,
+        )
+      : await channelConfigStorage.upsertFilters(request.channelId!, filters)
     if (!success) {
       throw new Error("Failed to persist filters locally")
     }

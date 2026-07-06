@@ -106,6 +106,10 @@ import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
+import {
+  isManagedSiteFeatureResourceSliceEnabled,
+  MANAGED_UPSTREAM_RESOURCE_FEATURES,
+} from "~/services/managedSites/managedUpstreamResourceMigration"
 import { resolveManagedUpstreamResourceCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import {
   getManagedSiteConfigMissingMessage,
@@ -217,7 +221,13 @@ export function upsertChannelRow(rows: ChannelRow[], channel: ChannelRow) {
     return [channel, ...rows]
   }
 
-  return rows.map((row, index) => (index === existingIndex ? channel : row))
+  const existing = rows[existingIndex]
+  const nextChannel =
+    channel.resourceRef || !existing.resourceRef
+      ? channel
+      : { ...channel, resourceRef: existing.resourceRef }
+
+  return rows.map((row, index) => (index === existingIndex ? nextChannel : row))
 }
 
 const normalizeManagedSiteResourceScopeKey = (baseUrl: string): string => {
@@ -297,6 +307,32 @@ const getManagedUpstreamResourceId = (
   }
 
   return channel.id
+}
+
+const attachChannelFilterResourceRefs = (params: {
+  channels: ChannelRow[]
+  managedSiteType: ManagedSiteType
+  baseUrl: string
+}): ChannelRow[] => {
+  const { channels, managedSiteType, baseUrl } = params
+  const isEnabled = isManagedSiteFeatureResourceSliceEnabled(
+    managedSiteType,
+    MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelFilters,
+  )
+
+  if (!isEnabled) {
+    return channels
+  }
+
+  const scopeKey = normalizeManagedSiteResourceScopeKey(baseUrl)
+  return channels.map((channel) => ({
+    ...channel,
+    resourceRef: createManagedUpstreamResourceRef({
+      managedSiteType,
+      scopeKey,
+      resourceId: getManagedUpstreamResourceId(managedSiteType, channel),
+    }),
+  }))
 }
 
 /**
@@ -452,7 +488,11 @@ export default function ManagedSiteChannels({
         const response = await service.listChannels(config, {
           signal: refreshAbortController.signal,
         })
-        const items = response.items ?? []
+        const items = attachChannelFilterResourceRefs({
+          channels: response.items ?? [],
+          managedSiteType,
+          baseUrl: String((config as { baseUrl?: string }).baseUrl ?? ""),
+        })
         if (
           activeRefreshRef.current !== activeRefresh ||
           refreshAbortController.signal.aborted
@@ -510,7 +550,7 @@ export default function ManagedSiteChannels({
         }
       }
     },
-    [isConfigMissing, managedSiteAnalyticsType, t],
+    [isConfigMissing, managedSiteAnalyticsType, managedSiteType, t],
   )
 
   const cancelRefresh = useCallback(() => {

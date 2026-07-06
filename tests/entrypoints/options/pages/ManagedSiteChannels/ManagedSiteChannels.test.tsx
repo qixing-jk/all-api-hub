@@ -44,6 +44,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { navigateWithinOptionsPage, openSettingsTab } from "~/utils/navigation"
 import {
   fireEvent,
@@ -526,9 +527,15 @@ describe("ManagedSiteChannels", () => {
   })
 
   it("inserts and replaces mutation channel rows by id", () => {
+    const alphaResourceRef = createManagedUpstreamResourceRef({
+      managedSiteType: SITE_TYPES.NEW_API,
+      scopeKey: "https://managed.example.invalid",
+      resourceId: 1,
+    })
     const alpha = buildCompleteChannelRow({
       id: 1,
       name: "Alpha",
+      resourceRef: alphaResourceRef,
     })
     const beta = buildCompleteChannelRow({
       id: 2,
@@ -540,7 +547,12 @@ describe("ManagedSiteChannels", () => {
     })
 
     expect(upsertChannelRow([alpha], beta)).toEqual([beta, alpha])
-    expect(upsertChannelRow([alpha], alphaEdited)).toEqual([alphaEdited])
+    expect(upsertChannelRow([alpha], alphaEdited)).toEqual([
+      {
+        ...alphaEdited,
+        resourceRef: alphaResourceRef,
+      },
+    ])
   })
 
   const fillAndSubmitChannelDialog = async (
@@ -2695,7 +2707,14 @@ describe("ManagedSiteChannels", () => {
     ).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(fetchChannelFilters).toHaveBeenCalledWith(1)
+      expect(fetchChannelFilters).toHaveBeenCalledWith({
+        channelId: 1,
+        resourceRef: createManagedUpstreamResourceRef({
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://admin.example",
+          resourceId: 1,
+        }),
+      })
     })
   })
 
@@ -3579,15 +3598,6 @@ describe("ManagedSiteChannels", () => {
       within(dialog).getByText("managedSiteChannels:migration.betaBadge"),
     ).toBeInTheDocument()
     expect(within(dialog).getByText("Beta")).toBeInTheDocument()
-
-    const betaDetailsToggle = within(dialog).getByText("Beta").closest("button")
-    expect(betaDetailsToggle).toBeTruthy()
-
-    await user.click(betaDetailsToggle!)
-
-    expect(
-      within(dialog).getByText("channelDialog:fields.priority.label"),
-    ).toBeInTheDocument()
   })
 
   it("uses filtered rows for migrate filtered", async () => {

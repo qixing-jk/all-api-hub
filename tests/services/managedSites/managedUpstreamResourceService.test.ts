@@ -417,6 +417,59 @@ describe("managed upstream resource service", () => {
     )
   })
 
+  it("enables channel filter resource config slices for channel-shaped migrated sites by default", () => {
+    const resources = buildResourcesCapability()
+    getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
+      siteType,
+      managedSites: {
+        channels: {} as NonNullable<
+          NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
+        >,
+        resources,
+      },
+    }))
+    const migratedChannelShapedSiteTypes = [
+      SITE_TYPES.NEW_API,
+      SITE_TYPES.VELOERA,
+      SITE_TYPES.DONE_HUB,
+    ]
+    const nativeResourceSiteTypes = [
+      SITE_TYPES.OCTOPUS,
+      SITE_TYPES.AXON_HUB,
+      SITE_TYPES.CLAUDE_CODE_HUB,
+    ]
+
+    for (const feature of [
+      MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelFilters,
+      MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelConfigStorage,
+    ]) {
+      expect(
+        migratedChannelShapedSiteTypes.map((siteType) =>
+          resolveManagedUpstreamResourceFeatureCapabilities(siteType, feature),
+        ),
+      ).toEqual(
+        migratedChannelShapedSiteTypes.map((siteType) => ({
+          supported: true,
+          siteType,
+          feature,
+          capabilities: resources,
+        })),
+      )
+      expect(
+        nativeResourceSiteTypes.map((siteType) =>
+          resolveManagedUpstreamResourceFeatureCapabilities(siteType, feature),
+        ),
+      ).toEqual(
+        nativeResourceSiteTypes.map((siteType) => ({
+          supported: false,
+          siteType,
+          feature,
+          reason: "feature-slice-disabled",
+        })),
+      )
+    }
+  })
+
   it("requires both core and feature gates before resolving feature resources", () => {
     const resources = buildResourcesCapability()
     getSiteTypeCapabilitiesMock.mockReturnValue({
