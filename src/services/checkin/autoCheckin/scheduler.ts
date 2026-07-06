@@ -237,6 +237,7 @@ class AutoCheckinScheduler {
   private static readonly DAILY_ALARM_NAME = "autoCheckinDaily"
   private static readonly RETRY_ALARM_NAME = "autoCheckinRetry"
   private static readonly DETERMINISTIC_CATCH_UP_DELAY_MS = 60_000
+  private static readonly CHECKIN_EXECUTION_BATCH_SIZE = 3
   private isInitialized = false
 
   /**
@@ -1010,6 +1011,43 @@ class AutoCheckinScheduler {
         successful: false,
       }
     }
+  }
+
+  private async runAccountCheckinsInBatches(params: {
+    accounts: SiteAccount[]
+    accountDisplayNameById: Map<string, string>
+  }): Promise<
+    Array<{
+      result: CheckinAccountResult
+      successful: boolean
+    }>
+  > {
+    const outcomes: Array<{
+      result: CheckinAccountResult
+      successful: boolean
+    }> = []
+
+    for (
+      let index = 0;
+      index < params.accounts.length;
+      index += AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE
+    ) {
+      const batch = params.accounts.slice(
+        index,
+        index + AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE,
+      )
+      const batchOutcomes = await Promise.all(
+        batch.map((account) =>
+          this.runAccountCheckin(
+            account,
+            params.accountDisplayNameById.get(account.id) ?? account.id,
+          ),
+        ),
+      )
+      outcomes.push(...batchOutcomes)
+    }
+
+    return outcomes
   }
 
   /**
@@ -2035,18 +2073,14 @@ class AutoCheckinScheduler {
         return
       }
 
-      // Execute check-ins concurrently
+      // Execute check-ins in small batches because some providers open pages.
       let successCount = 0
       let failedCount = 0
 
-      const checkinOutcomes = await Promise.all(
-        runnableAccounts.map((account) =>
-          this.runAccountCheckin(
-            account,
-            accountDisplayNameById.get(account.id) ?? account.id,
-          ),
-        ),
-      )
+      const checkinOutcomes = await this.runAccountCheckinsInBatches({
+        accounts: runnableAccounts,
+        accountDisplayNameById,
+      })
 
       for (const outcome of checkinOutcomes) {
         results[outcome.result.accountId] = outcome.result
