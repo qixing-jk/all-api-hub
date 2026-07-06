@@ -125,6 +125,7 @@ export default function KeyManagement(props: {
     editingToken,
     serviceCredentials,
     currentAccountLoadError,
+    currentAccountUnsupportedKeyManagement,
     tokenLoadProgress,
     failedAccounts,
     accountSummaryItems,
@@ -415,6 +416,9 @@ export default function KeyManagement(props: {
         selectedAccount={selectedAccount}
         displayData={displayData}
         currentAccountLoadError={currentAccountLoadError}
+        currentAccountUnsupportedKeyManagement={
+          currentAccountUnsupportedKeyManagement
+        }
         serviceCredentials={serviceCredentials}
         onCopyServiceCredential={copyServiceCredential}
         onRotateServiceCredential={rotateServiceCredential}

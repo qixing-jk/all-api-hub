@@ -415,5 +415,10 @@
   "title": "Administración de claves",
   "totalKeys_one": "Total {{count}} clave",
   "totalKeys_many": "Total {{count}} claves",
-  "totalKeys_other": "Total {{count}} claves"
+  "totalKeys_other": "Total {{count}} claves",
+  "unsupportedSource": {
+    "description": "El tipo de sitio de esta cuenta se puede guardar, pero la extensión aún no ha adaptado su protocolo de lista de claves. Envía una solicitud de soporte del sitio para ayudarnos a agregar soporte de gestión de claves.",
+    "requestSiteSupport": "Solicitar soporte del sitio",
+    "title": "La gestión de claves aún no es compatible con este tipo de sitio"
+  }
 }

@@ -1,11 +1,28 @@
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { render, screen } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
+const { openSiteSupportRequestPageMock } = vi.hoisted(() => ({
+  openSiteSupportRequestPageMock: vi.fn(),
+}))
+
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+
+  return {
+    ...actual,
+    openSiteSupportRequestPage: openSiteSupportRequestPageMock,
+  }
+})
+
 describe("TokenList empty states", () => {
+  beforeEach(() => {
+    openSiteSupportRequestPageMock.mockReset()
+  })
+
   it("guides the user to add an account when none exist", async () => {
     const user = userEvent.setup()
     const onAddAccount = vi.fn()
@@ -162,6 +179,53 @@ describe("TokenList empty states", () => {
     await user.click(createButton)
 
     expect(handleAddToken).not.toHaveBeenCalled()
+  })
+
+  it("shows a site-support request entry when key management is unsupported", async () => {
+    const user = userEvent.setup()
+    const account = createAccount({
+      id: "unsupported-account",
+      baseUrl: "https://unsupported.example.invalid",
+      siteType: "future-site",
+    })
+
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[]}
+        filteredTokens={[]}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={vi.fn()}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account]}
+        currentAccountUnsupportedKeyManagement={true}
+      />,
+    )
+
+    expect(
+      await screen.findByText("keyManagement:unsupportedSource.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:unsupportedSource.description"),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:unsupportedSource.requestSiteSupport",
+      }),
+    )
+
+    expect(openSiteSupportRequestPageMock).toHaveBeenCalledWith({
+      siteUrl: "https://unsupported.example.invalid",
+      errorType: "key_management_unsupported",
+      errorMessage: "Key management is not implemented for future-site",
+    })
   })
 
   it("keeps the current single-account token list visible while refreshing", async () => {

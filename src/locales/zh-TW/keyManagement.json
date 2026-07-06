@@ -387,5 +387,10 @@
   },
   "showingCount_other": "顯示 {{count}} 個",
   "title": "金鑰管理",
-  "totalKeys_other": "總計 {{count}} 個金鑰"
+  "totalKeys_other": "總計 {{count}} 個金鑰",
+  "unsupportedSource": {
+    "description": "目前帳號的站點類型已支援儲存帳號，但擴充功能尚未適配此站點的金鑰列表協議。你可以提交站點支援請求，協助我們補齊金鑰管理能力。",
+    "requestSiteSupport": "回報站點支援",
+    "title": "此站點類型尚未支援金鑰管理"
+  }
 }

@@ -401,5 +401,10 @@
   "showingCount_other": "Showing {{count}}",
   "title": "Key Management",
   "totalKeys_one": "Total {{count}} key",
-  "totalKeys_other": "Total {{count}} keys"
+  "totalKeys_other": "Total {{count}} keys",
+  "unsupportedSource": {
+    "description": "This account's site type can be saved, but the extension has not adapted its key-list protocol yet. Submit a site-support request to help us add key-management support.",
+    "requestSiteSupport": "Request site support",
+    "title": "Key management is not supported for this site type yet"
+  }
 }

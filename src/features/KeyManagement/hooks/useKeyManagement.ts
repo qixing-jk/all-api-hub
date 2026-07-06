@@ -132,11 +132,20 @@ const isClipboardPermissionError = (error: unknown) => {
 }
 
 type TokenLoadStatus = "idle" | "loading" | "loaded" | "error"
+
+const TOKEN_LOAD_ERROR_KINDS = {
+  UnsupportedKeyManagement: "unsupported-key-management",
+} as const
+
+type TokenLoadErrorKind =
+  (typeof TOKEN_LOAD_ERROR_KINDS)[keyof typeof TOKEN_LOAD_ERROR_KINDS]
+
 interface TokenInventoryState {
   status: TokenLoadStatus
   tokens: AccountToken[]
   errorMessage?: string
   errorCategory?: ProductAnalyticsErrorCategory
+  errorKind?: TokenLoadErrorKind
 }
 
 interface FailedAccountTokenLoad {
@@ -694,12 +703,29 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           tokens: prev[accountId]?.tokens ?? [],
           errorMessage: undefined,
           errorCategory: undefined,
+          errorKind: undefined,
         },
       }))
 
       try {
         const { keyManagement, serviceCredential, request } =
           createDisplayAccountApiContext(account)
+
+        if (!keyManagement && !serviceCredential) {
+          const errorCategory = PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
+          tokenLoadErrorCategoriesRef.current[accountId] = errorCategory
+          setTokenInventories((prev) => ({
+            ...prev,
+            [accountId]: {
+              status: "error",
+              tokens: prev[accountId]?.tokens ?? [],
+              errorMessage: undefined,
+              errorCategory,
+              errorKind: TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement,
+            },
+          }))
+          return "error"
+        }
 
         const serviceCredentialLoad =
           await loadServiceCredentialKeyManagementRuntimeKey({
@@ -742,6 +768,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               tokens: [],
               errorMessage: undefined,
               errorCategory: undefined,
+              errorKind: undefined,
             },
           }))
           delete tokenLoadErrorCategoriesRef.current[accountId]
@@ -776,6 +803,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               tokens: prev[accountId]?.tokens ?? [],
               errorMessage,
               errorCategory,
+              errorKind: undefined,
             },
           }))
           if (toastOnError) {
@@ -797,6 +825,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             tokens: tokensWithAccount,
             errorMessage: undefined,
             errorCategory: undefined,
+            errorKind: undefined,
           },
         }))
         delete tokenLoadErrorCategoriesRef.current[accountId]
@@ -834,6 +863,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             tokens: prev[accountId]?.tokens ?? [],
             errorMessage,
             errorCategory,
+            errorKind: undefined,
           },
         }))
         if (toastOnError) {
@@ -1336,6 +1366,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     }
 
     const tokenInventory = tokenInventories[selectedAccount]
+    if (
+      tokenInventory?.errorKind ===
+      TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement
+    ) {
+      return null
+    }
+
     if (tokenInventory?.status === "error") {
       return tokenInventory.errorMessage ?? loadFailedMessage
     }
@@ -1347,6 +1384,20 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
     return null
   }, [loadFailedMessage, selectedAccount, serviceCredentials, tokenInventories])
+
+  const currentAccountUnsupportedKeyManagement = useMemo(() => {
+    if (
+      !selectedAccount ||
+      selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+    ) {
+      return false
+    }
+
+    return (
+      tokenInventories[selectedAccount]?.errorKind ===
+      TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement
+    )
+  }, [selectedAccount, tokenInventories])
 
   const accountSummaryItems = useMemo(() => {
     if (!isAllAccountsMode) return []
@@ -1864,6 +1915,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     tokenInventories,
     serviceCredentials,
     currentAccountLoadError,
+    currentAccountUnsupportedKeyManagement,
     tokenLoadProgress,
     failedAccounts,
     accountSummaryItems,

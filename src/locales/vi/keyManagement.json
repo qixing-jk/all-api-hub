@@ -387,5 +387,10 @@
   },
   "showingCount_other": "Đang hiển thị {{count}}",
   "title": "Quản lý khóa",
-  "totalKeys_other": "Tổng cộng {{count}} key"
+  "totalKeys_other": "Tổng cộng {{count}} key",
+  "unsupportedSource": {
+    "description": "Loại trang của tài khoản này có thể được lưu, nhưng tiện ích chưa thích ứng giao thức danh sách khóa của trang này. Hãy gửi yêu cầu hỗ trợ trang để giúp chúng tôi bổ sung khả năng quản lý khóa.",
+    "requestSiteSupport": "Yêu cầu hỗ trợ trang",
+    "title": "Loại trang này chưa hỗ trợ quản lý khóa"
+  }
 }

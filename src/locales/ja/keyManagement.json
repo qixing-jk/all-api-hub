@@ -387,5 +387,10 @@
   },
   "showingCount_other": "{{count}} 件を表示中",
   "title": "キー管理",
-  "totalKeys_other": "合計 {{count}} キー"
+  "totalKeys_other": "合計 {{count}} キー",
+  "unsupportedSource": {
+    "description": "このアカウントのサイト種別は保存できますが、拡張機能はこのサイトのキー一覧プロトコルにはまだ対応していません。サイト対応リクエストを送信すると、キー管理機能の追加に役立ちます。",
+    "requestSiteSupport": "サイト対応をリクエスト",
+    "title": "このサイト種別のキー管理にはまだ対応していません"
+  }
 }

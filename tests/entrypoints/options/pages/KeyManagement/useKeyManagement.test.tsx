@@ -963,6 +963,43 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(result.current.tokenInventories[account.id]?.status).toBe("error")
   })
 
+  it("marks missing key-management capability as unsupported without parsing error text", async () => {
+    const account = createDisplayAccount({
+      id: "unsupported-key-management-acc",
+      name: "Unsupported Key Management",
+      siteType: SITE_TYPES.UNKNOWN,
+      baseUrl: "https://unsupported-key-management.example.invalid",
+    })
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.UNKNOWN,
+      account: {},
+    } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(result.current.tokenInventories[account.id]?.status).toBe("error"),
+    )
+
+    expect(result.current.currentAccountUnsupportedKeyManagement).toBe(true)
+    expect(result.current.currentAccountLoadError).toBeNull()
+    expect(result.current.serviceCredentials[account.id]).toMatchObject({
+      status: "idle",
+      errorMessage: undefined,
+    })
+  })
+
   it("copies and rotates a singleton service credential without token CRUD", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, {

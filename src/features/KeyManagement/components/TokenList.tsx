@@ -39,6 +39,7 @@ import type {
 } from "~/types/managedSiteTokenBatchExport"
 import { createTab } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
+import { openSiteSupportRequestPage } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
@@ -90,6 +91,7 @@ interface TokenListProps {
   selectedAccount: string
   displayData: DisplaySiteData[]
   currentAccountLoadError?: string | null
+  currentAccountUnsupportedKeyManagement?: boolean
   onRetryCurrentAccount?: () => void
   managedSiteTokenStatuses?: Record<
     string,
@@ -135,6 +137,7 @@ function LoadingSkeleton() {
  * @param props.canCreateTokens Whether the current account scope supports token creation.
  * @param props.displayData Account display data used to determine empty states.
  * @param props.currentAccountLoadError Error message shown when the selected account fails to load.
+ * @param props.currentAccountUnsupportedKeyManagement Whether the selected account site type lacks a key-management route.
  * @param props.onRetryCurrentAccount Optional callback to retry loading the selected account.
  * @param props.onAddAccount Optional callback to open the add-account flow.
  * @param props.onRequestAccountSelection Optional callback to focus the account selector.
@@ -146,6 +149,7 @@ function TokenEmptyState({
   canCreateTokens = true,
   displayData,
   currentAccountLoadError,
+  currentAccountUnsupportedKeyManagement = false,
   onRetryCurrentAccount,
   onAddAccount,
   onRequestAccountSelection,
@@ -156,6 +160,7 @@ function TokenEmptyState({
   canCreateTokens?: boolean
   displayData: DisplaySiteData[]
   currentAccountLoadError?: string | null
+  currentAccountUnsupportedKeyManagement?: boolean
   onRetryCurrentAccount?: () => void
   onAddAccount?: () => void
   onRequestAccountSelection?: () => void
@@ -170,6 +175,16 @@ function TokenEmptyState({
     const baseUrl = currentAccount?.baseUrl?.trim()
     if (!baseUrl) return
     void createTab(baseUrl, true)
+  }
+
+  const handleRequestSiteSupport = () => {
+    if (!currentAccount) return
+
+    void openSiteSupportRequestPage({
+      siteUrl: currentAccount.baseUrl,
+      errorType: "key_management_unsupported",
+      errorMessage: `Key management is not implemented for ${currentAccount.siteType}`,
+    })
   }
 
   // 如果没有账户
@@ -243,6 +258,20 @@ function TokenEmptyState({
     )
   }
 
+  if (currentAccountUnsupportedKeyManagement && currentAccount) {
+    return (
+      <EmptyState
+        icon={<KeyIcon className="h-12 w-12" />}
+        title={t("keyManagement:unsupportedSource.title")}
+        description={t("keyManagement:unsupportedSource.description")}
+        action={{
+          label: t("keyManagement:unsupportedSource.requestSiteSupport"),
+          onClick: handleRequestSiteSupport,
+        }}
+      />
+    )
+  }
+
   // 如果没有密钥
   if (tokens.length === 0) {
     return (
@@ -289,6 +318,7 @@ function TokenEmptyState({
  * @param props.selectedAccount Currently selected account identifier.
  * @param props.displayData Account metadata used to render contextual info.
  * @param props.currentAccountLoadError Optional load error for the currently selected account.
+ * @param props.currentAccountUnsupportedKeyManagement Whether the selected account lacks a key-management route.
  * @param props.onRetryCurrentAccount Optional retry handler for the current account load.
  * @param props.managedSiteTokenStatuses Optional managed-site channel status by token identity.
  * @param props.onManagedSiteImportSuccess Optional callback after a managed-site token import succeeds.
@@ -316,6 +346,7 @@ export function TokenList(props: TokenListProps) {
     selectedAccount,
     displayData,
     currentAccountLoadError,
+    currentAccountUnsupportedKeyManagement,
     onRetryCurrentAccount,
     managedSiteTokenStatuses,
     onManagedSiteImportSuccess,
@@ -713,6 +744,9 @@ export function TokenList(props: TokenListProps) {
         canCreateTokens={canCreateTokens}
         displayData={displayData}
         currentAccountLoadError={currentAccountLoadError}
+        currentAccountUnsupportedKeyManagement={
+          currentAccountUnsupportedKeyManagement
+        }
         onRetryCurrentAccount={onRetryCurrentAccount}
         onAddAccount={onAddAccount}
         onRequestAccountSelection={onRequestAccountSelection}

@@ -387,5 +387,10 @@
   },
   "showingCount": "显示 {{count}} 个",
   "title": "密钥管理",
-  "totalKeys": "总计 {{count}} 个密钥"
+  "totalKeys": "总计 {{count}} 个密钥",
+  "unsupportedSource": {
+    "description": "当前账号的站点类型已支持保存账号，但插件还没有适配该站点的密钥列表协议。你可以提交站点支持请求，帮助我们补齐密钥管理能力。",
+    "requestSiteSupport": "反馈站点支持",
+    "title": "该站点类型暂未适配密钥管理"
+  }
 }
