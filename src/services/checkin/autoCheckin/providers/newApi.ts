@@ -117,11 +117,13 @@ function isEndpointUnsupportedFailure(params: {
   message: string
   error?: unknown
 }): boolean {
-  if (getErrorStatusCode(params.error) === 404) return true
+  const statusCode = getErrorStatusCode(params.error)
+  if (statusCode === 404 || statusCode === 405) return true
 
   const normalized = params.message.toLowerCase()
   return (
     normalized.includes("404") ||
+    normalized.includes("method not allowed") ||
     normalized.includes("not found") ||
     normalized.includes("unsupported") ||
     normalized.includes("not supported") ||

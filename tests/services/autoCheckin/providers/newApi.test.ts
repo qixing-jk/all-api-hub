@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
+import { ApiError } from "~/services/apiTransport/errors"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -317,6 +318,26 @@ describe("newApiProvider", () => {
         expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
       },
     )
+
+    it("does not use native page check-in when the API endpoint rejects POST with 405", async () => {
+      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
+        await import("~/utils/browser/tempWindowFetch")
+
+      const error = new ApiError("请求失败: 405", 405, "/api/user/checkin")
+
+      vi.mocked(fetchApi).mockRejectedValueOnce(error)
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result).toEqual({
+        status: "failed",
+        rawMessage: "请求失败: 405",
+        messageKey: undefined,
+      })
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+    })
 
     it("refuses native page check-in when temp page identity is missing", async () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
