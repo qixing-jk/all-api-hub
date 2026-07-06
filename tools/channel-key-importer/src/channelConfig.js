@@ -337,6 +337,61 @@ export function inferAwsCredentialMode(apiKey) {
   return ""
 }
 
+export function summarizeAwsCredentials(entries, globalInference = false) {
+  const regions = [
+    ...new Set(
+      entries
+        .map((entry) =>
+          String(entry.apiKey || "")
+            .split("|")
+            .at(-1)
+            ?.trim(),
+        )
+        .filter(Boolean),
+    ),
+  ]
+  const modes = [
+    ...new Set(
+      entries
+        .map((entry) => inferAwsCredentialMode(entry.apiKey))
+        .filter(Boolean),
+    ),
+  ]
+  return { regions, modes, globalInference }
+}
+
+// Global inference starts from one requesting region and lets Bedrock route to
+// supported destination regions; it does not require duplicate channels.
+// https://docs.aws.amazon.com/bedrock/latest/userguide/global-cross-region-inference.html
+export function buildAwsGlobalMappings(models, existingMappings = []) {
+  const explicitMappings = existingMappings.filter((mapping) =>
+    String(mapping.actualModel || "").startsWith("arn:aws:bedrock:"),
+  )
+  const explicitlyMapped = new Set(
+    explicitMappings.map((mapping) => mapping.standardModel),
+  )
+  const routableModels = normalizeModels(models).filter(
+    (model) =>
+      !/^(?:global|us|eu)\./.test(model) &&
+      !model.startsWith("arn:aws:bedrock:") &&
+      !explicitlyMapped.has(model),
+  )
+  return [
+    ...explicitMappings,
+    ...buildAwsInferenceProfileMappings(routableModels, "", true),
+  ]
+}
+
+export function appendAwsRegionToChannelName(name, apiKey, maxLength = 80) {
+  const region = String(apiKey || "")
+    .split("|")
+    .at(-1)
+    ?.trim()
+  if (!region) return String(name || "").slice(0, maxLength)
+  const suffix = ` · ${region}`
+  return `${String(name || "").slice(0, maxLength - suffix.length)}${suffix}`
+}
+
 export function getAwsEntryChannelSettings(apiKey, channelSettings = {}) {
   const awsKeyType = inferAwsCredentialMode(apiKey)
   if (!awsKeyType) {

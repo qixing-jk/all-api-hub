@@ -2,6 +2,8 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  appendAwsRegionToChannelName,
+  buildAwsGlobalMappings,
   buildAwsInferenceProfileMappings,
   getAwsEntryChannelSettings,
   getAwsRuntimeBaseUrl,
@@ -9,6 +11,7 @@ import {
   inferAwsCredentialMode,
   normalizeAwsBatchCredentialInput,
   resolveChannelInput,
+  summarizeAwsCredentials,
   validateBatchCredentialEntries,
 } from "../src/channelConfig.js"
 
@@ -88,6 +91,53 @@ test("maps AWS models to global inference profile IDs", () => {
       actualModel: "global.anthropic.claude-sonnet-4-6",
     },
   ])
+})
+
+test("summarizes AWS source regions without exposing credentials", () => {
+  assert.deepEqual(
+    summarizeAwsCredentials(
+      [{ apiKey: "ABSKFIRST|us-east-1" }, { apiKey: "ABSKSECOND|us-west-2" }],
+      true,
+    ),
+    {
+      regions: ["us-east-1", "us-west-2"],
+      modes: ["api_key"],
+      globalInference: true,
+    },
+  )
+})
+
+test("forces global mappings while preserving application profiles", () => {
+  assert.deepEqual(
+    buildAwsGlobalMappings(
+      ["claude-sonnet-4-6", "claude-opus-4-6"],
+      [
+        {
+          standardModel: "claude-opus-4-6",
+          actualModel:
+            "arn:aws:bedrock:us-east-1:123456789012:application-inference-profile/custom",
+        },
+      ],
+    ),
+    [
+      {
+        standardModel: "claude-opus-4-6",
+        actualModel:
+          "arn:aws:bedrock:us-east-1:123456789012:application-inference-profile/custom",
+      },
+      {
+        standardModel: "claude-sonnet-4-6",
+        actualModel: "global.anthropic.claude-sonnet-4-6",
+      },
+    ],
+  )
+})
+
+test("adds the detected AWS source region to channel names", () => {
+  assert.equal(
+    appendAwsRegionToChannelName("AWS resource", "ABSKEXAMPLE|us-east-1"),
+    "AWS resource · us-east-1",
+  )
 })
 
 test("maps an AWS API key channel according to its source region", () => {

@@ -76,6 +76,8 @@ const elements = {
   providerModelMappings: $("#provider-model-mappings"),
   providerModelMappingsHelp: $("#provider-model-mappings-help"),
   keyQuotas: $("#key-quotas"),
+  awsGlobalField: $("#aws-global-field"),
+  awsGlobalInference: $("#aws-global-inference"),
   autoWrite: $("#auto-write"),
   batchMode: $("#batch-mode"),
   keyLabel: $("#key-label"),
@@ -86,6 +88,8 @@ const elements = {
   previewProvider: $("#preview-provider"),
   previewBaseUrl: $("#preview-base-url"),
   previewGroups: $("#preview-groups"),
+  previewAwsRoutingFact: $("#preview-aws-routing-fact"),
+  previewAwsRouting: $("#preview-aws-routing"),
   modelCount: $("#model-count"),
   batchKeyCount: $("#batch-key-count"),
   batchQuotaTotal: $("#batch-quota-total"),
@@ -427,6 +431,8 @@ function selectProvider(provider) {
     : "可以按实际部署修改；留空时由 New API 使用默认值。"
   elements.apiKey.value = ""
   elements.keyQuotas.value = ""
+  elements.awsGlobalField.classList.toggle("hidden", provider.id !== "aws")
+  elements.awsGlobalInference.checked = false
   state.channelTemplates = []
   renderConfigSourceOptions()
   elements.apiKey.required =
@@ -642,6 +648,9 @@ function renderProviderConfigFields() {
     elements.providerConfigFields.append(extra)
   }
   for (const flag of config.flags || []) {
+    if (state.selectedProvider?.id === "aws" && flag.id === "globalInference") {
+      continue
+    }
     const label = document.createElement("label")
     label.className = "check-row field-wide"
     const input = document.createElement("input")
@@ -719,6 +728,12 @@ function renderPreview(preview) {
   elements.previewBaseUrl.textContent =
     preview.provider.baseUrl || "New API 默认"
   elements.previewGroups.textContent = preview.groups.join("、")
+  elements.previewAwsRoutingFact.classList.toggle("hidden", !preview.awsRouting)
+  elements.previewAwsRouting.textContent = preview.awsRouting
+    ? `${preview.awsRouting.regions.join("、")} · ${
+        preview.awsRouting.globalInference ? "Global 全球路由" : "区域路由"
+      }`
+    : "—"
   elements.modelCount.textContent = String(preview.models.length)
   elements.batchKeyCount.textContent = String(preview.keyCount || 1)
   elements.batchQuotaTotal.textContent = Number.isFinite(preview.quotaTotal)
@@ -1381,13 +1396,18 @@ elements.credentialForm.addEventListener("submit", async (event) => {
         providerExtra:
           elements.providerConfigFields.querySelector("[data-provider-extra]")
             ?.value || "",
-        providerFlags: Object.fromEntries(
-          [
-            ...elements.providerConfigFields.querySelectorAll(
-              "[data-provider-flag]",
-            ),
-          ].map((input) => [input.dataset.providerFlag, input.checked]),
-        ),
+        providerFlags: {
+          ...Object.fromEntries(
+            [
+              ...elements.providerConfigFields.querySelectorAll(
+                "[data-provider-flag]",
+              ),
+            ].map((input) => [input.dataset.providerFlag, input.checked]),
+          ),
+          ...(state.selectedProvider.id === "aws"
+            ? { globalInference: elements.awsGlobalInference.checked }
+            : {}),
+        },
         providerModels: elements.providerModels.value,
         providerModelMappings: elements.providerModelMappings.value,
       }),

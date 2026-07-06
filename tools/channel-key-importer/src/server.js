@@ -11,12 +11,15 @@ import {
   parseBatchKeys,
 } from "./batchKeys.js"
 import {
+  appendAwsRegionToChannelName,
+  buildAwsGlobalMappings,
   buildAwsInferenceProfileMappings,
   getAwsEntryChannelSettings,
   getAwsRuntimeBaseUrl,
   inferAwsCredentialMode,
   normalizeAwsBatchCredentialInput,
   resolveChannelInput,
+  summarizeAwsCredentials,
   validateBatchCredentialEntries,
 } from "./channelConfig.js"
 import {
@@ -561,9 +564,18 @@ async function handleApi(request, response, url, port) {
             : "请填写至少一个模型",
       )
     }
-    const providerMappings = template
+    const globalInference =
+      provider.id === "aws" && body.providerFlags?.globalInference === true
+    let providerMappings = template
       ? template.modelMappings
       : channelInput.providerMappings
+    if (globalInference) {
+      providerMappings = buildAwsGlobalMappings(models, providerMappings)
+    }
+    const awsRouting =
+      provider.id === "aws"
+        ? summarizeAwsCredentials(keys, globalInference)
+        : null
     const previewId = previewStore.create({
       provider,
       keys,
@@ -588,6 +600,7 @@ async function handleApi(request, response, url, port) {
       templateChannelId: template?.id || null,
       templateChannelName: template?.name || "",
       automaticName,
+      awsRouting,
     })
     return sendJson(response, 200, {
       previewId,
@@ -611,6 +624,7 @@ async function handleApi(request, response, url, port) {
       templateChannelId: template?.id || null,
       templateChannelName: template?.name || "",
       providerMappings,
+      awsRouting,
       expiresInSeconds: 300,
     })
   }
@@ -761,6 +775,10 @@ async function handleApi(request, response, url, port) {
       const createInput = {
         ...preview,
         apiKeys: preview.keys.map((entry) => entry.apiKey),
+        name:
+          preview.provider.id === "aws"
+            ? appendAwsRegionToChannelName(preview.name, preview.keys[0].apiKey)
+            : preview.name,
         baseUrl: buildEntryBaseUrl(preview, preview.keys[0]),
         channelSettings: buildEntryChannelSettings(preview, preview.keys[0]),
         ...routedModelPlans[0],
@@ -787,7 +805,7 @@ async function handleApi(request, response, url, port) {
             keyIndex,
             operation: "created-multi-key",
             channelId: createdChannel?.id,
-            channelName: preview.name,
+            channelName: createInput.name,
           }),
         )
       }
@@ -796,7 +814,7 @@ async function handleApi(request, response, url, port) {
         success: true,
         operation: "created-multi-key",
         channelId: createdChannel?.id ?? null,
-        channelName: preview.name,
+        channelName: createInput.name,
         keyCount: preview.keys.length,
         successCount: preview.keys.length,
         failedCount: 0,
@@ -820,19 +838,23 @@ async function handleApi(request, response, url, port) {
               modelPlan,
               entry,
             )
+            const baseName = preview.automaticName
+              ? buildResourceChannelName(preview.provider.name, [entry], {
+                  index,
+                  total: preview.keys.length,
+                })
+              : preview.keys.length > 1
+                ? `${preview.name} · ${index + 1}`.slice(0, 80)
+                : preview.name
             const createInput = {
               ...preview,
               apiKey: entry.apiKey,
               baseUrl: buildEntryBaseUrl(preview, entry),
               channelSettings: buildEntryChannelSettings(preview, entry),
-              name: preview.automaticName
-                ? buildResourceChannelName(preview.provider.name, [entry], {
-                    index,
-                    total: preview.keys.length,
-                  })
-                : preview.keys.length > 1
-                  ? `${preview.name} · ${index + 1}`.slice(0, 80)
-                  : preview.name,
+              name:
+                preview.provider.id === "aws"
+                  ? appendAwsRegionToChannelName(baseName, entry.apiKey)
+                  : baseName,
               ...entryModelPlan,
             }
             try {
@@ -896,7 +918,7 @@ async function handleApi(request, response, url, port) {
       success: failed.length === 0,
       operation: "created",
       channelId: latest?.channelId ?? null,
-      channelName: preview.name,
+      channelName: latest?.channelName ?? preview.name,
       keyCount: preview.keys.length,
       successCount: successful.length,
       failedCount: failed.length,

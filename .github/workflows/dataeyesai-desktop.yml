@@ -15,7 +15,7 @@ on:
       version:
         description: "Release version without the v prefix"
         required: true
-        default: "0.1.0"
+        default: "0.2.0"
 
 permissions:
   contents: write
@@ -78,6 +78,10 @@ jobs:
         run: |
           cat > release-notes.md <<'EOF'
           dataeyesai 桌面安装包。
+
+          - AWS Bedrock 自动识别 Key 类型和来源地区
+          - Global 模式使用一个来源地区并生成 `global.*` 模型映射
+          - 渠道名称和预览明确显示 AWS 来源地区
 
           - macOS Apple Silicon：`mac-arm64.dmg`
           - macOS Intel：`mac-x64.dmg`

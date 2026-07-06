@@ -410,6 +410,16 @@
                 <small id="provider-model-mappings-help"></small>
               </label>
               <div class="unsupported-note hidden" id="unsupported-note"></div>
+              <label class="check-row hidden" id="aws-global-field">
+                <input id="aws-global-inference" type="checkbox" />
+                <span
+                  ><strong>Global 跨区域推理</strong
+                  ><small
+                    >只建立填写的来源地区渠道，并把支持的模型改为 global.*；AWS
+                    会自动路由到全球可用目标地区，不会复制所有地区。</small
+                  ></span
+                >
+              </label>
               <label class="field">
                 <span>批量写入方式</span>
                 <select id="batch-mode">
@@ -463,6 +473,10 @@
               </div>
               <div>
                 <small>渠道分组</small><strong id="preview-groups">—</strong>
+              </div>
+              <div class="hidden" id="preview-aws-routing-fact">
+                <small>AWS 推理路由</small
+                ><strong id="preview-aws-routing">—</strong>
               </div>
               <div>
                 <small>发现模型</small
