@@ -21,7 +21,7 @@ import type { TokenProvisioningCapability } from "./tokenProvisioning"
 
 export type SiteType = AccountSiteType | ManagedSiteType
 
-export type SiteBackendFamily = "newApiFamily" | "sub2api"
+export type SiteBackendFamily = "newApiFamily" | "sub2api" | "voapiV2"
 
 export type SiteTypeCapabilities = {
   siteType: SiteType

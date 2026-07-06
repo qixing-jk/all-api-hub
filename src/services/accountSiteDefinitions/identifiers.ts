@@ -6,6 +6,7 @@ export const SITE_TYPES = {
   ONE_HUB: "one-hub",
   DONE_HUB: "done-hub",
   V_API: "v-api",
+  VO_API_V2: "voapi-v2",
   VO_API: "VoAPI",
   SUPER_API: "Super-API",
   RIX_API: "Rix-Api",

@@ -96,6 +96,26 @@ describe("accountSiteProfile", () => {
     )
   })
 
+  it("resolves VoAPI v2 saved-account product rules", () => {
+    const profile = getAccountSiteProductProfile(SITE_TYPES.VO_API_V2)
+
+    expect(profile.identity.usernameRequired).toBe(false)
+    expect(profile.identity.storedUserIdentityFields).toEqual([
+      "id",
+      "username",
+    ])
+    expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
+    expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
+    expect(profile.auth.supportsCookieAuth).toBe(false)
+    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(true)
+    expect(profile.modelList.directPricing).toBe(
+      ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
+    )
+    expect(profile.modelList.tokenScopedCatalogFallback).toBe(
+      ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
+    )
+  })
+
   it("resolves site-specific overrides from account-site definitions", async () => {
     const { getAccountSiteProductProfileOverride } = await import(
       "~/services/accountSiteDefinitions"

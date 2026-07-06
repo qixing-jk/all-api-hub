@@ -14,6 +14,7 @@ describe("siteType constants", () => {
   it("recognizes account site type values only", () => {
     expect(isAccountSiteType(SITE_TYPES.NEW_API)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.V_API)).toBe(true)
+    expect(isAccountSiteType(SITE_TYPES.VO_API_V2)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.SUB2API)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.AIHUBMIX)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.SHAREDCHAT)).toBe(true)
@@ -55,6 +56,12 @@ describe("siteType constants", () => {
       adminCredentialsPath: "/panel/profile",
       siteAnnouncementsPath: "/",
     })
+  })
+
+  it("keeps VoAPI v2 distinct from old VoAPI", () => {
+    expect(SITE_TYPES.VO_API_V2).toBe("voapi-v2")
+    expect(SITE_TYPES.VO_API).toBe("VoAPI")
+    expect(SITE_TYPES.VO_API_V2).not.toBe(SITE_TYPES.VO_API)
   })
 
   it("returns default routes for AIHubMix account pages", () => {

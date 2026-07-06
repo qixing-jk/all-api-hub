@@ -177,6 +177,28 @@ describe("apiAdapters registry", () => {
     expect(capabilities.site?.notice).toBeUndefined()
   })
 
+  it("returns dedicated VoAPI v2 account capabilities while old VoAPI stays New API-family", () => {
+    const capabilities = getSiteTypeCapabilities(SITE_TYPES.VO_API_V2)
+
+    expect(capabilities).toMatchObject({
+      siteType: SITE_TYPES.VO_API_V2,
+      family: ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2,
+    })
+    expectAccountDataCapability(capabilities)
+    expectAccountBootstrapCapability(capabilities)
+    expectAccountCompletionCapability(capabilities)
+    expectKeyManagementCapability(capabilities)
+    expectTokenProvisioningCapability(capabilities)
+    expectAccountRefreshCapability(capabilities)
+    expect(capabilities.account?.modelPricing).toBeUndefined()
+    expect(capabilities.managedSites).toBeUndefined()
+
+    expect(getSiteTypeCapabilities(SITE_TYPES.VO_API)).toMatchObject({
+      siteType: SITE_TYPES.VO_API,
+      family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    })
+  })
+
   it("returns AIHubMix account capabilities without managed-site capabilities", () => {
     const capabilities = getSiteTypeCapabilities(SITE_TYPES.AIHUBMIX)
 

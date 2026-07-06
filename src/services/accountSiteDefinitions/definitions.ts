@@ -66,6 +66,12 @@ const tokenScopedRuntimeModelListReadiness = {
   },
 } as const
 
+const unsupportedModelListReadiness = {
+  modelList: {
+    expectedRoute: ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.Unsupported,
+  },
+} as const
+
 export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.ONE_API,
   SITE_TYPES.NEW_API,
@@ -74,6 +80,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.ONE_HUB,
   SITE_TYPES.DONE_HUB,
   SITE_TYPES.V_API,
+  SITE_TYPES.VO_API_V2,
   SITE_TYPES.VO_API,
   SITE_TYPES.SUPER_API,
   SITE_TYPES.RIX_API,
@@ -292,6 +299,45 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
     readiness: tokenScopedRuntimeModelListReadiness,
+  },
+  {
+    siteType: SITE_TYPES.VO_API_V2,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2,
+    onboarding: {
+      detection: {
+        titlePatterns: [/^(?:.* - )?VoAPI公益站$/i],
+      },
+      routes: {
+        usagePath: "/dash?_userMenuKey=dash",
+        checkInPath: "/checkIn?_userMenuKey=checkIn",
+        adminCredentialsPath: "/keys?_userMenuKey=keys",
+      },
+    },
+    productProfile: {
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+        supportsCookieAuth: false,
+        supportsBuiltInCheckInDetection: true,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
+        tokenScopedCatalogFallback:
+          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
+        dashboardEstimateLoader:
+          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+      },
+    },
+    readiness: unsupportedModelListReadiness,
   },
 ] as const satisfies readonly AccountSiteDefinition[]
 

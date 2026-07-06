@@ -24,6 +24,7 @@ const COMPAT_USER_ID_HEADER_MESSAGE_RULES =
       "i",
     ),
   }))
+const VOAPI_V2_USER_INFO_ENDPOINT = "/api/user/info"
 
 /**
  * Fetch the raw HTML title from the site root.
@@ -183,6 +184,60 @@ async function detectSub2ApiFromAuthEndpoint(
 }
 
 /**
+ * VoAPI v2 exposes a protected account-info endpoint that returns a distinctive
+ * JSON business envelope even without credentials. Probe it before page-title
+ * detection so white-label/self-hosted deployments do not depend on branding.
+ *
+ * Source: https://github.com/VoAPI/VoAPI and observed `/api/user/info`
+ * contract: raw JWT auth, `{ code, data, msg }` envelope, auth failures with
+ * numeric non-zero code and null data.
+ */
+async function detectVoApiV2FromProtectedEndpoint(
+  url: string,
+): Promise<AccountSiteType> {
+  try {
+    const response = await fetch(new URL(VOAPI_V2_USER_INFO_ENDPOINT, url), {
+      method: "GET",
+      cache: "no-store",
+      credentials: "omit",
+    })
+
+    const contentType = response.headers.get("content-type") || ""
+    if (!/\bjson\b/i.test(contentType)) {
+      return SITE_TYPES.UNKNOWN
+    }
+
+    const responseBody = (await response.json()) as unknown
+    if (!isJsonObject(responseBody)) {
+      return SITE_TYPES.UNKNOWN
+    }
+
+    const code = responseBody.code
+    const message = [responseBody.msg, responseBody.message]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+    const hasProtectedEndpointEnvelope =
+      typeof code === "number" &&
+      "data" in responseBody &&
+      responseBody.data === null &&
+      /\b(?:unauthorized|auth\s*expire|token|jwt)\b/i.test(message)
+    const hasAccountInfoEnvelope =
+      code === 0 &&
+      isJsonObject(responseBody.data) &&
+      ("basicBalance" in responseBody.data ||
+        "bindBalance" in responseBody.data)
+
+    if (hasProtectedEndpointEnvelope || hasAccountInfoEnvelope) {
+      return SITE_TYPES.VO_API_V2
+    }
+  } catch (error) {
+    logger.debug("VoAPI v2 protected endpoint probe failed", { url, error })
+  }
+
+  return SITE_TYPES.UNKNOWN
+}
+
+/**
  * detectAccountSiteTypeFromDomain parses the URL hostname and compares it
  * case-insensitively against account-site domain rules. It returns the matched
  * AccountSiteType rule name, or SITE_TYPES.UNKNOWN when parsing fails or no
@@ -208,16 +263,21 @@ export const getAccountSiteType = async (
     return domainSiteType
   }
 
-  const title = await fetchSiteOriginalTitle(url)
-  for (const rule of getAccountSiteTitleRules()) {
-    if (rule.regex.test(title)) {
-      return rule.name
-    }
+  const voApiV2SiteType = await detectVoApiV2FromProtectedEndpoint(url)
+  if (voApiV2SiteType !== SITE_TYPES.UNKNOWN) {
+    return voApiV2SiteType
   }
 
   const sub2ApiSiteType = await detectSub2ApiFromAuthEndpoint(url)
   if (sub2ApiSiteType !== SITE_TYPES.UNKNOWN) {
     return sub2ApiSiteType
+  }
+
+  const title = await fetchSiteOriginalTitle(url)
+  for (const rule of getAccountSiteTitleRules()) {
+    if (rule.regex.test(title)) {
+      return rule.name
+    }
   }
 
   return await detectNewApiFamilySiteTypeFromCompatAuthError(url)

@@ -7,6 +7,7 @@ import {
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
+import { voApiV2ContentSessionExtractor } from "./contentSession/voapiV2"
 import type { ContentSessionExtractor } from "./contracts"
 
 /**
@@ -37,6 +38,7 @@ export function getContentSessionExtractors(): readonly ContentSessionExtractor[
   return [
     sub2ApiContentSessionExtractor,
     sharedChatContentSessionExtractor,
+    voApiV2ContentSessionExtractor,
     compatibleUserContentSessionExtractor,
   ]
 }

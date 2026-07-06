@@ -20,6 +20,7 @@ export interface AccountSiteDetectionMetadata {
 export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   NewApiFamily: "newApiFamily",
   Sub2Api: "sub2api",
+  VoApiV2: "voapiV2",
   Aihubmix: "aihubmix",
   SharedChat: "sharedchat",
   Unsupported: "unsupported",

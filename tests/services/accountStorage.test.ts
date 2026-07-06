@@ -2170,6 +2170,60 @@ describe("accountStorage core behaviors", () => {
     })
   })
 
+  it("refreshAccount should persist VoAPI v2 dashboard JWT re-sync auth updates", async () => {
+    const account = createAccount({
+      id: "voapi-v2-resync",
+      site_url: "https://voapi.example.invalid",
+      site_type: SITE_TYPES.VO_API_V2,
+      account_info: {
+        id: "7",
+        username: "old-user",
+        access_token: "old-dashboard-jwt",
+        quota: 1_000_000,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    seedStorage([account])
+
+    mockFetchSupportCheckIn.mockResolvedValue(true)
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: true,
+      data: {
+        quota: 42,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: {
+          enableDetection: true,
+        },
+      },
+      healthStatus: {
+        status: SiteHealthStatus.Healthy,
+        message: "",
+      },
+      authUpdate: {
+        accessToken: "new-dashboard-jwt",
+        userId: "8",
+        username: "new-user",
+      },
+    })
+
+    await accountStorage.refreshAccount("voapi-v2-resync", true)
+
+    const updatedAccount =
+      await accountStorage.getAccountById("voapi-v2-resync")
+    expect(updatedAccount?.account_info.access_token).toBe("new-dashboard-jwt")
+    expect(updatedAccount?.account_info.id).toBe("8")
+    expect(updatedAccount?.account_info.username).toBe("new-user")
+    expect(updatedAccount?.sub2apiAuth).toBeUndefined()
+  })
+
   it("refreshAccount ignores blank auth updates and invalid Sub2API token refresh payloads", async () => {
     const account = createAccount({
       id: "sub2api-blank-auth",

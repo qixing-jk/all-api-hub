@@ -19,6 +19,7 @@ import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
 import { sharedChatCapabilities } from "./sharedchat"
 import { sub2ApiCapabilities } from "./sub2api"
+import { voApiV2Capabilities } from "./voapiV2"
 
 type ManagedSiteCapabilities = NonNullable<SiteTypeCapabilities["managedSites"]>
 
@@ -67,6 +68,7 @@ export function getSiteTypeCapabilities(
     ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported
 
   if (siteType === SITE_TYPES.SUB2API) return sub2ApiCapabilities
+  if (siteType === SITE_TYPES.VO_API_V2) return voApiV2Capabilities
   if (siteType === SITE_TYPES.AIHUBMIX) return aihubmixCapabilities
   if (siteType === SITE_TYPES.SHAREDCHAT) return sharedChatCapabilities
 

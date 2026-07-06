@@ -63,6 +63,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.ONE_HUB
   | typeof SITE_TYPES.DONE_HUB
   | typeof SITE_TYPES.V_API
+  | typeof SITE_TYPES.VO_API_V2
   | typeof SITE_TYPES.VO_API
   | typeof SITE_TYPES.SUPER_API
   | typeof SITE_TYPES.RIX_API
@@ -220,6 +221,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.ONE_HUB,
       SITE_TYPES.DONE_HUB,
       SITE_TYPES.V_API,
+      SITE_TYPES.VO_API_V2,
       SITE_TYPES.VO_API,
       SITE_TYPES.SUPER_API,
       SITE_TYPES.RIX_API,
@@ -278,6 +280,9 @@ describe("account site definition registry", () => {
     expect(getAccountSiteDefinition(SITE_TYPES.SUB2API)?.adapterFamily).toBe(
       ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
     )
+    expect(getAccountSiteDefinition(SITE_TYPES.VO_API_V2)?.adapterFamily).toBe(
+      ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2,
+    )
     expect(getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)?.adapterFamily).toBe(
       ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
     )
@@ -286,6 +291,24 @@ describe("account site definition registry", () => {
     )
     expect(getAccountSiteDefinition(SITE_TYPES.OCTOPUS)?.adapterFamily).toBe(
       ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    )
+  })
+
+  it("defines VoAPI v2 before old VoAPI with account-only policy", () => {
+    const voApiV2 = getAccountSiteDefinition(SITE_TYPES.VO_API_V2)
+
+    expect(voApiV2).toMatchObject({
+      siteType: SITE_TYPES.VO_API_V2,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2,
+    })
+    expect(voApiV2?.scopes).toEqual([ACCOUNT_SITE_DEFINITION_SCOPES.Account])
+    expect(voApiV2?.onboarding?.routes).toMatchObject({
+      usagePath: "/dash?_userMenuKey=dash",
+      checkInPath: "/checkIn?_userMenuKey=checkIn",
+      adminCredentialsPath: "/keys?_userMenuKey=keys",
+    })
+    expect(ACCOUNT_SITE_TYPE_ORDER.indexOf(SITE_TYPES.VO_API_V2)).toBeLessThan(
+      ACCOUNT_SITE_TYPE_ORDER.indexOf(SITE_TYPES.VO_API),
     )
   })
 
@@ -305,6 +328,15 @@ describe("account site definition registry", () => {
         (definition) => definition.siteType === SITE_TYPES.SHAREDCHAT,
       )?.detection?.hostnames,
     ).toEqual(SHAREDCHAT_HOSTNAMES)
+    expect(
+      onboardingDefinitions.find(
+        (definition) => definition.siteType === SITE_TYPES.VO_API_V2,
+      )?.routes,
+    ).toMatchObject({
+      usagePath: "/dash?_userMenuKey=dash",
+      checkInPath: "/checkIn?_userMenuKey=checkIn",
+      adminCredentialsPath: "/keys?_userMenuKey=keys",
+    })
     expect(
       onboardingDefinitions.find(
         (definition) => definition.siteType === SITE_TYPES.SUB2API,
@@ -511,6 +543,10 @@ describe("account site definition registry", () => {
       getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)?.readiness?.modelList
         ?.expectedRoute,
     ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing)
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.VO_API_V2)?.readiness?.modelList
+        ?.expectedRoute,
+    ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported)
     expect(
       getAccountSiteDefinition(SITE_TYPES.SHAREDCHAT)?.readiness?.modelList
         ?.expectedRoute,

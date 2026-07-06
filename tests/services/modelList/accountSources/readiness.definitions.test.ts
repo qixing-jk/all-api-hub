@@ -44,6 +44,16 @@ describe("Model List readiness definition expectations", () => {
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     })
     expect(
+      resolveModelListAccountSourceReadiness({
+        siteType: SITE_TYPES.VO_API_V2,
+      }),
+    ).toMatchObject({
+      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
+      statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+      displayCapabilitiesSource:
+        ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+    })
+    expect(
       resolveModelListAccountSourceReadiness({ siteType: SITE_TYPES.AIHUBMIX }),
     ).toMatchObject({
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,

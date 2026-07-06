@@ -1,6 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import type { SiteAccount } from "~/types"
 
 import { AnyrouterCheckInParams, anyrouterProvider } from "./anyrouter"
@@ -26,6 +27,7 @@ const providers: Record<string, AutoCheckinProvider> = {
   [SITE_TYPES.VELOERA]: veloeraProvider,
   [SITE_TYPES.WONG_GONGYI]: wongGongyiProvider,
   [SITE_TYPES.NEW_API]: newApiProvider,
+  [SITE_TYPES.VO_API_V2]: voApiV2Provider,
 }
 
 /**

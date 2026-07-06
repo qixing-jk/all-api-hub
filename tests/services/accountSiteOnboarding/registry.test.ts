@@ -157,7 +157,7 @@ describe("account site onboarding registry", () => {
   it("returns content session extractors in onboarding order", () => {
     expect(
       getContentSessionExtractors().map((extractor) => extractor.id),
-    ).toEqual(["sub2api", "sharedchat", "compatible-user"])
+    ).toEqual(["sub2api", "sharedchat", "voapi-v2", "compatible-user"])
   })
 
   it("returns default routes for site types without route metadata", () => {
