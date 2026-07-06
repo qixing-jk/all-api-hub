@@ -74,6 +74,7 @@ describe("tempWindowPool window fallback", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>
   let tabsGetMock: ReturnType<typeof vi.fn>
   let tabsQueryMock: ReturnType<typeof vi.fn>
+  let tabsUpdateMock: ReturnType<typeof vi.fn>
   let tempContextMode: "window" | "composite" | "tab"
   let defaultTempContextMode: "window" | "composite" | "tab"
 
@@ -148,6 +149,7 @@ describe("tempWindowPool window fallback", () => {
     )
     tabsGetMock = vi.fn().mockResolvedValue({ status: "complete" })
     tabsQueryMock = vi.fn().mockResolvedValue([])
+    tabsUpdateMock = vi.fn().mockResolvedValue(undefined)
     tempContextMode = "window"
     defaultTempContextMode = "window"
     trackProductAnalyticsActionCompletedMock.mockReset()
@@ -163,7 +165,7 @@ describe("tempWindowPool window fallback", () => {
       tabs: {
         get: tabsGetMock,
         query: tabsQueryMock,
-        update: vi.fn().mockResolvedValue(undefined),
+        update: tabsUpdateMock,
         sendMessage: sendMessageMock,
       },
       windows: {
@@ -300,7 +302,10 @@ describe("tempWindowPool window fallback", () => {
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
     expect(createWindowMock).toHaveBeenCalledTimes(1)
-    expect(createTabMock).toHaveBeenCalledWith("https://example.com", false)
+    expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(101, {
+      url: "https://example.com",
+    })
 
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabOrWindowMock).toHaveBeenCalledWith(101)
@@ -308,8 +313,25 @@ describe("tempWindowPool window fallback", () => {
 
   it("installs and removes a temp-context download block rule for the owned tab", async () => {
     tempContextMode = "tab"
-    createTabMock.mockResolvedValueOnce({ id: 601 })
-    applyTempWindowDownloadBlockRuleMock.mockResolvedValueOnce(2_000_601)
+    const setupOrder: string[] = []
+    createTabMock.mockImplementationOnce(async () => {
+      setupOrder.push("open")
+      return { id: 601 }
+    })
+    applyTempWindowDownloadBlockRuleMock.mockImplementationOnce(async () => {
+      setupOrder.push("dnr")
+      return 2_000_601
+    })
+    applyFirefoxTempWindowDownloadBlockRuleMock.mockImplementationOnce(
+      async () => {
+        setupOrder.push("firefox")
+        return null
+      },
+    )
+    tabsUpdateMock.mockImplementationOnce(async () => {
+      setupOrder.push("navigate")
+      return undefined
+    })
 
     const { handleTempWindowFetch } = await import(
       "~/entrypoints/background/tempWindowPool"
@@ -329,7 +351,11 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(500)
     await request
 
+    expect(setupOrder).toEqual(["open", "dnr", "firefox", "navigate"])
     expect(applyTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(601)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(601, {
+      url: "https://example.invalid",
+    })
     expect(sendMessageMock).toHaveBeenCalledWith(
       601,
       expect.objectContaining({
@@ -416,10 +442,13 @@ describe("tempWindowPool window fallback", () => {
     expect(createWindowMock).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "normal",
-        url: "https://example.com",
+        url: "about:blank",
       }),
     )
-    expect(createTabMock).toHaveBeenCalledWith("https://example.com", false)
+    expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(202, {
+      url: "https://example.com",
+    })
 
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabOrWindowMock).toHaveBeenCalledWith(202)
@@ -458,7 +487,10 @@ describe("tempWindowPool window fallback", () => {
       },
     })
     expect(removeTabOrWindowMock).toHaveBeenNthCalledWith(1, 303)
-    expect(createTabMock).toHaveBeenCalledWith("https://example.com", false)
+    expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(304, {
+      url: "https://example.com",
+    })
 
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabOrWindowMock).toHaveBeenNthCalledWith(2, 304)
@@ -718,7 +750,7 @@ describe("tempWindowPool window fallback", () => {
     expect(createWindowMock).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "normal",
-        url: "https://example.com",
+        url: "about:blank",
       }),
     )
     expect(createTabMock).not.toHaveBeenCalled()
@@ -759,7 +791,10 @@ describe("tempWindowPool window fallback", () => {
     await request
 
     expect(createWindowMock).not.toHaveBeenCalled()
-    expect(createTabMock).toHaveBeenCalledWith("https://example.com", false)
+    expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(492, {
+      url: "https://example.com",
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       data: {
@@ -1020,10 +1055,13 @@ describe("tempWindowPool window fallback", () => {
     expect(isAllowedIncognitoAccessMock).toHaveBeenCalled()
     expect(createWindowMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "https://example.com/account",
+        url: "about:blank",
         incognito: true,
       }),
     )
+    expect(tabsUpdateMock).toHaveBeenCalledWith(609, {
+      url: "https://example.com/account",
+    })
     expect(createTabMock).not.toHaveBeenCalled()
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
@@ -1061,10 +1099,13 @@ describe("tempWindowPool window fallback", () => {
 
     expect(createWindowMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "https://aihubmix.com",
+        url: "about:blank",
         focused: false,
       }),
     )
+    expect(tabsUpdateMock).toHaveBeenCalledWith(611, {
+      url: "https://aihubmix.com",
+    })
     expect((globalThis as any).browser.windows.update).not.toHaveBeenCalledWith(
       610,
       {
@@ -1107,11 +1148,14 @@ describe("tempWindowPool window fallback", () => {
 
     expect(createWindowMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "https://aihubmix.com",
+        url: "about:blank",
         focused: false,
         type: "normal",
       }),
     )
+    expect(tabsUpdateMock).toHaveBeenCalledWith(613, {
+      url: "https://aihubmix.com",
+    })
     expect((globalThis as any).browser.windows.update).not.toHaveBeenCalledWith(
       612,
       {
@@ -1590,10 +1634,10 @@ describe("tempWindowPool window fallback", () => {
     await secondRequest
 
     expect(createTabMock).toHaveBeenCalledTimes(2)
-    expect(createTabMock).toHaveBeenLastCalledWith(
-      "https://example.com/suspend-two",
-      false,
-    )
+    expect(createTabMock).toHaveBeenLastCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(616, {
+      url: "https://example.com/suspend-two",
+    })
     expect(secondResponse).toHaveBeenCalledWith({
       success: true,
       data: {
@@ -2040,10 +2084,10 @@ describe("tempWindowPool window fallback", () => {
     await thirdRequest
 
     expect(createTabMock).toHaveBeenCalledTimes(2)
-    expect(createTabMock).toHaveBeenLastCalledWith(
-      "https://example.com/c",
-      false,
-    )
+    expect(createTabMock).toHaveBeenLastCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(607, {
+      url: "https://example.com/c",
+    })
   })
 
   it("defers same-origin cleanup while a reused temp tab is still busy", async () => {
@@ -2306,10 +2350,10 @@ describe("tempWindowPool window fallback", () => {
     await thirdRequest
 
     expect(createTabMock).toHaveBeenCalledTimes(2)
-    expect(createTabMock).toHaveBeenLastCalledWith(
-      "https://example.com/force-close-three",
-      false,
-    )
+    expect(createTabMock).toHaveBeenLastCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(651, {
+      url: "https://example.com/force-close-three",
+    })
     expect(thirdResponse).toHaveBeenCalledWith({
       success: true,
       data: {

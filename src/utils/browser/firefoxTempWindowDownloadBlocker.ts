@@ -1,16 +1,11 @@
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
-import { isTempWindowBlockedDownloadUrl } from "~/utils/browser/tempWindowDownloadRules"
+import {
+  isTempWindowBlockedDownloadUrl,
+  TEMP_WINDOW_DOWNLOAD_BLOCK_RESOURCE_TYPES,
+} from "~/utils/browser/tempWindowDownloadRules"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("FirefoxTempWindowDownloadBlocker")
-
-const TEMP_WINDOW_DOWNLOAD_BLOCK_RESOURCE_TYPES = [
-  "main_frame",
-  "sub_frame",
-  "object",
-  "xmlhttprequest",
-  "other",
-] as const
 
 const activeBlockedTabIds = new Set<number>()
 let isListenerRegistered = false

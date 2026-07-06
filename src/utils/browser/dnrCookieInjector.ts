@@ -2,7 +2,10 @@ import {
   COOKIE_AUTH_HEADER_NAME,
   EXTENSION_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
-import { buildTempWindowBlockedDownloadExtensionPattern } from "~/utils/browser/tempWindowDownloadRules"
+import {
+  buildTempWindowBlockedDownloadExtensionPattern,
+  TEMP_WINDOW_DOWNLOAD_BLOCK_RESOURCE_TYPES,
+} from "~/utils/browser/tempWindowDownloadRules"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -103,14 +106,8 @@ export function buildTempWindowDownloadBlockRule(tabId: number) {
     },
     condition: {
       tabIds: [tabId],
-      regexFilter: `^https?://.*\\.(${buildTempWindowBlockedDownloadExtensionPattern()})(?:[?#].*)?$`,
-      resourceTypes: [
-        "main_frame",
-        "sub_frame",
-        "object",
-        "xmlhttprequest",
-        "other",
-      ],
+      regexFilter: `^https?://[^?#]*\\.(${buildTempWindowBlockedDownloadExtensionPattern()})(?:[?#].*)?$`,
+      resourceTypes: [...TEMP_WINDOW_DOWNLOAD_BLOCK_RESOURCE_TYPES],
     },
   } as const
 }

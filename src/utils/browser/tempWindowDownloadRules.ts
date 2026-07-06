@@ -17,6 +17,14 @@ const TEMP_WINDOW_BLOCKED_DOWNLOAD_EXTENSIONS = [
   "vbs",
 ] as const
 
+export const TEMP_WINDOW_DOWNLOAD_BLOCK_RESOURCE_TYPES = [
+  "main_frame",
+  "sub_frame",
+  "object",
+  "xmlhttprequest",
+  "other",
+] as const
+
 /**
  * Builds a case-insensitive DNR regex fragment for blocked installer suffixes.
  */

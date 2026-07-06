@@ -118,6 +118,37 @@ describe("firefoxTempWindowDownloadBlocker", () => {
     ).resolves.toBeNull()
   })
 
+  it("returns null when browser API probing throws", async () => {
+    ;(globalThis as any).browser = {
+      get webRequest() {
+        throw new Error("blocked getter")
+      },
+    }
+    const { applyFirefoxTempWindowDownloadBlockRule } = await import(
+      "~/utils/browser/firefoxTempWindowDownloadBlocker"
+    )
+
+    await expect(
+      applyFirefoxTempWindowDownloadBlockRule(77),
+    ).resolves.toBeNull()
+  })
+
+  it("ignores invalid tab ids", async () => {
+    const {
+      applyFirefoxTempWindowDownloadBlockRule,
+      removeFirefoxTempWindowDownloadBlockRule,
+    } = await import("~/utils/browser/firefoxTempWindowDownloadBlocker")
+
+    await expect(
+      applyFirefoxTempWindowDownloadBlockRule(-1),
+    ).resolves.toBeNull()
+    await expect(
+      removeFirefoxTempWindowDownloadBlockRule(Number.NaN),
+    ).resolves.toBeUndefined()
+    expect(addListenerMock).not.toHaveBeenCalled()
+    expect(removeListenerMock).not.toHaveBeenCalled()
+  })
+
   it("cleans up state when listener registration fails", async () => {
     addListenerMock.mockImplementationOnce(() => {
       throw new Error("missing permission")
@@ -134,5 +165,24 @@ describe("firefoxTempWindowDownloadBlocker", () => {
       expect.any(Error),
     )
     expect(registeredListener).toBeUndefined()
+  })
+
+  it("logs listener cleanup failures without throwing", async () => {
+    removeListenerMock.mockImplementationOnce(() => {
+      throw new Error("cleanup failed")
+    })
+    const {
+      applyFirefoxTempWindowDownloadBlockRule,
+      removeFirefoxTempWindowDownloadBlockRule,
+    } = await import("~/utils/browser/firefoxTempWindowDownloadBlocker")
+
+    await applyFirefoxTempWindowDownloadBlockRule(77)
+    await expect(
+      removeFirefoxTempWindowDownloadBlockRule(77),
+    ).resolves.toBeUndefined()
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      "Failed to remove Firefox temp-window download block listener",
+      expect.any(Error),
+    )
   })
 })
