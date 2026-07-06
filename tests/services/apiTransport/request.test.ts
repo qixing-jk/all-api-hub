@@ -2,7 +2,10 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { API_TRANSPORT_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import {
+  API_AUTH_TOKEN_MODES,
+  API_TRANSPORT_FETCH_CONTEXT_KINDS,
+} from "~/services/apiTransport/type"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import {
   COOKIE_AUTH_HEADER_NAME,
@@ -271,6 +274,104 @@ describe("apiTransport request helpers", () => {
 
     expect(capturedAccept).toBe("application/json")
     expect(capturedAuthorization).toBe("Bearer token")
+  })
+
+  it("uses Bearer authorization for access tokens by default", async () => {
+    let capturedAuthorization: string | null = null
+
+    server.use(
+      http.get(API_URL, ({ request }) => {
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        })
+      }),
+    )
+
+    await fetchApi(
+      {
+        baseUrl: BASE_URL,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "jwt-default",
+        },
+      },
+      { endpoint: ENDPOINT },
+      true,
+    )
+
+    expect(capturedAuthorization).toBe("Bearer jwt-default")
+  })
+
+  it("uses raw authorization when authTokenMode is raw", async () => {
+    let capturedAuthorization: string | null = null
+
+    server.use(
+      http.get(API_URL, ({ request }) => {
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        })
+      }),
+    )
+
+    await fetchApi(
+      {
+        baseUrl: BASE_URL,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "jwt-raw",
+        },
+      },
+      {
+        endpoint: ENDPOINT,
+        authTokenMode: API_AUTH_TOKEN_MODES.Raw,
+      },
+      true,
+    )
+
+    expect(capturedAuthorization).toBe("jwt-raw")
+  })
+
+  it("keeps caller-provided Authorization header override in raw-token mode", async () => {
+    let capturedAuthorization: string | null = null
+
+    server.use(
+      http.get(API_URL, ({ request }) => {
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        })
+      }),
+    )
+
+    await fetchApi(
+      {
+        baseUrl: BASE_URL,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "jwt-from-account",
+        },
+      },
+      {
+        endpoint: ENDPOINT,
+        authTokenMode: API_AUTH_TOKEN_MODES.Raw,
+        options: {
+          headers: {
+            Authorization: "manual-header",
+          },
+        },
+      },
+      true,
+    )
+
+    expect(capturedAuthorization).toBe("manual-header")
   })
 
   it("fetchApiData applies the site API limiter with a normalized origin key", async () => {
@@ -1544,6 +1645,41 @@ describe("apiTransport request helpers", () => {
       statusCode: 403,
       code: ApiErrorCodes.BUSINESS_ERROR,
       message: "Access denied for test group",
+    })
+
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("fetchApiData should surface VoAPI v2 403 business error messages", async () => {
+    const modelsEndpoint = "/v1/models"
+    const modelsUrl = "https://example.com/base/v1/models"
+
+    server.use(
+      http.get(modelsUrl, () => {
+        return HttpResponse.json(
+          {
+            code: 2,
+            data: null,
+            msg: "api key expire",
+          },
+          { status: 403 },
+        )
+      }),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: modelsEndpoint },
+      ),
+    ).rejects.toMatchObject({
+      endpoint: modelsEndpoint,
+      statusCode: 403,
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      message: "api key expire",
     })
 
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()

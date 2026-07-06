@@ -10,6 +10,7 @@ import { createMinIntervalLimiter } from "~/services/apiTransport/minIntervalLim
 import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
 import { withSiteApiRequestLimit } from "~/services/apiTransport/siteRequestLimiter"
 import type {
+  ApiAuthTokenMode,
   ApiResponse,
   ApiTransportFetchContext,
   ApiTransportRequest,
@@ -17,6 +18,7 @@ import type {
   FetchApiOptions,
 } from "~/services/apiTransport/type"
 import {
+  API_AUTH_TOKEN_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
   summarizeApiTransportFetchContext,
 } from "~/services/apiTransport/type"
@@ -93,14 +95,19 @@ function extractBackendErrorDetails(body: unknown): BackendErrorDetails | null {
     return null
   }
 
-  const topLevelMessage = getNonEmptyString(
-    (body as { message?: unknown }).message,
-  )
+  const topLevelMessage =
+    getNonEmptyString((body as { message?: unknown }).message) ??
+    getNonEmptyString((body as { msg?: unknown }).msg)
   if (topLevelMessage) {
+    const code = (body as { code?: unknown }).code
+    const isBusinessEnvelope =
+      (typeof code === "number" && code !== 0) ||
+      (typeof code === "string" && code.trim() !== "" && code.trim() !== "0")
+
     return {
       message: topLevelMessage,
       isBackendError: Boolean(
-        (body as { success?: unknown }).success === false,
+        (body as { success?: unknown }).success === false || isBusinessEnvelope,
       ),
     }
   }
@@ -196,6 +203,7 @@ async function enforceLogRequestRateLimit(options: {
  */
 const createRequestHeaders = async (
   auth: NormalizedAuthContext,
+  authTokenMode: ApiAuthTokenMode = API_AUTH_TOKEN_MODES.Bearer,
 ): Promise<Record<string, string>> => {
   const baseHeaders = {
     "Content-Type": REQUEST_CONFIG.HEADERS.CONTENT_TYPE,
@@ -216,7 +224,10 @@ const createRequestHeaders = async (
   }
 
   if (auth.accessToken) {
-    headers["Authorization"] = `Bearer ${auth.accessToken}`
+    headers["Authorization"] =
+      authTokenMode === API_AUTH_TOKEN_MODES.Raw
+        ? auth.accessToken
+        : `Bearer ${auth.accessToken}`
   }
 
   if (auth.authType === AuthTypeEnum.Cookie && auth.cookie) {
@@ -398,6 +409,7 @@ async function executeWithCurrentTabContentPreference<T>(
 const createAuthRequest = async (
   auth: NormalizedAuthContext,
   options: RequestInit = {},
+  authTokenMode: ApiAuthTokenMode = API_AUTH_TOKEN_MODES.Bearer,
 ): Promise<RequestInit> => {
   const credentials: RequestCredentials =
     auth.authType === AuthTypeEnum.Cookie ? "include" : "omit"
@@ -408,7 +420,7 @@ const createAuthRequest = async (
   }
 
   return createBaseRequest(
-    await createRequestHeaders(auth),
+    await createRequestHeaders(auth, authTokenMode),
     credentials,
     normalizedOptions,
   )
@@ -543,10 +555,14 @@ const _fetchApi = async <T>(
     cookie: request.auth?.cookie,
   }
 
-  const fetchOptions = await createAuthRequest(resolvedAuth, {
-    ...options.options,
-    signal: options.options?.signal ?? request.abortSignal,
-  })
+  const fetchOptions = await createAuthRequest(
+    resolvedAuth,
+    {
+      ...options.options,
+      signal: options.options?.signal ?? request.abortSignal,
+    },
+    options.authTokenMode,
+  )
 
   await enforceLogRequestRateLimit({ baseUrl, endpoint: options.endpoint })
 

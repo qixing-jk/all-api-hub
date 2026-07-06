@@ -56,6 +56,14 @@ export type ApiTransportFetchContext =
 export type ApiServiceFetchContextKind = ApiTransportFetchContextKind
 export type ApiServiceFetchContext = ApiTransportFetchContext
 
+export const API_AUTH_TOKEN_MODES = {
+  Bearer: "bearer",
+  Raw: "raw",
+} as const
+
+export type ApiAuthTokenMode =
+  (typeof API_AUTH_TOKEN_MODES)[keyof typeof API_AUTH_TOKEN_MODES]
+
 /**
  * Builds a log-safe summary of a fetch context without exposing cookie-store values.
  */
@@ -99,6 +107,7 @@ export interface FetchApiOptions {
   responseType?: TempWindowResponseType
   tempWindowFallback?: TempWindowFallbackAllowlist
   currentTabTransport?: "prefer" | "disabled"
+  authTokenMode?: ApiAuthTokenMode
 }
 
 export interface OpenAIAuthParams {
