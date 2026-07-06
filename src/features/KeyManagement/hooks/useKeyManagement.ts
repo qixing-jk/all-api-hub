@@ -1336,17 +1336,27 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const tokenLoadProgress = useMemo((): TokenLoadProgress | null => {
     if (!isAllAccountsMode) return null
 
-    const total = enabledDisplayData.length
+    let total = 0
     let loaded = 0
     let loading = 0
     let error = 0
 
     for (const account of enabledDisplayData) {
-      const status = tokenInventories[account.id]?.status ?? "idle"
+      const inventory = tokenInventories[account.id]
+      if (
+        inventory?.errorKind === TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement
+      ) {
+        continue
+      }
+
+      total += 1
+      const status = inventory?.status ?? "idle"
       if (status === "loaded") loaded += 1
       if (status === "loading") loading += 1
       if (status === "error") error += 1
     }
+
+    if (total === 0) return null
 
     return { total, loaded, loading, error }
   }, [enabledDisplayData, isAllAccountsMode, tokenInventories])

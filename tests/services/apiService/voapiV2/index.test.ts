@@ -820,6 +820,48 @@ describe("apiService VoAPI v2", () => {
     expect(requestedPages).toEqual([1, 2])
   })
 
+  it("bounds token lookup when the backend keeps returning full pages", async () => {
+    const requestedPages: number[] = []
+    const fullPageKeys = Array.from({ length: 100 }, (_, index) => ({
+      id: index + 1,
+      name: `repeated-${index + 1}`,
+      groups: [1],
+      enable: true,
+      expireTime: -1,
+      boundlessAmount: false,
+      amount: "0",
+      used: "0",
+    }))
+
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const url = new URL(request.url)
+        requestedPages.push(Number(url.searchParams.get("page")))
+
+        return HttpResponse.json({
+          code: 0,
+          data: fullPageKeys,
+        })
+      }),
+      http.get("https://example.invalid/api/keys/template", () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            groups: [{ id: 2, name: "default", ratio: 1 }],
+            models: [],
+          },
+        }),
+      ),
+    )
+
+    await expect(
+      updateVoApiV2Token(createVoApiV2Request(), 150, tokenRequest),
+    ).rejects.toThrow("VoAPI v2 token not found")
+    expect(requestedPages).toHaveLength(100)
+    expect(requestedPages[0]).toBe(1)
+    expect(requestedPages.at(-1)).toBe(100)
+  })
+
   it("deletes VoAPI v2 keys", async () => {
     let deleted = false
     server.use(

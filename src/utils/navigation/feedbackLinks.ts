@@ -1,3 +1,4 @@
+import type { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { getDocsCommunityUrl } from "~/utils/navigation/docsLinks"
 import { getRepository } from "~/utils/navigation/packageMeta"
 
@@ -6,16 +7,20 @@ const FEATURE_REQUEST_TEMPLATE = "feature_request.yml"
 const LANGUAGE_REQUEST_TEMPLATE = "language_request.yml"
 const SITE_SUPPORT_REQUEST_TEMPLATE = "site_support_request.yml"
 
-export interface SiteSupportRequestContext {
-  siteUrl?: string
-  errorType?: string
-  errorMessage?: string
-}
-
 export const SITE_SUPPORT_ERROR_TYPES = {
   KeyManagementUnsupported: "key_management_unsupported",
   ModelListUnsupported: "model_list_unsupported",
 } as const
+
+export type SiteSupportErrorType =
+  | AutoDetectErrorType
+  | (typeof SITE_SUPPORT_ERROR_TYPES)[keyof typeof SITE_SUPPORT_ERROR_TYPES]
+
+export interface SiteSupportRequestContext {
+  siteUrl?: string
+  errorType?: SiteSupportErrorType
+  errorMessage?: string
+}
 
 interface FeedbackDestinationUrls {
   repository: string

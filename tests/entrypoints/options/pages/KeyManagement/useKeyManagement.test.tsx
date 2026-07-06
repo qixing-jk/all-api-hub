@@ -619,6 +619,12 @@ describe("useKeyManagement enabled account filtering", () => {
         errorMessage: "retryable load failure",
       },
     ])
+    expect(result.current.tokenLoadProgress).toEqual({
+      total: 1,
+      loaded: 0,
+      loading: 0,
+      error: 1,
+    })
 
     fetchAccountTokens.mockClear()
 

@@ -40,6 +40,7 @@ import {
 const DEFAULT_KEYS_PAGE = 1
 const DEFAULT_KEYS_PAGE_SIZE = 10
 const TOKEN_LOOKUP_PAGE_SIZE = 100
+const TOKEN_LOOKUP_MAX_PAGES = 100
 
 type VoApiV2AccountDataRequest = ApiServiceRequest &
   Partial<Pick<ApiServiceAccountRequest, "checkIn" | "includeTodayCashflow">>
@@ -484,7 +485,7 @@ async function fetchVoApiV2TokenById(
 ): Promise<VoApiV2Key> {
   let page = DEFAULT_KEYS_PAGE
 
-  while (true) {
+  while (page <= TOKEN_LOOKUP_MAX_PAGES) {
     const keys = await fetchVoApiV2RawKeys(
       request,
       page,

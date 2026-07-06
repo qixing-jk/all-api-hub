@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { DOCS_BASE_URL, REPO_URL } from "~/constants/about"
+import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import {
   getFeedbackDestinationUrls,
   getSiteSupportRequestUrl,
@@ -177,7 +178,7 @@ describe("packageMeta", () => {
     it("prefills site-support request destinations with site context", () => {
       const destination = getSiteSupportRequestUrl({
         siteUrl: "https://relay.example.com/console?token=redacted",
-        errorType: "notFound",
+        errorType: AutoDetectErrorType.NOT_FOUND,
         errorMessage: "Auto-detect failed",
       })
       const url = new URL(destination)
