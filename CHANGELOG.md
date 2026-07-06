@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.51.0](https://github.com/qixing-jk/all-api-hub/compare/v3.50.0...v3.51.0) (2026-07-06)
+
+
+### Features
+
+* **auto-checkin:** add external check-in actions ([#1127](https://github.com/qixing-jk/all-api-hub/issues/1127)) ([13f62a5](https://github.com/qixing-jk/all-api-hub/commit/13f62a5b1c9ddad16f73af5e5eccf1638f80df43))
+* **i18n:** add Latin American Spanish locale ([#1129](https://github.com/qixing-jk/all-api-hub/issues/1129)) ([60dbdd1](https://github.com/qixing-jk/all-api-hub/commit/60dbdd17ec1c1648639e92bf6c1eb4eb2ab840db))
+* **import-export:** support append backup imports ([#1110](https://github.com/qixing-jk/all-api-hub/issues/1110)) ([58da549](https://github.com/qixing-jk/all-api-hub/commit/58da549f527be0b9416f63c6ae1c144fa174901b))
+* **managed-sites:** list claude code hub providers ([#1114](https://github.com/qixing-jk/all-api-hub/issues/1114)) ([095e07d](https://github.com/qixing-jk/all-api-hub/commit/095e07d1e9e2b6b919df0eaab0aea006cbd1f31f))
+* **sharedchat:** support service credential management ([#1117](https://github.com/qixing-jk/all-api-hub/issues/1117)) ([c4b01d7](https://github.com/qixing-jk/all-api-hub/commit/c4b01d792279645019ec96209db34fefec58d132))
+* **sub2api:** support account usage stats ([#1115](https://github.com/qixing-jk/all-api-hub/issues/1115)) ([c1ab67c](https://github.com/qixing-jk/all-api-hub/commit/c1ab67c42229fe2231494b5881f8d684960b15f6))
+* **voapi-v2:** add account adapter ([#1135](https://github.com/qixing-jk/all-api-hub/issues/1135)) ([4ef352e](https://github.com/qixing-jk/all-api-hub/commit/4ef352e9dd35d23e8317b3b53b3b19ac4fea9bd9))
+
+
+### Bug Fixes
+
+* **api-transport:** skip temp window for backend 403 errors ([#1116](https://github.com/qixing-jk/all-api-hub/issues/1116)) ([470459d](https://github.com/qixing-jk/all-api-hub/commit/470459de23ce63b12acca1ebb599106631f517b4))
+* **auto-checkin:** limit concurrent account checkins ([#1137](https://github.com/qixing-jk/all-api-hub/issues/1137)) ([44222ee](https://github.com/qixing-jk/all-api-hub/commit/44222ee0f570d1b4f49cbd123eafbe69dd8a490f))
+* **checkin:** guard unsafe temp-window fallbacks ([#1136](https://github.com/qixing-jk/all-api-hub/issues/1136)) ([a3c66b9](https://github.com/qixing-jk/all-api-hub/commit/a3c66b909ad75e7945671255f89db12e7b042d66))
+* **managed-site-channels:** distinguish empty table states ([#1113](https://github.com/qixing-jk/all-api-hub/issues/1113)) ([1f4bad5](https://github.com/qixing-jk/all-api-hub/commit/1f4bad5d35c84d08783a100c4f191f7baed4c63e))
+* **managed-sites:** allow cancelling channel refresh ([#1112](https://github.com/qixing-jk/all-api-hub/issues/1112)) ([db88dd9](https://github.com/qixing-jk/all-api-hub/commit/db88dd95df600a8826bd42733a788db6ea55252f))
+* **new-api:** stabilize channel update flows ([#1128](https://github.com/qixing-jk/all-api-hub/issues/1128)) ([468a2db](https://github.com/qixing-jk/all-api-hub/commit/468a2db0505d02d2621dba366d321fa7fb3e6ac4))
+
 ## [3.50.0](https://github.com/qixing-jk/all-api-hub/compare/v3.49.1...v3.50.0) (2026-07-01)
 
 
