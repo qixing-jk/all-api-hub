@@ -124,6 +124,7 @@ export default function ModelList(props: {
     pricingContexts,
     isLoading,
     dataFormatError,
+    unsupportedSource,
     loadErrorMessage,
     accountFallback,
     isFallbackCatalogActive,
@@ -551,6 +552,7 @@ export default function ModelList(props: {
           selectedSource={selectedSource}
           isLoading={isLoading}
           dataFormatError={dataFormatError}
+          unsupportedSource={unsupportedSource}
           loadErrorMessage={loadErrorMessage}
           currentAccount={currentAccount}
           loadPricingData={loadPricingData}

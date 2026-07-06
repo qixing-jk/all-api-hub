@@ -273,6 +273,7 @@ function createModelListData() {
     pricingContexts: [],
     isLoading: false,
     dataFormatError: null,
+    unsupportedSource: false,
     loadErrorMessage: null,
     accountFallback: null,
     isFallbackCatalogActive: false,

@@ -514,6 +514,47 @@ describe("useModelData all-accounts loading", () => {
     expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
   })
 
+  it("marks VoAPI v2 model lists as unsupported even when account keys are listable", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+    const fetchPricing = vi
+      .fn()
+      .mockRejectedValue(new Error("fetch should not be called"))
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.VO_API_V2,
+      account: {
+        keyManagement: {},
+      },
+    } as any)
+
+    const account = createDisplayAccount({
+      id: "unsupported-voapi-v2",
+      baseUrl: "https://voapi-v2.example.invalid",
+      siteType: SITE_TYPES.VO_API_V2,
+      userId: "unsupported-voapi-v2-user",
+    })
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([])
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(result.current.unsupportedSource).toBe(true)
+      },
+      { timeout: 3000 },
+    )
+    expect(result.current.loadErrorMessage).toBeNull()
+    expect(result.current.accountFallback?.isAvailable).toBe(true)
+    expect(fetchPricing).not.toHaveBeenCalled()
+  })
+
   it("does not invoke all-account pricing when Sub2API has no fallback key", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()

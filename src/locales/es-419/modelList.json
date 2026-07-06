@@ -15,7 +15,8 @@
   "accountSummary": {
     "failureReasons": {
       "invalidFormat": "La lista de modelos devolvió un formato no compatible.",
-      "unknown": "Error desconocido"
+      "unknown": "Error desconocido",
+      "unsupportedSource": "La lista de modelos aún no es compatible con este tipo de sitio."
     },
     "incompatible": "formato incompatible",
     "loadFailed": "error al cargar",
@@ -25,7 +26,8 @@
     "models_other": "{{count}} modelos",
     "partialLoadFailed": "parcial",
     "partialLoadFailedReason": "No se pudieron cargar algunas claves. Primer error: {{reason}}",
-    "title": "Resumen de cuentas"
+    "title": "Resumen de cuentas",
+    "unsupported": "no compatible"
   },
   "actions": {
     "copyModelName": "Copiar nombre del modelo",
@@ -253,11 +255,14 @@
     "loading": "Cargando datos de modelos...",
     "profileLoadFailed": "No se pudieron cargar modelos para esta credencial de API: {{errorMessage}}",
     "profileLoadFailedTitle": "No se pudieron cargar modelos para esta credencial de API",
+    "requestSiteSupport": "Solicitar soporte del sitio",
     "retryLoad": "Reintentar carga",
     "runtimeKeyScopedCatalogDescription": "Esta cuenta de origen no proporciona una lista de modelos a nivel de cuenta. La extensión obtiene los modelos disponibles para esta cuenta mediante sus claves de API.",
     "runtimeKeyScopedCatalogFallbackDescription": "Selecciona una clave de API. Si solo existe una clave disponible, la extensión la usará automáticamente.",
     "runtimeKeyScopedCatalogFallbackTitle": "Obtener modelos mediante una clave",
-    "runtimeKeyScopedCatalogTitle": "Obteniendo la lista de modelos mediante una clave de API"
+    "runtimeKeyScopedCatalogTitle": "Obteniendo la lista de modelos mediante una clave de API",
+    "unsupportedSourceDescription": "El tipo de sitio de esta cuenta se puede administrar, pero su protocolo de lista de modelos aún no se ha adaptado. Envía una solicitud de soporte del sitio para ayudarnos a agregar esta ruta de lista de modelos.",
+    "unsupportedSourceTitle": "La lista de modelos aún no es compatible con este tipo de sitio"
   },
   "title": "Lista de modelos",
   "totalModels_one": "Total {{count}} modelo",

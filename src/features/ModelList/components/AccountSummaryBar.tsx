@@ -74,6 +74,14 @@ export function AccountSummaryBar({
       }
     }
 
+    if (item.errorType === MODEL_LIST_ACCOUNT_ERROR_TYPES.UNSUPPORTED_SOURCE) {
+      return {
+        label: t("accountSummary.unsupported"),
+        className: "text-blue-600 dark:text-blue-300",
+        title: item.errorMessage,
+      }
+    }
+
     if (item.errorType === MODEL_LIST_ACCOUNT_ERROR_TYPES.PARTIAL_LOAD_FAILED) {
       return {
         label: t("accountSummary.partialLoadFailed"),

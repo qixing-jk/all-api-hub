@@ -143,4 +143,34 @@ describe("AccountSummaryBar", () => {
       "dark:text-amber-300",
     )
   })
+
+  it("shows unsupported accounts as informational instead of failed", () => {
+    render(
+      <AccountSummaryBar
+        items={[
+          {
+            accountId: "account-unsupported",
+            name: "Unsupported Account",
+            count: 0,
+            errorType: "unsupported-source",
+            errorMessage: "Model list is not implemented yet.",
+          },
+        ]}
+      />,
+    )
+
+    const unsupportedBadge = screen
+      .getByText("Unsupported Account")
+      .closest("[data-slot='badge']")
+
+    expect(unsupportedBadge).toHaveAttribute(
+      "title",
+      "Model list is not implemented yet.",
+    )
+    expect(screen.getByText("accountSummary.unsupported")).toHaveClass(
+      "text-blue-600",
+      "dark:text-blue-300",
+    )
+    expect(screen.queryByText("accountSummary.loadFailed")).toBeNull()
+  })
 })

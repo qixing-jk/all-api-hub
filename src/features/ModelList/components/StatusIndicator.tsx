@@ -20,6 +20,7 @@ import {
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import type { DisplaySiteData } from "~/types"
+import { openSiteSupportRequestPage } from "~/utils/navigation"
 
 interface StatusIndicatorProps {
   selectedSource: ModelManagementSource | null
@@ -29,6 +30,7 @@ interface StatusIndicatorProps {
   currentAccount: DisplaySiteData | undefined
   loadPricingData: () => void
   accountFallback: AccountFallbackControls | null
+  unsupportedSource: boolean
 }
 
 /**
@@ -41,6 +43,7 @@ interface StatusIndicatorProps {
  * @param props.currentAccount Account details for navigation links.
  * @param props.loadPricingData Retry handler.
  * @param props.accountFallback Transient account-key fallback controls for the current account.
+ * @param props.unsupportedSource Whether the selected source has no model-list route.
  * @returns Status UI for loading/error or null when idle.
  */
 export function StatusIndicator({
@@ -51,6 +54,7 @@ export function StatusIndicator({
   currentAccount,
   loadPricingData,
   accountFallback,
+  unsupportedSource,
 }: StatusIndicatorProps) {
   const { t } = useTranslation("modelList")
   const fallbackRuntimeKeySelectId = `model-list-fallback-runtime-key-${useId()}`
@@ -71,6 +75,32 @@ export function StatusIndicator({
           {t("status.loading")}
         </p>
       </div>
+    )
+  }
+
+  if (
+    unsupportedSource &&
+    selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+    currentAccount
+  ) {
+    const handleRequestSiteSupport = () => {
+      void openSiteSupportRequestPage({
+        siteUrl: currentAccount.baseUrl,
+        errorType: "model_list_unsupported",
+        errorMessage: `Model list is not implemented for ${currentAccount.siteType}`,
+      })
+    }
+
+    return (
+      <EmptyState
+        icon={<CpuChipIcon className="h-12 w-12" />}
+        title={t("status.unsupportedSourceTitle")}
+        description={t("status.unsupportedSourceDescription")}
+        action={{
+          label: t("status.requestSiteSupport"),
+          onClick: handleRequestSiteSupport,
+        }}
+      />
     )
   }
 

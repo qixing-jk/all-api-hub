@@ -43,6 +43,7 @@ describe("StatusIndicator", () => {
         loadErrorMessage={null}
         currentAccount={sub2apiAccount as any}
         loadPricingData={vi.fn()}
+        unsupportedSource={false}
         accountFallback={{
           isAvailable: true,
           isActive: false,
@@ -95,6 +96,7 @@ describe("StatusIndicator", () => {
         loadErrorMessage={null}
         currentAccount={compatibleAccount as any}
         loadPricingData={vi.fn()}
+        unsupportedSource={false}
         accountFallback={{
           isAvailable: true,
           isActive: false,
@@ -131,6 +133,7 @@ describe("StatusIndicator", () => {
         loadErrorMessage="modelList:status.loadFailed"
         currentAccount={ACCOUNT as any}
         loadPricingData={vi.fn()}
+        unsupportedSource={false}
         accountFallback={{
           isAvailable: true,
           isActive: false,
@@ -172,6 +175,7 @@ describe("StatusIndicator", () => {
         loadErrorMessage="modelList:status.loadFailed"
         currentAccount={ACCOUNT as any}
         loadPricingData={vi.fn()}
+        unsupportedSource={false}
         accountFallback={{
           isAvailable: true,
           isActive: false,
@@ -235,6 +239,7 @@ describe("StatusIndicator", () => {
         loadErrorMessage="modelList:status.profileLoadFailed"
         currentAccount={undefined}
         loadPricingData={vi.fn()}
+        unsupportedSource={false}
         accountFallback={{
           isAvailable: true,
           isActive: false,

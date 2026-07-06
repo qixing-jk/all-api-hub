@@ -13,7 +13,8 @@
   "accountSummary": {
     "failureReasons": {
       "invalidFormat": "モデル一覧が対応していない形式で返されました。",
-      "unknown": "不明なエラー"
+      "unknown": "不明なエラー",
+      "unsupportedSource": "このサイト種別のモデル一覧にはまだ対応していません。"
     },
     "incompatible": "形式非互換",
     "loadFailed": "読み込み失敗",
@@ -21,7 +22,8 @@
     "models_other": "{{count}} モデル",
     "partialLoadFailed": "一部読み込み",
     "partialLoadFailedReason": "一部のキーの読み込みに失敗しました。最初の理由: {{reason}}",
-    "title": "アカウント概要"
+    "title": "アカウント概要",
+    "unsupported": "未対応"
   },
   "actions": {
     "copyModelName": "モデル名をコピー",
@@ -239,11 +241,14 @@
     "loading": "モデルデータを読み込み中...",
     "profileLoadFailed": "この API 認証情報のモデル読み込みに失敗しました: {{errorMessage}}",
     "profileLoadFailedTitle": "この API 認証情報のモデル読み込みに失敗しました",
+    "requestSiteSupport": "サイト対応をリクエスト",
     "retryLoad": "再読み込み",
     "runtimeKeyScopedCatalogDescription": "このソースアカウントはアカウント単位のモデル一覧を提供していません。拡張機能は、このアカウントの API キーを使って実際に利用できるモデルを取得します。",
     "runtimeKeyScopedCatalogFallbackDescription": "API キーを選択してください。利用可能なキーが 1 つだけの場合は、拡張機能が自動的にそのキーでモデルを読み込みます。",
     "runtimeKeyScopedCatalogFallbackTitle": "キーでモデルを取得",
-    "runtimeKeyScopedCatalogTitle": "API キーでモデル一覧を取得しています"
+    "runtimeKeyScopedCatalogTitle": "API キーでモデル一覧を取得しています",
+    "unsupportedSourceDescription": "このアカウントのサイト種別は管理できますが、モデル一覧のプロトコルにはまだ対応していません。サイト対応リクエストを送信すると、このモデル一覧経路の追加に役立ちます。",
+    "unsupportedSourceTitle": "このサイト種別のモデル一覧にはまだ対応していません"
   },
   "title": "モデル一覧",
   "totalModels_other": "合計 {{count}} モデル",

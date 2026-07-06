@@ -16,6 +16,7 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
+  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   getAccountSiteModelListProfile,
   shouldUseAccountSiteRuntimeKeyCatalogFallback,
   supportsAccountSiteDirectModelPricing,
@@ -132,6 +133,7 @@ interface UseModelDataReturn {
   pricingContexts: AccountPricingContext[]
   isLoading: boolean
   dataFormatError: boolean
+  unsupportedSource: boolean
   accountQueryStates: AccountQueryState[]
   loadPricingData: () => Promise<void>
   loadErrorMessage: string | null
@@ -148,11 +150,18 @@ function createInvalidFormatError() {
 
 const MODEL_PRICING_UNSUPPORTED_ERROR = "model_pricing_unsupported"
 
-const createUnsupportedModelPricingError = () =>
-  new Error(MODEL_PRICING_UNSUPPORTED_ERROR)
+const createUnsupportedModelPricingError = () => {
+  const error = new Error(MODEL_PRICING_UNSUPPORTED_ERROR)
+  ;(error as { code?: string }).code =
+    MODEL_LIST_DATA_ERROR_CODES.UNSUPPORTED_SOURCE
+  return error
+}
 
 const isUnsupportedModelPricingError = (error: unknown) =>
-  error instanceof Error && error.message === MODEL_PRICING_UNSUPPORTED_ERROR
+  error instanceof Error &&
+  (error.message === MODEL_PRICING_UNSUPPORTED_ERROR ||
+    (error as { code?: string }).code ===
+      MODEL_LIST_DATA_ERROR_CODES.UNSUPPORTED_SOURCE)
 
 const shouldRetryModelPricingQuery = (failureCount: number, error: Error) =>
   !isUnsupportedModelPricingError(error) && failureCount < 1
@@ -1152,6 +1161,14 @@ function useSingleAccountModelData(params: {
   const isFallbackCatalogActive = Boolean(
     scopedFallbackPricingData && !query.data,
   )
+  const unsupportedSource = Boolean(
+    query.isError &&
+      isUnsupportedModelPricingError(query.error) &&
+      currentAccount &&
+      getAccountSiteModelListProfile(currentAccount.siteType)
+        .tokenScopedCatalogFallback !==
+        ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
+  )
 
   const pricingContexts: AccountPricingContext[] = useMemo(
     () =>
@@ -1228,6 +1245,7 @@ function useSingleAccountModelData(params: {
     pricingContexts,
     isLoading: query.isFetching || scopedIsLoadingFallbackCatalog,
     dataFormatError,
+    unsupportedSource,
     accountQueryStates: [],
     loadPricingData,
     loadErrorMessage,
@@ -1442,6 +1460,9 @@ function useAllAccountsModelData(
         if (error?.code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT) {
           errorType = MODEL_LIST_ACCOUNT_ERROR_TYPES.INVALID_FORMAT
           errorMessage = t("accountSummary.failureReasons.invalidFormat")
+        } else if (isUnsupportedModelPricingError(query?.error)) {
+          errorType = MODEL_LIST_ACCOUNT_ERROR_TYPES.UNSUPPORTED_SOURCE
+          errorMessage = t("accountSummary.failureReasons.unsupportedSource")
         } else if (hasPartialFailure) {
           errorType = MODEL_LIST_ACCOUNT_ERROR_TYPES.PARTIAL_LOAD_FAILED
           errorMessage = t("accountSummary.partialLoadFailedReason", {
@@ -1485,6 +1506,7 @@ function useAllAccountsModelData(
     pricingContexts,
     isLoading,
     dataFormatError,
+    unsupportedSource: false,
     accountQueryStates,
     loadPricingData,
     loadErrorMessage,
@@ -1609,6 +1631,7 @@ function useProfileModelData(
     pricingContexts: [],
     isLoading: query.isFetching,
     dataFormatError: false,
+    unsupportedSource: false,
     accountQueryStates: [],
     loadPricingData,
     loadErrorMessage,

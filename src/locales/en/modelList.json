@@ -14,7 +14,8 @@
   "accountSummary": {
     "failureReasons": {
       "invalidFormat": "The model list returned an unsupported format.",
-      "unknown": "Unknown error"
+      "unknown": "Unknown error",
+      "unsupportedSource": "Model List is not supported for this site type yet."
     },
     "incompatible": "format incompatible",
     "loadFailed": "load failed",
@@ -23,7 +24,8 @@
     "models_other": "{{count}} models",
     "partialLoadFailed": "partial",
     "partialLoadFailedReason": "Some keys failed to load. First failure: {{reason}}",
-    "title": "Accounts overview"
+    "title": "Accounts overview",
+    "unsupported": "unsupported"
   },
   "actions": {
     "copyModelName": "Copy model name",
@@ -246,11 +248,14 @@
     "loading": "Loading model data...",
     "profileLoadFailed": "Failed to load models for this API credential: {{errorMessage}}",
     "profileLoadFailedTitle": "Failed to load models for this API credential",
+    "requestSiteSupport": "Request site support",
     "retryLoad": "Retry Load",
     "runtimeKeyScopedCatalogDescription": "This source account does not provide an account-level model list. The extension fetches the models available to this account through its API keys.",
     "runtimeKeyScopedCatalogFallbackDescription": "Select an API key. If only one available key exists, the extension will use it automatically.",
     "runtimeKeyScopedCatalogFallbackTitle": "Fetch models through a key",
-    "runtimeKeyScopedCatalogTitle": "Fetching the model list through an API key"
+    "runtimeKeyScopedCatalogTitle": "Fetching the model list through an API key",
+    "unsupportedSourceDescription": "This account's site type can be managed, but its model-list protocol has not been adapted yet. Submit a site-support request to help us add this model-list path.",
+    "unsupportedSourceTitle": "Model List is not supported for this site type yet"
   },
   "title": "Model List",
   "totalModels_one": "Total {{count}} model",

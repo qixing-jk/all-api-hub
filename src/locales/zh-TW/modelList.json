@@ -13,7 +13,8 @@
   "accountSummary": {
     "failureReasons": {
       "invalidFormat": "模型列表返回格式不受支援。",
-      "unknown": "未知錯誤"
+      "unknown": "未知錯誤",
+      "unsupportedSource": "此站點類型尚未支援模型列表。"
     },
     "incompatible": "格式不相容",
     "loadFailed": "載入失敗",
@@ -21,7 +22,8 @@
     "models_other": "{{count}} 個模型",
     "partialLoadFailed": "部分載入",
     "partialLoadFailedReason": "部分金鑰載入失敗。第一個原因：{{reason}}",
-    "title": "帳號概覽"
+    "title": "帳號概覽",
+    "unsupported": "尚未支援"
   },
   "actions": {
     "copyModelName": "複製模型名稱",
@@ -239,11 +241,14 @@
     "loading": "正在載入模型資料...",
     "profileLoadFailed": "載入該 API 憑據的模型失敗：{{errorMessage}}",
     "profileLoadFailedTitle": "載入該 API 憑據的模型失敗",
+    "requestSiteSupport": "回報站點支援",
     "retryLoad": "重新嘗試載入",
     "runtimeKeyScopedCatalogDescription": "此來源帳號不提供帳號級模型列表。擴充功能會透過該帳號下的 API 密鑰取得實際可用模型。",
     "runtimeKeyScopedCatalogFallbackDescription": "請選擇一個 API 密鑰；如果只有一個可用密鑰，擴充功能會自動使用它載入模型。",
     "runtimeKeyScopedCatalogFallbackTitle": "透過密鑰取得模型",
-    "runtimeKeyScopedCatalogTitle": "正在透過 API 密鑰取得模型列表"
+    "runtimeKeyScopedCatalogTitle": "正在透過 API 密鑰取得模型列表",
+    "unsupportedSourceDescription": "目前帳號的站點類型已支援帳號功能，但模型列表協議尚未適配。你可以提交站點支援請求，協助我們補齊此站點的模型列表支援。",
+    "unsupportedSourceTitle": "此站點類型尚未支援模型列表"
   },
   "title": "模型列表",
   "totalModels_other": "總計 {{count}} 個模型",
