@@ -1,0 +1,13 @@
+packages:
+  - tools/channel-key-importer
+
+allowBuilds:
+  "@swc/core": false
+  core-js: false
+  electron: true
+  electron-winstaller: true
+  esbuild: false
+  msw: false
+  sharp: false
+  spawn-sync: false
+  unrs-resolver: false

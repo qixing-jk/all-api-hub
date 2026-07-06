@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>dataeyesai · 渠道 Key 导入器</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#top" aria-label="dataeyesai 首页">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <span>dataeyesai</span>
+        </a>
+
+        <nav class="side-nav" aria-label="页面导航">
+          <a class="active" href="#importer"><span>01</span> 导入渠道</a>
+          <a href="#connection"><span>02</span> 目标连接</a>
+          <a href="#records"><span>03</span> 导入记录</a>
+          <a href="#security"><span>04</span> 安全说明</a>
+        </nav>
+
+        <div class="sidebar-spacer"></div>
+
+        <div class="local-card">
+          <span class="pulse-dot"></span>
+          <div>
+            <strong>本地服务运行中</strong>
+            <span>仅监听 127.0.0.1</span>
+          </div>
+        </div>
+
+        <div class="sidebar-note" id="security">
+          <span class="shield-icon" aria-hidden="true">◇</span>
+          <p>渠道 Key 仅在内存中短暂停留，预览 5 分钟后自动失效。</p>
+        </div>
+      </aside>
+
+      <main id="top">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">NEW API CHANNEL ONBOARDING</p>
+            <h1>dataeyesai</h1>
+          </div>
+          <div class="connection-pill" id="connection-pill">
+            <span></span>
+            <div><small>目标站点</small><strong>尚未配置</strong></div>
+          </div>
+        </header>
+
+        <section class="intro-grid">
+          <article class="manifesto">
+            <span class="section-number">01</span>
+            <div>
+              <p>选择来源，粘贴 Key。</p>
+              <p>
+                剩下的交给工具：识别渠道类型、拉取模型、检查同源渠道，再写入 New
+                API。
+              </p>
+            </div>
+          </article>
+          <div class="trust-row" aria-label="安全特性">
+            <span>NO ANALYTICS</span>
+            <span>NO KEY LOGS</span>
+            <span>HTTPS ONLY</span>
+          </div>
+        </section>
+
+        <section class="panel connection-panel" id="connection">
+          <div class="panel-heading">
+            <div>
+              <span class="kicker">TARGET</span>
+              <h2>连接你的 New API</h2>
+            </div>
+            <button class="text-button" id="toggle-config" type="button">
+              收起设置
+            </button>
+          </div>
+
+          <div class="profile-switcher">
+            <label class="field">
+              <span>当前 New API</span>
+              <select id="profile-select">
+                <option value="">尚未添加站点</option>
+              </select>
+            </label>
+            <button
+              class="secondary-button compact"
+              id="new-profile"
+              type="button"
+            >
+              添加 New API
+            </button>
+          </div>
+
+          <form
+            class="config-form login-form"
+            id="config-form"
+            autocomplete="off"
+          >
+            <label class="field profile-name-field">
+              <span>站点名称（可不填，自动识别）</span>
+              <input
+                id="profile-name"
+                maxlength="40"
+                placeholder="例如：主站、测试站"
+              />
+            </label>
+            <label class="field field-wide target-url-field">
+              <span>New API 地址</span>
+              <input
+                id="target-url"
+                name="targetUrl"
+                type="url"
+                placeholder="https://api.example.com"
+                required
+              />
+              <small
+                >推荐使用 HTTPS；旧站点只有 HTTP 时，需要明确接受风险。</small
+              >
+            </label>
+            <details class="password-auth">
+              <summary>其他方式：使用管理员用户名和密码</summary>
+              <div class="password-auth-grid">
+                <label class="field login-username-field">
+                  <span>管理员用户名</span>
+                  <input
+                    id="login-username"
+                    name="username"
+                    autocomplete="username"
+                    placeholder="输入用户名"
+                  />
+                </label>
+                <label class="field login-password-field">
+                  <span>密码</span>
+                  <div class="secret-input">
+                    <input
+                      id="login-password"
+                      name="password"
+                      type="password"
+                      autocomplete="current-password"
+                      placeholder="输入登录密码"
+                    />
+                    <button
+                      type="button"
+                      data-toggle-secret="login-password"
+                      aria-label="显示或隐藏密码"
+                    >
+                      显示
+                    </button>
+                  </div>
+                </label>
+                <button
+                  class="secondary-button compact open-login-button"
+                  id="open-login-page"
+                  type="button"
+                >
+                  打开网页登录
+                </button>
+                <button
+                  class="primary-button compact login-submit-button"
+                  id="login-button"
+                  type="submit"
+                >
+                  <span>登录 New API</span><i aria-hidden="true">→</i>
+                </button>
+              </div>
+            </details>
+            <label class="check-row insecure-http-row hidden">
+              <input id="allow-insecure-http" type="checkbox" />
+              <span
+                ><strong>允许连接公网 HTTP 站点</strong
+                ><small
+                  >管理员密码、Session 和渠道 Key 都会明文传输</small
+                ></span
+              >
+            </label>
+          </form>
+          <div
+            class="inline-status hidden"
+            id="config-status"
+            role="status"
+          ></div>
+
+          <section class="token-auth-primary">
+            <div class="token-auth-heading">
+              <strong>使用管理员系统访问令牌</strong>
+              <span>只需要地址和令牌，用户 ID 自动识别</span>
+            </div>
+            <form class="config-form token-form" id="token-form">
+              <input id="user-id" type="hidden" />
+              <label class="field field-wide">
+                <span>系统访问令牌</span>
+                <div class="secret-input">
+                  <input
+                    id="admin-token"
+                    name="adminToken"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="个人设置 → 安全设置 → 系统访问令牌"
+                    required
+                  />
+                  <button
+                    type="button"
+                    data-toggle-secret="admin-token"
+                    aria-label="显示或隐藏访问令牌"
+                  >
+                    显示
+                  </button>
+                </div>
+              </label>
+              <label class="check-row">
+                <input
+                  id="remember-token"
+                  name="rememberToken"
+                  type="checkbox"
+                  checked
+                />
+                <span
+                  ><strong>保存到 macOS 钥匙串</strong
+                  ><small>浏览器和配置文件都不保存令牌</small></span
+                >
+              </label>
+              <button
+                class="secondary-button compact"
+                id="save-token"
+                type="submit"
+              >
+                使用令牌连接
+              </button>
+            </form>
+          </section>
+        </section>
+
+        <section class="workspace" id="importer">
+          <div class="source-column panel">
+            <div class="panel-heading source-heading">
+              <div>
+                <span class="kicker">SOURCE</span>
+                <h2>选择渠道来源</h2>
+              </div>
+              <span class="count-badge" id="provider-count">—</span>
+            </div>
+            <label class="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input
+                id="provider-search"
+                type="search"
+                placeholder="搜索 OpenAI、DeepSeek、Azure…"
+              />
+            </label>
+            <div
+              class="category-list"
+              id="category-list"
+              aria-label="渠道分类"
+            ></div>
+            <div
+              class="provider-list"
+              id="provider-list"
+              role="listbox"
+              aria-label="渠道来源"
+            ></div>
+          </div>
+
+          <div class="import-column panel">
+            <div class="panel-heading">
+              <div>
+                <span class="kicker">CREDENTIAL</span>
+                <h2>填写渠道凭证</h2>
+              </div>
+              <span class="selected-type" id="selected-type">等待选择</span>
+            </div>
+
+            <div class="empty-state" id="credential-empty">
+              <div class="orbit" aria-hidden="true"><span></span><i></i></div>
+              <h3>先选择这批 Key 的渠道</h3>
+              <p>渠道由你指定，不自动猜测 Key 来源。</p>
+            </div>
+
+            <form
+              class="credential-form hidden"
+              id="credential-form"
+              autocomplete="off"
+            >
+              <div class="provider-summary">
+                <div class="provider-monogram" id="provider-monogram">AI</div>
+                <div>
+                  <strong id="provider-name">—</strong
+                  ><span id="provider-description">—</span>
+                </div>
+                <span id="channel-type">TYPE —</span>
+              </div>
+
+              <label class="field">
+                <span>渠道名称</span>
+                <input id="channel-name" maxlength="80" required />
+              </label>
+              <div class="field">
+                <span>渠道分组（可多选）</span>
+                <span
+                  class="group-options"
+                  id="channel-groups"
+                  role="group"
+                  aria-label="渠道分组"
+                ></span>
+                <span class="group-options-footer">
+                  <small id="channel-groups-help"
+                    >连接 New API 后读取该站点分组。</small
+                  >
+                  <button class="text-button" id="refresh-groups" type="button">
+                    重新读取分组
+                  </button>
+                </span>
+              </div>
+              <label class="field">
+                <span>渠道配置来源</span>
+                <select id="config-source" required>
+                  <option value="">请先选择配置来源</option>
+                  <option value="fetch">
+                    使用新 Key 从供应商获取模型（经 New API）
+                  </option>
+                  <option value="new-api">从 New API 获取该类型模型</option>
+                  <option value="manual">手动填写模型与配置</option>
+                </select>
+                <span class="group-options-footer">
+                  <small id="config-source-help"
+                    >可以复制一个已配置好的同类型渠道，只替换 Key。</small
+                  >
+                  <button
+                    class="text-button"
+                    id="refresh-channel-templates"
+                    type="button"
+                  >
+                    重新读取已有渠道
+                  </button>
+                </span>
+              </label>
+              <label class="field">
+                <span>来源 Base URL</span>
+                <input
+                  id="source-base-url"
+                  type="url"
+                  placeholder="由 New API 使用默认地址"
+                />
+                <small id="base-url-help">可以按部署情况修改。</small>
+              </label>
+              <div class="provider-config hidden" id="provider-config">
+                <label class="field hidden" id="credential-mode-field">
+                  <span>凭证类型</span>
+                  <select id="credential-mode"></select>
+                </label>
+                <div
+                  class="provider-config-fields"
+                  id="provider-config-fields"
+                ></div>
+              </div>
+              <div class="batch-input-grid">
+                <label class="field" id="raw-key-field">
+                  <span id="key-label">API Key / 组合凭证（可批量）</span>
+                  <div class="secret-input textarea-secret">
+                    <textarea
+                      id="api-key"
+                      rows="5"
+                      autocomplete="new-password"
+                      spellcheck="false"
+                      placeholder="可整段粘贴，例如 sk-xxx 20 sk-yyy x；也支持一行一条"
+                    ></textarea>
+                    <button
+                      type="button"
+                      data-toggle-secret="api-key"
+                      aria-label="显示或隐藏 API Key"
+                    >
+                      显示
+                    </button>
+                  </div>
+                  <small id="key-help">一行一条 Key。</small>
+                </label>
+                <label class="field">
+                  <span>Key 额度（逐行对应）</span>
+                  <textarea
+                    id="key-quotas"
+                    rows="5"
+                    spellcheck="false"
+                    placeholder="20&#10;x&#10;50"
+                  ></textarea>
+                  <small>可不填；支持 485、485u、$485、485刀或 x。</small>
+                </label>
+              </div>
+              <label class="field hidden" id="provider-models-field">
+                <span>模型或部署名称</span>
+                <textarea
+                  id="provider-models"
+                  rows="5"
+                  spellcheck="false"
+                  placeholder="每行一个 New API 本地模型名或云厂商部署名"
+                ></textarea>
+                <small id="provider-models-help"></small>
+              </label>
+              <label class="field hidden" id="provider-model-mappings-field">
+                <span id="provider-model-mappings-label">推理配置文件</span>
+                <textarea
+                  id="provider-model-mappings"
+                  rows="4"
+                  spellcheck="false"
+                ></textarea>
+                <small id="provider-model-mappings-help"></small>
+              </label>
+              <div class="unsupported-note hidden" id="unsupported-note"></div>
+              <label class="field">
+                <span>批量写入方式</span>
+                <select id="batch-mode">
+                  <option value="per_key">每条 Key 建立独立渠道（推荐）</option>
+                  <option value="multi_to_single">合并为一个多 Key 渠道</option>
+                </select>
+                <small
+                  >独立渠道会按每条 Key 的额度分别命名、记录和统计用量。</small
+                >
+              </label>
+              <label class="check-row">
+                <input id="auto-write" type="checkbox" checked />
+                <span
+                  ><strong>读取后自动批量写入</strong
+                  ><small
+                    >发现同类渠道时也新建独立渠道；关闭后进入高级预览。</small
+                  ></span
+                >
+              </label>
+              <button class="primary-button" id="preview-button" type="submit">
+                <span>批量添加到 New API</span><i aria-hidden="true">↗</i>
+              </button>
+            </form>
+            <div
+              class="inline-status hidden"
+              id="credential-status"
+              role="status"
+            ></div>
+          </div>
+        </section>
+
+        <section class="panel preview-panel hidden" id="preview-panel">
+          <div class="preview-title-row">
+            <div>
+              <span class="kicker">REVIEW</span>
+              <h2>写入前最后看一眼</h2>
+            </div>
+            <div class="preview-expiry"><span></span>预览将在 5 分钟后失效</div>
+          </div>
+
+          <div class="preview-grid">
+            <div class="preview-facts">
+              <div>
+                <small>渠道名称</small><strong id="preview-name">—</strong>
+              </div>
+              <div>
+                <small>渠道类型</small><strong id="preview-provider">—</strong>
+              </div>
+              <div>
+                <small>Base URL</small><strong id="preview-base-url">—</strong>
+              </div>
+              <div>
+                <small>渠道分组</small><strong id="preview-groups">—</strong>
+              </div>
+              <div>
+                <small>发现模型</small
+                ><strong><em id="model-count">0</em> 个</strong>
+              </div>
+            </div>
+            <div class="model-section">
+              <div class="subheading">
+                <h3>上游实际模型</h3>
+                <span id="model-overflow"></span>
+              </div>
+              <div class="model-chips" id="model-list"></div>
+            </div>
+          </div>
+
+          <div class="batch-summary" id="batch-summary">
+            <div>
+              <small>Key 数量</small><strong id="batch-key-count">1</strong>
+            </div>
+            <div>
+              <small>录入总额度</small
+              ><strong id="batch-quota-total">未填写</strong>
+            </div>
+            <p>批量新建时，每条 Key 会建立一个独立渠道；渠道名自动追加序号。</p>
+          </div>
+
+          <div class="model-workbench">
+            <div class="workbench-heading">
+              <div>
+                <span class="kicker">MODEL WORKBENCH</span>
+                <h3>模型名称与重定向</h3>
+                <p>
+                  映射方向是“对外标准名 → 上游实际名”。OpenRouter
+                  会自动把“供应商/模型”重定向成“模型”；同名冲突则保留完整名。
+                </p>
+              </div>
+              <div class="workbench-summary">
+                <strong id="final-model-count">0</strong><span>最终模型</span>
+                <strong id="mapping-count">0</strong><span>名称映射</span>
+              </div>
+            </div>
+
+            <div class="mapping-toolbar">
+              <button
+                class="secondary-button small"
+                id="suggest-mappings"
+                type="button"
+              >
+                生成标准名建议
+              </button>
+              <button
+                class="secondary-button small"
+                id="add-mapping"
+                type="button"
+              >
+                ＋ 手动添加映射
+              </button>
+            </div>
+            <div class="mapping-list" id="mapping-list"></div>
+            <datalist id="actual-model-options"></datalist>
+
+            <label class="field manual-models-field">
+              <span>补充 New API 尚未发现的新模型</span>
+              <textarea
+                id="manual-models"
+                rows="3"
+                spellcheck="false"
+                placeholder="每行一个模型，例如：&#10;gpt-5.2-new&#10;claude-opus-next"
+              ></textarea>
+              <small
+                >这些名称会直接加入渠道。若 New API
+                没有对应倍率，请开启自用模式或补充模型倍率/价格。</small
+              >
+            </label>
+          </div>
+
+          <div class="duplicate-box hidden" id="duplicate-box">
+            <div>
+              <span aria-hidden="true">!</span>
+              <div>
+                <strong>发现同类型或同地址渠道</strong>
+                <p id="duplicate-copy"></p>
+              </div>
+            </div>
+            <label class="duplicate-target-field">
+              <span>处理方式</span>
+              <select id="duplicate-target">
+                <option value="">新建独立渠道（不修改现有渠道）</option>
+              </select>
+            </label>
+            <p class="duplicate-target-help">
+              选择已有渠道时只更新 Key，不修改该渠道现有的模型和重定向。
+            </p>
+            <label class="duplicate-confirm-row"
+              ><input id="confirm-duplicates" type="checkbox" />
+              <span id="duplicate-confirm-copy"
+                >我确认仍要新增一个渠道</span
+              ></label
+            >
+          </div>
+
+          <div class="preview-actions">
+            <button class="secondary-button" id="discard-preview" type="button">
+              放弃这次预览
+            </button>
+            <button class="primary-button" id="create-channel" type="button">
+              <span>确认写入 New API</span><i>→</i>
+            </button>
+          </div>
+          <div
+            class="inline-status hidden"
+            id="create-status"
+            role="status"
+          ></div>
+
+          <div class="balance-card hidden" id="balance-card">
+            <div class="balance-heading">
+              <div>
+                <span class="kicker">KEY BALANCE</span>
+                <h3>渠道额度</h3>
+              </div>
+              <button
+                class="secondary-button small"
+                id="refresh-balance"
+                type="button"
+              >
+                刷新余额
+              </button>
+            </div>
+            <div class="balance-metrics hidden" id="balance-metrics">
+              <div>
+                <small>当前剩余</small>
+                <strong id="remaining-balance">—</strong>
+              </div>
+              <div>
+                <small>导入后已消耗</small>
+                <strong id="spent-balance">—</strong>
+              </div>
+              <div>
+                <small>首次查询额度</small>
+                <strong id="initial-balance">—</strong>
+              </div>
+            </div>
+            <p id="balance-message"></p>
+          </div>
+        </section>
+
+        <section class="panel records-panel" id="records">
+          <div class="panel-heading">
+            <div>
+              <span class="kicker">KEY LEDGER</span>
+              <h2>Key 填入与额度记录</h2>
+            </div>
+            <button
+              class="secondary-button compact"
+              id="refresh-records"
+              type="button"
+            >
+              刷新实时用量
+            </button>
+          </div>
+          <p class="records-note">
+            只保存 Key 尾号和不可逆指纹，不保存明文。用量按 New API
+            消费日志统计，并按站点、渠道和多 Key
+            索引区分；上游余额按供应商支持情况单独展示。
+          </p>
+          <div class="records-empty" id="records-empty">
+            还没有 Key 填入记录。
+          </div>
+          <div class="records-table-wrap hidden" id="records-table-wrap">
+            <table class="records-table">
+              <thead>
+                <tr>
+                  <th>时间 / 目标</th>
+                  <th>来源 / Key</th>
+                  <th>渠道</th>
+                  <th>录入额度</th>
+                  <th>当前余额</th>
+                  <th>New API 已用 / 剩余</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="records-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <footer>
+          <span>dataeyesai / LOCAL EDITION</span>
+          <p>不采集统计，不记录 Key，不向第三方发送日志。</p>
+        </footer>
+      </main>
+    </div>
+
+    <div class="toast hidden" id="toast" role="status"></div>
+    <script type="module" src="/app.js?v=20260705-2"></script>
+  </body>
+</html>

@@ -1,0 +1,104 @@
+name: dataeyesai desktop packages
+
+on:
+  push:
+    tags:
+      - "dataeyesai-v*"
+  pull_request:
+    paths:
+      - ".github/workflows/dataeyesai-desktop.yml"
+      - "tools/channel-key-importer/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the v prefix"
+        required: true
+        default: "0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS Apple Silicon
+            os: macos-15
+            command: --mac dmg --arm64
+            artifact: mac-arm64
+          - label: macOS Intel
+            os: macos-15-intel
+            command: --mac dmg --x64
+            artifact: mac-x64
+          - label: Windows x64
+            os: windows-2025
+            command: --win nsis --x64
+            artifact: windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:channel-importer
+      - name: Build installer
+        run: pnpm --filter dataeyesai exec electron-builder ${{ matrix.command }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dataeyesai-${{ matrix.artifact }}
+          path: |
+            tools/channel-key-importer/dist/*.dmg
+            tools/channel-key-importer/dist/*.exe
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/dataeyesai-v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dataeyesai-*
+          path: release-assets
+          merge-multiple: true
+      - name: Write release notes
+        run: |
+          cat > release-notes.md <<'EOF'
+          dataeyesai 桌面安装包。
+
+          - macOS Apple Silicon：`mac-arm64.dmg`
+          - macOS Intel：`mac-x64.dmg`
+          - Windows x64：`.exe`
+
+          当前预览版尚未购买 Apple 和 Microsoft 代码签名证书。macOS 首次启动可能需要在“系统设置 → 隐私与安全性”中选择“仍要打开”；Windows 可能显示 SmartScreen 提示。
+          EOF
+      - name: Create prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            TAG="dataeyesai-v${VERSION}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#dataeyesai-v}"
+          fi
+          gh release create "${TAG}" release-assets/* \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "dataeyesai v${VERSION}" \
+            --notes-file release-notes.md \
+            --prerelease

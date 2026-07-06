@@ -13,6 +13,10 @@
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
     "dev:mobile:firefox": "node scripts/android-dev.js",
+    "channel-importer": "node tools/channel-key-importer/src/server.js",
+    "channel-importer:desktop": "pnpm --filter dataeyesai desktop",
+    "channel-importer:package": "pnpm --filter dataeyesai package:current",
+    "test:channel-importer": "node --test tools/channel-key-importer/tests/*.test.js",
     "build": "wxt build",
     "build:e2e": "node scripts/e2e-build.mjs",
     "build:firefox": "wxt build -b firefox",
@@ -159,10 +163,5 @@
     "web-ext": "^9.0.0",
     "whatwg-fetch": "^3.6.20",
     "wxt": "^0.20.16"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron"
-    ]
   }
 }

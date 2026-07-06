@@ -1,0 +1,61 @@
+{
+  "name": "dataeyesai",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "author": "dataeyesai contributors",
+  "license": "MIT",
+  "main": "desktop/main.js",
+  "description": "A loopback-only visual importer for adding provider API keys to New API channels.",
+  "scripts": {
+    "start": "node src/server.js",
+    "desktop": "electron desktop/main.js",
+    "package:current": "electron-builder --publish never",
+    "package:mac": "electron-builder --mac dmg --publish never",
+    "package:win": "electron-builder --win nsis --publish never",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "electron": "43.0.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "ai.dataeyes.channel-importer",
+    "productName": "dataeyesai",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "desktop/**/*",
+      "public/**/*",
+      "src/**/*",
+      "package.json"
+    ],
+    "artifactName": "dataeyesai-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "../../src/assets/icon.png",
+      "identity": null
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "../../src/assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "dataeyesai"
+    }
+  }
+}

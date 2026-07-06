@@ -1,38 +1,55 @@
 import type { KnipConfig } from "knip"
 
-const config: KnipConfig = {
+const rootEntry = [
   // WXT entrypoints are referenced via extension conventions and HTML files,
   // so declare them explicitly instead of relying on Knip defaults.
-  entry: [
-    "wxt.config.ts",
-    "i18next.config.ts",
-    "vitest.config.ts",
-    "scripts/diagnostics/collect-extension-memory.mjs",
-    "scripts/diagnostics/compare-extension-memory.mjs",
-    "scripts/diagnostics/compare-lazy-loading.mjs",
-    "scripts/diagnostics/render-extension-memory-report.mjs",
-    "scripts/diagnostics/render-lazy-loading-report.mjs",
-    "src/entrypoints/background/index.ts",
-    "src/entrypoints/content/index.ts",
-    "src/entrypoints/options/main.tsx",
-    "src/entrypoints/popup/main.tsx",
-    "src/entrypoints/sidepanel/main.tsx",
-    "tests/**/*.test.{ts,tsx}",
-    "tests/setup.ts",
-    "tests/setup.node.ts",
-    "tests/setup.shared.ts",
-    // Playwright runs this through the build dependency project in
-    // playwright.config.ts, which Knip does not discover as a static import.
-    "e2e/setup/build.setup.ts",
-  ],
-  project: [
-    "src/**/*.{ts,tsx}",
-    "tests/**/*.{ts,tsx}",
-    "e2e/**/*.{ts,tsx}",
-    "scripts/**/*.{js,mjs}",
-    "plugins/**/*.ts",
-    "*.{js,mjs,ts}",
-  ],
+  "wxt.config.ts",
+  "i18next.config.ts",
+  "vitest.config.ts",
+  "scripts/diagnostics/collect-extension-memory.mjs",
+  "scripts/diagnostics/compare-extension-memory.mjs",
+  "scripts/diagnostics/compare-lazy-loading.mjs",
+  "scripts/diagnostics/render-extension-memory-report.mjs",
+  "scripts/diagnostics/render-lazy-loading-report.mjs",
+  "src/entrypoints/background/index.ts",
+  "src/entrypoints/content/index.ts",
+  "src/entrypoints/options/main.tsx",
+  "src/entrypoints/popup/main.tsx",
+  "src/entrypoints/sidepanel/main.tsx",
+  "tests/**/*.test.{ts,tsx}",
+  "tests/setup.ts",
+  "tests/setup.node.ts",
+  "tests/setup.shared.ts",
+  // Playwright runs this through the build dependency project in
+  // playwright.config.ts, which Knip does not discover as a static import.
+  "e2e/setup/build.setup.ts",
+]
+
+const rootProject = [
+  "src/**/*.{ts,tsx}",
+  "tests/**/*.{ts,tsx}",
+  "e2e/**/*.{ts,tsx}",
+  "scripts/**/*.{js,mjs}",
+  "plugins/**/*.ts",
+  "*.{js,mjs,ts}",
+]
+
+const config: KnipConfig = {
+  workspaces: {
+    ".": {
+      entry: rootEntry,
+      project: rootProject,
+    },
+    "tools/channel-key-importer": {
+      entry: [
+        "public/index.html",
+        "public/app.js",
+        "public/styles.css",
+        "tests/*.test.js",
+      ],
+      project: ["**/*.{js,html,css}"],
+    },
+  },
   ignoreDependencies: [
     // Ambient extension/browser types are consumed globally by TypeScript.
     "@types/chrome",
