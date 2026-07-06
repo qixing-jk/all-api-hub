@@ -126,6 +126,23 @@ interface TempContextTabSnapshot {
   status?: string
 }
 
+/**
+ * Removes any download-block rules installed for a temp-context tab.
+ */
+async function removeInstalledDownloadBlockRules(
+  downloadBlockRuleId: number | null | undefined,
+  firefoxDownloadBlockTabId: number | null | undefined,
+): Promise<void> {
+  await Promise.all([
+    downloadBlockRuleId != null
+      ? removeTempWindowDownloadBlockRule(downloadBlockRuleId)
+      : Promise.resolve(),
+    firefoxDownloadBlockTabId != null
+      ? removeFirefoxTempWindowDownloadBlockRule(firefoxDownloadBlockTabId)
+      : Promise.resolve(),
+  ])
+}
+
 /** Retry delay when the content script is not ready to receive messages. */
 const SHIELD_BYPASS_UI_RETRY_MS = 250
 /** Max retry attempts for showing the shield-bypass UI in the temp tab. */
@@ -2222,6 +2239,12 @@ async function createTempContextInstance(
       applyTempWindowDownloadBlockRule(tabId),
       applyFirefoxTempWindowDownloadBlockRule(tabId),
     ])
+    if (downloadBlockRuleId == null && firefoxDownloadBlockTabId == null) {
+      logger.warn(
+        "No temp-window download block rule could be installed before navigation",
+        { requestId, origin, tabId },
+      )
+    }
     await updateTab(tabId, { url })
 
     logTempWindow("createTempContextInstance", {
@@ -2287,14 +2310,10 @@ async function createTempContextInstance(
         )
       }
     }
-    await Promise.all([
-      downloadBlockRuleId != null
-        ? removeTempWindowDownloadBlockRule(downloadBlockRuleId)
-        : Promise.resolve(),
-      firefoxDownloadBlockTabId != null
-        ? removeFirefoxTempWindowDownloadBlockRule(firefoxDownloadBlockTabId)
-        : Promise.resolve(),
-    ])
+    await removeInstalledDownloadBlockRules(
+      downloadBlockRuleId,
+      firefoxDownloadBlockTabId,
+    )
     throw error
   }
 }
@@ -2671,16 +2690,10 @@ async function destroyContext(
   }
   context.activeRequestIds.clear()
 
-  await Promise.all([
-    context.downloadBlockRuleId != null
-      ? removeTempWindowDownloadBlockRule(context.downloadBlockRuleId)
-      : Promise.resolve(),
-    context.firefoxDownloadBlockTabId != null
-      ? removeFirefoxTempWindowDownloadBlockRule(
-          context.firefoxDownloadBlockTabId,
-        )
-      : Promise.resolve(),
-  ])
+  await removeInstalledDownloadBlockRules(
+    context.downloadBlockRuleId,
+    context.firefoxDownloadBlockTabId,
+  )
   context.downloadBlockRuleId = null
   context.firefoxDownloadBlockTabId = null
 

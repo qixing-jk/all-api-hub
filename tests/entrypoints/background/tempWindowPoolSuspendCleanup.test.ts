@@ -23,6 +23,7 @@ describe("cleanupTempContextsOnSuspend", () => {
       },
       tabs: {
         get: vi.fn().mockResolvedValue({ status: "complete" }),
+        update: vi.fn().mockResolvedValue(undefined),
         sendMessage: vi.fn(
           async (_tabId: number, message: { action: string }) => {
             switch (message.action) {

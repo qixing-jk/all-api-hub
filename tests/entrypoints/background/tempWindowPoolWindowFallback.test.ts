@@ -21,10 +21,12 @@ const {
   trackProductAnalyticsActionCompletedMock,
   recordTempWindowFetchResultMock,
   recordTempWindowTurnstileFetchResultMock,
+  loggerWarnMock,
 } = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
   recordTempWindowFetchResultMock: vi.fn(),
   recordTempWindowTurnstileFetchResultMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -36,6 +38,14 @@ vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
   recordShieldBypassTempWindowFetchResult: recordTempWindowFetchResultMock,
   recordShieldBypassTempWindowTurnstileFetchResult:
     recordTempWindowTurnstileFetchResultMock,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    error: vi.fn(),
+    warn: loggerWarnMock,
+  }),
 }))
 
 const originalBrowser = (globalThis as any).browser
@@ -155,6 +165,7 @@ describe("tempWindowPool window fallback", () => {
     trackProductAnalyticsActionCompletedMock.mockReset()
     recordTempWindowFetchResultMock.mockReset()
     recordTempWindowTurnstileFetchResultMock.mockReset()
+    loggerWarnMock.mockReset()
 
     vi.useFakeTimers()
     vi.resetModules()
@@ -404,6 +415,41 @@ describe("tempWindowPool window fallback", () => {
       602,
     )
     expect(removeTabOrWindowMock).toHaveBeenCalledWith(602)
+  })
+
+  it("warns when no temp-context download blocker can be installed before navigation", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 603 })
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.invalid",
+        fetchUrl: "https://example.invalid/api/test",
+        fetchOptions: { method: "GET" },
+        requestId: "req-download-block-unavailable",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      "No temp-window download block rule could be installed before navigation",
+      {
+        requestId: "req-download-block-unavailable",
+        origin: "https://example.invalid",
+        tabId: 603,
+      },
+    )
+    expect(tabsUpdateMock).toHaveBeenCalledWith(603, {
+      url: "https://example.invalid",
+    })
   })
 
   it("rolls back composite temp-context creation to a plain tab", async () => {
