@@ -71,7 +71,9 @@ import {
 import { mergeCookieHeaders } from "~/utils/browser/cookieString"
 import {
   applyTempWindowCookieRule,
+  applyTempWindowDownloadBlockRule,
   removeTempWindowCookieRule,
+  removeTempWindowDownloadBlockRule,
 } from "~/utils/browser/dnrCookieInjector"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
@@ -404,6 +406,7 @@ type TempContext = {
   currentUrl?: string
   activeRequestIds: Set<string>
   lastUsed: number
+  downloadBlockRuleId?: number | null
   releaseTimer?: ReturnType<typeof setTimeout>
 }
 
@@ -2183,6 +2186,7 @@ async function createTempContextInstance(
 ) {
   let contextId: number | undefined
   let tabId: number | undefined
+  let downloadBlockRuleId: number | null = null
   let type: "window" | "tab" = "window"
   const useIncognito = Boolean(options.incognito)
   const requestedMode = resolveTempContextOpenMode({
@@ -2207,6 +2211,7 @@ async function createTempContextInstance(
     contextId = opened.id
     tabId = opened.tabId
     type = opened.type
+    downloadBlockRuleId = await applyTempWindowDownloadBlockRule(tabId)
 
     logTempWindow("createTempContextInstance", {
       requestId,
@@ -2214,6 +2219,7 @@ async function createTempContextInstance(
       contextId,
       tabId,
       type,
+      downloadBlockRuleInstalled: downloadBlockRuleId != null,
       preferredMode,
       requestedMode,
       url: sanitizeUrlForLog(url),
@@ -2243,6 +2249,7 @@ async function createTempContextInstance(
       currentUrl: readyTab?.url ?? url,
       activeRequestIds: new Set<string>(),
       lastUsed: Date.now(),
+      ...(downloadBlockRuleId != null ? { downloadBlockRuleId } : {}),
     }
   } catch (error) {
     logTempWindow("createTempContextInstanceError", {
@@ -2264,6 +2271,9 @@ async function createTempContextInstance(
           cleanupError,
         )
       }
+    }
+    if (downloadBlockRuleId != null) {
+      await removeTempWindowDownloadBlockRule(downloadBlockRuleId)
     }
     throw error
   }
@@ -2639,6 +2649,11 @@ async function destroyContext(
     }
   }
   context.activeRequestIds.clear()
+
+  if (context.downloadBlockRuleId != null) {
+    await removeTempWindowDownloadBlockRule(context.downloadBlockRuleId)
+    context.downloadBlockRuleId = null
+  }
 
   if (!options.skipBrowserRemoval) {
     try {

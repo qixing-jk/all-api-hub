@@ -19,6 +19,26 @@ const logger = createLogger("DnrCookieInjector")
  */
 
 export const TEMP_WINDOW_DNR_RULE_ID_BASE = 1_000_000 as const
+export const TEMP_WINDOW_DOWNLOAD_BLOCK_RULE_ID_BASE = 2_000_000 as const
+
+const TEMP_WINDOW_BLOCKED_DOWNLOAD_EXTENSION_PATTERN = [
+  "[aA][pP][kK]",
+  "[aA][pP][pP][iI][mM][aA][gG][eE]",
+  "[bB][aA][tT]",
+  "[cC][mM][dD]",
+  "[cC][oO][mM]",
+  "[dD][eE][bB]",
+  "[dD][mM][gG]",
+  "[eE][xX][eE]",
+  "[mM][sS][iI]",
+  "[mM][sS][pP]",
+  "[pP][kK][gG]",
+  "[pP][sS]1",
+  "[rR][pP][mM]",
+  "[sS][cC][rR]",
+  "[sS][hH]",
+  "[vV][bB][sS]",
+].join("|")
 
 interface TempWindowCookieRuleParams {
   tabId: number
@@ -45,6 +65,14 @@ function hasDnrApi(): boolean {
 function buildRuleId(tabId: number): number {
   const safeTabId = Number.isFinite(tabId) ? Math.max(0, Math.floor(tabId)) : 0
   return TEMP_WINDOW_DNR_RULE_ID_BASE + safeTabId
+}
+
+/**
+ * Builds a stable download block rule ID for a given temp tab.
+ */
+function buildDownloadBlockRuleId(tabId: number): number {
+  const safeTabId = Number.isFinite(tabId) ? Math.max(0, Math.floor(tabId)) : 0
+  return TEMP_WINDOW_DOWNLOAD_BLOCK_RULE_ID_BASE + safeTabId
 }
 
 /**
@@ -78,6 +106,75 @@ export function buildTempWindowCookieRule(params: TempWindowCookieRuleParams) {
       resourceTypes: ["xmlhttprequest", "other"],
     },
   } as const
+}
+
+/**
+ * Build a session-scoped DNR rule that blocks executable/installer downloads
+ * initiated inside a specific temp-context tab.
+ */
+export function buildTempWindowDownloadBlockRule(tabId: number) {
+  return {
+    id: buildDownloadBlockRuleId(tabId),
+    priority: 1,
+    action: {
+      type: "block",
+    },
+    condition: {
+      tabIds: [tabId],
+      regexFilter: `^https?://.*\\.(${TEMP_WINDOW_BLOCKED_DOWNLOAD_EXTENSION_PATTERN})(?:[?#].*)?$`,
+      resourceTypes: [
+        "main_frame",
+        "sub_frame",
+        "object",
+        "xmlhttprequest",
+        "other",
+      ],
+    },
+  } as const
+}
+
+/**
+ * Installs (or replaces) a per-tab temp-context rule that blocks obvious
+ * executable/installer downloads before they leave the browser.
+ */
+export async function applyTempWindowDownloadBlockRule(
+  tabId: number,
+): Promise<number | null> {
+  if (!hasDnrApi()) {
+    return null
+  }
+
+  const ruleId = buildDownloadBlockRuleId(tabId)
+
+  try {
+    await (globalThis as any).chrome.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: [ruleId],
+      addRules: [buildTempWindowDownloadBlockRule(tabId)],
+    })
+    return ruleId
+  } catch (error) {
+    logger.warn("Failed to install temp-window download block rule", error)
+    return null
+  }
+}
+
+/**
+ * Best-effort removal of a previously installed temp-window download block rule.
+ */
+export async function removeTempWindowDownloadBlockRule(
+  ruleId: number,
+): Promise<void> {
+  if (!hasDnrApi()) {
+    return
+  }
+
+  try {
+    await (globalThis as any).chrome.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: [ruleId],
+    })
+  } catch (error) {
+    logger.warn("Failed to remove temp-window download block rule", error)
+  }
 }
 
 /**

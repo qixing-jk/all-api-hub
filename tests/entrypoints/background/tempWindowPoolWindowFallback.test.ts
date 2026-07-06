@@ -62,6 +62,8 @@ describe("tempWindowPool window fallback", () => {
   let getAccountByIdMock: ReturnType<typeof vi.fn>
   let getCookieHeaderForUrlMock: ReturnType<typeof vi.fn>
   let addAuthMethodHeaderMock: ReturnType<typeof vi.fn>
+  let applyTempWindowDownloadBlockRuleMock: ReturnType<typeof vi.fn>
+  let removeTempWindowDownloadBlockRuleMock: ReturnType<typeof vi.fn>
   let applyTempWindowCookieRuleMock: ReturnType<typeof vi.fn>
   let removeTempWindowCookieRuleMock: ReturnType<typeof vi.fn>
   let isProtectionBypassFirefoxEnvMock: ReturnType<typeof vi.fn>
@@ -89,6 +91,8 @@ describe("tempWindowPool window fallback", () => {
         "X-Auth-Mode": mode,
       }),
     )
+    applyTempWindowDownloadBlockRuleMock = vi.fn().mockResolvedValue(null)
+    removeTempWindowDownloadBlockRuleMock = vi.fn().mockResolvedValue(undefined)
     applyTempWindowCookieRuleMock = vi.fn().mockResolvedValue(null)
     removeTempWindowCookieRuleMock = vi.fn().mockResolvedValue(undefined)
     isProtectionBypassFirefoxEnvMock = vi.fn(() => false)
@@ -191,7 +195,9 @@ describe("tempWindowPool window fallback", () => {
       }
     })
     vi.doMock("~/utils/browser/dnrCookieInjector", () => ({
+      applyTempWindowDownloadBlockRule: applyTempWindowDownloadBlockRuleMock,
       applyTempWindowCookieRule: applyTempWindowCookieRuleMock,
+      removeTempWindowDownloadBlockRule: removeTempWindowDownloadBlockRuleMock,
       removeTempWindowCookieRule: removeTempWindowCookieRuleMock,
     }))
     vi.doMock("~/utils/browser/protectionBypass", () => ({
@@ -283,6 +289,45 @@ describe("tempWindowPool window fallback", () => {
 
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabOrWindowMock).toHaveBeenCalledWith(101)
+  })
+
+  it("installs and removes a temp-context download block rule for the owned tab", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 601 })
+    applyTempWindowDownloadBlockRuleMock.mockResolvedValueOnce(2_000_601)
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.invalid",
+        fetchUrl: "https://example.invalid/api/test",
+        fetchOptions: { method: "GET" },
+        requestId: "req-download-block-rule",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(applyTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(601)
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      601,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentPerformTempWindowFetch,
+      }),
+    )
+
+    await vi.advanceTimersByTimeAsync(2500)
+
+    expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(
+      2_000_601,
+    )
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(601)
   })
 
   it("rolls back composite temp-context creation to a plain tab", async () => {
