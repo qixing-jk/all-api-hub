@@ -75,6 +75,10 @@ import {
   removeTempWindowCookieRule,
   removeTempWindowDownloadBlockRule,
 } from "~/utils/browser/dnrCookieInjector"
+import {
+  applyFirefoxTempWindowDownloadBlockRule,
+  removeFirefoxTempWindowDownloadBlockRule,
+} from "~/utils/browser/firefoxTempWindowDownloadBlocker"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 import { resolveAuthTypeEnum } from "~/utils/core/authType"
@@ -407,6 +411,7 @@ type TempContext = {
   activeRequestIds: Set<string>
   lastUsed: number
   downloadBlockRuleId?: number | null
+  firefoxDownloadBlockTabId?: number | null
   releaseTimer?: ReturnType<typeof setTimeout>
 }
 
@@ -2187,6 +2192,7 @@ async function createTempContextInstance(
   let contextId: number | undefined
   let tabId: number | undefined
   let downloadBlockRuleId: number | null = null
+  let firefoxDownloadBlockTabId: number | null = null
   let type: "window" | "tab" = "window"
   const useIncognito = Boolean(options.incognito)
   const requestedMode = resolveTempContextOpenMode({
@@ -2212,6 +2218,8 @@ async function createTempContextInstance(
     tabId = opened.tabId
     type = opened.type
     downloadBlockRuleId = await applyTempWindowDownloadBlockRule(tabId)
+    firefoxDownloadBlockTabId =
+      await applyFirefoxTempWindowDownloadBlockRule(tabId)
 
     logTempWindow("createTempContextInstance", {
       requestId,
@@ -2220,6 +2228,7 @@ async function createTempContextInstance(
       tabId,
       type,
       downloadBlockRuleInstalled: downloadBlockRuleId != null,
+      firefoxDownloadBlockRuleInstalled: firefoxDownloadBlockTabId != null,
       preferredMode,
       requestedMode,
       url: sanitizeUrlForLog(url),
@@ -2250,6 +2259,9 @@ async function createTempContextInstance(
       activeRequestIds: new Set<string>(),
       lastUsed: Date.now(),
       ...(downloadBlockRuleId != null ? { downloadBlockRuleId } : {}),
+      ...(firefoxDownloadBlockTabId != null
+        ? { firefoxDownloadBlockTabId }
+        : {}),
     }
   } catch (error) {
     logTempWindow("createTempContextInstanceError", {
@@ -2274,6 +2286,9 @@ async function createTempContextInstance(
     }
     if (downloadBlockRuleId != null) {
       await removeTempWindowDownloadBlockRule(downloadBlockRuleId)
+    }
+    if (firefoxDownloadBlockTabId != null) {
+      await removeFirefoxTempWindowDownloadBlockRule(firefoxDownloadBlockTabId)
     }
     throw error
   }
@@ -2653,6 +2668,12 @@ async function destroyContext(
   if (context.downloadBlockRuleId != null) {
     await removeTempWindowDownloadBlockRule(context.downloadBlockRuleId)
     context.downloadBlockRuleId = null
+  }
+  if (context.firefoxDownloadBlockTabId != null) {
+    await removeFirefoxTempWindowDownloadBlockRule(
+      context.firefoxDownloadBlockTabId,
+    )
+    context.firefoxDownloadBlockTabId = null
   }
 
   if (!options.skipBrowserRemoval) {

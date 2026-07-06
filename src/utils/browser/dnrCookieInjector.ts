@@ -2,6 +2,7 @@ import {
   COOKIE_AUTH_HEADER_NAME,
   EXTENSION_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
+import { buildTempWindowBlockedDownloadExtensionPattern } from "~/utils/browser/tempWindowDownloadRules"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -20,25 +21,6 @@ const logger = createLogger("DnrCookieInjector")
 
 export const TEMP_WINDOW_DNR_RULE_ID_BASE = 1_000_000 as const
 export const TEMP_WINDOW_DOWNLOAD_BLOCK_RULE_ID_BASE = 2_000_000 as const
-
-const TEMP_WINDOW_BLOCKED_DOWNLOAD_EXTENSION_PATTERN = [
-  "[aA][pP][kK]",
-  "[aA][pP][pP][iI][mM][aA][gG][eE]",
-  "[bB][aA][tT]",
-  "[cC][mM][dD]",
-  "[cC][oO][mM]",
-  "[dD][eE][bB]",
-  "[dD][mM][gG]",
-  "[eE][xX][eE]",
-  "[mM][sS][iI]",
-  "[mM][sS][pP]",
-  "[pP][kK][gG]",
-  "[pP][sS]1",
-  "[rR][pP][mM]",
-  "[sS][cC][rR]",
-  "[sS][hH]",
-  "[vV][bB][sS]",
-].join("|")
 
 interface TempWindowCookieRuleParams {
   tabId: number
@@ -121,7 +103,7 @@ export function buildTempWindowDownloadBlockRule(tabId: number) {
     },
     condition: {
       tabIds: [tabId],
-      regexFilter: `^https?://.*\\.(${TEMP_WINDOW_BLOCKED_DOWNLOAD_EXTENSION_PATTERN})(?:[?#].*)?$`,
+      regexFilter: `^https?://.*\\.(${buildTempWindowBlockedDownloadExtensionPattern()})(?:[?#].*)?$`,
       resourceTypes: [
         "main_frame",
         "sub_frame",

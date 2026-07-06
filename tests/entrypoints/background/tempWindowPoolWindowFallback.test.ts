@@ -62,6 +62,8 @@ describe("tempWindowPool window fallback", () => {
   let getAccountByIdMock: ReturnType<typeof vi.fn>
   let getCookieHeaderForUrlMock: ReturnType<typeof vi.fn>
   let addAuthMethodHeaderMock: ReturnType<typeof vi.fn>
+  let applyFirefoxTempWindowDownloadBlockRuleMock: ReturnType<typeof vi.fn>
+  let removeFirefoxTempWindowDownloadBlockRuleMock: ReturnType<typeof vi.fn>
   let applyTempWindowDownloadBlockRuleMock: ReturnType<typeof vi.fn>
   let removeTempWindowDownloadBlockRuleMock: ReturnType<typeof vi.fn>
   let applyTempWindowCookieRuleMock: ReturnType<typeof vi.fn>
@@ -91,6 +93,12 @@ describe("tempWindowPool window fallback", () => {
         "X-Auth-Mode": mode,
       }),
     )
+    applyFirefoxTempWindowDownloadBlockRuleMock = vi
+      .fn()
+      .mockResolvedValue(null)
+    removeFirefoxTempWindowDownloadBlockRuleMock = vi
+      .fn()
+      .mockResolvedValue(undefined)
     applyTempWindowDownloadBlockRuleMock = vi.fn().mockResolvedValue(null)
     removeTempWindowDownloadBlockRuleMock = vi.fn().mockResolvedValue(undefined)
     applyTempWindowCookieRuleMock = vi.fn().mockResolvedValue(null)
@@ -200,6 +208,12 @@ describe("tempWindowPool window fallback", () => {
       removeTempWindowDownloadBlockRule: removeTempWindowDownloadBlockRuleMock,
       removeTempWindowCookieRule: removeTempWindowCookieRuleMock,
     }))
+    vi.doMock("~/utils/browser/firefoxTempWindowDownloadBlocker", () => ({
+      applyFirefoxTempWindowDownloadBlockRule:
+        applyFirefoxTempWindowDownloadBlockRuleMock,
+      removeFirefoxTempWindowDownloadBlockRule:
+        removeFirefoxTempWindowDownloadBlockRuleMock,
+    }))
     vi.doMock("~/utils/browser/protectionBypass", () => ({
       isProtectionBypassFirefoxEnv: isProtectionBypassFirefoxEnvMock,
     }))
@@ -228,6 +242,7 @@ describe("tempWindowPool window fallback", () => {
     vi.doUnmock("~/services/accounts/accountStorage")
     vi.doUnmock("~/utils/browser/cookieHelper")
     vi.doUnmock("~/utils/browser/dnrCookieInjector")
+    vi.doUnmock("~/utils/browser/firefoxTempWindowDownloadBlocker")
     vi.doUnmock("~/utils/browser/protectionBypass")
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/services/siteDetection/detectSiteType")
@@ -328,6 +343,41 @@ describe("tempWindowPool window fallback", () => {
       2_000_601,
     )
     expect(removeTabOrWindowMock).toHaveBeenCalledWith(601)
+  })
+
+  it("installs and removes a Firefox temp-context download block rule for the owned tab", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 602 })
+    applyFirefoxTempWindowDownloadBlockRuleMock.mockResolvedValueOnce(602)
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.invalid",
+        fetchUrl: "https://example.invalid/api/test",
+        fetchOptions: { method: "GET" },
+        requestId: "req-firefox-download-block-rule",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(applyFirefoxTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(
+      602,
+    )
+
+    await vi.advanceTimersByTimeAsync(2500)
+
+    expect(removeFirefoxTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(
+      602,
+    )
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(602)
   })
 
   it("rolls back composite temp-context creation to a plain tab", async () => {
