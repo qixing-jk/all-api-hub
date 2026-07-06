@@ -15,6 +15,7 @@ import {
   normalizeTokenProvisioningGroupNames,
   sub2ApiTokenProvisioning,
 } from "~/services/apiAdapters/sub2api/tokenProvisioning"
+import { voApiV2TokenProvisioning } from "~/services/apiAdapters/voapiV2/tokenProvisioning"
 import type { ApiToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
@@ -289,6 +290,95 @@ describe("apiAdapter tokenProvisioning", () => {
     ).toEqual({
       kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
+    })
+  })
+
+  it("resolves VoAPI v2 default-token provisioning policy", () => {
+    expect(
+      voApiV2TokenProvisioning.isInventoryTokenUsable({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        token: token({ id: 0 }),
+      }),
+    ).toBe(false)
+    expect(
+      voApiV2TokenProvisioning.resolveDefaultTokenCreation({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        defaultTokenData: { ...defaultTokenData, unlimited_quota: true },
+      }),
+    ).toEqual({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
+    })
+    expect(
+      voApiV2TokenProvisioning.resolveDefaultTokenCreation({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        defaultTokenData,
+        explicitGroup: " vip ",
+      }),
+    ).toEqual({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+      tokenData: { ...defaultTokenData, group: "vip" },
+      oneTimeSecret: false,
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+    })
+    expect(
+      voApiV2TokenProvisioning.resolveDefaultTokenCreation({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        defaultTokenData,
+      }),
+    ).toEqual({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+    })
+    expect(
+      voApiV2TokenProvisioning.resolveDefaultTokenCreation({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        defaultTokenData,
+        userGroups: {
+          " ": { desc: "Blank", ratio: 1 },
+        },
+      }),
+    ).toEqual({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
+    })
+    expect(
+      voApiV2TokenProvisioning.resolveDefaultTokenCreation({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        defaultTokenData,
+        userGroups: {
+          " default ": { desc: "Default", ratio: 1 },
+          default: { desc: "Duplicate", ratio: 1 },
+        },
+      }),
+    ).toEqual({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
+      tokenData: { ...defaultTokenData, group: "default" },
+      oneTimeSecret: false,
+      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
+    })
+    expect(
+      voApiV2TokenProvisioning.resolveDefaultTokenCreation({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        defaultTokenData,
+        userGroups: {
+          " vip ": { desc: "VIP", ratio: 2 },
+          default: { desc: "Default", ratio: 1 },
+        },
+      }),
+    ).toEqual({
+      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
+      allowedGroups: ["vip", "default"],
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
+    })
+    expect(
+      voApiV2TokenProvisioning.classifyCreatedToken({
+        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
+        result: token(),
+      }),
+    ).toEqual({
+      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
+    })
+    expect(voApiV2TokenProvisioning.getRepairPolicy()).toEqual({
+      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
     })
   })
 

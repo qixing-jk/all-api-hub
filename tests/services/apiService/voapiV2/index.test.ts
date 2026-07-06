@@ -276,6 +276,99 @@ describe("apiService VoAPI v2", () => {
     )
   })
 
+  it("reports the retry auth-expired message after dashboard JWT re-sync", async () => {
+    mockResyncVoApiV2AuthToken.mockResolvedValueOnce({
+      accessToken: "resynced-dashboard-token",
+      userId: "8",
+      username: "resynced-owner",
+      source: "existing_tab",
+    })
+
+    server.use(
+      http.get("https://example.invalid/api/user/info", ({ request }) => {
+        const authorization = request.headers.get("authorization")
+        return HttpResponse.json({
+          code: 2,
+          data: null,
+          msg:
+            authorization === "example-dashboard-token"
+              ? "Initial auth expire"
+              : "Retry auth expire",
+        })
+      }),
+      http.get("https://example.invalid/api/dash/statistics", () =>
+        HttpResponse.json({
+          code: 2,
+          data: null,
+          msg: "Retry auth expire",
+        }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({
+          code: 2,
+          data: null,
+          msg: "Retry auth expire",
+        }),
+      ),
+    )
+
+    await expect(refreshAccountData(createVoApiV2Request())).resolves.toEqual({
+      success: false,
+      healthStatus: {
+        status: SiteHealthStatus.Warning,
+        message: "account:healthStatus.httpError",
+      },
+    })
+  })
+
+  it("reports non-auth retry failures after dashboard JWT re-sync", async () => {
+    mockResyncVoApiV2AuthToken.mockResolvedValueOnce({
+      accessToken: "resynced-dashboard-token",
+      userId: "8",
+      username: "resynced-owner",
+      source: "existing_tab",
+    })
+
+    server.use(
+      http.get("https://example.invalid/api/user/info", ({ request }) => {
+        const authorization = request.headers.get("authorization")
+        if (authorization === "example-dashboard-token") {
+          return HttpResponse.json({
+            code: 2,
+            data: null,
+            msg: "Initial auth expire",
+          })
+        }
+
+        return HttpResponse.json(
+          { code: 500, data: null, msg: "Backend unavailable" },
+          { status: 500 },
+        )
+      }),
+      http.get(/https:\/\/example\.invalid\/api\/dash\/statistics/, () =>
+        HttpResponse.json(
+          { code: 500, data: null, msg: "Backend unavailable" },
+          { status: 500 },
+        ),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json(
+          { code: 500, data: null, msg: "Backend unavailable" },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(refreshAccountData(createVoApiV2Request())).resolves.toEqual(
+      expect.objectContaining({
+        success: false,
+        healthStatus: expect.objectContaining({
+          status: SiteHealthStatus.Warning,
+        }),
+      }),
+    )
+  })
+
   it("reveals token secrets from the VoAPI v2 reveal endpoint", async () => {
     server.use(
       http.post("https://example.invalid/api/keys/11/token", () =>
@@ -292,6 +385,36 @@ describe("apiService VoAPI v2", () => {
         key: "masked-example-key",
       }),
     ).resolves.toBe("example-revealed-api-key")
+  })
+
+  it("accepts string token reveal responses and rejects malformed reveal payloads", async () => {
+    server.use(
+      http.post("https://example.invalid/api/keys/11/token", () =>
+        HttpResponse.json({
+          code: 0,
+          data: "example-revealed-api-key",
+        }),
+      ),
+      http.post("https://example.invalid/api/keys/12/token", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { masked: "still-hidden" },
+        }),
+      ),
+    )
+
+    await expect(
+      resolveVoApiV2TokenKey(createVoApiV2Request(), {
+        id: 11,
+        key: "masked-example-key",
+      }),
+    ).resolves.toBe("example-revealed-api-key")
+    await expect(
+      resolveVoApiV2TokenKey(createVoApiV2Request(), {
+        id: 12,
+        key: "masked-example-key",
+      }),
+    ).rejects.toThrow("VoAPI v2 token reveal response is missing token")
   })
 
   it("normalizes VoAPI v2 key inventory", async () => {
@@ -483,6 +606,27 @@ describe("apiService VoAPI v2", () => {
     })
   })
 
+  it("rejects key creation when the requested VoAPI v2 group cannot resolve", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys/template", () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            groups: [{ id: 2, name: "default", ratio: 1 }],
+            models: [],
+          },
+        }),
+      ),
+    )
+
+    await expect(
+      createVoApiV2Token(createVoApiV2Request(), {
+        ...tokenRequest,
+        group: "missing-group",
+      }),
+    ).rejects.toThrow("VoAPI v2 group not found")
+  })
+
   it("updates and toggles keys with preserved VoAPI v2 fields", async () => {
     const payloads: unknown[] = []
     server.use(
@@ -557,6 +701,125 @@ describe("apiService VoAPI v2", () => {
     })
   })
 
+  it("paginates key inventory when updating a token beyond the first lookup page", async () => {
+    const requestedPages: number[] = []
+    let payload: unknown
+    const firstPageKeys = Array.from({ length: 100 }, (_, index) => ({
+      id: index + 1,
+      name: `page-one-${index + 1}`,
+      groups: [1],
+      enable: true,
+      expireTime: -1,
+      boundlessAmount: false,
+      amount: "0",
+      used: "0",
+    }))
+
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const url = new URL(request.url)
+        const page = Number(url.searchParams.get("page"))
+        requestedPages.push(page)
+
+        return HttpResponse.json({
+          code: 0,
+          data:
+            page === 1
+              ? firstPageKeys
+              : [
+                  {
+                    id: 150,
+                    name: "page-two-target",
+                    groups: [3],
+                    enable: true,
+                    expireTime: -1,
+                    boundlessAmount: true,
+                    amount: "2",
+                    used: "0.25",
+                    note: "keep me",
+                  },
+                ],
+        })
+      }),
+      http.get("https://example.invalid/api/keys/template", () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            groups: [
+              { id: 2, name: "default", ratio: 1 },
+              { id: 3, name: "previous-group", ratio: 1 },
+            ],
+            models: [],
+          },
+        }),
+      ),
+      http.put("https://example.invalid/api/keys/150", async ({ request }) => {
+        payload = await request.json()
+        return HttpResponse.json({ code: 0, data: null })
+      }),
+    )
+
+    await expect(
+      updateVoApiV2Token(createVoApiV2Request(), 150, {
+        ...tokenRequest,
+        remain_quota: 0,
+        unlimited_quota: true,
+      }),
+    ).resolves.toBe(true)
+
+    expect(requestedPages).toEqual([1, 2])
+    expect(payload).toEqual(
+      expect.objectContaining({
+        id: 150,
+        name: "default",
+        groups: [2],
+        used: "0.25",
+        note: "keep me",
+      }),
+    )
+  })
+
+  it("reports missing tokens after exhausting paginated lookup", async () => {
+    const requestedPages: number[] = []
+    const firstPageKeys = Array.from({ length: 100 }, (_, index) => ({
+      id: index + 1,
+      name: `page-one-${index + 1}`,
+      groups: [1],
+      enable: true,
+      expireTime: -1,
+      boundlessAmount: false,
+      amount: "0",
+      used: "0",
+    }))
+
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const url = new URL(request.url)
+        const page = Number(url.searchParams.get("page"))
+        requestedPages.push(page)
+
+        return HttpResponse.json({
+          code: 0,
+          data: page === 1 ? firstPageKeys : [],
+        })
+      }),
+      http.get("https://example.invalid/api/keys/template", () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            groups: [{ id: 2, name: "default", ratio: 1 }],
+            models: [],
+          },
+        }),
+      ),
+    )
+
+    await expect(
+      updateVoApiV2Token(createVoApiV2Request(), 150, tokenRequest),
+    ).rejects.toThrow("VoAPI v2 token not found")
+    expect(requestedPages).toEqual([1, 2])
+  })
+
   it("deletes VoAPI v2 keys", async () => {
     let deleted = false
     server.use(
@@ -597,6 +860,24 @@ describe("apiService VoAPI v2", () => {
     ).resolves.toEqual({
       "2": { desc: "main", ratio: 1 },
     })
+  })
+
+  it("ignores VoAPI v2 user groups with blank ids", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys/template", () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            groups: [{ id: " ", name: "Blank", ratio: 1 }],
+            models: [],
+          },
+        }),
+      ),
+    )
+
+    await expect(
+      fetchVoApiV2UserGroups(createVoApiV2Request()),
+    ).resolves.toEqual({})
   })
 
   it("supports VoAPI v2 API check-in helpers", async () => {

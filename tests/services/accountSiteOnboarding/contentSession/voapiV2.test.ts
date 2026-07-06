@@ -71,6 +71,14 @@ describe("voApiV2ContentSessionExtractor", () => {
     })
   })
 
+  it("detects whether the VoAPI v2 user store is present", () => {
+    expect(voApiV2ContentSessionExtractor.canExtract({})).toBe(false)
+
+    localStorage.setItem("userStore", JSON.stringify({ auth: {} }))
+
+    expect(voApiV2ContentSessionExtractor.canExtract({})).toBe(true)
+  })
+
   it("falls back to JWT userId when localStorage.user has no id", async () => {
     localStorage.setItem(
       "userStore",
@@ -104,6 +112,15 @@ describe("voApiV2ContentSessionExtractor", () => {
     await expect(voApiV2ContentSessionExtractor.extract({})).resolves.toBeNull()
 
     localStorage.setItem("userStore", "{")
+    await expect(voApiV2ContentSessionExtractor.extract({})).resolves.toBeNull()
+  })
+
+  it("returns null when the dashboard JWT payload is malformed and no stored user id exists", async () => {
+    localStorage.setItem(
+      "userStore",
+      JSON.stringify({ auth: { token: "not-a.jwt" } }),
+    )
+
     await expect(voApiV2ContentSessionExtractor.extract({})).resolves.toBeNull()
   })
 })

@@ -2,7 +2,8 @@
   "accountSummary": {
     "keys_other": "{{count}} key",
     "loadFailed": "Tải thất bại",
-    "title": "Tổng quan tài khoản"
+    "title": "Tổng quan tài khoản",
+    "unsupported": "chưa hỗ trợ"
   },
   "actions": {
     "collapseAll": "Thu gọn tất cả",
@@ -391,6 +392,7 @@
   "unsupportedSource": {
     "description": "Loại trang của tài khoản này có thể được lưu, nhưng tiện ích chưa thích ứng giao thức danh sách khóa của trang này. Hãy gửi yêu cầu hỗ trợ trang để giúp chúng tôi bổ sung khả năng quản lý khóa.",
     "requestSiteSupport": "Yêu cầu hỗ trợ trang",
+    "supportRequestErrorMessage": "Quản lý khóa chưa được triển khai cho {{siteType}}",
     "title": "Loại trang này chưa hỗ trợ quản lý khóa"
   }
 }

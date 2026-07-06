@@ -552,6 +552,83 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
   })
 
+  it("excludes unsupported key-management accounts from retryable all-account failures", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const unsupportedAccount = createDisplayAccount({
+      id: "unsupported-key-management-acc",
+      name: "Unsupported Account",
+      siteType: SITE_TYPES.UNKNOWN,
+      baseUrl: "https://unsupported.example.invalid",
+    })
+    const failedAccount = createDisplayAccount({
+      id: "failed-key-management-acc",
+      name: "Failed Account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://failed.example.invalid",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [unsupportedAccount, failedAccount],
+    } as any)
+
+    const fetchAccountTokens = vi.fn(async () => {
+      throw new Error("retryable load failure")
+    })
+    vi.mocked(getSiteTypeCapabilities).mockImplementation((siteType) => {
+      if (siteType === SITE_TYPES.UNKNOWN) {
+        return {
+          siteType: SITE_TYPES.UNKNOWN,
+          account: {},
+        } as any
+      }
+
+      return createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any
+    })
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount("all")
+    })
+
+    await waitFor(() =>
+      expect(result.current.accountSummaryItems).toEqual([
+        {
+          accountId: unsupportedAccount.id,
+          name: unsupportedAccount.name,
+          count: 0,
+          errorType: "unsupported",
+        },
+        {
+          accountId: failedAccount.id,
+          name: failedAccount.name,
+          count: 0,
+          errorType: "load-failed",
+        },
+      ]),
+    )
+    expect(result.current.failedAccounts).toEqual([
+      {
+        accountId: failedAccount.id,
+        accountName: failedAccount.name,
+        errorMessage: "retryable load failure",
+      },
+    ])
+
+    fetchAccountTokens.mockClear()
+
+    await act(async () => {
+      await result.current.retryFailedAccounts()
+    })
+
+    expect(fetchAccountTokens).toHaveBeenCalledTimes(1)
+  })
+
   it("tracks all-account token refresh with sanitized aggregate buckets", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
 

@@ -1,7 +1,7 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 
-import type { VoApiV2Envelope } from "./type"
+import { VOAPI_V2_PROTOCOL_CODES, type VoApiV2Envelope } from "./type"
 
 class VoApiV2AuthExpiredError extends ApiError {}
 
@@ -19,7 +19,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
 const isAuthExpiredEnvelope = (body: VoApiV2Envelope<unknown>): boolean =>
-  body.code === 2 &&
+  body.code === VOAPI_V2_PROTOCOL_CODES.AuthExpired &&
   /auth\s*expire|unauthorized|token|jwt|login/i.test(getEnvelopeMessage(body))
 
 /**
@@ -40,7 +40,7 @@ export function parseVoApiV2Envelope<TData>(
   }
 
   const body = value as VoApiV2Envelope<TData>
-  if (body.code !== 0) {
+  if (body.code !== VOAPI_V2_PROTOCOL_CODES.Success) {
     const message = getEnvelopeMessage(body)
     const ErrorClass = isAuthExpiredEnvelope(body)
       ? VoApiV2AuthExpiredError

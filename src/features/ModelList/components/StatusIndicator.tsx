@@ -20,7 +20,11 @@ import {
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import type { DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 import { openSiteSupportRequestPage } from "~/utils/navigation"
+import { SITE_SUPPORT_ERROR_TYPES } from "~/utils/navigation/feedbackLinks"
+
+const logger = createLogger("ModelListStatusIndicator")
 
 interface StatusIndicatorProps {
   selectedSource: ModelManagementSource | null
@@ -84,10 +88,17 @@ export function StatusIndicator({
     currentAccount
   ) {
     const handleRequestSiteSupport = () => {
+      const baseUrl = currentAccount.baseUrl?.trim()
+      if (!baseUrl) return
+
       void openSiteSupportRequestPage({
-        siteUrl: currentAccount.baseUrl,
-        errorType: "model_list_unsupported",
-        errorMessage: `Model list is not implemented for ${currentAccount.siteType}`,
+        siteUrl: baseUrl,
+        errorType: SITE_SUPPORT_ERROR_TYPES.ModelListUnsupported,
+        errorMessage: t("status.unsupportedSourceSupportRequestErrorMessage", {
+          siteType: currentAccount.siteType,
+        }),
+      }).catch((error) => {
+        logger.error("Failed to open model-list site-support request", error)
       })
     }
 
@@ -99,6 +110,7 @@ export function StatusIndicator({
         action={{
           label: t("status.requestSiteSupport"),
           onClick: handleRequestSiteSupport,
+          disabled: !currentAccount.baseUrl?.trim(),
         }}
       />
     )

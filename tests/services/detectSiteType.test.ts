@@ -20,16 +20,20 @@ vi.mock("~/utils/browser/tempWindowFetch", async (importOriginal) => {
 })
 
 describe("detectSiteType", () => {
-  beforeEach(() => {
-    server.resetHandlers()
+  const addDefaultUnsupportedProtectedProbeHandlers = () => {
     server.use(
-      http.get("https://example.com/api/user/info", () => {
+      http.get(/\/api\/user\/info$/, () => {
         return HttpResponse.json({ message: "not found" }, { status: 404 })
       }),
-      http.get("https://example.com/api/v1/auth/me", () => {
+      http.get(/\/api\/v1\/auth\/me$/, () => {
         return HttpResponse.json({ message: "not found" }, { status: 404 })
       }),
     )
+  }
+
+  beforeEach(() => {
+    server.resetHandlers()
+    addDefaultUnsupportedProtectedProbeHandlers()
   })
 
   describe("fetchSiteOriginalTitle", () => {
@@ -302,6 +306,7 @@ describe("detectSiteType", () => {
 
         for (const [title] of managedOnlyTitles) {
           server.resetHandlers()
+          addDefaultUnsupportedProtectedProbeHandlers()
           server.use(
             http.get("https://example.com", () => {
               return new HttpResponse(`<html><title>${title}</title></html>`, {
@@ -366,6 +371,47 @@ describe("detectSiteType", () => {
           SITE_TYPES.VO_API_V2,
         )
         expect(titleFetched).toBe(false)
+      })
+
+      it("detects VoAPI v2 from a successful account-info envelope", async () => {
+        let titleFetched = false
+        server.use(
+          http.get("https://example.com", () => {
+            titleFetched = true
+            return new HttpResponse("<html><title>Custom Portal</title></html>")
+          }),
+          http.get("https://example.com/api/user/info", () =>
+            HttpResponse.json({
+              code: 0,
+              data: {
+                id: 7,
+                basicBalance: "1",
+              },
+            }),
+          ),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.VO_API_V2,
+        )
+        expect(titleFetched).toBe(false)
+      })
+
+      it("falls back when the VoAPI v2 probe returns non-object JSON", async () => {
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse("<html><title>New API</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+          http.get("https://example.com/api/user/info", () =>
+            HttpResponse.json(["not", "an", "envelope"]),
+          ),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.NEW_API,
+        )
       })
 
       it("keeps old VoAPI title-only detection on the old site type", async () => {

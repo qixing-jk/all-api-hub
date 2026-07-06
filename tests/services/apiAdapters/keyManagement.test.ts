@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixKeyManagement } from "~/services/apiAdapters/aihubmix/keyManagement"
 import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
 import { sub2ApiKeyManagement } from "~/services/apiAdapters/sub2api/keyManagement"
+import { voApiV2KeyManagement } from "~/services/apiAdapters/voapiV2/keyManagement"
 import { AuthTypeEnum, type ApiToken } from "~/types"
 
 const {
@@ -30,6 +31,13 @@ const {
   mockSub2ApiResolveApiTokenKey,
   mockSub2ApiUpdateApiToken,
   mockUpdateApiToken,
+  mockVoApiV2CreateToken,
+  mockVoApiV2DeleteToken,
+  mockVoApiV2FetchAvailableModels,
+  mockVoApiV2FetchTokens,
+  mockVoApiV2FetchUserGroups,
+  mockVoApiV2ResolveTokenKey,
+  mockVoApiV2UpdateToken,
   mockWongResolveApiTokenKey,
 } = vi.hoisted(() => ({
   mockAihubmixCreateApiToken: vi.fn(),
@@ -55,6 +63,13 @@ const {
   mockSub2ApiResolveApiTokenKey: vi.fn(),
   mockSub2ApiUpdateApiToken: vi.fn(),
   mockUpdateApiToken: vi.fn(),
+  mockVoApiV2CreateToken: vi.fn(),
+  mockVoApiV2DeleteToken: vi.fn(),
+  mockVoApiV2FetchAvailableModels: vi.fn(),
+  mockVoApiV2FetchTokens: vi.fn(),
+  mockVoApiV2FetchUserGroups: vi.fn(),
+  mockVoApiV2ResolveTokenKey: vi.fn(),
+  mockVoApiV2UpdateToken: vi.fn(),
   mockWongResolveApiTokenKey: vi.fn(),
 }))
 
@@ -97,6 +112,16 @@ vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
 
 vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
   resolveApiTokenKey: mockWongResolveApiTokenKey,
+}))
+
+vi.mock("~/services/apiService/voapiV2", () => ({
+  createVoApiV2Token: mockVoApiV2CreateToken,
+  deleteVoApiV2Token: mockVoApiV2DeleteToken,
+  fetchVoApiV2AvailableModels: mockVoApiV2FetchAvailableModels,
+  fetchVoApiV2Tokens: mockVoApiV2FetchTokens,
+  fetchVoApiV2UserGroups: mockVoApiV2FetchUserGroups,
+  resolveVoApiV2TokenKey: mockVoApiV2ResolveTokenKey,
+  updateVoApiV2Token: mockVoApiV2UpdateToken,
 }))
 
 const request = {
@@ -287,6 +312,55 @@ describe("apiAdapter keyManagement", () => {
     expect(mockSub2ApiDeleteApiToken).toHaveBeenCalledWith(request, token.id)
     expect(mockSub2ApiFetchUserGroups).toHaveBeenCalledWith(request)
     expect(mockSub2ApiFetchAccountAvailableModels).toHaveBeenCalledWith(request)
+  })
+
+  it("delegates VoAPI v2 key operations to backend key helpers", async () => {
+    const expectedTokens = [token]
+    mockVoApiV2FetchTokens.mockResolvedValueOnce(expectedTokens)
+    mockVoApiV2CreateToken.mockResolvedValueOnce(true)
+    mockVoApiV2UpdateToken.mockResolvedValueOnce(true)
+    mockVoApiV2ResolveTokenKey.mockResolvedValueOnce("sk-voapi-v2")
+    mockVoApiV2DeleteToken.mockResolvedValueOnce(true)
+    mockVoApiV2FetchAvailableModels.mockResolvedValueOnce(availableModels)
+    mockVoApiV2FetchUserGroups.mockResolvedValueOnce(userGroups)
+
+    await expect(
+      voApiV2KeyManagement.fetchTokens(request, { page: 4, size: 40 }),
+    ).resolves.toBe(expectedTokens)
+    await expect(
+      voApiV2KeyManagement.createToken(request, tokenData),
+    ).resolves.toBe(true)
+    await expect(
+      voApiV2KeyManagement.updateToken({
+        request,
+        tokenId: token.id,
+        tokenData,
+      }),
+    ).resolves.toBe(true)
+    await expect(
+      voApiV2KeyManagement.resolveTokenKey({ request, token }),
+    ).resolves.toBe("sk-voapi-v2")
+    await expect(
+      voApiV2KeyManagement.deleteToken({ request, tokenId: token.id }),
+    ).resolves.toBe(true)
+    await expect(
+      voApiV2KeyManagement.fetchAvailableModels(request),
+    ).resolves.toBe(availableModels)
+    await expect(voApiV2KeyManagement.userGroups?.fetch(request)).resolves.toBe(
+      userGroups,
+    )
+
+    expect(mockVoApiV2FetchTokens).toHaveBeenCalledWith(request, 4, 40)
+    expect(mockVoApiV2CreateToken).toHaveBeenCalledWith(request, tokenData)
+    expect(mockVoApiV2UpdateToken).toHaveBeenCalledWith(
+      request,
+      token.id,
+      tokenData,
+    )
+    expect(mockVoApiV2ResolveTokenKey).toHaveBeenCalledWith(request, token)
+    expect(mockVoApiV2DeleteToken).toHaveBeenCalledWith(request, token.id)
+    expect(mockVoApiV2FetchAvailableModels).toHaveBeenCalledWith(request)
+    expect(mockVoApiV2FetchUserGroups).toHaveBeenCalledWith(request)
   })
 
   it("propagates Sub2API key inventory errors from backend helpers", async () => {

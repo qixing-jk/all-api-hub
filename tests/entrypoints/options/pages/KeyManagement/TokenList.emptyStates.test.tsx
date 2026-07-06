@@ -21,6 +21,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 describe("TokenList empty states", () => {
   beforeEach(() => {
     openSiteSupportRequestPageMock.mockReset()
+    openSiteSupportRequestPageMock.mockResolvedValue(undefined)
   })
 
   it("guides the user to add an account when none exist", async () => {
@@ -224,7 +225,8 @@ describe("TokenList empty states", () => {
     expect(openSiteSupportRequestPageMock).toHaveBeenCalledWith({
       siteUrl: "https://unsupported.example.invalid",
       errorType: "key_management_unsupported",
-      errorMessage: "Key management is not implemented for future-site",
+      errorMessage:
+        "keyManagement:unsupportedSource.supportRequestErrorMessage",
     })
   })
 

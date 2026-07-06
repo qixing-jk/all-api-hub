@@ -6,7 +6,7 @@ interface AccountSummaryItem {
   accountId: string
   name: string
   count: number
-  errorType?: "load-failed"
+  errorType?: "load-failed" | "unsupported"
 }
 
 interface AccountSummaryBarProps {
@@ -59,7 +59,9 @@ export function AccountSummaryBar({
                   </span>
                   {item.errorType && (
                     <span className="ml-2 text-xs text-red-500 dark:text-red-400">
-                      {t("accountSummary.loadFailed")}
+                      {item.errorType === "unsupported"
+                        ? t("accountSummary.unsupported")
+                        : t("accountSummary.loadFailed")}
                     </span>
                   )}
                 </Badge>

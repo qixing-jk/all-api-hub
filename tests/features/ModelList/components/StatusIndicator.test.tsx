@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { StatusIndicator } from "~/features/ModelList/components/StatusIndicator"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 
@@ -33,7 +34,7 @@ const ACCOUNT = {
   id: "account-1",
   name: "VoAPI v2 Demo",
   baseUrl: "https://example.invalid",
-  siteType: "voapi-v2",
+  siteType: SITE_TYPES.VO_API_V2,
 } as any
 
 const ACCOUNT_SOURCE = {
@@ -55,6 +56,7 @@ const ACCOUNT_SOURCE = {
 describe("StatusIndicator", () => {
   beforeEach(() => {
     openSiteSupportRequestPageMock.mockReset()
+    openSiteSupportRequestPageMock.mockResolvedValue(undefined)
   })
 
   it("shows an unsupported model-list state with a site-support request action", async () => {
@@ -89,7 +91,7 @@ describe("StatusIndicator", () => {
     expect(openSiteSupportRequestPageMock).toHaveBeenCalledWith({
       siteUrl: "https://example.invalid",
       errorType: "model_list_unsupported",
-      errorMessage: "Model list is not implemented for voapi-v2",
+      errorMessage: "status.unsupportedSourceSupportRequestErrorMessage",
     })
   })
 })

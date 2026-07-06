@@ -140,6 +140,14 @@ const TOKEN_LOAD_ERROR_KINDS = {
 type TokenLoadErrorKind =
   (typeof TOKEN_LOAD_ERROR_KINDS)[keyof typeof TOKEN_LOAD_ERROR_KINDS]
 
+const ACCOUNT_TOKEN_LOAD_ERROR_TYPES = {
+  LoadFailed: "load-failed",
+  Unsupported: "unsupported",
+} as const
+
+type AccountTokenLoadErrorType =
+  (typeof ACCOUNT_TOKEN_LOAD_ERROR_TYPES)[keyof typeof ACCOUNT_TOKEN_LOAD_ERROR_TYPES]
+
 interface TokenInventoryState {
   status: TokenLoadStatus
   tokens: AccountToken[]
@@ -1120,7 +1128,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     const failedAccountIds = enabledDisplayData
       .filter(
         (account) =>
-          tokenInventoriesRef.current[account.id]?.status === "error",
+          tokenInventoriesRef.current[account.id]?.status === "error" &&
+          tokenInventoriesRef.current[account.id]?.errorKind !==
+            TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement,
       )
       .map((account) => account.id)
 
@@ -1348,6 +1358,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       .map((account): FailedAccountTokenLoad | null => {
         const inventory = tokenInventories[account.id]
         if (inventory?.status !== "error") return null
+        if (
+          inventory.errorKind ===
+          TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement
+        ) {
+          return null
+        }
         return {
           accountId: account.id,
           accountName: account.name,
@@ -1412,10 +1428,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       accountId: account.id,
       name: account.name,
       count: countMap.get(account.id) ?? 0,
-      errorType:
-        tokenInventories[account.id]?.status === "error"
-          ? ("load-failed" as const)
-          : undefined,
+      errorType: (() => {
+        const inventory = tokenInventories[account.id]
+        if (inventory?.status !== "error") return undefined
+        return inventory.errorKind ===
+          TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement
+          ? ACCOUNT_TOKEN_LOAD_ERROR_TYPES.Unsupported
+          : ACCOUNT_TOKEN_LOAD_ERROR_TYPES.LoadFailed
+      })() satisfies AccountTokenLoadErrorType | undefined,
     }))
   }, [enabledDisplayData, filteredEntries, isAllAccountsMode, tokenInventories])
 

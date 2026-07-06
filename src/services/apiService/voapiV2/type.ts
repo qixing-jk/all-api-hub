@@ -9,6 +9,14 @@ export const VOAPI_V2_ENDPOINTS = {
   CheckInSubmit: "/api/check_in",
 } as const
 
+export const VOAPI_V2_PROTOCOL_CODES = {
+  Success: 0,
+  AlreadySigned: 1,
+  AuthExpired: 2,
+} as const
+
+export const VOAPI_V2_SYSTEM_NAME = "VoAPI"
+
 export type VoApiV2Envelope<TData = unknown> = {
   code: number
   data?: TData

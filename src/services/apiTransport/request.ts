@@ -203,7 +203,7 @@ async function enforceLogRequestRateLimit(options: {
  */
 const createRequestHeaders = async (
   auth: NormalizedAuthContext,
-  authTokenMode: ApiAuthTokenMode = API_AUTH_TOKEN_MODES.Bearer,
+  authTokenMode: ApiAuthTokenMode,
 ): Promise<Record<string, string>> => {
   const baseHeaders = {
     "Content-Type": REQUEST_CONFIG.HEADERS.CONTENT_TYPE,

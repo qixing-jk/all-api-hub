@@ -4,7 +4,8 @@
     "keys_many": "{{count}} claves",
     "keys_other": "{{count}} claves",
     "loadFailed": "Error al cargar",
-    "title": "Resumen de cuentas"
+    "title": "Resumen de cuentas",
+    "unsupported": "no compatible"
   },
   "actions": {
     "collapseAll": "Contraer todo",
@@ -419,6 +420,7 @@
   "unsupportedSource": {
     "description": "El tipo de sitio de esta cuenta se puede guardar, pero la extensión aún no ha adaptado su protocolo de lista de claves. Envía una solicitud de soporte del sitio para ayudarnos a agregar soporte de gestión de claves.",
     "requestSiteSupport": "Solicitar soporte del sitio",
+    "supportRequestErrorMessage": "La gestión de claves no está implementada para {{siteType}}",
     "title": "La gestión de claves aún no es compatible con este tipo de sitio"
   }
 }

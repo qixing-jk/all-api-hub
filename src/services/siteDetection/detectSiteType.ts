@@ -16,6 +16,7 @@ import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("DetectSiteType")
+const PROTECTED_ENDPOINT_PROBE_TIMEOUT_MS = 5000
 const COMPAT_USER_ID_HEADER_MESSAGE_RULES =
   getAccountSiteCompatUserIdHeaderRules().map(({ headerName, siteType }) => ({
     siteType,
@@ -25,6 +26,29 @@ const COMPAT_USER_ID_HEADER_MESSAGE_RULES =
     ),
   }))
 const VOAPI_V2_USER_INFO_ENDPOINT = "/api/user/info"
+
+/** Create an abort signal for bounded protected-endpoint probes. */
+function createProbeTimeoutSignal(timeoutMs: number): {
+  signal: AbortSignal
+  cleanup: () => void
+} {
+  if (typeof AbortSignal.timeout === "function") {
+    return {
+      signal: AbortSignal.timeout(timeoutMs),
+      cleanup: () => {},
+    }
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => {
+    controller.abort()
+  }, timeoutMs)
+
+  return {
+    signal: controller.signal,
+    cleanup: () => clearTimeout(timeoutId),
+  }
+}
 
 /**
  * Fetch the raw HTML title from the site root.
@@ -195,11 +219,14 @@ async function detectSub2ApiFromAuthEndpoint(
 async function detectVoApiV2FromProtectedEndpoint(
   url: string,
 ): Promise<AccountSiteType> {
+  const timeout = createProbeTimeoutSignal(PROTECTED_ENDPOINT_PROBE_TIMEOUT_MS)
+
   try {
     const response = await fetch(new URL(VOAPI_V2_USER_INFO_ENDPOINT, url), {
       method: "GET",
       cache: "no-store",
       credentials: "omit",
+      signal: timeout.signal,
     })
 
     const contentType = response.headers.get("content-type") || ""
@@ -232,6 +259,8 @@ async function detectVoApiV2FromProtectedEndpoint(
     }
   } catch (error) {
     logger.debug("VoAPI v2 protected endpoint probe failed", { url, error })
+  } finally {
+    timeout.cleanup()
   }
 
   return SITE_TYPES.UNKNOWN

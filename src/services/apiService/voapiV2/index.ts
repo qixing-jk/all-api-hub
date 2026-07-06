@@ -8,6 +8,7 @@ import type {
   CreateTokenRequest,
   UserGroupInfo,
 } from "~/services/accountTokens/tokenProvisioningModel"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import {
   API_AUTH_TOKEN_MODES,
@@ -26,6 +27,7 @@ import {
 import { resyncVoApiV2AuthToken } from "./tokenResync"
 import {
   VOAPI_V2_ENDPOINTS,
+  VOAPI_V2_PROTOCOL_CODES,
   type VoApiV2CheckInStats,
   type VoApiV2CheckInSubmitData,
   type VoApiV2DashboardStatistics,
@@ -37,6 +39,7 @@ import {
 
 const DEFAULT_KEYS_PAGE = 1
 const DEFAULT_KEYS_PAGE_SIZE = 10
+const TOKEN_LOOKUP_PAGE_SIZE = 100
 
 type VoApiV2AccountDataRequest = ApiServiceRequest &
   Partial<Pick<ApiServiceAccountRequest, "checkIn" | "includeTodayCashflow">>
@@ -229,7 +232,12 @@ const resolveVoApiV2GroupIds = async (
   const groupId = toVoApiV2GroupId(matchedGroup?.id ?? normalizedGroup)
 
   if (typeof groupId !== "number") {
-    throw new Error("VoAPI v2 group not found")
+    throw new ApiError(
+      "VoAPI v2 group not found",
+      undefined,
+      VOAPI_V2_ENDPOINTS.KeyTemplate,
+      API_ERROR_CODES.BUSINESS_ERROR,
+    )
   }
 
   return [groupId]
@@ -400,11 +408,22 @@ export async function refreshAccountData(
             },
           }
         } catch (retryError) {
-          if (!isVoApiV2AuthExpiredError(retryError)) {
+          if (isVoApiV2AuthExpiredError(retryError)) {
             return {
               success: false,
-              healthStatus: determineHealthStatus(retryError),
+              healthStatus: {
+                status: SiteHealthStatus.Warning,
+                message: t("account:healthStatus.httpError", {
+                  statusCode: 401,
+                  message: retryError.message,
+                }),
+              },
             }
+          }
+
+          return {
+            success: false,
+            healthStatus: determineHealthStatus(retryError),
           }
         }
       }
@@ -463,15 +482,33 @@ async function fetchVoApiV2TokenById(
   request: ApiServiceRequest,
   tokenId: number,
 ): Promise<VoApiV2Key> {
-  const token = (await fetchVoApiV2RawKeys(request, 1, 100)).find(
-    (item) => item.id === tokenId,
-  )
+  let page = DEFAULT_KEYS_PAGE
 
-  if (!token) {
-    throw new Error("VoAPI v2 token not found")
+  while (true) {
+    const keys = await fetchVoApiV2RawKeys(
+      request,
+      page,
+      TOKEN_LOOKUP_PAGE_SIZE,
+    )
+    const token = keys.find((item) => item.id === tokenId)
+
+    if (token) {
+      return token
+    }
+
+    if (keys.length < TOKEN_LOOKUP_PAGE_SIZE) {
+      break
+    }
+
+    page += 1
   }
 
-  return token
+  throw new ApiError(
+    "VoAPI v2 token not found",
+    undefined,
+    VOAPI_V2_ENDPOINTS.Keys,
+    API_ERROR_CODES.BUSINESS_ERROR,
+  )
 }
 
 type VoApiV2RevealTokenResponse = string | { token?: unknown }
@@ -480,9 +517,16 @@ const extractVoApiV2RevealedToken = (
   value: VoApiV2RevealTokenResponse,
 ): string => {
   if (typeof value === "string") return value
-  if (typeof value.token === "string") return value.token
+  if (value && typeof value === "object" && typeof value.token === "string") {
+    return value.token
+  }
 
-  throw new Error("VoAPI v2 token reveal response is missing token")
+  throw new ApiError(
+    "VoAPI v2 token reveal response is missing token",
+    undefined,
+    VOAPI_V2_ENDPOINTS.Keys,
+    API_ERROR_CODES.JSON_PARSE_ERROR,
+  )
 }
 
 /**
@@ -634,7 +678,7 @@ export async function submitVoApiV2CheckIn(
   if (
     body &&
     typeof body === "object" &&
-    body.code === 1 &&
+    body.code === VOAPI_V2_PROTOCOL_CODES.AlreadySigned &&
     /signed|check/i.test(body.msg ?? body.message ?? "")
   ) {
     return { alreadySigned: true }

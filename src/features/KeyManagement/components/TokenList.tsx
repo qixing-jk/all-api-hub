@@ -40,6 +40,7 @@ import type {
 import { createTab } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { openSiteSupportRequestPage } from "~/utils/navigation"
+import { SITE_SUPPORT_ERROR_TYPES } from "~/utils/navigation/feedbackLinks"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
@@ -178,12 +179,20 @@ function TokenEmptyState({
   }
 
   const handleRequestSiteSupport = () => {
-    if (!currentAccount) return
+    const baseUrl = currentAccount?.baseUrl?.trim()
+    if (!currentAccount || !baseUrl) return
 
     void openSiteSupportRequestPage({
-      siteUrl: currentAccount.baseUrl,
-      errorType: "key_management_unsupported",
-      errorMessage: `Key management is not implemented for ${currentAccount.siteType}`,
+      siteUrl: baseUrl,
+      errorType: SITE_SUPPORT_ERROR_TYPES.KeyManagementUnsupported,
+      errorMessage: t(
+        "keyManagement:unsupportedSource.supportRequestErrorMessage",
+        {
+          siteType: currentAccount.siteType,
+        },
+      ),
+    }).catch((error) => {
+      logger.error("Failed to open key-management site-support request", error)
     })
   }
 
@@ -267,6 +276,7 @@ function TokenEmptyState({
         action={{
           label: t("keyManagement:unsupportedSource.requestSiteSupport"),
           onClick: handleRequestSiteSupport,
+          disabled: !currentAccount.baseUrl?.trim(),
         }}
       />
     )

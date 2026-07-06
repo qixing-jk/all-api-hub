@@ -1,4 +1,5 @@
 import type { AccountSiteType, ManagedSiteType } from "~/constants/siteType"
+import type { AccountSiteBackendFamily } from "~/services/accountSiteDefinitions/contracts"
 
 import type { AccountBootstrapCapability } from "./accountBootstrap"
 import type { AccountCompletionCapability } from "./accountCompletion"
@@ -21,7 +22,7 @@ import type { TokenProvisioningCapability } from "./tokenProvisioning"
 
 export type SiteType = AccountSiteType | ManagedSiteType
 
-export type SiteBackendFamily = "newApiFamily" | "sub2api" | "voapiV2"
+export type SiteBackendFamily = AccountSiteBackendFamily
 
 export type SiteTypeCapabilities = {
   siteType: SiteType

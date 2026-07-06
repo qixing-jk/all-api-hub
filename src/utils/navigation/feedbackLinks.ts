@@ -12,6 +12,11 @@ export interface SiteSupportRequestContext {
   errorMessage?: string
 }
 
+export const SITE_SUPPORT_ERROR_TYPES = {
+  KeyManagementUnsupported: "key_management_unsupported",
+  ModelListUnsupported: "model_list_unsupported",
+} as const
+
 interface FeedbackDestinationUrls {
   repository: string
   bugReport: string

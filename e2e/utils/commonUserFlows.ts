@@ -627,6 +627,17 @@ export async function stubNewApiSiteRoutes(
       return
     }
 
+    if (
+      method === "GET" &&
+      (url.pathname === "/api/user/info" || url.pathname === "/api/v1/auth/me")
+    ) {
+      await route.fulfill({
+        status: 204,
+        body: "",
+      })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/user/self") {
       await route.fulfill({
         status: 200,

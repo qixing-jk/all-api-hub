@@ -3,7 +3,8 @@
     "keys_one": "{{count}} key",
     "keys_other": "{{count}} keys",
     "loadFailed": "Load failed",
-    "title": "Accounts overview"
+    "title": "Accounts overview",
+    "unsupported": "unsupported"
   },
   "actions": {
     "collapseAll": "Collapse all",
@@ -405,6 +406,7 @@
   "unsupportedSource": {
     "description": "This account's site type can be saved, but the extension has not adapted its key-list protocol yet. Submit a site-support request to help us add key-management support.",
     "requestSiteSupport": "Request site support",
+    "supportRequestErrorMessage": "Key management is not implemented for {{siteType}}",
     "title": "Key management is not supported for this site type yet"
   }
 }

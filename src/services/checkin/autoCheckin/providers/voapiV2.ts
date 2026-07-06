@@ -87,6 +87,7 @@ export const voApiV2Provider: AutoCheckinProvider = {
     return Boolean(
       isVoApiV2Account(account) &&
         account.checkIn?.enableDetection &&
+        account.checkIn?.autoCheckInEnabled !== false &&
         account.account_info?.access_token,
     )
   },

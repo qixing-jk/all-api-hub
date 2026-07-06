@@ -248,6 +248,7 @@
     "runtimeKeyScopedCatalogFallbackTitle": "通过密钥获取模型",
     "runtimeKeyScopedCatalogTitle": "正在通过 API 密钥获取模型列表",
     "unsupportedSourceDescription": "当前账号的站点类型已支持账号能力，但模型列表还没有适配。你可以提交站点支持请求，帮助我们补齐该站点的模型列表协议。",
+    "unsupportedSourceSupportRequestErrorMessage": "{{siteType}} 暂未实现模型列表",
     "unsupportedSourceTitle": "该站点类型暂未适配模型列表"
   },
   "title": "模型列表",

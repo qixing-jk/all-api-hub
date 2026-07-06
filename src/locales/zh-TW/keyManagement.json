@@ -2,7 +2,8 @@
   "accountSummary": {
     "keys_other": "{{count}} 個金鑰",
     "loadFailed": "載入失敗",
-    "title": "帳號概覽"
+    "title": "帳號概覽",
+    "unsupported": "不支援"
   },
   "actions": {
     "collapseAll": "全部摺疊",
@@ -391,6 +392,7 @@
   "unsupportedSource": {
     "description": "目前帳號的站點類型已支援儲存帳號，但擴充功能尚未適配此站點的金鑰列表協議。你可以提交站點支援請求，協助我們補齊金鑰管理能力。",
     "requestSiteSupport": "回報站點支援",
+    "supportRequestErrorMessage": "{{siteType}} 尚未實作金鑰管理",
     "title": "此站點類型尚未支援金鑰管理"
   }
 }

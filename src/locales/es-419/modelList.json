@@ -262,6 +262,7 @@
     "runtimeKeyScopedCatalogFallbackTitle": "Obtener modelos mediante una clave",
     "runtimeKeyScopedCatalogTitle": "Obteniendo la lista de modelos mediante una clave de API",
     "unsupportedSourceDescription": "El tipo de sitio de esta cuenta se puede administrar, pero su protocolo de lista de modelos aún no se ha adaptado. Envía una solicitud de soporte del sitio para ayudarnos a agregar esta ruta de lista de modelos.",
+    "unsupportedSourceSupportRequestErrorMessage": "La lista de modelos no está implementada para {{siteType}}",
     "unsupportedSourceTitle": "La lista de modelos aún no es compatible con este tipo de sitio"
   },
   "title": "Lista de modelos",

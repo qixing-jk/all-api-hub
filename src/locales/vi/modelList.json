@@ -248,6 +248,7 @@
     "runtimeKeyScopedCatalogFallbackTitle": "Lấy mô hình qua key",
     "runtimeKeyScopedCatalogTitle": "Đang lấy danh sách mô hình qua API key",
     "unsupportedSourceDescription": "Loại trang của tài khoản này đã có thể quản lý tài khoản, nhưng giao thức danh sách mô hình chưa được thích ứng. Hãy gửi yêu cầu hỗ trợ trang để giúp chúng tôi bổ sung đường dẫn danh sách mô hình này.",
+    "unsupportedSourceSupportRequestErrorMessage": "Danh sách mô hình chưa được triển khai cho {{siteType}}",
     "unsupportedSourceTitle": "Loại trang này chưa hỗ trợ danh sách mô hình"
   },
   "title": "Danh sách mô hình",

@@ -162,4 +162,28 @@ describe("voApiV2AccountCompletion", () => {
     })
     expect(fetchVoApiV2UserInfo).not.toHaveBeenCalled()
   })
+
+  it("classifies user-info fetch failures as token-fetch completion failures", async () => {
+    vi.mocked(fetchVoApiV2UserInfo).mockRejectedValueOnce(
+      new Error("user info unavailable"),
+    )
+
+    await expect(
+      voApiV2AccountCompletion.complete(
+        {
+          url: "https://voapi.example.invalid",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "42",
+            siteType: SITE_TYPES.VO_API_V2,
+            accessToken: "dashboard-jwt",
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+    })
+  })
 })

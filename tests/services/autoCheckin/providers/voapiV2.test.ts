@@ -95,6 +95,83 @@ describe("voApiV2Provider", () => {
     ).toBe(false)
   })
 
+  it("does not run when automatic check-in is disabled", () => {
+    expect(
+      voApiV2Provider.canCheckIn({
+        ...account,
+        checkIn: {
+          enableDetection: true,
+          autoCheckInEnabled: false,
+        },
+      } as SiteAccount),
+    ).toBe(false)
+  })
+
+  it("returns a failed result for unusable VoAPI v2 accounts", async () => {
+    await expect(
+      voApiV2Provider.checkIn({
+        ...account,
+        account_info: { ...account.account_info, access_token: "" },
+      } as SiteAccount),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+    })
+  })
+
+  it("reports failure when submit succeeds but final stats are not checked in", async () => {
+    server.use(
+      http.post("https://example.invalid/api/check_in", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { amount: "0.1", bonusAmount: "0" },
+        }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: { todaySigned: false } }),
+      ),
+    )
+
+    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+    })
+  })
+
+  it("returns a provider error result when an expired JWT cannot be resynced", async () => {
+    mockResyncVoApiV2AuthToken.mockResolvedValueOnce(null)
+    server.use(
+      http.post("https://example.invalid/api/check_in", () =>
+        HttpResponse.json({
+          code: 2,
+          data: null,
+          msg: "Auth expire",
+        }),
+      ),
+    )
+
+    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+    })
+    expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
+      "https://example.invalid",
+    )
+  })
+
+  it("reports generic backend failures without dashboard JWT re-sync", async () => {
+    server.use(
+      http.post("https://example.invalid/api/check_in", () =>
+        HttpResponse.json(
+          { code: 500, data: null, msg: "Backend unavailable" },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+    })
+    expect(mockResyncVoApiV2AuthToken).not.toHaveBeenCalled()
+  })
+
   it("re-syncs an expired dashboard JWT before retrying API check-in", async () => {
     const postAuthorizations: (string | null)[] = []
     const statsAuthorizations: (string | null)[] = []

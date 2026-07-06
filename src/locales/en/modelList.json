@@ -255,6 +255,7 @@
     "runtimeKeyScopedCatalogFallbackTitle": "Fetch models through a key",
     "runtimeKeyScopedCatalogTitle": "Fetching the model list through an API key",
     "unsupportedSourceDescription": "This account's site type can be managed, but its model-list protocol has not been adapted yet. Submit a site-support request to help us add this model-list path.",
+    "unsupportedSourceSupportRequestErrorMessage": "Model list is not implemented for {{siteType}}",
     "unsupportedSourceTitle": "Model List is not supported for this site type yet"
   },
   "title": "Model List",

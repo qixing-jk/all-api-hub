@@ -2,7 +2,8 @@
   "accountSummary": {
     "keys_other": "{{count}} キー",
     "loadFailed": "読み込み失敗",
-    "title": "アカウント概要"
+    "title": "アカウント概要",
+    "unsupported": "未対応"
   },
   "actions": {
     "collapseAll": "すべて折りたたむ",
@@ -391,6 +392,7 @@
   "unsupportedSource": {
     "description": "このアカウントのサイト種別は保存できますが、拡張機能はこのサイトのキー一覧プロトコルにはまだ対応していません。サイト対応リクエストを送信すると、キー管理機能の追加に役立ちます。",
     "requestSiteSupport": "サイト対応をリクエスト",
+    "supportRequestErrorMessage": "{{siteType}} のキー管理はまだ実装されていません",
     "title": "このサイト種別のキー管理にはまだ対応していません"
   }
 }

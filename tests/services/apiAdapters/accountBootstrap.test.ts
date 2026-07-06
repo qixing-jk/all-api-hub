@@ -6,6 +6,7 @@ import { aihubmixAccountBootstrap } from "~/services/apiAdapters/aihubmix/accoun
 import { ACCOUNT_BOOTSTRAP_ROUTE_KINDS } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/accountBootstrap"
 import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
+import { voApiV2AccountBootstrap } from "~/services/apiAdapters/voapiV2/accountBootstrap"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -24,6 +25,8 @@ const {
   mockSub2ApiFetchSupportCheckIn,
   mockSub2ApiFetchUserInfo,
   mockSub2ApiGetOrCreateAccessToken,
+  mockVoApiV2FetchSupportCheckIn,
+  mockVoApiV2FetchUserInfo,
 } = vi.hoisted(() => ({
   mockAihubmixExtractDefaultExchangeRate: vi.fn(),
   mockAihubmixFetchSiteStatus: vi.fn(),
@@ -40,6 +43,8 @@ const {
   mockSub2ApiFetchSupportCheckIn: vi.fn(),
   mockSub2ApiFetchUserInfo: vi.fn(),
   mockSub2ApiGetOrCreateAccessToken: vi.fn(),
+  mockVoApiV2FetchSupportCheckIn: vi.fn(),
+  mockVoApiV2FetchUserInfo: vi.fn(),
 }))
 
 vi.mock(
@@ -72,6 +77,11 @@ vi.mock("~/services/apiService/aihubmix", () => ({
   fetchSupportCheckIn: mockAihubmixFetchSupportCheckIn,
   fetchUserInfo: mockAihubmixFetchUserInfo,
   getOrCreateAccessToken: mockAihubmixGetOrCreateAccessToken,
+}))
+
+vi.mock("~/services/apiService/voapiV2", () => ({
+  fetchSupportCheckIn: mockVoApiV2FetchSupportCheckIn,
+  fetchVoApiV2UserInfo: mockVoApiV2FetchUserInfo,
 }))
 
 const request = {
@@ -255,5 +265,58 @@ describe("account bootstrap adapters", () => {
     expect(mockAihubmixExtractDefaultExchangeRate).toHaveBeenCalledWith(
       siteStatus,
     )
+  })
+
+  it("maps VoAPI v2 bootstrap operations through the dashboard JWT account", async () => {
+    const voapiRequest = {
+      ...request,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "dashboard-jwt",
+        userId: "7",
+      },
+    }
+    mockVoApiV2FetchUserInfo.mockResolvedValueOnce({
+      id: 7,
+      username: "",
+      nickname: "VoAPI Owner",
+    })
+    mockVoApiV2FetchSupportCheckIn.mockResolvedValueOnce(true)
+
+    await expect(
+      voApiV2AccountBootstrap.fetchUserInfo(voapiRequest),
+    ).resolves.toEqual({
+      id: "7",
+      username: "VoAPI Owner",
+      access_token: "dashboard-jwt",
+    })
+    await expect(
+      voApiV2AccountBootstrap.getOrCreateAccessToken(voapiRequest),
+    ).resolves.toEqual({
+      username: "7",
+      access_token: "dashboard-jwt",
+    })
+    await expect(
+      voApiV2AccountBootstrap.fetchSiteStatus(voapiRequest),
+    ).resolves.toEqual({
+      system_name: "VoAPI",
+      checkin_enabled: true,
+    })
+    await expect(
+      voApiV2AccountBootstrap.fetchCheckInSupport(voapiRequest),
+    ).resolves.toBe(true)
+    expect(voApiV2AccountBootstrap.extractDefaultExchangeRate(null)).toBe(7.2)
+    await expect(
+      voApiV2AccountBootstrap.resolveRoutePath(
+        {
+          baseUrl: "https://voapi.example.invalid",
+          siteType: SITE_TYPES.VO_API_V2,
+        },
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Login,
+      ),
+    ).resolves.toBe("/login")
+
+    expect(mockVoApiV2FetchUserInfo).toHaveBeenCalledWith(voapiRequest)
+    expect(mockVoApiV2FetchSupportCheckIn).toHaveBeenCalledWith(voapiRequest)
   })
 })

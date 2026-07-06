@@ -68,11 +68,7 @@ export const voApiV2ContentSessionExtractor: ContentSessionExtractor = {
       pickIdentityField(user, "id") ?? pickIdentityField(jwtPayload, "userId")
     if (userId === undefined) return null
 
-    const safeUser = {
-      ...(user ?? {}),
-      access_token: undefined,
-    }
-    delete safeUser.access_token
+    const { access_token: _accessToken, ...safeUser } = user ?? {}
 
     return {
       userId,

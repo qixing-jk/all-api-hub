@@ -2,6 +2,7 @@ import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { UI_CONSTANTS } from "~/constants/ui"
 import type { AccountCompletionCapability } from "~/services/apiAdapters/contracts/accountCompletion"
 import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2"
+import { VOAPI_V2_SYSTEM_NAME } from "~/services/apiService/voapiV2/type"
 import { AuthTypeEnum } from "~/types"
 
 export const voApiV2AccountCompletion: AccountCompletionCapability = {
@@ -48,7 +49,9 @@ export const voApiV2AccountCompletion: AccountCompletionCapability = {
 
     return {
       username,
-      siteName: await helpers.fetchSiteName({ system_name: "VoAPI" }),
+      siteName: await helpers.fetchSiteName({
+        system_name: VOAPI_V2_SYSTEM_NAME,
+      }),
       accessToken,
       userId,
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,

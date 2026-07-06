@@ -35,7 +35,28 @@ describe("VoAPI v2 parsing", () => {
     ).toThrow(ApiError)
   })
 
+  it("uses message and default fallback text for business errors", () => {
+    expect(() =>
+      parseVoApiV2Envelope(
+        { code: 1, data: null, message: "Backend says no" },
+        "/api/example",
+      ),
+    ).toThrow("Backend says no")
+    expect(() =>
+      parseVoApiV2Envelope({ code: 1, data: null }, "/api/example"),
+    ).toThrow("VoAPI v2 request failed")
+  })
+
+  it("rejects invalid or empty success envelopes", () => {
+    expect(() => parseVoApiV2Envelope({}, "/api/example")).toThrow(ApiError)
+    expect(() =>
+      parseVoApiV2Envelope({ code: 0, data: null }, "/api/example"),
+    ).toThrow("Missing VoAPI v2 response data")
+  })
+
   it("classifies auth-expired business errors", () => {
+    expect.assertions(1)
+
     try {
       parseVoApiV2Envelope(
         { code: 2, data: null, msg: "Auth expire" },
@@ -47,6 +68,9 @@ describe("VoAPI v2 parsing", () => {
   })
 
   it("converts decimal amounts to internal quota points", () => {
+    expect(amountToQuota(1.25)).toBe(
+      Math.round(1.25 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR),
+    )
     expect(amountToQuota("1.25")).toBe(
       Math.round(1.25 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR),
     )

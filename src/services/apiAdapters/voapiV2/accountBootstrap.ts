@@ -6,6 +6,7 @@ import {
   fetchSupportCheckIn,
   fetchVoApiV2UserInfo,
 } from "~/services/apiService/voapiV2"
+import { VOAPI_V2_SYSTEM_NAME } from "~/services/apiService/voapiV2/type"
 
 export const voApiV2AccountBootstrap: AccountBootstrapCapability = {
   fetchUserInfo: async (request) => {
@@ -25,7 +26,7 @@ export const voApiV2AccountBootstrap: AccountBootstrapCapability = {
     access_token: request.auth.accessToken ?? "",
   }),
   fetchSiteStatus: async () => ({
-    system_name: "VoAPI",
+    system_name: VOAPI_V2_SYSTEM_NAME,
     checkin_enabled: true,
   }),
   fetchCheckInSupport: (request) => fetchSupportCheckIn(request),

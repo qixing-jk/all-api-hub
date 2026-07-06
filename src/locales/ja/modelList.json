@@ -248,6 +248,7 @@
     "runtimeKeyScopedCatalogFallbackTitle": "キーでモデルを取得",
     "runtimeKeyScopedCatalogTitle": "API キーでモデル一覧を取得しています",
     "unsupportedSourceDescription": "このアカウントのサイト種別は管理できますが、モデル一覧のプロトコルにはまだ対応していません。サイト対応リクエストを送信すると、このモデル一覧経路の追加に役立ちます。",
+    "unsupportedSourceSupportRequestErrorMessage": "{{siteType}} のモデル一覧はまだ実装されていません",
     "unsupportedSourceTitle": "このサイト種別のモデル一覧にはまだ対応していません"
   },
   "title": "モデル一覧",

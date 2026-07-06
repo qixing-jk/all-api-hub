@@ -5,6 +5,7 @@ import type { AccountData } from "~/services/accounts/accountDataModel"
 import { aihubmixAccountData } from "~/services/apiAdapters/aihubmix/accountData"
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/accountData"
 import { sub2ApiAccountData } from "~/services/apiAdapters/sub2api/accountData"
+import { voApiV2AccountData } from "~/services/apiAdapters/voapiV2/accountData"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -12,11 +13,13 @@ const {
   mockDoneHubFetchAccountData,
   mockFetchAccountData,
   mockSub2ApiFetchAccountData,
+  mockVoApiV2FetchAccountData,
 } = vi.hoisted(() => ({
   mockAihubmixFetchAccountData: vi.fn(),
   mockDoneHubFetchAccountData: vi.fn(),
   mockFetchAccountData: vi.fn(),
   mockSub2ApiFetchAccountData: vi.fn(),
+  mockVoApiV2FetchAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
@@ -37,6 +40,10 @@ vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
 
 vi.mock("~/services/apiService/aihubmix", () => ({
   fetchAccountData: mockAihubmixFetchAccountData,
+}))
+
+vi.mock("~/services/apiService/voapiV2", () => ({
+  fetchVoApiV2AccountData: mockVoApiV2FetchAccountData,
 }))
 
 const request = {
@@ -137,5 +144,16 @@ describe("apiAdapter accountData", () => {
 
     expect(mockAihubmixFetchAccountData).toHaveBeenCalledOnce()
     expect(mockAihubmixFetchAccountData).toHaveBeenCalledWith(request)
+  })
+
+  it("delegates VoAPI v2 account data without reshaping the service result", async () => {
+    mockVoApiV2FetchAccountData.mockResolvedValueOnce(accountData)
+
+    await expect(voApiV2AccountData.fetchData(request)).resolves.toBe(
+      accountData,
+    )
+
+    expect(mockVoApiV2FetchAccountData).toHaveBeenCalledOnce()
+    expect(mockVoApiV2FetchAccountData).toHaveBeenCalledWith(request)
   })
 })
