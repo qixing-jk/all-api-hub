@@ -189,19 +189,19 @@ class AutoCheckinScheduler {
       let failedCount = 0
 
       const force = params.force ?? true
-      const results = await this.processInBatches({
+      const results = await this.processInBatches<
+        string,
+        PostCheckinRefreshOutcome
+      >({
         items: uniqueAccountIds,
         batchSize: AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE,
-        processItem: async (accountId): Promise<PostCheckinRefreshOutcome> => {
-          try {
-            const result = await accountStorage.refreshAccount(accountId, force)
-            if (result?.refreshed === true) return "refreshed"
-            if (result == null) return "failed"
-            return "unchanged"
-          } catch {
-            return "failed"
-          }
+        processItem: async (accountId) => {
+          const result = await accountStorage.refreshAccount(accountId, force)
+          if (result?.refreshed === true) return "refreshed"
+          if (result == null) return "failed"
+          return "unchanged"
         },
+        onItemError: () => "failed",
       })
 
       for (const result of results) {
@@ -1022,6 +1022,7 @@ class AutoCheckinScheduler {
     items: TItem[]
     batchSize: number
     processItem: (item: TItem) => Promise<TResult>
+    onItemError?: (error: unknown, item: TItem) => TResult | Promise<TResult>
     delayBetweenBatchesMs?: number
   }): Promise<TResult[]> {
     const outcomes: TResult[] = []
@@ -1030,7 +1031,18 @@ class AutoCheckinScheduler {
 
     for (let index = 0; index < params.items.length; index += batchSize) {
       const batch = params.items.slice(index, index + batchSize)
-      const batchOutcomes = await Promise.all(batch.map(params.processItem))
+      const batchOutcomes = await Promise.all(
+        batch.map(async (item) => {
+          try {
+            return await params.processItem(item)
+          } catch (error) {
+            if (!params.onItemError) {
+              throw error
+            }
+            return params.onItemError(error, item)
+          }
+        }),
+      )
       outcomes.push(...batchOutcomes)
 
       const hasMoreBatches = index + batchSize < params.items.length
@@ -1062,6 +1074,17 @@ class AutoCheckinScheduler {
       batchSize: AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE,
       delayBetweenBatchesMs:
         AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_DELAY_MS,
+      onItemError: (error, account) => ({
+        result: {
+          accountId: account.id,
+          accountName:
+            params.accountDisplayNameById.get(account.id) ?? account.id,
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          rawMessage: getErrorMessage(error),
+          timestamp: Date.now(),
+        },
+        successful: false,
+      }),
       processItem: (account) =>
         this.runAccountCheckin(
           account,
