@@ -7,6 +7,7 @@ import {
   getAwsRuntimeBaseUrl,
   getPublicChannelConfig,
   inferAwsCredentialMode,
+  normalizeAwsBatchCredentialInput,
   resolveChannelInput,
   validateBatchCredentialEntries,
 } from "../src/channelConfig.js"
@@ -14,6 +15,7 @@ import {
 const provider = (id, channelType) => ({ id, channelType })
 
 test("builds the two New API AWS credential formats with region", () => {
+  assert.equal(getPublicChannelConfig("aws", 33).supportsModelFetch, false)
   assert.deepEqual(
     resolveChannelInput(provider("aws", 33), {
       credentialMode: "ak_sk",
@@ -135,6 +137,25 @@ test("infers each AWS batch credential mode independently", () => {
       aws_key_type: "ak_sk",
     }),
     { copied_setting: true, aws_key_type: "api_key" },
+  )
+})
+
+test("repairs wrapped and alternate-delimiter AWS batch credentials", () => {
+  assert.equal(
+    normalizeAwsBatchCredentialInput(
+      "ABSKEXAMPLELONG\nWRAPPEDVALUE\n|us-east-2",
+    ),
+    "ABSKEXAMPLELONGWRAPPEDVALUE|us-east-2",
+  )
+  assert.equal(
+    normalizeAwsBatchCredentialInput(
+      "ABSKFIRST｜us-east-2\nAKIASECOND|secret|eu-west-1",
+    ),
+    "ABSKFIRST|us-east-2\nAKIASECOND|secret|eu-west-1",
+  )
+  assert.equal(
+    normalizeAwsBatchCredentialInput("ABSKTHIRD\nus-west-2\n50"),
+    "ABSKTHIRD|us-west-2 50",
   )
 })
 

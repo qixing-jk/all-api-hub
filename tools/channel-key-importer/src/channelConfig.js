@@ -47,7 +47,7 @@ const CHANNEL_CONFIGS = Object.freeze({
         separator: "|",
         settings: { aws_key_type: "ak_sk" },
         batchHelp:
-          "批量时每条必须是 AK|SK|Region，可在末尾继续写额度，例如 AK|SK|us-east-1 50。",
+          "批量框会逐条自动识别 APIKey|Region 或 AK|SK|Region；被换行折断的长 Key 也会自动合并。",
         parts: [
           part("accessKey", "Access Key ID"),
           part("secretKey", "Secret Access Key", { secret: true }),
@@ -60,7 +60,7 @@ const CHANNEL_CONFIGS = Object.freeze({
         separator: "|",
         settings: { aws_key_type: "api_key" },
         batchHelp:
-          "批量时每条必须是 BedrockAPIKey|Region，可在末尾继续写额度。",
+          "批量框会逐条自动识别 APIKey|Region 或 AK|SK|Region；被换行折断的长 Key 也会自动合并。",
         parts: [
           part("apiKey", "Bedrock API Key", { secret: true }),
           part("region", "推理地区", { placeholder: "例如：us-east-1" }),
@@ -248,6 +248,57 @@ const normalizeModels = (value) => [
       .filter(Boolean),
   ),
 ]
+
+const AWS_REGION_PATTERN = "[a-z]{2}(?:-[a-z0-9]+)+-\\d+"
+const AWS_QUOTA_PATTERN = "(?:x|[$¥￥]?\\d+(?:\\.\\d+)?(?:u|刀|美元)?)"
+const AWS_COMPLETE_CREDENTIAL = new RegExp(
+  `^(?:[^|\\s]+\\|[^|\\s]+\\|${AWS_REGION_PATTERN}|[^|\\s]+\\|${AWS_REGION_PATTERN})(?:\\s+${AWS_QUOTA_PATTERN})?$`,
+  "i",
+)
+const AWS_REGION_LINE = new RegExp(
+  `^${AWS_REGION_PATTERN}(?:\\s+${AWS_QUOTA_PATTERN})?$`,
+  "i",
+)
+const AWS_QUOTA_LINE = new RegExp(`^${AWS_QUOTA_PATTERN}$`, "i")
+
+export function normalizeAwsBatchCredentialInput(value) {
+  const lines = String(value || "")
+    .replace(/[｜￨]/g, "|")
+    .replace(/\r/g, "")
+    .split(/\n+/)
+    .map((line) => line.trim().replace(/\s*\|\s*/g, "|"))
+    .filter(Boolean)
+  const credentials = []
+  let pending = ""
+
+  for (let line of lines) {
+    if (AWS_QUOTA_LINE.test(line) && credentials.length > 0 && !pending) {
+      credentials[credentials.length - 1] += ` ${line}`
+      continue
+    }
+    line = line.replace(
+      new RegExp(
+        `^(\\S+)\\s+(${AWS_REGION_PATTERN})(\\s+${AWS_QUOTA_PATTERN})?$`,
+        "i",
+      ),
+      "$1|$2$3",
+    )
+    if (pending) {
+      line =
+        AWS_REGION_LINE.test(line) && !pending.endsWith("|")
+          ? `${pending}|${line}`
+          : `${pending}${line.replace(/\s+/g, "")}`
+    }
+    if (AWS_COMPLETE_CREDENTIAL.test(line)) {
+      credentials.push(line)
+      pending = ""
+    } else {
+      pending = line.replace(/\s+/g, "")
+    }
+  }
+  if (pending) credentials.push(pending)
+  return credentials.join("\n")
+}
 
 export function buildAwsInferenceProfileMappings(
   models,

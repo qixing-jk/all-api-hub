@@ -473,11 +473,14 @@ function renderConfigSourceOptions() {
     }
     elements.configSource.append(templates)
   }
-  for (const [value, label] of [
-    ["fetch", "使用新 Key 从供应商获取模型（经 New API）"],
+  const modelSources = [
     ["new-api", "从 New API 获取该类型模型"],
     ["manual", "手动填写模型与配置"],
-  ]) {
+  ]
+  if (state.selectedProvider?.channelConfig?.supportsModelFetch === true) {
+    modelSources.unshift(["fetch", "使用新 Key 从供应商获取模型（经 New API）"])
+  }
+  for (const [value, label] of modelSources) {
     const option = document.createElement("option")
     option.value = value
     option.textContent = label

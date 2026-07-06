@@ -15,6 +15,7 @@ import {
   getAwsEntryChannelSettings,
   getAwsRuntimeBaseUrl,
   inferAwsCredentialMode,
+  normalizeAwsBatchCredentialInput,
   resolveChannelInput,
   validateBatchCredentialEntries,
 } from "./channelConfig.js"
@@ -444,6 +445,14 @@ async function handleApi(request, response, url, port) {
     if (!["template", "fetch", "new-api", "manual"].includes(configSource)) {
       throw new Error("请选择复制已有渠道、自动获取模型或手动填写")
     }
+    if (
+      configSource === "fetch" &&
+      provider.channelConfig.supportsModelFetch !== true
+    ) {
+      throw new Error(
+        "该渠道不能从供应商自动获取模型，请复制已有渠道、从 New API 获取或手动填写模型",
+      )
+    }
     const runtimeConfig = await getRuntimeConfig()
     const template =
       configSource === "template"
@@ -453,18 +462,22 @@ async function handleApi(request, response, url, port) {
             provider,
           )
         : null
+    const normalizedApiKey =
+      provider.id === "aws"
+        ? normalizeAwsBatchCredentialInput(body.apiKey)
+        : String(body.apiKey || "")
     const useRawCredentials = Boolean(
-      provider.channelConfig.credentialModes?.length &&
-        String(body.apiKey || "").trim(),
+      provider.channelConfig.credentialModes?.length && normalizedApiKey.trim(),
     )
     const channelInput = resolveChannelInput(provider, {
       ...body,
+      apiKey: normalizedApiKey,
       configSource,
       useRawCredentials,
     })
     let keys
     if (useRawCredentials) {
-      keys = parseBatchKeys(body.apiKey, "", {
+      keys = parseBatchKeys(normalizedApiKey, "", {
         allowInlineQuota: true,
         deduplicate: false,
       })
