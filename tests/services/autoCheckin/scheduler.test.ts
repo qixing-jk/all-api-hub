@@ -1141,9 +1141,11 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     expect(maxInFlight).toBeLessThanOrEqual(3)
 
     resolvers.splice(0).forEach((resolve) => resolve())
-    await vi.waitFor(() => {
-      expect(provider.checkIn).toHaveBeenCalledTimes(5)
-    })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(provider.checkIn).toHaveBeenCalledTimes(3)
+
+    await vi.advanceTimersByTimeAsync(250)
+    expect(provider.checkIn).toHaveBeenCalledTimes(5)
     expect(maxInFlight).toBeLessThanOrEqual(3)
 
     resolvers.splice(0).forEach((resolve) => resolve())

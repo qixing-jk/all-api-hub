@@ -151,6 +151,8 @@ const AUTO_CHECKIN_BACKGROUND_ANALYTICS_CONTEXT = {
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
 } as const
 
+type PostCheckinRefreshOutcome = "refreshed" | "unchanged" | "failed"
+
 /**
  * Scheduler service for Auto Check-in
  *
@@ -159,6 +161,9 @@ const AUTO_CHECKIN_BACKGROUND_ANALYTICS_CONTEXT = {
  * - A separate *retry* alarm retries only the accounts that failed in today's normal run.
  */
 class AutoCheckinScheduler {
+  private static readonly CHECKIN_EXECUTION_BATCH_SIZE = 3
+  private static readonly CHECKIN_EXECUTION_BATCH_DELAY_MS = 250
+
   /**
    * Post-checkin account refresh to ensure balances/quotas reflect the effect of a successful check-in.
    *
@@ -180,29 +185,30 @@ class AutoCheckinScheduler {
         return
       }
 
-      const force = params.force ?? true
-      const batchSize = 3
       let refreshedCount = 0
       let failedCount = 0
 
-      for (let i = 0; i < uniqueAccountIds.length; i += batchSize) {
-        const batch = uniqueAccountIds.slice(i, i + batchSize)
-        const results = await Promise.allSettled(
-          batch.map((accountId) =>
-            accountStorage.refreshAccount(accountId, force),
-          ),
-        )
-
-        for (const result of results) {
-          if (result.status === "fulfilled") {
-            if (result.value?.refreshed === true) {
-              refreshedCount += 1
-            } else if (result.value == null) {
-              failedCount += 1
-            }
-          } else {
-            failedCount += 1
+      const force = params.force ?? true
+      const results = await this.processInBatches({
+        items: uniqueAccountIds,
+        batchSize: AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE,
+        processItem: async (accountId): Promise<PostCheckinRefreshOutcome> => {
+          try {
+            const result = await accountStorage.refreshAccount(accountId, force)
+            if (result?.refreshed === true) return "refreshed"
+            if (result == null) return "failed"
+            return "unchanged"
+          } catch {
+            return "failed"
           }
+        },
+      })
+
+      for (const result of results) {
+        if (result === "refreshed") {
+          refreshedCount += 1
+        } else if (result === "failed") {
+          failedCount += 1
         }
       }
 
@@ -237,7 +243,6 @@ class AutoCheckinScheduler {
   private static readonly DAILY_ALARM_NAME = "autoCheckinDaily"
   private static readonly RETRY_ALARM_NAME = "autoCheckinRetry"
   private static readonly DETERMINISTIC_CATCH_UP_DELAY_MS = 60_000
-  private static readonly CHECKIN_EXECUTION_BATCH_SIZE = 3
   private isInitialized = false
 
   /**
@@ -1013,6 +1018,36 @@ class AutoCheckinScheduler {
     }
   }
 
+  private async processInBatches<TItem, TResult>(params: {
+    items: TItem[]
+    batchSize: number
+    processItem: (item: TItem) => Promise<TResult>
+    delayBetweenBatchesMs?: number
+  }): Promise<TResult[]> {
+    const outcomes: TResult[] = []
+    const batchSize = Math.max(1, Math.floor(params.batchSize))
+    const delayBetweenBatchesMs = Math.max(0, params.delayBetweenBatchesMs ?? 0)
+
+    for (let index = 0; index < params.items.length; index += batchSize) {
+      const batch = params.items.slice(index, index + batchSize)
+      const batchOutcomes = await Promise.all(batch.map(params.processItem))
+      outcomes.push(...batchOutcomes)
+
+      const hasMoreBatches = index + batchSize < params.items.length
+      if (hasMoreBatches && delayBetweenBatchesMs > 0) {
+        await this.delay(delayBetweenBatchesMs)
+      }
+    }
+
+    return outcomes
+  }
+
+  private async delay(ms: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, ms)
+    })
+  }
+
   private async runAccountCheckinsInBatches(params: {
     accounts: SiteAccount[]
     accountDisplayNameById: Map<string, string>
@@ -1022,32 +1057,17 @@ class AutoCheckinScheduler {
       successful: boolean
     }>
   > {
-    const outcomes: Array<{
-      result: CheckinAccountResult
-      successful: boolean
-    }> = []
-
-    for (
-      let index = 0;
-      index < params.accounts.length;
-      index += AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE
-    ) {
-      const batch = params.accounts.slice(
-        index,
-        index + AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE,
-      )
-      const batchOutcomes = await Promise.all(
-        batch.map((account) =>
-          this.runAccountCheckin(
-            account,
-            params.accountDisplayNameById.get(account.id) ?? account.id,
-          ),
+    return this.processInBatches({
+      items: params.accounts,
+      batchSize: AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE,
+      delayBetweenBatchesMs:
+        AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_DELAY_MS,
+      processItem: (account) =>
+        this.runAccountCheckin(
+          account,
+          params.accountDisplayNameById.get(account.id) ?? account.id,
         ),
-      )
-      outcomes.push(...batchOutcomes)
-    }
-
-    return outcomes
+    })
   }
 
   /**
