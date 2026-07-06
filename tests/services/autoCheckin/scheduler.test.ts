@@ -5263,6 +5263,18 @@ describe("autoCheckinScheduler private helpers", () => {
     expect(mockedAccountStorage.refreshAccount).not.toHaveBeenCalled()
   })
 
+  it("propagates batch item failures when no item fallback is provided", async () => {
+    await expect(
+      (autoCheckinScheduler as any).processInBatches({
+        items: ["account-1"],
+        batchSize: 3,
+        processItem: async () => {
+          throw new Error("batch item failed")
+        },
+      }),
+    ).rejects.toThrow("batch item failed")
+  })
+
   it("parses time strings and rejects invalid hour or minute values", () => {
     expect((autoCheckinScheduler as any).parseTimeToMinutes("09:30")).toBe(570)
     expect((autoCheckinScheduler as any).parseTimeToMinutes("24:00")).toBeNull()
