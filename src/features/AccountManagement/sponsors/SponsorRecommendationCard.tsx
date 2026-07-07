@@ -80,26 +80,18 @@ function getSupportBadgeVariant(
   }
 }
 
-/** Picks the compact row action without changing multi-fallback choice behavior. */
+/** Picks the compact row action, preferring plugin workflows over a plain visit. */
 function getMainActionKind(item: SponsorRecommendation): SponsorMainActionKind {
   if (item.actions.addAccount) {
     return SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount
   }
 
-  const fallbackActionKinds: SponsorMainActionKind[] = []
+  if (item.actions.apiCredentialProfileFallback) {
+    return SPONSOR_MAIN_ACTION_KINDS.ApiCredentialProfilesFallback
+  }
 
   if (item.actions.bookmarkFallback) {
-    fallbackActionKinds.push(SPONSOR_MAIN_ACTION_KINDS.BookmarkFallback)
-  }
-
-  if (item.actions.apiCredentialProfileFallback) {
-    fallbackActionKinds.push(
-      SPONSOR_MAIN_ACTION_KINDS.ApiCredentialProfilesFallback,
-    )
-  }
-
-  if (fallbackActionKinds.length === 1) {
-    return fallbackActionKinds[0]
+    return SPONSOR_MAIN_ACTION_KINDS.BookmarkFallback
   }
 
   return SPONSOR_MAIN_ACTION_KINDS.VisitProvider

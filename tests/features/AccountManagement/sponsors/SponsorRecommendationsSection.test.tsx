@@ -275,6 +275,34 @@ describe("SponsorRecommendationsSection", () => {
     )
   })
 
+  it("promotes API credential fallback over bookmark fallback when both are available", async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.fn()
+    vi.stubGlobal("open", openSpy)
+
+    renderSection([createUnsupportedSponsor()])
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /account:sponsor.actions.openApiCredentialProfilesFallback: Manual Provider/u,
+      }),
+    )
+
+    expect(onOpenApiCredentialProfiles).toHaveBeenCalledWith({
+      name: "Manual Provider",
+      baseUrl: "https://api.manual.example.invalid/v1",
+      apiKeyCreateUrl: "https://console.manual.example.invalid/keys",
+      apiKeyCreateHint: "Create a key in the example console.",
+    })
+    expect(onOpenBookmarkManager).not.toHaveBeenCalled()
+    expect(onContinueAddAccount).not.toHaveBeenCalled()
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://manual.example.invalid/register",
+      "_blank",
+      "noopener,noreferrer",
+    )
+  })
+
   it("opens the provider URL directly when unsupported sponsors have no fallback actions", async () => {
     const user = userEvent.setup()
     const openSpy = vi.fn()
@@ -576,8 +604,8 @@ describe("SponsorRecommendationsSection", () => {
       2,
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
       expect.objectContaining({
-        action_id: "open_sponsor_provider",
-        sponsor_action_kind: "visit_provider",
+        action_id: "open_sponsor_api_credentials_followup",
+        sponsor_action_kind: "api_credential_profiles_fallback",
         sponsor_support_status: "unsupported",
         sponsor_catalog_source: "remote",
         sponsor_rank: 2,
