@@ -14,38 +14,13 @@ import {
 } from "~/services/managedSites/channelMatchResolver"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import { createManagedSiteServiceStub } from "~~/tests/test-utils/managedSiteServiceFactory"
 
 const managedConfig = {
   baseUrl: "https://managed.example",
   adminToken: "managed-token",
   userId: "1",
 }
-
-const createManagedSiteServiceStub = (
-  overrides: Record<string, unknown> = {},
-) =>
-  ({
-    siteType: "new-api",
-    messagesKey: "newapi",
-    searchChannel: vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      type_counts: {},
-    }),
-    createChannel: vi.fn(),
-    updateChannel: vi.fn(),
-    deleteChannel: vi.fn(),
-    checkValidConfig: vi.fn().mockResolvedValue(true),
-    getConfig: vi.fn().mockResolvedValue(managedConfig),
-    fetchAvailableModels: vi.fn(),
-    buildChannelName: vi.fn(),
-    prepareChannelFormData: vi.fn(),
-    buildChannelPayload: vi.fn(),
-    hydrateComparableChannelKeys: vi.fn(
-      async (_config, candidates) => candidates,
-    ),
-    ...overrides,
-  }) as any
 
 describe("resolveManagedSiteChannelMatch", () => {
   it("skips candidate key hydration when a local exact match is already available", async () => {
@@ -178,6 +153,7 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("hydrates narrowed comparable candidates instead of calling provider duplicate search", async () => {
+    const requestCache = createManagedSiteChannelMatchRequestCache()
     const searchChannel = vi.fn().mockResolvedValue({
       items: [
         buildManagedSiteChannel({
@@ -205,6 +181,7 @@ describe("resolveManagedSiteChannelMatch", () => {
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
       key: "sk-match",
+      requestCache,
     })
 
     expect(searchChannel).toHaveBeenCalledTimes(1)
@@ -213,6 +190,9 @@ describe("resolveManagedSiteChannelMatch", () => {
     ])
     expect(result.key.matched).toBe(true)
     expect(result.models.matched).toBe(true)
+    expect(requestCache.resolvedChannelKeysById).toEqual({
+      7: "sk-match",
+    })
   })
 
   it("marks key comparison unavailable when candidate key hydration requires verification", async () => {

@@ -233,4 +233,47 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
       },
     })
   })
+
+  it("marks a recoverable row ready when verified key removes the only warning", () => {
+    const item = buildRecoverablePreviewItem({
+      assessment: {
+        searchBaseUrl: "https://api.example.invalid",
+        searchCompleted: true,
+        url: {
+          matched: false,
+          candidateCount: 0,
+        },
+        key: {
+          comparable: false,
+          matched: false,
+          reason: "comparison-unavailable",
+        },
+        models: {
+          comparable: true,
+          matched: false,
+          reason: "no-match",
+        },
+      },
+    })
+
+    expect(
+      applyResolvedChannelKeyToPreviewItem({
+        item,
+        candidate,
+        resolvedKey: "test-other-key",
+        siteType: SITE_TYPES.NEW_API,
+      }),
+    ).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
+      warningCodes: [],
+      matchedChannel: undefined,
+      verificationCandidate: undefined,
+      assessment: {
+        key: {
+          comparable: true,
+          matched: false,
+        },
+      },
+    })
+  })
 })

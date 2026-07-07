@@ -29,20 +29,26 @@ import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   mockExecuteBatchExport,
+  mockCloseNewApiManagedVerification,
   mockLoadNewApiChannelKeyWithVerification,
   mockOpenNewApiManagedVerification,
   mockPreparePreview,
   mockTrackProductAnalyticsActionCompleted,
   mockTrackProductAnalyticsActionStarted,
   mockToastSuccess,
+  mockVerificationDialogState,
 } = vi.hoisted(() => ({
   mockExecuteBatchExport: vi.fn(),
+  mockCloseNewApiManagedVerification: vi.fn(),
   mockLoadNewApiChannelKeyWithVerification: vi.fn(),
   mockOpenNewApiManagedVerification: vi.fn(),
   mockPreparePreview: vi.fn(),
   mockTrackProductAnalyticsActionCompleted: vi.fn(),
   mockTrackProductAnalyticsActionStarted: vi.fn(),
   mockToastSuccess: vi.fn(),
+  mockVerificationDialogState: {
+    isOpen: false,
+  },
 }))
 
 vi.mock("~/services/managedSites/tokenBatchExport", () => ({
@@ -70,14 +76,14 @@ vi.mock(
       ...actual,
       useNewApiManagedVerification: () => ({
         dialogState: {
-          isOpen: false,
+          isOpen: mockVerificationDialogState.isOpen,
           step: actual.NEW_API_MANAGED_VERIFICATION_STEPS.LOGGING_IN,
           request: null,
           code: "",
           isBusy: false,
         },
         setCode: vi.fn(),
-        closeDialog: vi.fn(),
+        closeDialog: mockCloseNewApiManagedVerification,
         openBaseUrl: vi.fn(),
         openNewApiManagedVerification: mockOpenNewApiManagedVerification,
         submitCode: vi.fn(),
@@ -140,11 +146,22 @@ vi.mock("~/components/ui", async (importOriginal) => {
       disabled?: boolean
       onClick?: () => void
       type?: "button" | "submit" | "reset"
-    }) => (
-      <button type={type} disabled={disabled} onClick={onClick}>
-        {children}
-      </button>
-    ),
+    }) => {
+      const isVerificationButton =
+        children ===
+          "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh" ||
+        children === "keyManagement:batchManagedSiteExport.actions.verifying"
+
+      return (
+        <button
+          type={type}
+          disabled={isVerificationButton ? false : disabled}
+          onClick={onClick}
+        >
+          {children}
+        </button>
+      )
+    },
     Checkbox: ({
       checked,
       disabled,
@@ -465,8 +482,10 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockExecuteBatchExport.mockReset()
+    mockCloseNewApiManagedVerification.mockReset()
     mockLoadNewApiChannelKeyWithVerification.mockReset()
     mockPreparePreview.mockReset()
+    mockVerificationDialogState.isOpen = false
     mockLoadNewApiChannelKeyWithVerification.mockImplementation(
       async (params) => {
         await Promise.resolve(params.onLoaded?.())
@@ -843,6 +862,139 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     })
     expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledTimes(2)
     expect(mockPreparePreview).toHaveBeenCalledTimes(1)
+  })
+
+  it("closes an open verification dialog before closing the batch dialog", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    mockVerificationDialogState.isOpen = true
+    mockPreparePreview.mockResolvedValue(preview)
+
+    renderDialog({ onClose })
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "common:actions.cancel",
+      }),
+    )
+
+    expect(mockCloseNewApiManagedVerification).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows a verification error when channel key loading fails", async () => {
+    const user = userEvent.setup()
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 1,
+      readyCount: 0,
+      warningCount: 1,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+      ],
+    }
+    mockPreparePreview.mockResolvedValueOnce(recoverablePreview)
+    mockLoadNewApiChannelKeyWithVerification.mockRejectedValue(
+      new Error("verification failed"),
+    )
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.messages.executionFailed",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("ignores verify clicks while the verification dialog is already open", async () => {
+    const user = userEvent.setup()
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 1,
+      readyCount: 0,
+      warningCount: 1,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+      ],
+    }
+    mockVerificationDialogState.isOpen = true
+    mockPreparePreview.mockResolvedValueOnce(recoverablePreview)
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
+
+    expect(mockLoadNewApiChannelKeyWithVerification).not.toHaveBeenCalled()
+  })
+
+  it("shows a fallback verification error when a verification target cannot be read", async () => {
+    const user = userEvent.setup()
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 1,
+      readyCount: 0,
+      warningCount: 1,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+      ],
+    }
+    mockPreparePreview.mockResolvedValueOnce(recoverablePreview)
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    const originalItemId = recoverablePreview.items[0].id
+    Object.defineProperty(recoverablePreview.items[0], "id", {
+      configurable: true,
+      get: () => {
+        const stack = new Error().stack ?? ""
+        if (stack.includes("verifyTargetsFromIndex")) {
+          throw new Error("target unavailable")
+        }
+        return originalItemId
+      },
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.messages.executionFailed",
+      ),
+    ).toBeInTheDocument()
   })
 
   it("tracks analytics only around confirmed batch export execution success", async () => {

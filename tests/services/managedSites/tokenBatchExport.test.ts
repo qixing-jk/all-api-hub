@@ -868,6 +868,58 @@ describe("managed-site token batch export", () => {
     }
   })
 
+  it("does not expose New API verification candidates for other managed-site types", async () => {
+    const service = buildService({
+      siteType: SITE_TYPES.DONE_HUB,
+      messagesKey: "donehub",
+    })
+    mockGetManagedSiteService.mockResolvedValue(service)
+    mockResolveManagedSiteChannelMatch.mockResolvedValue(
+      buildMatchInspection({
+        searchCompleted: true,
+        url: {
+          matched: true,
+          channel: buildManagedSiteChannel({
+            id: 78,
+            name: "DoneHub Channel",
+          }),
+          candidateCount: 1,
+        },
+        key: {
+          comparable: false,
+          matched: false,
+          reason: "comparison-unavailable",
+          channel: null,
+        },
+        models: {
+          comparable: true,
+          matched: true,
+          reason: "exact",
+          channel: buildManagedSiteChannel({
+            id: 78,
+            name: "DoneHub Channel",
+          }),
+        },
+      }),
+    )
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [buildAccountTokenInput()],
+    })
+
+    expect(preview.items[0]).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      warningCodes: [
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
+      ],
+    })
+    expect(preview.items[0].verificationCandidate).toBeUndefined()
+  })
+
   it("skips exact duplicates when preview can resolve a hidden managed-site channel key", async () => {
     vi.resetModules()
     vi.doUnmock("~/services/managedSites/channelMatchResolver")

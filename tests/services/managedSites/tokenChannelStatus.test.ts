@@ -19,6 +19,7 @@ import {
   buildDisplaySiteData,
   buildManagedSiteChannel,
 } from "~~/tests/test-utils/factories"
+import { createManagedSiteServiceStub } from "~~/tests/test-utils/managedSiteServiceFactory"
 
 const buildExpectedAssessment = (overrides: Record<string, unknown> = {}) => ({
   searchBaseUrl: "https://api.example.com",
@@ -98,46 +99,6 @@ vi.mock(
     }
   },
 )
-
-const createManagedSiteServiceStub = (
-  overrides: Record<string, unknown> = {},
-) =>
-  ({
-    siteType: "new-api",
-    messagesKey: "newapi",
-    searchChannel: vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      type_counts: {},
-    }),
-    createChannel: vi.fn(),
-    updateChannel: vi.fn(),
-    deleteChannel: vi.fn(),
-    checkValidConfig: vi.fn().mockResolvedValue(true),
-    getConfig: vi.fn().mockResolvedValue({
-      baseUrl: "https://managed.example",
-      adminToken: "managed-admin-token",
-      userId: "1",
-    }),
-    fetchAvailableModels: vi.fn(),
-    buildChannelName: vi.fn(),
-    prepareChannelFormData: vi.fn().mockResolvedValue({
-      name: "Managed Channel",
-      type: 1,
-      key: "test-token-key",
-      base_url: "https://api.example.com",
-      models: ["gpt-4o"],
-      groups: ["default"],
-      priority: 0,
-      weight: 0,
-      status: 1,
-    }),
-    buildChannelPayload: vi.fn(),
-    hydrateComparableChannelKeys: vi.fn(
-      async (_config, candidates) => candidates,
-    ),
-    ...overrides,
-  }) as any
 
 const buildRecoverableVerificationUnavailableStatus = (
   overrides: Record<string, unknown> = {},

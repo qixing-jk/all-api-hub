@@ -183,7 +183,7 @@ const pickBetterCandidate = (
 }
 
 const toManagedSiteChannelModelsMatchReason = (
-  reason: ManagedSiteChannelMatchResult["reason"],
+  reason: RankedManagedSiteChannelMatchReason,
 ) => {
   switch (reason) {
     case MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_MODELS_EXACT:
@@ -192,8 +192,6 @@ const toManagedSiteChannelModelsMatchReason = (
       return MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED
     case MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_MODELS_SIMILAR:
       return MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR
-    default:
-      return MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH
   }
 }
 
@@ -460,7 +458,9 @@ export function inspectManagedSiteChannelModelsMatch(
   return {
     comparable: true,
     matched: true,
-    reason: toManagedSiteChannelModelsMatchReason(bestMatch.reason),
+    reason: toManagedSiteChannelModelsMatchReason(
+      bestMatch.reason as RankedManagedSiteChannelMatchReason,
+    ),
     channel: bestMatch.channel,
     similarityScore: bestMatch.similarityScore,
   }

@@ -2941,6 +2941,106 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
+  it("skips managed-site confirmation when the selected managed site does not support status lookup", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "unsupported-confirm-acc",
+    })
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: "Veloera",
+      newApiBaseUrl: "",
+      newApiAdminToken: "",
+      newApiUserId: "",
+      newApiUsername: "",
+      newApiPassword: "",
+      newApiTotpSecret: "",
+      doneHubBaseUrl: "",
+      doneHubAdminToken: "",
+      doneHubUserId: "",
+      veloeraBaseUrl: "https://veloera.example",
+      veloeraAdminToken: "veloera-admin-token",
+      veloeraUserId: "1",
+      octopusBaseUrl: "",
+      octopusUsername: "",
+      octopusPassword: "",
+    })
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    const resolveTokenKey = vi.fn()
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        resolveTokenKey,
+      }) as any,
+    )
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    await act(async () => {
+      await result.current.confirmManagedSiteTokenStatusWithChannelKey(
+        createToken({
+          accountId: account.id,
+          id: 610,
+        }),
+        {
+          status: managedSiteTokenChannelStatuses.UNKNOWN,
+        } as any,
+        {
+          channelId: 90,
+          channelKey: "verified-channel-key",
+        },
+      )
+    })
+
+    expect(resolveTokenKey).not.toHaveBeenCalled()
+    expect(
+      resolveManagedSiteTokenChannelStatusWithVerifiedKeyMock,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("skips managed-site confirmation before the token inventory has loaded", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "unloaded-confirm-acc",
+    })
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    const resolveTokenKey = vi.fn()
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        resolveTokenKey,
+      }) as any,
+    )
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    await act(async () => {
+      await result.current.confirmManagedSiteTokenStatusWithChannelKey(
+        createToken({
+          accountId: account.id,
+          id: 611,
+        }),
+        {
+          status: managedSiteTokenChannelStatuses.UNKNOWN,
+        } as any,
+        {
+          channelId: 91,
+          channelKey: "verified-channel-key",
+        },
+      )
+    })
+
+    expect(resolveTokenKey).not.toHaveBeenCalled()
+    expect(
+      resolveManagedSiteTokenChannelStatusWithVerifiedKeyMock,
+    ).not.toHaveBeenCalled()
+  })
+
   it("rejects managed-site confirmation when token secret resolution fails", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({
