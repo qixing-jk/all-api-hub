@@ -1,9 +1,27 @@
 import {
   SPONSOR_SUPPORT_STATUS,
   SPONSOR_VISIBILITY_BROWSER_FAMILIES,
+  type RawSponsorCatalogItem,
+  type RawSponsorLocaleCampaign,
 } from "./types"
 
 type StringEnum = Record<string, string>
+type RawSponsorCampaignLinks = RawSponsorLocaleCampaign["links"]
+type RawSponsorCampaignVisibility = NonNullable<
+  RawSponsorLocaleCampaign["visibility"]
+>
+type RawSponsorCampaignActions = NonNullable<
+  RawSponsorLocaleCampaign["actions"]
+>
+type RawSponsorAddAccountAction = NonNullable<
+  RawSponsorCampaignActions["addAccount"]
+>
+type RawSponsorBookmarkFallbackAction = NonNullable<
+  RawSponsorCampaignActions["bookmarkFallback"]
+>
+type RawSponsorApiCredentialProfileFallbackAction = NonNullable<
+  RawSponsorCampaignActions["apiCredentialProfileFallback"]
+>
 
 /** Builds a reusable lookup set from a string enum-like constant object. */
 function createValueSet(values: StringEnum): ReadonlySet<string> {
@@ -13,7 +31,7 @@ function createValueSet(values: StringEnum): ReadonlySet<string> {
 const SPONSOR_CATALOG_ITEM_FIELD = {
   Id: "id",
   Locales: "locales",
-} as const
+} as const satisfies Record<string, keyof RawSponsorCatalogItem>
 
 const SPONSOR_LOCALE_CAMPAIGN_FIELD = {
   Enabled: "enabled",
@@ -27,38 +45,41 @@ const SPONSOR_LOCALE_CAMPAIGN_FIELD = {
   Links: "links",
   Actions: "actions",
   Visibility: "visibility",
-} as const
+} as const satisfies Record<string, keyof RawSponsorLocaleCampaign>
 
 const SPONSOR_CAMPAIGN_LINK_FIELD = {
   Primary: "primary",
-} as const
+} as const satisfies Record<string, keyof RawSponsorCampaignLinks>
 
 const SPONSOR_CAMPAIGN_VISIBILITY_FIELD = {
   ExtensionVersions: "extensionVersions",
   ExcludedBrowserFamilies: "excludedBrowserFamilies",
-} as const
+} as const satisfies Record<string, keyof RawSponsorCampaignVisibility>
 
 const SPONSOR_CAMPAIGN_ACTION_FIELD = {
   AddAccount: "addAccount",
   BookmarkFallback: "bookmarkFallback",
   ApiCredentialProfileFallback: "apiCredentialProfileFallback",
-} as const
+} as const satisfies Record<string, keyof RawSponsorCampaignActions>
 
 const SPONSOR_ADD_ACCOUNT_ACTION_FIELD = {
   SiteType: "siteType",
   SiteUrl: "siteUrl",
   AuthType: "authType",
-} as const
+} as const satisfies Record<string, keyof RawSponsorAddAccountAction>
 
 const SPONSOR_BOOKMARK_FALLBACK_ACTION_FIELD = {
   Url: "url",
-} as const
+} as const satisfies Record<string, keyof RawSponsorBookmarkFallbackAction>
 
 const SPONSOR_API_CREDENTIAL_PROFILE_FALLBACK_ACTION_FIELD = {
   BaseUrl: "baseUrl",
   ApiKeyCreateUrl: "apiKeyCreateUrl",
   ApiKeyCreateHint: "apiKeyCreateHint",
-} as const
+} as const satisfies Record<
+  string,
+  keyof RawSponsorApiCredentialProfileFallbackAction
+>
 
 export const SPONSOR_CATALOG_ITEM_FIELDS = createValueSet(
   SPONSOR_CATALOG_ITEM_FIELD,

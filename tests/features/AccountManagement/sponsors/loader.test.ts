@@ -86,6 +86,28 @@ const sponsorLoaderFixtures = vi.hoisted(() => ({
                 },
               },
             },
+            en: {
+              enabled: true,
+              rank: 9000,
+              supportStatus: "supported",
+              name: "[DEV] Direct add",
+              tagline: "Tests account prefill visibility defaults.",
+              visibility: {
+                extensionVersions: ">=3.51.0",
+                excludedBrowserFamilies: ["firefox"],
+              },
+              links: {
+                primary:
+                  "https://dev-supported.example.test/register?utm_source=all-api-hub",
+              },
+              actions: {
+                addAccount: {
+                  siteType: "new-api",
+                  siteUrl: "https://dev-supported.example.test",
+                  authType: "cookie",
+                },
+              },
+            },
           },
         },
         {
@@ -321,6 +343,25 @@ describe("sponsor recommendation loader", () => {
         },
       },
     })
+  })
+
+  it("uses runtime visibility defaults when merging development examples", async () => {
+    vi.stubEnv("MODE", "development")
+    vi.stubGlobal("fetch", vi.fn())
+    vi.mocked(
+      sponsorCatalogStorage.getCachedVersionedCatalog,
+    ).mockResolvedValue({
+      schemaVersion: 5,
+      sourceUrl: SPONSOR_REMOTE_CATALOG_V5_URL,
+      fetchedAt: now,
+      payload: createV5Catalog("cached-v5"),
+    })
+
+    const result = await loadSponsorRecommendations({ locale: "en", now })
+
+    expect(result.items.map((item) => item.id)).toContain(
+      "dev-supported-direct",
+    )
   })
 
   it("refreshes and caches valid remote V5 recommendations", async () => {

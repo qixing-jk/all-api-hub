@@ -13,10 +13,7 @@ import {
   SPONSOR_API_CREDENTIAL_PROFILE_FALLBACK_ACTION_FIELDS,
   SPONSOR_BOOKMARK_FALLBACK_ACTION_FIELDS,
 } from "./catalogSchema"
-import {
-  trimOptionalNonEmptyString,
-  validateObjectKeys,
-} from "./catalogValidation"
+import { trimNonEmptyString, validateObjectKeys } from "./catalogValidation"
 import type { SponsorRecommendationActions } from "./types"
 
 /** Validates the shape of every known action object. */
@@ -140,7 +137,7 @@ function normalizeApiCredentialProfileFallbackAction(
     return false
   }
 
-  const apiKeyCreateHint = trimOptionalNonEmptyString(value.apiKeyCreateHint)
+  const apiKeyCreateHint = trimNonEmptyString(value.apiKeyCreateHint)
 
   return {
     baseUrl: value.baseUrl.trim(),

@@ -35,13 +35,8 @@ export function getUnknownKeys(
   return Object.keys(value).filter((key) => !allowedKeys.has(key))
 }
 
-/** Trims a required non-empty string field. */
-export function trimRequiredString(value: unknown): string | undefined {
-  return trimToNull(value) ?? undefined
-}
-
-/** Trims optional display copy and omits blanks or malformed values. */
-export function trimOptionalNonEmptyString(value: unknown): string | undefined {
+/** Trims display copy and omits blanks or malformed values. */
+export function trimNonEmptyString(value: unknown): string | undefined {
   return trimToNull(value) ?? undefined
 }
 

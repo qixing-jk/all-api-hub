@@ -43,7 +43,7 @@ function mergeDevelopmentSponsorRecommendations(
     return items
   }
 
-  const normalized = normalizeSponsorCatalog(developmentCatalog, {
+  const normalized = normalizeCatalog(developmentCatalog, {
     ...options,
     source: SPONSOR_CATALOG_SOURCES.Bundled,
   })

@@ -14,8 +14,7 @@ import {
   getUnknownKeys,
   isActiveInDateRange,
   isValidSponsorId,
-  trimOptionalNonEmptyString,
-  trimRequiredString,
+  trimNonEmptyString,
   validateObjectKeys,
 } from "./catalogValidation"
 import {
@@ -367,8 +366,8 @@ function normalizeLocaleCampaign(
     }
   }
 
-  const name = trimRequiredString(campaign.name)
-  const tagline = trimRequiredString(campaign.tagline)
+  const name = trimNonEmptyString(campaign.name)
+  const tagline = trimNonEmptyString(campaign.tagline)
 
   if (!name || !tagline) {
     return {
@@ -392,7 +391,7 @@ function normalizeLocaleCampaign(
     }
   }
 
-  const postClickNote = trimOptionalNonEmptyString(campaign.postClickNote)
+  const postClickNote = trimNonEmptyString(campaign.postClickNote)
 
   return {
     recommendation: {

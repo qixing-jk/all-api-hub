@@ -22,6 +22,18 @@ export const SPONSOR_CAMPAIGN_VISIBILITY_STATES = {
 type SponsorCampaignVisibilityState =
   (typeof SPONSOR_CAMPAIGN_VISIBILITY_STATES)[keyof typeof SPONSOR_CAMPAIGN_VISIBILITY_STATES]
 
+/** Normalizes a runtime browser family before visibility evaluation. */
+function normalizeBrowserFamily(
+  value: SponsorVisibilityContext["browserFamily"],
+): SponsorVisibilityBrowserFamily | undefined {
+  const normalized = value?.trim().toLowerCase()
+  if (!normalized) return undefined
+  if (!SPONSOR_VISIBILITY_BROWSER_FAMILY_VALUES.has(normalized)) {
+    return undefined
+  }
+  return normalized as SponsorVisibilityBrowserFamily
+}
+
 /** Validates the optional V5 campaign visibility object shape. */
 export function validateVisibilityShape(
   itemId: string,
@@ -98,11 +110,8 @@ export function getCampaignVisibilityState(
       return SPONSOR_CAMPAIGN_VISIBILITY_STATES.Invalid
     }
 
-    const browserFamily = context.browserFamily?.trim()
+    const browserFamily = normalizeBrowserFamily(context.browserFamily)
     if (!browserFamily) return SPONSOR_CAMPAIGN_VISIBILITY_STATES.Hidden
-    if (!SPONSOR_VISIBILITY_BROWSER_FAMILY_VALUES.has(browserFamily)) {
-      return SPONSOR_CAMPAIGN_VISIBILITY_STATES.Invalid
-    }
     if (excludedBrowserFamilies.includes(browserFamily)) {
       return SPONSOR_CAMPAIGN_VISIBILITY_STATES.Hidden
     }
