@@ -1,9 +1,10 @@
 import type { TFunction } from "i18next"
 import { Loader2, RefreshCcw, SendToBack } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { ManagedSiteChannelAssessmentSignalsRow } from "~/components/ManagedSiteChannelAssessmentSignals"
 import {
   Badge,
   Button,
@@ -12,6 +13,13 @@ import {
   DestructiveConfirmDialog,
   Modal,
 } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
+import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
+import {
+  NEW_API_MANAGED_VERIFICATION_CLOSE_MODES,
+  useNewApiManagedVerification,
+} from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import {
   executeManagedSiteTokenBatchExport,
   prepareManagedSiteTokenBatchExportPreview,
@@ -31,6 +39,7 @@ import {
 import type {
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportItemInput,
+  ManagedSiteTokenBatchExportMatchedChannel,
   ManagedSiteTokenBatchExportPreview,
   ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
@@ -42,6 +51,17 @@ import {
 } from "~/types/managedSiteTokenBatchExport"
 import { getErrorMessage } from "~/utils/core/error"
 
+import {
+  applyResolvedChannelKeyToPreviewItem,
+  canEditItemModels,
+  countPreviewItems,
+  getPreviewItemVerificationCandidate,
+  getPreviewVerificationTargets,
+  normalizeModels,
+  shouldSelectPreviewItemByDefault,
+  toModelOptions,
+} from "./managedSiteTokenBatchExportPreview"
+
 interface ManagedSiteTokenBatchExportDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -49,49 +69,8 @@ interface ManagedSiteTokenBatchExportDialogProps {
   onCompleted?: (result: ManagedSiteTokenBatchExportExecutionResult) => void
 }
 
-const canEditItemModels = (item: ManagedSiteTokenBatchExportPreviewItem) =>
-  isExecutablePreviewItem(item) ||
-  (Boolean(item.draft) &&
-    item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED &&
-    item.blockingReasonCode ===
-      MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED)
-
 const formatValues = (items: string[] | undefined) =>
   items && items.length > 0 ? items.join(", ") : "-"
-
-const toModelOptions = (models: string[]) =>
-  models.map((model) => ({ label: model, value: model }))
-
-const normalizeModels = (models: string[]) =>
-  Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)))
-
-const countPreviewItems = (items: ManagedSiteTokenBatchExportPreviewItem[]) =>
-  items.reduce(
-    (accumulator, item) => {
-      switch (item.status) {
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY:
-          accumulator.readyCount += 1
-          break
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING:
-          accumulator.warningCount += 1
-          break
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED:
-          accumulator.skippedCount += 1
-          break
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED:
-          accumulator.blockedCount += 1
-          break
-      }
-
-      return accumulator
-    },
-    {
-      readyCount: 0,
-      warningCount: 0,
-      skippedCount: 0,
-      blockedCount: 0,
-    },
-  )
 
 const getWarningText = (t: TFunction, code: string) => {
   switch (code) {
@@ -218,6 +197,14 @@ export function ManagedSiteTokenBatchExportDialog({
     "common",
     "channelDialog",
   ])
+  const {
+    newApiBaseUrl,
+    newApiUserId,
+    newApiUsername,
+    newApiPassword,
+    newApiTotpSecret,
+  } = useUserPreferencesContext()
+  const verification = useNewApiManagedVerification()
   const [preview, setPreview] =
     useState<ManagedSiteTokenBatchExportPreview | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -229,6 +216,10 @@ export function ManagedSiteTokenBatchExportDialog({
   const [executionResult, setExecutionResult] =
     useState<ManagedSiteTokenBatchExportExecutionResult | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [verifyingItemId, setVerifyingItemId] = useState<string | null>(null)
+  const resolvedChannelKeysByItemIdRef = useRef<
+    Record<string, Record<number, string>>
+  >({})
 
   useEffect(() => {
     if (!isOpen) {
@@ -241,6 +232,8 @@ export function ManagedSiteTokenBatchExportDialog({
       setIsRunning(false)
       setExecutionResult(null)
       setRefreshKey(0)
+      setVerifyingItemId(null)
+      resolvedChannelKeysByItemIdRef.current = {}
       return
     }
 
@@ -256,13 +249,14 @@ export function ManagedSiteTokenBatchExportDialog({
       try {
         const nextPreview = await prepareManagedSiteTokenBatchExportPreview({
           items,
+          resolvedChannelKeysByItemId: resolvedChannelKeysByItemIdRef.current,
         })
         if (cancelled) return
         setPreview(nextPreview)
         setSelectedIds(
           new Set(
             nextPreview.items
-              .filter(isExecutablePreviewItem)
+              .filter(shouldSelectPreviewItemByDefault)
               .map((item) => item.id),
           ),
         )
@@ -314,6 +308,9 @@ export function ManagedSiteTokenBatchExportDialog({
 
   const handleClose = () => {
     if (isRunning) return
+    if (verification.dialogState.isOpen) {
+      verification.closeDialog()
+    }
     onClose()
   }
 
@@ -321,6 +318,175 @@ export function ManagedSiteTokenBatchExportDialog({
     if (isLoadingPreview || isRunning) return
     setExecutionError(null)
     setRefreshKey((value) => value + 1)
+  }
+
+  const mergeResolvedChannelKeyForItem = (
+    itemId: string,
+    channelId: number,
+    key: string,
+  ) => {
+    resolvedChannelKeysByItemIdRef.current = {
+      ...resolvedChannelKeysByItemIdRef.current,
+      [itemId]: {
+        ...(resolvedChannelKeysByItemIdRef.current[itemId] ?? {}),
+        [channelId]: key,
+      },
+    }
+  }
+
+  const applyResolvedChannelKeyForItem = (
+    item: ManagedSiteTokenBatchExportPreviewItem,
+    candidate: ManagedSiteTokenBatchExportMatchedChannel,
+    resolvedKey: string,
+  ) => {
+    setPreview((currentPreview) => {
+      if (!currentPreview) return currentPreview
+
+      const nextItems = currentPreview.items.map((previewItem) =>
+        previewItem.id === item.id
+          ? applyResolvedChannelKeyToPreviewItem({
+              item: previewItem,
+              candidate,
+              resolvedKey,
+              siteType: currentPreview.siteType,
+            })
+          : previewItem,
+      )
+
+      return {
+        ...currentPreview,
+        items: nextItems,
+        ...countPreviewItems(nextItems),
+      }
+    })
+    setSelectedIds((currentSelectedIds) => {
+      const nextSelectedIds = new Set(currentSelectedIds)
+      const updatedItem = applyResolvedChannelKeyToPreviewItem({
+        item,
+        candidate,
+        resolvedKey,
+        siteType: preview?.siteType,
+      })
+
+      if (
+        updatedItem.status ===
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED
+      ) {
+        nextSelectedIds.delete(item.id)
+      }
+
+      return nextSelectedIds
+    })
+  }
+
+  const handleVerifyAndRefresh = async (
+    requestedItem: ManagedSiteTokenBatchExportPreviewItem,
+    requestedCandidate: ManagedSiteTokenBatchExportMatchedChannel,
+  ) => {
+    if (
+      verifyingItemId ||
+      verification.dialogState.isOpen ||
+      isLoadingPreview ||
+      isRunning
+    ) {
+      return
+    }
+
+    const verificationTargets = preview
+      ? getPreviewVerificationTargets(preview)
+      : [{ item: requestedItem, candidate: requestedCandidate }]
+    const targets =
+      verificationTargets.length > 0
+        ? verificationTargets
+        : [{ item: requestedItem, candidate: requestedCandidate }]
+    const failureMessages: string[] = []
+
+    setExecutionError(null)
+
+    const verifyTargetsFromIndex = async (startIndex: number) => {
+      for (let index = startIndex; index < targets.length; index += 1) {
+        const { item, candidate } = targets[index]
+        let resolvedChannelKey = ""
+        let shouldContinueAfterDeferredLoad = false
+        let loadCompleted = false
+
+        setVerifyingItemId(item.id)
+
+        const handleLoaded = async () => {
+          loadCompleted = true
+          if (resolvedChannelKey) {
+            mergeResolvedChannelKeyForItem(
+              item.id,
+              candidate.id,
+              resolvedChannelKey,
+            )
+            applyResolvedChannelKeyForItem(item, candidate, resolvedChannelKey)
+          }
+          setExecutionError(null)
+          if (shouldContinueAfterDeferredLoad) {
+            await verifyTargetsFromIndex(index + 1)
+          }
+        }
+
+        try {
+          const loadedImmediately = await loadNewApiChannelKeyWithVerification({
+            channelId: candidate.id,
+            label: candidate.name,
+            requestKind: "channel",
+            config: {
+              baseUrl: newApiBaseUrl,
+              userId: newApiUserId,
+              username: newApiUsername,
+              password: newApiPassword,
+              totpSecret: newApiTotpSecret,
+            },
+            setKey: (key) => {
+              resolvedChannelKey = key
+            },
+            onLoaded: handleLoaded,
+            openVerification: (request) =>
+              verification.openNewApiManagedVerification({
+                ...request,
+                closeMode:
+                  NEW_API_MANAGED_VERIFICATION_CLOSE_MODES.CLOSE_AFTER_VERIFICATION,
+              }),
+          })
+
+          if (!loadedImmediately) {
+            if (!loadCompleted) {
+              shouldContinueAfterDeferredLoad = true
+              setVerifyingItemId(null)
+              return
+            }
+          }
+        } catch (error) {
+          failureMessages.push(getErrorMessage(error))
+        }
+      }
+
+      setVerifyingItemId(null)
+      if (failureMessages.length > 0) {
+        setExecutionError(
+          t(
+            "keyManagement:batchManagedSiteExport.messages.verificationFailed",
+            {
+              error: failureMessages.join("; "),
+            },
+          ),
+        )
+      }
+    }
+
+    try {
+      await verifyTargetsFromIndex(0)
+    } catch (error) {
+      setVerifyingItemId(null)
+      setExecutionError(
+        t("keyManagement:batchManagedSiteExport.messages.verificationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    }
   }
 
   const handleToggleAll = () => {
@@ -650,9 +816,43 @@ export function ManagedSiteTokenBatchExportDialog({
             <div className="max-h-[60vh] space-y-3 overflow-y-auto rounded-md border p-3 md:max-h-[min(70vh,48rem)]">
               {preview.items.map((item) => {
                 const badge = getStatusBadge(t, item)
+                const verificationCandidate =
+                  getPreviewItemVerificationCandidate(item, preview.siteType)
                 const result = executionResult?.items.find(
                   (resultItem) => resultItem.id === item.id,
                 )
+                const verificationButton = verificationCandidate ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    leftIcon={
+                      verifyingItemId === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCcw className="h-4 w-4" />
+                      )
+                    }
+                    disabled={
+                      isLoadingPreview ||
+                      isRunning ||
+                      Boolean(executionResult) ||
+                      verification.dialogState.isOpen ||
+                      Boolean(verifyingItemId)
+                    }
+                    onClick={() =>
+                      void handleVerifyAndRefresh(item, verificationCandidate)
+                    }
+                  >
+                    {verifyingItemId === item.id
+                      ? t(
+                          "keyManagement:batchManagedSiteExport.actions.verifying",
+                        )
+                      : t(
+                          "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+                        )}
+                  </Button>
+                ) : null
 
                 return (
                   <div
@@ -679,7 +879,7 @@ export function ManagedSiteTokenBatchExportDialog({
                           </span>
                         </span>
                       </label>
-                      <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                         {result ? (
                           <Badge
                             variant={
@@ -708,6 +908,7 @@ export function ManagedSiteTokenBatchExportDialog({
                             {badge.label}
                           </Badge>
                         )}
+                        {verificationButton}
                       </div>
                     </div>
 
@@ -782,11 +983,19 @@ export function ManagedSiteTokenBatchExportDialog({
                     ) : null}
 
                     {item.warningCodes.length > 0 ? (
-                      <ul className="list-disc space-y-1 pl-5 text-xs text-amber-700 dark:text-amber-300">
-                        {item.warningCodes.map((code) => (
-                          <li key={code}>{getWarningText(t, code)}</li>
-                        ))}
-                      </ul>
+                      <div className="space-y-2 rounded-md border border-amber-200/70 bg-amber-50/55 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">
+                        <ul className="list-disc space-y-1 pl-4 leading-5">
+                          {item.warningCodes.map((code) => (
+                            <li key={code}>{getWarningText(t, code)}</li>
+                          ))}
+                        </ul>
+                        {item.assessment ? (
+                          <ManagedSiteChannelAssessmentSignalsRow
+                            assessment={item.assessment}
+                            managedSiteType={preview.siteType}
+                          />
+                        ) : null}
+                      </div>
                     ) : null}
 
                     {item.blockingReasonCode ? (
@@ -828,6 +1037,21 @@ export function ManagedSiteTokenBatchExportDialog({
         confirmLabel={t("keyManagement:batchManagedSiteExport.actions.start")}
         cancelLabel={t("common:actions.cancel")}
         isWorking={isRunning}
+      />
+      <NewApiManagedVerificationDialog
+        isOpen={verification.dialogState.isOpen}
+        step={verification.dialogState.step}
+        request={verification.dialogState.request}
+        code={verification.dialogState.code}
+        errorMessage={verification.dialogState.errorMessage}
+        isBusy={verification.dialogState.isBusy}
+        busyMessage={verification.dialogState.busyMessage}
+        onCodeChange={verification.setCode}
+        onClose={verification.closeDialog}
+        onSubmit={verification.submitCode}
+        onRetry={verification.retryVerification}
+        onOpenSite={verification.openBaseUrl}
+        onUpdateRequestConfig={verification.patchRequestConfig}
       />
     </>
   )

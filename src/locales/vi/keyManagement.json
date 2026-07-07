@@ -60,7 +60,9 @@
       "refreshPreview": "Làm mới bản xem trước",
       "running": "Đang nhập...",
       "selectAll": "Đã chọn {{selected}}/{{total}}",
-      "start": "Bắt đầu nhập"
+      "start": "Bắt đầu nhập",
+      "verifyAndRefresh": "Xác minh và làm mới bản xem trước",
+      "verifying": "Đang xác minh..."
     },
     "blockedReasons": {
       "baseUrlRequired": "Trang web tự quản lý mục tiêu yêu cầu Base URL.",
@@ -87,7 +89,8 @@
     "messages": {
       "completed": "Nhập hàng loạt hoàn tất: thành công {{created}}, thất bại {{failed}}, bỏ qua {{skipped}}.",
       "duplicate": "Đã tồn tại kênh trùng khớp chính xác: {{channel}}",
-      "executionFailed": "Thực thi nhập hàng loạt thất bại: {{error}}"
+      "executionFailed": "Thực thi nhập hàng loạt thất bại: {{error}}",
+      "verificationFailed": "Xác minh New API thất bại: {{error}}"
     },
     "preview": {
       "loadFailed": "Tải bản xem trước thất bại: {{error}}",

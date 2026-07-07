@@ -60,7 +60,9 @@
       "refreshPreview": "重新整理預覽",
       "running": "正在匯入...",
       "selectAll": "已選 {{selected}}/{{total}}",
-      "start": "開始匯入"
+      "start": "開始匯入",
+      "verifyAndRefresh": "驗證並重新整理預覽",
+      "verifying": "正在驗證..."
     },
     "blockedReasons": {
       "baseUrlRequired": "目標自管理站點需要 Base URL。",
@@ -87,7 +89,8 @@
     "messages": {
       "completed": "批次匯入完成：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個。",
       "duplicate": "已存在精確符合渠道：{{channel}}",
-      "executionFailed": "執行批次匯入失敗：{{error}}"
+      "executionFailed": "執行批次匯入失敗：{{error}}",
+      "verificationFailed": "New API 驗證失敗：{{error}}"
     },
     "preview": {
       "loadFailed": "載入預覽失敗：{{error}}",

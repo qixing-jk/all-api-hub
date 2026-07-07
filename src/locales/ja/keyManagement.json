@@ -60,7 +60,9 @@
       "refreshPreview": "プレビューを更新",
       "running": "インポート中...",
       "selectAll": "{{selected}}/{{total}} 選択中",
-      "start": "インポート開始"
+      "start": "インポート開始",
+      "verifyAndRefresh": "検証してプレビューを更新",
+      "verifying": "検証中..."
     },
     "blockedReasons": {
       "baseUrlRequired": "対象の管理対象サイトでは Base URL が必要です。",
@@ -87,7 +89,8 @@
     "messages": {
       "completed": "一括インポート完了: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件。",
       "duplicate": "完全一致するチャネルが既に存在します: {{channel}}",
-      "executionFailed": "一括インポートの実行に失敗しました: {{error}}"
+      "executionFailed": "一括インポートの実行に失敗しました: {{error}}",
+      "verificationFailed": "New API の検証に失敗しました: {{error}}"
     },
     "preview": {
       "loadFailed": "プレビューの読み込みに失敗しました: {{error}}",

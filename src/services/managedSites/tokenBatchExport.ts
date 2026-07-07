@@ -6,7 +6,11 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
+import {
+  getManagedSiteChannelExactMatch,
+  getRecoverableManagedSiteChannelCandidate,
+  type ManagedSiteChannelMatchInspection,
+} from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
   getManagedSiteService,
@@ -14,15 +18,23 @@ import {
   type ManagedSiteConfig,
   type ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
+import {
+  createManagedSiteOperationContext,
+  type ManagedSiteOperationContext,
+} from "~/services/managedSites/operationContext"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
   collectManagedConfigSecrets,
   hasUsableManagedSiteChannelKey,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
+import {
+  toManagedSiteAssessmentChannel,
+  toManagedSiteVerifiedKeyAssessment,
+} from "~/services/managedSites/verifiedChannelKeyAssessment"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken } from "~/types"
-import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
+import type { ChannelFormData } from "~/types/managedSite"
 import {
   isExecutableManagedSiteTokenBatchExportPreviewItem,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
@@ -84,12 +96,27 @@ const getInputRuntimeKeyId = (input: ManagedSiteTokenBatchExportItemInput) =>
 const getInputRuntimeKeyName = (input: ManagedSiteTokenBatchExportItemInput) =>
   input.runtimeKey.label
 
-const toMatchedChannel = (
-  channel: ManagedSiteChannel,
-): { id: number; name: string } => ({
-  id: channel.id,
-  name: channel.name,
-})
+const getVerificationCandidate = (
+  service: ManagedSiteService,
+  resolution: ManagedSiteChannelMatchInspection,
+) => {
+  if (service.siteType !== SITE_TYPES.NEW_API) {
+    return undefined
+  }
+
+  const candidate = getRecoverableManagedSiteChannelCandidate({
+    url: {
+      channel: resolution.url.channel,
+      candidateCount: resolution.url.candidateCount,
+    },
+    models: {
+      channel: resolution.models.channel,
+      reason: resolution.models.reason,
+    },
+  })
+
+  return candidate ? toManagedSiteAssessmentChannel(candidate) : undefined
+}
 
 const buildBasePreviewItem = (
   input: ManagedSiteTokenBatchExportItemInput,
@@ -214,6 +241,8 @@ const preparePreviewItem = async (params: {
   input: ManagedSiteTokenBatchExportItemInput
   service: ManagedSiteService
   managedConfig: ManagedSiteConfig
+  resolvedChannelKeysById?: Record<number, string>
+  operationContext?: ManagedSiteOperationContext
 }): Promise<ManagedSiteTokenBatchExportPreviewItem> => {
   const { input, service, managedConfig } = params
   let secretsToRedact = collectSecrets(input, managedConfig)
@@ -247,6 +276,9 @@ const preparePreviewItem = async (params: {
     const draft = await service.prepareChannelFormData(
       channelDraftAccount,
       resolvedToken,
+      {
+        operationContext: params.operationContext,
+      },
     )
     const blockedReason = getDraftBlockedReason(service, draft)
 
@@ -290,8 +322,15 @@ const preparePreviewItem = async (params: {
       accountBaseUrl: searchBaseUrl,
       models: draft.models,
       key: draft.key,
+      resolvedChannelKeysById: params.resolvedChannelKeysById,
+      resolveHiddenKeys: true,
+      requestCache: params.operationContext?.channelMatch,
     })
     const exactMatch = getManagedSiteChannelExactMatch(resolution)
+    const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
+    const verificationCandidate = getVerificationCandidate(service, resolution)
+    const exactVerificationUnavailable =
+      isExactVerificationUnavailable(resolution)
 
     if (exactMatch) {
       return {
@@ -299,7 +338,8 @@ const preparePreviewItem = async (params: {
         draft,
         status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
         warningCodes: uniqueWarningCodes(warningCodes),
-        matchedChannel: toMatchedChannel(exactMatch),
+        matchedChannel: toManagedSiteAssessmentChannel(exactMatch),
+        assessment,
       }
     }
 
@@ -307,7 +347,7 @@ const preparePreviewItem = async (params: {
       warningCodes.push(
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.BACKEND_SEARCH_FAILED,
       )
-    } else if (isExactVerificationUnavailable(resolution)) {
+    } else if (exactVerificationUnavailable) {
       warningCodes.push(
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
       )
@@ -329,6 +369,8 @@ const preparePreviewItem = async (params: {
           ? MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING
           : MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
       warningCodes: uniqueWarningCodes(warningCodes),
+      assessment,
+      ...(verificationCandidate ? { verificationCandidate } : {}),
     }
   } catch (error) {
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
@@ -393,9 +435,11 @@ const buildPreview = (
  */
 export async function prepareManagedSiteTokenBatchExportPreview(params: {
   items: ManagedSiteTokenBatchExportItemInput[]
+  resolvedChannelKeysByItemId?: Record<string, Record<number, string>>
 }): Promise<ManagedSiteTokenBatchExportPreview> {
   const service = await getManagedSiteService()
   const managedConfig = await service.getConfig()
+  const operationContext = createManagedSiteOperationContext()
 
   if (!managedConfig) {
     return buildPreview(
@@ -417,6 +461,9 @@ export async function prepareManagedSiteTokenBatchExportPreview(params: {
         input,
         service,
         managedConfig,
+        resolvedChannelKeysById:
+          params.resolvedChannelKeysByItemId?.[getInputRuntimeKeyId(input)],
+        operationContext,
       }),
   )
 

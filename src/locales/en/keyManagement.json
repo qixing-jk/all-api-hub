@@ -63,7 +63,9 @@
       "refreshPreview": "Refresh preview",
       "running": "Importing...",
       "selectAll": "{{selected}}/{{total}} selected",
-      "start": "Start import"
+      "start": "Start import",
+      "verifyAndRefresh": "Verify and refresh preview",
+      "verifying": "Verifying..."
     },
     "blockedReasons": {
       "baseUrlRequired": "Base URL is required by the target managed site.",
@@ -90,7 +92,8 @@
     "messages": {
       "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} skipped.",
       "duplicate": "Exact match already exists: {{channel}}",
-      "executionFailed": "Failed to run batch import: {{error}}"
+      "executionFailed": "Failed to run batch import: {{error}}",
+      "verificationFailed": "New API verification failed: {{error}}"
     },
     "preview": {
       "loadFailed": "Failed to load preview: {{error}}",

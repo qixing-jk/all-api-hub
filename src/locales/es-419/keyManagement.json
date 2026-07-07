@@ -66,7 +66,9 @@
       "refreshPreview": "Actualizar vista previa",
       "running": "Importando...",
       "selectAll": "{{selected}}/{{total}} seleccionadas",
-      "start": "Iniciar importación"
+      "start": "Iniciar importación",
+      "verifyAndRefresh": "Verificar y actualizar vista previa",
+      "verifying": "Verificando..."
     },
     "blockedReasons": {
       "baseUrlRequired": "El sitio administrado de destino requiere una URL base.",
@@ -93,7 +95,8 @@
     "messages": {
       "completed": "Importación por lote completada: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos.",
       "duplicate": "Ya existe una coincidencia exacta: {{channel}}",
-      "executionFailed": "No se pudo ejecutar la importación por lote: {{error}}"
+      "executionFailed": "No se pudo ejecutar la importación por lote: {{error}}",
+      "verificationFailed": "No se pudo verificar New API: {{error}}"
     },
     "preview": {
       "loadFailed": "No se pudo cargar la vista previa: {{error}}",

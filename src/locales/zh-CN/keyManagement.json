@@ -60,7 +60,9 @@
       "refreshPreview": "刷新预览",
       "running": "正在导入...",
       "selectAll": "已选 {{selected}}/{{total}}",
-      "start": "开始导入"
+      "start": "开始导入",
+      "verifyAndRefresh": "验证并刷新预览",
+      "verifying": "正在验证..."
     },
     "blockedReasons": {
       "baseUrlRequired": "目标自管理站点要求填写 Base URL。",
@@ -87,7 +89,8 @@
     "messages": {
       "completed": "批量导入完成：成功 {{created}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个。",
       "duplicate": "已存在精确匹配渠道：{{channel}}",
-      "executionFailed": "执行批量导入失败：{{error}}"
+      "executionFailed": "执行批量导入失败：{{error}}",
+      "verificationFailed": "New API 验证失败：{{error}}"
     },
     "preview": {
       "loadFailed": "加载预览失败：{{error}}",

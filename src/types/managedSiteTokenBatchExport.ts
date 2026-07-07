@@ -1,5 +1,9 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type {
+  ManagedSiteAssessmentChannel,
+  ManagedSiteVerifiedKeyAssessment,
+} from "~/services/managedSites/verifiedChannelKeyAssessment"
 import type { DisplaySiteData } from "~/types"
 
 import type { ChannelFormData } from "./managedSite"
@@ -44,10 +48,11 @@ export type ManagedSiteTokenBatchExportItemInput = {
   runtimeKey: AccountRuntimeKey
 }
 
-export interface ManagedSiteTokenBatchExportMatchedChannel {
-  id: number
-  name: string
-}
+export type ManagedSiteTokenBatchExportMatchedChannel =
+  ManagedSiteAssessmentChannel
+
+export type ManagedSiteTokenBatchExportAssessment =
+  ManagedSiteVerifiedKeyAssessment<ManagedSiteTokenBatchExportMatchedChannel>
 
 export interface ManagedSiteTokenBatchExportPreviewItem {
   id: string
@@ -61,6 +66,8 @@ export interface ManagedSiteTokenBatchExportPreviewItem {
   blockingReasonCode?: ManagedSiteTokenBatchExportBlockedReasonCode
   blockingMessage?: string
   matchedChannel?: ManagedSiteTokenBatchExportMatchedChannel
+  verificationCandidate?: ManagedSiteTokenBatchExportMatchedChannel
+  assessment?: ManagedSiteTokenBatchExportAssessment
 }
 
 export type ExecutableManagedSiteTokenBatchExportPreviewItem =

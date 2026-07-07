@@ -41,6 +41,11 @@ vi.mock("~/services/managedSites/managedSiteService", () => ({
 }))
 
 vi.mock("~/services/managedSites/channelMatchResolver", () => ({
+  createManagedSiteChannelMatchRequestCache: () => ({
+    searchResultsByBaseUrl: new Map(),
+    channelSecretKeysById: new Map(),
+    resolvedChannelKeysById: {},
+  }),
   resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
 }))
 
@@ -136,6 +141,11 @@ const buildService = (
     ...overrides,
   }) as ManagedSiteService
 
+const expectBatchDraftOptions = () =>
+  expect.objectContaining({
+    operationContext: expect.any(Object),
+  })
+
 describe("managed-site token batch export", () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -219,6 +229,33 @@ describe("managed-site token batch export", () => {
     )
   })
 
+  it("passes previously resolved channel keys into duplicate matching", async () => {
+    const service = buildService()
+    mockGetManagedSiteService.mockResolvedValue(service)
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const input = buildAccountTokenInput()
+    await prepareManagedSiteTokenBatchExportPreview({
+      items: [input],
+      resolvedChannelKeysByItemId: {
+        [input.runtimeKey.id]: {
+          77: "resolved-channel-key",
+        },
+      },
+    })
+
+    expect(mockResolveManagedSiteChannelMatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resolvedChannelKeysById: {
+          77: "resolved-channel-key",
+        },
+      }),
+    )
+  })
+
   it("previews service credentials without resolving an account token secret", async () => {
     const service = buildService()
     mockGetManagedSiteService.mockResolvedValue(service)
@@ -264,6 +301,7 @@ describe("managed-site token batch export", () => {
         key: "sk-service-credential",
         accountId: "sharedchat-account",
       }),
+      expectBatchDraftOptions(),
     )
     expect(preview.items[0]).toMatchObject({
       id: "service_credential:sharedchat-account:codex",
@@ -306,6 +344,7 @@ describe("managed-site token batch export", () => {
         id: token.id,
         key: "token-secret",
       }),
+      expectBatchDraftOptions(),
     )
   })
 
@@ -346,6 +385,7 @@ describe("managed-site token batch export", () => {
         id: token.id,
         key: "token-secret",
       }),
+      expectBatchDraftOptions(),
     )
   })
 
@@ -393,6 +433,7 @@ describe("managed-site token batch export", () => {
         name: "Codex API Key",
         key: "sk-service-credential",
       }),
+      expectBatchDraftOptions(),
     )
   })
 
@@ -816,6 +857,154 @@ describe("managed-site token batch export", () => {
       })
     } finally {
       vi.doMock("~/services/managedSites/channelMatchResolver", () => ({
+        createManagedSiteChannelMatchRequestCache: () => ({
+          searchResultsByBaseUrl: new Map(),
+          channelSecretKeysById: new Map(),
+          resolvedChannelKeysById: {},
+        }),
+        resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
+      }))
+      vi.resetModules()
+    }
+  })
+
+  it("skips exact duplicates when preview can resolve a hidden managed-site channel key", async () => {
+    vi.resetModules()
+    vi.doUnmock("~/services/managedSites/channelMatchResolver")
+
+    try {
+      const fetchChannelSecretKey = vi.fn().mockResolvedValue("token-secret")
+      const service = buildService({
+        searchChannel: vi.fn().mockResolvedValue({
+          items: [
+            buildManagedSiteChannel({
+              id: 77,
+              key: "",
+              base_url: "https://upstream.example.com/v1",
+              models: "gpt-4o",
+            }),
+          ],
+          total: 1,
+          type_counts: {},
+        }),
+        fetchChannelSecretKey,
+      })
+      mockGetManagedSiteService.mockResolvedValue(service)
+
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/tokenBatchExport"
+      )
+
+      const preview = await prepareManagedSiteTokenBatchExportPreview({
+        items: [
+          buildAccountTokenInput(
+            buildDisplaySiteData({
+              baseUrl: "https://upstream.example.com/",
+            }),
+          ),
+        ],
+      })
+
+      expect(fetchChannelSecretKey).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://target.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        }),
+        77,
+      )
+      expect(preview.items[0]).toMatchObject({
+        status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+        matchedChannel: {
+          id: 77,
+        },
+      })
+    } finally {
+      vi.doMock("~/services/managedSites/channelMatchResolver", () => ({
+        createManagedSiteChannelMatchRequestCache: () => ({
+          searchResultsByBaseUrl: new Map(),
+          channelSecretKeysById: new Map(),
+          resolvedChannelKeysById: {},
+        }),
+        resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
+      }))
+      vi.resetModules()
+    }
+  })
+
+  it("reuses managed-site draft and duplicate-check request caches across preview items with the same base URL", async () => {
+    vi.resetModules()
+    vi.doUnmock("~/services/managedSites/channelMatchResolver")
+
+    try {
+      const searchChannel = vi.fn().mockResolvedValue({
+        items: [
+          buildManagedSiteChannel({
+            id: 77,
+            key: "sk-***",
+            base_url: "https://upstream.example.com/v1",
+            models: "gpt-4o",
+          }),
+        ],
+        total: 1,
+        type_counts: {},
+      })
+      const fetchChannelSecretKey = vi.fn().mockResolvedValue("token-secret")
+      const service = buildService({
+        searchChannel,
+        fetchChannelSecretKey,
+      })
+      mockGetManagedSiteService.mockResolvedValue(service)
+
+      const account = buildDisplaySiteData({
+        id: "account-1",
+        name: "Alpha",
+        baseUrl: "https://upstream.example.com/v1",
+      })
+      const firstToken = buildAccountToken({
+        id: 11,
+        name: "Token 11",
+        key: "token-secret",
+      })
+      const secondToken = buildAccountToken({
+        id: 12,
+        name: "Token 12",
+        key: "token-secret",
+      })
+
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/tokenBatchExport"
+      )
+
+      const preview = await prepareManagedSiteTokenBatchExportPreview({
+        items: [
+          buildAccountTokenInput(account, firstToken),
+          buildAccountTokenInput(account, secondToken),
+        ],
+      })
+
+      expect(searchChannel).toHaveBeenCalledTimes(1)
+      expect(fetchChannelSecretKey).toHaveBeenCalledTimes(1)
+      const prepareChannelFormDataMock = vi.mocked(
+        service.prepareChannelFormData,
+      )
+      const firstDraftOptions = prepareChannelFormDataMock.mock.calls[0]?.[2]
+      const secondDraftOptions = prepareChannelFormDataMock.mock.calls[1]?.[2]
+      expect(firstDraftOptions).toEqual(expectBatchDraftOptions())
+      expect(firstDraftOptions?.operationContext).toBe(
+        secondDraftOptions?.operationContext,
+      )
+      expect(preview.skippedCount).toBe(2)
+      expect(preview.items.map((item) => item.matchedChannel?.id)).toEqual([
+        77, 77,
+      ])
+    } finally {
+      vi.doMock("~/services/managedSites/channelMatchResolver", () => ({
+        createManagedSiteChannelMatchRequestCache: () => ({
+          searchResultsByBaseUrl: new Map(),
+          channelSecretKeysById: new Map(),
+          resolvedChannelKeysById: {},
+        }),
         resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
       }))
       vi.resetModules()
