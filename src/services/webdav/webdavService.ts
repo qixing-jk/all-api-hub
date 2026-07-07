@@ -178,6 +178,20 @@ function joinWebdavUrl(baseUrl: string, fileName: string) {
 }
 
 /**
+ * Encodes WebDAV URLs before they are placed in request headers.
+ *
+ * Browser header values are ByteStrings, so non-ASCII path segments such as
+ * Jianguoyun/Nutstore Chinese folder names must be percent-encoded first.
+ */
+function encodeWebdavHeaderUrl(url: string) {
+  try {
+    return new URL(url).toString()
+  } catch {
+    return encodeURI(url)
+  }
+}
+
+/**
  * Creates a compact UTC timestamp for temporary backup names.
  */
 function createTimestampForTempFile(now: number = Date.now()) {
@@ -397,7 +411,7 @@ async function moveWebdavContent(params: {
       method: "MOVE",
       headers: {
         Authorization: buildAuthHeader(params.username, params.password),
-        Destination: params.destinationUrl,
+        Destination: encodeWebdavHeaderUrl(params.destinationUrl),
         Overwrite: "T",
       },
     })

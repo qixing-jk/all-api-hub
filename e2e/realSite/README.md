@@ -20,9 +20,9 @@ Provider compatibility checks:
 
 - WebDAV providers: verify the live provider's UI-driven save, connection
   test, upload overwrite, and download/import flow. Nutstore is included as a
-  regression target for existing-file `MOVE` compatibility. CTFile is included
-  as a regression target for providers that reject hidden temporary upload
-  names.
+  regression target for existing-file `MOVE` compatibility and non-ASCII
+  `Destination` header paths. CTFile is included as a regression target for
+  providers that reject hidden temporary upload names.
 
 For current coverage details, inspect the specs in this directory and the shared
 helpers under `e2e/scenarios/`.
@@ -199,11 +199,14 @@ AAH_E2E_SUB2API_PASSWORD=replace-with-test-password
 ## Nutstore WebDAV
 
 Use a dedicated low-value Nutstore app password and a test-only JSON file URL.
+Keep the test file under a clearly named non-ASCII child directory, such as
+`all-api-hub-e2e/中文目录测试`, so the live run also covers percent-encoded WebDAV
+`MOVE` `Destination` headers while reusing the existing test root collection.
 The spec deletes this exact file before and after the run. The local WebDAV
 runner selects these variables by default.
 
 ```env
-AAH_E2E_NUTSTORE_WEBDAV_URL=https://dav.jianguoyun.com/dav/all-api-hub-e2e/all-api-hub-nutstore-move.json
+AAH_E2E_NUTSTORE_WEBDAV_URL=https://dav.jianguoyun.com/dav/all-api-hub-e2e/中文目录测试/all-api-hub-nutstore-move.json
 AAH_E2E_NUTSTORE_WEBDAV_USERNAME=test-user@example.com
 AAH_E2E_NUTSTORE_WEBDAV_PASSWORD=replace-with-nutstore-app-password
 ```

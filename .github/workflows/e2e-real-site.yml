@@ -147,6 +147,9 @@ jobs:
             write_env "AAH_E2E_WEBDAV_URL" "$WEBDAV_URL"
             write_env "AAH_E2E_WEBDAV_USERNAME" "$WEBDAV_USERNAME"
             write_env "AAH_E2E_WEBDAV_PASSWORD" "$WEBDAV_PASSWORD"
+            write_env "AAH_E2E_${prefix}_URL" "$WEBDAV_URL"
+            write_env "AAH_E2E_${prefix}_USERNAME" "$WEBDAV_USERNAME"
+            write_env "AAH_E2E_${prefix}_PASSWORD" "$WEBDAV_PASSWORD"
             [ -z "$WEBDAV_URL" ] && missing+=("AAH_E2E_${prefix}_URL")
             [ -z "$WEBDAV_USERNAME" ] && missing+=("AAH_E2E_${prefix}_USERNAME")
             [ -z "$WEBDAV_PASSWORD" ] && missing+=("AAH_E2E_${prefix}_PASSWORD")
@@ -223,7 +226,7 @@ jobs:
         env:
           AAH_SKIP_E2E_BUILD: "1"
           REAL_SITE_SPEC: ${{ matrix.spec }}
-        run: pnpm exec playwright test "$REAL_SITE_SPEC" --project=chromium --reporter=list
+        run: pnpm exec playwright test "$REAL_SITE_SPEC" --project=chromium --reporter=list --no-deps
 
       - name: Upload Playwright artifacts (failure)
         if: failure()

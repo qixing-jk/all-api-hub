@@ -892,6 +892,41 @@ describe("webdavService", () => {
       })
     })
 
+    it("encodes non-ASCII destination URLs before sending them as MOVE headers", async () => {
+      const responses = [
+        { status: 201 },
+        { status: 405 },
+        { status: 204 },
+        {
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"jianguoyun":true}'),
+        },
+        { status: 201 },
+      ]
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        webdav: {
+          ...basePrefs.webdav,
+          url: "https://dav.jianguoyun.com/dav/all-api-hub-e2e/中文目录测试",
+        },
+      })
+      globalAny.fetch.mockImplementation(
+        async (_url: string, init?: RequestInit) => {
+          expect(() => new Headers(init?.headers)).not.toThrow()
+          return responses.shift()
+        },
+      )
+
+      await expect(uploadBackup('{"jianguoyun":true}')).resolves.toBe(true)
+
+      const moveInit = globalAny.fetch.mock.calls.find(
+        ([, init]: [unknown, RequestInit]) => init?.method === "MOVE",
+      )?.[1] as RequestInit
+      expect(moveInit.headers).toMatchObject({
+        Destination:
+          "https://dav.jianguoyun.com/dav/all-api-hub-e2e/%E4%B8%AD%E6%96%87%E7%9B%AE%E5%BD%95%E6%B5%8B%E8%AF%95/all-api-hub-backup/all-api-hub-1-0.json",
+      })
+    })
+
     it("throws authFailed for 401 from temp readback", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch
