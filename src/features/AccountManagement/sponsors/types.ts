@@ -18,6 +18,17 @@ export const SPONSOR_CATALOG_SOURCES = {
 export type SponsorCatalogSource =
   (typeof SPONSOR_CATALOG_SOURCES)[keyof typeof SPONSOR_CATALOG_SOURCES]
 
+export const SPONSOR_VISIBILITY_BROWSER_FAMILIES = {
+  Chromium: "chromium",
+  Edge: "edge",
+  Firefox: "firefox",
+  Safari: "safari",
+  Unknown: "unknown",
+} as const
+
+export type SponsorVisibilityBrowserFamily =
+  (typeof SPONSOR_VISIBILITY_BROWSER_FAMILIES)[keyof typeof SPONSOR_VISIBILITY_BROWSER_FAMILIES]
+
 export const SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE = "sponsor" as const
 export const BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE =
   "bookmark-import" as const
@@ -64,15 +75,19 @@ export interface RawSponsorCatalog {
 
 export interface RawSponsorCatalogItem {
   id: string
-  locales: Record<string, RawSponsorLocaleCampaignV4>
+  locales: Record<string, RawSponsorLocaleCampaign>
 }
 
-export interface RawSponsorLocaleCampaignV4 {
+export interface RawSponsorLocaleCampaign {
   enabled: boolean
   rank: number
   supportStatus: SponsorSupportStatus | string
   startsAt?: string
   endsAt?: string
+  visibility?: {
+    extensionVersions?: string
+    excludedBrowserFamilies?: SponsorVisibilityBrowserFamily[] | string[]
+  }
   name: string
   tagline: string
   postClickNote?: string

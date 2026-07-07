@@ -4,6 +4,7 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import { normalizeOptionalAccountAuthType } from "~/features/AccountManagement/utils/accountAuthType"
+import { isVersionInRange } from "~/services/productAnnouncements/versionRange"
 import type { AuthTypeEnum } from "~/types"
 
 import {
@@ -12,23 +13,27 @@ import {
 } from "./constants"
 import {
   SPONSOR_SUPPORT_STATUS,
-  type RawSponsorLocaleCampaignV4,
+  SPONSOR_VISIBILITY_BROWSER_FAMILIES,
+  type RawSponsorLocaleCampaign,
   type SponsorCatalogNormalizationResult,
   type SponsorCatalogSource,
   type SponsorRecommendation,
   type SponsorRecommendationActions,
   type SponsorSupportStatus,
+  type SponsorVisibilityBrowserFamily,
 } from "./types"
 
-interface NormalizeSponsorCatalogV4Options {
+interface NormalizeSponsorCatalogOptions {
   locale: string
   now?: number
   source: SponsorCatalogSource
+  currentVersion?: string
+  browserFamily?: SponsorVisibilityBrowserFamily | string
 }
 
-const V4_SCHEMA_VERSION = 4
-const V4_ITEM_KEYS = new Set(["id", "locales"])
-const V4_LOCALE_KEYS = new Set([
+const SPONSOR_CATALOG_SCHEMA_VERSION = 5
+const ITEM_KEYS = new Set(["id", "locales"])
+const LOCALE_KEYS = new Set([
   "enabled",
   "rank",
   "supportStatus",
@@ -39,15 +44,20 @@ const V4_LOCALE_KEYS = new Set([
   "postClickNote",
   "links",
   "actions",
+  "visibility",
 ])
-const V4_ACTION_KEYS = new Set([
+const VISIBILITY_KEYS = new Set([
+  "extensionVersions",
+  "excludedBrowserFamilies",
+])
+const ACTION_KEYS = new Set([
   "addAccount",
   "bookmarkFallback",
   "apiCredentialProfileFallback",
 ])
-const V4_ADD_ACCOUNT_KEYS = new Set(["siteType", "siteUrl", "authType"])
-const V4_BOOKMARK_FALLBACK_KEYS = new Set(["url"])
-const V4_API_CREDENTIAL_PROFILE_FALLBACK_KEYS = new Set([
+const ADD_ACCOUNT_KEYS = new Set(["siteType", "siteUrl", "authType"])
+const BOOKMARK_FALLBACK_KEYS = new Set(["url"])
+const API_CREDENTIAL_PROFILE_FALLBACK_KEYS = new Set([
   "baseUrl",
   "apiKeyCreateUrl",
   "apiKeyCreateHint",
@@ -55,11 +65,14 @@ const V4_API_CREDENTIAL_PROFILE_FALLBACK_KEYS = new Set([
 const SPONSOR_SUPPORT_STATUS_VALUES = new Set<string>(
   Object.values(SPONSOR_SUPPORT_STATUS),
 )
+const SPONSOR_VISIBILITY_BROWSER_FAMILY_VALUES = new Set<string>(
+  Object.values(SPONSOR_VISIBILITY_BROWSER_FAMILIES),
+)
 
-/** Normalizes a v4 locale-campaign sponsor catalog into UI recommendations. */
+/** Normalizes a v5 locale-campaign sponsor catalog into UI recommendations. */
 export function normalizeSponsorCatalog(
   catalog: unknown,
-  options: NormalizeSponsorCatalogV4Options,
+  options: NormalizeSponsorCatalogOptions,
 ): SponsorCatalogNormalizationResult {
   if (!isRecord(catalog)) {
     return {
@@ -69,7 +82,9 @@ export function normalizeSponsorCatalog(
     }
   }
 
-  if (catalog.schemaVersion !== V4_SCHEMA_VERSION) {
+  const schemaVersion =
+    typeof catalog.schemaVersion === "number" ? catalog.schemaVersion : null
+  if (schemaVersion !== SPONSOR_CATALOG_SCHEMA_VERSION) {
     return {
       ok: false,
       items: [],
@@ -88,7 +103,7 @@ export function normalizeSponsorCatalog(
   const now = options.now ?? Date.now()
   const errors: string[] = []
   const items = catalog.items.flatMap((item) => {
-    const normalized = normalizeSponsorItemV4(item, options, now, errors)
+    const normalized = normalizeSponsorItem(item, options, now, errors)
     return normalized ? [normalized] : []
   })
 
@@ -110,10 +125,10 @@ export function selectSponsorRecommendations(
   return items
 }
 
-/** Validates one v4 item and resolves its best locale campaign. */
-function normalizeSponsorItemV4(
+/** Validates one item and resolves its best locale campaign. */
+function normalizeSponsorItem(
   item: unknown,
-  options: NormalizeSponsorCatalogV4Options,
+  options: NormalizeSponsorCatalogOptions,
   now: number,
   errors: string[],
 ): SponsorRecommendation | undefined {
@@ -129,7 +144,7 @@ function normalizeSponsorItemV4(
     return undefined
   }
 
-  const extraItemKeys = getUnknownKeys(item, V4_ITEM_KEYS)
+  const extraItemKeys = getUnknownKeys(item, ITEM_KEYS)
   if (extraItemKeys.length > 0) {
     errors.push(
       `item ${itemId} has unsupported top-level fields: ${extraItemKeys.join(
@@ -178,7 +193,7 @@ function normalizeSponsorItemV4(
 function resolveLocaleCampaign(
   itemId: string,
   locales: Record<string, unknown>,
-  options: NormalizeSponsorCatalogV4Options,
+  options: NormalizeSponsorCatalogOptions,
   now: number,
 ): {
   recommendation?: Omit<SponsorRecommendation, "id">
@@ -236,13 +251,22 @@ function validateLocaleCampaignShape(
     return [`item ${itemId} locale ${locale} has invalid shape`]
   }
 
-  const unknownLocaleKeys = getUnknownKeys(campaign, V4_LOCALE_KEYS)
+  const unknownLocaleKeys = getUnknownKeys(campaign, LOCALE_KEYS)
   if (unknownLocaleKeys.length > 0) {
     return [
       `item ${itemId} locale ${locale} has unsupported locale fields: ${unknownLocaleKeys.join(
         ", ",
       )}`,
     ]
+  }
+
+  if (campaign.visibility !== undefined) {
+    const visibilityShapeErrors = validateVisibilityShape(
+      itemId,
+      locale,
+      campaign.visibility,
+    )
+    if (visibilityShapeErrors.length > 0) return visibilityShapeErrors
   }
 
   if (campaign.links !== undefined) {
@@ -261,7 +285,7 @@ function validateLocaleCampaignShape(
       return [`item ${itemId} locale ${locale} has invalid actions`]
     }
 
-    const unknownActionKeys = getUnknownKeys(campaign.actions, V4_ACTION_KEYS)
+    const unknownActionKeys = getUnknownKeys(campaign.actions, ACTION_KEYS)
     if (unknownActionKeys.length > 0) {
       return [
         `item ${itemId} locale ${locale} has unsupported action fields: ${unknownActionKeys.join(
@@ -285,11 +309,11 @@ function validateLocaleCampaignShape(
 function validateAllLocaleCampaignSemantics(
   itemId: string,
   locales: Record<string, unknown>,
-  options: NormalizeSponsorCatalogV4Options,
+  options: NormalizeSponsorCatalogOptions,
   now: number,
 ): string[] {
   return Object.entries(locales).flatMap(([locale, campaign]) => {
-    if (!isActiveEnabledCampaign(campaign, now)) return []
+    if (!isActiveEnabledCampaign(campaign, now, options)) return []
 
     const result = normalizeLocaleCampaign(
       itemId,
@@ -303,12 +327,12 @@ function validateAllLocaleCampaignSemantics(
   })
 }
 
-/** Converts a single strict v4 locale campaign into the shared UI contract. */
+/** Converts a single strict v5 locale campaign into the shared UI contract. */
 function normalizeLocaleCampaign(
   itemId: string,
   selectedLocale: string,
   campaign: unknown,
-  options: NormalizeSponsorCatalogV4Options,
+  options: NormalizeSponsorCatalogOptions,
   now: number,
 ): {
   recommendation?: Omit<SponsorRecommendation, "id">
@@ -348,6 +372,22 @@ function normalizeLocaleCampaign(
     }
   }
 
+  const visibility = getCampaignVisibilityState(campaign.visibility, options)
+  if (visibility === "invalid") {
+    return {
+      errors: [
+        `item ${itemId} locale ${selectedLocale} has invalid visibility`,
+      ],
+    }
+  }
+  if (visibility === "hidden") {
+    return {
+      errors: [
+        `item ${itemId} locale ${selectedLocale} is outside its visibility constraints`,
+      ],
+    }
+  }
+
   const name = trimRequiredString(campaign.name)
   const tagline = trimRequiredString(campaign.tagline)
 
@@ -382,7 +422,7 @@ function normalizeLocaleCampaign(
       links,
       actions,
       selectedLocale,
-      schemaVersion: V4_SCHEMA_VERSION,
+      schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
       name,
       tagline,
       postClickNote,
@@ -392,7 +432,7 @@ function normalizeLocaleCampaign(
   }
 }
 
-/** Validates and trims the v4 campaign primary link payload. */
+/** Validates and trims the campaign primary link payload. */
 function normalizeLinks(
   value: unknown,
 ): SponsorRecommendation["links"] | false {
@@ -404,7 +444,7 @@ function normalizeLinks(
   }
 }
 
-/** Validates and normalizes every supported v4 action payload. */
+/** Validates and normalizes every supported action payload. */
 function normalizeActions(
   value: unknown,
 ): SponsorRecommendationActions | false {
@@ -511,17 +551,110 @@ function getLocaleCandidates(locale: string): string[] {
 }
 
 /** Checks whether a campaign should be semantically validated as selectable content. */
-function isActiveEnabledCampaign(campaign: unknown, now: number): boolean {
+function isActiveEnabledCampaign(
+  campaign: unknown,
+  now: number,
+  options: NormalizeSponsorCatalogOptions,
+): boolean {
   if (!isRecord(campaign) || campaign.enabled !== true) return false
 
   const startsAt = parseOptionalDate(campaign.startsAt)
   const endsAt = parseOptionalDate(campaign.endsAt)
   if (startsAt === false || endsAt === false) return true
 
-  return (
+  const isActiveInTimeRange =
     (startsAt === undefined || now >= startsAt) &&
     (endsAt === undefined || now <= endsAt)
-  )
+  if (!isActiveInTimeRange) return false
+
+  return getCampaignVisibilityState(campaign.visibility, options) !== "hidden"
+}
+
+/** Validates the optional V5 campaign visibility object shape. */
+function validateVisibilityShape(
+  itemId: string,
+  locale: string,
+  value: unknown,
+): string[] {
+  if (!isRecord(value)) {
+    return [`item ${itemId} locale ${locale} has invalid visibility`]
+  }
+
+  const unknownVisibilityKeys = getUnknownKeys(value, VISIBILITY_KEYS)
+  if (unknownVisibilityKeys.length > 0) {
+    return [
+      `item ${itemId} locale ${locale} has unsupported visibility fields: ${unknownVisibilityKeys.join(
+        ", ",
+      )}`,
+    ]
+  }
+
+  if (
+    value.extensionVersions !== undefined &&
+    typeof value.extensionVersions !== "string"
+  ) {
+    return [`item ${itemId} locale ${locale} has invalid visibility`]
+  }
+
+  if (
+    value.excludedBrowserFamilies !== undefined &&
+    !isStringArray(value.excludedBrowserFamilies)
+  ) {
+    return [`item ${itemId} locale ${locale} has invalid visibility`]
+  }
+
+  return []
+}
+
+/** Evaluates whether a V5 visibility object allows the current runtime context. */
+function getCampaignVisibilityState(
+  value: unknown,
+  options: NormalizeSponsorCatalogOptions,
+): "visible" | "hidden" | "invalid" {
+  if (value === undefined) {
+    return "visible"
+  }
+  if (!isRecord(value)) return "invalid"
+
+  const extensionVersions = value.extensionVersions
+  if (extensionVersions !== undefined) {
+    if (typeof extensionVersions !== "string") return "invalid"
+    const currentVersion = options.currentVersion?.trim()
+    if (
+      !currentVersion ||
+      !isVersionInRange(currentVersion, extensionVersions)
+    ) {
+      return "hidden"
+    }
+  }
+
+  const excludedBrowserFamilies = value.excludedBrowserFamilies
+  if (excludedBrowserFamilies !== undefined) {
+    if (!isStringArray(excludedBrowserFamilies)) return "invalid"
+    if (
+      excludedBrowserFamilies.some(
+        (family) => !SPONSOR_VISIBILITY_BROWSER_FAMILY_VALUES.has(family),
+      )
+    ) {
+      return "invalid"
+    }
+
+    const browserFamily = options.browserFamily?.trim()
+    if (!browserFamily) return "hidden"
+    if (!SPONSOR_VISIBILITY_BROWSER_FAMILY_VALUES.has(browserFamily)) {
+      return "invalid"
+    }
+    if (excludedBrowserFamilies.includes(browserFamily)) {
+      return "hidden"
+    }
+  }
+
+  return "visible"
+}
+
+/** Checks whether a value is an array of strings. */
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
 }
 
 /** Validates the shape of every known action object. */
@@ -534,7 +667,7 @@ function validateActionPayloadShapes(
     itemId,
     locale,
     actions.addAccount,
-    V4_ADD_ACCOUNT_KEYS,
+    ADD_ACCOUNT_KEYS,
     "addAccount action",
   )
   if (addAccountErrors.length > 0) return addAccountErrors
@@ -543,7 +676,7 @@ function validateActionPayloadShapes(
     itemId,
     locale,
     actions.bookmarkFallback,
-    V4_BOOKMARK_FALLBACK_KEYS,
+    BOOKMARK_FALLBACK_KEYS,
     "bookmarkFallback action",
   )
   if (bookmarkErrors.length > 0) return bookmarkErrors
@@ -552,7 +685,7 @@ function validateActionPayloadShapes(
     itemId,
     locale,
     actions.apiCredentialProfileFallback,
-    V4_API_CREDENTIAL_PROFILE_FALLBACK_KEYS,
+    API_CREDENTIAL_PROFILE_FALLBACK_KEYS,
     "apiCredentialProfileFallback action",
   )
 }
@@ -616,7 +749,7 @@ function isSponsorSupportStatus(value: unknown): value is SponsorSupportStatus {
 
 /** Checks whether a campaign is active at the provided timestamp. */
 function isActiveInDateRange(
-  campaign: RawSponsorLocaleCampaignV4 | Record<string, unknown>,
+  campaign: RawSponsorLocaleCampaign | Record<string, unknown>,
   now: number,
 ): boolean {
   const startsAt = parseOptionalDate(campaign.startsAt)

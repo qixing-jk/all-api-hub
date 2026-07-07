@@ -10,11 +10,146 @@ import { AuthTypeEnum } from "~/types"
 
 const now = Date.parse("2026-06-11T00:00:00.000Z")
 
-describe("sponsor catalog v4 normalization", () => {
-  it("selects one whole valid locale campaign", () => {
+describe("sponsor catalog v5 normalization", () => {
+  it("rejects legacy V4 payloads in the current runtime parser", () => {
     const result = normalizeSponsorCatalog(
       {
         schemaVersion: 4,
+        items: [],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+      },
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toEqual([])
+    expect(result.errors).toEqual(["unsupported schemaVersion 4"])
+  })
+
+  it("filters V5 campaigns by extension version and excluded browser families", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 5,
+        items: [
+          {
+            id: "visible-version-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 10,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                name: "Visible Version Campaign",
+                tagline: "Visible for the current extension version.",
+                visibility: {
+                  extensionVersions: ">=3.52.0 <3.53.0",
+                },
+                links: {
+                  primary: "https://visible.example.invalid/signup",
+                },
+              },
+            },
+          },
+          {
+            id: "future-version-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 20,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                name: "Future Version Campaign",
+                tagline: "Hidden until a later extension version.",
+                visibility: {
+                  extensionVersions: ">=3.53.0",
+                },
+                links: {
+                  primary: "https://future.example.invalid/signup",
+                },
+              },
+            },
+          },
+          {
+            id: "excluded-browser-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 30,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                name: "Excluded Browser Campaign",
+                tagline: "Hidden for the current browser family.",
+                visibility: {
+                  excludedBrowserFamilies: ["firefox"],
+                },
+                links: {
+                  primary: "https://browser.example.invalid/signup",
+                },
+              },
+            },
+          },
+        ],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+        currentVersion: "3.52.1",
+        browserFamily: "firefox",
+      },
+    )
+
+    expect(result.ok).toBe(true)
+    expect(result.items.map((item) => item.id)).toEqual([
+      "visible-version-campaign",
+    ])
+  })
+
+  it("rejects malformed V5 visibility constraints", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 5,
+        items: [
+          {
+            id: "invalid-visibility-campaign",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 10,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+                name: "Invalid Visibility Campaign",
+                tagline: "Visibility has an unsupported browser family.",
+                visibility: {
+                  excludedBrowserFamilies: ["brave"],
+                },
+                links: {
+                  primary: "https://invalid-visibility.example.invalid/signup",
+                },
+              },
+            },
+          },
+        ],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+        currentVersion: "3.52.1",
+        browserFamily: "chromium",
+      },
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toEqual([])
+    expect(result.errors.join("\n")).toContain(
+      "locale en has invalid visibility",
+    )
+  })
+
+  it("selects one whole valid locale campaign", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 5,
         items: [
           {
             id: "locale-campaign",
@@ -68,7 +203,7 @@ describe("sponsor catalog v4 normalization", () => {
     expect(result.items).toHaveLength(1)
     expect(result.items[0]).toMatchObject({
       selectedLocale: "en",
-      schemaVersion: 4,
+      schemaVersion: 5,
       links: {
         primary: "https://en.example.invalid/signup",
       },
@@ -86,7 +221,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("falls back when the candidate locale campaign is disabled", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "fallback-campaign",
@@ -134,7 +269,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("does not fall back to arbitrary unrelated locale campaigns", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "unrelated-locale-campaign",
@@ -167,10 +302,10 @@ describe("sponsor catalog v4 normalization", () => {
     )
   })
 
-  it("normalizes every supported v4 action payload", () => {
+  it("normalizes every supported action payload", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "action-campaign",
@@ -230,10 +365,10 @@ describe("sponsor catalog v4 normalization", () => {
     })
   })
 
-  it("keeps API key creation data on the explicit V4 action", () => {
+  it("keeps API key creation data on the explicit action", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "api-key-bridge-campaign",
@@ -278,7 +413,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects malformed unselected locale campaigns", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "unselected-malformed-campaign",
@@ -329,7 +464,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects unsafe links in unselected locale campaigns", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "unselected-unsafe-link-campaign",
@@ -373,7 +508,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects invalid nested actions in unselected locale campaigns", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "unselected-invalid-action-campaign",
@@ -426,7 +561,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects invalid rank and date values in unselected locale campaigns", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "unselected-invalid-values-campaign",
@@ -471,7 +606,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects top-level campaign fields", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "strict-campaign",
@@ -507,7 +642,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects unknown locale fields", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "unknown-locale-field-campaign",
@@ -544,7 +679,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects malformed locale and action containers before semantic selection", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "invalid-locales-campaign",
@@ -597,7 +732,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects selected locale campaigns with invalid semantic fields", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "invalid-shape-selected-campaign",
@@ -698,7 +833,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects invalid fallback action URLs and malformed action payloads", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "invalid-api-key-url-campaign",
@@ -761,7 +896,7 @@ describe("sponsor catalog v4 normalization", () => {
   it("rejects unknown nested link and action fields", () => {
     const result = normalizeSponsorCatalog(
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [
           {
             id: "unknown-link-field-campaign",

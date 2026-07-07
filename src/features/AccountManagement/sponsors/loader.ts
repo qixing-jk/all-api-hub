@@ -1,3 +1,5 @@
+import { getExtensionVersion } from "~/utils/browser/browserApi"
+import { detectBrowserFamily } from "~/utils/browser/userAgent"
 import { createLogger } from "~/utils/core/logger"
 
 import {
@@ -7,7 +9,7 @@ import {
 import { normalizeSponsorCatalog } from "./catalog"
 import {
   SPONSOR_CATALOG_SCHEMA_VERSION,
-  SPONSOR_REMOTE_CATALOG_V4_URL,
+  SPONSOR_REMOTE_CATALOG_V5_URL,
 } from "./constants"
 import { sponsorCatalogStorage } from "./storage"
 import {
@@ -22,6 +24,8 @@ const logger = createLogger("SponsorCatalogLoader")
 interface LoadSponsorRecommendationsOptions {
   locale: string
   now?: number
+  currentVersion?: string
+  browserFamily?: string
 }
 
 export interface LoadSponsorRecommendationsResult {
@@ -56,17 +60,17 @@ function mergeDevelopmentSponsorRecommendations(
   )
 }
 
-/** Fetches the current V4 sponsor catalog as a best-effort JSON payload. */
+/** Fetches the current V5 sponsor catalog as a best-effort JSON payload. */
 async function fetchRemoteSponsorCatalog(): Promise<unknown | null> {
   try {
-    const response = await fetch(SPONSOR_REMOTE_CATALOG_V4_URL, {
+    const response = await fetch(SPONSOR_REMOTE_CATALOG_V5_URL, {
       cache: "no-store",
     })
 
     if (!response.ok) {
       logger.warn("Failed to fetch sponsor catalog resource", {
         status: response.status,
-        url: SPONSOR_REMOTE_CATALOG_V4_URL,
+        url: SPONSOR_REMOTE_CATALOG_V5_URL,
       })
       return null
     }
@@ -75,38 +79,42 @@ async function fetchRemoteSponsorCatalog(): Promise<unknown | null> {
   } catch (error) {
     logger.warn("Failed to fetch sponsor catalog resource", {
       error,
-      url: SPONSOR_REMOTE_CATALOG_V4_URL,
+      url: SPONSOR_REMOTE_CATALOG_V5_URL,
     })
     return null
   }
 }
 
-/** Normalizes one V4 catalog payload for a result source. */
+/** Normalizes one V5 catalog payload for a result source. */
 function normalizeCatalog(
   catalog: unknown,
   options: LoadSponsorRecommendationsOptions & { source: SponsorCatalogSource },
 ): SponsorCatalogNormalizationResult {
-  return normalizeSponsorCatalog(catalog, options)
+  return normalizeSponsorCatalog(catalog, {
+    ...options,
+    currentVersion: options.currentVersion?.trim() || getExtensionVersion(),
+    browserFamily: options.browserFamily?.trim() || detectBrowserFamily(),
+  })
 }
 
-/** Reads the fixed V4 remote cache. */
+/** Reads the fixed V5 remote cache. */
 async function readCachedSponsorCatalog(): Promise<unknown | null> {
   try {
     const cached = await sponsorCatalogStorage.getCachedVersionedCatalog({
       schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
-      sourceUrl: SPONSOR_REMOTE_CATALOG_V4_URL,
+      sourceUrl: SPONSOR_REMOTE_CATALOG_V5_URL,
     })
     return cached?.payload ?? null
   } catch (error) {
     logger.warn("Failed to read sponsor catalog cache", {
       error,
-      url: SPONSOR_REMOTE_CATALOG_V4_URL,
+      url: SPONSOR_REMOTE_CATALOG_V5_URL,
     })
     return null
   }
 }
 
-/** Persists the fixed V4 remote cache. */
+/** Persists the fixed V5 remote cache. */
 async function persistCachedSponsorCatalog(
   payload: unknown,
   options: LoadSponsorRecommendationsOptions,
@@ -114,20 +122,20 @@ async function persistCachedSponsorCatalog(
   try {
     await sponsorCatalogStorage.setCachedVersionedCatalog({
       schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
-      sourceUrl: SPONSOR_REMOTE_CATALOG_V4_URL,
+      sourceUrl: SPONSOR_REMOTE_CATALOG_V5_URL,
       fetchedAt: options.now ?? Date.now(),
       payload,
     })
   } catch (error) {
     logger.warn("Failed to persist sponsor catalog cache", {
       error,
-      url: SPONSOR_REMOTE_CATALOG_V4_URL,
+      url: SPONSOR_REMOTE_CATALOG_V5_URL,
     })
   }
 }
 
 /**
- * Fetches, validates, and caches the current remote V4 sponsor recommendations.
+ * Fetches, validates, and caches the current remote V5 sponsor recommendations.
  */
 export async function refreshSponsorRecommendations(
   options: LoadSponsorRecommendationsOptions,
@@ -158,7 +166,7 @@ export async function refreshSponsorRecommendations(
 }
 
 /**
- * Loads cached V4 remote recommendations when valid, falling back to bundled data.
+ * Loads cached V5 remote recommendations when valid, falling back to bundled data.
  */
 export async function loadSponsorRecommendations(
   options: LoadSponsorRecommendationsOptions,

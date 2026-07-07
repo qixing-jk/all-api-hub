@@ -6,7 +6,7 @@ import { sponsorCatalogStorage } from "~/features/AccountManagement/sponsors/sto
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 
 const storage = new Storage({ area: "local" })
-const sourceUrl = "https://example.invalid/sponsors/catalog.v4.json"
+const sourceUrl = "https://example.invalid/sponsors/catalog.v5.json"
 
 describe("sponsor catalog storage", () => {
   beforeEach(async () => {
@@ -14,28 +14,28 @@ describe("sponsor catalog storage", () => {
     await storage.remove(STORAGE_KEYS.SPONSOR_CATALOG_VERSIONED_CACHE)
   })
 
-  it("persists and reads V4 catalog cache envelopes", async () => {
+  it("persists and reads catalog cache envelopes", async () => {
     await sponsorCatalogStorage.setCachedVersionedCatalog({
-      schemaVersion: 4,
+      schemaVersion: 5,
       sourceUrl,
       fetchedAt: Date.parse("2026-06-11T00:00:00.000Z"),
       payload: {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [],
       },
     })
 
     await expect(
       sponsorCatalogStorage.getCachedVersionedCatalog({
-        schemaVersion: 4,
+        schemaVersion: 5,
         sourceUrl,
       }),
     ).resolves.toEqual({
-      schemaVersion: 4,
+      schemaVersion: 5,
       sourceUrl,
       fetchedAt: Date.parse("2026-06-11T00:00:00.000Z"),
       payload: {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [],
       },
     })
@@ -43,11 +43,11 @@ describe("sponsor catalog storage", () => {
 
   it("does not return cache entries for mismatched schema or URL", async () => {
     await sponsorCatalogStorage.setCachedVersionedCatalog({
-      schemaVersion: 4,
+      schemaVersion: 5,
       sourceUrl,
       fetchedAt: 1,
       payload: {
-        schemaVersion: 4,
+        schemaVersion: 5,
         items: [],
       },
     })
@@ -60,7 +60,7 @@ describe("sponsor catalog storage", () => {
     ).resolves.toBeNull()
     await expect(
       sponsorCatalogStorage.getCachedVersionedCatalog({
-        schemaVersion: 4,
+        schemaVersion: 5,
         sourceUrl: "https://example.invalid/sponsors/other.json",
       }),
     ).resolves.toBeNull()
@@ -68,21 +68,21 @@ describe("sponsor catalog storage", () => {
 
   it("returns null for malformed matching cache entries", async () => {
     await storage.set(STORAGE_KEYS.SPONSOR_CATALOG_VERSIONED_CACHE, {
-      [`4:${sourceUrl}`]: {
-        schemaVersion: 4,
+      [`5:${sourceUrl}`]: {
+        schemaVersion: 5,
         sourceUrl,
         payload: {
-          schemaVersion: 4,
+          schemaVersion: 5,
           items: [],
         },
       },
-      "4:https://example.invalid/sponsors/catalog-with-invalid-date.v4.json": {
-        schemaVersion: 4,
+      "5:https://example.invalid/sponsors/catalog-with-invalid-date.v5.json": {
+        schemaVersion: 5,
         sourceUrl:
-          "https://example.invalid/sponsors/catalog-with-invalid-date.v4.json",
+          "https://example.invalid/sponsors/catalog-with-invalid-date.v5.json",
         fetchedAt: "2026-06-11T00:00:00.000Z",
         payload: {
-          schemaVersion: 4,
+          schemaVersion: 5,
           items: [],
         },
       },
@@ -90,15 +90,15 @@ describe("sponsor catalog storage", () => {
 
     await expect(
       sponsorCatalogStorage.getCachedVersionedCatalog({
-        schemaVersion: 4,
+        schemaVersion: 5,
         sourceUrl,
       }),
     ).resolves.toBeNull()
     await expect(
       sponsorCatalogStorage.getCachedVersionedCatalog({
-        schemaVersion: 4,
+        schemaVersion: 5,
         sourceUrl:
-          "https://example.invalid/sponsors/catalog-with-invalid-date.v4.json",
+          "https://example.invalid/sponsors/catalog-with-invalid-date.v5.json",
       }),
     ).resolves.toBeNull()
   })
@@ -110,7 +110,7 @@ describe("sponsor catalog storage", () => {
 
     await expect(
       sponsorCatalogStorage.getCachedVersionedCatalog({
-        schemaVersion: 4,
+        schemaVersion: 5,
         sourceUrl,
       }),
     ).resolves.toBeNull()

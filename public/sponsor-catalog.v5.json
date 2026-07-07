@@ -1,0 +1,610 @@
+{
+  "schemaVersion": 5,
+  "items": [
+    {
+      "id": "packycode",
+      "locales": {
+        "zh-CN": {
+          "enabled": true,
+          "rank": 95,
+          "supportStatus": "supported",
+          "name": "PackyCode",
+          "tagline": "稳定高效的 API 中转服务，支持 Claude Code、Codex、Gemini 等多种工具场景。",
+          "links": {
+            "primary": "https://www.packyapi.com/register?aff=all-api-hub"
+          },
+          "postClickNote": "使用 all-api-hub 优惠码完成首次充值，可享受 9 折优惠。",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://www.packyapi.com",
+              "authType": "access_token"
+            }
+          }
+        },
+        "zh-TW": {
+          "enabled": true,
+          "rank": 95,
+          "supportStatus": "supported",
+          "name": "PackyCode",
+          "tagline": "穩定高效的 API 中轉服務，支援 Claude Code、Codex、Gemini 等多種工具場景。",
+          "links": {
+            "primary": "https://www.packyapi.com/register?aff=all-api-hub"
+          },
+          "postClickNote": "使用 all-api-hub 優惠碼完成首次儲值，可享 9 折優惠。",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://www.packyapi.com",
+              "authType": "access_token"
+            }
+          }
+        },
+        "en": {
+          "enabled": true,
+          "rank": 95,
+          "supportStatus": "supported",
+          "name": "PackyCode",
+          "tagline": "A stable and efficient API relay service for Claude Code, Codex, Gemini, and more.",
+          "links": {
+            "primary": "https://www.packyapi.com/register?aff=all-api-hub"
+          },
+          "postClickNote": "Use promo code all-api-hub on your first recharge to get 10% off.",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://www.packyapi.com",
+              "authType": "access_token"
+            }
+          }
+        },
+        "ja": {
+          "enabled": true,
+          "rank": 95,
+          "supportStatus": "supported",
+          "name": "PackyCode",
+          "tagline": "Claude Code、Codex、Gemini などで使える、安定した高速な API リレーサービスです。",
+          "links": {
+            "primary": "https://www.packyapi.com/register?aff=all-api-hub"
+          },
+          "postClickNote": "初回チャージ時にプロモコード all-api-hub を入力すると、10% オフになります。",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://www.packyapi.com",
+              "authType": "access_token"
+            }
+          }
+        },
+        "vi": {
+          "enabled": true,
+          "rank": 95,
+          "supportStatus": "supported",
+          "name": "PackyCode",
+          "tagline": "Dich vu chuyen tiep API on dinh, hieu qua cho Claude Code, Codex, Gemini va nhieu cong cu khac.",
+          "links": {
+            "primary": "https://www.packyapi.com/register?aff=all-api-hub"
+          },
+          "postClickNote": "Dung ma uu dai all-api-hub trong lan nap dau tien de duoc giam 10%.",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://www.packyapi.com",
+              "authType": "access_token"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "xingchen-ai",
+      "locales": {
+        "zh-CN": {
+          "enabled": true,
+          "rank": 100,
+          "supportStatus": "supported",
+          "name": "星辰AI",
+          "tagline": "稳定高效的 API 中转服务商，提供 Claude Code、Codex、Gemini 等多种中转服务。",
+          "links": {
+            "primary": "https://ai.centos.hk"
+          },
+          "postClickNote": "充值比例 1:1，可开发票；Claude 低至 4 折。",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://ai.centos.hk",
+              "authType": "access_token"
+            }
+          }
+        },
+        "zh-TW": {
+          "enabled": true,
+          "rank": 100,
+          "supportStatus": "supported",
+          "name": "星辰AI",
+          "tagline": "穩定高效的 API 中轉服務商，提供 Claude Code、Codex、Gemini 等多種中轉服務。",
+          "links": {
+            "primary": "https://ai.centos.hk"
+          },
+          "postClickNote": "儲值比例 1:1，可開發票；Claude 低至 4 折。",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://ai.centos.hk",
+              "authType": "access_token"
+            }
+          }
+        },
+        "en": {
+          "enabled": true,
+          "rank": 100,
+          "supportStatus": "supported",
+          "name": "Xingchen AI",
+          "tagline": "A stable and efficient API relay provider for Claude Code, Codex, Gemini, and more.",
+          "links": {
+            "primary": "https://ai.centos.hk"
+          },
+          "postClickNote": "1:1 recharge ratio with invoice support and Claude from 40% pricing.",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://ai.centos.hk",
+              "authType": "access_token"
+            }
+          }
+        },
+        "ja": {
+          "enabled": true,
+          "rank": 100,
+          "supportStatus": "supported",
+          "name": "Xingchen AI",
+          "tagline": "Claude Code、Codex、Gemini などの中継サービスを提供する、安定した高速な API 中継プロバイダーです。",
+          "links": {
+            "primary": "https://ai.centos.hk"
+          },
+          "postClickNote": "チャージ比率は 1:1、請求書発行に対応。Claude は 40% 価格から利用できます。",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://ai.centos.hk",
+              "authType": "access_token"
+            }
+          }
+        },
+        "vi": {
+          "enabled": true,
+          "rank": 100,
+          "supportStatus": "supported",
+          "name": "Xingchen AI",
+          "tagline": "Nha cung cap chuyen tiep API on dinh, hieu qua cho Claude Code, Codex, Gemini va nhieu dich vu khac.",
+          "links": {
+            "primary": "https://ai.centos.hk"
+          },
+          "postClickNote": "Ty le nap 1:1, ho tro xuat hoa don va Claude tu 40% gia.",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://ai.centos.hk",
+              "authType": "access_token"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "runapi",
+      "locales": {
+        "zh-CN": {
+          "enabled": true,
+          "rank": 110,
+          "supportStatus": "supported",
+          "name": "RunAPI",
+          "tagline": "高效稳定的 API OpenRouter 平替平台，一个 API Key 可访问 OpenAI、Claude、Gemini、DeepSeek、Grok 等 150+ 主流模型，低至 1 折，兼容 Claude Code、OpenClaw 等工具。",
+          "links": {
+            "primary": "https://runapi.co/register?aff=cvDm"
+          },
+          "postClickNote": "All API Hub 用户注册后联系 RunAPI 管理员，即可领取 ¥7 免费额度。",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://runapi.co",
+              "authType": "access_token"
+            }
+          }
+        },
+        "zh-TW": {
+          "enabled": true,
+          "rank": 110,
+          "supportStatus": "supported",
+          "name": "RunAPI",
+          "tagline": "高效穩定的 API OpenRouter 平替平台，一個 API Key 可存取 OpenAI、Claude、Gemini、DeepSeek、Grok 等 150+ 主流模型，低至 1 折，兼容 Claude Code、OpenClaw 等工具。",
+          "links": {
+            "primary": "https://runapi.co/register?aff=cvDm"
+          },
+          "postClickNote": "All API Hub 使用者註冊後聯絡管理員，即可領取 ¥7 免費額度。",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://runapi.co",
+              "authType": "access_token"
+            }
+          }
+        },
+        "en": {
+          "enabled": true,
+          "rank": 110,
+          "supportStatus": "supported",
+          "name": "RunAPI",
+          "tagline": "A stable OpenRouter alternative API platform: one API key for 150+ mainstream models including OpenAI, Claude, Gemini, DeepSeek, and Grok, from 10% of standard pricing, with Claude Code and OpenClaw compatibility.",
+          "links": {
+            "primary": "https://runapi.co/register?aff=cvDm"
+          },
+          "postClickNote": "All API Hub users can register and contact the administrator to claim ¥7 in free credits.",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://runapi.co",
+              "authType": "access_token"
+            }
+          }
+        },
+        "ja": {
+          "enabled": true,
+          "rank": 110,
+          "supportStatus": "supported",
+          "name": "RunAPI",
+          "tagline": "OpenRouter の代替として使える安定した API プラットフォームです。1 つの API Key で OpenAI、Claude、Gemini、DeepSeek、Grok など 150 以上の主要モデルを利用でき、Claude Code や OpenClaw にも対応します。",
+          "links": {
+            "primary": "https://runapi.co/register?aff=cvDm"
+          },
+          "postClickNote": "All API Hub ユーザーは登録後に管理者へ連絡すると、¥7 の無料クレジットを受け取れます。",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://runapi.co",
+              "authType": "access_token"
+            }
+          }
+        },
+        "vi": {
+          "enabled": true,
+          "rank": 110,
+          "supportStatus": "supported",
+          "name": "RunAPI",
+          "tagline": "Nen tang API on dinh thay the OpenRouter: mot API Key truy cap hon 150 mo hinh pho bien nhu OpenAI, Claude, Gemini, DeepSeek va Grok, gia tu 10%, tuong thich Claude Code va OpenClaw.",
+          "links": {
+            "primary": "https://runapi.co/register?aff=cvDm"
+          },
+          "postClickNote": "Nguoi dung All API Hub co the dang ky va lien he quan tri vien de nhan ¥7 han muc mien phi.",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://runapi.co",
+              "authType": "access_token"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "volcengine-coding-plan",
+      "locales": {
+        "zh-CN": {
+          "enabled": true,
+          "rank": 120,
+          "supportStatus": "unsupported",
+          "name": "火山引擎 - 方舟Coding-Plan",
+          "tagline": "字节跳动旗下开发者生产力计划，Lite 套餐仅需 9.9 元/月。支持豆包、DeepSeek、GLM 等顶级模型，完美适配 Cursor、Claude Code 等工具，尊享高并发稳定性与模型自动切换体验。",
+          "links": {
+            "primary": "https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html"
+          },
+          "postClickNote": "全场 Lite 套餐 9.9 元/月起，更有邀请好友首单 9.5 折优惠及充值券返利。",
+          "actions": {
+            "apiCredentialProfileFallback": {
+              "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+              "apiKeyCreateUrl": "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey",
+              "apiKeyCreateHint": "全场 Lite 套餐 9.9 元/月起，更有邀请好友首单 9.5 折优惠及充值券返利。"
+            }
+          }
+        },
+        "zh-TW": {
+          "enabled": true,
+          "rank": 120,
+          "supportStatus": "unsupported",
+          "name": "火山引擎 - 方舟Coding-Plan",
+          "tagline": "字節跳動旗下開發者生產力計劃，Lite 套餐僅需 9.9 元/月。支持豆包、DeepSeek、GLM 等頂級模型，完美适配 Cursor、Claude Code 等工具，尊享高併發穩定性與模型自動切換體驗。",
+          "links": {
+            "primary": "https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html"
+          },
+          "postClickNote": "全場 Lite 套餐 9.9 元/月起，更有邀請好友首單 9.5 折優惠及充值券返利。",
+          "actions": {
+            "apiCredentialProfileFallback": {
+              "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+              "apiKeyCreateUrl": "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey",
+              "apiKeyCreateHint": "全場 Lite 套餐 9.9 元/月起，更有邀請好友首單 9.5 折優惠及充值券返利。"
+            }
+          }
+        },
+        "en": {
+          "enabled": true,
+          "rank": 120,
+          "supportStatus": "unsupported",
+          "name": "Dola Seed on BytePlus ModelArk",
+          "tagline": "Dola Seed 2.0 is ByteDance's full-modal general large model for the global market, available through BytePlus ModelArk with multimodal understanding and generation, agent collaboration, reasoning, tool integration, and coding capabilities.",
+          "links": {
+            "primary": "https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub"
+          },
+          "postClickNote": "Register via BytePlus ModelArk to get 500,000 tokens of free inference quota per model. Developers in mainland China can use https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html instead.",
+          "actions": {
+            "apiCredentialProfileFallback": {
+              "baseUrl": "https://ark.ap-southeast.bytepluses.com/api/v3",
+              "apiKeyCreateUrl": "https://console.byteplus.com/ark/region:ark+ap-southeast-1/apiKey",
+              "apiKeyCreateHint": "Create a BytePlus ModelArk API key in the same region as your inference endpoint. The prefilled Base URL uses the AP region; switch it if your endpoint is in another region."
+            }
+          }
+        },
+        "ja": {
+          "enabled": true,
+          "rank": 120,
+          "supportStatus": "unsupported",
+          "name": "Dola Seed on BytePlus ModelArk",
+          "tagline": "Dola Seed 2.0 は ByteDance がグローバル市場向けに開発したフルモーダル汎用大規模モデルです。BytePlus ModelArk から、マルチモーダル理解と生成、エージェント協調、推論、ツール連携、コーディング機能を利用できます。",
+          "links": {
+            "primary": "https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub"
+          },
+          "postClickNote": "BytePlus ModelArk から登録すると、各モデルにつき 500,000 トークン分の無料推論枠を受け取れます。中国大陆地区の開発者は https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html を利用してください。",
+          "actions": {
+            "apiCredentialProfileFallback": {
+              "baseUrl": "https://ark.ap-southeast.bytepluses.com/api/v3",
+              "apiKeyCreateUrl": "https://console.byteplus.com/ark/region:ark+ap-southeast-1/apiKey",
+              "apiKeyCreateHint": "推論エンドポイントと同じリージョンで BytePlus ModelArk API Key を作成してください。事前入力される Base URL は AP リージョン用です。別リージョンのエンドポイントを使う場合は変更してください。"
+            }
+          }
+        },
+        "vi": {
+          "enabled": true,
+          "rank": 120,
+          "supportStatus": "unsupported",
+          "name": "Dola Seed on BytePlus ModelArk",
+          "tagline": "Dola Seed 2.0 la mo hinh lon tong quat full-modal cua ByteDance cho thi truong toan cau, co tren BytePlus ModelArk voi kha nang hieu va tao noi dung da phuong thuc, phoi hop agent, suy luan, tich hop cong cu va lap trinh.",
+          "links": {
+            "primary": "https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub"
+          },
+          "postClickNote": "Dang ky qua BytePlus ModelArk de nhan 500.000 token suy luan mien phi cho moi mo hinh. Lap trinh vien o Trung Quoc dai luc co the dung https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html.",
+          "actions": {
+            "apiCredentialProfileFallback": {
+              "baseUrl": "https://ark.ap-southeast.bytepluses.com/api/v3",
+              "apiKeyCreateUrl": "https://console.byteplus.com/ark/region:ark+ap-southeast-1/apiKey",
+              "apiKeyCreateHint": "Tao API key BytePlus ModelArk trong cung khu vuc voi inference endpoint cua ban. Base URL duoc dien san dung khu vuc AP; hay doi lai neu endpoint cua ban nam o khu vuc khac."
+            }
+          }
+        }
+      }
+    }
+  ],
+  "_examples": {
+    "devSponsors": [
+      {
+        "id": "dev-supported-direct",
+        "locales": {
+          "zh-CN": {
+            "enabled": true,
+            "rank": 9000,
+            "supportStatus": "supported",
+            "name": "[DEV] 可直接添加",
+            "tagline": "测试 Cookie 认证的 accountPrefill 主按钮和添加账号预填。",
+            "links": {
+              "primary": "https://dev-supported.example.test/register?utm_source=all-api-hub"
+            },
+            "postClickNote": "测试 Cookie 认证预填后的提示，会显示在新建账号 URL 下方。",
+            "actions": {
+              "addAccount": {
+                "siteType": "new-api",
+                "siteUrl": "https://dev-supported.example.test",
+                "authType": "cookie"
+              }
+            }
+          },
+          "en": {
+            "enabled": true,
+            "rank": 9000,
+            "supportStatus": "supported",
+            "name": "[DEV] Direct account",
+            "tagline": "Tests cookie accountPrefill primary action and add-account prefill.",
+            "links": {
+              "primary": "https://dev-supported.example.test/register?utm_source=all-api-hub"
+            },
+            "postClickNote": "Tests the post-click note shown below the add-account URL after cookie prefill.",
+            "actions": {
+              "addAccount": {
+                "siteType": "new-api",
+                "siteUrl": "https://dev-supported.example.test",
+                "authType": "cookie"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "dev-supported-access-token",
+        "locales": {
+          "zh-CN": {
+            "enabled": true,
+            "rank": 9010,
+            "supportStatus": "supported",
+            "name": "[DEV] 访问令牌直连",
+            "tagline": "测试访问令牌认证的 accountPrefill 和 API Key 创建入口。",
+            "links": {
+              "primary": "https://dev-token.example.test/register?utm_source=all-api-hub"
+            },
+            "postClickNote": "测试访问令牌认证预填后的提示，会显示在新建账号 URL 下方。",
+            "actions": {
+              "addAccount": {
+                "siteType": "new-api",
+                "siteUrl": "https://dev-token.example.test",
+                "authType": "access_token"
+              }
+            }
+          },
+          "en": {
+            "enabled": true,
+            "rank": 9010,
+            "supportStatus": "supported",
+            "name": "[DEV] Access token account",
+            "tagline": "Tests access-token accountPrefill and API key creation URL normalization.",
+            "links": {
+              "primary": "https://dev-token.example.test/register?utm_source=all-api-hub"
+            },
+            "postClickNote": "Tests the post-click note shown below the add-account URL after access-token prefill.",
+            "actions": {
+              "addAccount": {
+                "siteType": "new-api",
+                "siteUrl": "https://dev-token.example.test",
+                "authType": "access_token"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "dev-unsupported-bookmark",
+        "locales": {
+          "zh-CN": {
+            "enabled": true,
+            "rank": 9020,
+            "supportStatus": "unsupported",
+            "name": "[DEV] 保存书签",
+            "tagline": "测试仅显示书签 fallback。",
+            "links": {
+              "primary": "https://dev-bookmark.example.test"
+            },
+            "actions": {
+              "bookmarkFallback": {
+                "url": "https://dev-bookmark.example.test"
+              }
+            }
+          },
+          "en": {
+            "enabled": true,
+            "rank": 9020,
+            "supportStatus": "unsupported",
+            "name": "[DEV] Bookmark",
+            "tagline": "Tests the bookmark fallback only.",
+            "links": {
+              "primary": "https://dev-bookmark.example.test"
+            },
+            "actions": {
+              "bookmarkFallback": {
+                "url": "https://dev-bookmark.example.test"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "dev-unsupported-api-profile",
+        "locales": {
+          "zh-CN": {
+            "enabled": true,
+            "rank": 9030,
+            "supportStatus": "unsupported",
+            "name": "[DEV] API 凭证",
+            "tagline": "测试仅显示 API 凭证配置 fallback。",
+            "links": {
+              "primary": "https://dev-api-profile.example.test"
+            },
+            "actions": {
+              "apiCredentialProfileFallback": {
+                "baseUrl": "https://dev-api-profile.example.test",
+                "apiKeyCreateUrl": "https://dev-api-profile.example.test/dashboard/api-keys?utm_source=all-api-hub"
+              }
+            }
+          },
+          "en": {
+            "enabled": true,
+            "rank": 9030,
+            "supportStatus": "unsupported",
+            "name": "[DEV] API profile",
+            "tagline": "Tests the API credential profile fallback only.",
+            "links": {
+              "primary": "https://dev-api-profile.example.test"
+            },
+            "actions": {
+              "apiCredentialProfileFallback": {
+                "baseUrl": "https://dev-api-profile.example.test",
+                "apiKeyCreateUrl": "https://dev-api-profile.example.test/dashboard/api-keys?utm_source=all-api-hub"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "dev-unsupported-all-fallbacks",
+        "locales": {
+          "zh-CN": {
+            "enabled": true,
+            "rank": 9040,
+            "supportStatus": "unsupported",
+            "name": "[DEV] 全部 fallback",
+            "tagline": "测试 fallback 按钮和活动提示同时出现。",
+            "links": {
+              "primary": "https://dev-all-fallbacks.example.test/register"
+            },
+            "postClickNote": "测试赞助商提供的活动提示，可同时显示在添加账号和获取 API Key 的引导中。",
+            "actions": {
+              "bookmarkFallback": {
+                "url": "https://dev-all-fallbacks.example.test"
+              },
+              "apiCredentialProfileFallback": {
+                "baseUrl": "https://dev-all-fallbacks.example.test",
+                "apiKeyCreateUrl": "https://dev-all-fallbacks.example.test/dashboard/api-keys?utm_source=all-api-hub",
+                "apiKeyCreateHint": "测试赞助商提供的活动提示，可同时显示在添加账号和获取 API Key 的引导中。"
+              }
+            }
+          },
+          "en": {
+            "enabled": true,
+            "rank": 9040,
+            "supportStatus": "unsupported",
+            "name": "[DEV] All fallbacks",
+            "tagline": "Tests fallback buttons and campaign copy together.",
+            "links": {
+              "primary": "https://dev-all-fallbacks.example.test/register"
+            },
+            "postClickNote": "Tests sponsor-provided campaign copy in both add-account and API key guidance.",
+            "actions": {
+              "bookmarkFallback": {
+                "url": "https://dev-all-fallbacks.example.test"
+              },
+              "apiCredentialProfileFallback": {
+                "baseUrl": "https://dev-all-fallbacks.example.test",
+                "apiKeyCreateUrl": "https://dev-all-fallbacks.example.test/dashboard/api-keys?utm_source=all-api-hub",
+                "apiKeyCreateHint": "Tests sponsor-provided campaign copy in both add-account and API key guidance."
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "dev-locale-fallback",
+        "locales": {
+          "en": {
+            "enabled": true,
+            "rank": 9050,
+            "supportStatus": "unsupported",
+            "name": "[DEV] Locale fallback",
+            "tagline": "Tests fallback from the active locale to English.",
+            "links": {
+              "primary": "https://dev-locale-fallback.example.test"
+            },
+            "actions": {
+              "bookmarkFallback": {
+                "url": "https://dev-locale-fallback.example.test"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
