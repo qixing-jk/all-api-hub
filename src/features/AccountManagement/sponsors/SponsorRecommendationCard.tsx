@@ -31,6 +31,16 @@ interface SponsorRecommendationCardProps {
   ) => void
 }
 
+const SPONSOR_MAIN_ACTION_KINDS = {
+  ContinueAddAccount: "continue-add-account",
+  VisitProvider: "visit-provider",
+  BookmarkFallback: "bookmark-fallback",
+  ApiCredentialProfilesFallback: "api-credential-profiles-fallback",
+} as const
+
+type SponsorMainActionKind =
+  (typeof SPONSOR_MAIN_ACTION_KINDS)[keyof typeof SPONSOR_MAIN_ACTION_KINDS]
+
 /** Returns the translated badge label for a sponsor recommendation. */
 function getSupportLabel(t: TFunction<"account">, item: SponsorRecommendation) {
   if (
@@ -67,6 +77,66 @@ function getSupportBadgeVariant(
     case SPONSOR_SUPPORT_STATUS.Unsupported:
     default:
       return "info"
+  }
+}
+
+/** Picks the compact row action without changing multi-fallback choice behavior. */
+function getMainActionKind(item: SponsorRecommendation): SponsorMainActionKind {
+  if (item.actions.addAccount) {
+    return SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount
+  }
+
+  const fallbackActionKinds: SponsorMainActionKind[] = []
+
+  if (item.actions.bookmarkFallback) {
+    fallbackActionKinds.push(SPONSOR_MAIN_ACTION_KINDS.BookmarkFallback)
+  }
+
+  if (item.actions.apiCredentialProfileFallback) {
+    fallbackActionKinds.push(
+      SPONSOR_MAIN_ACTION_KINDS.ApiCredentialProfilesFallback,
+    )
+  }
+
+  if (fallbackActionKinds.length === 1) {
+    return fallbackActionKinds[0]
+  }
+
+  return SPONSOR_MAIN_ACTION_KINDS.VisitProvider
+}
+
+/** Returns the translated action label for the compact row action. */
+function getMainActionLabel(
+  t: TFunction<"account">,
+  actionKind: SponsorMainActionKind,
+) {
+  switch (actionKind) {
+    case SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount:
+      return t("sponsor.actions.continueAddAccount")
+    case SPONSOR_MAIN_ACTION_KINDS.BookmarkFallback:
+      return t("sponsor.actions.openBookmarkManagerFallback")
+    case SPONSOR_MAIN_ACTION_KINDS.ApiCredentialProfilesFallback:
+      return t("sponsor.actions.openApiCredentialProfilesFallback")
+    case SPONSOR_MAIN_ACTION_KINDS.VisitProvider:
+    default:
+      return t("sponsor.actions.visitProvider")
+  }
+}
+
+/** Renders the compact row icon that matches its current action. */
+function renderMainActionIcon(actionKind: SponsorMainActionKind) {
+  switch (actionKind) {
+    case SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount:
+      return <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+    case SPONSOR_MAIN_ACTION_KINDS.BookmarkFallback:
+      return <Bookmark aria-hidden="true" className="h-3.5 w-3.5" />
+    case SPONSOR_MAIN_ACTION_KINDS.ApiCredentialProfilesFallback:
+      return (
+        <ApiCredentialLibraryIcon aria-hidden="true" className="h-3.5 w-3.5" />
+      )
+    case SPONSOR_MAIN_ACTION_KINDS.VisitProvider:
+    default:
+      return <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
   }
 }
 
@@ -149,12 +219,27 @@ export function SponsorRecommendationCard({
     })
   }
 
-  const primaryLabel = t("sponsor.actions.visitProvider")
-  const continueLabel = t("sponsor.actions.continueAddAccount")
-  const isSupported = Boolean(item.actions.addAccount)
-  const handleMainAction = isSupported
-    ? handleContinueAddAccount
-    : handlePrimaryClick
+  const mainActionKind = getMainActionKind(item)
+  const mainActionLabel = getMainActionLabel(t, mainActionKind)
+  const hasAddAccountAction = Boolean(item.actions.addAccount)
+  const isIntegratedMainAction =
+    mainActionKind !== SPONSOR_MAIN_ACTION_KINDS.VisitProvider
+  const handleMainAction = () => {
+    switch (mainActionKind) {
+      case SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount:
+        handleContinueAddAccount()
+        return
+      case SPONSOR_MAIN_ACTION_KINDS.BookmarkFallback:
+        handleOpenBookmarkManager()
+        return
+      case SPONSOR_MAIN_ACTION_KINDS.ApiCredentialProfilesFallback:
+        handleOpenApiCredentialProfiles()
+        return
+      case SPONSOR_MAIN_ACTION_KINDS.VisitProvider:
+      default:
+        handlePrimaryClick()
+    }
+  }
   const hasFallbackActions =
     Boolean(item.actions.bookmarkFallback) ||
     Boolean(item.actions.apiCredentialProfileFallback)
@@ -169,18 +254,14 @@ export function SponsorRecommendationCard({
         type="button"
         className={cn(
           "focus-visible:ring-ring/50 flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors outline-none focus-visible:ring-[3px]",
-          isSupported
+          isIntegratedMainAction
             ? "text-blue-700 hover:bg-blue-100/70 dark:text-blue-300 dark:hover:bg-blue-900/30"
             : "dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary/70 text-gray-800 hover:bg-gray-100",
         )}
         onClick={handleMainAction}
-        aria-label={
-          isSupported
-            ? `${continueLabel}: ${item.name}`
-            : `${primaryLabel}: ${item.name}`
-        }
+        aria-label={`${mainActionLabel}: ${item.name}`}
         data-testid={
-          isSupported
+          mainActionKind === SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount
             ? ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction
             : ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryAction
         }
@@ -188,16 +269,12 @@ export function SponsorRecommendationCard({
         <span
           className={cn(
             "flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
-            isSupported
+            isIntegratedMainAction
               ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
               : "dark:bg-dark-bg-tertiary dark:text-dark-text-secondary bg-gray-100 text-gray-600",
           )}
         >
-          {isSupported ? (
-            <Plus aria-hidden="true" className="h-3.5 w-3.5" />
-          ) : (
-            <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
-          )}
+          {renderMainActionIcon(mainActionKind)}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
@@ -209,7 +286,7 @@ export function SponsorRecommendationCard({
             {item.tagline}
           </span>
         </span>
-        {!isSupported ? (
+        {!hasAddAccountAction ? (
           <Badge
             variant={getSupportBadgeVariant(item.supportStatus)}
             size="sm"

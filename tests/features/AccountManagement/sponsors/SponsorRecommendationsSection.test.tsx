@@ -365,6 +365,80 @@ describe("SponsorRecommendationsSection", () => {
     expect(openSpy).toHaveBeenCalledTimes(2)
   })
 
+  it("promotes the only fallback action to the compact row action", async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.fn()
+    vi.stubGlobal("open", openSpy)
+
+    renderSection([
+      createUnsupportedSponsor({
+        id: "bookmark-provider",
+        name: "Bookmark Provider",
+        tagline: "Bookmark first.",
+        links: {
+          primary: "https://bookmark.example.invalid/register",
+        },
+        actions: {
+          bookmarkFallback: {
+            url: "https://docs.bookmark.example.invalid/get-started",
+          },
+        },
+        postClickNote: undefined,
+      }),
+      createUnsupportedSponsor({
+        id: "api-provider",
+        name: "API Provider",
+        tagline: "API credential first.",
+        links: {
+          primary: "https://api.example.invalid/register",
+        },
+        actions: {
+          apiCredentialProfileFallback: {
+            baseUrl: "https://api.example.invalid/v1",
+          },
+        },
+        postClickNote: undefined,
+        rank: 3,
+      }),
+    ])
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /account:sponsor.actions.openBookmarkManagerFallback: Bookmark Provider/u,
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: /account:sponsor.actions.openApiCredentialProfilesFallback: API Provider/u,
+      }),
+    )
+
+    expect(onOpenBookmarkManager).toHaveBeenCalledWith({
+      name: "Bookmark Provider",
+      url: "https://docs.bookmark.example.invalid/get-started",
+    })
+    expect(onOpenApiCredentialProfiles).toHaveBeenCalledWith({
+      name: "API Provider",
+      baseUrl: "https://api.example.invalid/v1",
+      apiKeyCreateUrl: undefined,
+      apiKeyCreateHint: undefined,
+    })
+    expect(onContinueAddAccount).not.toHaveBeenCalled()
+    expect(openSpy).toHaveBeenCalledTimes(2)
+    expect(openSpy).toHaveBeenNthCalledWith(
+      1,
+      "https://bookmark.example.invalid/register",
+      "_blank",
+      "noopener,noreferrer",
+    )
+    expect(openSpy).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.invalid/register",
+      "_blank",
+      "noopener,noreferrer",
+    )
+  })
+
   it("renders nothing when no recommendations are available", () => {
     renderSection([])
 
