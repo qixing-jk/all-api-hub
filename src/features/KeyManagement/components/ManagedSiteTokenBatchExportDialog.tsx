@@ -1,186 +1,16 @@
-import type { TFunction } from "i18next"
-import { Loader2, RefreshCcw, SendToBack } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { ManagedSiteChannelAssessmentSignalsRow } from "~/components/ManagedSiteChannelAssessmentSignals"
-import {
-  Badge,
-  Button,
-  Checkbox,
-  CompactMultiSelect,
-  DestructiveConfirmDialog,
-  Modal,
-} from "~/components/ui"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
+import { DestructiveConfirmDialog, Modal } from "~/components/ui"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
-import {
-  NEW_API_MANAGED_VERIFICATION_CLOSE_MODES,
-  useNewApiManagedVerification,
-} from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import {
-  executeManagedSiteTokenBatchExport,
-  prepareManagedSiteTokenBatchExportPreview,
-} from "~/services/managedSites/tokenBatchExport"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
+
+import { ManagedSiteTokenBatchExportFooter } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
+import { ManagedSiteTokenBatchExportPreviewList } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportPreviewList"
+import { ManagedSiteTokenBatchExportStatusPanels } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportStatusPanels"
 import {
-  trackProductAnalyticsActionCompleted,
-  trackProductAnalyticsActionStarted,
-} from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_RESULTS,
-} from "~/services/productAnalytics/contracts"
-import type {
-  ManagedSiteTokenBatchExportExecutionResult,
-  ManagedSiteTokenBatchExportItemInput,
-  ManagedSiteTokenBatchExportMatchedChannel,
-  ManagedSiteTokenBatchExportPreview,
-  ManagedSiteTokenBatchExportPreviewItem,
-} from "~/types/managedSiteTokenBatchExport"
-import {
-  isExecutableManagedSiteTokenBatchExportPreviewItem as isExecutablePreviewItem,
-  MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
-  MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
-  MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
-} from "~/types/managedSiteTokenBatchExport"
-import { getErrorMessage } from "~/utils/core/error"
-
-import {
-  applyResolvedChannelKeyToPreviewItem,
-  canEditItemModels,
-  countPreviewItems,
-  getPreviewItemVerificationCandidate,
-  getPreviewVerificationTargets,
-  normalizeModels,
-  shouldSelectPreviewItemByDefault,
-  toModelOptions,
-} from "./managedSiteTokenBatchExportPreview"
-
-interface ManagedSiteTokenBatchExportDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  items: ManagedSiteTokenBatchExportItemInput[]
-  onCompleted?: (result: ManagedSiteTokenBatchExportExecutionResult) => void
-}
-
-const formatValues = (items: string[] | undefined) =>
-  items && items.length > 0 ? items.join(", ") : "-"
-
-const getWarningText = (t: TFunction, code: string) => {
-  switch (code) {
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.MODEL_PREFILL_FAILED:
-      return t(
-        "keyManagement:batchManagedSiteExport.warnings.modelPrefillFailed",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.MATCH_REQUIRES_CONFIRMATION:
-      return t(
-        "keyManagement:batchManagedSiteExport.warnings.matchRequiresConfirmation",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE:
-      return t(
-        "keyManagement:batchManagedSiteExport.warnings.exactVerificationUnavailable",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.BACKEND_SEARCH_FAILED:
-      return t(
-        "keyManagement:batchManagedSiteExport.warnings.backendSearchFailed",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.DEDUPE_UNSUPPORTED:
-    default:
-      return t(
-        "keyManagement:batchManagedSiteExport.warnings.dedupeUnsupported",
-      )
-  }
-}
-
-const getBlockedReasonText = (
-  t: TFunction,
-  code?: string | null | undefined,
-) => {
-  switch (code) {
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.CONFIG_MISSING:
-      return t(
-        "keyManagement:batchManagedSiteExport.blockedReasons.configMissing",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.SECRET_RESOLUTION_FAILED:
-      return t(
-        "keyManagement:batchManagedSiteExport.blockedReasons.secretResolutionFailed",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.NAME_REQUIRED:
-      return t(
-        "keyManagement:batchManagedSiteExport.blockedReasons.nameRequired",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.KEY_REQUIRED:
-      return t(
-        "keyManagement:batchManagedSiteExport.blockedReasons.keyRequired",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.REAL_KEY_REQUIRED:
-      return t(
-        "keyManagement:batchManagedSiteExport.blockedReasons.realKeyRequired",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED:
-      return t(
-        "keyManagement:batchManagedSiteExport.blockedReasons.baseUrlRequired",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED:
-      return t(
-        "keyManagement:batchManagedSiteExport.blockedReasons.modelsRequired",
-      )
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED:
-      return t(
-        "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed",
-      )
-    default:
-      return null
-  }
-}
-
-const getExecutionErrorText = (t: TFunction, error?: string | null) => {
-  const blockedReasonText = getBlockedReasonText(t, error)
-  if (blockedReasonText) {
-    return blockedReasonText
-  }
-
-  const trimmedError = error?.trim()
-  return (
-    trimmedError ||
-    t("keyManagement:batchManagedSiteExport.results.channelCreationFailed")
-  )
-}
-
-const getStatusBadge = (
-  t: TFunction,
-  item: ManagedSiteTokenBatchExportPreviewItem,
-) => {
-  switch (item.status) {
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY:
-      return {
-        label: t("keyManagement:batchManagedSiteExport.status.ready"),
-        variant: "success" as const,
-      }
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING:
-      return {
-        label: t("keyManagement:batchManagedSiteExport.status.warning"),
-        variant: "warning" as const,
-      }
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED:
-      return {
-        label: t("keyManagement:batchManagedSiteExport.status.skipped"),
-        variant: "secondary" as const,
-      }
-    case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED:
-    default:
-      return {
-        label: t("keyManagement:batchManagedSiteExport.status.blocked"),
-        variant: "danger" as const,
-      }
-  }
-}
+  useManagedSiteTokenBatchExportDialog,
+  type ManagedSiteTokenBatchExportDialogProps,
+} from "./ManagedSiteTokenBatchExportDialog/useManagedSiteTokenBatchExportDialog"
 
 /**
  * Preview and execute selected Key Management tokens as managed-site channels.
@@ -197,523 +27,23 @@ export function ManagedSiteTokenBatchExportDialog({
     "common",
     "channelDialog",
   ])
-  const {
-    newApiBaseUrl,
-    newApiUserId,
-    newApiUsername,
-    newApiPassword,
-    newApiTotpSecret,
-  } = useUserPreferencesContext()
-  const verification = useNewApiManagedVerification()
-  const [preview, setPreview] =
-    useState<ManagedSiteTokenBatchExportPreview | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
-  const [previewError, setPreviewError] = useState<string | null>(null)
-  const [executionError, setExecutionError] = useState<string | null>(null)
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
-  const [isRunning, setIsRunning] = useState(false)
-  const [executionResult, setExecutionResult] =
-    useState<ManagedSiteTokenBatchExportExecutionResult | null>(null)
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [verifyingItemId, setVerifyingItemId] = useState<string | null>(null)
-  const resolvedChannelKeysByItemIdRef = useRef<
-    Record<string, Record<number, string>>
-  >({})
-
-  useEffect(() => {
-    if (!isOpen) {
-      setPreview(null)
-      setSelectedIds(new Set())
-      setIsLoadingPreview(false)
-      setPreviewError(null)
-      setExecutionError(null)
-      setIsConfirmOpen(false)
-      setIsRunning(false)
-      setExecutionResult(null)
-      setRefreshKey(0)
-      setVerifyingItemId(null)
-      resolvedChannelKeysByItemIdRef.current = {}
-      return
-    }
-
-    let cancelled = false
-    setPreview(null)
-    setSelectedIds(new Set())
-    setPreviewError(null)
-    setExecutionError(null)
-    setExecutionResult(null)
-    setIsLoadingPreview(true)
-
-    void (async () => {
-      try {
-        const nextPreview = await prepareManagedSiteTokenBatchExportPreview({
-          items,
-          resolvedChannelKeysByItemId: resolvedChannelKeysByItemIdRef.current,
-        })
-        if (cancelled) return
-        setPreview(nextPreview)
-        setSelectedIds(
-          new Set(
-            nextPreview.items
-              .filter(shouldSelectPreviewItemByDefault)
-              .map((item) => item.id),
-          ),
-        )
-      } catch (error) {
-        if (cancelled) return
-        setPreviewError(getErrorMessage(error))
-      } finally {
-        if (!cancelled) {
-          setIsLoadingPreview(false)
-        }
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isOpen, items, refreshKey])
-
-  const executableItems = useMemo(
-    () => preview?.items.filter(isExecutablePreviewItem) ?? [],
-    [preview],
-  )
-  const selectedExecutableCount = executableItems.filter((item) =>
-    selectedIds.has(item.id),
-  ).length
-  const allExecutableSelected =
-    executableItems.length > 0 &&
-    selectedExecutableCount === executableItems.length
-  const executableSelectionChecked =
-    selectedExecutableCount === 0
-      ? false
-      : selectedExecutableCount === executableItems.length
-        ? true
-        : "indeterminate"
-
-  const selectedExecutionIds = useMemo(
-    () => Array.from(selectedIds),
-    [selectedIds],
-  )
-  const modelOptions = useMemo(
-    () =>
-      toModelOptions(
-        normalizeModels(
-          preview?.items.flatMap((item) => item.draft?.models ?? []) ?? [],
-        ),
-      ),
-    [preview],
-  )
-
-  const handleClose = () => {
-    if (isRunning) return
-    if (verification.dialogState.isOpen) {
-      verification.closeDialog()
-    }
-    onClose()
-  }
-
-  const handleRefreshPreview = () => {
-    if (isLoadingPreview || isRunning) return
-    setExecutionError(null)
-    setRefreshKey((value) => value + 1)
-  }
-
-  const mergeResolvedChannelKeyForItem = (
-    itemId: string,
-    channelId: number,
-    key: string,
-  ) => {
-    resolvedChannelKeysByItemIdRef.current = {
-      ...resolvedChannelKeysByItemIdRef.current,
-      [itemId]: {
-        ...(resolvedChannelKeysByItemIdRef.current[itemId] ?? {}),
-        [channelId]: key,
-      },
-    }
-  }
-
-  const applyResolvedChannelKeyForItem = (
-    item: ManagedSiteTokenBatchExportPreviewItem,
-    candidate: ManagedSiteTokenBatchExportMatchedChannel,
-    resolvedKey: string,
-  ) => {
-    setPreview((currentPreview) => {
-      if (!currentPreview) return currentPreview
-
-      const nextItems = currentPreview.items.map((previewItem) =>
-        previewItem.id === item.id
-          ? applyResolvedChannelKeyToPreviewItem({
-              item: previewItem,
-              candidate,
-              resolvedKey,
-              siteType: currentPreview.siteType,
-            })
-          : previewItem,
-      )
-
-      return {
-        ...currentPreview,
-        items: nextItems,
-        ...countPreviewItems(nextItems),
-      }
-    })
-    setSelectedIds((currentSelectedIds) => {
-      const nextSelectedIds = new Set(currentSelectedIds)
-      const updatedItem = applyResolvedChannelKeyToPreviewItem({
-        item,
-        candidate,
-        resolvedKey,
-        siteType: preview?.siteType,
-      })
-
-      if (
-        updatedItem.status ===
-        MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED
-      ) {
-        nextSelectedIds.delete(item.id)
-      }
-
-      return nextSelectedIds
-    })
-  }
-
-  const handleVerifyAndRefresh = async (
-    requestedItem: ManagedSiteTokenBatchExportPreviewItem,
-    requestedCandidate: ManagedSiteTokenBatchExportMatchedChannel,
-  ) => {
-    if (
-      verifyingItemId ||
-      verification.dialogState.isOpen ||
-      isLoadingPreview ||
-      isRunning
-    ) {
-      return
-    }
-
-    const verificationTargets = preview
-      ? getPreviewVerificationTargets(preview)
-      : []
-    const targets =
-      verificationTargets.length > 0
-        ? verificationTargets
-        : [{ item: requestedItem, candidate: requestedCandidate }]
-    const failureMessages: string[] = []
-
-    setExecutionError(null)
-
-    const verifyTargetsFromIndex = async (startIndex: number) => {
-      for (let index = startIndex; index < targets.length; index += 1) {
-        const { item, candidate } = targets[index]
-        let resolvedChannelKey = ""
-        let shouldContinueAfterDeferredLoad = false
-        let loadCompleted = false
-
-        setVerifyingItemId(item.id)
-
-        const handleLoaded = async () => {
-          loadCompleted = true
-          if (resolvedChannelKey) {
-            mergeResolvedChannelKeyForItem(
-              item.id,
-              candidate.id,
-              resolvedChannelKey,
-            )
-            applyResolvedChannelKeyForItem(item, candidate, resolvedChannelKey)
-          }
-          setExecutionError(null)
-          if (shouldContinueAfterDeferredLoad) {
-            await verifyTargetsFromIndex(index + 1)
-          }
-        }
-
-        try {
-          const loadedImmediately = await loadNewApiChannelKeyWithVerification({
-            channelId: candidate.id,
-            label: candidate.name,
-            requestKind: "channel",
-            config: {
-              baseUrl: newApiBaseUrl,
-              userId: newApiUserId,
-              username: newApiUsername,
-              password: newApiPassword,
-              totpSecret: newApiTotpSecret,
-            },
-            setKey: (key) => {
-              resolvedChannelKey = key
-            },
-            onLoaded: handleLoaded,
-            openVerification: (request) =>
-              verification.openNewApiManagedVerification({
-                ...request,
-                closeMode:
-                  NEW_API_MANAGED_VERIFICATION_CLOSE_MODES.CLOSE_AFTER_VERIFICATION,
-              }),
-          })
-
-          if (!loadedImmediately) {
-            if (!loadCompleted) {
-              shouldContinueAfterDeferredLoad = true
-              setVerifyingItemId(null)
-              return
-            }
-          }
-        } catch (error) {
-          failureMessages.push(getErrorMessage(error))
-        }
-      }
-
-      setVerifyingItemId(null)
-      if (failureMessages.length > 0) {
-        setExecutionError(
-          t(
-            "keyManagement:batchManagedSiteExport.messages.verificationFailed",
-            {
-              error: failureMessages.join("; "),
-            },
-          ),
-        )
-      }
-    }
-
-    try {
-      await verifyTargetsFromIndex(0)
-    } catch (error) {
-      setVerifyingItemId(null)
-      setExecutionError(
-        t("keyManagement:batchManagedSiteExport.messages.verificationFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    }
-  }
-
-  const handleToggleAll = () => {
-    if (!preview || executionResult) return
-    setSelectedIds(
-      allExecutableSelected
-        ? new Set()
-        : new Set(executableItems.map((item) => item.id)),
-    )
-  }
-
-  const handleToggleItem = (item: ManagedSiteTokenBatchExportPreviewItem) => {
-    if (!isExecutablePreviewItem(item) || executionResult) return
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(item.id)) {
-        next.delete(item.id)
-      } else {
-        next.add(item.id)
-      }
-      return next
-    })
-  }
-
-  const handleItemModelsChange = (
-    item: ManagedSiteTokenBatchExportPreviewItem,
-    models: string[],
-  ) => {
-    if (!item.draft || executionResult || isRunning) return
-
-    const normalizedModels = normalizeModels(models)
-
-    setPreview((currentPreview) => {
-      if (!currentPreview) return currentPreview
-
-      const nextItems = currentPreview.items.map((previewItem) => {
-        if (previewItem.id !== item.id || !previewItem.draft) {
-          return previewItem
-        }
-
-        if (normalizedModels.length === 0) {
-          return {
-            ...previewItem,
-            draft: {
-              ...previewItem.draft,
-              models: [],
-            },
-            status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
-            blockingReasonCode:
-              MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
-          }
-        }
-
-        if (
-          canEditItemModels(previewItem) &&
-          !isExecutablePreviewItem(previewItem)
-        ) {
-          // Manually supplied models make a models-required blocked row executable,
-          // but keep it as WARNING after clearing the blocking fields for confirmation.
-          return {
-            ...previewItem,
-            draft: {
-              ...previewItem.draft,
-              models: normalizedModels,
-            },
-            status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
-            blockingReasonCode: undefined,
-            blockingMessage: undefined,
-          }
-        }
-
-        return {
-          ...previewItem,
-          draft: {
-            ...previewItem.draft,
-            models: normalizedModels,
-          },
-        }
-      })
-
-      return {
-        ...currentPreview,
-        items: nextItems,
-        ...countPreviewItems(nextItems),
-      }
-    })
-
-    setSelectedIds((currentSelectedIds) => {
-      const nextSelectedIds = new Set(currentSelectedIds)
-      if (normalizedModels.length === 0) {
-        nextSelectedIds.delete(item.id)
-      } else if (
-        item.status ===
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED &&
-        item.blockingReasonCode ===
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED
-      ) {
-        nextSelectedIds.add(item.id)
-      }
-      return nextSelectedIds
-    })
-  }
-
-  const handleConfirm = async () => {
-    if (!preview || selectedExecutionIds.length === 0) return
-
-    setIsConfirmOpen(false)
-    setIsRunning(true)
-    setExecutionError(null)
-    const analyticsContext = {
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    }
-    void trackProductAnalyticsActionStarted(analyticsContext)
-    try {
-      const result = await executeManagedSiteTokenBatchExport({
-        preview,
-        selectedItemIds: selectedExecutionIds,
-      })
-      void trackProductAnalyticsActionCompleted({
-        ...analyticsContext,
-        result: PRODUCT_ANALYTICS_RESULTS.Success,
-        insights: {
-          selectedCount: result.totalSelected,
-          itemCount: result.attemptedCount,
-          successCount: result.createdCount,
-          failureCount: result.failedCount,
-        },
-      })
-      setExecutionResult(result)
-      onCompleted?.(result)
-      toast.success(
-        t("keyManagement:batchManagedSiteExport.messages.completed", {
-          created: result.createdCount,
-          failed: result.failedCount,
-          skipped: result.skippedCount,
-        }),
-      )
-    } catch (error) {
-      void trackProductAnalyticsActionCompleted({
-        ...analyticsContext,
-        result: PRODUCT_ANALYTICS_RESULTS.Failure,
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          selectedCount: selectedExecutionIds.length,
-          itemCount: selectedExecutionIds.length,
-        },
-      })
-      setExecutionError(getErrorMessage(error))
-    } finally {
-      setIsRunning(false)
-    }
-  }
-
-  const footer = executionResult ? (
-    <div className="flex items-center justify-between gap-3">
-      <div className="text-muted-foreground text-sm">
-        {t("keyManagement:batchManagedSiteExport.results.summary", {
-          created: executionResult.createdCount,
-          failed: executionResult.failedCount,
-          skipped: executionResult.skippedCount,
-          total: executionResult.items.length,
-        })}
-      </div>
-      <Button type="button" onClick={handleClose}>
-        {t("common:actions.close")}
-      </Button>
-    </div>
-  ) : (
-    <div className="flex items-center justify-between gap-3">
-      <div className="text-muted-foreground text-sm">
-        {preview
-          ? t("keyManagement:batchManagedSiteExport.preview.summary", {
-              ready: preview.readyCount,
-              warning: preview.warningCount,
-              skipped: preview.skippedCount,
-              blocked: preview.blockedCount,
-              total: preview.totalCount,
-            })
-          : t("keyManagement:batchManagedSiteExport.preview.selected", {
-              selectedCount: items.length,
-            })}
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleClose}
-          disabled={isRunning}
-        >
-          {t("common:actions.cancel")}
-        </Button>
-        <Button
-          type="button"
-          leftIcon={
-            isRunning || isLoadingPreview ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <SendToBack className="h-4 w-4" />
-            )
-          }
-          disabled={
-            isRunning ||
-            isLoadingPreview ||
-            !preview ||
-            selectedExecutableCount === 0 ||
-            Boolean(previewError)
-          }
-          onClick={() => setIsConfirmOpen(true)}
-        >
-          {isRunning
-            ? t("keyManagement:batchManagedSiteExport.actions.running")
-            : t("keyManagement:batchManagedSiteExport.actions.start")}
-        </Button>
-      </div>
-    </div>
-  )
+  const dialog = useManagedSiteTokenBatchExportDialog({
+    isOpen,
+    onClose,
+    items,
+    onCompleted,
+    t,
+  })
+  const verificationState = dialog.verification.dialogState
 
   return (
     <>
       <Modal
         isOpen={isOpen}
-        onClose={handleClose}
-        closeOnBackdropClick={!isRunning}
-        closeOnEsc={!isRunning}
-        showCloseButton={!isRunning}
+        onClose={dialog.actions.close}
+        closeOnBackdropClick={!dialog.isRunning}
+        closeOnEsc={!dialog.isRunning}
+        showCloseButton={!dialog.isRunning}
         size="lg"
         header={
           <div className="space-y-1">
@@ -721,10 +51,10 @@ export function ManagedSiteTokenBatchExportDialog({
               {t("keyManagement:batchManagedSiteExport.title")}
             </div>
             <div className="text-muted-foreground text-sm">
-              {preview
+              {dialog.preview
                 ? t("keyManagement:batchManagedSiteExport.description", {
-                    site: getManagedSiteLabel(t, preview.siteType),
-                    selectedCount: preview.totalCount,
+                    site: getManagedSiteLabel(t, dialog.preview.siteType),
+                    selectedCount: dialog.preview.totalCount,
                   })
                 : t("keyManagement:batchManagedSiteExport.loadingDescription", {
                     selectedCount: items.length,
@@ -732,326 +62,82 @@ export function ManagedSiteTokenBatchExportDialog({
             </div>
           </div>
         }
-        footer={footer}
+        footer={
+          <ManagedSiteTokenBatchExportFooter
+            t={t}
+            selectedItemCount={items.length}
+            preview={dialog.preview}
+            previewError={dialog.previewError}
+            executionResult={dialog.executionResult}
+            isLoadingPreview={dialog.isLoadingPreview}
+            isRunning={dialog.isRunning}
+            selectedExecutableCount={dialog.executableSelection.selectedCount}
+            onClose={dialog.actions.close}
+            onStart={dialog.actions.openConfirm}
+          />
+        }
       >
         <div className="space-y-4">
-          {previewError ? (
-            <div className="space-y-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
-              <div>
-                {t("keyManagement:batchManagedSiteExport.preview.loadFailed", {
-                  error: previewError,
-                })}
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                leftIcon={<RefreshCcw className="h-4 w-4" />}
-                disabled={isLoadingPreview || isRunning}
-                onClick={handleRefreshPreview}
-              >
-                {t(
-                  "keyManagement:batchManagedSiteExport.actions.refreshPreview",
-                )}
-              </Button>
-            </div>
-          ) : null}
+          <ManagedSiteTokenBatchExportStatusPanels
+            t={t}
+            previewError={dialog.previewError}
+            executionError={dialog.executionError}
+            isLoadingPreview={dialog.isLoadingPreview}
+            isRunning={dialog.isRunning}
+            onRefreshPreview={dialog.actions.refreshPreview}
+          />
 
-          {executionError ? (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
-              {t(
-                "keyManagement:batchManagedSiteExport.messages.executionFailed",
-                {
-                  error: executionError,
-                },
-              )}
-            </div>
-          ) : null}
-
-          {isLoadingPreview ? (
-            <div className="text-muted-foreground rounded-md border p-3 text-sm">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t("keyManagement:batchManagedSiteExport.preview.loading")}
-              </div>
-            </div>
-          ) : null}
-
-          {preview && !executionResult ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={executableSelectionChecked}
-                  disabled={executableItems.length === 0}
-                  aria-label={t(
-                    "keyManagement:batchManagedSiteExport.actions.selectAll",
-                    {
-                      selected: selectedExecutableCount,
-                      total: executableItems.length,
-                    },
-                  )}
-                  onCheckedChange={handleToggleAll}
-                />
-                {t("keyManagement:batchManagedSiteExport.actions.selectAll", {
-                  selected: selectedExecutableCount,
-                  total: executableItems.length,
-                })}
-              </label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                leftIcon={<RefreshCcw className="h-4 w-4" />}
-                disabled={isLoadingPreview || isRunning}
-                onClick={handleRefreshPreview}
-              >
-                {t(
-                  "keyManagement:batchManagedSiteExport.actions.refreshPreview",
-                )}
-              </Button>
-            </div>
-          ) : null}
-
-          {preview ? (
-            <div className="max-h-[60vh] space-y-3 overflow-y-auto rounded-md border p-3 md:max-h-[min(70vh,48rem)]">
-              {preview.items.map((item) => {
-                const badge = getStatusBadge(t, item)
-                const verificationCandidate =
-                  getPreviewItemVerificationCandidate(item, preview.siteType)
-                const result = executionResult?.items.find(
-                  (resultItem) => resultItem.id === item.id,
-                )
-                const verificationButton = verificationCandidate ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    leftIcon={
-                      verifyingItemId === item.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCcw className="h-4 w-4" />
-                      )
-                    }
-                    disabled={
-                      isLoadingPreview ||
-                      isRunning ||
-                      Boolean(executionResult) ||
-                      verification.dialogState.isOpen ||
-                      Boolean(verifyingItemId)
-                    }
-                    onClick={() =>
-                      void handleVerifyAndRefresh(item, verificationCandidate)
-                    }
-                  >
-                    {verifyingItemId === item.id
-                      ? t(
-                          "keyManagement:batchManagedSiteExport.actions.verifying",
-                        )
-                      : t(
-                          "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
-                        )}
-                  </Button>
-                ) : null
-
-                return (
-                  <div
-                    key={item.id}
-                    className="space-y-2 rounded-md border p-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <label className="flex min-w-0 items-start gap-2">
-                        <Checkbox
-                          className="mt-0.5"
-                          checked={selectedIds.has(item.id)}
-                          aria-label={`${item.accountName} / ${item.runtimeKeyName}`}
-                          disabled={
-                            !isExecutablePreviewItem(item) || !!executionResult
-                          }
-                          onCheckedChange={() => handleToggleItem(item)}
-                        />
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium">
-                            {item.accountName} / {item.runtimeKeyName}
-                          </span>
-                          <span className="text-muted-foreground block truncate text-xs">
-                            {item.draft?.name ?? "-"}
-                          </span>
-                        </span>
-                      </label>
-                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                        {result ? (
-                          <Badge
-                            variant={
-                              result.success
-                                ? "success"
-                                : result.skipped
-                                  ? "secondary"
-                                  : "danger"
-                            }
-                            size="sm"
-                          >
-                            {result.success
-                              ? t(
-                                  "keyManagement:batchManagedSiteExport.results.status.success",
-                                )
-                              : result.skipped
-                                ? t(
-                                    "keyManagement:batchManagedSiteExport.results.status.skipped",
-                                  )
-                                : t(
-                                    "keyManagement:batchManagedSiteExport.results.status.failed",
-                                  )}
-                          </Badge>
-                        ) : (
-                          <Badge variant={badge.variant} size="sm">
-                            {badge.label}
-                          </Badge>
-                        )}
-                        {verificationButton}
-                      </div>
-                    </div>
-
-                    <div className="grid gap-2 text-xs md:grid-cols-2">
-                      <div>
-                        <span className="text-muted-foreground">
-                          {t(
-                            "keyManagement:batchManagedSiteExport.fields.baseUrl",
-                          )}
-                        </span>
-                        <span className="ml-2 break-all">
-                          {item.draft?.base_url || "-"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">
-                          {t(
-                            "keyManagement:batchManagedSiteExport.fields.groups",
-                          )}
-                        </span>
-                        <span className="ml-2">
-                          {formatValues(item.draft?.groups)}
-                        </span>
-                      </div>
-                      <div className="md:col-span-2">
-                        <span className="text-muted-foreground">
-                          {t(
-                            "keyManagement:batchManagedSiteExport.fields.models",
-                          )}
-                        </span>
-                        {item.draft &&
-                        !executionResult &&
-                        canEditItemModels(item) ? (
-                          <div className="mt-1">
-                            <CompactMultiSelect
-                              options={modelOptions}
-                              selected={item.draft.models}
-                              onChange={(models) =>
-                                handleItemModelsChange(item, models)
-                              }
-                              size="default"
-                              placeholder={t(
-                                "channelDialog:fields.models.placeholder",
-                              )}
-                              aria-label={t(
-                                "keyManagement:batchManagedSiteExport.fields.editModelsLabel",
-                                {
-                                  name: `${item.accountName} / ${item.runtimeKeyName}`,
-                                },
-                              )}
-                              allowCustom
-                              disabled={isRunning}
-                            />
-                          </div>
-                        ) : (
-                          <span className="ml-2 break-words">
-                            {formatValues(item.draft?.models)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {item.matchedChannel ? (
-                      <div className="text-muted-foreground dark:bg-dark-bg-tertiary rounded-md bg-gray-50 p-2 text-xs">
-                        {t(
-                          "keyManagement:batchManagedSiteExport.messages.duplicate",
-                          {
-                            channel: item.matchedChannel.name,
-                          },
-                        )}
-                      </div>
-                    ) : null}
-
-                    {item.warningCodes.length > 0 ? (
-                      <div className="space-y-2 rounded-md border border-amber-200/70 bg-amber-50/55 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">
-                        <ul className="list-disc space-y-1 pl-4 leading-5">
-                          {item.warningCodes.map((code) => (
-                            <li key={code}>{getWarningText(t, code)}</li>
-                          ))}
-                        </ul>
-                        {item.assessment ? (
-                          <ManagedSiteChannelAssessmentSignalsRow
-                            assessment={item.assessment}
-                            managedSiteType={preview.siteType}
-                          />
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {item.blockingReasonCode ? (
-                      <div className="rounded-md bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
-                        {getBlockedReasonText(t, item.blockingReasonCode) ??
-                          t(
-                            "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed",
-                          )}
-                        {item.blockingMessage
-                          ? `: ${item.blockingMessage}`
-                          : ""}
-                      </div>
-                    ) : null}
-
-                    {result?.error ? (
-                      <div className="rounded-md bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
-                        {getExecutionErrorText(t, result.error)}
-                      </div>
-                    ) : null}
-                  </div>
-                )
-              })}
-            </div>
+          {dialog.preview ? (
+            <ManagedSiteTokenBatchExportPreviewList
+              t={t}
+              preview={dialog.preview}
+              selectedIds={dialog.selectedIds}
+              executableSelection={dialog.executableSelection}
+              modelOptions={dialog.modelOptions}
+              executionResult={dialog.executionResult}
+              isLoadingPreview={dialog.isLoadingPreview}
+              isRunning={dialog.isRunning}
+              verifyingItemId={dialog.verifyingItemId}
+              isVerificationDialogOpen={verificationState.isOpen}
+              onToggleAll={dialog.actions.toggleAll}
+              onRefreshPreview={dialog.actions.refreshPreview}
+              onToggleItem={dialog.actions.toggleItem}
+              onItemModelsChange={dialog.actions.changeItemModels}
+              onVerifyAndRefresh={dialog.actions.verifyAndRefresh}
+            />
           ) : null}
         </div>
       </Modal>
 
       <DestructiveConfirmDialog
-        isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        onConfirm={handleConfirm}
+        isOpen={dialog.isConfirmOpen}
+        onClose={dialog.actions.closeConfirm}
+        onConfirm={dialog.actions.confirm}
         title={t("keyManagement:batchManagedSiteExport.confirm.title")}
         description={t(
           "keyManagement:batchManagedSiteExport.confirm.description",
           {
-            selectedCount: selectedExecutableCount,
+            selectedCount: dialog.executableSelection.selectedCount,
           },
         )}
         confirmLabel={t("keyManagement:batchManagedSiteExport.actions.start")}
         cancelLabel={t("common:actions.cancel")}
-        isWorking={isRunning}
+        isWorking={dialog.isRunning}
       />
       <NewApiManagedVerificationDialog
-        isOpen={verification.dialogState.isOpen}
-        step={verification.dialogState.step}
-        request={verification.dialogState.request}
-        code={verification.dialogState.code}
-        errorMessage={verification.dialogState.errorMessage}
-        isBusy={verification.dialogState.isBusy}
-        busyMessage={verification.dialogState.busyMessage}
-        onCodeChange={verification.setCode}
-        onClose={verification.closeDialog}
-        onSubmit={verification.submitCode}
-        onRetry={verification.retryVerification}
-        onOpenSite={verification.openBaseUrl}
-        onUpdateRequestConfig={verification.patchRequestConfig}
+        isOpen={verificationState.isOpen}
+        step={verificationState.step}
+        request={verificationState.request}
+        code={verificationState.code}
+        errorMessage={verificationState.errorMessage}
+        isBusy={verificationState.isBusy}
+        busyMessage={verificationState.busyMessage}
+        onCodeChange={dialog.verification.setCode}
+        onClose={dialog.verification.closeDialog}
+        onSubmit={dialog.verification.submitCode}
+        onRetry={dialog.verification.retryVerification}
+        onOpenSite={dialog.verification.openBaseUrl}
+        onUpdateRequestConfig={dialog.verification.patchRequestConfig}
       />
     </>
   )

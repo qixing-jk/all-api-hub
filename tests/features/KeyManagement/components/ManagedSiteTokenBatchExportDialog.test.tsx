@@ -624,6 +624,35 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeNull()
   })
 
+  it("keeps the opened item batch stable across parent rerenders while open", async () => {
+    mockPreparePreview.mockResolvedValue(preview)
+
+    const { rerender } = render(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    expect(mockPreparePreview).toHaveBeenCalledTimes(1)
+    mockPreparePreview.mockClear()
+
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(mockPreparePreview).not.toHaveBeenCalled()
+  })
+
   it("executes selected preview rows and reports success", async () => {
     const user = userEvent.setup()
     mockPreparePreview.mockResolvedValue(preview)

@@ -28,6 +28,55 @@ export const toModelOptions = (models: string[]) =>
 export const normalizeModels = (models: string[]) =>
   Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)))
 
+export const applyNormalizedModelsToPreviewItem = (
+  item: ManagedSiteTokenBatchExportPreviewItem,
+  models: string[],
+): ManagedSiteTokenBatchExportPreviewItem => {
+  if (!item.draft) {
+    return item
+  }
+
+  if (models.length === 0) {
+    return {
+      ...item,
+      draft: {
+        ...item.draft,
+        models: [],
+      },
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+    }
+  }
+
+  if (canEditItemModels(item) && !isExecutablePreviewItem(item)) {
+    return {
+      ...item,
+      draft: {
+        ...item.draft,
+        models,
+      },
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      blockingReasonCode: undefined,
+      blockingMessage: undefined,
+    }
+  }
+
+  return {
+    ...item,
+    draft: {
+      ...item.draft,
+      models,
+    },
+  }
+}
+
+export const applyModelsToPreviewItem = (
+  item: ManagedSiteTokenBatchExportPreviewItem,
+  models: string[],
+): ManagedSiteTokenBatchExportPreviewItem =>
+  applyNormalizedModelsToPreviewItem(item, normalizeModels(models))
+
 const hasDuplicateRiskWarning = (
   item: ManagedSiteTokenBatchExportPreviewItem,
 ) =>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  applyModelsToPreviewItem,
   applyResolvedChannelKeyToPreviewItem,
   canEditItemModels,
   countPreviewItems,
@@ -112,6 +113,53 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
         }),
       ),
     ).toBe(true)
+  })
+
+  it("updates editable preview item models and normalizes duplicate values", () => {
+    expect(
+      applyModelsToPreviewItem(buildPreviewItem(), [
+        " gpt-4o-mini ",
+        "",
+        "gpt-4o-mini",
+      ]),
+    ).toMatchObject({
+      draft: {
+        models: ["gpt-4o-mini"],
+      },
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
+    })
+  })
+
+  it("moves models-required blocked rows between blocked and warning states as models change", () => {
+    const item = buildPreviewItem({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+      blockingMessage: "models missing",
+      draft: {
+        ...buildPreviewItem().draft!,
+        models: [],
+      },
+    })
+
+    const unblocked = applyModelsToPreviewItem(item, ["gpt-4o-mini"])
+    expect(unblocked).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      blockingReasonCode: undefined,
+      blockingMessage: undefined,
+      draft: {
+        models: ["gpt-4o-mini"],
+      },
+    })
+
+    expect(applyModelsToPreviewItem(unblocked, [])).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+      draft: {
+        models: [],
+      },
+    })
   })
 
   it("counts preview items by status", () => {
