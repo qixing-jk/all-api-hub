@@ -1569,6 +1569,11 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return
       }
 
+      const identityKey = buildTokenIdentityKey(token.accountId, token.id)
+      const cacheKey = buildManagedSiteStatusCacheKey(token)
+      const entryBeforeResolve =
+        managedSiteTokenStatusesRef.current[identityKey]
+
       let resolvedToken: AccountToken
       try {
         resolvedToken = await resolveDisplayAccountTokenForSecret(
@@ -1581,12 +1586,18 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           tokenId: token.id,
           error,
         })
+        throw error
+      }
+
+      const currentEntry = managedSiteTokenStatusesRef.current[identityKey]
+      if (
+        !currentEntry ||
+        currentEntry.cacheKey !== cacheKey ||
+        currentEntry.runId !== entryBeforeResolve?.runId
+      ) {
         return
       }
 
-      const identityKey = buildTokenIdentityKey(token.accountId, token.id)
-      const cacheKey = buildManagedSiteStatusCacheKey(token)
-      const currentEntry = managedSiteTokenStatusesRef.current[identityKey]
       const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
         status,
         tokenKey: resolvedToken.key,
@@ -1605,7 +1616,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         ...prev,
         [identityKey]: {
           cacheKey,
-          runId: currentEntry?.runId ?? managedSiteStatusRunIdRef.current,
+          runId: currentEntry.runId,
           isChecking: false,
           result: displayResult,
           checkedAt: Date.now(),

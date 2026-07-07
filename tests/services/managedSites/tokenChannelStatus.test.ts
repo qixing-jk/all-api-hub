@@ -177,6 +177,48 @@ const buildRecoverableVerificationUnavailableStatus = (
 })
 
 describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
+  it("returns the original status when there is no assessment to update", () => {
+    const status = {
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      reason:
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.INPUT_PREPARATION_FAILED,
+    }
+
+    expect(
+      resolveManagedSiteTokenChannelStatusWithVerifiedKey({
+        status,
+        tokenKey: "sk-token-secret",
+        channelId: 12,
+        channelKey: "sk-token-secret",
+        siteType: SITE_TYPES.NEW_API,
+      }),
+    ).toBe(status)
+  })
+
+  it("records a resolved channel key when the assessment no longer has that channel", () => {
+    const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
+      status: buildRecoverableVerificationUnavailableStatus({
+        models: {
+          comparable: true,
+          matched: false,
+          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
+          channel: undefined,
+        },
+      }) as any,
+      tokenKey: "sk-token-secret",
+      channelId: 999,
+      channelKey: "sk-token-secret",
+      siteType: SITE_TYPES.NEW_API,
+    })
+
+    expect(result).toMatchObject({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      resolvedChannelKeysById: {
+        999: "sk-token-secret",
+      },
+    })
+  })
+
   it("marks the token as added when the verified channel key matches the token key", () => {
     const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
       status: buildRecoverableVerificationUnavailableStatus() as any,
@@ -223,6 +265,53 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
           channel: undefined,
         },
       }),
+    })
+  })
+
+  it("marks the token as not added when the verified key has no URL, key, or model match", () => {
+    const status = buildRecoverableVerificationUnavailableStatus() as any
+    status.assessment = {
+      ...status.assessment,
+      url: {
+        matched: false,
+        candidateCount: 0,
+        channel: {
+          id: 12,
+          name: "Managed Channel 12",
+        },
+      },
+      models: {
+        comparable: true,
+        matched: false,
+        reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
+        channel: undefined,
+      },
+    }
+
+    const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
+      status,
+      tokenKey: "sk-token-secret",
+      channelId: 12,
+      channelKey: "sk-other-secret",
+      siteType: SITE_TYPES.NEW_API,
+    })
+
+    expect(result).toMatchObject({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
+      resolvedChannelKeysById: {
+        12: "sk-other-secret",
+      },
+      assessment: {
+        url: {
+          matched: false,
+        },
+        key: {
+          matched: false,
+        },
+        models: {
+          matched: false,
+        },
+      },
     })
   })
 })

@@ -107,6 +107,14 @@ const fetchRecoverableCandidateSecretKey = async (params: {
       params.channelId,
       secretKeyPromise,
     )
+    secretKeyPromise.catch(() => {
+      if (
+        params.requestCache?.channelSecretKeysById.get(params.channelId) ===
+        secretKeyPromise
+      ) {
+        params.requestCache.channelSecretKeysById.delete(params.channelId)
+      }
+    })
 
     return await secretKeyPromise
   } catch (error) {
@@ -148,11 +156,17 @@ export async function resolveManagedSiteChannelMatch(
     requestCache?.searchResultsByBaseUrl.get(searchBaseUrl)
 
   if (!searchResultsPromise) {
+    const cache = requestCache
     searchResultsPromise = service.searchChannel(managedConfig, searchBaseUrl)
-    requestCache?.searchResultsByBaseUrl.set(
-      searchBaseUrl,
-      searchResultsPromise,
-    )
+    cache?.searchResultsByBaseUrl.set(searchBaseUrl, searchResultsPromise)
+    searchResultsPromise.catch(() => {
+      if (
+        cache &&
+        cache.searchResultsByBaseUrl.get(searchBaseUrl) === searchResultsPromise
+      ) {
+        cache.searchResultsByBaseUrl.delete(searchBaseUrl)
+      }
+    })
   }
 
   const searchResults = await searchResultsPromise

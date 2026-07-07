@@ -179,4 +179,58 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
       },
     })
   })
+
+  it("leaves preview rows unchanged when the resolved channel key cannot be compared", () => {
+    const item = buildRecoverablePreviewItem({
+      assessment: undefined,
+    })
+
+    expect(
+      applyResolvedChannelKeyToPreviewItem({
+        item,
+        candidate,
+        resolvedKey: "sk-source-key",
+      }),
+    ).toBe(item)
+    expect(
+      applyResolvedChannelKeyToPreviewItem({
+        item: buildRecoverablePreviewItem({
+          draft: {
+            ...buildPreviewItem().draft!,
+            key: " ",
+          },
+        }),
+        candidate,
+        resolvedKey: "sk-source-key",
+      }),
+    ).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+    })
+  })
+
+  it("keeps a recoverable row as warning when the verified channel key still needs confirmation", () => {
+    const item = buildRecoverablePreviewItem()
+
+    expect(
+      applyResolvedChannelKeyToPreviewItem({
+        item,
+        candidate,
+        resolvedKey: "sk-other-key",
+        siteType: SITE_TYPES.NEW_API,
+      }),
+    ).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      warningCodes: [
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.MATCH_REQUIRES_CONFIRMATION,
+      ],
+      matchedChannel: undefined,
+      verificationCandidate: undefined,
+      assessment: {
+        key: {
+          comparable: true,
+          matched: false,
+        },
+      },
+    })
+  })
 })

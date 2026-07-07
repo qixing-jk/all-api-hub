@@ -10,9 +10,12 @@ import {
 } from "~/services/managedSites/providers/newApiSession"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { createTab } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { getNewApiManagedVerificationErrorMessage } from "./errorMessages"
+
+const logger = createLogger("NewApiManagedVerification")
 
 export const NEW_API_MANAGED_VERIFICATION_STEPS = {
   LOGGING_IN: "logging-in",
@@ -211,6 +214,10 @@ export function useNewApiManagedVerification() {
         await Promise.resolve(request.onVerified())
       } else if (request.onVerified) {
         void Promise.resolve(request.onVerified()).catch((error) => {
+          logger.warn("New API managed verification onVerified failed", {
+            kind: request.kind,
+            error,
+          })
           toast.error(getNewApiManagedVerificationErrorMessage(error))
         })
       }

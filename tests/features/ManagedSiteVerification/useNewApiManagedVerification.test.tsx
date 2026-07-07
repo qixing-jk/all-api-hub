@@ -15,11 +15,13 @@ const {
   submitNewApiLoginTwoFactorCodeMock,
   submitNewApiSecureVerificationCodeMock,
   createTabMock,
+  loggerWarnMock,
 } = vi.hoisted(() => ({
   ensureNewApiManagedSessionMock: vi.fn(),
   submitNewApiLoginTwoFactorCodeMock: vi.fn(),
   submitNewApiSecureVerificationCodeMock: vi.fn(),
   createTabMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -51,6 +53,12 @@ vi.mock("~/utils/browser/browserApi", () => ({
   createTab: (...args: unknown[]) => createTabMock(...args),
 }))
 
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    warn: loggerWarnMock,
+  }),
+}))
+
 const BASE_REQUEST = {
   kind: "token" as const,
   label: "Token A",
@@ -69,6 +77,7 @@ describe("useNewApiManagedVerification", () => {
     submitNewApiLoginTwoFactorCodeMock.mockReset()
     submitNewApiSecureVerificationCodeMock.mockReset()
     createTabMock.mockReset()
+    loggerWarnMock.mockReset()
     vi.mocked(toast.success).mockReset()
     vi.mocked(toast.error).mockReset()
   })
@@ -774,6 +783,42 @@ describe("useNewApiManagedVerification", () => {
 
     act(() => {
       resolveVerified?.()
+    })
+  })
+
+  it("logs background onVerified failures after closing immediately", async () => {
+    const error = new Error("callback failed")
+    const onVerified = vi.fn().mockRejectedValue(error)
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        kind: "channel",
+        onVerified,
+        initialSessionResult: {
+          status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
+          methods: {
+            twoFactorEnabled: true,
+            passkeyEnabled: false,
+          },
+        },
+      })
+    })
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledTimes(1)
+      expect(result.current.dialogState.isOpen).toBe(false)
+    })
+    await waitFor(() => {
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        "New API managed verification onVerified failed",
+        {
+          kind: "channel",
+          error,
+        },
+      )
+      expect(toast.error).toHaveBeenCalledTimes(1)
     })
   })
 

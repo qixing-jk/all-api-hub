@@ -2941,6 +2941,197 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
+  it("rejects managed-site confirmation when token secret resolution fails", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "secret-failure-acc",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://api.example.invalid",
+    })
+    const initialStatus = {
+      status: managedSiteTokenChannelStatuses.UNKNOWN,
+      assessment: {
+        searchBaseUrl: "https://api.example.invalid",
+        searchCompleted: true,
+        url: {
+          matched: true,
+          candidateCount: 1,
+          channel: { id: 88, name: "Managed Channel 88" },
+        },
+        key: {
+          comparable: false,
+          matched: false,
+          reason: "comparison-unavailable",
+        },
+        models: {
+          comparable: true,
+          matched: true,
+          reason: "exact",
+          channel: { id: 88, name: "Managed Channel 88" },
+        },
+      },
+    }
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi.fn().mockResolvedValue([
+          createToken({
+            id: 608,
+            key: "masked-token-608",
+            name: "Token 608",
+            expired_time: 0,
+          }),
+        ]),
+        resolveTokenKey: vi
+          .fn()
+          .mockRejectedValue(new Error("secret unavailable")),
+      }) as any,
+    )
+    getManagedSiteTokenChannelStatusMock.mockResolvedValue(initialStatus)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+
+    await expect(
+      result.current.confirmManagedSiteTokenStatusWithChannelKey(
+        result.current.tokens[0]!,
+        initialStatus as any,
+        {
+          channelId: 88,
+          channelKey: "verified-channel-key",
+        },
+      ),
+    ).rejects.toThrow("secret unavailable")
+    expect(
+      resolveManagedSiteTokenChannelStatusWithVerifiedKeyMock,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("does not overwrite a newer managed-site status after resolving a token secret", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "stale-confirm-acc",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://api.example.invalid",
+    })
+    const initialStatus = {
+      status: managedSiteTokenChannelStatuses.UNKNOWN,
+      assessment: {
+        searchBaseUrl: "https://api.example.invalid",
+        searchCompleted: true,
+        url: {
+          matched: true,
+          candidateCount: 1,
+          channel: { id: 89, name: "Managed Channel 89" },
+        },
+        key: {
+          comparable: false,
+          matched: false,
+          reason: "comparison-unavailable",
+        },
+        models: {
+          comparable: true,
+          matched: true,
+          reason: "exact",
+          channel: { id: 89, name: "Managed Channel 89" },
+        },
+      },
+    }
+    const refreshedStatus = {
+      status: managedSiteTokenChannelStatuses.NOT_ADDED,
+    }
+    let resolveSecret: (value: string) => void = () => {}
+    const resolveTokenKey = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveSecret = resolve
+        }),
+    )
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi.fn().mockResolvedValue([
+          createToken({
+            id: 609,
+            key: "masked-token-609",
+            name: "Token 609",
+            expired_time: 0,
+          }),
+        ]),
+        resolveTokenKey,
+      }) as any,
+    )
+    getManagedSiteTokenChannelStatusMock
+      .mockResolvedValueOnce(initialStatus)
+      .mockResolvedValueOnce(refreshedStatus)
+    resolveManagedSiteTokenChannelStatusWithVerifiedKeyMock.mockReturnValue({
+      status: managedSiteTokenChannelStatuses.ADDED,
+      matchedChannel: { id: 89, name: "Managed Channel 89" },
+    })
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+
+    const confirmationPromise =
+      result.current.confirmManagedSiteTokenStatusWithChannelKey(
+        result.current.tokens[0]!,
+        initialStatus as any,
+        {
+          channelId: 89,
+          channelKey: "verified-channel-key",
+        },
+      )
+
+    await waitFor(() => expect(resolveTokenKey).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatusForToken(
+        result.current.tokens[0]!,
+      )
+    })
+    await waitFor(() =>
+      expect(
+        result.current.managedSiteTokenStatuses["stale-confirm-acc:609"]
+          ?.result,
+      ).toEqual(refreshedStatus),
+    )
+
+    await act(async () => {
+      resolveSecret("token-609-secret")
+      await confirmationPromise
+    })
+
+    expect(
+      resolveManagedSiteTokenChannelStatusWithVerifiedKeyMock,
+    ).not.toHaveBeenCalled()
+    expect(
+      result.current.managedSiteTokenStatuses["stale-confirm-acc:609"]?.result,
+    ).toEqual(refreshedStatus)
+  })
+
   it("does not return stale managed-site status results from superseded forced refreshes", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({

@@ -15,6 +15,7 @@ import {
   findManagedSiteChannelsByBaseUrlAndModels,
   getManagedSiteChannelKeyComparisonMode,
   inspectManagedSiteChannelKeyMatch,
+  inspectManagedSiteChannelKeyValueMatch,
   inspectManagedSiteChannelModelsMatch,
   MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES,
 } from "~/services/managedSites/utils/channelMatching"
@@ -318,6 +319,43 @@ describe("channelMatching", () => {
     })
   })
 
+  it("compares raw channel-key values with optional sk-prefix normalization", () => {
+    expect(
+      inspectManagedSiteChannelKeyValueMatch({
+        sourceKey: "",
+        channelKey: "sk-stored-key",
+      }),
+    ).toEqual({
+      comparable: false,
+      matched: false,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_KEY_PROVIDED,
+    })
+
+    expect(
+      inspectManagedSiteChannelKeyValueMatch({
+        sourceKey: "sk-stored-key",
+        channelKey: "",
+      }),
+    ).toEqual({
+      comparable: false,
+      matched: false,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+    })
+
+    expect(
+      inspectManagedSiteChannelKeyValueMatch({
+        sourceKey: "sk-stored-key",
+        channelKey: "stored-key, other-key",
+        keyComparisonMode:
+          MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+      }),
+    ).toEqual({
+      comparable: true,
+      matched: true,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+    })
+  })
+
   it("distinguishes missing comparable keys from comparable key mismatches", () => {
     const urlOnlyChannel = buildManagedSiteChannel({
       id: 1_4,
@@ -411,6 +449,44 @@ describe("channelMatching", () => {
       matched: false,
       reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
       channel: null,
+    })
+  })
+
+  it("maps contained and similar URL model matches into model assessments", () => {
+    const containedChannel = buildManagedSiteChannel({
+      id: 1_8,
+      base_url: "https://api.example.com",
+      models: "gpt-4,gpt-4o-mini",
+    })
+    const similarChannel = buildManagedSiteChannel({
+      id: 1_9,
+      base_url: "https://similar.example.com",
+      models: "gpt-4,gpt-4o,claude-3",
+    })
+
+    expect(
+      inspectManagedSiteChannelModelsMatch({
+        channels: [containedChannel],
+        accountBaseUrl: "https://api.example.com",
+        models: ["gpt-4"],
+      }),
+    ).toMatchObject({
+      comparable: true,
+      matched: true,
+      reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED,
+      channel: containedChannel,
+    })
+    expect(
+      inspectManagedSiteChannelModelsMatch({
+        channels: [similarChannel],
+        accountBaseUrl: "https://similar.example.com",
+        models: ["gpt-4", "gpt-4o", "gemini-2.0"],
+      }),
+    ).toMatchObject({
+      comparable: true,
+      matched: true,
+      reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR,
+      channel: similarChannel,
     })
   })
 
@@ -608,6 +684,26 @@ describe("channelMatching", () => {
       level: MANAGED_SITE_CHANNEL_MATCH_LEVELS.NONE,
       reason: MANAGED_SITE_CHANNEL_MATCH_REASONS.UNRESOLVED,
       channel: null,
+    })
+  })
+
+  it("skips URL bucket channels without comparable model inputs before falling back to URL-only", () => {
+    const blankModelChannel = buildManagedSiteChannel({
+      id: 8,
+      base_url: "https://api.example.com",
+      models: "",
+    })
+
+    expect(
+      findBestManagedSiteChannelMatch({
+        channels: [blankModelChannel],
+        accountBaseUrl: "https://api.example.com",
+        models: ["gpt-4"],
+      }),
+    ).toEqual({
+      level: MANAGED_SITE_CHANNEL_MATCH_LEVELS.FUZZY,
+      reason: MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_ONLY,
+      channel: blankModelChannel,
     })
   })
 })

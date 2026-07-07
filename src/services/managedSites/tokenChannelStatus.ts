@@ -4,10 +4,7 @@ import {
   getManagedSiteChannelExactMatch,
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
-import {
-  createManagedSiteChannelMatchRequestCache,
-  resolveManagedSiteChannelMatch,
-} from "~/services/managedSites/channelMatchResolver"
+import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import type {
   ManagedSiteConfig,
   ManagedSiteService,
@@ -332,9 +329,7 @@ export async function getManagedSiteTokenChannelStatus(
       key: formData.key,
       resolvedChannelKeysById: params.resolvedChannelKeysById,
       resolveHiddenKeys: true,
-      requestCache:
-        params.operationContext?.channelMatch ??
-        createManagedSiteChannelMatchRequestCache(),
+      requestCache: params.operationContext?.channelMatch,
     })
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(resolution)
