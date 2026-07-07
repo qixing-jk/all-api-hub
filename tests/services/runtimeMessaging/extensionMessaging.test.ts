@@ -268,6 +268,36 @@ describe("extension messaging transport", () => {
     ).rejects.toThrow("No response")
   })
 
+  it("retries receiver-missing runtime sends before preserving the typed response", async () => {
+    const runtime = createRuntimeMock()
+    const messenger = defineExtensionMessaging<TestProtocolMap>()
+    runtime.sendMessage
+      .mockRejectedValueOnce(
+        new Error(
+          "Could not establish connection. Receiving end does not exist.",
+        ),
+      )
+      .mockResolvedValueOnce({ res: { echoed: "pong" } })
+
+    await expect(
+      messenger.sendMessage("test:ping", { value: "pong" }),
+    ).resolves.toEqual({ echoed: "pong" })
+    expect(runtime.sendMessage).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not retry typed listener errors returned by the receiver", async () => {
+    const runtime = createRuntimeMock()
+    const messenger = defineExtensionMessaging<TestProtocolMap>()
+    runtime.sendMessage.mockResolvedValueOnce({
+      err: { message: "listener failed", name: "Error" },
+    })
+
+    await expect(messenger.sendMessage("test:fail")).rejects.toThrow(
+      "listener failed",
+    )
+    expect(runtime.sendMessage).toHaveBeenCalledTimes(1)
+  })
+
   it("targets tabs and frames through tabs.sendMessage", async () => {
     const runtime = createRuntimeMock()
     const messenger = defineExtensionMessaging<TestProtocolMap>()
@@ -282,6 +312,28 @@ describe("extension messaging transport", () => {
       expect.objectContaining({
         type: "test:void",
       }),
+      { frameId: 3 },
+    )
+  })
+
+  it("retries receiver-missing tab sends before preserving the typed response", async () => {
+    const runtime = createRuntimeMock()
+    const messenger = defineExtensionMessaging<TestProtocolMap>()
+    runtime.tabsSendMessage
+      .mockRejectedValueOnce(new Error("Receiving end does not exist"))
+      .mockResolvedValueOnce({ res: { echoed: "from tab" } })
+
+    await expect(
+      messenger.sendMessage(
+        "test:ping",
+        { value: "from tab" },
+        { tabId: 7, frameId: 3 },
+      ),
+    ).resolves.toEqual({ echoed: "from tab" })
+    expect(runtime.tabsSendMessage).toHaveBeenCalledTimes(2)
+    expect(runtime.tabsSendMessage).toHaveBeenLastCalledWith(
+      7,
+      expect.objectContaining({ type: "test:ping" }),
       { frameId: 3 },
     )
   })

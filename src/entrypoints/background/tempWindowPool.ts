@@ -55,7 +55,6 @@ import {
   onWindowRemoved,
   queryTabs,
   removeTabOrWindow,
-  sendTabMessage,
   sendTabMessageWithRetry,
   updateTab,
   updateWindow,
@@ -165,11 +164,17 @@ async function showShieldBypassUiInTab(meta: {
 }) {
   for (let attempt = 1; attempt <= SHIELD_BYPASS_UI_MAX_RETRIES; attempt += 1) {
     try {
-      await sendTabMessage(meta.tabId, {
-        action: RuntimeActionIds.ContentShowShieldBypassUi,
-        origin: meta.origin,
-        requestId: meta.requestId,
-      })
+      await sendTabMessageWithRetry(
+        meta.tabId,
+        {
+          action: RuntimeActionIds.ContentShowShieldBypassUi,
+          origin: meta.origin,
+          requestId: meta.requestId,
+        },
+        {
+          maxAttempts: 1,
+        },
+      )
       logTempWindow("shieldBypassUiShown", {
         tabId: meta.tabId,
         requestId: meta.requestId,

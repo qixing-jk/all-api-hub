@@ -8,8 +8,8 @@ import type {
 
 import {
   onRuntimeMessage,
-  sendRuntimeMessageOnce,
-  sendTabMessage,
+  sendRuntimeMessage,
+  sendTabMessageWithRetry,
 } from "~/utils/browser/browserApi"
 
 export type { Logger } from "@webext-core/messaging"
@@ -237,13 +237,15 @@ export function defineExtensionMessaging<
 
       const response =
         arg == null
-          ? await sendRuntimeMessageOnce(message)
-          : await sendTabMessage(
+          ? await sendRuntimeMessage(message)
+          : await sendTabMessageWithRetry(
               typeof arg === "number" ? arg : arg.tabId,
               message,
-              typeof arg === "object" && arg.frameId != null
-                ? { frameId: arg.frameId }
-                : undefined,
+              {
+                ...(typeof arg === "object" && arg.frameId != null
+                  ? { frameId: arg.frameId }
+                  : {}),
+              },
             )
       const { res, err } = (response ?? {
         err: createNoResponseError(),

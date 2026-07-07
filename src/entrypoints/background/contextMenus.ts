@@ -18,7 +18,7 @@ import {
   hasContextMenusAPI,
   onContextMenuClicked,
   removeContextMenu,
-  sendTabMessage,
+  sendTabMessageWithRetry,
 } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
@@ -68,7 +68,7 @@ const handleContextMenuClick = async (
         return
       }
 
-      await sendTabMessage(tab.id, {
+      await sendTabMessageWithRetry(tab.id, {
         action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
         selectionText,
         pageUrl,
@@ -77,7 +77,7 @@ const handleContextMenuClick = async (
     }
 
     if (isApiCheckMenu) {
-      await sendTabMessage(tab.id, {
+      await sendTabMessageWithRetry(tab.id, {
         action: RuntimeActionIds.ApiCheckContextMenuTrigger,
         selectionText,
         pageUrl,

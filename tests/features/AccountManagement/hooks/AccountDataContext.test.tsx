@@ -236,7 +236,7 @@ vi.mock("~/utils/core/logger", () => ({
 vi.mock("~/utils/browser/browserApi", () => ({
   getActiveTabs: mockGetActiveTabs,
   getAllTabs: mockGetAllTabs,
-  sendTabMessage: mockSendTabMessage,
+  sendTabMessageWithRetry: mockSendTabMessage,
   onRuntimeMessage: mockOnRuntimeMessage,
   onTabActivated: mockOnTabActivated,
   onTabRemoved: mockOnTabRemoved,

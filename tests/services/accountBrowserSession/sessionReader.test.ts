@@ -26,7 +26,7 @@ vi.mock("~/utils/browser/browserApi", () => ({
   getAllTabs: mockGetAllTabs,
   getBrowserApiCapabilities: mockGetBrowserApiCapabilities,
   sendRuntimeMessage: mockSendRuntimeMessage,
-  sendTabMessage: mockSendTabMessage,
+  sendTabMessageWithRetry: mockSendTabMessage,
 }))
 
 describe("account browser-session reader", () => {

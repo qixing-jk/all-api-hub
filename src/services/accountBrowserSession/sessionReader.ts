@@ -6,7 +6,7 @@ import {
   getAllTabs,
   getBrowserApiCapabilities,
   sendRuntimeMessage,
-  sendTabMessage,
+  sendTabMessageWithRetry,
 } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
@@ -149,7 +149,7 @@ export async function readAccountBrowserSessionFromTab(
   options: ReadAccountBrowserSessionFromTabOptions,
 ): Promise<AccountBrowserSession | null> {
   try {
-    const response = await sendTabMessage(options.tabId, {
+    const response = await sendTabMessageWithRetry(options.tabId, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: options.baseUrl,
       siteType: options.siteType,

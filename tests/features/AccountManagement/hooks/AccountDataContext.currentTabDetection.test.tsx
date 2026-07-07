@@ -115,7 +115,7 @@ vi.mock("~/utils/browser/browserApi", () => ({
       )
     }
   }),
-  sendTabMessage: vi.fn(
+  sendTabMessageWithRetry: vi.fn(
     (
       tabId: number,
       message: unknown,
