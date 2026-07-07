@@ -141,6 +141,7 @@ export default function KeyManagement(props: {
     getVisibleTokenKey,
     refreshManagedSiteTokenStatuses,
     refreshManagedSiteTokenStatusForToken,
+    confirmManagedSiteTokenStatusWithChannelKey,
     copyKey,
     copyServiceCredential,
     rotateServiceCredential,
@@ -261,11 +262,14 @@ export default function KeyManagement(props: {
           resolvedChannelKey = key
         },
         onLoaded: async () => {
-          await refreshManagedSiteTokenStatusForToken(token, {
-            resolvedChannelKeysById: {
-              [candidateChannel.id]: resolvedChannelKey,
+          await confirmManagedSiteTokenStatusWithChannelKey(
+            token,
+            managedSiteStatus,
+            {
+              channelId: candidateChannel.id,
+              channelKey: resolvedChannelKey,
             },
-          })
+          )
         },
         openVerification: verification.openNewApiManagedVerification,
       })

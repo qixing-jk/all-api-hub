@@ -736,6 +736,10 @@ export function TokenHeader({
 }: TokenHeaderProps) {
   const { t } = useTranslation(["keyManagement", "common"])
   const { managedSiteType } = useUserPreferencesContext()
+  const [
+    isManagedSiteVerificationRetrying,
+    setIsManagedSiteVerificationRetrying,
+  ] = useState(false)
   const isManagedSiteStatusSupported =
     supportsManagedSiteBaseUrlChannelLookup(managedSiteType)
 
@@ -784,7 +788,11 @@ export function TokenHeader({
     : null
 
   const handleManagedSiteVerificationRetryClick = () => {
-    if (!managedSiteStatus || !onManagedSiteVerificationRetry) {
+    if (
+      isManagedSiteVerificationRetrying ||
+      !managedSiteStatus ||
+      !onManagedSiteVerificationRetry
+    ) {
       return
     }
 
@@ -795,18 +803,21 @@ export function TokenHeader({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
 
-    void Promise.resolve(
-      onManagedSiteVerificationRetry(token, managedSiteStatus),
-    )
-      .then(() => {
+    setIsManagedSiteVerificationRetrying(true)
+
+    void (async () => {
+      try {
+        await onManagedSiteVerificationRetry(token, managedSiteStatus)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-      })
-      .catch((error) => {
+      } catch (error) {
         logger.error("Managed-site verification retry callback failed", error)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
-      })
+      } finally {
+        setIsManagedSiteVerificationRetrying(false)
+      }
+    })()
   }
 
   const handleOpenManagedSiteSettings = () => {
@@ -939,6 +950,7 @@ export function TokenHeader({
                 data-testid={
                   KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton
                 }
+                loading={isManagedSiteVerificationRetrying}
                 onClick={handleManagedSiteVerificationRetryClick}
               >
                 {t("managedSiteStatus.actions.verifyNow")}

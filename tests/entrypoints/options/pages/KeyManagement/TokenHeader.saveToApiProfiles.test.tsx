@@ -925,6 +925,82 @@ describe("TokenHeader save to API profiles", () => {
     )
   })
 
+  it("shows loading and ignores duplicate clicks while managed-site verification retry is pending", async () => {
+    const user = userEvent.setup()
+    const account = createAccountStub()
+    let resolveRetry: () => void = () => {}
+    const retryPromise = new Promise<void>((resolve) => {
+      resolveRetry = resolve
+    })
+    const onManagedSiteVerificationRetry = vi.fn(() => retryPromise)
+
+    const token = {
+      id: 8_2,
+      user_id: 1,
+      key: "sk-verification-pending",
+      status: 1,
+      name: "Verification Pending Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
+          recovery: {
+            siteType: "new-api",
+            managedBaseUrl: "https://managed.example",
+            searchBaseUrl: "https://example.com",
+            loginCredentialsConfigured: true,
+            authenticatedBrowserSessionExists: false,
+            automaticCodeConfigured: true,
+          },
+        }}
+      />,
+    )
+
+    const retryButton = screen.getByRole("button", {
+      name: "keyManagement:managedSiteStatus.actions.verifyNow",
+    })
+
+    await user.click(retryButton)
+
+    expect(onManagedSiteVerificationRetry).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(retryButton).toBeDisabled())
+    expect(
+      screen.getByRole("status", { name: "common:status.loading" }),
+    ).toBeInTheDocument()
+
+    await user.click(retryButton)
+    expect(onManagedSiteVerificationRetry).toHaveBeenCalledTimes(1)
+
+    resolveRetry()
+    await waitFor(() => expect(retryButton).not.toBeDisabled())
+  })
+
   it("directs the user to Settings instead of showing retry when login-assist credentials are missing", () => {
     const account = createAccountStub()
 

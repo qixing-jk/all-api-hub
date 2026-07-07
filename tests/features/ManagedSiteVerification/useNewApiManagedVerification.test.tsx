@@ -3,6 +3,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  NEW_API_MANAGED_VERIFICATION_CLOSE_MODES,
   NEW_API_MANAGED_VERIFICATION_STEPS,
   useNewApiManagedVerification,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
@@ -151,6 +152,86 @@ describe("useNewApiManagedVerification", () => {
         NEW_API_MANAGED_VERIFICATION_STEPS.LOGIN_2FA,
       )
       expect(onVerified).not.toHaveBeenCalled()
+    })
+  })
+
+  it("uses configured TOTP before showing a prefetched login-2fa step", async () => {
+    ensureNewApiManagedSessionMock.mockResolvedValue({
+      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
+      methods: {
+        twoFactorEnabled: true,
+        passkeyEnabled: false,
+      },
+    })
+
+    const onVerified = vi.fn()
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        config: {
+          ...BASE_REQUEST.config,
+          totpSecret: "JBSWY3DPEHPK3PXP",
+        },
+        onVerified,
+        initialSessionResult: {
+          status: NEW_API_MANAGED_SESSION_STATUSES.LOGIN_2FA_REQUIRED,
+          automaticAttempted: false,
+        },
+      })
+    })
+
+    await waitFor(() => {
+      expect(ensureNewApiManagedSessionMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          totpSecret: "JBSWY3DPEHPK3PXP",
+        }),
+      )
+      expect(onVerified).toHaveBeenCalledTimes(1)
+      expect(result.current.dialogState.isOpen).toBe(false)
+    })
+  })
+
+  it("uses configured TOTP before showing a prefetched secure-verification step", async () => {
+    ensureNewApiManagedSessionMock.mockResolvedValue({
+      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
+      methods: {
+        twoFactorEnabled: true,
+        passkeyEnabled: false,
+      },
+    })
+
+    const onVerified = vi.fn()
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        config: {
+          ...BASE_REQUEST.config,
+          totpSecret: "JBSWY3DPEHPK3PXP",
+        },
+        onVerified,
+        initialSessionResult: {
+          status: NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED,
+          methods: {
+            twoFactorEnabled: true,
+            passkeyEnabled: false,
+          },
+          automaticAttempted: false,
+        },
+      })
+    })
+
+    await waitFor(() => {
+      expect(ensureNewApiManagedSessionMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          totpSecret: "JBSWY3DPEHPK3PXP",
+        }),
+      )
+      expect(onVerified).toHaveBeenCalledTimes(1)
+      expect(result.current.dialogState.isOpen).toBe(false)
     })
   })
 
@@ -584,7 +665,7 @@ describe("useNewApiManagedVerification", () => {
     })
   })
 
-  it("runs the channel onVerified flow before showing the success toast", async () => {
+  it("runs the channel onVerified flow before showing the success toast when configured to wait", async () => {
     const onVerified = vi.fn().mockResolvedValue(undefined)
     const { result } = renderHook(() => useNewApiManagedVerification())
 
@@ -594,6 +675,8 @@ describe("useNewApiManagedVerification", () => {
         kind: "channel",
         label: "Channel A",
         onVerified,
+        closeMode:
+          NEW_API_MANAGED_VERIFICATION_CLOSE_MODES.CLOSE_AFTER_CALLBACK,
         initialSessionResult: {
           status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
           methods: {
@@ -627,6 +710,8 @@ describe("useNewApiManagedVerification", () => {
         ...BASE_REQUEST,
         kind: "settings",
         onVerified,
+        closeMode:
+          NEW_API_MANAGED_VERIFICATION_CLOSE_MODES.CLOSE_AFTER_CALLBACK,
         initialSessionResult: {
           status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
           methods: {
@@ -652,6 +737,43 @@ describe("useNewApiManagedVerification", () => {
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledTimes(1)
       expect(result.current.dialogState.isOpen).toBe(false)
+    })
+  })
+
+  it("closes immediately after verification by default while onVerified continues", async () => {
+    let resolveVerified: (() => void) | null = null
+    const onVerified = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveVerified = resolve
+        }),
+    )
+
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        kind: "channel",
+        onVerified,
+        initialSessionResult: {
+          status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
+          methods: {
+            twoFactorEnabled: true,
+            passkeyEnabled: false,
+          },
+        },
+      })
+    })
+
+    await waitFor(() => {
+      expect(onVerified).toHaveBeenCalledTimes(1)
+      expect(toast.success).toHaveBeenCalledTimes(1)
+      expect(result.current.dialogState.isOpen).toBe(false)
+    })
+
+    act(() => {
+      resolveVerified?.()
     })
   })
 

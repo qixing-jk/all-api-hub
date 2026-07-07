@@ -17,7 +17,11 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/accountTokens/apiTokenKey"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
+import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
+import {
+  getManagedSiteTokenChannelStatus,
+  resolveManagedSiteTokenChannelStatusWithVerifiedKey,
+} from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -189,6 +193,11 @@ type ManagedSiteTokenChannelStatusResult = Awaited<
 
 interface RefreshManagedSiteTokenStatusOptions {
   resolvedChannelKeysById?: Record<number, string>
+}
+
+interface ConfirmManagedSiteTokenStatusWithChannelKeyOptions {
+  channelId: number
+  channelKey: string
 }
 
 const toDisplayManagedSiteTokenStatusResult = (
@@ -572,6 +581,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return resultsByIdentityKey
       }
 
+      const operationContext = createManagedSiteOperationContext()
       const runId = force
         ? managedSiteStatusRunIdRef.current + 1
         : managedSiteStatusRunIdRef.current
@@ -613,6 +623,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               account: target.account,
               token: target.token,
               resolvedChannelKeysById: target.resolvedChannelKeysById,
+              operationContext,
             })
             const displayResult = toDisplayManagedSiteTokenStatusResult(result)
 
@@ -1539,6 +1550,80 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     ],
   )
 
+  const confirmManagedSiteTokenStatusWithChannelKey = useCallback(
+    async (
+      token: AccountToken,
+      status: ManagedSiteTokenChannelStatusResult,
+      options: ConfirmManagedSiteTokenStatusWithChannelKeyOptions,
+    ) => {
+      if (!isManagedSiteChannelStatusSupported) {
+        return
+      }
+
+      if (tokenInventoriesRef.current[token.accountId]?.status !== "loaded") {
+        return
+      }
+
+      const account = accountById.get(token.accountId)
+      if (!account) {
+        return
+      }
+
+      let resolvedToken: AccountToken
+      try {
+        resolvedToken = await resolveDisplayAccountTokenForSecret(
+          account,
+          token,
+        )
+      } catch (error) {
+        logger.warn("Managed-site token secret confirmation failed", {
+          accountId: token.accountId,
+          tokenId: token.id,
+          error,
+        })
+        return
+      }
+
+      const identityKey = buildTokenIdentityKey(token.accountId, token.id)
+      const cacheKey = buildManagedSiteStatusCacheKey(token)
+      const currentEntry = managedSiteTokenStatusesRef.current[identityKey]
+      const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
+        status,
+        tokenKey: resolvedToken.key,
+        channelId: options.channelId,
+        channelKey: options.channelKey,
+        siteType: managedSiteType,
+      })
+      const displayResult = toDisplayManagedSiteTokenStatusResult(result)
+
+      mergeResolvedChannelKeysForIdentity(
+        identityKey,
+        result.resolvedChannelKeysById,
+      )
+
+      updateManagedSiteTokenStatuses((prev) => ({
+        ...prev,
+        [identityKey]: {
+          cacheKey,
+          runId: currentEntry?.runId ?? managedSiteStatusRunIdRef.current,
+          isChecking: false,
+          result: displayResult,
+          checkedAt: Date.now(),
+        },
+      }))
+
+      return displayResult
+    },
+    [
+      accountById,
+      buildManagedSiteStatusCacheKey,
+      isManagedSiteChannelStatusSupported,
+      managedSiteType,
+      mergeResolvedChannelKeysForIdentity,
+      updateManagedSiteTokenStatuses,
+    ],
+  )
+
   useEffect(() => {
     isMountedRef.current = true
 
@@ -1961,6 +2046,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     getVisibleTokenKey,
     refreshManagedSiteTokenStatuses,
     refreshManagedSiteTokenStatusForToken,
+    confirmManagedSiteTokenStatusWithChannelKey,
     copyKey,
     copyServiceCredential,
     rotateServiceCredential,

@@ -135,6 +135,7 @@ const baseHookResult = {
   ],
   refreshManagedSiteTokenStatuses: vi.fn(),
   refreshManagedSiteTokenStatusForToken: vi.fn(),
+  confirmManagedSiteTokenStatusWithChannelKey: vi.fn(),
   copyKey: vi.fn(),
   toggleKeyVisibility: vi.fn(),
   retryFailedAccounts: vi.fn(),
@@ -218,14 +219,30 @@ describe("KeyManagement managed-site status support", () => {
 
   it("tries the concrete channel key before opening verification when a candidate channel is known", async () => {
     sendRuntimeActionMessageMock.mockResolvedValue({ success: false })
-    loadNewApiChannelKeyWithVerificationMock.mockResolvedValue(true)
+    loadNewApiChannelKeyWithVerificationMock.mockImplementation(
+      async ({ setKey, onLoaded }) => {
+        setKey("token-1-secret")
+        await onLoaded()
+        return true
+      },
+    )
 
     const refreshManagedSiteTokenStatusForToken = vi.fn()
+    const confirmManagedSiteTokenStatusWithChannelKey = vi
+      .fn()
+      .mockResolvedValue({
+        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+        matchedChannel: {
+          id: 88,
+          name: "Managed Channel 88",
+        },
+      })
 
     useKeyManagementMock.mockReturnValue({
       ...baseHookResult,
       isManagedSiteChannelStatusSupported: true,
       refreshManagedSiteTokenStatusForToken,
+      confirmManagedSiteTokenStatusWithChannelKey,
     })
 
     render(<KeyManagement />)
@@ -290,6 +307,17 @@ describe("KeyManagement managed-site status support", () => {
           totpSecret: "JBSWY3DPEHPK3PXP",
         }),
       }),
+    )
+    expect(confirmManagedSiteTokenStatusWithChannelKey).toHaveBeenCalledWith(
+      baseHookResult.tokens[0],
+      expect.objectContaining({
+        reason:
+          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      }),
+      {
+        channelId: 88,
+        channelKey: "token-1-secret",
+      },
     )
     expect(refreshManagedSiteTokenStatusForToken).not.toHaveBeenCalled()
     expect(openNewApiManagedVerificationMock).not.toHaveBeenCalled()
