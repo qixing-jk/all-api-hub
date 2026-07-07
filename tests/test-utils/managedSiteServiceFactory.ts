@@ -13,7 +13,7 @@ const buildManagedSiteRuntimeConfig = (
 })
 
 export const createManagedSiteServiceStub = (
-  overrides: Record<string, unknown> = {},
+  overrides: Partial<Record<keyof ManagedSiteService, unknown>> = {},
 ) =>
   ({
     siteType: SITE_TYPES.NEW_API,

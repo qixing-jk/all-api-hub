@@ -28,8 +28,10 @@ import {
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
+  mockAllowDisabledVerificationButtonClicks,
   mockExecuteBatchExport,
   mockCloseNewApiManagedVerification,
+  mockGetPreviewVerificationTargets,
   mockLoadNewApiChannelKeyWithVerification,
   mockOpenNewApiManagedVerification,
   mockPreparePreview,
@@ -38,8 +40,12 @@ const {
   mockToastSuccess,
   mockVerificationDialogState,
 } = vi.hoisted(() => ({
+  mockAllowDisabledVerificationButtonClicks: {
+    current: false,
+  },
   mockExecuteBatchExport: vi.fn(),
   mockCloseNewApiManagedVerification: vi.fn(),
+  mockGetPreviewVerificationTargets: vi.fn(),
   mockLoadNewApiChannelKeyWithVerification: vi.fn(),
   mockOpenNewApiManagedVerification: vi.fn(),
   mockPreparePreview: vi.fn(),
@@ -50,6 +56,31 @@ const {
     isOpen: false,
   },
 }))
+
+vi.mock(
+  "~/features/KeyManagement/components/managedSiteTokenBatchExportPreview",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/features/KeyManagement/components/managedSiteTokenBatchExportPreview")
+      >()
+
+    return {
+      ...actual,
+      getPreviewVerificationTargets: (...args: unknown[]) => {
+        const implementation =
+          mockGetPreviewVerificationTargets.getMockImplementation()
+        return implementation
+          ? mockGetPreviewVerificationTargets(...args)
+          : actual.getPreviewVerificationTargets(
+              args[0] as Parameters<
+                typeof actual.getPreviewVerificationTargets
+              >[0],
+            )
+      },
+    }
+  },
+)
 
 vi.mock("~/services/managedSites/tokenBatchExport", () => ({
   prepareManagedSiteTokenBatchExportPreview: mockPreparePreview,
@@ -155,7 +186,12 @@ vi.mock("~/components/ui", async (importOriginal) => {
       return (
         <button
           type={type}
-          disabled={isVerificationButton ? false : disabled}
+          disabled={
+            isVerificationButton &&
+            mockAllowDisabledVerificationButtonClicks.current
+              ? false
+              : disabled
+          }
           onClick={onClick}
         >
           {children}
@@ -483,8 +519,10 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     vi.clearAllMocks()
     mockExecuteBatchExport.mockReset()
     mockCloseNewApiManagedVerification.mockReset()
+    mockGetPreviewVerificationTargets.mockReset()
     mockLoadNewApiChannelKeyWithVerification.mockReset()
     mockPreparePreview.mockReset()
+    mockAllowDisabledVerificationButtonClicks.current = false
     mockVerificationDialogState.isOpen = false
     mockLoadNewApiChannelKeyWithVerification.mockImplementation(
       async (params) => {
@@ -937,6 +975,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       ],
     }
     mockVerificationDialogState.isOpen = true
+    mockAllowDisabledVerificationButtonClicks.current = true
     mockPreparePreview.mockResolvedValueOnce(recoverablePreview)
 
     renderDialog()
@@ -951,7 +990,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(mockLoadNewApiChannelKeyWithVerification).not.toHaveBeenCalled()
   })
 
-  it("shows a fallback verification error when a verification target cannot be read", async () => {
+  it("falls back to the clicked item when the preview has no verification targets", async () => {
     const user = userEvent.setup()
     const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
       ...preview,
@@ -968,22 +1007,69 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       ],
     }
     mockPreparePreview.mockResolvedValueOnce(recoverablePreview)
+    mockGetPreviewVerificationTargets.mockReturnValue([])
 
     renderDialog()
 
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
-    const originalItemId = recoverablePreview.items[0].id
-    Object.defineProperty(recoverablePreview.items[0], "id", {
-      configurable: true,
-      get: () => {
-        const stack = new Error().stack ?? ""
-        if (stack.includes("verifyTargetsFromIndex")) {
-          throw new Error("target unavailable")
-        }
-        return originalItemId
-      },
-    })
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
 
+    expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channelId: 7,
+        label: "Potential channel",
+      }),
+    )
+  })
+
+  it("shows a fallback verification error when the verification target list cannot be read", async () => {
+    const user = userEvent.setup()
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 1,
+      readyCount: 0,
+      warningCount: 1,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+      ],
+    }
+    mockPreparePreview.mockResolvedValueOnce(recoverablePreview)
+    let lengthReads = 0
+    mockGetPreviewVerificationTargets.mockReturnValue(
+      new Proxy(
+        [
+          {
+            item: recoverablePreview.items[0],
+            candidate: recoverablePreview.items[0].verificationCandidate,
+          },
+        ],
+        {
+          get(target, property, receiver) {
+            if (property === "length") {
+              lengthReads += 1
+              if (lengthReads > 1) {
+                throw new Error("target unavailable")
+              }
+            }
+
+            return Reflect.get(target, property, receiver)
+          },
+        },
+      ),
+    )
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
     await user.click(
       screen.getByRole("button", {
         name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",

@@ -394,7 +394,7 @@ export function ManagedSiteTokenBatchExportDialog({
 
     const verificationTargets = preview
       ? getPreviewVerificationTargets(preview)
-      : [{ item: requestedItem, candidate: requestedCandidate }]
+      : []
     const targets =
       verificationTargets.length > 0
         ? verificationTargets

@@ -3041,6 +3041,64 @@ describe("useKeyManagement enabled account filtering", () => {
     ).not.toHaveBeenCalled()
   })
 
+  it("skips managed-site confirmation when the account disappears after inventory load", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "missing-confirm-acc",
+    })
+    const token = createToken({
+      accountId: account.id,
+      id: 612,
+    })
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    const resolveTokenKey = vi.fn().mockResolvedValue("token-612-secret")
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi.fn().mockResolvedValue([token]),
+        resolveTokenKey,
+      }) as any,
+    )
+
+    const { result, rerender } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(result.current.tokenInventories[account.id]?.status).toBe(
+        "loaded",
+      ),
+    )
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [],
+    } as any)
+    rerender()
+
+    await act(async () => {
+      await result.current.confirmManagedSiteTokenStatusWithChannelKey(
+        token,
+        {
+          status: managedSiteTokenChannelStatuses.UNKNOWN,
+        } as any,
+        {
+          channelId: 92,
+          channelKey: "verified-channel-key",
+        },
+      )
+    })
+
+    expect(resolveTokenKey).not.toHaveBeenCalled()
+    expect(
+      resolveManagedSiteTokenChannelStatusWithVerifiedKeyMock,
+    ).not.toHaveBeenCalled()
+  })
+
   it("rejects managed-site confirmation when token secret resolution fails", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({
