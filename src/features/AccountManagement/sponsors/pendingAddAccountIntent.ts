@@ -8,6 +8,8 @@ import {
 } from "~/services/accounts/accountSiteProfile"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { createLogger } from "~/utils/core/logger"
+import { isRecord } from "~/utils/core/object"
+import { isHttpUrl, tryParseHttpUrl } from "~/utils/core/urlParsing"
 
 import {
   BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
@@ -175,25 +177,23 @@ function normalizeSponsorAddAccountPrefillPayload(
   const normalizedAuthType = normalizeOptionalAccountAuthType(value.authType)
   if (normalizedAuthType === false) return null
 
-  try {
-    const url = new URL(value.siteUrl)
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null
-    const siteUrl = normalizeAccountSiteProfileUrlForStorage({
-      siteType,
-      url: value.siteUrl,
-    })
-
-    return {
-      source: SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE,
-      sponsorId: value.sponsorId.trim(),
-      siteType,
-      siteUrl,
-      authType:
-        normalizedAuthType ??
-        resolveAccountSiteDefaultAuthType({ siteType, url: siteUrl }),
-    }
-  } catch {
+  if (!isHttpUrl(value.siteUrl)) {
     return null
+  }
+
+  const siteUrl = normalizeAccountSiteProfileUrlForStorage({
+    siteType,
+    url: value.siteUrl,
+  })
+
+  return {
+    source: SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE,
+    sponsorId: value.sponsorId.trim(),
+    siteType,
+    siteUrl,
+    authType:
+      normalizedAuthType ??
+      resolveAccountSiteDefaultAuthType({ siteType, url: siteUrl }),
   }
 }
 
@@ -210,31 +210,23 @@ function normalizeBookmarkImportAddAccountPrefillPayload(
     ? value.siteType
     : SITE_TYPES.UNKNOWN
 
-  try {
-    const url = new URL(value.siteUrl)
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null
-    const siteUrl =
-      siteType !== SITE_TYPES.UNKNOWN
-        ? normalizeAccountSiteProfileUrlForStorage({
-            siteType,
-            url: value.siteUrl,
-          })
-        : url.origin
-
-    return {
-      source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
-      siteUrl,
-      ...(siteType !== SITE_TYPES.UNKNOWN ? { siteType } : {}),
-      ...(normalizedAuthType ? { authType: normalizedAuthType } : {}),
-    }
-  } catch {
+  const url = tryParseHttpUrl(value.siteUrl)
+  if (!url) {
     return null
   }
-}
 
-/**
- * Narrows unknown JSON-like values before field-level validation.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
+  const siteUrl =
+    siteType !== SITE_TYPES.UNKNOWN
+      ? normalizeAccountSiteProfileUrlForStorage({
+          siteType,
+          url: value.siteUrl,
+        })
+      : url.origin
+
+  return {
+    source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+    siteUrl,
+    ...(siteType !== SITE_TYPES.UNKNOWN ? { siteType } : {}),
+    ...(normalizedAuthType ? { authType: normalizedAuthType } : {}),
+  }
 }

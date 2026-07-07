@@ -48,9 +48,23 @@ export function tryParseOrigin(
 /**
  * Returns whether the value is an absolute HTTP(S) URL.
  */
-export function isHttpUrl(value: string | undefined | null): boolean {
+export function isHttpUrl(value: unknown): value is string {
+  return tryParseHttpUrl(value) !== null
+}
+
+/**
+ * Best-effort parse for absolute HTTP(S) URL strings.
+ * Returns `null` when the input is empty, malformed, or uses another scheme.
+ */
+export function tryParseHttpUrl(value: unknown): URL | null {
+  if (typeof value !== "string") return null
+
   const parsed = tryParseUrl(value)
-  return parsed?.protocol === "http:" || parsed?.protocol === "https:"
+  if (parsed?.protocol !== "http:" && parsed?.protocol !== "https:") {
+    return null
+  }
+
+  return parsed
 }
 
 /**
