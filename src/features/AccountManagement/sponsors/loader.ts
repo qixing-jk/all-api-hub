@@ -20,6 +20,7 @@ import {
 } from "./types"
 
 const logger = createLogger("SponsorCatalogLoader")
+const REMOTE_SPONSOR_CATALOG_FETCH_TIMEOUT_MS = 15_000
 
 interface LoadSponsorRecommendationsOptions {
   locale: string
@@ -62,9 +63,15 @@ function mergeDevelopmentSponsorRecommendations(
 
 /** Fetches the current V5 sponsor catalog as a best-effort JSON payload. */
 async function fetchRemoteSponsorCatalog(): Promise<unknown | null> {
+  const abortController = new AbortController()
+  const timeoutId = globalThis.setTimeout(() => {
+    abortController.abort()
+  }, REMOTE_SPONSOR_CATALOG_FETCH_TIMEOUT_MS)
+
   try {
     const response = await fetch(SPONSOR_REMOTE_CATALOG_V5_URL, {
       cache: "no-store",
+      signal: abortController.signal,
     })
 
     if (!response.ok) {
@@ -82,6 +89,8 @@ async function fetchRemoteSponsorCatalog(): Promise<unknown | null> {
       url: SPONSOR_REMOTE_CATALOG_V5_URL,
     })
     return null
+  } finally {
+    globalThis.clearTimeout(timeoutId)
   }
 }
 

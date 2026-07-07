@@ -2,6 +2,10 @@ import type { BrowserContext, Page, Worker } from "@playwright/test"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  SPONSOR_CATALOG_SCHEMA_VERSION,
+  SPONSOR_REMOTE_CATALOG_V5_URL,
+} from "~/features/AccountManagement/sponsors/constants"
+import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
   normalizeSiteAccount,
@@ -81,10 +85,8 @@ export type ExtensionPageGuardOptions = {
   ignoreConsoleErrorPatterns?: RegExp[]
 }
 
-const E2E_SPONSOR_REMOTE_CATALOG_URL =
-  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/public/sponsor-catalog.v5.json"
 const E2E_SPONSOR_CATALOG_PAYLOAD = {
-  schemaVersion: 5,
+  schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
   items: [],
 }
 
@@ -162,7 +164,7 @@ export async function stubLlmMetadataIndex(context: BrowserContext) {
  * refreshes do not depend on a PR branch asset already existing on main.
  */
 export async function stubSponsorRemoteCatalog(context: BrowserContext) {
-  await context.route(E2E_SPONSOR_REMOTE_CATALOG_URL, (route) =>
+  await context.route(SPONSOR_REMOTE_CATALOG_V5_URL, (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",

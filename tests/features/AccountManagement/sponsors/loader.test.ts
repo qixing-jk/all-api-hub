@@ -222,6 +222,7 @@ describe("sponsor recommendation loader", () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
     vi.unstubAllEnvs()
+    vi.useRealTimers()
     vi.mocked(sponsorCatalogStorage.getCachedVersionedCatalog).mockReset()
     vi.mocked(sponsorCatalogStorage.setCachedVersionedCatalog).mockReset()
   })
@@ -375,6 +376,7 @@ describe("sponsor recommendation loader", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith(SPONSOR_REMOTE_CATALOG_V5_URL, {
       cache: "no-store",
+      signal: expect.any(AbortSignal),
     })
     expect(
       sponsorCatalogStorage.setCachedVersionedCatalog,
@@ -385,6 +387,35 @@ describe("sponsor recommendation loader", () => {
         payload: remoteCatalog,
       }),
     )
+  })
+
+  it("aborts stalled remote catalog fetches and keeps the refresh best effort", async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"))
+          })
+        }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const resultPromise = refreshSponsorRecommendations({ locale: "en", now })
+
+    expect(fetchMock).toHaveBeenCalledWith(SPONSOR_REMOTE_CATALOG_V5_URL, {
+      cache: "no-store",
+      signal: expect.any(AbortSignal),
+    })
+    vi.advanceTimersByTime(15_000)
+    await expect(resultPromise).resolves.toBeNull()
+    expect(
+      (fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.signal
+        ?.aborted,
+    ).toBe(true)
+    expect(
+      sponsorCatalogStorage.setCachedVersionedCatalog,
+    ).not.toHaveBeenCalled()
   })
 
   it("falls back to bundled recommendations when cache is invalid", async () => {
@@ -456,6 +487,7 @@ describe("sponsor recommendation loader", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(SPONSOR_REMOTE_CATALOG_V5_URL, {
       cache: "no-store",
+      signal: expect.any(AbortSignal),
     })
     expect(
       sponsorCatalogStorage.setCachedVersionedCatalog,
