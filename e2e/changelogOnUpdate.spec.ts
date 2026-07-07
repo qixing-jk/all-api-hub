@@ -41,7 +41,7 @@ async function findPageWithUpdateLogDialog(
  */
 async function waitForUpdateLogDialogPage(
   context: BrowserContext,
-  timeoutMs = 60_000,
+  timeoutMs = 30_000,
 ): Promise<Page> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
@@ -129,7 +129,7 @@ test("shows update log inline once on first UI open after update", async ({
     timeout: 30_000,
   })
 
-  const dialogPage = await waitForUpdateLogDialogPage(context, 60_000)
+  const dialogPage = await waitForUpdateLogDialogPage(context)
   await expect(dialogPage.locator(UPDATE_LOG_DIALOG_SELECTOR)).toBeVisible()
 
   await expect
@@ -233,7 +233,7 @@ test("shows update log inline in popup once on first UI open after update", asyn
 
   await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
 
-  const dialogPage = await waitForUpdateLogDialogPage(context, 60_000)
+  const dialogPage = await waitForUpdateLogDialogPage(context)
   await expect(dialogPage.locator(UPDATE_LOG_DIALOG_SELECTOR)).toBeVisible()
 
   await expect

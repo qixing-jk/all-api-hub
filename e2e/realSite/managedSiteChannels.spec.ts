@@ -91,7 +91,6 @@ if (selectedManagedSiteTarget && selectedManagedSiteTargets.length === 0) {
 
 test.describe.configure({
   mode: selectedManagedSiteTarget ? "parallel" : "serial",
-  timeout: 600_000,
 })
 
 test.describe("real-site E2E: managed-site channel management", () => {
@@ -104,20 +103,68 @@ test.describe("real-site E2E: managed-site channel management", () => {
     const managedSite = target.resolveConfig()
 
     if (!managedSite.config) {
-      test.skip(`${target.label} covers channel CRUD/search and token channel status when supported`, async () => {
-        getManagedSiteRealSiteSkipReason({
-          label: target.label,
-          missingEnvKeys: managedSite.missingEnvKeys,
-        })
+      const skipReason = getManagedSiteRealSiteSkipReason({
+        label: target.label,
+        missingEnvKeys: managedSite.missingEnvKeys,
       })
+
+      test.skip(
+        `${target.label} covers channel CRUD/search`,
+        { annotation: { type: "skip", description: skipReason } },
+        async () => {},
+      )
+      test.skip(
+        `${target.label} covers token channel status when supported`,
+        { annotation: { type: "skip", description: skipReason } },
+        async () => {},
+      )
       continue
     }
 
-    test(`${target.label} covers channel CRUD/search and token channel status when supported`, async ({
+    test(`${target.label} covers channel CRUD/search`, async ({
+      context,
+      extensionId,
+      page,
+    }) => {
+      const serviceWorker = await getServiceWorker(context)
+      const config = managedSite.config
+      const runId = buildRealSiteRunId()
+      const runPrefix = buildManagedSiteE2ePrefix({
+        label: target.label.replace(/\s+/g, ""),
+        runId,
+      })
+      const cleanupPrefix = buildManagedSiteE2ePrefix({
+        label: target.label.replace(/\s+/g, ""),
+      })
+
+      await seedUserPreferences(serviceWorker, {
+        managedSiteType: target.siteType,
+        [target.preferenceKey]: config,
+        autoFillCurrentSiteUrlOnAccountAdd: false,
+        autoProvisionKeyOnAccountAdd: false,
+        openChangelogOnUpdate: false,
+      })
+
+      await runManagedSiteChannelsCrudScenario({
+        page,
+        extensionId,
+        siteType: target.siteType,
+        label: target.label,
+        runPrefix,
+        cleanupPrefix,
+      })
+    })
+
+    test(`${target.label} covers token channel status when supported`, async ({
       context,
       extensionId,
       page,
     }, testInfo) => {
+      test.skip(
+        target.siteType !== SITE_TYPES.NEW_API,
+        `${target.label} token channel status is not covered by this real-site E2E`,
+      )
+
       const serviceWorker = await getServiceWorker(context)
       const config = managedSite.config
       const runId = buildRealSiteRunId()
@@ -149,18 +196,19 @@ test.describe("real-site E2E: managed-site channel management", () => {
         openChangelogOnUpdate: false,
       })
 
-      try {
-        await test.step(`${target.label}: channel CRUD/search`, async () => {
-          await runManagedSiteChannelsCrudScenario({
-            page,
-            extensionId,
-            siteType: target.siteType,
-            label: target.label,
-            runPrefix,
-            cleanupPrefix,
-          })
+      if (!sourceAccountResult.sourceAccount) {
+        testInfo.annotations.push({
+          type: "skip",
+          description:
+            sourceAccountResult.skipReason ??
+            `${target.label} source account E2E env is missing`,
         })
+        return
+      }
 
+      const sourceAccount = sourceAccountResult.sourceAccount
+
+      try {
         const statusResult =
           await test.step(`${target.label}: token channel status`, async () =>
             await runManagedSiteTokenChannelStatusScenario({
@@ -170,7 +218,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
               label: target.label,
               runPrefix,
               cleanupPrefix,
-              sourceAccount: sourceAccountResult.sourceAccount ?? undefined,
+              sourceAccount,
               tokenName: buildRealSiteTestTokenName({
                 label: "channel",
                 runId,
@@ -186,7 +234,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
           })
         }
       } finally {
-        await sourceAccountResult.sourceAccount?.cleanup()
+        await sourceAccount.cleanup()
       }
     })
   }

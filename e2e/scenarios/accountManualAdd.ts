@@ -90,9 +90,9 @@ export async function saveManualAccountFromApp(params: {
     account: params.account,
   })
 
-  await expect(dialog.confirmAddButton).toBeEnabled({ timeout: 60_000 })
+  await expect(dialog.confirmAddButton).toBeEnabled({ timeout: 30_000 })
   await dialog.confirmAddButton.click()
-  await expect(dialog.dialog).toBeHidden({ timeout: 60_000 })
+  await expect(dialog.dialog).toBeHidden({ timeout: 30_000 })
 
   const savedAccount = await waitForManualSavedAccount({
     serviceWorker: params.serviceWorker,
@@ -200,7 +200,7 @@ async function waitForManualSavedAccount(params: {
 
         return savedAccount
       },
-      { timeout: 60_000 },
+      { timeout: 30_000 },
     )
     .not.toBeNull()
 

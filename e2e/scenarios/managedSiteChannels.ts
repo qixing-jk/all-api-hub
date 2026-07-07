@@ -102,7 +102,7 @@ export async function runManagedSiteChannelsCrudScenario<
     await waitForExtensionRoot(context.page)
     await expect(
       context.page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton),
-    ).toBeVisible({ timeout: 60_000 })
+    ).toBeVisible({ timeout: 30_000 })
 
     await createManagedSiteChannelFromUi(context.page, {
       name: channelName,
@@ -119,7 +119,7 @@ export async function runManagedSiteChannelsCrudScenario<
       .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput)
       .fill(channelName)
     await expect(channelRowByName(context.page, channelName)).toBeVisible({
-      timeout: 60_000,
+      timeout: 30_000,
     })
     await expectPaginationSummary(context.page, "1", "1", "1")
 
@@ -132,7 +132,7 @@ export async function runManagedSiteChannelsCrudScenario<
 
     await expect(channelRowByName(context.page, editedChannelName)).toBeVisible(
       {
-        timeout: 60_000,
+        timeout: 30_000,
       },
     )
 
@@ -141,7 +141,7 @@ export async function runManagedSiteChannelsCrudScenario<
       .fill(editedChannelName)
     await expect(channelRowByName(context.page, editedChannelName)).toBeVisible(
       {
-        timeout: 60_000,
+        timeout: 30_000,
       },
     )
     await expect(channelRowByName(context.page, channelName)).toHaveCount(0)
@@ -215,7 +215,7 @@ export async function runManagedSiteTokenChannelStatusScenario<
 
     await expect(
       row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge),
-    ).toBeVisible({ timeout: 90_000 })
+    ).toBeVisible({ timeout: 30_000 })
     await openManagedSiteImportDialogFromTokenRow({
       page: keyManagementPage,
       row,
@@ -276,7 +276,7 @@ async function openManagedSiteImportDialogFromTokenRow(params: {
     ).toBeVisible({ timeout: 30_000 })
   }).toPass({
     intervals: [1_000, 3_000, 5_000],
-    timeout: 90_000,
+    timeout: 30_000,
   })
 }
 
@@ -355,7 +355,7 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
     await expect(row).toBeVisible({ timeout: 20_000 })
   }).toPass({
     intervals: [1_000, 3_000, 5_000],
-    timeout: 90_000,
+    timeout: 30_000,
   })
 }
 
@@ -375,7 +375,7 @@ async function expectManagedSiteImportStatusAfterChannelCreate(row: Locator) {
     await expect(verificationRetryButton).toBeVisible({ timeout: 10_000 })
   }).toPass({
     intervals: [1_000, 3_000, 5_000],
-    timeout: 90_000,
+    timeout: 30_000,
   })
 }
 
@@ -425,7 +425,7 @@ async function deleteVisibleChannelByName(page: Page, channelName: string) {
   await page
     .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton)
     .click()
-  await expect(row).toHaveCount(0, { timeout: 60_000 })
+  await expect(row).toHaveCount(0, { timeout: 30_000 })
 }
 
 async function createManagedSiteChannelFromUi(
@@ -443,7 +443,7 @@ async function createManagedSiteChannelFromUi(
   await expect(
     page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
   ).toBeVisible({
-    timeout: 60_000,
+    timeout: 30_000,
   })
   await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput).fill(params.name)
   await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput).fill(params.key)
@@ -495,7 +495,7 @@ async function openSingleVisibleChannelEditDialog(page: Page, rowText: string) {
     })
   }).toPass({
     intervals: [1_000, 3_000, 5_000],
-    timeout: 60_000,
+    timeout: 30_000,
   })
 }
 
@@ -521,13 +521,13 @@ async function expectPaginationSummary(
 ) {
   await expect(
     page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
-  ).toHaveAttribute("data-start", start, { timeout: 60_000 })
+  ).toHaveAttribute("data-start", start, { timeout: 30_000 })
   await expect(
     page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
-  ).toHaveAttribute("data-end", end, { timeout: 60_000 })
+  ).toHaveAttribute("data-end", end, { timeout: 30_000 })
   await expect(
     page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
-  ).toHaveAttribute("data-total", total, { timeout: 60_000 })
+  ).toHaveAttribute("data-total", total, { timeout: 30_000 })
 }
 
 function channelRowByName(page: Page, channelName: string) {

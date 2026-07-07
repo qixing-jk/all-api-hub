@@ -79,7 +79,7 @@ async function resolveCreatedKeyManagementToken(params: {
       }),
     })
 
-  await expect(tokenRows).toHaveCount(1, { timeout: 60_000 })
+  await expect(tokenRows).toHaveCount(1, { timeout: 30_000 })
 
   const row = tokenRows.first()
   const testId = await row.getAttribute("data-testid")

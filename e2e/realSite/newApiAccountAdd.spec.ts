@@ -18,71 +18,73 @@ import {
 } from "~~/e2e/utils/realSite/newApi"
 
 test.describe("real-site E2E: New API account add flow", () => {
-  test.setTimeout(180_000)
-
   test.beforeEach(async ({ context, page }) => {
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)
   })
 
-  test("logs into a real New API site, saves the account, then verifies account usage workflows", async ({
-    context,
-    extensionId,
-    page,
-  }, testInfo) => {
-    const realSite = resolveNewApiRealSiteConfig()
-    test.skip(
-      !realSite.config,
-      getNewApiRealSiteSkipReason(realSite.missingEnvKeys),
-    )
+  const usageChecks = [
+    realSiteAccountUsageChecks.keyLifecycle(),
+    realSiteAccountUsageChecks.keyToApiProfileAndPopupModels(),
+    realSiteAccountUsageChecks.providerDestinations({
+      validateDestinationPages: true,
+    }),
+    realSiteAccountUsageChecks.modelCatalog(),
+    realSiteAccountUsageChecks.modelToKey({ envPrefix: "NEW_API" }),
+  ] as const
 
-    const config = realSite.config!
-    const serviceWorker = await getServiceWorker(context)
+  for (const usageCheck of usageChecks) {
+    test(`logs into a real New API site, saves the account, then ${usageCheck.name}`, async ({
+      context,
+      extensionId,
+      page,
+    }, testInfo) => {
+      const realSite = resolveNewApiRealSiteConfig()
+      test.skip(
+        !realSite.config,
+        getNewApiRealSiteSkipReason(realSite.missingEnvKeys),
+      )
 
-    await seedUserPreferences(serviceWorker, {
-      managedSiteType: SITE_TYPES.NEW_API,
-      autoFillCurrentSiteUrlOnAccountAdd: false,
-      autoProvisionKeyOnAccountAdd: false,
-      openChangelogOnUpdate: false,
-    })
+      const config = realSite.config!
+      const serviceWorker = await getServiceWorker(context)
 
-    const accountFixture =
-      await test.step("save account from real site auto-detect", async () => {
-        const sitePage = await context.newPage()
-        try {
-          return await runCompatibleRealSiteAccountSaveFlow({
-            page,
-            extensionId,
-            serviceWorker,
-            sitePage,
-            config,
-            siteType: SITE_TYPES.NEW_API,
-            login: loginToRealNewApiSite,
-          })
-        } finally {
-          if (!sitePage.isClosed()) {
-            await sitePage.close()
-          }
-        }
+      await seedUserPreferences(serviceWorker, {
+        managedSiteType: SITE_TYPES.NEW_API,
+        autoFillCurrentSiteUrlOnAccountAdd: false,
+        autoProvisionKeyOnAccountAdd: false,
+        openChangelogOnUpdate: false,
       })
-    await runRealSiteAccountFixtureUsageChecks(
-      {
-        testInfo,
-        page,
-        extensionId,
-        serviceWorker,
-        account: accountFixture,
-        label: "New API",
-      },
-      [
-        realSiteAccountUsageChecks.keyLifecycle(),
-        realSiteAccountUsageChecks.keyToApiProfileAndPopupModels(),
-        realSiteAccountUsageChecks.providerDestinations({
-          validateDestinationPages: true,
-        }),
-        realSiteAccountUsageChecks.modelCatalog(),
-        realSiteAccountUsageChecks.modelToKey({ envPrefix: "NEW_API" }),
-      ],
-    )
-  })
+
+      const accountFixture =
+        await test.step("save account from real site auto-detect", async () => {
+          const sitePage = await context.newPage()
+          try {
+            return await runCompatibleRealSiteAccountSaveFlow({
+              page,
+              extensionId,
+              serviceWorker,
+              sitePage,
+              config,
+              siteType: SITE_TYPES.NEW_API,
+              login: loginToRealNewApiSite,
+            })
+          } finally {
+            if (!sitePage.isClosed()) {
+              await sitePage.close()
+            }
+          }
+        })
+      await runRealSiteAccountFixtureUsageChecks(
+        {
+          testInfo,
+          page,
+          extensionId,
+          serviceWorker,
+          account: accountFixture,
+          label: "New API",
+        },
+        [usageCheck],
+      )
+    })
+  }
 })

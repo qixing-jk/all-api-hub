@@ -105,7 +105,7 @@ export async function waitForSavedAccount(params: {
         return savedAccount
       },
       {
-        timeout: params.timeoutMs ?? 60_000,
+        timeout: params.timeoutMs ?? 30_000,
       },
     )
     .not.toBeNull()
@@ -116,7 +116,7 @@ export async function waitForSavedAccount(params: {
 export async function expectAccountListItemVisible(
   page: Page,
   accountId: string,
-  timeoutMs = 60_000,
+  timeoutMs = 30_000,
 ) {
   const row = page.getByTestId(getAccountManagementListItemTestId(accountId))
   await expect(row).toBeVisible({ timeout: timeoutMs })
@@ -139,7 +139,7 @@ export async function expectAccountListItemVisibleBySite(
     ].join(""),
   )
 
-  await expect(row).toBeVisible({ timeout: params.timeoutMs ?? 60_000 })
+  await expect(row).toBeVisible({ timeout: params.timeoutMs ?? 30_000 })
   return row
 }
 

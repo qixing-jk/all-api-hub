@@ -142,15 +142,15 @@ export async function saveAutoDetectedAccountFromApp(params: {
     await expect(dialog.siteTypeTrigger).toHaveAttribute(
       "data-site-type",
       params.expectedSiteType,
-      { timeout: 60_000 },
+      { timeout: 30_000 },
     )
   }
 
   await params.prepareDetectedDialog?.(dialog)
 
-  await expect(dialog.confirmAddButton).toBeEnabled({ timeout: 60_000 })
+  await expect(dialog.confirmAddButton).toBeEnabled({ timeout: 30_000 })
   await dialog.confirmAddButton.click()
-  await expect(dialog.dialog).toBeHidden({ timeout: 60_000 })
+  await expect(dialog.dialog).toBeHidden({ timeout: 30_000 })
 
   await expectAccountListItemVisibleBySite(params.page, {
     siteType: params.siteType,
@@ -294,7 +294,7 @@ async function expectTokenVisibleInKeyManagementPage(params: {
   tokenName: string
 }): Promise<Locator> {
   const heading = params.page.getByRole("heading", { name: params.tokenName })
-  await expect(heading).toBeVisible({ timeout: 60_000 })
+  await expect(heading).toBeVisible({ timeout: 30_000 })
   return heading.locator("xpath=ancestor::*[@data-testid][1]")
 }
 
@@ -311,13 +311,13 @@ export async function deleteTokenFromKeyManagementPage(params: {
           tokenName: params.token,
         })
       : params.page.getByTestId(getKeyManagementTokenRowTestId(params.token.id))
-  await expect(row).toBeVisible({ timeout: 60_000 })
+  await expect(row).toBeVisible({ timeout: 30_000 })
 
   await row.getByRole("button", { name: "Delete Key" }).click()
   await params.page
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
     .click()
-  await expect(row).toHaveCount(0, { timeout: 60_000 })
+  await expect(row).toHaveCount(0, { timeout: 30_000 })
 }
 
 export async function openKeyManagementForAccount(params: {

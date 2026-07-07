@@ -67,7 +67,7 @@ async function expectModelListCatalog(params: {
   const { page, expectations } = params
 
   await expect(page.getByTestId(MODEL_LIST_TEST_IDS.controlPanel)).toBeVisible({
-    timeout: 60_000,
+    timeout: 30_000,
   })
   if (!expectations?.allowEmptyCatalog) {
     await expect(
