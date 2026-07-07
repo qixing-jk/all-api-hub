@@ -86,6 +86,8 @@ function getStatusTitle(options: {
       return t("settings:releaseUpdate.states.unavailable")
     case RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdateReady:
       return t("settings:releaseUpdate.states.storeUpdateReady")
+    case RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdatePending:
+      return t("settings:releaseUpdate.states.storeUpdatePending")
     case RELEASE_UPDATE_PRESENTATION_STATES.UpdateAvailable:
       return t("settings:releaseUpdate.states.updateAvailable")
     case RELEASE_UPDATE_PRESENTATION_STATES.CheckFailed:
@@ -117,6 +119,8 @@ function getStatusHelper(options: {
       return t("settings:releaseUpdate.helpers.unavailable")
     case RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdateReady:
       return t("settings:releaseUpdate.helpers.storeUpdateReady")
+    case RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdatePending:
+      return t("settings:releaseUpdate.helpers.storeUpdate")
     case RELEASE_UPDATE_PRESENTATION_STATES.UpdateAvailable:
       switch (reason) {
         case RELEASE_UPDATE_REASONS.StoreBuild:
@@ -232,6 +236,9 @@ export function ReleaseUpdateStatusPanel() {
         return
       case RELEASE_UPDATE_CHECK_OUTCOMES.StoreUpdateReady:
         toast.success(t("settings:releaseUpdate.states.storeUpdateReady"))
+        return
+      case RELEASE_UPDATE_CHECK_OUTCOMES.StoreUpdatePending:
+        toast.success(t("settings:releaseUpdate.states.storeUpdatePending"))
         return
       case RELEASE_UPDATE_CHECK_OUTCOMES.UpdateAvailable:
         toast.success(t("settings:releaseUpdate.states.updateAvailable"))

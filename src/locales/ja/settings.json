@@ -467,6 +467,7 @@
     "states": {
       "checkFailed": "確認に失敗したため、最新安定版の情報を取得できませんでした",
       "notChecked": "最新安定版はまだ確認していません。手動チェックで比較できます",
+      "storeUpdatePending": "GitHub には新しいリリースがありますが、ストア更新はまだ利用できません",
       "storeUpdateReady": "ストア更新を適用できます。再読み込みしてください",
       "unavailable": "更新状態を取得できませんでした",
       "updateAvailable": "アップグレード可能な新しいバージョンがあります",

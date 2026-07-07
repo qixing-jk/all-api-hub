@@ -467,6 +467,7 @@
     "states": {
       "checkFailed": "Kiểm tra thất bại, chưa lấy được thông tin bản chính thức mới nhất",
       "notChecked": "Chưa kiểm tra bản chính thức mới nhất, có thể kiểm tra thủ công",
+      "storeUpdatePending": "GitHub đã có bản phát hành mới hơn, nhưng bản cập nhật trên cửa hàng chưa sẵn sàng",
       "storeUpdateReady": "Bản cập nhật cửa hàng đã sẵn sàng, hãy tải lại để áp dụng",
       "unavailable": "Tạm thời không thể đọc trạng thái cập nhật",
       "updateAvailable": "Phát hiện phiên bản mới có thể nâng cấp",

@@ -467,6 +467,7 @@
     "states": {
       "checkFailed": "Check failed, so the latest stable release could not be retrieved",
       "notChecked": "The latest stable release has not been checked yet. Run a manual check to compare versions",
+      "storeUpdatePending": "GitHub has a newer release, but the store update is not ready yet",
       "storeUpdateReady": "Store update is ready. Reload to apply it",
       "unavailable": "Update status is currently unavailable",
       "updateAvailable": "A newer version is available to upgrade",

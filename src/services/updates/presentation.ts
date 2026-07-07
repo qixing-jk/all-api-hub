@@ -1,10 +1,14 @@
 import type { ReleaseUpdateStatus } from "./releaseUpdateStatus"
-import { BROWSER_STORE_UPDATE_STATUSES } from "./releaseUpdateStatus"
+import {
+  BROWSER_STORE_UPDATE_STATUSES,
+  RELEASE_UPDATE_REASONS,
+} from "./releaseUpdateStatus"
 
 export const RELEASE_UPDATE_PRESENTATION_STATES = {
   Loading: "loading",
   Unavailable: "unavailable",
   StoreUpdateReady: "store-update-ready",
+  StoreUpdatePending: "store-update-pending",
   UpdateAvailable: "update-available",
   CheckFailed: "check-failed",
   UpToDate: "up-to-date",
@@ -27,6 +31,7 @@ type ReleaseUpdateActionKind =
 export const RELEASE_UPDATE_CHECK_OUTCOMES = {
   CheckFailed: "check-failed",
   StoreUpdateReady: "store-update-ready",
+  StoreUpdatePending: "store-update-pending",
   UpdateAvailable: "update-available",
   UpToDate: "up-to-date",
 } as const
@@ -52,7 +57,31 @@ export function getReleaseUpdateLatestVersion(
 export function hasAvailableReleaseUpdate(
   status: ReleaseUpdateStatus | null | undefined,
 ): boolean {
-  return !!(status?.updateAvailable && getReleaseUpdateLatestVersion(status))
+  const latestVersion = getReleaseUpdateLatestVersion(status)
+  if (!status?.updateAvailable || !latestVersion) {
+    return false
+  }
+
+  if (isStoreReleasePending(status)) {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Store installs may see a newer GitHub release before the browser store has
+ * published or rolled it out. That is informational, not an actionable update.
+ */
+function isStoreReleasePending(
+  status: ReleaseUpdateStatus | null | undefined,
+): boolean {
+  return !!(
+    status?.reason === RELEASE_UPDATE_REASONS.StoreBuild &&
+    status.updateAvailable &&
+    getReleaseUpdateLatestVersion(status) &&
+    status.storeUpdate.status !== BROWSER_STORE_UPDATE_STATUSES.UpdateAvailable
+  )
 }
 
 /**
@@ -97,6 +126,15 @@ export function deriveReleaseUpdatePresentation(options: {
       hasUpdate: true,
       latestVersion,
       state: RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdateReady,
+    }
+  }
+
+  if (isStoreReleasePending(status)) {
+    return {
+      actionKind: RELEASE_UPDATE_ACTION_KINDS.OpenLatest,
+      hasUpdate: false,
+      latestVersion,
+      state: RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdatePending,
     }
   }
 
@@ -158,6 +196,10 @@ export function deriveReleaseUpdateCheckOutcome(
     status.storeUpdate.status === BROWSER_STORE_UPDATE_STATUSES.UpdateAvailable
   ) {
     return RELEASE_UPDATE_CHECK_OUTCOMES.StoreUpdateReady
+  }
+
+  if (isStoreReleasePending(status)) {
+    return RELEASE_UPDATE_CHECK_OUTCOMES.StoreUpdatePending
   }
 
   if (status.lastError) {

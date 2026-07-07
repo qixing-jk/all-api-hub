@@ -467,6 +467,7 @@
     "states": {
       "checkFailed": "檢查失敗，暫未取得最新正式版資訊",
       "notChecked": "尚未檢查最新正式版，可手動檢查",
+      "storeUpdatePending": "GitHub 已發布新版本，商店更新暫未可用",
       "storeUpdateReady": "商店更新已可用，等待重新載入",
       "unavailable": "暫時無法讀取更新狀態",
       "updateAvailable": "發現可升級的新版本",

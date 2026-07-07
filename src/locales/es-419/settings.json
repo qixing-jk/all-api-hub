@@ -467,6 +467,7 @@
     "states": {
       "checkFailed": "La comprobación falló, así que no se pudo obtener la última versión estable",
       "notChecked": "La última versión estable aún no se ha comprobado. Ejecuta una comprobación manual para comparar versiones",
+      "storeUpdatePending": "GitHub tiene una versión más nueva, pero la actualización de la tienda aún no está lista",
       "storeUpdateReady": "La actualización de tienda está lista. Recarga para aplicarla",
       "unavailable": "El estado de actualización no está disponible actualmente",
       "updateAvailable": "Hay una versión más nueva disponible para actualizar",

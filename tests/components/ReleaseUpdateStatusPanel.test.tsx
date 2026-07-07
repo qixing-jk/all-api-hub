@@ -249,6 +249,91 @@ describe("ReleaseUpdateStatusPanel", () => {
     )
   })
 
+  it("shows store rollout pending copy when GitHub is newer but the store has no update yet", () => {
+    mockHook(
+      buildStatus({
+        eligible: true,
+        reason: "store-build",
+        currentVersion: "3.50.0",
+        latestVersion: "3.51.0",
+        updateAvailable: true,
+        releaseUrl:
+          "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.51.0",
+        checkedAt: Date.now(),
+        storeUpdate: {
+          supported: true,
+          status: "no_update",
+          version: "3.50.0",
+        },
+      }),
+    )
+
+    renderSubject()
+
+    expect(
+      screen.getByText("settings:releaseUpdate.states.storeUpdatePending"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("settings:releaseUpdate.helpers.storeUpdate"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("settings:releaseUpdate.states.updateAvailable"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("link", {
+        name: "settings:releaseUpdate.openLatest",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.51.0",
+    )
+    expect(
+      screen.queryByRole("link", {
+        name: "settings:releaseUpdate.downloadUpdate",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows a store rollout pending toast after checking a store build with no browser update yet", async () => {
+    const user = userEvent.setup()
+
+    mockInteractiveHook({
+      initialStatus: buildStatus({
+        eligible: true,
+        reason: "store-build",
+        storeUpdate: {
+          supported: true,
+          status: "not_checked",
+          version: null,
+        },
+      }),
+      nextStatus: buildStatus({
+        eligible: true,
+        reason: "store-build",
+        currentVersion: "3.50.0",
+        latestVersion: "3.51.0",
+        updateAvailable: true,
+        checkedAt: Date.now(),
+        storeUpdate: {
+          supported: true,
+          status: "no_update",
+          version: "3.50.0",
+        },
+      }),
+    })
+
+    renderSubject()
+    await user.click(
+      screen.getByRole("button", { name: "settings:releaseUpdate.checkNow" }),
+    )
+
+    await waitFor(() => {
+      expect(toastMocks.success).toHaveBeenCalledWith(
+        "settings:releaseUpdate.states.storeUpdatePending",
+      )
+    })
+  })
+
   it("shows an unavailable latest-version line after a failed check", () => {
     mockHook(
       buildStatus({
