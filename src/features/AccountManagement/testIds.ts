@@ -83,6 +83,10 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   sponsorPrimaryAction: "account-management-sponsor-primary-action",
   sponsorContinueAddAccountAction:
     "account-management-sponsor-continue-add-account-action",
+  sponsorPrimaryBookmarkAction:
+    "account-management-sponsor-primary-bookmark-action",
+  sponsorPrimaryApiCredentialProfilesAction:
+    "account-management-sponsor-primary-api-credential-profiles-action",
   sponsorPostClickNote: "account-management-sponsor-post-click-note",
   sponsorFallbackBookmarkAction:
     "account-management-sponsor-fallback-bookmark-action",

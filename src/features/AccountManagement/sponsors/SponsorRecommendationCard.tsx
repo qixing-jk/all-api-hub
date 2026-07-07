@@ -132,6 +132,21 @@ function renderMainActionIcon(actionKind: SponsorMainActionKind) {
   }
 }
 
+/** Returns the stable test id for the compact row action currently promoted. */
+function getMainActionTestId(actionKind: SponsorMainActionKind) {
+  switch (actionKind) {
+    case SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount:
+      return ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction
+    case SPONSOR_MAIN_ACTION_KINDS.BookmarkFallback:
+      return ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryBookmarkAction
+    case SPONSOR_MAIN_ACTION_KINDS.ApiCredentialProfilesFallback:
+      return ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryApiCredentialProfilesAction
+    case SPONSOR_MAIN_ACTION_KINDS.VisitProvider:
+    default:
+      return ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryAction
+  }
+}
+
 /** Renders one compact sponsor recommendation with primary, continue, and fallback actions. */
 export function SponsorRecommendationCard({
   item,
@@ -252,11 +267,7 @@ export function SponsorRecommendationCard({
         )}
         onClick={handleMainAction}
         aria-label={`${mainActionLabel}: ${item.name}`}
-        data-testid={
-          mainActionKind === SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount
-            ? ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction
-            : ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryAction
-        }
+        data-testid={getMainActionTestId(mainActionKind)}
       >
         <span
           className={cn(

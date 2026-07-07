@@ -232,7 +232,9 @@ describe("SponsorRecommendationsSection", () => {
     ).not.toBeInTheDocument()
 
     expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryAction),
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryApiCredentialProfilesAction,
+      ),
     ).toHaveAttribute("type", "button")
 
     const bookmarkAction = screen.getByRole("button", {
@@ -431,14 +433,14 @@ describe("SponsorRecommendationsSection", () => {
     ])
 
     await user.click(
-      screen.getByRole("button", {
-        name: /account:sponsor.actions.openBookmarkManagerFallback: Bookmark Provider/u,
-      }),
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryBookmarkAction,
+      ),
     )
     await user.click(
-      screen.getByRole("button", {
-        name: /account:sponsor.actions.openApiCredentialProfilesFallback: API Provider/u,
-      }),
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryApiCredentialProfilesAction,
+      ),
     )
 
     expect(onOpenBookmarkManager).toHaveBeenCalledWith({
@@ -571,7 +573,9 @@ describe("SponsorRecommendationsSection", () => {
       ),
     )
     await user.click(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryAction),
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryApiCredentialProfilesAction,
+      ),
     )
     await user.click(
       screen.getByTestId(
