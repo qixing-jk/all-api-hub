@@ -353,7 +353,9 @@ export interface SendMessageRetryOptions {
 
 export interface SendTabMessageRetryOptions
   extends SendMessageRetryOptions,
-    browser.tabs._SendMessageOptions {}
+    browser.tabs._SendMessageOptions {
+  documentId?: string
+}
 
 const RECOVERABLE_MESSAGE_SNIPPETS = [
   "Receiving end does not exist",
@@ -470,15 +472,24 @@ export async function sendTabMessageWithRetry<TResponse>(
   message: unknown,
   options?: SendTabMessageRetryOptions,
 ): Promise<TResponse> {
-  const sendOptions: browser.tabs._SendMessageOptions | undefined =
-    typeof options?.frameId === "number"
+  const sendOptions: browser.tabs._SendMessageOptions & {
+    documentId?: string
+  } = {
+    ...(typeof options?.frameId === "number"
       ? { frameId: options.frameId }
-      : undefined
+      : {}),
+    ...(typeof options?.documentId === "string"
+      ? { documentId: options.documentId }
+      : {}),
+  }
+  const hasSendOptions = Object.keys(sendOptions).length > 0
+  // webextension-polyfill types do not yet model Chrome's documentId tab-message target.
+  const typedSendOptions = sendOptions as browser.tabs._SendMessageOptions
 
   return await withMessageRetry(
     () =>
-      (sendOptions
-        ? browser.tabs.sendMessage(tabId, message, sendOptions)
+      (hasSendOptions
+        ? browser.tabs.sendMessage(tabId, message, typedSendOptions)
         : browser.tabs.sendMessage(tabId, message)) as Promise<TResponse>,
     options,
     { maxAttempts: 5, delayMs: 400 },

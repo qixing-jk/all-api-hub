@@ -548,6 +548,27 @@ describe("browserApi sendTabMessageWithRetry", () => {
       })(),
     ).resolves.toEqual({ ok: true })
   })
+
+  it("forwards tab message targeting options", async () => {
+    const sendMessageMock = vi.fn().mockResolvedValue({ ok: true })
+    ;(globalThis as any).browser = { tabs: { sendMessage: sendMessageMock } }
+    const message = {
+      action: RuntimeActionIds.PermissionsCheck,
+      payload: { ok: true },
+    }
+
+    await expect(
+      sendTabMessageWithRetry(123, message, {
+        frameId: 7,
+        documentId: "document-1",
+      }),
+    ).resolves.toEqual({ ok: true })
+
+    expect(sendMessageMock).toHaveBeenCalledWith(123, message, {
+      frameId: 7,
+      documentId: "document-1",
+    })
+  })
 })
 
 describe("browserApi direct adapter helpers", () => {

@@ -50,6 +50,9 @@ vi.mock("~~/e2e/scenarios/modelListCatalog", () => ({
   verifyAccountModelCatalog: mocks.verifyAccountModelCatalog,
 }))
 
+const realSiteDetectionConsoleErrorPattern =
+  /Failed to load resource: .*status of (401|404)/u
+
 describe("runRealSiteAccountSaveFlow", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -85,7 +88,9 @@ describe("runRealSiteAccountSaveFlow", () => {
       }),
     ).resolves.toBe(fixture)
 
-    expect(installExtensionPageGuards).toHaveBeenCalledWith(page, undefined)
+    expect(installExtensionPageGuards).toHaveBeenCalledWith(page, {
+      ignoreConsoleErrorPatterns: [realSiteDetectionConsoleErrorPattern],
+    })
     expect(runAccountAutoDetectScenario).toHaveBeenCalledOnce()
     expect(runAccountKeyLifecycleScenario).not.toHaveBeenCalled()
 
@@ -154,7 +159,10 @@ describe("runRealSiteAccountSaveFlow", () => {
     })
 
     expect(installExtensionPageGuards).toHaveBeenCalledWith(page, {
-      ignoreConsoleErrorPatterns: [/known real-site warning/u],
+      ignoreConsoleErrorPatterns: [
+        realSiteDetectionConsoleErrorPattern,
+        /known real-site warning/u,
+      ],
     })
   })
 })
