@@ -1,6 +1,7 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   createChannel as createNewApiChannel,
   deleteChannel as deleteNewApiChannel,
@@ -336,6 +337,7 @@ export function buildChannelName(
 export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
+  options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ChannelFormData> {
   const upstreamAccount = normalizeAccountForManagedChannel(account)
 
@@ -349,6 +351,7 @@ export async function prepareChannelFormData(
   const resolvedGroups = await resolveDefaultChannelGroups({
     getConfig: getNewApiConfig,
     fetchSiteUserGroups: fetchNewApiConfigUserGroups,
+    operationContext: options?.operationContext,
     onError: (error) => {
       logger.warn("Failed to resolve New API default groups", error)
     },

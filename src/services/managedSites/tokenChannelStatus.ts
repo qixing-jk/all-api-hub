@@ -2,16 +2,18 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import {
   getManagedSiteChannelExactMatch,
-  type ManagedSiteChannelKeyMatchReasonValue,
   type ManagedSiteChannelMatchInspection,
-  type ManagedSiteChannelModelsMatchReasonValue,
 } from "~/services/managedSites/channelMatch"
-import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
+import {
+  createManagedSiteChannelMatchRequestCache,
+  resolveManagedSiteChannelMatch,
+} from "~/services/managedSites/channelMatchResolver"
 import type {
   ManagedSiteConfig,
   ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApi"
 import {
   hasNewApiAuthenticatedBrowserSession,
@@ -23,9 +25,15 @@ import {
   collectManagedConfigSecrets,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
+import {
+  applyVerifiedManagedSiteChannelKey,
+  toManagedSiteAssessmentChannel,
+  toManagedSiteVerifiedKeyAssessment,
+  type ManagedSiteAssessmentChannel,
+  type ManagedSiteVerifiedKeyAssessment,
+} from "~/services/managedSites/verifiedChannelKeyAssessment"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
-import type { ManagedSiteChannel } from "~/types/managedSite"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { createLogger } from "~/utils/core/logger"
 
@@ -49,33 +57,11 @@ export const MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS = {
 export type ManagedSiteTokenChannelStatusUnknownReason =
   (typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS)[keyof typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS]
 
-export interface ManagedSiteTokenChannelStatusMatchedChannel {
-  id: number
-  name: string
-}
+export type ManagedSiteTokenChannelStatusMatchedChannel =
+  ManagedSiteAssessmentChannel
 
-export interface ManagedSiteTokenChannelAssessment {
-  searchBaseUrl: string
-  searchCompleted: boolean
-  url: {
-    matched: boolean
-    candidateCount: number
-    channel?: ManagedSiteTokenChannelStatusMatchedChannel
-  }
-  key: {
-    comparable: boolean
-    matched: boolean
-    reason: ManagedSiteChannelKeyMatchReasonValue
-    channel?: ManagedSiteTokenChannelStatusMatchedChannel
-  }
-  models: {
-    comparable: boolean
-    matched: boolean
-    reason: ManagedSiteChannelModelsMatchReasonValue
-    channel?: ManagedSiteTokenChannelStatusMatchedChannel
-    similarityScore?: number
-  }
-}
+export type ManagedSiteTokenChannelAssessment =
+  ManagedSiteVerifiedKeyAssessment<ManagedSiteTokenChannelStatusMatchedChannel>
 
 export interface ManagedSiteTokenChannelRecovery {
   siteType: typeof SITE_TYPES.NEW_API
@@ -131,42 +117,27 @@ interface GetManagedSiteTokenChannelStatusParams {
   service?: ManagedSiteService
   managedConfig?: ManagedSiteConfig | null
   resolvedChannelKeysById?: Record<number, string>
+  operationContext?: ManagedSiteOperationContext
 }
 
-const toMatchedChannelSummary = (
-  channel: ManagedSiteChannel,
-): ManagedSiteTokenChannelStatusMatchedChannel => ({
-  id: channel.id,
-  name: channel.name,
-})
+interface ResolveManagedSiteTokenChannelStatusWithVerifiedKeyParams {
+  status: ManagedSiteTokenChannelStatus
+  tokenKey: string
+  channelId: number
+  channelKey: string
+  siteType?: ManagedSiteService["siteType"] | string
+}
 
-const toOptionalMatchedChannelSummary = (channel: ManagedSiteChannel | null) =>
-  channel ? toMatchedChannelSummary(channel) : undefined
-
-const toManagedSiteTokenChannelAssessment = (
-  inspection: ManagedSiteChannelMatchInspection,
-): ManagedSiteTokenChannelAssessment => ({
-  searchBaseUrl: inspection.searchBaseUrl,
-  searchCompleted: inspection.searchCompleted,
-  url: {
-    matched: inspection.url.matched,
-    candidateCount: inspection.url.candidateCount,
-    channel: toOptionalMatchedChannelSummary(inspection.url.channel),
-  },
-  key: {
-    comparable: inspection.key.comparable,
-    matched: inspection.key.matched,
-    reason: inspection.key.reason,
-    channel: toOptionalMatchedChannelSummary(inspection.key.channel),
-  },
-  models: {
-    comparable: inspection.models.comparable,
-    matched: inspection.models.matched,
-    reason: inspection.models.reason,
-    channel: toOptionalMatchedChannelSummary(inspection.models.channel),
-    similarityScore: inspection.models.similarityScore,
-  },
-})
+const findAssessmentChannelSummary = (
+  assessment: ManagedSiteTokenChannelAssessment,
+  channelId: number,
+) => {
+  return [
+    assessment.key.channel,
+    assessment.models.channel,
+    assessment.url.channel,
+  ].find((channel) => channel?.id === channelId)
+}
 
 const collectSecrets = (
   token: ApiToken | AccountToken,
@@ -184,6 +155,70 @@ const isNewApiConfig = (config: ManagedSiteConfig): config is NewApiConfig =>
 const isExactVerificationUnavailable = (
   resolution: ManagedSiteChannelMatchInspection,
 ) => resolution.url.matched && !resolution.key.comparable
+
+/**
+ * Recomputes a token's managed-site status after a channel key has been
+ * verified, reusing the current assessment instead of running a full check.
+ */
+export function resolveManagedSiteTokenChannelStatusWithVerifiedKey(
+  params: ResolveManagedSiteTokenChannelStatusWithVerifiedKeyParams,
+): ManagedSiteTokenChannelStatus {
+  const assessment =
+    "assessment" in params.status ? params.status.assessment : undefined
+
+  if (!assessment) {
+    return params.status
+  }
+
+  const channelSummary = findAssessmentChannelSummary(
+    assessment,
+    params.channelId,
+  )
+  const resolvedChannelKeysById = {
+    ...(params.status.resolvedChannelKeysById ?? {}),
+    [params.channelId]: params.channelKey,
+  }
+
+  if (!channelSummary) {
+    return {
+      ...params.status,
+      resolvedChannelKeysById,
+    } as ManagedSiteTokenChannelStatus
+  }
+
+  const applied = applyVerifiedManagedSiteChannelKey({
+    assessment,
+    candidate: channelSummary,
+    sourceKey: params.tokenKey,
+    verifiedChannelKey: params.channelKey,
+    siteType: params.siteType,
+  })
+
+  if (applied.exactMatch) {
+    return {
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+      matchedChannel: channelSummary,
+      assessment: applied.assessment,
+      resolvedChannelKeysById,
+    }
+  }
+
+  if (applied.hasAnyMatch) {
+    return {
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      reason:
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
+      assessment: applied.assessment,
+      resolvedChannelKeysById,
+    }
+  }
+
+  return {
+    status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
+    assessment: applied.assessment,
+    resolvedChannelKeysById,
+  }
+}
 
 const buildNewApiRecoveryMetadata = async (params: {
   managedConfig: NewApiConfig
@@ -274,6 +309,9 @@ export async function getManagedSiteTokenChannelStatus(
         baseUrl: normalizedAccountBaseUrl,
       },
       resolvedToken,
+      {
+        operationContext: params.operationContext,
+      },
     )
     const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(formData.base_url)
 
@@ -294,9 +332,14 @@ export async function getManagedSiteTokenChannelStatus(
       key: formData.key,
       resolvedChannelKeysById: params.resolvedChannelKeysById,
       resolveHiddenKeys: true,
+      requestCache:
+        params.operationContext?.channelMatch ??
+        createManagedSiteChannelMatchRequestCache(),
     })
-    const assessment = toManagedSiteTokenChannelAssessment(resolution)
+    const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(resolution)
+    const exactVerificationUnavailable =
+      isExactVerificationUnavailable(resolution)
     const resolvedChannelKeys =
       resolution.resolvedChannelKeysById &&
       Object.keys(resolution.resolvedChannelKeysById).length > 0
@@ -306,7 +349,7 @@ export async function getManagedSiteTokenChannelStatus(
     if (exactMatch) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
-        matchedChannel: toMatchedChannelSummary(exactMatch),
+        matchedChannel: toManagedSiteAssessmentChannel(exactMatch),
         assessment,
         ...resolvedChannelKeys,
       }
@@ -320,13 +363,13 @@ export async function getManagedSiteTokenChannelStatus(
       }
     }
 
-    if (!formData.key.trim() || isExactVerificationUnavailable(resolution)) {
+    if (!formData.key.trim() || exactVerificationUnavailable) {
       let recovery: ManagedSiteTokenChannelRecovery | undefined
 
       if (
         service.siteType === SITE_TYPES.NEW_API &&
         isNewApiConfig(managedConfig) &&
-        isExactVerificationUnavailable(resolution)
+        exactVerificationUnavailable
       ) {
         try {
           recovery = await buildNewApiRecoveryMetadata({

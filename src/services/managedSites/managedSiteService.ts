@@ -1,5 +1,8 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import type { ManagedSiteChannelRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import type {
+  ManagedSiteChannelDraftRequestOptions,
+  ManagedSiteChannelRequestOptions,
+} from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiResponse } from "~/services/apiTransport/type"
 import {
@@ -79,6 +82,7 @@ export interface ManagedSiteService<
   prepareChannelFormData(
     account: DisplaySiteData,
     token: ApiToken | AccountToken,
+    options?: ManagedSiteChannelDraftRequestOptions,
   ): Promise<ChannelFormData>
 
   buildChannelPayload(

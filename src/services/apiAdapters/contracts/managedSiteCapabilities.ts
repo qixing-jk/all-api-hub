@@ -1,4 +1,5 @@
 import type { ApiResponse } from "~/services/apiTransport/type"
+import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
@@ -76,6 +77,10 @@ export type ManagedSiteQueriesCapability<
   fetchAccountAvailableModels(config: TConfig): Promise<string[]>
 }
 
+export type ManagedSiteChannelDraftRequestOptions = {
+  operationContext?: ManagedSiteOperationContext
+}
+
 export type ManagedSiteChannelDraftsCapability = {
   fetchAvailableModels(
     account: DisplaySiteData,
@@ -85,6 +90,7 @@ export type ManagedSiteChannelDraftsCapability = {
   prepareFormData(
     account: DisplaySiteData,
     token: ApiToken | AccountToken,
+    options?: ManagedSiteChannelDraftRequestOptions,
   ): Promise<ChannelFormData>
   buildPayload(
     formData: ChannelFormData,

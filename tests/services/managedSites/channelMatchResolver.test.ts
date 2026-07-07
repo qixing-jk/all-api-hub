@@ -772,6 +772,83 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(getManagedSiteChannelExactMatch(result)?.id).toBe(28)
   })
 
+  it("reuses cached channel searches and hidden-key resolutions across concurrent match checks", async () => {
+    const maskedCandidate = buildManagedSiteChannel({
+      id: 72,
+      name: "Shared Hidden Candidate",
+      base_url: "https://api.example.com/v1",
+      models: "gpt-4",
+      key: "sk-***",
+    })
+    let resolveSearch: (value: {
+      items: ManagedSiteChannel[]
+      total: number
+      type_counts: Record<string, number>
+    }) => void = () => {}
+    let resolveSecret: (value: string) => void = () => {}
+    const searchChannel = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveSearch = resolve
+        }),
+    )
+    const fetchChannelSecretKey = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveSecret = resolve
+        }),
+    )
+    const service = createManagedSiteServiceStub({
+      searchChannel,
+      fetchChannelSecretKey,
+    })
+    const requestCache = {
+      searchResultsByBaseUrl: new Map(),
+      resolvedChannelKeysById: {},
+      channelSecretKeysById: new Map(),
+    }
+
+    const firstResultPromise = resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com/v1",
+      models: ["gpt-4"],
+      key: "sk-match",
+      resolveHiddenKeys: true,
+      requestCache,
+    })
+    const secondResultPromise = resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4"],
+      key: "sk-match",
+      resolveHiddenKeys: true,
+      requestCache,
+    })
+
+    expect(searchChannel).toHaveBeenCalledTimes(1)
+
+    resolveSearch({
+      items: [maskedCandidate],
+      total: 1,
+      type_counts: {},
+    })
+    await Promise.resolve()
+    expect(fetchChannelSecretKey).toHaveBeenCalledTimes(1)
+
+    resolveSecret("sk-match")
+    const results = await Promise.all([firstResultPromise, secondResultPromise])
+
+    expect(fetchChannelSecretKey).toHaveBeenCalledTimes(1)
+    expect(requestCache.resolvedChannelKeysById).toEqual({
+      72: "sk-match",
+    })
+    expect(
+      results.map((result) => getManagedSiteChannelExactMatch(result)?.id),
+    ).toEqual([72, 72])
+  })
+
   it("keeps the advisory-match state when hidden-key recovery still needs verification", async () => {
     const hiddenUrlOnlyCandidate = buildManagedSiteChannel({
       id: 31,

@@ -1,5 +1,6 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   fetchAccountAvailableModels,
   fetchSiteUserGroups,
@@ -244,6 +245,7 @@ export function buildChannelName(
 export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
+  options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ChannelFormData> {
   const upstreamAccount = normalizeAccountForManagedChannel(account)
   const tokenModelList = parseDelimitedList(token.models)
@@ -265,6 +267,7 @@ export async function prepareChannelFormData(
           userId: config.userId,
         },
       }),
+    operationContext: options?.operationContext,
     onError: (error) => {
       logger.warn("Failed to resolve Veloera default groups", error)
     },

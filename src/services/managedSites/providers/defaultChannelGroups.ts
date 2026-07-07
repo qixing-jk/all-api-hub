@@ -1,4 +1,5 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { normalizeList } from "~/utils/core/string"
 
 type ManagedSiteConfig = {
@@ -11,6 +12,7 @@ type ResolveDefaultChannelGroupsParams = {
   getConfig: () => Promise<ManagedSiteConfig | null>
   fetchSiteUserGroups: (config: ManagedSiteConfig) => Promise<string[]>
   onError?: (error: unknown) => void
+  operationContext?: ManagedSiteOperationContext
 }
 
 /**
@@ -24,7 +26,36 @@ export async function resolveDefaultChannelGroups({
   getConfig,
   fetchSiteUserGroups,
   onError,
+  operationContext,
 }: ResolveDefaultChannelGroupsParams): Promise<string[]> {
+  const requestCache = operationContext?.defaultChannelGroups
+
+  if (requestCache?.resolvedGroups) {
+    return await requestCache.resolvedGroups
+  }
+
+  const resolvedGroupsPromise = resolveDefaultChannelGroupsUncached({
+    getConfig,
+    fetchSiteUserGroups,
+    onError,
+  })
+  if (requestCache) {
+    requestCache.resolvedGroups = resolvedGroupsPromise
+  }
+
+  return await resolvedGroupsPromise
+}
+
+/**
+ * Performs the managed-site group lookup without consulting a batch cache.
+ */
+async function resolveDefaultChannelGroupsUncached({
+  getConfig,
+  fetchSiteUserGroups,
+  onError,
+}: Omit<ResolveDefaultChannelGroupsParams, "operationContext">): Promise<
+  string[]
+> {
   const fallbackGroups = [...DEFAULT_CHANNEL_FIELDS.groups]
 
   try {

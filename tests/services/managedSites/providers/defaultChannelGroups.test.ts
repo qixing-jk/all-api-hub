@@ -99,4 +99,40 @@ describe("resolveDefaultChannelGroups", () => {
     expect(result).toEqual(["default"])
     expect(onError).toHaveBeenCalledTimes(1)
   })
+
+  it("reuses the same in-flight default group lookup within an operation context", async () => {
+    const { createManagedSiteOperationContext } = await import(
+      "~/services/managedSites/operationContext"
+    )
+    const { resolveDefaultChannelGroups } = await import(
+      "~/services/managedSites/providers/defaultChannelGroups"
+    )
+
+    mockFetchSiteUserGroups.mockResolvedValueOnce(["vip", "Default"])
+
+    const operationContext = createManagedSiteOperationContext()
+    const getConfig = vi.fn(async () => ({
+      baseUrl: "https://managed.example.com",
+      adminToken: "admin-token",
+      userId: "1",
+    }))
+
+    const [first, second] = await Promise.all([
+      resolveDefaultChannelGroups({
+        fetchSiteUserGroups: mockFetchSiteUserGroups,
+        getConfig,
+        operationContext,
+      }),
+      resolveDefaultChannelGroups({
+        fetchSiteUserGroups: mockFetchSiteUserGroups,
+        getConfig,
+        operationContext,
+      }),
+    ])
+
+    expect(first).toEqual(["Default"])
+    expect(second).toEqual(["Default"])
+    expect(getConfig).toHaveBeenCalledTimes(1)
+    expect(mockFetchSiteUserGroups).toHaveBeenCalledTimes(1)
+  })
 })

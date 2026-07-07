@@ -1,6 +1,7 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
 import {
   createChannel as createDoneHubChannel,
@@ -270,6 +271,7 @@ export function buildChannelName(
 export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
+  options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ChannelFormData> {
   const upstreamAccount = normalizeAccountForManagedChannel(account)
   const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
@@ -288,6 +290,7 @@ export async function prepareChannelFormData(
           userId: config.userId,
         },
       }),
+    operationContext: options?.operationContext,
     onError: (error) => {
       logger.warn("Failed to resolve Done Hub default groups", error)
     },
