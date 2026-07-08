@@ -113,6 +113,15 @@ const ACCOUNT = {
   tagIds: ["tag-a"],
 } as any
 
+const SECOND_ACCOUNT = {
+  ...ACCOUNT,
+  id: "acc-2",
+  name: "Second Example",
+  baseUrl: "https://second.example.com",
+  token: "second-token",
+  userId: "2",
+}
+
 const AIHUBMIX_ACCOUNT = {
   ...ACCOUNT,
   id: "aihubmix-1",
@@ -231,6 +240,49 @@ describe("AddTokenDialog prefill", () => {
 
     expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
       name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+    })
+  })
+
+  it("allows selecting a different account before creating a token", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValue([])
+    fetchUserGroupsMock.mockResolvedValue({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT, SECOND_ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await screen.findByLabelText(/keyManagement:dialog\.tokenName/)
+
+    const accountTrigger = screen
+      .getAllByRole("combobox")
+      .find((element) => element.textContent?.includes(ACCOUNT.name))
+    expect(accountTrigger).toBeTruthy()
+
+    await user.click(accountTrigger as HTMLElement)
+    await user.click(await screen.findByText(SECOND_ACCOUNT.name))
+
+    expect(accountTrigger).toHaveTextContent(SECOND_ACCOUNT.name)
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+    })
+
+    expect(createApiTokenMock.mock.calls[0]?.[0]).toMatchObject({
+      baseUrl: SECOND_ACCOUNT.baseUrl,
     })
   })
 
