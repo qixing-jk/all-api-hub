@@ -1,4 +1,5 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { SiteStructuredAnnouncement } from "~/services/apiAdapters/contracts/siteStructuredAnnouncements"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
 import type {
@@ -19,8 +20,12 @@ import { fingerprintAnnouncement, normalizeAnnouncementText } from "./text"
 
 const logger = createLogger("SiteAnnouncementProviders")
 
-const createMissingSiteNoticeCapabilityError = (siteType: AccountSiteType) =>
-  new Error(`siteNotice is not implemented for ${siteType}`)
+const createMissingCommonSiteAnnouncementCapabilitiesError = (
+  siteType: AccountSiteType,
+) =>
+  new Error(
+    `site announcement capabilities are not implemented for ${siteType}`,
+  )
 
 const createMissingSiteAnnouncementsCapabilityError = (
   siteType: AccountSiteType,
@@ -114,6 +119,40 @@ function normalizeSub2ApiAnnouncement(
   }
 }
 
+/**
+ * Converts New API-family structured announcement payloads into the local
+ * announcement contract while preserving optional extra text in the body.
+ */
+function normalizeStructuredSiteAnnouncement(
+  item: SiteStructuredAnnouncement,
+): SiteAnnouncement | null {
+  const content = normalizeAnnouncementText(item.content)
+  const extra = normalizeAnnouncementText(item.extra)
+
+  if (!content) {
+    return null
+  }
+
+  const upstreamId =
+    item.id === null || item.id === undefined ? undefined : String(item.id)
+  const createdAt = parseTimestamp(item.publishDate)
+  const fullContent = extra ? `${content}\n\n${extra}` : content
+  const fingerprint = fingerprintAnnouncement([
+    upstreamId ?? "",
+    item.type ?? "",
+    item.publishDate ?? "",
+    content,
+    extra,
+  ])
+
+  return {
+    id: upstreamId,
+    content: fullContent,
+    createdAt,
+    fingerprint,
+  }
+}
+
 export const commonSiteAnnouncementProvider: SiteAnnouncementProvider = {
   id: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
   createSiteKey: createCommonSiteAnnouncementKey,
@@ -122,26 +161,44 @@ export const commonSiteAnnouncementProvider: SiteAnnouncementProvider = {
   ): Promise<SiteAnnouncementProviderResult> {
     const siteKey = createCommonSiteAnnouncementKey(request)
     try {
-      const noticeCapability = getSiteTypeCapabilities(request.siteType).site
-        ?.notice
-      if (!noticeCapability) {
-        throw createMissingSiteNoticeCapabilityError(request.siteType)
+      const siteCapabilities = getSiteTypeCapabilities(request.siteType).site
+      const structuredAnnouncementsCapability = siteCapabilities?.announcements
+      const noticeCapability = siteCapabilities?.notice
+
+      if (!structuredAnnouncementsCapability && !noticeCapability) {
+        throw createMissingCommonSiteAnnouncementCapabilitiesError(
+          request.siteType,
+        )
       }
 
-      const notice = await noticeCapability.fetch(request.apiRequest)
+      const structuredAnnouncements = structuredAnnouncementsCapability
+        ? await structuredAnnouncementsCapability
+            .fetch(request.apiRequest)
+            .then((items) =>
+              items
+                .map(normalizeStructuredSiteAnnouncement)
+                .filter((item): item is SiteAnnouncement => Boolean(item)),
+            )
+        : []
+      const notice = noticeCapability
+        ? await noticeCapability.fetch(request.apiRequest)
+        : null
       const content = normalizeAnnouncementText(notice)
       return {
         providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
         siteKey,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
-        announcements: content
-          ? [
-              {
-                content,
-                fingerprint: fingerprintAnnouncement([content]),
-              },
-            ]
-          : [],
+        announcements: [
+          ...structuredAnnouncements,
+          ...(content
+            ? [
+                {
+                  content,
+                  fingerprint: fingerprintAnnouncement([content]),
+                },
+              ]
+            : []),
+        ],
       }
     } catch (error) {
       return {

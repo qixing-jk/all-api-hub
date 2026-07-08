@@ -146,6 +146,9 @@ describe("apiAdapters registry", () => {
       expect(capabilities.site?.notice).toEqual({
         fetch: expect.any(Function),
       })
+      expect(capabilities.site?.announcements).toEqual({
+        fetch: expect.any(Function),
+      })
       expectAccountDataCapability(capabilities)
       expectAccountBootstrapCapability(capabilities)
       expectAccountCompletionCapability(capabilities)

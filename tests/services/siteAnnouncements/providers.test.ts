@@ -47,6 +47,22 @@ const createNoticeAdapter = (fetch = vi.fn().mockResolvedValue(null)) => ({
   },
 })
 
+const createCommonAdapter = (overrides?: {
+  notice?: ReturnType<typeof vi.fn>
+  announcements?: ReturnType<typeof vi.fn>
+}) => ({
+  siteType: SITE_TYPES.NEW_API,
+  family: "newApiFamily" as const,
+  site: {
+    notice: {
+      fetch: overrides?.notice ?? vi.fn().mockResolvedValue(null),
+    },
+    announcements: {
+      fetch: overrides?.announcements ?? vi.fn().mockResolvedValue([]),
+    },
+  },
+})
+
 const createSub2ApiAdapter = (overrides?: {
   fetch?: ReturnType<typeof vi.fn>
   markRead?: ReturnType<typeof vi.fn>
@@ -109,6 +125,45 @@ describe("site announcement providers", () => {
     })
   })
 
+  it("normalizes New API structured announcements alongside site notices", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      createCommonAdapter({
+        notice: vi.fn().mockResolvedValue(" Site notice "),
+        announcements: vi.fn().mockResolvedValue([
+          {
+            id: 7,
+            content: " Maintenance ",
+            publishDate: "2026-07-01T12:00:00Z",
+            type: "warning",
+            extra: " Brief interruption ",
+          },
+          {
+            content: "",
+            publishDate: "2026-07-02T12:00:00Z",
+            type: "success",
+          },
+        ]),
+      }),
+    )
+
+    const result = await commonSiteAnnouncementProvider.fetch(baseRequest)
+
+    expect(result.status).toBe(SITE_ANNOUNCEMENT_STATUS.Success)
+    expect(result.announcements).toEqual([
+      {
+        content: "Maintenance\n\nBrief interruption",
+        createdAt: Date.parse("2026-07-01T12:00:00Z"),
+        id: "7",
+        fingerprint:
+          "1:7|7:warning|20:2026-07-01T12:00:00Z|11:Maintenance|18:Brief interruption",
+      },
+      {
+        content: "Site notice",
+        fingerprint: "11:Site notice",
+      },
+    ])
+  })
+
   it("marks common provider failures as unsupported with the upstream error text", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce(
       createNoticeAdapter(
@@ -125,7 +180,7 @@ describe("site announcement providers", () => {
     })
   })
 
-  it("marks common provider missing siteNotice capability as unsupported", async () => {
+  it("marks common provider missing site announcement capabilities as unsupported", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AIHUBMIX,
     })
@@ -138,7 +193,7 @@ describe("site announcement providers", () => {
     expect(result).toMatchObject({
       status: SITE_ANNOUNCEMENT_STATUS.Unsupported,
       announcements: [],
-      error: "siteNotice is not implemented for AIHubMix",
+      error: "site announcement capabilities are not implemented for AIHubMix",
     })
   })
 

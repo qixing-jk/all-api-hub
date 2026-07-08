@@ -13,6 +13,7 @@ import { createNewApiKeyManagement } from "./keyManagement"
 import { createNewApiModelPricing } from "./modelPricing"
 import { createNewApiRedemption } from "./redemption"
 import { newApiSiteNotice } from "./siteNotice"
+import { newApiSiteStructuredAnnouncements } from "./siteStructuredAnnouncements"
 import { createNewApiTokenProvisioning } from "./tokenProvisioning"
 
 export const createNewApiCapabilities = (
@@ -20,7 +21,10 @@ export const createNewApiCapabilities = (
 ): SiteTypeCapabilities => ({
   siteType,
   family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
-  site: { notice: newApiSiteNotice },
+  site: {
+    announcements: newApiSiteStructuredAnnouncements,
+    notice: newApiSiteNotice,
+  },
   account: {
     data: createNewApiAccountData(siteType),
     bootstrap: createNewApiAccountBootstrap(siteType),

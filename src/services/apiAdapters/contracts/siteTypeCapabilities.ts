@@ -18,6 +18,7 @@ import type { RedemptionCapability } from "./redemption"
 import type { ServiceCredentialCapability } from "./serviceCredential"
 import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
 import type { SiteNoticeCapability } from "./siteNotice"
+import type { SiteStructuredAnnouncementsCapability } from "./siteStructuredAnnouncements"
 import type { TokenProvisioningCapability } from "./tokenProvisioning"
 
 export type SiteType = AccountSiteType | ManagedSiteType
@@ -28,6 +29,7 @@ export type SiteTypeCapabilities = {
   siteType: SiteType
   family?: SiteBackendFamily
   site?: {
+    announcements?: SiteStructuredAnnouncementsCapability
     notice?: SiteNoticeCapability
   }
   account?: {
