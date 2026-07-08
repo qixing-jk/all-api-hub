@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 import { Loader2, SendToBack } from "lucide-react"
 
 import { Button } from "~/components/ui"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type {
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportPreview,
@@ -46,7 +47,13 @@ export function ManagedSiteTokenBatchExportFooter({
             total: executionResult.items.length,
           })}
         </div>
-        <Button type="button" onClick={onClose}>
+        <Button
+          type="button"
+          onClick={onClose}
+          data-testid={
+            KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportCloseButton
+          }
+        >
           {t("common:actions.close")}
         </Button>
       </div>
@@ -65,7 +72,7 @@ export function ManagedSiteTokenBatchExportFooter({
               total: preview.totalCount,
             })
           : t("keyManagement:batchManagedSiteExport.preview.selected", {
-              selectedCount: selectedItemCount,
+              count: selectedItemCount,
             })}
       </div>
       <div className="flex items-center gap-2">
@@ -74,6 +81,9 @@ export function ManagedSiteTokenBatchExportFooter({
           variant="outline"
           onClick={onClose}
           disabled={isRunning}
+          data-testid={
+            KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportCancelButton
+          }
         >
           {t("common:actions.cancel")}
         </Button>
@@ -94,6 +104,9 @@ export function ManagedSiteTokenBatchExportFooter({
             Boolean(previewError)
           }
           onClick={onStart}
+          data-testid={
+            KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportStartButton
+          }
         >
           {isRunning
             ? t("keyManagement:batchManagedSiteExport.actions.running")

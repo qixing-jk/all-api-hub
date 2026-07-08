@@ -95,7 +95,7 @@
     "preview": {
       "loadFailed": "Tải bản xem trước thất bại: {{error}}",
       "loading": "Đang chuẩn bị xem trước kênh...",
-      "selected": "Đã chọn {{selectedCount}} khóa",
+      "selected_other": "Đã chọn {{count}} khóa",
       "summary": "Xem trước: Có thể tạo {{ready}}, cảnh báo {{warning}}, bỏ qua {{skipped}}, bị chặn {{blocked}}, tổng cộng {{total}}."
     },
     "results": {

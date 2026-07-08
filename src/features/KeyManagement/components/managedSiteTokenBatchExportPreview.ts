@@ -46,6 +46,7 @@ export const applyNormalizedModelsToPreviewItem = (
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
       blockingReasonCode:
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+      blockingMessage: undefined,
     }
   }
 

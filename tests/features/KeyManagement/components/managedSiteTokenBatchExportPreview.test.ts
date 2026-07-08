@@ -130,6 +130,14 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
     })
   })
 
+  it("leaves rows without editable drafts unchanged when applying models", () => {
+    const item = buildPreviewItem({
+      draft: null,
+    })
+
+    expect(applyModelsToPreviewItem(item, ["gpt-4o-mini"])).toBe(item)
+  })
+
   it("moves models-required blocked rows between blocked and warning states as models change", () => {
     const item = buildPreviewItem({
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
@@ -156,6 +164,26 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
       blockingReasonCode:
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+      blockingMessage: undefined,
+      draft: {
+        models: [],
+      },
+    })
+  })
+
+  it("clears stale blocking details when an edited row becomes models-required again", () => {
+    const item = buildPreviewItem({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.CONFIG_MISSING,
+      blockingMessage: "previous configuration detail",
+    })
+
+    expect(applyModelsToPreviewItem(item, [])).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+      blockingMessage: undefined,
       draft: {
         models: [],
       },

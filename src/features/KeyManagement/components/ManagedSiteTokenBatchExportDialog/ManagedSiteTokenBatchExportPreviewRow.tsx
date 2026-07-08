@@ -11,6 +11,7 @@ import {
   type CompactMultiSelectOption,
 } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type {
   ManagedSiteTokenBatchExportExecutionItem,
   ManagedSiteTokenBatchExportMatchedChannel,
@@ -114,6 +115,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
         Boolean(verifyingItemId)
       }
       onClick={() => onVerifyAndRefresh(item, verificationCandidate)}
+      data-testid={KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportVerifyButton}
     >
       {isCurrentItemVerifying
         ? t("keyManagement:batchManagedSiteExport.actions.verifying")
@@ -130,8 +132,13 @@ export function ManagedSiteTokenBatchExportPreviewRow({
             className="mt-0.5"
             checked={isSelected}
             aria-label={`${item.accountName} / ${item.runtimeKeyName}`}
-            disabled={!isExecutablePreviewItem(item) || hasExecutionResult}
+            disabled={
+              !isExecutablePreviewItem(item) || hasExecutionResult || isRunning
+            }
             onCheckedChange={() => onToggleItem(item)}
+            data-testid={
+              KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportRowSelectCheckbox
+            }
           />
           <label htmlFor={checkboxId} className="min-w-0">
             <span className="block truncate text-sm font-medium">

@@ -12,6 +12,16 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   tokenRowActions: "key-management-token-row-actions",
   managedSiteStatusBadge: "key-management-managed-site-status-badge",
   importToManagedSiteButton: "key-management-import-to-managed-site-button",
+  managedSiteBatchExportCancelButton:
+    "key-management-managed-site-batch-export-cancel-button",
+  managedSiteBatchExportCloseButton:
+    "key-management-managed-site-batch-export-close-button",
+  managedSiteBatchExportStartButton:
+    "key-management-managed-site-batch-export-start-button",
+  managedSiteBatchExportRowSelectCheckbox:
+    "key-management-managed-site-batch-export-row-select-checkbox",
+  managedSiteBatchExportVerifyButton:
+    "key-management-managed-site-batch-export-verify-button",
   managedSiteChannelLinkButton:
     "key-management-managed-site-channel-link-button",
   managedSiteVerificationRetryButton:

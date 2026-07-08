@@ -95,7 +95,7 @@
     "preview": {
       "loadFailed": "加载预览失败：{{error}}",
       "loading": "正在准备渠道预览...",
-      "selected": "已选择 {{selectedCount}} 个密钥",
+      "selected": "已选择 {{count}} 个密钥",
       "summary": "预览：可创建 {{ready}} 个，警告 {{warning}} 个，跳过 {{skipped}} 个，阻塞 {{blocked}} 个，共 {{total}} 个。"
     },
     "results": {

@@ -65,6 +65,8 @@ export function ManagedSiteTokenBatchExportPreviewList({
   onVerifyAndRefresh,
 }: ManagedSiteTokenBatchExportPreviewListProps) {
   const hasExecutionResult = Boolean(executionResult)
+  const isVerificationPending =
+    isVerificationDialogOpen || Boolean(verifyingItemId)
   const selectAllId = useId()
 
   return (
@@ -75,7 +77,7 @@ export function ManagedSiteTokenBatchExportPreviewList({
             <Checkbox
               id={selectAllId}
               checked={executableSelection.checked}
-              disabled={executableSelection.itemCount === 0}
+              disabled={isRunning || executableSelection.itemCount === 0}
               aria-label={t(
                 "keyManagement:batchManagedSiteExport.actions.selectAll",
                 {
@@ -97,7 +99,7 @@ export function ManagedSiteTokenBatchExportPreviewList({
             size="sm"
             variant="outline"
             leftIcon={<RefreshCcw className="h-4 w-4" />}
-            disabled={isLoadingPreview || isRunning}
+            disabled={isLoadingPreview || isRunning || isVerificationPending}
             onClick={onRefreshPreview}
           >
             {t("keyManagement:batchManagedSiteExport.actions.refreshPreview")}

@@ -101,7 +101,9 @@
     "preview": {
       "loadFailed": "No se pudo cargar la vista previa: {{error}}",
       "loading": "Preparando vista previa de canales...",
-      "selected": "{{selectedCount}} claves seleccionadas",
+      "selected_one": "{{count}} clave seleccionada",
+      "selected_many": "{{count}} claves seleccionadas",
+      "selected_other": "{{count}} claves seleccionadas",
       "summary": "Vista previa: {{ready}} listas, {{warning}} advertencias, {{skipped}} omitidas, {{blocked}} bloqueadas, {{total}} en total."
     },
     "results": {

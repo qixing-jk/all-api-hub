@@ -204,7 +204,8 @@ export function useManagedSiteTokenBatchExportDialog({
   }
 
   const handleRefreshPreview = () => {
-    if (isLoadingPreview || isRunning) return
+    if (isLoadingPreview || isRunning || verifyingItemId) return
+    if (verification.dialogState.isOpen) return
     setExecutionError(null)
     setRefreshKey((value) => value + 1)
   }
@@ -281,9 +282,7 @@ export function useManagedSiteTokenBatchExportDialog({
       return
     }
 
-    const verificationTargets = preview
-      ? getPreviewVerificationTargets(preview)
-      : []
+    const verificationTargets = getPreviewVerificationTargets(preview!)
     const targets =
       verificationTargets.length > 0
         ? verificationTargets
@@ -379,7 +378,7 @@ export function useManagedSiteTokenBatchExportDialog({
   }
 
   const handleToggleAll = () => {
-    if (!preview || executionResult) return
+    if (!preview || executionResult || isRunning) return
     setSelectedIds(
       allExecutableSelected
         ? new Set()
@@ -388,7 +387,7 @@ export function useManagedSiteTokenBatchExportDialog({
   }
 
   const handleToggleItem = (item: ManagedSiteTokenBatchExportPreviewItem) => {
-    if (!isExecutablePreviewItem(item) || executionResult) return
+    if (!isExecutablePreviewItem(item) || executionResult || isRunning) return
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (next.has(item.id)) {

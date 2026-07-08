@@ -95,7 +95,7 @@
     "preview": {
       "loadFailed": "プレビューの読み込みに失敗しました: {{error}}",
       "loading": "チャネルプレビューを準備中...",
-      "selected": "{{selectedCount}} 件のキーを選択中",
+      "selected_other": "{{count}} 件のキーを選択中",
       "summary": "プレビュー: 作成可能 {{ready}} 件、警告 {{warning}} 件、スキップ {{skipped}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
     },
     "results": {
