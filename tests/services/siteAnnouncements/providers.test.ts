@@ -164,6 +164,33 @@ describe("site announcement providers", () => {
     ])
   })
 
+  it("keeps structured announcements when the site notice fetch fails", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      createCommonAdapter({
+        notice: vi.fn().mockRejectedValue(new Error("notice unavailable")),
+        announcements: vi.fn().mockResolvedValue([
+          {
+            content: "Structured",
+            publishDate: "2026-07-01T12:00:00Z",
+          },
+        ]),
+      }),
+    )
+
+    const result = await commonSiteAnnouncementProvider.fetch(baseRequest)
+
+    expect(result).toMatchObject({
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
+      announcements: [
+        {
+          content: "Structured",
+          createdAt: Date.parse("2026-07-01T12:00:00Z"),
+          fingerprint: "0:|0:|20:2026-07-01T12:00:00Z|10:Structured|0:",
+        },
+      ],
+    })
+  })
+
   it("marks common provider failures as unsupported with the upstream error text", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce(
       createNoticeAdapter(

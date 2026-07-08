@@ -1,4 +1,8 @@
-import type { SiteStructuredAnnouncement } from "~/services/apiAdapters/contracts/siteStructuredAnnouncements"
+import {
+  SITE_STRUCTURED_ANNOUNCEMENT_TYPES,
+  type SiteStructuredAnnouncement,
+  type SiteStructuredAnnouncementType,
+} from "~/services/apiAdapters/contracts/siteStructuredAnnouncements"
 import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
@@ -11,13 +15,16 @@ type NewApiStatusAnnouncementsResponse = {
   announcements?: unknown
 }
 
-const VALID_ANNOUNCEMENT_TYPES = new Set([
-  "default",
-  "ongoing",
-  "success",
-  "warning",
-  "error",
-])
+const VALID_ANNOUNCEMENT_TYPES = new Set(SITE_STRUCTURED_ANNOUNCEMENT_TYPES)
+
+/**
+ * Checks whether an upstream announcement type is supported locally.
+ */
+function isSiteStructuredAnnouncementType(
+  value: string,
+): value is SiteStructuredAnnouncementType {
+  return VALID_ANNOUNCEMENT_TYPES.has(value as SiteStructuredAnnouncementType)
+}
 
 /**
  * Keep only New API announcement fields the extension can safely display.
@@ -44,7 +51,7 @@ function normalizeStructuredAnnouncement(
       ? item.publishDate
       : undefined
   const type =
-    typeof item.type === "string" && VALID_ANNOUNCEMENT_TYPES.has(item.type)
+    typeof item.type === "string" && isSiteStructuredAnnouncementType(item.type)
       ? item.type
       : undefined
   const extra =
@@ -54,7 +61,7 @@ function normalizeStructuredAnnouncement(
     ...(id === undefined ? {} : { id }),
     content,
     ...(publishDate ? { publishDate } : {}),
-    ...(type ? { type: type as SiteStructuredAnnouncement["type"] } : {}),
+    ...(type ? { type } : {}),
     ...(extra ? { extra } : {}),
   }
 }

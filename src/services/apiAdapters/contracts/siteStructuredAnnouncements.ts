@@ -1,11 +1,15 @@
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
+export const SITE_STRUCTURED_ANNOUNCEMENT_TYPES = [
+  "default",
+  "ongoing",
+  "success",
+  "warning",
+  "error",
+] as const
+
 export type SiteStructuredAnnouncementType =
-  | "default"
-  | "ongoing"
-  | "success"
-  | "warning"
-  | "error"
+  (typeof SITE_STRUCTURED_ANNOUNCEMENT_TYPES)[number]
 
 export type SiteStructuredAnnouncement = {
   id?: string | number

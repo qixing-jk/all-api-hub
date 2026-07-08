@@ -77,6 +77,40 @@ describe("newApiFamily siteAnnouncements", () => {
     await expect(fetchSiteAnnouncements(request)).resolves.toEqual([])
   })
 
+  it("keeps valid items while omitting invalid optional fields", async () => {
+    fetchApiDataMock.mockResolvedValueOnce({
+      announcements_enabled: true,
+      announcements: [
+        null,
+        "not-an-object",
+        42,
+        {
+          id: 7,
+          content: "Valid content",
+          publishDate: 123,
+          type: "critical",
+          extra: 456,
+        },
+        {
+          id: "announcement-2",
+          content: "Also valid",
+          type: 123,
+        },
+      ],
+    })
+
+    await expect(fetchSiteAnnouncements(request)).resolves.toEqual([
+      {
+        id: 7,
+        content: "Valid content",
+      },
+      {
+        id: "announcement-2",
+        content: "Also valid",
+      },
+    ])
+  })
+
   it("returns an empty list when the status request throws", async () => {
     fetchApiDataMock.mockRejectedValueOnce(new TypeError("network failed"))
 

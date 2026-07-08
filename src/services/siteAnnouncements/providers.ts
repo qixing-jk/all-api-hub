@@ -180,9 +180,20 @@ export const commonSiteAnnouncementProvider: SiteAnnouncementProvider = {
                 .filter((item): item is SiteAnnouncement => Boolean(item)),
             )
         : []
-      const notice = noticeCapability
-        ? await noticeCapability.fetch(request.apiRequest)
-        : null
+      let notice: string | null = null
+      if (noticeCapability && structuredAnnouncementsCapability) {
+        try {
+          notice = await noticeCapability.fetch(request.apiRequest)
+        } catch (error) {
+          logger.warn("Failed to fetch site notice", {
+            siteType: request.siteType,
+            baseUrl: request.baseUrl,
+            error: getErrorMessage(error),
+          })
+        }
+      } else if (noticeCapability) {
+        notice = await noticeCapability.fetch(request.apiRequest)
+      }
       const content = normalizeAnnouncementText(notice)
       return {
         providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
