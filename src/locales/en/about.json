@@ -58,7 +58,7 @@
     "title": "Rate & Download"
   },
   "techStack": {
-    "headlessui": "Unstyled UI components",
+    "radix": "Accessible UI primitives",
     "react": "User interface library",
     "tailwindcss": "Atomic CSS framework",
     "title": "Tech Stack",

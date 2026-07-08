@@ -85,9 +85,9 @@ export default function About() {
       description: t("techStack.tailwindcss"),
     },
     {
-      name: "Headless UI",
-      version: getPkgVersion("@headlessui/react"),
-      description: t("techStack.headlessui"),
+      name: "Radix UI",
+      version: getPkgVersion("radix-ui"),
+      description: t("techStack.radix"),
     },
   ]
 

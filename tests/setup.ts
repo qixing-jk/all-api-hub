@@ -28,9 +28,8 @@ if (!globalAny.HTMLElement?.prototype?.scrollIntoView) {
   globalAny.HTMLElement.prototype.scrollIntoView = vi.fn()
 }
 
-// Headless UI checks the Web Animations API and warns when it has to install a
-// fallback `getAnimations` polyfill itself. Providing a no-op implementation in
-// the shared test setup keeps affected suites quiet and deterministic.
+// Some UI primitives inspect the Web Animations API in jsdom. Providing a no-op
+// implementation in the shared setup keeps affected suites deterministic.
 if (!globalAny.Element?.prototype?.getAnimations) {
   globalAny.Element.prototype.getAnimations = vi.fn(() => [])
 }

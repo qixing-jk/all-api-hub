@@ -58,7 +58,7 @@
     "title": "Calificar y descargar"
   },
   "techStack": {
-    "headlessui": "Componentes de UI sin estilos",
+    "radix": "Primitivos de UI accesibles",
     "react": "Biblioteca de interfaz de usuario",
     "tailwindcss": "Framework CSS atómico",
     "title": "Stack técnico",

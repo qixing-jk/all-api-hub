@@ -325,7 +325,7 @@ All API Hub 基于 GNU Affero General Public License v3.0（AGPL-3.0）开源。
 - **UI 层**: [React](https://react.dev) 构建扩展选项页与弹窗界面
 - **语言**: [TypeScript](https://www.typescriptlang.org) 提供端到端的类型安全
 - **样式**: [Tailwind CSS](https://tailwindcss.com) 以原子化工具类驱动主题样式
-- **组件**: [Headless UI](https://headlessui.com) 提供无样式可访问组件与设计系统基石
+- **组件**: [Radix UI](https://www.radix-ui.com/) 提供可访问组件与设计系统基石
 
 
 <a id="acknowledgements"></a>

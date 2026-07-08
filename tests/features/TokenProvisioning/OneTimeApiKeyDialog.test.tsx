@@ -7,19 +7,6 @@ import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testId
 
 let OneTimeApiKeyDialog: typeof import("~/features/TokenProvisioning/components/OneTimeApiKeyDialog").OneTimeApiKeyDialog
 
-vi.mock("@headlessui/react", () => {
-  const Dialog = ({ children }: any) => <div>{children}</div>
-  Dialog.Panel = ({ children, ...props }: any) => (
-    <div {...props}>{children}</div>
-  )
-
-  const Transition = ({ show, children }: any) =>
-    show ? <>{children}</> : null
-  Transition.Child = ({ children }: any) => <>{children}</>
-
-  return { Dialog, Transition }
-})
-
 describe("OneTimeApiKeyDialog", () => {
   beforeEach(async () => {
     ;({ OneTimeApiKeyDialog } = await import(

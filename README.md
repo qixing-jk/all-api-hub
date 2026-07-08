@@ -334,7 +334,7 @@ Commercial licenses apply only to code and assets for which the All API Hub main
 - **UI Layer**: [React](https://react.dev) drives the options UI and popup experiences
 - **Language**: [TypeScript](https://www.typescriptlang.org) keeps the entire codebase type-safe
 - **Styling**: [Tailwind CSS](https://tailwindcss.com) supplies utility-first theming primitives
-- **Components**: [Headless UI](https://headlessui.com) provides unstyled accessible primitives for our design system
+- **Components**: [Radix UI](https://www.radix-ui.com/) provides accessible primitives for our design system
 
 <a id="acknowledgements"></a>
 ## 🙏 Acknowledgements

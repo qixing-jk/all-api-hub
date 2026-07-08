@@ -145,7 +145,7 @@ function ProviderTabList({
  * @param props.allProvidersFilteredCount Count of models after non-provider filters.
  * @param props.getProviderFilteredCount Helper to get count per provider.
  * @param props.children Tab panels content to render.
- * @returns Headless UI Tab group with provider tabs.
+ * @returns Radix tab group with provider tabs.
  */
 export function ProviderTabs({
   providers,

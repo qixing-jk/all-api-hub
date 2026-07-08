@@ -18,16 +18,6 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("@headlessui/react", () => ({
-  DialogTitle: ({
-    children,
-    className,
-  }: {
-    children: ReactNode
-    className?: string
-  }) => <div className={className}>{children}</div>,
-}))
-
 vi.mock("~/features/AccountManagement/components/TagPicker", () => ({
   TagPicker: () => <div data-testid="tag-picker" />,
 }))

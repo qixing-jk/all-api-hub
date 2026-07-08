@@ -34,7 +34,7 @@ import {
 import { render, screen } from "~~/tests/test-utils/render"
 
 /**
- * Minimal HeadlessUI modal host for select-layer assertions.
+ * Minimal legacy Modal host for select-layer assertions.
  */
 function ModalSelectHarness() {
   return (
@@ -79,7 +79,7 @@ function DialogDropdownHarness() {
 }
 
 /**
- * Minimal HeadlessUI modal host for Base UI combobox layer assertions.
+ * Minimal legacy Modal host for Base UI combobox layer assertions.
  */
 function ModalComboboxHarness() {
   const items = React.useMemo(

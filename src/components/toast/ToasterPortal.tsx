@@ -18,7 +18,7 @@ interface ToasterPortalProviderProps {
 
 /**
  * Tracks modal-local toaster hosts so the single global toaster can stay
- * inside Headless UI's active dialog portal instead of the inert app tree.
+ * inside the active dialog portal instead of the inert app tree.
  */
 export function ToasterPortalProvider({
   children,

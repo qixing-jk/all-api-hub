@@ -58,7 +58,7 @@
     "title": "评分与下载"
   },
   "techStack": {
-    "headlessui": "无样式UI组件",
+    "radix": "可访问 UI 基础组件",
     "react": "用户界面库",
     "tailwindcss": "原子化CSS框架",
     "title": "技术栈",

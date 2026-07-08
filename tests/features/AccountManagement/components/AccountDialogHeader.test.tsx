@@ -1,19 +1,8 @@
 import { render, screen } from "@testing-library/react"
-import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import DialogHeader from "~/features/AccountManagement/components/AccountDialog/DialogHeader"
-
-vi.mock("@headlessui/react", () => ({
-  DialogTitle: ({
-    children,
-    className,
-  }: {
-    children: ReactNode
-    className?: string
-  }) => <div className={className}>{children}</div>,
-}))
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()

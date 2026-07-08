@@ -58,7 +58,7 @@
     "title": "Đánh giá và tải xuống"
   },
   "techStack": {
-    "headlessui": "Thành phần UI không kiểu dáng",
+    "radix": "Primitive UI hỗ trợ truy cập",
     "react": "Thư viện giao diện người dùng",
     "tailwindcss": "Framework CSS nguyên tử",
     "title": "Ngăn xếp công nghệ",

@@ -26,7 +26,7 @@ All API Hub is built with the same stack highlighted in the in-app About page to
 - **UI Layer**: [React](https://react.dev) powers the options UI and popup surfaces
 - **Language**: [TypeScript](https://www.typescriptlang.org) keeps the codebase type-safe end-to-end
 - **Styling**: [Tailwind CSS](https://tailwindcss.com) provides utility-first styling with theme tokens
-- **Components**: [Headless UI](https://headlessui.com) supplies accessible primitives layered with our design system
+- **Components**: [Radix UI](https://www.radix-ui.com/) supplies accessible primitives layered with our design system
 
 ### Getting Started
 
