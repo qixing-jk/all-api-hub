@@ -1,4 +1,3 @@
-import { Tab } from "@headlessui/react"
 import type { TFunction } from "i18next"
 import { ChevronDown, Settings } from "lucide-react"
 import {
@@ -22,6 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
   Spinner,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from "~/components/ui"
 import {
   DropdownMenu,
@@ -419,7 +422,7 @@ function DesktopTabs({
         </button>
       </div>
 
-      <Tab.List className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         {visibleTabIds.map((tabId) => {
           const tab = tabsById[tabId]
           const isSelected = selectedTabId === tab.id
@@ -436,7 +439,7 @@ function DesktopTabs({
             </button>
           )
         })}
-      </Tab.List>
+      </div>
 
       {overflowTabIds.length > 0 ? (
         <DropdownMenu>
@@ -602,12 +605,20 @@ export default function BasicSettings() {
         description={t("description")}
       />
 
-      <Tab.Group selectedIndex={selectedTabIndex} onChange={handleTabChange}>
-        <Tab.List className="sr-only">
+      <Tabs
+        value={selectedTabId}
+        onValueChange={(tabId) => {
+          const index = getTabIndexFromId(tabId)
+          handleTabChange(index)
+        }}
+      >
+        <TabsList className="sr-only">
           {tabs.map((tab) => (
-            <Tab key={tab.id}>{tab.label}</Tab>
+            <TabsTrigger key={tab.id} value={tab.id}>
+              {tab.label}
+            </TabsTrigger>
           ))}
-        </Tab.List>
+        </TabsList>
 
         <div className="mb-6">
           <div className="mb-4 md:hidden">
@@ -644,21 +655,24 @@ export default function BasicSettings() {
           />
         </div>
 
-        <Tab.Panels>
-          {TAB_CONFIGS.map((config) => {
-            const Component = config.component
-            return (
-              <Tab.Panel key={config.id} unmount={false}>
-                {mountedTabIds.includes(config.id) ? (
-                  <Suspense fallback={<SettingsTabContentFallback />}>
-                    <Component />
-                  </Suspense>
-                ) : null}
-              </Tab.Panel>
-            )
-          })}
-        </Tab.Panels>
-      </Tab.Group>
+        {TAB_CONFIGS.map((config) => {
+          const Component = config.component
+          return (
+            <TabsContent
+              key={config.id}
+              value={config.id}
+              forceMount
+              className="data-[state=inactive]:hidden"
+            >
+              {mountedTabIds.includes(config.id) ? (
+                <Suspense fallback={<SettingsTabContentFallback />}>
+                  <Component />
+                </Suspense>
+              ) : null}
+            </TabsContent>
+          )
+        })}
+      </Tabs>
     </div>
   )
 }

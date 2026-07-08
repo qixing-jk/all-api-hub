@@ -172,9 +172,9 @@ vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
 }))
 
 vi.mock("~/features/ModelList/components/ProviderTabs", async () => {
-  const { TabGroup } = await import("@headlessui/react")
+  const { Tabs } = await import("~/components/ui")
   return {
-    ProviderTabs: ({ children }: any) => <TabGroup>{children}</TabGroup>,
+    ProviderTabs: ({ children }: any) => <Tabs value="all">{children}</Tabs>,
   }
 })
 

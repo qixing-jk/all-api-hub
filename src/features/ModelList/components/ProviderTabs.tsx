@@ -1,10 +1,10 @@
-import { Tab } from "@headlessui/react"
 import { CpuChipIcon } from "@heroicons/react/24/outline"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useEffect, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import {
@@ -39,6 +39,8 @@ interface ProviderTabListProps {
   allProvidersFilteredCount: number
   getProviderFilteredCount: (provider: ProviderType) => number
 }
+
+const providerTabClassName = `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} data-[state=active]:dark:bg-dark-bg-secondary data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow data-[state=active]:dark:text-blue-400 dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900`
 
 /**
  * Renders the provider tab list.
@@ -82,18 +84,13 @@ function ProviderTabList({
         <ChevronLeft className="h-4 w-4" />
       </Button>
 
-      <Tab.List
+      <TabsList
         ref={tabListRef}
         className={`flex min-w-0 flex-1 space-x-1 rounded-xl ${COLORS.background.tertiary} scrollbar-hide touch-pan-x overflow-x-auto p-1`}
       >
-        <Tab
-          className={({ selected }) =>
-            `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} ${
-              selected
-                ? "dark:bg-dark-bg-secondary bg-white text-blue-700 shadow dark:text-blue-400"
-                : "dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900"
-            }`
-          }
+        <TabsTrigger
+          value={MODEL_PROVIDER_FILTER_VALUES.ALL}
+          className={providerTabClassName}
         >
           <div className="flex items-center justify-center space-x-2">
             <CpuChipIcon className="dark:text-dark-text-secondary h-4 w-4 text-gray-600" />
@@ -101,22 +98,17 @@ function ProviderTabList({
               {t("allProviders")} ({allProvidersFilteredCount})
             </span>
           </div>
-        </Tab>
+        </TabsTrigger>
         {providers.map((provider) => {
           const providerConfig = getProviderConfig(
             provider.toLowerCase().replace(/\s/g, "-"),
           )
           const IconComponent = providerConfig.icon
           return (
-            <Tab
+            <TabsTrigger
               key={provider}
-              className={({ selected }) =>
-                `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} ${
-                  selected
-                    ? "dark:bg-dark-bg-secondary bg-white text-blue-700 shadow dark:text-blue-400"
-                    : "dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900"
-                }`
-              }
+              value={provider}
+              className={providerTabClassName}
             >
               <div className="flex items-center justify-center space-x-2">
                 <IconComponent className="h-4 w-4" />
@@ -124,10 +116,10 @@ function ProviderTabList({
                   {provider} ({getProviderFilteredCount(provider)})
                 </span>
               </div>
-            </Tab>
+            </TabsTrigger>
           )
         })}
-      </Tab.List>
+      </TabsList>
 
       <Button
         type="button"
@@ -177,13 +169,14 @@ export function ProviderTabs({
         )
 
   return (
-    <Tab.Group
-      selectedIndex={selectedIndex}
-      onChange={(index) => {
-        const newProvider =
-          index === 0
-            ? MODEL_PROVIDER_FILTER_VALUES.ALL
-            : filteredProviders[index - 1]
+    <Tabs
+      value={
+        filteredProviders.includes(selectedProvider as ProviderType)
+          ? selectedProvider
+          : MODEL_PROVIDER_FILTER_VALUES.ALL
+      }
+      onValueChange={(value) => {
+        const newProvider = value as ModelProviderFilterValue
         setSelectedProvider(newProvider)
         void trackProductAnalyticsActionCompleted({
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
@@ -211,6 +204,6 @@ export function ProviderTabs({
         getProviderFilteredCount={getProviderFilteredCount}
       />
       {children}
-    </Tab.Group>
+    </Tabs>
   )
 }

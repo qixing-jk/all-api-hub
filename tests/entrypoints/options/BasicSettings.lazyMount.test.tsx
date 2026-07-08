@@ -243,6 +243,11 @@ describe("BasicSettings tab mounting", () => {
 
     render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
 
+    expect(
+      screen
+        .getAllByRole("tablist")
+        .some((tabList) => tabList.getAttribute("data-slot") === "tabs-list"),
+    ).toBe(true)
     expect(screen.getByTestId("general-tab-content")).toBeInTheDocument()
     expect(
       screen.queryByTestId("managed-site-tab-content"),

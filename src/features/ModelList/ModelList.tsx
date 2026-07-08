@@ -1,4 +1,3 @@
-import { Tab } from "@headlessui/react"
 import { ArrowPathIcon } from "@heroicons/react/24/outline"
 import { Cpu, KeyRound } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
@@ -8,7 +7,13 @@ import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
-import { Alert, Button, EmptyState, IconButton } from "~/components/ui"
+import {
+  Alert,
+  Button,
+  EmptyState,
+  IconButton,
+  TabsContent,
+} from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
@@ -24,7 +29,10 @@ import {
   canCreateAccountApiTokens,
   canListAccountRuntimeKeys,
 } from "~/services/accounts/keyProductCapabilities"
-import { getAllProviders } from "~/services/models/utils/modelProviders"
+import {
+  getAllProviders,
+  MODEL_PROVIDER_FILTER_VALUES,
+} from "~/services/models/utils/modelProviders"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -695,8 +703,32 @@ export default function ModelList(props: {
             allProvidersFilteredCount={allProvidersFilteredCount}
             getProviderFilteredCount={getProviderFilteredCount}
           >
-            <Tab.Panels>
-              <Tab.Panel>
+            <TabsContent value={MODEL_PROVIDER_FILTER_VALUES.ALL}>
+              <ModelDisplay
+                models={displayedModels}
+                verificationSummariesByKey={verificationSummariesByKey}
+                onVerifyModel={handleVerifyModel}
+                onVerifyCliSupport={handleVerifyCliSupport}
+                onOpenModelKeyDialog={handleOpenModelKeyDialog}
+                onFilterAccount={
+                  selectedSource?.kind ===
+                  MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+                    ? handleAccountSummaryClick
+                    : undefined
+                }
+                showRealPrice={showRealPrice}
+                showRatioColumn={showRatioColumn}
+                showEndpointTypes={showEndpointTypes}
+                selectedGroups={displaySelectedGroups}
+                handleGroupClick={handleGroupClick}
+                availableGroups={availableGroups}
+                groupSelectionScope={modelDisplayGroupSelectionScope}
+                isGroupSelectionInteractive={isModelGroupSelectionInteractive}
+                displayCapabilities={sourceCapabilities}
+              />
+            </TabsContent>
+            {providers.map((provider) => (
+              <TabsContent key={provider} value={provider}>
                 <ModelDisplay
                   models={displayedModels}
                   verificationSummariesByKey={verificationSummariesByKey}
@@ -719,36 +751,8 @@ export default function ModelList(props: {
                   isGroupSelectionInteractive={isModelGroupSelectionInteractive}
                   displayCapabilities={sourceCapabilities}
                 />
-              </Tab.Panel>
-              {providers.map((provider) => (
-                <Tab.Panel key={provider}>
-                  <ModelDisplay
-                    models={displayedModels}
-                    verificationSummariesByKey={verificationSummariesByKey}
-                    onVerifyModel={handleVerifyModel}
-                    onVerifyCliSupport={handleVerifyCliSupport}
-                    onOpenModelKeyDialog={handleOpenModelKeyDialog}
-                    onFilterAccount={
-                      selectedSource?.kind ===
-                      MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-                        ? handleAccountSummaryClick
-                        : undefined
-                    }
-                    showRealPrice={showRealPrice}
-                    showRatioColumn={showRatioColumn}
-                    showEndpointTypes={showEndpointTypes}
-                    selectedGroups={displaySelectedGroups}
-                    handleGroupClick={handleGroupClick}
-                    availableGroups={availableGroups}
-                    groupSelectionScope={modelDisplayGroupSelectionScope}
-                    isGroupSelectionInteractive={
-                      isModelGroupSelectionInteractive
-                    }
-                    displayCapabilities={sourceCapabilities}
-                  />
-                </Tab.Panel>
-              ))}
-            </Tab.Panels>
+              </TabsContent>
+            ))}
           </ProviderTabs>
 
           <Footer showPricingNote={sourceCapabilities.supportsPricing} />

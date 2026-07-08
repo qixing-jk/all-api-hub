@@ -1,7 +1,7 @@
-import { TabGroup } from "@headlessui/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { Tabs } from "~/components/ui"
 import ModelList from "~/entrypoints/options/pages/ModelList"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import {
@@ -167,7 +167,7 @@ vi.mock("~/features/ModelList/components/Footer", () => ({
 }))
 
 vi.mock("~/features/ModelList/components/ProviderTabs", () => ({
-  ProviderTabs: ({ children }: any) => <TabGroup>{children}</TabGroup>,
+  ProviderTabs: ({ children }: any) => <Tabs value="all">{children}</Tabs>,
 }))
 
 vi.mock("~/features/ModelList/components/ModelDisplay", () => ({

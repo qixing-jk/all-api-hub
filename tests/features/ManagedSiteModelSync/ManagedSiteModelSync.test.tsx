@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
@@ -851,13 +852,19 @@ describe("ManagedSiteModelSync page", () => {
   })
 
   it("uses route search params to prefilter both history and manual tabs", async () => {
+    const user = userEvent.setup()
+
     render(<ManagedSiteModelSync routeParams={{ search: "  Beta  " }} />)
 
     expect(await screen.findByDisplayValue("Beta")).toBeInTheDocument()
     expect(screen.getByText("Beta#102")).toBeInTheDocument()
     expect(screen.queryByText("Alpha#101")).not.toBeInTheDocument()
+    expect(screen.getByRole("tablist")).toHaveAttribute(
+      "data-slot",
+      "tabs-list",
+    )
 
-    fireEvent.click(
+    await user.click(
       screen.getByRole("tab", {
         name: "managedSiteModelSync:execution.tabs.manual",
       }),
@@ -2216,7 +2223,9 @@ describe("ManagedSiteModelSync page", () => {
     )
     expect(toast.success).toHaveBeenCalled()
 
-    fireEvent.click(
+    const user = userEvent.setup()
+
+    await user.click(
       screen.getByRole("tab", {
         name: "managedSiteModelSync:execution.tabs.history",
       }),

@@ -1,4 +1,3 @@
-import { Combobox, Transition } from "@headlessui/react"
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -6,19 +5,11 @@ import {
   XMarkIcon,
 } from "@heroicons/react/20/solid"
 import { Copy } from "lucide-react"
-import React, {
-  Fragment,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import React, { useEffect, useId, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
-import { isTestMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -61,6 +52,7 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const { t } = useTranslation("ui")
   const [query, setQuery] = useState("")
+  const [isOpen, setIsOpen] = useState(false)
   const [isSelectedExpanded, setIsSelectedExpanded] = useState(
     selected.length <= 5,
   )
@@ -155,16 +147,8 @@ export function MultiSelect({
       })
   }, [options, query])
 
-  // Headless UI's Combobox `virtual` mode is great for large lists in real browsers,
-  // but it doesn't reliably render options in jsdom (tests). Disable virtualization
-  // in `test` mode to keep component tests stable and user-event compatible.
-  const shouldUseVirtualOptions = !isTestMode()
-
-  const handleSelect = (newSelected: MultiSelectOption[]) => {
-    onChange(newSelected.map((opt) => opt.value))
-  }
-
   const resolvedPlaceholder = placeholder ?? t("multiSelect.placeholder")
+  const listboxId = `${uid}-listbox`
 
   const handleRemove = (value: string) => {
     onChange(selected.filter((v) => v !== value))
@@ -193,6 +177,12 @@ export function MultiSelect({
         }
       }
       setQuery("")
+      setIsOpen(false)
+      return
+    }
+
+    if (e.key === "Escape") {
+      setIsOpen(false)
     }
   }
 
@@ -222,6 +212,23 @@ export function MultiSelect({
     }
   }
 
+  const handleOptionToggle = (option: MultiSelectOption) => {
+    if (disabled) return
+
+    const nextSelected = selected.includes(option.value)
+      ? selected.filter((value) => value !== option.value)
+      : [...selected, option.value]
+
+    onChange(nextSelected)
+    setQuery("")
+    setIsOpen(true)
+  }
+
+  const optionListClassName = cn(
+    "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
+    dropdownPosition === "top" ? "bottom-full mb-1" : "top-full mt-1",
+  )
+
   return (
     <div className={cn("w-full", className)}>
       {label && (
@@ -229,63 +236,64 @@ export function MultiSelect({
           {label}
         </label>
       )}
-      <Combobox
-        immediate
-        value={selectedOptions}
-        onChange={handleSelect}
-        virtual={
-          shouldUseVirtualOptions ? { options: filteredOptions } : undefined
-        }
-        multiple
-        disabled={disabled}
-      >
-        <div className="relative" ref={comboboxRef}>
-          <div className="relative w-full">
-            <Combobox.Input
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder={resolvedPlaceholder}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={handleInputKeyDown}
-              displayValue={() => query}
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
-              {!disabled && query.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery("")
-                  }}
-                  className="inline-flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:bg-gray-200 focus:text-gray-700 focus:outline-none"
-                  aria-label={t("multiSelect.clearInput")}
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              )}
-              <Combobox.Button className="flex items-center">
-                <ChevronUpDownIcon
-                  className="h-5 w-5 text-gray-400"
-                  aria-hidden="true"
-                />
-              </Combobox.Button>
-            </div>
+      <div className="relative" ref={comboboxRef}>
+        <div className="relative w-full">
+          <input
+            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            placeholder={resolvedPlaceholder}
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              setIsOpen(true)
+            }}
+            onClick={() => setIsOpen(true)}
+            onFocus={() => setIsOpen(true)}
+            onKeyDown={handleInputKeyDown}
+            role="combobox"
+            aria-expanded={isOpen}
+            aria-controls={listboxId}
+            aria-autocomplete="list"
+            disabled={disabled}
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
+            {!disabled && query.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("")
+                  setIsOpen(true)
+                }}
+                className="inline-flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:bg-gray-200 focus:text-gray-700 focus:outline-none"
+                aria-label={t("multiSelect.clearInput")}
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            )}
+            <button
+              type="button"
+              className="flex items-center"
+              disabled={disabled}
+              aria-label={t("multiSelect.placeholder")}
+              aria-expanded={isOpen}
+              aria-controls={listboxId}
+              onClick={() => setIsOpen((open) => !open)}
+            >
+              <ChevronUpDownIcon
+                className="h-5 w-5 text-gray-400"
+                aria-hidden="true"
+              />
+            </button>
           </div>
+        </div>
 
-          <Transition
-            as={Fragment}
-            leave="transition ease-in duration-100"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-            afterLeave={() => setQuery("")}
-            appear
-          >
-            {filteredOptions.length === 0 ? (
+        {isOpen &&
+          (filteredOptions.length === 0 ? (
+            <div className={optionListClassName}>
               <div
-                className={cn(
-                  "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
-                  dropdownPosition === "top"
-                    ? "bottom-full mb-1"
-                    : "top-full mt-1",
-                )}
+                id={listboxId}
+                role="listbox"
+                data-slot="multiselect-listbox"
+                aria-multiselectable="true"
               >
                 <div className="dark:text-dark-text-secondary relative cursor-default px-4 py-1 text-gray-700 select-none">
                   {allowCustom
@@ -297,106 +305,47 @@ export function MultiSelect({
                     : t("multiSelect.noOptions")}
                 </div>
               </div>
-            ) : shouldUseVirtualOptions ? (
-              <Combobox.Options
-                className={cn(
-                  "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
-                  dropdownPosition === "top"
-                    ? "bottom-full mb-1"
-                    : "top-full mt-1",
-                )}
-              >
-                {({ option }) => (
-                  <Combobox.Option
+            </div>
+          ) : (
+            <div
+              id={listboxId}
+              role="listbox"
+              data-slot="multiselect-listbox"
+              aria-multiselectable="true"
+              className={optionListClassName}
+            >
+              {filteredOptions.map((option) => {
+                const isSelected = selected.includes(option.value)
+
+                return (
+                  <button
                     key={option.value}
-                    className={({ active }) =>
-                      cn(
-                        "relative flex w-full cursor-pointer items-center py-2 pr-4 pl-10 select-none",
-                        active
-                          ? "bg-blue-600 text-white"
-                          : "dark:text-dark-text-primary text-gray-900",
-                      )
-                    }
-                    value={option}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    className="dark:text-dark-text-primary relative flex w-full cursor-pointer items-center py-2 pr-4 pl-10 text-left text-gray-900 select-none hover:bg-blue-600 hover:text-white focus:bg-blue-600 focus:text-white focus:outline-none"
+                    onClick={() => handleOptionToggle(option)}
                   >
-                    {({ selected, active }) => (
-                      <>
-                        <span
-                          className={cn(
-                            "block truncate",
-                            selected ? "font-medium" : "font-normal",
-                          )}
-                          title={option.label}
-                        >
-                          {option.label}
-                        </span>
-                        {selected ? (
-                          <span
-                            className={cn(
-                              "absolute inset-y-0 left-0 flex items-center pl-3",
-                              active ? "text-white" : "text-blue-600",
-                            )}
-                          >
-                            <CheckIcon className="h-5 w-5" aria-hidden="true" />
-                          </span>
-                        ) : null}
-                      </>
-                    )}
-                  </Combobox.Option>
-                )}
-              </Combobox.Options>
-            ) : (
-              <Combobox.Options
-                className={cn(
-                  "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
-                  dropdownPosition === "top"
-                    ? "bottom-full mb-1"
-                    : "top-full mt-1",
-                )}
-              >
-                {filteredOptions.map((option) => (
-                  <Combobox.Option
-                    key={option.value}
-                    className={({ active }) =>
-                      cn(
-                        "relative flex w-full cursor-pointer items-center py-2 pr-4 pl-10 select-none",
-                        active
-                          ? "bg-blue-600 text-white"
-                          : "dark:text-dark-text-primary text-gray-900",
-                      )
-                    }
-                    value={option}
-                  >
-                    {({ selected, active }) => (
-                      <>
-                        <span
-                          className={cn(
-                            "block truncate",
-                            selected ? "font-medium" : "font-normal",
-                          )}
-                          title={option.label}
-                        >
-                          {option.label}
-                        </span>
-                        {selected ? (
-                          <span
-                            className={cn(
-                              "absolute inset-y-0 left-0 flex items-center pl-3",
-                              active ? "text-white" : "text-blue-600",
-                            )}
-                          >
-                            <CheckIcon className="h-5 w-5" aria-hidden="true" />
-                          </span>
-                        ) : null}
-                      </>
-                    )}
-                  </Combobox.Option>
-                ))}
-              </Combobox.Options>
-            )}
-          </Transition>
-        </div>
-      </Combobox>
+                    <span
+                      className={cn(
+                        "block truncate",
+                        isSelected ? "font-medium" : "font-normal",
+                      )}
+                      title={option.label}
+                    >
+                      {option.label}
+                    </span>
+                    {isSelected ? (
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600 group-hover:text-white">
+                        <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+      </div>
 
       {selectedOptions.length > 0 && (
         <div className="mt-2 space-y-2">

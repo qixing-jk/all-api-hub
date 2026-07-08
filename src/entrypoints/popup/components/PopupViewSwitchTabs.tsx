@@ -1,5 +1,4 @@
-import { Tab } from "@headlessui/react"
-
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useProductAnalyticsActionTracking } from "~/hooks/useProductAnalyticsActionTracking"
 import { cn } from "~/lib/utils"
@@ -31,6 +30,7 @@ interface PopupViewSwitchTabProps {
   baseClassName: string
   label: string
   testId: string
+  value: PopupViewType
 }
 
 /**
@@ -41,29 +41,27 @@ function PopupViewSwitchTab({
   baseClassName,
   label,
   testId,
+  value,
 }: PopupViewSwitchTabProps) {
   const analytics = useProductAnalyticsActionTracking({ analyticsAction })
   const trackingProps = analytics.getActionTrackingProps()
 
   return (
-    <Tab
-      as="button"
+    <TabsTrigger
       type="button"
+      value={value}
       title={label}
       data-testid={testId}
       onClick={trackingProps.onClick}
-      className={({ selected }) =>
-        cn(
-          baseClassName,
-          "flex min-w-0 items-center justify-center truncate",
-          selected
-            ? "dark:bg-dark-bg-secondary dark:text-dark-text-primary bg-white text-gray-900 shadow-sm"
-            : "dark:text-dark-text-secondary dark:hover:text-dark-text-primary text-gray-500 hover:text-gray-700",
-        )
-      }
+      className={cn(
+        baseClassName,
+        "flex min-w-0 items-center justify-center truncate",
+        "data-[state=active]:dark:bg-dark-bg-secondary data-[state=active]:dark:text-dark-text-primary data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm",
+        "dark:text-dark-text-secondary dark:hover:text-dark-text-primary text-gray-500 hover:text-gray-700",
+      )}
     >
       {label}
-    </Tab>
+    </TabsTrigger>
   )
 }
 
@@ -105,23 +103,13 @@ export default function PopupViewSwitchTabs({
     },
   ] as const
 
-  const selectedIndex = Math.max(
-    0,
-    tabs.findIndex((tab) => tab.value === value),
-  )
-
   return (
-    <Tab.Group
+    <Tabs
       className="min-w-0"
-      selectedIndex={selectedIndex}
-      onChange={(index) => {
-        const nextValue = tabs[index]?.value
-        if (nextValue) {
-          onChange(nextValue)
-        }
-      }}
+      value={value}
+      onValueChange={(nextValue) => onChange(nextValue as PopupViewType)}
     >
-      <Tab.List
+      <TabsList
         className={cn(
           "inline-flex min-w-0 gap-1 rounded-lg p-1",
           COLORS.background.tertiary,
@@ -138,10 +126,11 @@ export default function PopupViewSwitchTabs({
               baseClassName={baseClassName}
               label={tab.label}
               testId={tab.testId}
+              value={tab.value}
             />
           )
         })}
-      </Tab.List>
-    </Tab.Group>
+      </TabsList>
+    </Tabs>
   )
 }

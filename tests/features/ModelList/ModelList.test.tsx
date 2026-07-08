@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type React from "react"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/features/ModelList/ModelList"
@@ -22,17 +22,6 @@ vi.mock("react-i18next", async (importOriginal) => {
     }),
   }
 })
-
-vi.mock("@headlessui/react", () => ({
-  Tab: {
-    Panels: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="tab-panels">{children}</div>
-    ),
-    Panel: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="tab-panel">{children}</div>
-    ),
-  },
-}))
 
 vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: (...args: unknown[]) => mockUseModelListData(...args),
@@ -115,11 +104,17 @@ vi.mock("~/features/ModelList/components/Footer", () => ({
   Footer: () => <div data-testid="model-list-footer" />,
 }))
 
-vi.mock("~/features/ModelList/components/ProviderTabs", () => ({
-  ProviderTabs: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="provider-tabs">{children}</div>
-  ),
-}))
+vi.mock("~/features/ModelList/components/ProviderTabs", async () => {
+  const { Tabs } = await import("~/components/ui")
+
+  return {
+    ProviderTabs: ({ children }: { children: ReactNode }) => (
+      <Tabs value="all">
+        <div data-testid="provider-tabs">{children}</div>
+      </Tabs>
+    ),
+  }
+})
 
 vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
   StatusIndicator: () => <div data-testid="status-indicator" />,

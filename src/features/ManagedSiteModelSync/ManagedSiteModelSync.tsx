@@ -1,4 +1,3 @@
-import { Tab } from "@headlessui/react"
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import { RefreshCcw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -9,7 +8,15 @@ import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequir
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
-import { Button, EmptyState, Input } from "~/components/ui"
+import {
+  Button,
+  EmptyState,
+  Input,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
@@ -72,6 +79,16 @@ const TAB_INDEX = {
   history: 0,
   manual: 1,
 } as const
+
+const TAB_VALUE = {
+  history: "history",
+  manual: "manual",
+} as const
+
+type ManagedSiteModelSyncTabValue = (typeof TAB_VALUE)[keyof typeof TAB_VALUE]
+
+const getTabValueFromIndex = (index: number): ManagedSiteModelSyncTabValue =>
+  index === TAB_INDEX.manual ? TAB_VALUE.manual : TAB_VALUE.history
 
 const hasModelSyncFailures = (execution: ExecutionResult) =>
   execution.statistics.failureCount > 0
@@ -1115,151 +1132,144 @@ export default function ManagedSiteModelSync({
   }
 
   const renderTabs = () => (
-    <Tab.Group selectedIndex={selectedTab} onChange={handleTabChange}>
-      <Tab.List className="mb-4 flex space-x-2 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
-        <Tab
-          className={({ selected }) =>
-            `flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              selected
-                ? "bg-white text-blue-700 shadow dark:bg-gray-900 dark:text-blue-400"
-                : "text-gray-600 hover:text-gray-900 dark:text-gray-300"
-            }`
-          }
+    <Tabs
+      value={getTabValueFromIndex(selectedTab)}
+      onValueChange={(value) => {
+        handleTabChange(
+          value === TAB_VALUE.manual ? TAB_INDEX.manual : TAB_INDEX.history,
+        )
+      }}
+    >
+      <TabsList className="mb-4 flex space-x-2 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
+        <TabsTrigger
+          value={TAB_VALUE.history}
+          className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow dark:text-gray-300 dark:data-[state=active]:bg-gray-900 dark:data-[state=active]:text-blue-400"
         >
           {historyTabLabel}
-        </Tab>
-        <Tab
-          className={({ selected }) =>
-            `flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              selected
-                ? "bg-white text-blue-700 shadow dark:bg-gray-900 dark:text-blue-400"
-                : "text-gray-600 hover:text-gray-900 dark:text-gray-300"
-            }`
-          }
+        </TabsTrigger>
+        <TabsTrigger
+          value={TAB_VALUE.manual}
+          className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow dark:text-gray-300 dark:data-[state=active]:bg-gray-900 dark:data-[state=active]:text-blue-400"
         >
           {manualTabLabel}
-        </Tab>
-      </Tab.List>
-      <Tab.Panels>
-        <Tab.Panel>
-          <div className="space-y-4">
-            <ActionBar
-              isRunning={progress?.isRunning ?? false}
-              isRefreshing={isLoading && lastExecution !== null}
-              selectedCount={historySelectedIds.size}
-              failedCount={lastExecution?.statistics.failureCount ?? 0}
-              onRunAll={handleRunAll}
-              onRunSelected={() => handleRunSelected("history")}
-              onRetryFailed={handleRetryFailed}
-              onRefresh={handleRefresh}
-            />
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value={TAB_VALUE.history}>
+        <div className="space-y-4">
+          <ActionBar
+            isRunning={progress?.isRunning ?? false}
+            isRefreshing={isLoading && lastExecution !== null}
+            selectedCount={historySelectedIds.size}
+            failedCount={lastExecution?.statistics.failureCount ?? 0}
+            onRunAll={handleRunAll}
+            onRunSelected={() => handleRunSelected("history")}
+            onRetryFailed={handleRetryFailed}
+            onRefresh={handleRefresh}
+          />
 
-            {hasHistory && (
-              <div className="mt-2">
-                <FilterBar
-                  statistics={lastExecution.statistics}
-                  status={filterStatus}
-                  keyword={searchKeyword}
-                  onStatusChange={handleHistoryStatusChange}
-                  onKeywordChange={handleHistorySearchChange}
+          {hasHistory && (
+            <div className="mt-2">
+              <FilterBar
+                statistics={lastExecution.statistics}
+                status={filterStatus}
+                keyword={searchKeyword}
+                onStatusChange={handleHistoryStatusChange}
+                onKeywordChange={handleHistorySearchChange}
+              />
+            </div>
+          )}
+
+          {!hasResults ? (
+            <EmptyResults hasHistory={hasHistory} />
+          ) : (
+            <ResultsTable
+              items={filteredItems || []}
+              selectedIds={historySelectedIds}
+              onSelectAll={handleHistorySelectAll}
+              onSelectItem={handleHistorySelectItem}
+              onRunSingle={handleRunSingle}
+              isRunning={progress?.isRunning ?? false}
+              runningChannelId={runningChannelId}
+            />
+          )}
+        </div>
+      </TabsContent>
+      <TabsContent value={TAB_VALUE.manual}>
+        <div className="space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t("execution.manual.description")}
+            </p>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="md:w-64">
+                <Input
+                  type="text"
+                  placeholder={
+                    t("execution.manual.searchPlaceholder") as string
+                  }
+                  value={manualSearchKeyword}
+                  onChange={(e) => handleManualSearchChange(e.target.value)}
+                  leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
                 />
               </div>
-            )}
-
-            {!hasResults ? (
-              <EmptyResults hasHistory={hasHistory} />
-            ) : (
-              <ResultsTable
-                items={filteredItems || []}
-                selectedIds={historySelectedIds}
-                onSelectAll={handleHistorySelectAll}
-                onSelectItem={handleHistorySelectItem}
-                onRunSingle={handleRunSingle}
-                isRunning={progress?.isRunning ?? false}
-                runningChannelId={runningChannelId}
-              />
-            )}
-          </div>
-        </Tab.Panel>
-        <Tab.Panel>
-          <div className="space-y-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t("execution.manual.description")}
-              </p>
-              <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                <div className="md:w-64">
-                  <Input
-                    type="text"
-                    placeholder={
-                      t("execution.manual.searchPlaceholder") as string
-                    }
-                    value={manualSearchKeyword}
-                    onChange={(e) => handleManualSearchChange(e.target.value)}
-                    leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
-                  />
-                </div>
-                <Button
-                  onClick={() => handleRunSelected("manual")}
-                  variant="secondary"
-                  disabled={
-                    (progress?.isRunning ?? false) ||
-                    manualSelectedIds.size === 0
-                  }
-                >
-                  {t("execution.actions.runSelected")} ({manualSelectedIds.size}
-                  )
-                </Button>
-                <Button
-                  onClick={() => void loadChannels()}
-                  variant="ghost"
-                  disabled={isChannelsLoading}
-                  leftIcon={<RefreshCcw className="h-4 w-4" />}
-                >
-                  {t("execution.actions.refresh")}
-                </Button>
-              </div>
-            </div>
-
-            {isChannelsLoading ? (
-              <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                {t("execution.manual.loading")}
-              </div>
-            ) : manualHasResults ? (
-              <ResultsTable
-                items={manualItems}
-                selectedIds={manualSelectedIds}
-                onSelectAll={handleManualSelectAll}
-                onSelectItem={handleManualSelectItem}
-                onRunSingle={handleRunSingle}
-                isRunning={progress?.isRunning ?? false}
-                runningChannelId={runningChannelId}
-                visibleColumns={{
-                  status: false,
-                  message: false,
-                  attempts: false,
-                  finishedAt: false,
-                }}
-              />
-            ) : (
-              <EmptyState
-                title={t("execution.manual.empty.title")}
-                description={
-                  channelsError
-                    ? channelsError
-                    : (t("execution.manual.empty.description") as string)
+              <Button
+                onClick={() => handleRunSelected("manual")}
+                variant="secondary"
+                disabled={
+                  (progress?.isRunning ?? false) || manualSelectedIds.size === 0
                 }
-                icon={<MagnifyingGlassIcon className="h-12 w-12" />}
-                action={{
-                  label: t("execution.manual.reload"),
-                  onClick: () => void loadChannels(),
-                }}
-              />
-            )}
+              >
+                {t("execution.actions.runSelected")} ({manualSelectedIds.size})
+              </Button>
+              <Button
+                onClick={() => void loadChannels()}
+                variant="ghost"
+                disabled={isChannelsLoading}
+                leftIcon={<RefreshCcw className="h-4 w-4" />}
+              >
+                {t("execution.actions.refresh")}
+              </Button>
+            </div>
           </div>
-        </Tab.Panel>
-      </Tab.Panels>
-    </Tab.Group>
+
+          {isChannelsLoading ? (
+            <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+              {t("execution.manual.loading")}
+            </div>
+          ) : manualHasResults ? (
+            <ResultsTable
+              items={manualItems}
+              selectedIds={manualSelectedIds}
+              onSelectAll={handleManualSelectAll}
+              onSelectItem={handleManualSelectItem}
+              onRunSingle={handleRunSingle}
+              isRunning={progress?.isRunning ?? false}
+              runningChannelId={runningChannelId}
+              visibleColumns={{
+                status: false,
+                message: false,
+                attempts: false,
+                finishedAt: false,
+              }}
+            />
+          ) : (
+            <EmptyState
+              title={t("execution.manual.empty.title")}
+              description={
+                channelsError
+                  ? channelsError
+                  : (t("execution.manual.empty.description") as string)
+              }
+              icon={<MagnifyingGlassIcon className="h-12 w-12" />}
+              action={{
+                label: t("execution.manual.reload"),
+                onClick: () => void loadChannels(),
+              }}
+            />
+          )}
+        </div>
+      </TabsContent>
+    </Tabs>
   )
 
   return (

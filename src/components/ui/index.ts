@@ -86,6 +86,7 @@ export {
   SheetTrigger,
 } from "./sheet"
 export { Checkbox } from "./checkbox"
+export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs"
 export {
   Command,
   CommandDialog,

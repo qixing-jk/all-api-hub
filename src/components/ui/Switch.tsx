@@ -1,5 +1,5 @@
-import { Switch as HeadlessSwitch } from "@headlessui/react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Switch as SwitchPrimitive } from "radix-ui"
 import React from "react"
 
 import { cn } from "~/lib/utils"
@@ -103,16 +103,20 @@ export const Switch: React.FC<SwitchProps> = ({
   ...props
 }) => {
   return (
-    <HeadlessSwitch
+    <SwitchPrimitive.Root
+      data-slot="switch"
       checked={checked}
-      onChange={onChange}
+      onCheckedChange={onChange}
       disabled={disabled}
       className={cn(switchVariants({ checked, size, disabled, className }))}
       {...props}
     >
       <span className="sr-only">Toggle</span>
-      <span className={cn(thumbVariants({ checked, size }))} />
-    </HeadlessSwitch>
+      <SwitchPrimitive.Thumb
+        data-slot="switch-thumb"
+        className={cn(thumbVariants({ checked, size }))}
+      />
+    </SwitchPrimitive.Root>
   )
 }
 

@@ -1,6 +1,7 @@
-import { Tab } from "@headlessui/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { TabsContent } from "~/components/ui"
 import { ProviderTabs } from "~/features/ModelList/components/ProviderTabs"
 import {
   MODEL_PROVIDER_FILTER_VALUES,
@@ -56,12 +57,10 @@ const renderProviderTabs = ({
       allProvidersFilteredCount={allProvidersFilteredCount}
       getProviderFilteredCount={(provider) => providerCounts[provider] ?? 0}
     >
-      <Tab.Panels>
-        <Tab.Panel>All</Tab.Panel>
-        <Tab.Panel>OpenAI</Tab.Panel>
-        <Tab.Panel>Claude</Tab.Panel>
-        <Tab.Panel>Gemini</Tab.Panel>
-      </Tab.Panels>
+      <TabsContent value={MODEL_PROVIDER_FILTER_VALUES.ALL}>All</TabsContent>
+      <TabsContent value="OpenAI">OpenAI</TabsContent>
+      <TabsContent value="Claude">Claude</TabsContent>
+      <TabsContent value="Gemini">Gemini</TabsContent>
     </ProviderTabs>,
   )
 
@@ -177,16 +176,21 @@ describe("ProviderTabs selection", () => {
     })
 
     expect(screen.queryByRole("tab", { name: /Claude/ })).toBeNull()
+    expect(screen.getByRole("tablist")).toHaveAttribute(
+      "data-slot",
+      "tabs-list",
+    )
     expect(allProvidersTab).toHaveAttribute("aria-selected", "true")
-    expect(allProvidersTab).toHaveClass("text-blue-700")
+    expect(allProvidersTab).toHaveAttribute("data-state", "active")
     expect(openAiTab).toHaveAttribute("aria-selected", "false")
-    expect(openAiTab).toHaveClass("text-gray-700")
+    expect(openAiTab).toHaveAttribute("data-state", "inactive")
   })
 
   it("selects a provider tab and reports the chosen provider", async () => {
+    const user = userEvent.setup()
     const { setSelectedProvider } = renderProviderTabs()
 
-    fireEvent.click(await screen.findByRole("tab", { name: /Claude \(1\)/ }))
+    await user.click(await screen.findByRole("tab", { name: /Claude \(1\)/ }))
 
     expect(setSelectedProvider).toHaveBeenCalledWith("Claude")
     expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
@@ -205,6 +209,7 @@ describe("ProviderTabs selection", () => {
   })
 
   it("keeps a provider tab selected when a non-all provider is active and lets users switch back to all", async () => {
+    const user = userEvent.setup()
     const { setSelectedProvider } = renderProviderTabs({
       selectedProvider: "OpenAI",
     })
@@ -217,11 +222,11 @@ describe("ProviderTabs selection", () => {
     })
 
     expect(openAiTab).toHaveAttribute("aria-selected", "true")
-    expect(openAiTab).toHaveClass("text-blue-700")
+    expect(openAiTab).toHaveAttribute("data-state", "active")
     expect(allProvidersTab).toHaveAttribute("aria-selected", "false")
-    expect(allProvidersTab).toHaveClass("text-gray-700")
+    expect(allProvidersTab).toHaveAttribute("data-state", "inactive")
 
-    fireEvent.click(allProvidersTab)
+    await user.click(allProvidersTab)
 
     expect(setSelectedProvider).toHaveBeenCalledWith(
       MODEL_PROVIDER_FILTER_VALUES.ALL,

@@ -88,6 +88,26 @@ describe("MultiSelect", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders options through the local multi-select listbox", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <Harness
+        options={[
+          { value: "alpha", label: "Alpha" },
+          { value: "beta", label: "Beta" },
+        ]}
+      />,
+    )
+
+    await user.click(await screen.findByPlaceholderText("Pick values"))
+
+    expect(await screen.findByRole("listbox")).toHaveAttribute(
+      "data-slot",
+      "multiselect-listbox",
+    )
+  })
+
   it("adds comma-separated custom values and deduplicates existing selections", async () => {
     const user = userEvent.setup()
 

@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { useState, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -134,6 +135,7 @@ describe("popup bookmarks view", () => {
   })
 
   it("switches between accounts, bookmarks, and api credentials layouts", async () => {
+    const user = userEvent.setup()
     const { default: App } = await import("~/entrypoints/popup/App")
 
     render(<App />)
@@ -156,8 +158,12 @@ describe("popup bookmarks view", () => {
       "apiCredentialProfiles:popup.tabLabel",
       "bookmark:switch.bookmarks",
     ])
+    expect(screen.getByRole("tablist")).toHaveAttribute(
+      "data-slot",
+      "tabs-list",
+    )
 
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("tab", { name: "bookmark:switch.bookmarks" }),
     )
 
@@ -185,7 +191,7 @@ describe("popup bookmarks view", () => {
     )
     expect(await screen.findByText("BookmarkDialogOpen")).toBeInTheDocument()
 
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("tab", {
         name: "apiCredentialProfiles:popup.tabLabel",
       }),
