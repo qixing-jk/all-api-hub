@@ -283,7 +283,10 @@ vi.mock("~/features/TokenProvisioning/components/OneTimeApiKeyDialog", () => ({
       onSave: () => Promise<void>
     }
   }) => (
-    <div data-testid="post-save-one-time-key-dialog">
+    <div
+      data-testid="post-save-one-time-key-dialog"
+      style={{ pointerEvents: "auto" }}
+    >
       <div data-testid="post-save-one-time-key-open">
         {String(props.isOpen)}
       </div>

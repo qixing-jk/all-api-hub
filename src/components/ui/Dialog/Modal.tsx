@@ -1,6 +1,12 @@
 import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
-import { ReactNode, type MouseEvent } from "react"
+import {
+  ReactNode,
+  useEffect,
+  useId,
+  useSyncExternalStore,
+  type MouseEvent,
+} from "react"
 
 import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
@@ -34,6 +40,35 @@ const sizeMap: Record<Size, string> = {
   xl: "max-w-5xl",
 }
 
+let activeModalStack: string[] = []
+const modalStackListeners = new Set<() => void>()
+
+const emitModalStackChange = () => {
+  modalStackListeners.forEach((listener) => listener())
+}
+
+const getModalStackSnapshot = () => activeModalStack.join("|")
+
+const subscribeModalStack = (listener: () => void) => {
+  modalStackListeners.add(listener)
+  return () => modalStackListeners.delete(listener)
+}
+
+const registerModal = (id: string) => {
+  if (activeModalStack.includes(id)) return
+  activeModalStack = [...activeModalStack, id]
+  emitModalStackChange()
+}
+
+const unregisterModal = (id: string) => {
+  if (!activeModalStack.includes(id)) return
+  activeModalStack = activeModalStack.filter((activeId) => activeId !== id)
+  emitModalStackChange()
+}
+
+const isModalTopmost = (id: string) =>
+  activeModalStack[activeModalStack.length - 1] === id
+
 /**
  * Modal renders a Radix/shadcn-compatible dialog with the legacy slot API.
  * @deprecated Use the shadcn-style primitives from `~/components/ui/dialog`
@@ -55,12 +90,37 @@ export function Modal({
   closeOnBackdropClick = true,
   size = "md",
 }: ModalProps) {
+  const modalId = useId()
+  const modalStackSnapshot = useSyncExternalStore(
+    subscribeModalStack,
+    getModalStackSnapshot,
+    getModalStackSnapshot,
+  )
+  const topmostModalId = modalStackSnapshot.split("|").filter(Boolean).at(-1)
+  const isTopmostModal = isOpen && topmostModalId === modalId
+
+  useEffect(() => {
+    if (!isOpen) {
+      unregisterModal(modalId)
+      return
+    }
+
+    registerModal(modalId)
+    return () => unregisterModal(modalId)
+  }, [isOpen, modalId])
+
   const handleOpenChange = (open: boolean) => {
-    if (!open) onClose()
+    if (!open && isModalTopmost(modalId)) onClose()
   }
 
   const handleBackdropClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget || !closeOnBackdropClick) return
+    if (
+      event.target !== event.currentTarget ||
+      !closeOnBackdropClick ||
+      !isModalTopmost(modalId)
+    ) {
+      return
+    }
     onClose()
   }
 
@@ -70,7 +130,11 @@ export function Modal({
   )
 
   return (
-    <DialogPrimitive.Root open={isOpen} onOpenChange={handleOpenChange}>
+    <DialogPrimitive.Root
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      modal={isTopmostModal}
+    >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           data-slot="modal-overlay"
@@ -94,17 +158,23 @@ export function Modal({
               Z_INDEX.modal,
             )}
             onEscapeKeyDown={(event) => {
-              if (!closeOnEsc) event.preventDefault()
+              if (!closeOnEsc || !isModalTopmost(modalId)) {
+                event.preventDefault()
+              }
             }}
             onPointerDownOutside={(event) => {
-              if (!closeOnBackdropClick) event.preventDefault()
+              if (!closeOnBackdropClick || !isModalTopmost(modalId)) {
+                event.preventDefault()
+              }
             }}
             onInteractOutside={(event) => {
-              if (!closeOnBackdropClick) event.preventDefault()
+              if (!closeOnBackdropClick || !isModalTopmost(modalId)) {
+                event.preventDefault()
+              }
             }}
           >
-            <DialogPrimitive.Title className="sr-only">
-              {title}
+            <DialogPrimitive.Title asChild>
+              <span className="sr-only" aria-label={title} />
             </DialogPrimitive.Title>
             <div
               className="flex items-center justify-center p-4"

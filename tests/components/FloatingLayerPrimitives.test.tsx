@@ -174,6 +174,111 @@ describe("floating layer primitives inside dialogs", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("uses Modal title as the dialog name without duplicating visible headings", async () => {
+    render(
+      <Modal
+        isOpen={true}
+        onClose={vi.fn()}
+        title="Duplicate account cleanup"
+        header={<h2>Duplicate account cleanup</h2>}
+      >
+        <button type="button">Inside modal</button>
+      </Modal>,
+    )
+
+    expect(
+      await screen.findByRole("dialog", {
+        name: "Duplicate account cleanup",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getAllByRole("heading", {
+        name: "Duplicate account cleanup",
+      }),
+    ).toHaveLength(1)
+  })
+
+  it("keeps the topmost Modal accessible when multiple legacy modals are open", async () => {
+    const user = userEvent.setup()
+    const onChildAction = vi.fn()
+
+    render(
+      <>
+        <Modal
+          isOpen={true}
+          onClose={vi.fn()}
+          title="Parent dialog"
+          header={<h2>Parent dialog</h2>}
+        >
+          <button type="button">Parent action</button>
+        </Modal>
+        <Modal
+          isOpen={true}
+          onClose={vi.fn()}
+          title="Child dialog"
+          header={<h2>Child dialog</h2>}
+        >
+          <button type="button" onClick={onChildAction}>
+            Child action
+          </button>
+        </Modal>
+      </>,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "Child action" }),
+    )
+
+    expect(onChildAction).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps a parent Modal open when a child Modal is opened from inside it", async () => {
+    const user = userEvent.setup()
+    const onParentClose = vi.fn()
+    const onChildAction = vi.fn()
+
+    function NestedModalHarness() {
+      const [isChildOpen, setIsChildOpen] = React.useState(false)
+
+      return (
+        <>
+          <Modal
+            isOpen={true}
+            onClose={onParentClose}
+            title="Parent dialog"
+            header={<h2>Parent dialog</h2>}
+          >
+            <button type="button" onClick={() => setIsChildOpen(true)}>
+              Open child dialog
+            </button>
+          </Modal>
+          <Modal
+            isOpen={isChildOpen}
+            onClose={() => setIsChildOpen(false)}
+            title="Child dialog"
+            header={<h2>Child dialog</h2>}
+          >
+            <button type="button" onClick={onChildAction}>
+              Child action
+            </button>
+          </Modal>
+        </>
+      )
+    }
+
+    render(<NestedModalHarness />)
+
+    await user.click(
+      await screen.findByRole("button", { name: "Open child dialog" }),
+    )
+    await user.click(
+      await screen.findByRole("button", { name: "Child action" }),
+    )
+
+    expect(onParentClose).not.toHaveBeenCalled()
+    expect(onChildAction).toHaveBeenCalledTimes(1)
+  })
+
   it("does not request Modal close when selecting an item from a nested Select", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
