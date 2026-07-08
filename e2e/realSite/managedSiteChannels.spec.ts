@@ -197,13 +197,12 @@ test.describe("real-site E2E: managed-site channel management", () => {
       })
 
       if (!sourceAccountResult.sourceAccount) {
-        testInfo.annotations.push({
-          type: "skip",
-          description:
-            sourceAccountResult.skipReason ??
+        test.skip(
+          true,
+          sourceAccountResult.skipReason ??
             `${target.label} source account E2E env is missing`,
-        })
-        return
+        )
+        throw new Error("Skipped test continued without a source account")
       }
 
       const sourceAccount = sourceAccountResult.sourceAccount

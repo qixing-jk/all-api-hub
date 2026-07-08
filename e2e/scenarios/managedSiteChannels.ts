@@ -349,7 +349,7 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
       MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
       MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
       {
-        timeout: 30_000,
+        timeout: 10_000,
       },
     )
     await expect(row).toBeVisible({ timeout: 20_000 })
