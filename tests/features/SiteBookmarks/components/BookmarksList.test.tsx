@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
@@ -88,28 +89,6 @@ vi.mock("~/hooks/useMediaQuery", () => ({
   useIsSmallScreen: () => false,
   useIsDesktop: () => false,
 }))
-
-vi.mock("@headlessui/react", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@headlessui/react")>()
-  return {
-    ...actual,
-    Menu: ({ as: Component = "div", children, ...props }: any) => (
-      <Component {...props}>{children}</Component>
-    ),
-    MenuButton: ({ as: Component = "button", children, ...props }: any) => (
-      <Component {...props}>{children}</Component>
-    ),
-    MenuItems: ({ as: Component = "div", children, ...props }: any) => (
-      <Component {...props}>{children}</Component>
-    ),
-    MenuItem: ({ children, disabled }: any) =>
-      typeof children === "function" ? (
-        <>{children({ close: () => {}, disabled: Boolean(disabled) })}</>
-      ) : (
-        <>{children}</>
-      ),
-  }
-})
 
 // DnD-kit mocks keep the bookmark list UI renderable without simulating drag events.
 vi.mock("@dnd-kit/core", () => ({
@@ -231,8 +210,9 @@ beforeEach(() => {
   })
   completeProductAnalyticsActionMock.mockResolvedValue(undefined)
 
-  Object.assign(navigator, {
-    clipboard: {
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: {
       writeText: clipboardWriteTextMock,
     },
   })
@@ -483,6 +463,7 @@ describe("BookmarksList", () => {
   })
 
   it("supports pin and delete actions", async () => {
+    const user = userEvent.setup()
     const bookmark: SiteBookmark = {
       id: "b1",
       name: "Docs",
@@ -501,11 +482,11 @@ describe("BookmarksList", () => {
     render(<BookmarksList />)
 
     // Pin
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "common:actions.more" }),
     )
-    fireEvent.click(
-      await screen.findByRole("button", { name: "bookmark:actions.pin" }),
+    await user.click(
+      await screen.findByRole("menuitem", { name: "bookmark:actions.pin" }),
     )
 
     expectBookmarkActionTracked(
@@ -520,11 +501,11 @@ describe("BookmarksList", () => {
     })
 
     // Delete
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "common:actions.more" }),
     )
-    fireEvent.click(
-      await screen.findByRole("button", { name: "common:actions.delete" }),
+    await user.click(
+      await screen.findByRole("menuitem", { name: "common:actions.delete" }),
     )
 
     expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
@@ -553,6 +534,7 @@ describe("BookmarksList", () => {
   })
 
   it("does not start delete bookmark analytics when confirmation is cancelled", async () => {
+    const user = userEvent.setup()
     const bookmark: SiteBookmark = {
       id: "b1",
       name: "Docs",
@@ -567,11 +549,11 @@ describe("BookmarksList", () => {
 
     render(<BookmarksList />)
 
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "common:actions.more" }),
     )
-    fireEvent.click(
-      await screen.findByRole("button", { name: "common:actions.delete" }),
+    await user.click(
+      await screen.findByRole("menuitem", { name: "common:actions.delete" }),
     )
 
     const dialog = await screen.findByRole("dialog")
@@ -589,6 +571,7 @@ describe("BookmarksList", () => {
   })
 
   it("tracks delete bookmark failure when storage delete returns false", async () => {
+    const user = userEvent.setup()
     const bookmark: SiteBookmark = {
       id: "b1",
       name: "Docs",
@@ -604,11 +587,11 @@ describe("BookmarksList", () => {
 
     render(<BookmarksList />)
 
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "common:actions.more" }),
     )
-    fireEvent.click(
-      await screen.findByRole("button", { name: "common:actions.delete" }),
+    await user.click(
+      await screen.findByRole("menuitem", { name: "common:actions.delete" }),
     )
 
     const dialog = await screen.findByRole("dialog")
@@ -632,6 +615,7 @@ describe("BookmarksList", () => {
   })
 
   it("tracks delete bookmark failure when storage delete rejects", async () => {
+    const user = userEvent.setup()
     const bookmark: SiteBookmark = {
       id: "b1",
       name: "Docs",
@@ -647,11 +631,11 @@ describe("BookmarksList", () => {
 
     render(<BookmarksList />)
 
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "common:actions.more" }),
     )
-    fireEvent.click(
-      await screen.findByRole("button", { name: "common:actions.delete" }),
+    await user.click(
+      await screen.findByRole("menuitem", { name: "common:actions.delete" }),
     )
 
     const dialog = await screen.findByRole("dialog")

@@ -1,4 +1,3 @@
-import { Menu, MenuButton, MenuItems } from "@headlessui/react"
 import {
   EllipsisHorizontalIcon,
   LinkIcon,
@@ -18,6 +17,12 @@ import {
   CardItem,
   IconButton,
 } from "~/components/ui"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import { useDevice } from "~/contexts/DeviceContext"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { AccountActionMenuItem } from "~/features/AccountManagement/components/AccountActionButtons/AccountActionMenuItem"
@@ -170,20 +175,21 @@ export default function BookmarkListItem({
                 <PencilIcon className="h-4 w-4" />
               </IconButton>
 
-              <Menu as="div" className="relative">
-                <MenuButton
-                  as={IconButton}
-                  variant="ghost"
-                  size="sm"
-                  aria-label={t("common:actions.more")}
-                  data-testid={SITE_BOOKMARKS_TEST_IDS.rowMoreActionsButton}
-                >
-                  <EllipsisHorizontalIcon className="h-4 w-4" />
-                </MenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t("common:actions.more")}
+                    data-testid={SITE_BOOKMARKS_TEST_IDS.rowMoreActionsButton}
+                  >
+                    <EllipsisHorizontalIcon className="h-4 w-4" />
+                  </IconButton>
+                </DropdownMenuTrigger>
 
-                <MenuItems
-                  anchor="bottom end"
-                  className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none"
+                <DropdownMenuContent
+                  align="end"
+                  className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg focus:outline-none"
                 >
                   <AccountActionMenuItem
                     onClick={() => onTogglePin()}
@@ -194,7 +200,7 @@ export default function BookmarkListItem({
                     }
                     testId={SITE_BOOKMARKS_TEST_IDS.rowPinToggleMenuItem}
                   />
-                  <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+                  <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
                   <AccountActionMenuItem
                     onClick={() => onDelete()}
                     icon={TrashIcon}
@@ -202,8 +208,8 @@ export default function BookmarkListItem({
                     isDestructive={true}
                     testId={SITE_BOOKMARKS_TEST_IDS.rowDeleteMenuItem}
                   />
-                </MenuItems>
-              </Menu>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

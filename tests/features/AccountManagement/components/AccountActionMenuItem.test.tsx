@@ -1,8 +1,11 @@
-import { Menu } from "@headlessui/react"
 import { fireEvent, render, screen } from "@testing-library/react"
 import type { ComponentProps, SVGProps } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+} from "~/components/ui/dropdown-menu"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { AccountActionMenuItem } from "~/features/AccountManagement/components/AccountActionButtons/AccountActionMenuItem"
 import {
@@ -43,16 +46,16 @@ function renderMenuItem(
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions
       }
     >
-      <Menu>
-        <Menu.Items static>
+      <DropdownMenu open={true}>
+        <DropdownMenuContent>
           <AccountActionMenuItem
             onClick={onClick}
             icon={TestIcon}
             label="Refresh"
             {...props}
           />
-        </Menu.Items>
-      </Menu>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </ProductAnalyticsScope>,
   )
 
@@ -114,7 +117,10 @@ describe("AccountActionMenuItem analytics", () => {
       disabled: true,
       analyticsAction: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccount,
     })
-    fireEvent.click(screen.getAllByRole("menuitem", { name: "Refresh" })[1])
+    const disabledButton = screen.getAllByText("Refresh")[1].closest("button")
+    expect(disabledButton).not.toBeNull()
+    expect(disabledButton!).toBeDisabled()
+    fireEvent.click(disabledButton!)
 
     expect(trackStartedMock).not.toHaveBeenCalled()
   })

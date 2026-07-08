@@ -1,4 +1,3 @@
-import { Menu, MenuButton, MenuItems } from "@headlessui/react"
 import {
   ArrowPathIcon,
   ArrowUpOnSquareIcon,
@@ -22,6 +21,12 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -837,20 +842,21 @@ export default function AccountActionButtons({
         </IconButton>
 
         {/* Secondary Level - Dropdown menu */}
-        <Menu as="div" className="relative">
-          <MenuButton
-            as={IconButton}
-            variant="ghost"
-            size="sm"
-            aria-label={t("common:actions.more")}
-            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton}
-          >
-            <EllipsisHorizontalIcon className="h-4 w-4" />
-          </MenuButton>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <IconButton
+              variant="ghost"
+              size="sm"
+              aria-label={t("common:actions.more")}
+              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton}
+            >
+              <EllipsisHorizontalIcon className="h-4 w-4" />
+            </IconButton>
+          </DropdownMenuTrigger>
 
-          <MenuItems
-            anchor="bottom end"
-            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none"
+          <DropdownMenuContent
+            align="end"
+            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg focus:outline-none"
           >
             {isAccountDisabled ? (
               <>
@@ -862,7 +868,7 @@ export default function AccountActionButtons({
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />
 
-                <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
 
                 <AccountActionMenuItem
                   onClick={handleDeleteLocal}
@@ -936,7 +942,7 @@ export default function AccountActionButtons({
                   </ProductAnalyticsScope>
                 )}
 
-                <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
 
                 <ProductAnalyticsScope
                   featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
@@ -960,7 +966,7 @@ export default function AccountActionButtons({
                   analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenRedeemPage}
                 />
 
-                <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
 
                 {/* Pin/Unpin */}
                 {isPinFeatureEnabled && (
@@ -1001,7 +1007,7 @@ export default function AccountActionButtons({
                   label={t("shareSnapshots:actions.shareAccountSnapshot")}
                 />
 
-                <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
 
                 {/* Place Disable immediately above Delete for clarity and consistency. */}
                 <AccountActionMenuItem
@@ -1021,8 +1027,8 @@ export default function AccountActionButtons({
                 />
               </>
             )}
-          </MenuItems>
-        </Menu>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </ProductAnalyticsScope>
   )

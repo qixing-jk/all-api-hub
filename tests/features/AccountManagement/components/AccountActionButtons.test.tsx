@@ -370,6 +370,7 @@ describe("AccountActionButtons", () => {
     )
 
     let menu = await screen.findByRole("menu")
+    expect(menu).toHaveAttribute("data-slot", "dropdown-menu-content")
     const redeemButton = (
       await within(menu).findByText("account:actions.redeemPage")
     ).closest("button")
