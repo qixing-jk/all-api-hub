@@ -199,6 +199,41 @@ describe("AddTokenDialog prefill", () => {
     )
   })
 
+  it("prefills the default auto token name for manual create", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    expect(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+    ).toHaveValue(DEFAULT_AUTO_PROVISION_TOKEN_NAME)
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+    })
+
+    expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
+      name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+    })
+  })
+
   it("keeps a successful create flow successful when analytics completion rejects", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({
@@ -1242,10 +1277,11 @@ describe("AddTokenDialog prefill", () => {
       />,
     )
 
-    await user.type(
-      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
-      "AIHubMix subnet test",
+    const tokenNameInput = await screen.findByLabelText(
+      /keyManagement:dialog\.tokenName/,
     )
+    await user.clear(tokenNameInput)
+    await user.type(tokenNameInput, "AIHubMix subnet test")
     await user.type(
       screen.getByLabelText("keyManagement:dialog.subnetLimits"),
       "111",
@@ -1399,7 +1435,9 @@ describe("AddTokenDialog prefill", () => {
       />,
     )
 
-    await screen.findByLabelText(/keyManagement:dialog\.tokenName/)
+    const tokenNameInput = await screen.findByLabelText(
+      /keyManagement:dialog\.tokenName/,
+    )
 
     const groupField = screen
       .getByText("keyManagement:dialog.groupLabel")
@@ -1411,6 +1449,8 @@ describe("AddTokenDialog prefill", () => {
     await user.click(
       await screen.findByText("vip - VIP (keyManagement:dialog.groupRate 2)"),
     )
+
+    expect(tokenNameInput).toHaveValue("vip group (auto)")
 
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),

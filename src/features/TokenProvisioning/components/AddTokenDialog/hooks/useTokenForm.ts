@@ -3,7 +3,10 @@ import { useTranslation } from "react-i18next"
 
 import type { AccountSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { DEFAULT_USER_GROUP_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import {
+  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+  DEFAULT_USER_GROUP_NAME,
+} from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
   resolveAccountSiteTokenFormNetworkLimitPolicy,
@@ -182,7 +185,7 @@ export function useTokenForm({
             ? createPrefill.defaultName
             : shouldPrefillModel
               ? `model ${normalizedModelId}`
-              : ""
+              : DEFAULT_AUTO_PROVISION_TOKEN_NAME
 
         const normalizedGroup =
           typeof createPrefill?.group === "string"

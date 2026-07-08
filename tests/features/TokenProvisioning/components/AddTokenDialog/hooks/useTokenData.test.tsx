@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useTokenData } from "~/features/TokenProvisioning/components/AddTokenDialog/hooks/useTokenData"
+import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/defaultTokenLifecycle"
 import { AuthTypeEnum } from "~/types"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -75,6 +76,7 @@ type RenderSubjectProps = {
   isOpen: boolean
   currentAccount?: typeof ACCOUNT
   initialGroup?: string
+  initialName?: string
   allowedGroups?: string[]
 }
 
@@ -84,10 +86,12 @@ const renderSubject = (props: RenderSubjectProps) =>
       isOpen,
       currentAccount,
       initialGroup = "",
+      initialName = "",
       allowedGroups,
     }: RenderSubjectProps) => {
       const [formData, setFormData] = useState({
         group: initialGroup,
+        name: initialName,
       } as any)
 
       return {
@@ -246,6 +250,24 @@ describe("useTokenData", () => {
     await waitFor(() => {
       expect(result.current.formData.group).toBe("beta")
     })
+  })
+
+  it("keeps the default auto token name aligned with the fetched fallback group", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValue(["gpt-4o-mini"])
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["beta", "alpha"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+      initialName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+    })
+
+    await waitFor(() => {
+      expect(result.current.formData.group).toBe("beta")
+    })
+
+    expect(result.current.formData.name).toBe("beta group (auto)")
   })
 
   it("treats missing group capability as no group selection without showing an error", async () => {

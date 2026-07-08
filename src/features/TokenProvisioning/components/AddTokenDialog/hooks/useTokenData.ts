@@ -16,6 +16,7 @@ import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
+import { applyDefaultTokenCreateGroupSelection } from "../defaultTokenCreatePrefill"
 import type { FormData } from "./useTokenForm"
 
 /**
@@ -113,7 +114,10 @@ export function useTokenData(
             (!canValidateGroupMembership ||
               resolvedGroupsData[DEFAULT_USER_GROUP_NAME])
           ) {
-            return { ...prev, group: DEFAULT_USER_GROUP_NAME }
+            return applyDefaultTokenCreateGroupSelection(
+              prev,
+              DEFAULT_USER_GROUP_NAME,
+            )
           }
 
           const firstAllowedGroup = normalizedAllowedGroups.find(
@@ -121,16 +125,21 @@ export function useTokenData(
           )
 
           return firstAllowedGroup
-            ? { ...prev, group: firstAllowedGroup }
+            ? applyDefaultTokenCreateGroupSelection(prev, firstAllowedGroup)
             : prev
         }
 
         if (resolvedGroupsData[DEFAULT_USER_GROUP_NAME]) {
-          return { ...prev, group: DEFAULT_USER_GROUP_NAME }
+          return applyDefaultTokenCreateGroupSelection(
+            prev,
+            DEFAULT_USER_GROUP_NAME,
+          )
         }
 
         const firstGroup = Object.keys(resolvedGroupsData)[0]
-        return firstGroup ? { ...prev, group: firstGroup } : prev
+        return firstGroup
+          ? applyDefaultTokenCreateGroupSelection(prev, firstGroup)
+          : prev
       })
     } catch (error) {
       logger.error("Failed to load initial data", error)

@@ -1480,10 +1480,11 @@ describe("CopyKeyDialog", () => {
     })
     await user.click(customCreateButton)
 
-    await user.type(
-      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
-      "My Key",
+    const tokenNameInput = await screen.findByLabelText(
+      /keyManagement:dialog\.tokenName/,
     )
+    await user.clear(tokenNameInput)
+    await user.type(tokenNameInput, "My Key")
 
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
@@ -1538,10 +1539,11 @@ describe("CopyKeyDialog", () => {
         name: "ui:dialog.copyKey.createCustomKey",
       }),
     )
-    await user.type(
-      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
-      "My Key",
+    const tokenNameInput = await screen.findByLabelText(
+      /keyManagement:dialog\.tokenName/,
     )
+    await user.clear(tokenNameInput)
+    await user.type(tokenNameInput, "My Key")
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
     )
@@ -1600,10 +1602,11 @@ describe("CopyKeyDialog", () => {
         name: "ui:dialog.copyKey.createCustomKey",
       }),
     )
-    await user.type(
-      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
-      "My Key",
+    const tokenNameInput = await screen.findByLabelText(
+      /keyManagement:dialog\.tokenName/,
     )
+    await user.clear(tokenNameInput)
+    await user.type(tokenNameInput, "My Key")
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
     )

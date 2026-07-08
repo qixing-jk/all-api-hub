@@ -4,6 +4,7 @@ import {
 } from "~/services/accounts/accountSiteProfile"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 
+import { applyDefaultTokenCreateGroupSelection } from "../defaultTokenCreatePrefill"
 import type { FormData } from "../hooks/useTokenForm"
 import type { Account } from "./AccountSelection"
 import { AdvancedSettingsSection } from "./AdvancedSettingsSection"
@@ -43,7 +44,13 @@ export function TokenForm({
     }
 
   const handleSelectChange = (field: keyof FormData) => (value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => {
+      if (field !== "group") {
+        return { ...prev, [field]: value }
+      }
+
+      return applyDefaultTokenCreateGroupSelection(prev, value)
+    })
   }
 
   const handleSwitchChange = (field: keyof FormData) => (checked: boolean) => {

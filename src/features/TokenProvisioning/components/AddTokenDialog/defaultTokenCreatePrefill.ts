@@ -10,6 +10,11 @@ export interface DefaultTokenCreatePrefill {
   allowedGroups: string[]
 }
 
+type DefaultTokenGroupSelectionData = {
+  group: string
+  name: string
+}
+
 /**
  * Builds the AddTokenDialog prefill for constrained default-token creation.
  */
@@ -26,5 +31,22 @@ export function buildDefaultTokenCreatePrefill(
     defaultName: tokenRequest.name,
     group: tokenRequest.group,
     allowedGroups: [...allowedGroups],
+  }
+}
+
+/**
+ * Applies a token group change while keeping extension-generated auto names in sync.
+ */
+export function applyDefaultTokenCreateGroupSelection<
+  T extends DefaultTokenGroupSelectionData,
+>(formData: T, nextGroup: string): T {
+  const normalizedGroup = nextGroup.trim()
+  const previousAutoName = buildGroupDefaultTokenRequest(formData.group).name
+  const nextAutoName = buildGroupDefaultTokenRequest(normalizedGroup).name
+
+  return {
+    ...formData,
+    group: normalizedGroup,
+    name: formData.name === previousAutoName ? nextAutoName : formData.name,
   }
 }
