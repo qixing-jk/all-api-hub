@@ -1415,6 +1415,64 @@ describe("ManagedSiteModelSync page", () => {
     ).toBeDisabled()
   })
 
+  it("allows manual selected sync when progress loading is unavailable", async () => {
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, _data?: any) => {
+        switch (type) {
+          case ModelSyncMessageTypes.GetLastExecution:
+            return {
+              success: true,
+              data: {
+                items: [],
+                statistics: {
+                  total: 0,
+                  successCount: 0,
+                  failureCount: 0,
+                  durationMs: 0,
+                  startedAt: 0,
+                  endedAt: 0,
+                },
+              },
+            }
+          case ModelSyncMessageTypes.GetProgress:
+            throw new Error("progress unavailable")
+          case ModelSyncMessageTypes.GetNextRun:
+            return { success: true, data: { nextScheduledAt: null } }
+          case ModelSyncMessageTypes.GetPreferences:
+            return { success: true, data: { enableSync: true, intervalMs: 0 } }
+          case ModelSyncMessageTypes.ListChannels:
+            return {
+              success: true,
+              data: {
+                items: [{ id: 201, name: "Manual Alpha" }],
+              },
+            }
+          default:
+            return { success: true }
+        }
+      },
+    )
+
+    render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
+
+    expect(await screen.findByText("Manual Alpha#201")).toBeInTheDocument()
+
+    const manualAlphaRow = screen.getByText("Manual Alpha#201").closest("tr")
+    expect(manualAlphaRow).toBeTruthy()
+
+    fireEvent.click(within(manualAlphaRow!).getByRole("checkbox"))
+
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runSelected (1)",
+      }),
+    ).toBeEnabled()
+    expect(loggerMocks.error).toHaveBeenCalledWith(
+      "Failed to load progress",
+      expect.any(Error),
+    )
+  })
+
   it("runs selected manual channels and clears the manual selection after success", async () => {
     render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
 

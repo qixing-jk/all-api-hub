@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
@@ -197,6 +197,44 @@ describe("MultiSelect", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
   })
 
+  it("keeps the active option index within the filtered option range", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+
+    const { rerender } = render(
+      <MultiSelect
+        onChange={onChange}
+        options={[
+          { value: "alpha", label: "Alpha" },
+          { value: "beta", label: "Beta" },
+        ]}
+        placeholder="Pick values"
+        selected={[]}
+      />,
+    )
+
+    const input = await screen.findByPlaceholderText("Pick values")
+    await user.click(input)
+    await user.keyboard("{ArrowUp}")
+
+    rerender(
+      <MultiSelect
+        onChange={onChange}
+        options={[{ value: "alpha", label: "Alpha" }]}
+        placeholder="Pick values"
+        selected={[]}
+      />,
+    )
+
+    await waitFor(() => {
+      const activeOptionId = input.getAttribute("aria-activedescendant")
+      expect(activeOptionId).toBeTruthy()
+      expect(document.getElementById(activeOptionId!)).toHaveTextContent(
+        "Alpha",
+      )
+    })
+  })
+
   it("toggles the listbox from the disclosure button", async () => {
     const user = userEvent.setup()
 
@@ -227,7 +265,7 @@ describe("MultiSelect", () => {
     const input = await screen.findByPlaceholderText("Pick values")
     await user.click(input)
     await user.type(input, "alpha, beta, gamma")
-    fireEvent.keyDown(input, { key: "Enter" })
+    await user.keyboard("{Enter}")
 
     expect(screen.getByTestId(TEST_IDS.selectedValues)).toHaveTextContent(
       "beta,alpha,gamma",
@@ -242,7 +280,7 @@ describe("MultiSelect", () => {
     const input = await screen.findByPlaceholderText("Pick values")
     await user.click(input)
     await user.type(input, "delta")
-    fireEvent.keyDown(input, { key: "Enter" })
+    await user.keyboard("{Enter}")
 
     expect(screen.getByTestId(TEST_IDS.selectedValues)).toHaveTextContent(
       "delta",

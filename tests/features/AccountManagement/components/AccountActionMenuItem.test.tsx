@@ -117,9 +117,13 @@ describe("AccountActionMenuItem analytics", () => {
       disabled: true,
       analyticsAction: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccount,
     })
-    const disabledButton = screen.getAllByText("Refresh")[1].closest("button")
-    expect(disabledButton).not.toBeNull()
-    expect(disabledButton!).toBeDisabled()
+    const disabledButton = screen
+      .getAllByRole("menuitem", { name: "Refresh" })
+      .find(
+        (menuItem) =>
+          menuItem instanceof HTMLButtonElement && menuItem.disabled,
+      )
+    expect(disabledButton).toBeDefined()
     fireEvent.click(disabledButton!)
 
     expect(trackStartedMock).not.toHaveBeenCalled()
