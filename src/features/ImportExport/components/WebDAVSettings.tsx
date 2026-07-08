@@ -516,12 +516,12 @@ export default function WebDAVSettings() {
   }
 
   const handleConfirmRebuildBackup = async () => {
-    setRebuildDialogOpen(false)
     setRebuildPending(true)
     try {
       await uploadWebdavBackup({ forceFullRebuild: true })
     } finally {
       setRebuildPending(false)
+      setRebuildDialogOpen(false)
     }
   }
 

@@ -116,6 +116,44 @@ function ModalComboboxHarness() {
   )
 }
 
+function ModalComboboxEscapeHarness({ onClose }: { onClose: () => void }) {
+  const items = React.useMemo(
+    () => [
+      { value: "alpha", label: "Alpha" },
+      { value: "beta", label: "Beta" },
+    ],
+    [],
+  )
+  const [value, setValue] = React.useState<(typeof items)[number] | null>(null)
+  const [open, setOpen] = React.useState(true)
+
+  return (
+    <Modal isOpen={true} onClose={onClose}>
+      <Combobox
+        items={items}
+        value={value}
+        onValueChange={setValue}
+        open={open}
+        onOpenChange={setOpen}
+      >
+        <ComboboxInput
+          aria-label="Escaped combobox in modal"
+          className="w-48"
+        />
+        <ComboboxContent>
+          <ComboboxList>
+            {(item) => (
+              <ComboboxItem key={item.value} value={item}>
+                {item.label}
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+    </Modal>
+  )
+}
+
 describe("floating layer primitives inside dialogs", () => {
   it("keeps Modal open when Escape closing is disabled", async () => {
     const user = userEvent.setup()
@@ -132,6 +170,24 @@ describe("floating layer primitives inside dialogs", () => {
     await user.keyboard("{Escape}")
 
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it("requests Modal close when Escape starts inside the dialog", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(
+      <Modal isOpen={true} onClose={onClose}>
+        <button type="button">Inside modal</button>
+      </Modal>,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "Inside modal" }),
+    )
+    await user.keyboard("{Escape}")
+
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it("keeps Modal open when backdrop closing is disabled", async () => {
@@ -364,5 +420,23 @@ describe("floating layer primitives inside dialogs", () => {
     expect(positioner).toBeInTheDocument()
     expect(positioner).toHaveClass(Z_INDEX.modalFloating)
     expect(positioner).not.toHaveClass(Z_INDEX.floating)
+  })
+
+  it("keeps Modal open when Escape closes a nested combobox popup", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(<ModalComboboxEscapeHarness onClose={onClose} />)
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Escaped combobox in modal",
+      }),
+    )
+    await screen.findByText("Alpha")
+
+    await user.keyboard("{Escape}")
+
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

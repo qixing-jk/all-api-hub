@@ -1,12 +1,6 @@
 import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
-import {
-  ReactNode,
-  useEffect,
-  useId,
-  useSyncExternalStore,
-  type MouseEvent,
-} from "react"
+import { ReactNode, useRef, type MouseEvent } from "react"
 
 import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
@@ -40,34 +34,22 @@ const sizeMap: Record<Size, string> = {
   xl: "max-w-5xl",
 }
 
-let activeModalStack: string[] = []
-const modalStackListeners = new Set<() => void>()
+const openFloatingLayerSelector = [
+  '[data-slot="select-content"][data-state="open"]',
+  '[data-slot="popover-content"][data-state="open"]',
+  '[data-slot="combobox-content"][data-open]',
+].join(",")
 
-const emitModalStackChange = () => {
-  modalStackListeners.forEach((listener) => listener())
+/**
+ * Detects nested select, popover, or combobox layers that should handle Escape
+ * before the legacy Modal treats it as a dialog dismissal request.
+ */
+function hasOpenFloatingLayer() {
+  return (
+    typeof document !== "undefined" &&
+    document.querySelector(openFloatingLayerSelector) !== null
+  )
 }
-
-const getModalStackSnapshot = () => activeModalStack.join("|")
-
-const subscribeModalStack = (listener: () => void) => {
-  modalStackListeners.add(listener)
-  return () => modalStackListeners.delete(listener)
-}
-
-const registerModal = (id: string) => {
-  if (activeModalStack.includes(id)) return
-  activeModalStack = [...activeModalStack, id]
-  emitModalStackChange()
-}
-
-const unregisterModal = (id: string) => {
-  if (!activeModalStack.includes(id)) return
-  activeModalStack = activeModalStack.filter((activeId) => activeId !== id)
-  emitModalStackChange()
-}
-
-const isModalTopmost = (id: string) =>
-  activeModalStack[activeModalStack.length - 1] === id
 
 /**
  * Modal renders a Radix/shadcn-compatible dialog with the legacy slot API.
@@ -90,38 +72,26 @@ export function Modal({
   closeOnBackdropClick = true,
   size = "md",
 }: ModalProps) {
-  const modalId = useId()
-  const modalStackSnapshot = useSyncExternalStore(
-    subscribeModalStack,
-    getModalStackSnapshot,
-    getModalStackSnapshot,
-  )
-  const topmostModalId = modalStackSnapshot.split("|").filter(Boolean).at(-1)
-  const isTopmostModal = isOpen && topmostModalId === modalId
-
-  useEffect(() => {
-    if (!isOpen) {
-      unregisterModal(modalId)
-      return
-    }
-
-    registerModal(modalId)
-    return () => unregisterModal(modalId)
-  }, [isOpen, modalId])
-
-  const handleOpenChange = (open: boolean) => {
-    if (!open && isModalTopmost(modalId)) onClose()
-  }
+  const contentRef = useRef<HTMLDivElement>(null)
 
   const handleBackdropClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (
-      event.target !== event.currentTarget ||
-      !closeOnBackdropClick ||
-      !isModalTopmost(modalId)
-    ) {
-      return
-    }
+    if (event.target !== event.currentTarget || !closeOnBackdropClick) return
     onClose()
+  }
+
+  const shouldCloseOnEscape = () => {
+    if (!closeOnEsc) return false
+    if (hasOpenFloatingLayer()) return false
+    const activeElement = document.activeElement
+    return (
+      activeElement instanceof Node &&
+      contentRef.current?.contains(activeElement) === true
+    )
+  }
+
+  const handleEscapeKeyDown = (event: KeyboardEvent) => {
+    event.preventDefault()
+    if (shouldCloseOnEscape()) onClose()
   }
 
   const panelBaseClass = cn(
@@ -130,21 +100,16 @@ export function Modal({
   )
 
   return (
-    <DialogPrimitive.Root
-      open={isOpen}
-      onOpenChange={handleOpenChange}
-      modal={isTopmostModal}
-    >
+    <DialogPrimitive.Root open={isOpen} modal={false}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay
+        <div
           data-slot="modal-overlay"
+          data-state={isOpen ? "open" : "closed"}
           className={cn(
             "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 bg-black/30 backdrop-blur-sm",
             Z_INDEX.modal,
           )}
-          onPointerDown={(event) => {
-            if (!closeOnBackdropClick) event.preventDefault()
-          }}
+          onClick={handleBackdropClick}
         />
 
         <ToasterPortalHost />
@@ -152,25 +117,18 @@ export function Modal({
 
         <FloatingLayerProvider layer="modal-contained">
           <DialogPrimitive.Content
+            ref={contentRef}
             aria-describedby={undefined}
             className={cn(
               "fixed top-[50%] left-[50%] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] outline-none",
               Z_INDEX.modal,
             )}
-            onEscapeKeyDown={(event) => {
-              if (!closeOnEsc || !isModalTopmost(modalId)) {
-                event.preventDefault()
-              }
-            }}
+            onEscapeKeyDown={handleEscapeKeyDown}
             onPointerDownOutside={(event) => {
-              if (!closeOnBackdropClick || !isModalTopmost(modalId)) {
-                event.preventDefault()
-              }
+              event.preventDefault()
             }}
             onInteractOutside={(event) => {
-              if (!closeOnBackdropClick || !isModalTopmost(modalId)) {
-                event.preventDefault()
-              }
+              event.preventDefault()
             }}
           >
             <DialogPrimitive.Title asChild>
