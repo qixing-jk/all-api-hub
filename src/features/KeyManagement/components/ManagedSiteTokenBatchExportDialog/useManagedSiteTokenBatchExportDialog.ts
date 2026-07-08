@@ -98,10 +98,12 @@ export function useManagedSiteTokenBatchExportDialog({
   const resolvedChannelKeysByItemIdRef = useRef<
     Record<string, Record<number, string>>
   >({})
+  const previewRef = useRef<ManagedSiteTokenBatchExportPreview | null>(null)
   const latestItemsRef = useRef(items)
   const openedItemsRef = useRef(items)
   const wasOpenRef = useRef(false)
 
+  previewRef.current = preview
   latestItemsRef.current = items
 
   useEffect(() => {
@@ -251,11 +253,15 @@ export function useManagedSiteTokenBatchExportDialog({
     })
     setSelectedIds((currentSelectedIds) => {
       const nextSelectedIds = new Set(currentSelectedIds)
+      const currentPreviewItem =
+        previewRef.current?.items.find(
+          (previewItem) => previewItem.id === item.id,
+        ) ?? item
       const updatedItem = applyResolvedChannelKeyToPreviewItem({
-        item,
+        item: currentPreviewItem,
         candidate,
         resolvedKey,
-        siteType: preview?.siteType,
+        siteType: previewRef.current?.siteType,
       })
 
       if (
