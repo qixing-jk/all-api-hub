@@ -108,6 +108,111 @@ describe("MultiSelect", () => {
     )
   })
 
+  it("associates the visible label with the combobox input", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MultiSelect
+        label="Available models"
+        onChange={vi.fn()}
+        options={[]}
+        selected={[]}
+      />,
+    )
+
+    const input = await screen.findByLabelText("Available models")
+    await user.click(await screen.findByText("Available models"))
+
+    expect(input).toHaveFocus()
+  })
+
+  it("closes the listbox when focus or pointer moves outside", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <>
+        <Harness options={[{ value: "alpha", label: "Alpha" }]} />
+        <button type="button">Outside target</button>
+      </>,
+    )
+
+    await user.click(await screen.findByPlaceholderText("Pick values"))
+    expect(await screen.findByRole("listbox")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Outside target" }))
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+  })
+
+  it("supports keyboard navigation and selection for listed options", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <Harness
+        options={[
+          { value: "alpha", label: "Alpha" },
+          { value: "beta", label: "Beta" },
+        ]}
+      />,
+    )
+
+    const input = await screen.findByPlaceholderText("Pick values")
+    await user.click(input)
+    await user.keyboard("{ArrowDown}")
+
+    const activeOptionId = input.getAttribute("aria-activedescendant")
+    expect(activeOptionId).toBeTruthy()
+    expect(document.getElementById(activeOptionId!)).toHaveTextContent("Alpha")
+
+    await user.keyboard("{Enter}")
+    expect(screen.getByTestId(TEST_IDS.selectedValues)).toHaveTextContent(
+      "alpha",
+    )
+
+    await user.keyboard("{ArrowDown}{Enter}")
+    expect(screen.getByTestId(TEST_IDS.selectedValues)).toHaveTextContent("")
+  })
+
+  it("supports ArrowUp navigation and Escape dismissal", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <Harness
+        options={[
+          { value: "alpha", label: "Alpha" },
+          { value: "beta", label: "Beta" },
+        ]}
+      />,
+    )
+
+    const input = await screen.findByPlaceholderText("Pick values")
+    await user.click(input)
+    await user.keyboard("{ArrowUp}")
+
+    const activeOptionId = input.getAttribute("aria-activedescendant")
+    expect(activeOptionId).toBeTruthy()
+    expect(document.getElementById(activeOptionId!)).toHaveTextContent("Beta")
+
+    await user.keyboard("{Escape}")
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+  })
+
+  it("toggles the listbox from the disclosure button", async () => {
+    const user = userEvent.setup()
+
+    render(<Harness options={[{ value: "alpha", label: "Alpha" }]} />)
+
+    const toggleButton = await screen.findByRole("button", {
+      name: "ui:multiSelect.placeholder",
+    })
+
+    await user.click(toggleButton)
+    expect(await screen.findByRole("listbox")).toBeInTheDocument()
+
+    await user.click(toggleButton)
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+  })
+
   it("adds comma-separated custom values and deduplicates existing selections", async () => {
     const user = userEvent.setup()
 
@@ -126,6 +231,21 @@ describe("MultiSelect", () => {
 
     expect(screen.getByTestId(TEST_IDS.selectedValues)).toHaveTextContent(
       "beta,alpha,gamma",
+    )
+  })
+
+  it("adds a single custom value when comma parsing is disabled", async () => {
+    const user = userEvent.setup()
+
+    render(<Harness allowCustom parseCommaStrings={false} />)
+
+    const input = await screen.findByPlaceholderText("Pick values")
+    await user.click(input)
+    await user.type(input, "delta")
+    fireEvent.keyDown(input, { key: "Enter" })
+
+    expect(screen.getByTestId(TEST_IDS.selectedValues)).toHaveTextContent(
+      "delta",
     )
   })
 

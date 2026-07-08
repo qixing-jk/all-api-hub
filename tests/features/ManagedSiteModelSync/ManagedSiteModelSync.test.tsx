@@ -1266,6 +1266,40 @@ describe("ManagedSiteModelSync page", () => {
     expect(await screen.findByText("Manual Alpha#201")).toBeInTheDocument()
     expect(screen.getByText("Manual Beta#202")).toBeInTheDocument()
 
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "managedSiteModelSync:execution.manual.searchPlaceholder",
+      ),
+      { target: { value: "Beta" } },
+    )
+    expect(screen.queryByText("Manual Alpha#201")).not.toBeInTheDocument()
+    expect(screen.getByText("Manual Beta#202")).toBeInTheDocument()
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "managedSiteModelSync:execution.manual.searchPlaceholder",
+      ),
+      { target: { value: "" } },
+    )
+    expect(await screen.findByText("Manual Alpha#201")).toBeInTheDocument()
+
+    const listChannelCallsBeforeRefresh =
+      mockSendRuntimeMessage.mock.calls.filter(
+        ([type]) => type === ModelSyncMessageTypes.ListChannels,
+      ).length
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.refresh",
+      }),
+    )
+    await waitFor(() => {
+      expect(
+        mockSendRuntimeMessage.mock.calls.filter(
+          ([type]) => type === ModelSyncMessageTypes.ListChannels,
+        ).length,
+      ).toBeGreaterThan(listChannelCallsBeforeRefresh)
+    })
+
     const [selectAllCheckbox] = screen.getAllByRole("checkbox")
     fireEvent.click(selectAllCheckbox)
 
@@ -1322,6 +1356,63 @@ describe("ManagedSiteModelSync page", () => {
         },
       }),
     )
+  })
+
+  it("disables manual selected sync while progress is running", async () => {
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, _data?: any) => {
+        switch (type) {
+          case ModelSyncMessageTypes.GetLastExecution:
+            return {
+              success: true,
+              data: {
+                items: [],
+                statistics: {
+                  total: 0,
+                  successCount: 0,
+                  failureCount: 0,
+                  durationMs: 0,
+                  startedAt: 0,
+                  endedAt: 0,
+                },
+              },
+            }
+          case ModelSyncMessageTypes.GetProgress:
+            return {
+              success: true,
+              data: { isRunning: true, completed: 1, total: 2, failed: 0 },
+            }
+          case ModelSyncMessageTypes.GetNextRun:
+            return { success: true, data: { nextScheduledAt: null } }
+          case ModelSyncMessageTypes.GetPreferences:
+            return { success: true, data: { enableSync: true, intervalMs: 0 } }
+          case ModelSyncMessageTypes.ListChannels:
+            return {
+              success: true,
+              data: {
+                items: [{ id: 201, name: "Manual Alpha" }],
+              },
+            }
+          default:
+            return { success: true }
+        }
+      },
+    )
+
+    render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
+
+    expect(await screen.findByText("Manual Alpha#201")).toBeInTheDocument()
+
+    const manualAlphaRow = screen.getByText("Manual Alpha#201").closest("tr")
+    expect(manualAlphaRow).toBeTruthy()
+
+    fireEvent.click(within(manualAlphaRow!).getByRole("checkbox"))
+
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runSelected (1)",
+      }),
+    ).toBeDisabled()
   })
 
   it("runs selected manual channels and clears the manual selection after success", async () => {

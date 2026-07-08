@@ -59,9 +59,30 @@ export function MultiSelect({
   const [dropdownPosition, setDropdownPosition] = useState<"bottom" | "top">(
     "bottom",
   )
+  const [activeOptionIndex, setActiveOptionIndex] = useState<number | null>(
+    null,
+  )
   const hasUserToggledRef = useRef(false)
   const comboboxRef = useRef<HTMLDivElement>(null)
   const uid = useId()
+
+  useEffect(() => {
+    const handleDocumentInteraction = (event: PointerEvent | FocusEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (comboboxRef.current?.contains(target)) return
+
+      setIsOpen(false)
+    }
+
+    document.addEventListener("pointerdown", handleDocumentInteraction)
+    document.addEventListener("focusin", handleDocumentInteraction)
+
+    return () => {
+      document.removeEventListener("pointerdown", handleDocumentInteraction)
+      document.removeEventListener("focusin", handleDocumentInteraction)
+    }
+  }, [])
 
   useEffect(() => {
     if (selected.length === 0) {
@@ -147,14 +168,63 @@ export function MultiSelect({
       })
   }, [options, query])
 
+  useEffect(() => {
+    if (!isOpen || filteredOptions.length === 0) {
+      setActiveOptionIndex(null)
+      return
+    }
+
+    setActiveOptionIndex((currentIndex) =>
+      currentIndex === null
+        ? null
+        : Math.min(currentIndex, filteredOptions.length - 1),
+    )
+  }, [filteredOptions.length, isOpen])
+
   const resolvedPlaceholder = placeholder ?? t("multiSelect.placeholder")
+  const inputId = `${uid}-input`
   const listboxId = `${uid}-listbox`
+  const activeOption =
+    activeOptionIndex === null ? undefined : filteredOptions[activeOptionIndex]
+  const activeOptionId = activeOption
+    ? `${uid}-option-${activeOption.value}`
+    : undefined
 
   const handleRemove = (value: string) => {
     onChange(selected.filter((v) => v !== value))
   }
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown" && filteredOptions.length > 0) {
+      e.preventDefault()
+      setIsOpen(true)
+      setActiveOptionIndex((currentIndex) =>
+        currentIndex === null ? 0 : (currentIndex + 1) % filteredOptions.length,
+      )
+      return
+    }
+
+    if (e.key === "ArrowUp" && filteredOptions.length > 0) {
+      e.preventDefault()
+      setIsOpen(true)
+      setActiveOptionIndex((currentIndex) =>
+        currentIndex === null
+          ? filteredOptions.length - 1
+          : (currentIndex - 1 + filteredOptions.length) %
+            filteredOptions.length,
+      )
+      return
+    }
+
+    if (e.key === "Enter" && isOpen && activeOptionIndex !== null) {
+      const activeOption = filteredOptions[activeOptionIndex]
+      if (activeOption) {
+        e.preventDefault()
+        handleOptionToggle(activeOption)
+        return
+      }
+    }
+
     if (e.key === "Enter" && allowCustom && query.trim()) {
       e.preventDefault()
 
@@ -222,6 +292,7 @@ export function MultiSelect({
     onChange(nextSelected)
     setQuery("")
     setIsOpen(true)
+    setActiveOptionIndex(null)
   }
 
   const optionListClassName = cn(
@@ -232,19 +303,24 @@ export function MultiSelect({
   return (
     <div className={cn("w-full", className)}>
       {label && (
-        <label className="dark:text-dark-text-primary mb-1 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor={inputId}
+          className="dark:text-dark-text-primary mb-1 block text-sm font-medium text-gray-700"
+        >
           {label}
         </label>
       )}
       <div className="relative" ref={comboboxRef}>
         <div className="relative w-full">
           <input
+            id={inputId}
             className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             placeholder={resolvedPlaceholder}
             value={query}
             onChange={(event) => {
               setQuery(event.target.value)
               setIsOpen(true)
+              setActiveOptionIndex(null)
             }}
             onClick={() => setIsOpen(true)}
             onFocus={() => setIsOpen(true)}
@@ -253,6 +329,7 @@ export function MultiSelect({
             aria-expanded={isOpen}
             aria-controls={listboxId}
             aria-autocomplete="list"
+            aria-activedescendant={activeOptionId}
             disabled={disabled}
           />
           <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
@@ -276,7 +353,10 @@ export function MultiSelect({
               aria-label={t("multiSelect.placeholder")}
               aria-expanded={isOpen}
               aria-controls={listboxId}
-              onClick={() => setIsOpen((open) => !open)}
+              onClick={() => {
+                setIsOpen((open) => !open)
+                setActiveOptionIndex(null)
+              }}
             >
               <ChevronUpDownIcon
                 className="h-5 w-5 text-gray-400"
@@ -314,16 +394,22 @@ export function MultiSelect({
               aria-multiselectable="true"
               className={optionListClassName}
             >
-              {filteredOptions.map((option) => {
+              {filteredOptions.map((option, index) => {
                 const isSelected = selected.includes(option.value)
+                const isActive = index === activeOptionIndex
 
                 return (
                   <button
                     key={option.value}
+                    id={`${uid}-option-${option.value}`}
                     type="button"
                     role="option"
                     aria-selected={isSelected}
-                    className="dark:text-dark-text-primary relative flex w-full cursor-pointer items-center py-2 pr-4 pl-10 text-left text-gray-900 select-none hover:bg-blue-600 hover:text-white focus:bg-blue-600 focus:text-white focus:outline-none"
+                    className={cn(
+                      "dark:text-dark-text-primary relative flex w-full cursor-pointer items-center py-2 pr-4 pl-10 text-left text-gray-900 select-none hover:bg-blue-600 hover:text-white focus:bg-blue-600 focus:text-white focus:outline-none",
+                      isActive && "bg-blue-600 text-white",
+                    )}
+                    onMouseEnter={() => setActiveOptionIndex(index)}
                     onClick={() => handleOptionToggle(option)}
                   >
                     <span

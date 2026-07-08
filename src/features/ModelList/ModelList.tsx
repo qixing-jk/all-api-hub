@@ -440,6 +440,30 @@ export default function ModelList(props: {
     return Array.isArray(pricingData?.data) ? pricingData.data.length : 0
   }, [pricingContexts, pricingData, selectedSource?.kind])
 
+  const renderModelDisplay = () => (
+    <ModelDisplay
+      models={displayedModels}
+      verificationSummariesByKey={verificationSummariesByKey}
+      onVerifyModel={handleVerifyModel}
+      onVerifyCliSupport={handleVerifyCliSupport}
+      onOpenModelKeyDialog={handleOpenModelKeyDialog}
+      onFilterAccount={
+        selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+          ? handleAccountSummaryClick
+          : undefined
+      }
+      showRealPrice={showRealPrice}
+      showRatioColumn={showRatioColumn}
+      showEndpointTypes={showEndpointTypes}
+      selectedGroups={displaySelectedGroups}
+      handleGroupClick={handleGroupClick}
+      availableGroups={availableGroups}
+      groupSelectionScope={modelDisplayGroupSelectionScope}
+      isGroupSelectionInteractive={isModelGroupSelectionInteractive}
+      displayCapabilities={sourceCapabilities}
+    />
+  )
+
   return (
     <div className="p-6" data-testid={MODEL_LIST_TEST_IDS.page}>
       <PageHeader
@@ -704,53 +728,11 @@ export default function ModelList(props: {
             getProviderFilteredCount={getProviderFilteredCount}
           >
             <TabsContent value={MODEL_PROVIDER_FILTER_VALUES.ALL}>
-              <ModelDisplay
-                models={displayedModels}
-                verificationSummariesByKey={verificationSummariesByKey}
-                onVerifyModel={handleVerifyModel}
-                onVerifyCliSupport={handleVerifyCliSupport}
-                onOpenModelKeyDialog={handleOpenModelKeyDialog}
-                onFilterAccount={
-                  selectedSource?.kind ===
-                  MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-                    ? handleAccountSummaryClick
-                    : undefined
-                }
-                showRealPrice={showRealPrice}
-                showRatioColumn={showRatioColumn}
-                showEndpointTypes={showEndpointTypes}
-                selectedGroups={displaySelectedGroups}
-                handleGroupClick={handleGroupClick}
-                availableGroups={availableGroups}
-                groupSelectionScope={modelDisplayGroupSelectionScope}
-                isGroupSelectionInteractive={isModelGroupSelectionInteractive}
-                displayCapabilities={sourceCapabilities}
-              />
+              {renderModelDisplay()}
             </TabsContent>
             {providers.map((provider) => (
               <TabsContent key={provider} value={provider}>
-                <ModelDisplay
-                  models={displayedModels}
-                  verificationSummariesByKey={verificationSummariesByKey}
-                  onVerifyModel={handleVerifyModel}
-                  onVerifyCliSupport={handleVerifyCliSupport}
-                  onOpenModelKeyDialog={handleOpenModelKeyDialog}
-                  onFilterAccount={
-                    selectedSource?.kind ===
-                    MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-                      ? handleAccountSummaryClick
-                      : undefined
-                  }
-                  showRealPrice={showRealPrice}
-                  showRatioColumn={showRatioColumn}
-                  showEndpointTypes={showEndpointTypes}
-                  selectedGroups={displaySelectedGroups}
-                  handleGroupClick={handleGroupClick}
-                  availableGroups={availableGroups}
-                  groupSelectionScope={modelDisplayGroupSelectionScope}
-                  isGroupSelectionInteractive={isModelGroupSelectionInteractive}
-                  displayCapabilities={sourceCapabilities}
-                />
+                {renderModelDisplay()}
               </TabsContent>
             ))}
           </ProviderTabs>

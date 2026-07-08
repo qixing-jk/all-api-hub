@@ -124,4 +124,18 @@ describe("AccountActionMenuItem analytics", () => {
 
     expect(trackStartedMock).not.toHaveBeenCalled()
   })
+
+  it("renders a visible description when no compact hint is provided", () => {
+    renderMenuItem({
+      description: "Refresh the latest balance and usage data.",
+    })
+
+    expect(
+      screen.getByText("Refresh the latest balance and usage data."),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("menuitem", { name: "Refresh" })).toHaveAttribute(
+      "aria-describedby",
+      expect.stringMatching(/.+/),
+    )
+  })
 })
