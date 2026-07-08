@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { installExtensionPageGuards } from "~~/e2e/utils/commonUserFlows"
+import {
+  SPONSOR_CATALOG_SCHEMA_VERSION,
+  SPONSOR_REMOTE_CATALOG_V5_URL,
+} from "~/features/AccountManagement/sponsors/constants"
+import {
+  installExtensionPageGuards,
+  stubLlmMetadataIndex,
+  stubSponsorRemoteCatalog,
+} from "~~/e2e/utils/commonUserFlows"
 
 describe("installExtensionPageGuards", () => {
   it("throws on extension console errors, including resource-load failures", () => {
@@ -57,5 +65,48 @@ describe("installExtensionPageGuards", () => {
         text: () => "ResizeObserver loop limit exceeded",
       }),
     ).not.toThrow()
+  })
+})
+
+describe("E2E external route stubs", () => {
+  it("stubs both metadata and sponsor catalog endpoints used by extension pages", async () => {
+    const context = {
+      route: vi.fn(),
+    } as any
+
+    await stubLlmMetadataIndex(context)
+
+    expect(context.route).toHaveBeenCalledWith(
+      "https://llm-metadata.pages.dev/api/index.json",
+      expect.any(Function),
+    )
+    expect(context.route).toHaveBeenCalledWith(
+      SPONSOR_REMOTE_CATALOG_V5_URL,
+      expect.any(Function),
+    )
+  })
+
+  it("serves a deterministic empty sponsor catalog for E2E pages", async () => {
+    const context = {
+      route: vi.fn(),
+    } as any
+
+    await stubSponsorRemoteCatalog(context)
+
+    const [, handler] = context.route.mock.calls[0]!
+    const route = {
+      fulfill: vi.fn(),
+    }
+
+    await handler(route)
+
+    expect(route.fulfill).toHaveBeenCalledWith({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
+        items: [],
+      }),
+    })
   })
 })
