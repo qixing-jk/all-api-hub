@@ -1,4 +1,3 @@
-import { DialogTitle } from "@headlessui/react"
 import {
   ArrowTopRightOnSquareIcon,
   KeyIcon,
@@ -172,6 +171,9 @@ export function ApiCredentialProfileDialog({
   ])
 
   const isEditMode = Boolean(profile)
+  const dialogTitle = isEditMode
+    ? t("apiCredentialProfiles:dialog.editTitle")
+    : t("apiCredentialProfiles:dialog.addTitle")
 
   const [name, setName] = useState("")
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
@@ -449,6 +451,7 @@ export function ApiCredentialProfileDialog({
         closeOnEsc={!isSaving}
         showCloseButton={!isSaving}
         size="lg"
+        title={dialogTitle}
         panelTestId={API_CREDENTIAL_PROFILES_TEST_IDS.dialog}
         header={
           <div className="flex min-w-0 items-center gap-3">
@@ -457,11 +460,9 @@ export function ApiCredentialProfileDialog({
             ) : (
               <PlusIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             )}
-            <DialogTitle className="dark:text-dark-text-primary truncate text-lg font-semibold text-gray-900">
-              {isEditMode
-                ? t("apiCredentialProfiles:dialog.editTitle")
-                : t("apiCredentialProfiles:dialog.addTitle")}
-            </DialogTitle>
+            <h2 className="dark:text-dark-text-primary truncate text-lg font-semibold text-gray-900">
+              {dialogTitle}
+            </h2>
           </div>
         }
         footer={

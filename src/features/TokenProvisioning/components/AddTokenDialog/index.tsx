@@ -290,6 +290,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         isOpen={isOpen}
         onClose={handleClose}
         size="lg"
+        title={isEditMode ? t("dialog.editToken") : t("dialog.addToken")}
         header={<DialogHeader isEditMode={isEditMode} />}
         panelTestId={TOKEN_PROVISIONING_TEST_IDS.addTokenDialog}
         footer={

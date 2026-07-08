@@ -10,7 +10,7 @@ import { ToasterPortalHost } from "../toast/ToasterPortal"
 import { FloatingLayerProvider } from "./floating-layer"
 
 /**
- * Dialog provides a Radix-based modal root to manage open/close state.
+ * Dialog provides the preferred Radix/shadcn modal root for new dialogs.
  */
 function Dialog({
   ...props

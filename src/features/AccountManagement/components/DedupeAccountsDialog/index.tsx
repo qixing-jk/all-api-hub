@@ -1,4 +1,3 @@
-import { DialogTitle } from "@headlessui/react"
 import { Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
@@ -242,13 +241,14 @@ export default function DedupeAccountsDialog({
         closeOnEsc={!isWorking}
         showCloseButton={!isWorking}
         size="lg"
+        title={t("ui:dialog.dedupeAccounts.title")}
         header={
           <div className="flex min-w-0 flex-col gap-1 pr-8">
             <div className="flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
-              <DialogTitle className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+              <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
                 {t("ui:dialog.dedupeAccounts.title")}
-              </DialogTitle>
+              </h2>
             </div>
             <p className="dark:text-dark-text-secondary text-sm text-gray-500">
               {t("ui:dialog.dedupeAccounts.description")}

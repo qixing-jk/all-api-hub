@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import * as React from "react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import {
   Modal,
@@ -117,6 +117,94 @@ function ModalComboboxHarness() {
 }
 
 describe("floating layer primitives inside dialogs", () => {
+  it("keeps Modal open when Escape closing is disabled", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(
+      <Modal isOpen={true} onClose={onClose} closeOnEsc={false}>
+        <button type="button">Inside modal</button>
+      </Modal>,
+    )
+
+    await screen.findByRole("dialog")
+
+    await user.keyboard("{Escape}")
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it("keeps Modal open when backdrop closing is disabled", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(
+      <Modal isOpen={true} onClose={onClose} closeOnBackdropClick={false}>
+        <button type="button">Inside modal</button>
+      </Modal>,
+    )
+
+    await screen.findByRole("dialog")
+
+    const overlay = document.querySelector('[data-slot="modal-overlay"]')
+    expect(overlay).toBeInTheDocument()
+
+    await user.click(overlay as HTMLElement)
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it("requests Modal close when clicking the visual backdrop around the panel", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(
+      <Modal isOpen={true} onClose={onClose}>
+        <button type="button">Inside modal</button>
+      </Modal>,
+    )
+
+    await screen.findByRole("dialog")
+
+    const positioner = document.querySelector('[data-slot="modal-positioner"]')
+    expect(positioner).toBeInTheDocument()
+
+    await user.click(positioner as HTMLElement)
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not request Modal close when selecting an item from a nested Select", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(
+      <Modal isOpen={true} onClose={onClose}>
+        <Select defaultValue="alpha">
+          <SelectTrigger
+            aria-label="Select without modal close"
+            className="w-48"
+          >
+            <SelectValue placeholder="Choose a value" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="alpha">Alpha</SelectItem>
+            <SelectItem value="beta">Beta</SelectItem>
+          </SelectContent>
+        </Select>
+      </Modal>,
+    )
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Select without modal close",
+      }),
+    )
+    await user.click(await screen.findByRole("option", { name: "Beta" }))
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it("uses the modal-contained layer for select content inside Modal", async () => {
     const user = userEvent.setup()
 

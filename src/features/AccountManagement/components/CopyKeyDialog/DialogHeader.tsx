@@ -1,4 +1,3 @@
-import { DialogTitle } from "@headlessui/react"
 import { KeyIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
@@ -19,9 +18,9 @@ export function DialogHeader({ account }: DialogHeaderProps) {
       <div className="flex items-center space-x-3">
         <KeyIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
         <div>
-          <DialogTitle className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+          <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
             {t("dialog.copyKey.title")}
-          </DialogTitle>
+          </h2>
           <p className="dark:text-dark-text-secondary mt-0.5 text-xs text-gray-500">
             {account?.name}
           </p>

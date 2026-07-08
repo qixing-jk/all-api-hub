@@ -1,4 +1,3 @@
-import { DialogTitle } from "@headlessui/react"
 import { TrashIcon } from "@heroicons/react/24/outline"
 import type { ReactNode } from "react"
 
@@ -81,6 +80,7 @@ export function DestructiveConfirmDialog({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      title={title}
       closeOnBackdropClick={!isWorking}
       closeOnEsc={!isWorking}
       showCloseButton={!isWorking}
@@ -89,9 +89,9 @@ export function DestructiveConfirmDialog({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <TrashIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
-            <DialogTitle className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+            <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
               {title}
-            </DialogTitle>
+            </h2>
           </div>
         </div>
       }

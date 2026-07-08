@@ -148,6 +148,10 @@ export default function AccountDialog({
     onRequestCookieAuthPermissions: handlers.handleRequestCookieAuthPermissions,
   }
   const currentSitePolicy = getAccountDialogSitePolicy(state.siteType)
+  const dialogTitle =
+    mode === DIALOG_MODES.ADD
+      ? tAccountDialog("title.add")
+      : tAccountDialog("title.edit")
   const siteInfoInputProps: ComponentProps<typeof SiteInfoInput> =
     showEntryAuthTypeSelector
       ? {
@@ -206,6 +210,7 @@ export default function AccountDialog({
         isOpen={isOpen}
         onClose={handlers.handleClose}
         size="lg"
+        title={dialogTitle}
         panelTestId={ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog}
         header={<DialogHeader mode={mode} />}
         footer={

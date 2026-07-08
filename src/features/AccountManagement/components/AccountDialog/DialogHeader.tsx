@@ -1,4 +1,3 @@
-import { DialogTitle } from "@headlessui/react"
 import { PencilIcon, SparklesIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
@@ -26,9 +25,9 @@ export default function DialogHeader({ mode }: DialogHeaderProps) {
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
         <Icon className={`h-5 w-5 ${iconClass}`} />
-        <DialogTitle className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+        <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
           {title}
-        </DialogTitle>
+        </h2>
       </div>
       {/* Modal provides close button */}
     </div>
