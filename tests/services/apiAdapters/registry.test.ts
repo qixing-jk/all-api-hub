@@ -47,6 +47,14 @@ const expectAccountCompletionCapability = (
   })
 }
 
+const expectInviteLinkCapability = (
+  capabilities: ReturnType<typeof getSiteTypeCapabilities>,
+) => {
+  expect(capabilities.account?.inviteLink).toEqual({
+    fetchInviteLink: expect.any(Function),
+  })
+}
+
 const expectKeyManagementCapability = (
   capabilities: ReturnType<typeof getSiteTypeCapabilities>,
 ) => {
@@ -152,6 +160,7 @@ describe("apiAdapters registry", () => {
       expectAccountDataCapability(capabilities)
       expectAccountBootstrapCapability(capabilities)
       expectAccountCompletionCapability(capabilities)
+      expectInviteLinkCapability(capabilities)
       expectKeyManagementCapability(capabilities)
       expectTokenProvisioningCapability(capabilities)
       expectAccountRefreshCapability(capabilities)

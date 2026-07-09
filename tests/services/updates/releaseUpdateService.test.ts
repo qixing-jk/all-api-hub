@@ -93,7 +93,7 @@ describe("releaseUpdateService", () => {
       .fn()
       .mockResolvedValue({ installType: "normal" })
 
-    globalThis.fetch = vi.fn()
+    globalThis.fetch = vi.fn() as unknown as typeof fetch
   })
 
   afterEach(() => {

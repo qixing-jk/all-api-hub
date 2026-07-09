@@ -9,6 +9,7 @@ import { createNewApiAccountBootstrap } from "./accountBootstrap"
 import { newApiAccountCompletion } from "./accountCompletion"
 import { createNewApiAccountData } from "./accountData"
 import { createNewApiAccountRefresh } from "./accountRefresh"
+import { createNewApiInviteLink } from "./inviteLink"
 import { createNewApiKeyManagement } from "./keyManagement"
 import { createNewApiModelPricing } from "./modelPricing"
 import { createNewApiRedemption } from "./redemption"
@@ -29,6 +30,7 @@ export const createNewApiCapabilities = (
     data: createNewApiAccountData(siteType),
     bootstrap: createNewApiAccountBootstrap(siteType),
     completion: newApiAccountCompletion,
+    inviteLink: createNewApiInviteLink(),
     keyManagement: createNewApiKeyManagement(siteType),
     tokenProvisioning: createNewApiTokenProvisioning(),
     refresh: createNewApiAccountRefresh(siteType),

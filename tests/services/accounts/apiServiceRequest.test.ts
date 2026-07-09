@@ -8,10 +8,12 @@ import {
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import {
   canCreateDisplayAccountTokens,
+  canFetchDisplayAccountInviteLink,
   canManageDisplayAccountTokens,
   createAccountApiRequestFromStoredAccount,
   createDisplayAccountApiContext,
   createDisplayAccountRequestContext,
+  fetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
   fetchDisplayAccountTokens,
   getInvalidTokenPayloadLogContext,
@@ -91,6 +93,7 @@ const buildStoredAccount = (overrides: Record<string, unknown> = {}) => ({
 
 describe("fetchDisplayAccountTokens", () => {
   let fetchTokens: ReturnType<typeof vi.fn>
+  let fetchInviteLink: ReturnType<typeof vi.fn>
   let createToken: ReturnType<typeof vi.fn>
   let updateToken: ReturnType<typeof vi.fn>
   let resolveTokenKey: ReturnType<typeof vi.fn>
@@ -118,6 +121,9 @@ describe("fetchDisplayAccountTokens", () => {
   let capabilities: {
     siteType: string
     account?: {
+      inviteLink?: {
+        fetchInviteLink: typeof fetchInviteLink
+      }
       keyManagement?: typeof keyManagement
       serviceCredential?: {
         fetch: typeof fetchServiceCredential
@@ -129,6 +135,7 @@ describe("fetchDisplayAccountTokens", () => {
 
   beforeEach(() => {
     fetchTokens = vi.fn()
+    fetchInviteLink = vi.fn()
     createToken = vi.fn()
     updateToken = vi.fn()
     resolveTokenKey = vi.fn()
@@ -155,7 +162,13 @@ describe("fetchDisplayAccountTokens", () => {
     }
     capabilities = {
       siteType: "new-api",
-      account: { keyManagement, tokenProvisioning },
+      account: {
+        inviteLink: {
+          fetchInviteLink,
+        },
+        keyManagement,
+        tokenProvisioning,
+      },
     }
 
     vi.mocked(getSiteTypeCapabilities).mockReset()
@@ -291,6 +304,20 @@ describe("fetchDisplayAccountTokens", () => {
     expect(
       createDisplayAccountRequestContext(ACCOUNT as any).request,
     ).not.toHaveProperty("cookieAuthSessionCookie")
+  })
+
+  it("fetches invite links through the site invite-link capability", async () => {
+    fetchInviteLink.mockResolvedValueOnce(
+      "https://example.com/register?aff=invite-code",
+    )
+
+    await expect(fetchDisplayAccountInviteLink(ACCOUNT as any)).resolves.toBe(
+      "https://example.com/register?aff=invite-code",
+    )
+
+    expect(fetchInviteLink).toHaveBeenCalledWith({
+      request: expect.objectContaining(REQUEST),
+    })
   })
 
   it("keeps cookie-auth sessions in request auth for display snapshots", () => {
@@ -1006,6 +1033,19 @@ describe("fetchDisplayAccountTokens", () => {
     ).toThrow("tokenProvisioning is not implemented for unsupported")
   })
 
+  it("throws when adapter invite-link loading is not implemented", async () => {
+    const { requireDisplayAccountInviteLink } = await import(
+      "~/services/accounts/utils/apiServiceRequest"
+    )
+
+    expect(() =>
+      requireDisplayAccountInviteLink(
+        { siteType: "unsupported" } as any,
+        undefined,
+      ),
+    ).toThrow("inviteLink is not implemented for unsupported")
+  })
+
   it("only allows token management for enabled accounts with complete auth context", () => {
     expect(canManageDisplayAccountTokens(null)).toBe(false)
     expect(
@@ -1083,6 +1123,36 @@ describe("fetchDisplayAccountTokens", () => {
       canCreateDisplayAccountTokens({
         ...ACCOUNT,
         siteType: SITE_TYPES.SHAREDCHAT,
+      } as any),
+    ).toBe(false)
+  })
+
+  it("only allows invite-link loading when the account has capability and valid auth context", () => {
+    expect(canFetchDisplayAccountInviteLink(null)).toBe(false)
+    expect(canFetchDisplayAccountInviteLink(ACCOUNT as any)).toBe(true)
+
+    expect(
+      canFetchDisplayAccountInviteLink({
+        ...ACCOUNT,
+        disabled: true,
+      } as any),
+    ).toBe(false)
+    expect(
+      canFetchDisplayAccountInviteLink({
+        ...ACCOUNT,
+        token: "   ",
+      } as any),
+    ).toBe(false)
+
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: "unsupported",
+      account: {},
+    } as any)
+
+    expect(
+      canFetchDisplayAccountInviteLink({
+        ...ACCOUNT,
+        siteType: "unsupported",
       } as any),
     ).toBe(false)
   })

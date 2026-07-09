@@ -50,6 +50,13 @@
   "bulk": {
     "clearAll": "Borrar toda la selección",
     "clearVisible": "Borrar selección visible",
+    "copyInviteLinks": "Copiar enlaces de invitación",
+    "copyInviteLinksFailed": "No se pudieron obtener los enlaces de invitación. Inténtalo de nuevo más tarde.",
+    "copyInviteLinksPartialSuccess": "Se copiaron {{successCount}} enlaces de invitación. {{failureCount}} fallaron, {{unsupportedCount}} no son compatibles y {{skippedCount}} se omitieron.",
+    "copyInviteLinksSuccess_one": "Se copió {{count}} enlace de invitación.",
+    "copyInviteLinksSuccess_many": "Se copiaron {{count}} enlaces de invitación.",
+    "copyInviteLinksSuccess_other": "Se copiaron {{count}} enlaces de invitación.",
+    "copyInviteLinksUnsupported": "La selección actual no admite enlaces de invitación.",
     "deleteConfirmAction": "Eliminar seleccionadas",
     "deleteConfirmDescription_one": "Estás por eliminar {{count}} cuenta seleccionada. Revisa la selección con cuidado antes de confirmar.",
     "deleteConfirmDescription_many": "Estás por eliminar {{count}} cuentas seleccionadas. Revisa la selección con cuidado antes de confirmar.",

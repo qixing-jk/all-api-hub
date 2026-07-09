@@ -42,10 +42,15 @@ const {
   handleAddAccountClickMock,
   handleDeleteAccountMock,
   handleDeleteAccountsMock,
+  fetchDisplayAccountInviteLinkMock,
   handleSetAccountsDisabledMock,
   startProductAnalyticsActionMock,
+  clipboardWriteTextMock,
+  toastErrorMock,
+  toastSuccessMock,
   trackProductAnalyticsActionStartedMock,
   trackProductAnalyticsActionCompletedMock,
+  canFetchDisplayAccountInviteLinkMock,
   dndState,
   sortableKeyboardCoordinatesMock,
   sortableReturnState,
@@ -57,10 +62,15 @@ const {
   handleAddAccountClickMock: vi.fn(),
   handleDeleteAccountMock: vi.fn(),
   handleDeleteAccountsMock: vi.fn(),
+  fetchDisplayAccountInviteLinkMock: vi.fn(),
   handleSetAccountsDisabledMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
+  clipboardWriteTextMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
   trackProductAnalyticsActionCompletedMock: vi.fn(),
+  canFetchDisplayAccountInviteLinkMock: vi.fn(),
   dndState: {
     onDragEnd: undefined as ((event: any) => void) | undefined,
   },
@@ -279,9 +289,23 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
   }
 })
 
+vi.mock("react-hot-toast", () => ({
+  default: {
+    success: toastSuccessMock,
+    error: toastErrorMock,
+  },
+}))
+
 vi.mock("~/hooks/useMediaQuery", () => ({
   useIsDesktop: () => false,
   useIsSmallScreen: () => false,
+}))
+
+vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  canFetchDisplayAccountInviteLink: (...args: unknown[]) =>
+    canFetchDisplayAccountInviteLinkMock(...args),
+  fetchDisplayAccountInviteLink: (...args: unknown[]) =>
+    fetchDisplayAccountInviteLinkMock(...args),
 }))
 
 vi.mock(
@@ -497,6 +521,20 @@ describe("AccountList", () => {
     handleSetAccountsDisabledMock.mockResolvedValue({
       updatedCount: 0,
       updatedIds: [],
+    })
+    canFetchDisplayAccountInviteLinkMock.mockImplementation(
+      (account: { siteType?: string }) => account.siteType === "new-api",
+    )
+    fetchDisplayAccountInviteLinkMock.mockImplementation(
+      async (account: { id: string; baseUrl: string }) =>
+        `${account.baseUrl}/register?aff=${account.id}`,
+    )
+    clipboardWriteTextMock.mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get: () => ({
+        writeText: clipboardWriteTextMock,
+      }),
     })
     mockUseUserPreferencesContext.mockReturnValue({
       showTodayCashflow: true,
@@ -1530,5 +1568,152 @@ describe("AccountList", () => {
     expect(completionPayload).not.toHaveProperty("error")
     expect(completionPayload).not.toHaveProperty("message")
     expect(completionPayload).not.toHaveProperty("accountIds")
+  })
+
+  it("disables bulk invite-link copy when no selected account supports it", async () => {
+    const user = userEvent.setup()
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(screen.getAllByRole("checkbox")[0])
+
+    expect(
+      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
+    ).toBeDisabled()
+  })
+
+  it("copies invite links for supported selected accounts", async () => {
+    const user = userEvent.setup()
+    const inviteA = buildDisplaySiteData({
+      id: "invite-a",
+      name: "Invite A",
+      disabled: false,
+      siteType: "new-api",
+      baseUrl: "https://invite-a.example.com",
+    })
+    const inviteB = buildDisplaySiteData({
+      id: "invite-b",
+      name: "Invite B",
+      disabled: false,
+      siteType: "new-api",
+      baseUrl: "https://invite-b.example.com",
+    })
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [inviteA, inviteB],
+        displayData: [inviteA, inviteB],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(screen.getAllByRole("checkbox")[1])
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
+    )
+
+    await waitFor(() => {
+      expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(2)
+      expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "invite-a" }),
+      )
+      expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "invite-b" }),
+      )
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "account:bulk.copyInviteLinksSuccess",
+      )
+      expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountInviteLinks,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountInviteLinks,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          itemCount: 2,
+          selectedCount: 2,
+          successCount: 2,
+          failureCount: 0,
+          skippedCount: 0,
+        },
+      })
+    })
+  })
+
+  it("reports partial invite-link copy when the selection mixes supported and unsupported accounts", async () => {
+    const user = userEvent.setup()
+    const supported = buildDisplaySiteData({
+      id: "invite-supported",
+      name: "Invite Supported",
+      disabled: false,
+      siteType: "new-api",
+      baseUrl: "https://invite-supported.example.com",
+    })
+    const unsupported = buildDisplaySiteData({
+      id: "invite-unsupported",
+      name: "Invite Unsupported",
+      disabled: false,
+      siteType: "one-api",
+      baseUrl: "https://invite-unsupported.example.com",
+    })
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [supported, unsupported],
+        displayData: [supported, unsupported],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(screen.getAllByRole("checkbox")[1])
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
+    )
+
+    expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(1)
+    expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "invite-supported" }),
+    )
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "account:bulk.copyInviteLinksPartialSuccess",
+    )
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountInviteLinks,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+      insights: {
+        itemCount: 1,
+        selectedCount: 2,
+        successCount: 1,
+        failureCount: 0,
+        skippedCount: 1,
+      },
+    })
   })
 })

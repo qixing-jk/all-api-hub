@@ -5,6 +5,7 @@ import type { AccountBootstrapCapability } from "./accountBootstrap"
 import type { AccountCompletionCapability } from "./accountCompletion"
 import type { AccountDataCapability } from "./accountData"
 import type { AccountRefreshCapability } from "./accountRefresh"
+import type { InviteLinkCapability } from "./inviteLink"
 import type { KeyManagementCapability } from "./keyManagement"
 import type {
   ManagedSiteChannelDraftsCapability,
@@ -39,6 +40,7 @@ export type SiteTypeCapabilities = {
     data?: AccountDataCapability
     bootstrap?: AccountBootstrapCapability
     completion?: AccountCompletionCapability
+    inviteLink?: InviteLinkCapability
     keyManagement?: KeyManagementCapability
     serviceCredential?: ServiceCredentialCapability
     tokenProvisioning?: TokenProvisioningCapability

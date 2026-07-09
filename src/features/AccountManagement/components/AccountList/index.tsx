@@ -6,6 +6,7 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -38,6 +39,10 @@ import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healt
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
+import {
+  canFetchDisplayAccountInviteLink,
+  fetchDisplayAccountInviteLink,
+} from "~/services/accounts/utils/apiServiceRequest"
 import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionStarted,
@@ -97,6 +102,18 @@ function moveAccountId(ids: string[], fromIndex: number, toIndex: number) {
   const [movedId] = nextIds.splice(fromIndex, 1)
   nextIds.splice(toIndex, 0, movedId)
   return nextIds
+}
+
+function formatInviteLinkClipboardLine(
+  account: Pick<DisplaySiteData, "name" | "baseUrl">,
+  inviteLink: string,
+) {
+  const label =
+    typeof account.name === "string" && account.name.trim().length > 0
+      ? account.name.trim()
+      : account.baseUrl
+
+  return `${label}: ${inviteLink}`
 }
 
 interface AccountListFilterState {
@@ -319,6 +336,8 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [isBulkDisabling, setIsBulkDisabling] = useState(false)
+  const [isBulkCopyingInviteLinks, setIsBulkCopyingInviteLinks] =
+    useState(false)
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [siteTypeFilter, setSiteTypeFilter] = useState<string | null>(null)
@@ -548,6 +567,10 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     () => selectedAccounts.filter((account) => account.disabled !== true),
     [selectedAccounts],
   )
+  const selectedInviteLinkAccounts = useMemo(
+    () => selectedEnabledAccounts.filter(canFetchDisplayAccountInviteLink),
+    [selectedEnabledAccounts],
+  )
   const bulkDeletePreviewAccounts = useMemo(
     () => selectedAccounts.slice(0, 6),
     [selectedAccounts],
@@ -583,7 +606,8 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     disabledFilter !== null
   const dragDisabled = inSearchMode || !isManualSortFeatureEnabled || isBulkMode
   const handleLabel = t("account:list.dragHandle")
-  const isBulkBusy = isBulkDeleting || isBulkDisabling
+  const isBulkBusy =
+    isBulkDeleting || isBulkDisabling || isBulkCopyingInviteLinks
   const shouldRenderSortableList =
     isManualSortFeatureEnabled &&
     !dragDisabled &&
@@ -721,6 +745,117 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       throw error
     } finally {
       setIsBulkDisabling(false)
+    }
+  }
+
+  const handleBulkCopyInviteLinks = async () => {
+    if (selectedInviteLinkAccounts.length === 0 || isBulkBusy) {
+      return
+    }
+
+    const itemCount = selectedInviteLinkAccounts.length
+    const selectedCount = selectedAccountIds.length
+    const unsupportedCount = Math.max(
+      0,
+      selectedEnabledAccounts.length - itemCount,
+    )
+    const skippedCount = Math.max(
+      0,
+      selectedAccounts.length - selectedEnabledAccounts.length,
+    )
+    const analyticsContext = {
+      ...accountListAnalyticsBaseContext,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountInviteLinks,
+    }
+    const tracker = startProductAnalyticsAction(analyticsContext)
+
+    setIsBulkCopyingInviteLinks(true)
+    try {
+      const results = await Promise.allSettled(
+        selectedInviteLinkAccounts.map(async (account) => ({
+          account,
+          inviteLink: await fetchDisplayAccountInviteLink(account),
+        })),
+      )
+      const fulfilledResults = results.filter(
+        (
+          result,
+        ): result is PromiseFulfilledResult<{
+          account: DisplaySiteData
+          inviteLink: string
+        }> => result.status === "fulfilled",
+      )
+      const successCount = fulfilledResults.length
+      const failureCount = itemCount - successCount
+
+      if (successCount > 0) {
+        await navigator.clipboard.writeText(
+          fulfilledResults
+            .map(({ value }) =>
+              formatInviteLinkClipboardLine(value.account, value.inviteLink),
+            )
+            .join("\n"),
+        )
+      }
+
+      tracker.complete(
+        successCount > 0 && failureCount === 0 && unsupportedCount === 0
+          ? PRODUCT_ANALYTICS_RESULTS.Success
+          : successCount === 0 && failureCount === 0
+            ? PRODUCT_ANALYTICS_RESULTS.Skipped
+            : PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          ...(failureCount > 0 || unsupportedCount > 0
+            ? {
+                errorCategory:
+                  failureCount > 0
+                    ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+                    : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+              }
+            : {}),
+          insights: {
+            itemCount,
+            selectedCount,
+            successCount,
+            failureCount,
+            skippedCount: skippedCount + unsupportedCount,
+          },
+        },
+      )
+
+      if (successCount === 0) {
+        toast.error(
+          unsupportedCount > 0 && failureCount === 0
+            ? t("account:bulk.copyInviteLinksUnsupported")
+            : t("account:bulk.copyInviteLinksFailed"),
+        )
+        return
+      }
+
+      toast.success(
+        failureCount === 0 && unsupportedCount === 0 && skippedCount === 0
+          ? t("account:bulk.copyInviteLinksSuccess", { count: successCount })
+          : t("account:bulk.copyInviteLinksPartialSuccess", {
+              successCount,
+              failureCount,
+              unsupportedCount,
+              skippedCount,
+            }),
+      )
+    } catch (error) {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount,
+          selectedCount,
+          successCount: 0,
+          failureCount: itemCount,
+          skippedCount: skippedCount + unsupportedCount,
+        },
+      })
+      throw error
+    } finally {
+      setIsBulkCopyingInviteLinks(false)
     }
   }
 
@@ -1150,6 +1285,18 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
                     loading={isBulkDisabling}
                   >
                     {t("account:bulk.disableSelected")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleBulkCopyInviteLinks()}
+                    disabled={
+                      selectedInviteLinkAccounts.length === 0 || isBulkBusy
+                    }
+                    loading={isBulkCopyingInviteLinks}
+                  >
+                    {t("account:bulk.copyInviteLinks")}
                   </Button>
                   <Button
                     type="button"

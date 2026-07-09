@@ -329,6 +329,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   CopyModelName: "copy_model_name",
   CopySelectedModelKey: "copy_selected_model_key",
   CopyAccountSiteUrl: "copy_account_site_url",
+  CopySelectedAccountInviteLinks: "copy_selected_account_invite_links",
   CopyAccountTokenKey: "copy_account_token_key",
   CopyVisibleModelNames: "copy_visible_model_names",
   CreateAccount: "create_account",

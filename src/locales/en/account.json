@@ -50,6 +50,12 @@
   "bulk": {
     "clearAll": "Clear all selection",
     "clearVisible": "Clear visible selection",
+    "copyInviteLinks": "Copy invite links",
+    "copyInviteLinksFailed": "Failed to fetch invite links. Please try again later.",
+    "copyInviteLinksPartialSuccess": "Copied {{successCount}} invite links. {{failureCount}} failed, {{unsupportedCount}} unsupported, {{skippedCount}} skipped.",
+    "copyInviteLinksSuccess_one": "Copied {{count}} invite link.",
+    "copyInviteLinksSuccess_other": "Copied {{count}} invite links.",
+    "copyInviteLinksUnsupported": "The current selection does not support invite links.",
     "deleteConfirmAction": "Delete selected",
     "deleteConfirmDescription_one": "You are about to delete {{count}} selected account. Review the selection carefully before confirming.",
     "deleteConfirmDescription_other": "You are about to delete {{count}} selected accounts. Review the selection carefully before confirming.",

@@ -16,7 +16,7 @@ describe("ModelMetadataService", () => {
       json: async () => ({
         models: [{ id: "gpt-4", name: "GPT-4", providerId: "openai" }],
       }),
-    })
+    }) as unknown as typeof fetch
   })
 
   it("initializes without errors", async () => {
@@ -49,7 +49,7 @@ describe("ModelMetadataService", () => {
           },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -72,7 +72,7 @@ describe("ModelMetadataService", () => {
           },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -99,7 +99,7 @@ describe("ModelMetadataService", () => {
           },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -122,7 +122,7 @@ describe("ModelMetadataService", () => {
           { id: "gpt-4o-mini", name: "GPT-4o mini", providerId: "openai" },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -144,7 +144,7 @@ describe("ModelMetadataService", () => {
           },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -161,7 +161,7 @@ describe("ModelMetadataService", () => {
         new Promise((resolve) => {
           resolveFetch = resolve
         }),
-    ) as any
+    ) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     const firstInit = modelMetadataService.initialize()
@@ -184,7 +184,9 @@ describe("ModelMetadataService", () => {
   })
 
   it("uses bundled fallback metadata when the first refresh fails", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error("network down"))
+    global.fetch = vi.fn().mockRejectedValue(
+      new Error("network down"),
+    ) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -216,7 +218,7 @@ describe("ModelMetadataService", () => {
         ok: false,
         status: 503,
         statusText: "Service Unavailable",
-      })
+      }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -240,7 +242,7 @@ describe("ModelMetadataService", () => {
           provider_id: "acme-labs",
         },
       ],
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -262,7 +264,7 @@ describe("ModelMetadataService", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => "invalid payload",
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -285,7 +287,7 @@ describe("ModelMetadataService", () => {
           id: "gpt-4o",
         },
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -323,7 +325,7 @@ describe("ModelMetadataService", () => {
           },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -392,7 +394,7 @@ describe("ModelMetadataService", () => {
           },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     await modelMetadataService.initialize()
 
@@ -420,7 +422,7 @@ describe("ModelMetadataService", () => {
           },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()

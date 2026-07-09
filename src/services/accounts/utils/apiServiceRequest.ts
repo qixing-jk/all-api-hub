@@ -17,6 +17,7 @@ import {
 } from "~/services/accounts/keyProductCapabilities"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
+import type { InviteLinkCapability } from "~/services/apiAdapters/contracts/inviteLink"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import type { ServiceCredentialCapability } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
@@ -66,6 +67,21 @@ export const requireDisplayAccountTokenProvisioning = (
   }
 
   return tokenProvisioning
+}
+
+export const createMissingInviteLinkCapabilityError = (
+  siteType: string,
+): Error => new Error(`inviteLink is not implemented for ${siteType}`)
+
+export const requireDisplayAccountInviteLink = (
+  account: Pick<DisplaySiteData, "siteType">,
+  inviteLink: InviteLinkCapability | undefined,
+): InviteLinkCapability => {
+  if (!inviteLink) {
+    throw createMissingInviteLinkCapabilityError(account.siteType)
+  }
+
+  return inviteLink
 }
 
 export class InvalidTokenPayloadError extends Error {
@@ -143,6 +159,7 @@ export interface AccountApiContext {
 
 export interface DisplayAccountApiCapabilityContext extends AccountApiContext {
   capabilities: SiteTypeCapabilities
+  inviteLink?: InviteLinkCapability
   keyManagement: KeyManagementCapability | undefined
   serviceCredential: ServiceCredentialCapability | undefined
   tokenProvisioning: TokenProvisioningCapability | undefined
@@ -319,10 +336,24 @@ export const createDisplayAccountApiContext = (
   return {
     ...context,
     capabilities,
+    inviteLink: accountCapabilities?.inviteLink,
     keyManagement: accountCapabilities?.keyManagement,
     serviceCredential: accountCapabilities?.serviceCredential,
     tokenProvisioning: accountCapabilities?.tokenProvisioning,
   }
+}
+
+/**
+ * Fetches the current invite link for a display account.
+ */
+export async function fetchDisplayAccountInviteLink(
+  account: DisplayAccountApiSnapshot,
+): Promise<string> {
+  const { inviteLink, request } = createDisplayAccountApiContext(account)
+
+  return requireDisplayAccountInviteLink(account, inviteLink).fetchInviteLink({
+    request,
+  })
 }
 
 export interface ResolveDisplayAccountTokenForSecretOptions {
@@ -491,3 +522,25 @@ export const canManageDisplayAccountTokens = (
 export const canCreateDisplayAccountTokens = (
   account: DisplaySiteData | null | undefined,
 ): account is DisplaySiteData => canCreateAccountApiTokens(account)
+
+/**
+ * Guard used by invite-link entry points before enabling fetch/copy actions.
+ */
+export const canFetchDisplayAccountInviteLink = (
+  account: DisplaySiteData | null | undefined,
+): account is DisplaySiteData => {
+  if (!account || account.disabled === true) {
+    return false
+  }
+
+  if (!getSiteTypeCapabilities(account.siteType).account?.inviteLink) {
+    return false
+  }
+
+  try {
+    createDisplayAccountRequestContext(account)
+    return true
+  } catch {
+    return false
+  }
+}
