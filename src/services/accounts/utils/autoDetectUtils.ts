@@ -217,6 +217,7 @@ export interface AutoDetectErrorProps {
   siteType?: AccountSiteType
   onHelpClick?: () => void
   onActionClick?: () => void
+  onApiCredentialProfilesClick?: () => void
 }
 
 /**

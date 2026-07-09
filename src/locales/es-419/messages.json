@@ -18,7 +18,7 @@
     "forbidden": "Acceso denegado. Confirma si el firewall del sitio web está bloqueando la solicitud",
     "loginThisSite": "Iniciar sesión en este sitio",
     "networkError": "Falló la conexión de red; revisa tu conexión e inténtalo de nuevo",
-    "notFound": "Recurso no encontrado. Confirma si la dirección del sitio ingresada es correcta",
+    "notFound": "No se pudo detectar este sitio automáticamente. Revisa que la dirección sea correcta, o inicia sesión en el sitio de destino y vuelve a intentarlo.",
     "notLoggedIn": "No has iniciado sesión en el sitio actual, o la información de inicio de sesión expiró. No se puede agregar automáticamente. Revisa la documentación de ayuda o haz clic para iniciar sesión primero",
     "serverError": "Error del servidor. Inténtalo de nuevo más tarde",
     "timeout": "Tiempo de espera agotado en la detección automática; intenta agregar manualmente",

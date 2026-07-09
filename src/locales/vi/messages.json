@@ -18,7 +18,7 @@
     "forbidden": "Truy cập bị từ chối. Vui lòng kiểm tra xem tường lửa của trang web có chặn các yêu cầu liên quan hay không.",
     "loginThisSite": "Đăng nhập vào trang web này",
     "networkError": "Kết nối mạng thất bại, vui lòng kiểm tra lại kết nối mạng và thử lại.",
-    "notFound": "Không tìm thấy tài nguyên liên quan, vui lòng xác nhận địa chỉ trang web đã nhập là chính xác.",
+    "notFound": "Không thể tự động nhận dạng trang web này. Hãy kiểm tra địa chỉ có đúng không, hoặc đăng nhập vào trang web đích rồi thử lại.",
     "notLoggedIn": "Bạn chưa đăng nhập vào trang web hiện tại hoặc thông tin đăng nhập đã hết hạn, không thể thêm tự động. Vui lòng đăng nhập trước hoặc xem tài liệu hướng dẫn.",
     "serverError": "Lỗi máy chủ, vui lòng thử lại sau.",
     "timeout": "Nhận dạng tự động quá thời gian, vui lòng thử thêm thủ công.",

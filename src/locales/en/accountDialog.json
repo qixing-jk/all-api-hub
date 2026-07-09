@@ -6,10 +6,11 @@
     "configToManagedSite": "Save and configure in {{managedSite}}",
     "configuring": "Configuring...",
     "confirmAdd": "Confirm Add",
-    "helpDocument": "Help Document",
+    "helpDocument": "Troubleshooting guide",
+    "openApiCredentialProfiles": "Open API credentials",
     "reloadCurrentPage": "Reload current page",
     "reloadExtensionAndRetry": "Reload extension and retry",
-    "reportUnsupportedSite": "Report unsupported site",
+    "reportUnsupportedSite": "Request site support",
     "saveAccount": "Save Account",
     "saveChanges": "Save Changes",
     "workflow": {
@@ -30,6 +31,15 @@
     "description": "{{accountName}} has been saved. AIHubMix API keys are shown only once after creation, so make sure you can copy and save the full key now.",
     "title": "Create an AIHubMix default key?",
     "warningTitle": "The full key is shown only once"
+  },
+  "apiCredentialFallback": {
+    "apiCredentials": {
+      "description": "If you only need to store keys and make API calls right now, use the lighter API credentials path first. After account support is added, add a web account for check-ins, balance refresh, and dashboard sync."
+    },
+    "siteSupport": {
+      "description": "If detection still fails after following the troubleshooting guide, this site may not be supported yet, or this page may not support auto-detection."
+    },
+    "title": "Still not recognized? Try these alternatives"
   },
   "bookmarkImportBatch": {
     "action": "Batch import from bookmarks",

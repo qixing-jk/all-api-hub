@@ -16,6 +16,7 @@ import type { SponsorRecommendation } from "~/features/AccountManagement/sponsor
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
+import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { AuthTypeEnum } from "~/types"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -597,6 +598,35 @@ describe("AccountDialog", () => {
     )
 
     expect(handleOpenBookmarkImport).toHaveBeenCalledTimes(1)
+  })
+
+  it("opens API credential profiles and closes from auto-detect fallback guidance", async () => {
+    const user = userEvent.setup()
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+    mockState.detectionError = {
+      type: AutoDetectErrorType.INVALID_RESPONSE,
+      message: "Detection returned unexpected data",
+    }
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:actions.openApiCredentialProfiles",
+      }),
+    )
+
+    expect(mockOpenApiCredentialProfilesPage).toHaveBeenCalledTimes(1)
+    expect(mockHandlers.handleClose).toHaveBeenCalledTimes(1)
   })
 
   it("disables sponsor recommendations outside the add-account entry phase", () => {

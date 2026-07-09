@@ -6,10 +6,11 @@
     "configToManagedSite": "Lưu và cấu hình vào {{managedSite}}",
     "configuring": "Đang cấu hình...",
     "confirmAdd": "Xác nhận thêm",
-    "helpDocument": "Tài liệu hướng dẫn",
+    "helpDocument": "Hướng dẫn khắc phục",
+    "openApiCredentialProfiles": "Mở API Credentials",
     "reloadCurrentPage": "Làm mới trang hiện tại",
     "reloadExtensionAndRetry": "Tải lại tiện ích rồi thử lại",
-    "reportUnsupportedSite": "Báo cáo trang web chưa được hỗ trợ",
+    "reportUnsupportedSite": "Yêu cầu hỗ trợ trang",
     "saveAccount": "Lưu tài khoản",
     "saveChanges": "Lưu thay đổi",
     "workflow": {
@@ -30,6 +31,15 @@
     "description": "{{accountName}} đã được lưu. AIHubMix API Key sẽ chỉ hiển thị một lần sau khi tạo, vui lòng xác nhận bạn có thể sao chép và lưu toàn bộ API Key ngay bây giờ.",
     "title": "Tạo AIHubMix API Key mặc định?",
     "warningTitle": "Toàn bộ API Key chỉ hiển thị một lần"
+  },
+  "apiCredentialFallback": {
+    "apiCredentials": {
+      "description": "Nếu hiện chỉ cần lưu khóa và gọi API, bạn có thể dùng luồng API Credentials nhẹ hơn trước. Sau khi có hỗ trợ tài khoản, hãy thêm tài khoản web để điểm danh, làm mới số dư và đồng bộ bảng điều khiển."
+    },
+    "siteSupport": {
+      "description": "Nếu sau khi làm theo hướng dẫn khắc phục mà vẫn không nhận dạng được, có thể trang này chưa được hỗ trợ hoặc trang hiện tại không hỗ trợ tự động nhận dạng."
+    },
+    "title": "Vẫn chưa nhận dạng được? Hãy thử các phương án thay thế"
   },
   "bookmarkImportBatch": {
     "action": "Nhập hàng loạt từ dấu trang",
