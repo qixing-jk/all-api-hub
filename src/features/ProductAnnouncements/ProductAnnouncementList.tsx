@@ -1,7 +1,7 @@
-import { ExternalLink } from "lucide-react"
 import type { ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, Button } from "~/components/ui"
 import { cn } from "~/lib/utils"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
@@ -176,7 +176,7 @@ export function ProductAnnouncementList({
                 onClick={() => onOpenCta?.(notice)}
               >
                 <span className="min-w-0 break-words">{cta.label}</span>
-                <ExternalLink className="h-3 w-3 shrink-0" />
+                <WorkflowTransitionIcon className="h-3 w-3 shrink-0" />
               </a>
             ) : null}
           </article>

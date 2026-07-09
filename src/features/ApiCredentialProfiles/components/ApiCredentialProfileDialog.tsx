@@ -1,14 +1,10 @@
-import {
-  ArrowTopRightOnSquareIcon,
-  KeyIcon,
-  PencilIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline"
+import { KeyIcon, PencilIcon, PlusIcon } from "@heroicons/react/24/outline"
 import type { ChangeEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import {
   Button,
   FormField,
@@ -595,7 +591,7 @@ export function ApiCredentialProfileDialog({
                     {t(
                       "apiCredentialProfiles:dialog.actions.openApiKeyCreateUrl",
                     )}
-                    <ArrowTopRightOnSquareIcon
+                    <WorkflowTransitionIcon
                       aria-hidden="true"
                       className="h-4 w-4"
                     />

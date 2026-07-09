@@ -1,8 +1,9 @@
-import { Copy, ExternalLink } from "lucide-react"
+import { Copy } from "lucide-react"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
 import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
@@ -323,7 +324,7 @@ export default function ModelItem(props: ModelItemProps) {
               : undefined
           }
         >
-          <ExternalLink className="h-3 w-3 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300" />
+          <WorkflowTransitionIcon className="h-3 w-3 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300" />
         </IconButton>
       ) : null}
     </>
