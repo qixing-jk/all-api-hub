@@ -54,7 +54,6 @@
     "copyInviteLinksFailed": "招待リンクの取得に失敗しました。後でもう一度お試しください。",
     "copyInviteLinksPartialSuccess": "{{successCount}} 件の招待リンクをコピーしました。{{failureCount}} 件失敗、{{unsupportedCount}} 件未対応、{{skippedCount}} 件スキップ。",
     "copyInviteLinksSuccess_other": "{{count}} 件の招待リンクをコピーしました。",
-    "copyInviteLinksUnsupported": "現在の選択では招待リンクに対応していません。",
     "deleteConfirmAction": "選択したアカウントを削除",
     "deleteConfirmDescription_other": "選択した {{count}} 件のアカウントを削除しようとしています。確認前に選択内容をよく確認してください。",
     "deleteConfirmTitle": "選択したアカウントを削除",

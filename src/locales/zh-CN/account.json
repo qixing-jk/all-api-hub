@@ -54,7 +54,6 @@
     "copyInviteLinksFailed": "获取邀请链接失败，请稍后重试。",
     "copyInviteLinksPartialSuccess": "已复制 {{successCount}} 个邀请链接，{{failureCount}} 个失败，{{unsupportedCount}} 个不支持，{{skippedCount}} 个已跳过。",
     "copyInviteLinksSuccess": "已复制 {{count}} 个邀请链接。",
-    "copyInviteLinksUnsupported": "当前所选账号暂不支持邀请链接。",
     "deleteConfirmAction": "删除已选账号",
     "deleteConfirmDescription": "你将删除 {{count}} 个已选账号。请在确认前仔细检查这些选择。",
     "deleteConfirmTitle": "删除已选账号",

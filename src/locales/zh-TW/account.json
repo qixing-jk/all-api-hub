@@ -54,7 +54,6 @@
     "copyInviteLinksFailed": "取得邀請連結失敗，請稍後再試。",
     "copyInviteLinksPartialSuccess": "已複製 {{successCount}} 個邀請連結，{{failureCount}} 個失敗，{{unsupportedCount}} 個不支援，{{skippedCount}} 個已跳過。",
     "copyInviteLinksSuccess_other": "已複製 {{count}} 個邀請連結。",
-    "copyInviteLinksUnsupported": "目前所選帳號暫不支援邀請連結。",
     "deleteConfirmAction": "刪除已選帳號",
     "deleteConfirmDescription_other": "你將刪除 {{count}} 個已選帳號。請在確認前仔細檢查這些選擇。",
     "deleteConfirmTitle": "刪除已選帳號",

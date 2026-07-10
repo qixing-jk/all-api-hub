@@ -104,6 +104,9 @@ function moveAccountId(ids: string[], fromIndex: number, toIndex: number) {
   return nextIds
 }
 
+/**
+ * Formats one account invite link for the multi-line clipboard payload.
+ */
 function formatInviteLinkClipboardLine(
   account: Pick<DisplaySiteData, "name" | "baseUrl">,
   inviteLink: string,
@@ -749,10 +752,6 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   }
 
   const handleBulkCopyInviteLinks = async () => {
-    if (selectedInviteLinkAccounts.length === 0 || isBulkBusy) {
-      return
-    }
-
     const itemCount = selectedInviteLinkAccounts.length
     const selectedCount = selectedAccountIds.length
     const unsupportedCount = Math.max(
@@ -801,9 +800,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       tracker.complete(
         successCount > 0 && failureCount === 0 && unsupportedCount === 0
           ? PRODUCT_ANALYTICS_RESULTS.Success
-          : successCount === 0 && failureCount === 0
-            ? PRODUCT_ANALYTICS_RESULTS.Skipped
-            : PRODUCT_ANALYTICS_RESULTS.Failure,
+          : PRODUCT_ANALYTICS_RESULTS.Failure,
         {
           ...(failureCount > 0 || unsupportedCount > 0
             ? {
@@ -824,11 +821,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       )
 
       if (successCount === 0) {
-        toast.error(
-          unsupportedCount > 0 && failureCount === 0
-            ? t("account:bulk.copyInviteLinksUnsupported")
-            : t("account:bulk.copyInviteLinksFailed"),
-        )
+        toast.error(t("account:bulk.copyInviteLinksFailed"))
         return
       }
 
@@ -842,7 +835,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
               skippedCount,
             }),
       )
-    } catch (error) {
+    } catch {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
@@ -853,7 +846,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           skippedCount: skippedCount + unsupportedCount,
         },
       })
-      throw error
+      toast.error(t("account:bulk.copyInviteLinksFailed"))
     } finally {
       setIsBulkCopyingInviteLinks(false)
     }
