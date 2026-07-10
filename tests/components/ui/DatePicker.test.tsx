@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import dayjs from "dayjs"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { Calendar } from "~/components/ui/calendar"
 import { DatePicker } from "~/components/ui/DatePicker"
@@ -23,6 +23,14 @@ const labels = {
     preview: "Will set to {{date}}",
   },
 }
+
+const appendedPortalContainers: HTMLElement[] = []
+
+afterEach(() => {
+  for (const portalContainer of appendedPortalContainers.splice(0)) {
+    portalContainer.remove()
+  }
+})
 
 describe("DatePicker", () => {
   it("applies quick expiry presets as canonical YYYY-MM-DD values", async () => {
@@ -93,6 +101,7 @@ describe("DatePicker", () => {
     const onChange = vi.fn()
     const portalContainer = document.createElement("div")
     document.body.appendChild(portalContainer)
+    appendedPortalContainers.push(portalContainer)
 
     render(
       <DatePicker
@@ -341,6 +350,7 @@ describe("DatePicker", () => {
     externalPortalButton.textContent = "Portal action"
     portalContainer.appendChild(externalPortalButton)
     document.body.appendChild(portalContainer)
+    appendedPortalContainers.push(portalContainer)
 
     render(
       <DatePicker
@@ -414,12 +424,6 @@ describe("DatePicker", () => {
     expect(onChange).not.toHaveBeenCalled()
     expect(screen.getByText(labels.naturalInput.invalid)).toBeVisible()
   })
-
-  it("returns null for canonical dates with missing month or day parts", () => {
-    expect(parseDatePickerValue("2026-00-01")).toBeNull()
-    expect(parseDatePickerValue("2026-01-00")).toBeNull()
-    expect(parseDatePickerValue("2026-02-30")).toBeNull()
-  })
 })
 
 describe("Calendar", () => {
@@ -439,5 +443,13 @@ describe("Calendar", () => {
 
     expect(screen.getByRole("grid")).toBeVisible()
     expect(screen.getAllByRole("combobox")).toHaveLength(2)
+  })
+})
+
+describe("datePickerValue", () => {
+  it("returns null for canonical dates with missing month or day parts", () => {
+    expect(parseDatePickerValue("2026-00-01")).toBeNull()
+    expect(parseDatePickerValue("2026-01-00")).toBeNull()
+    expect(parseDatePickerValue("2026-02-30")).toBeNull()
   })
 })
