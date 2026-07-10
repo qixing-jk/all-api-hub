@@ -381,8 +381,57 @@ test("calculates per-key gateway usage from New API admin logs", async (context)
       completionTokens: 25,
       lastUsedAt: 1_750_000_000,
       quotaPerUnit: 500000,
+      scannedLogCount: 2,
+      totalLogCount: null,
+      truncated: false,
+      usageDetailsComplete: true,
+      usageMethod: "log-scan",
     },
   )
+})
+
+test("uses New API database stats for exact independent-channel cost", async (context) => {
+  let statRequests = 0
+  let detailRequests = 0
+  context.mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).includes("/api/status")) {
+      return jsonResponse({ success: true, data: { quota_per_unit: 500000 } })
+    }
+    if (String(url).includes("/api/log/stat")) {
+      statRequests += 1
+      return jsonResponse({ success: true, data: { quota: 1_250_000 } })
+    }
+    detailRequests += 1
+    return jsonResponse({
+      success: true,
+      data: {
+        total: 2001,
+        items: Array.from({ length: 100 }, () => ({
+          quota: 1,
+          prompt_tokens: 2,
+          completion_tokens: 1,
+          created_at: 1_750_000_000,
+        })),
+      },
+    })
+  })
+
+  const usage = await fetchChannelUsage(config, {
+    channelId: 9,
+    startTimestamp: 1_740_000_000,
+  })
+
+  assert.equal(statRequests, 1)
+  assert.equal(detailRequests, 1)
+  assert.equal(usage.spentUsd, 2.5)
+  assert.equal(usage.requestCount, 2001)
+  assert.equal(usage.promptTokens, null)
+  assert.equal(usage.completionTokens, null)
+  assert.equal(usage.scannedLogCount, 100)
+  assert.equal(usage.totalLogCount, 2001)
+  assert.equal(usage.truncated, false)
+  assert.equal(usage.usageDetailsComplete, false)
+  assert.equal(usage.usageMethod, "database-stat")
 })
 
 test("appends a key only when the selected channel is multi-key", async (context) => {

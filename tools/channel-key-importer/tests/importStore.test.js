@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  applyBalanceUsage,
   applyGatewayUsage,
   calculateQuotaUsage,
   keyIdentity,
@@ -42,12 +43,17 @@ test("uses New API gateway logs as the per-key usage source", () => {
       promptTokens: 120,
       completionTokens: 30,
       lastUsedAt: 1_750_000_000,
+      scannedLogCount: 3,
+      truncated: false,
+      quotaPerUnit: 500_000,
     },
   )
 
   assert.equal(updated.spent, 1.25)
   assert.equal(updated.usageStatus, "gateway-usage")
   assert.equal(updated.requestCount, 3)
+  assert.equal(updated.usageLogCount, 3)
+  assert.equal(updated.usageTruncated, false)
 })
 
 test("persists a corrected New API profile with refreshed usage", () => {
@@ -59,6 +65,9 @@ test("persists a corrected New API profile with refreshed usage", () => {
       promptTokens: 0,
       completionTokens: 0,
       lastUsedAt: null,
+      scannedLogCount: 0,
+      truncated: false,
+      quotaPerUnit: 500_000,
     },
     {
       profileId: "current-profile",
@@ -69,4 +78,22 @@ test("persists a corrected New API profile with refreshed usage", () => {
 
   assert.equal(updated.profileId, "current-profile")
   assert.equal(updated.targetName, "内部资源池")
+})
+
+test("keeps gateway usage when an upstream balance refresh arrives", () => {
+  const updated = applyBalanceUsage(
+    {
+      quota: 100,
+      gatewaySpent: 12,
+      spent: 12,
+      usageStatus: "gateway-usage",
+    },
+    70,
+  )
+
+  assert.equal(updated.gatewaySpent, 12)
+  assert.equal(updated.spent, 12)
+  assert.equal(updated.usageStatus, "gateway-usage")
+  assert.equal(updated.upstreamSpent, 30)
+  assert.equal(updated.balanceStatus, "available")
 })

@@ -1,8 +1,21 @@
+import {
+  filterUsageDashboardRecords,
+  filterUsageRecords,
+  gatewaySpent,
+  groupUsageDashboardByDay,
+  groupUsageDashboardByTarget,
+  localDateKey,
+  summarizeUsageDashboard,
+  summarizeUsageRecords,
+  usageState,
+} from "./usageStats.js"
+
 const state = {
   sessionToken: "",
   providers: [],
   profiles: [],
   records: [],
+  schedules: [],
   channelTemplates: [],
   activeProfileId: "",
   profileNameEdited: false,
@@ -17,6 +30,7 @@ const state = {
   pendingInsecureLoginUrl: "",
   credentialTargetUrl: "",
   credentialUserId: "",
+  usageAutoRefreshStarted: false,
 }
 
 const TOKEN_PLACEHOLDER = "粘贴管理员的系统访问令牌"
@@ -79,6 +93,11 @@ const elements = {
   awsGlobalField: $("#aws-global-field"),
   awsGlobalInference: $("#aws-global-inference"),
   autoWrite: $("#auto-write"),
+  scheduleEnabled: $("#schedule-enabled"),
+  scheduleOptions: $("#schedule-options"),
+  scheduleStartAt: $("#schedule-start-at"),
+  scheduleBatchSize: $("#schedule-batch-size"),
+  scheduleIntervalMinutes: $("#schedule-interval-minutes"),
   batchMode: $("#batch-mode"),
   keyLabel: $("#key-label"),
   unsupportedNote: $("#unsupported-note"),
@@ -118,6 +137,49 @@ const elements = {
   balanceMessage: $("#balance-message"),
   refreshBalance: $("#refresh-balance"),
   refreshRecords: $("#refresh-records"),
+  refreshSchedules: $("#refresh-schedules"),
+  scheduleEmpty: $("#schedule-empty"),
+  scheduleList: $("#schedule-list"),
+  refreshUsageMonitor: $("#refresh-usage-monitor"),
+  usageMonitorSyncStatus: $("#usage-monitor-sync-status"),
+  usageMonitorTarget: $("#usage-monitor-target"),
+  usageMonitorStart: $("#usage-monitor-start"),
+  usageMonitorEnd: $("#usage-monitor-end"),
+  usageMonitorRange: $("#usage-monitor-range"),
+  monitorKeyCount: $("#monitor-key-count"),
+  monitorKeyDetail: $("#monitor-key-detail"),
+  monitorQuotaTotal: $("#monitor-quota-total"),
+  monitorQuotaDetail: $("#monitor-quota-detail"),
+  monitorSpentTotal: $("#monitor-spent-total"),
+  monitorSpentDetail: $("#monitor-spent-detail"),
+  monitorRemainingTotal: $("#monitor-remaining-total"),
+  monitorRemainingRing: $("#monitor-remaining-ring"),
+  monitorRemainingRingValue: $("#monitor-remaining-ring-value"),
+  monitorRemainingPercent: $("#monitor-remaining-percent"),
+  monitorRemainingDetail: $("#monitor-remaining-detail"),
+  monitorCoveragePercent: $("#monitor-coverage-percent"),
+  monitorCoverageDetail: $("#monitor-coverage-detail"),
+  usageMonitorGrid: $("#usage-monitor-grid"),
+  siteUsageList: $("#site-usage-list"),
+  dailyUsageChart: $("#daily-usage-chart"),
+  usageMonitorEmpty: $("#usage-monitor-empty"),
+  usageKeyCount: $("#usage-key-count"),
+  usageKeyDetail: $("#usage-key-detail"),
+  usageQuotaTotal: $("#usage-quota-total"),
+  usageQuotaDetail: $("#usage-quota-detail"),
+  usageSpentTotal: $("#usage-spent-total"),
+  usageCoverageDetail: $("#usage-coverage-detail"),
+  usageRemainingTotal: $("#usage-remaining-total"),
+  usageRequestCount: $("#usage-request-count"),
+  usageLastChecked: $("#usage-last-checked"),
+  usageTokenTotal: $("#usage-token-total"),
+  usageTokenDetail: $("#usage-token-detail"),
+  usageSummaryNote: $("#usage-summary-note"),
+  recordsTargetFilter: $("#records-target-filter"),
+  recordsProviderFilter: $("#records-provider-filter"),
+  recordsStatusFilter: $("#records-status-filter"),
+  recordsSearch: $("#records-search"),
+  resetRecordFilters: $("#reset-record-filters"),
   recordsEmpty: $("#records-empty"),
   recordsTableWrap: $("#records-table-wrap"),
   recordsBody: $("#records-body"),
@@ -819,20 +881,376 @@ const formatUsd = (value) =>
     maximumFractionDigits: 4,
   }).format(value)
 
+const formatInteger = (value) =>
+  new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 }).format(
+    Number(value) || 0,
+  )
+
+const formatCompact = (value) =>
+  new Intl.NumberFormat("zh-CN", {
+    notation: "compact",
+    maximumFractionDigits: 2,
+  }).format(Number(value) || 0)
+
+const formatDateTime = (value) => {
+  const date = new Date(value)
+  return Number.isFinite(date.getTime()) ? date.toLocaleString("zh-CN") : "暂无"
+}
+
+const formatDateTimeInput = (date) => {
+  const offset = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+}
+
+const formatUsageTime = (timestamp) => {
+  if (timestamp == null || timestamp === "") return "尚未使用"
+  return Number.isFinite(Number(timestamp))
+    ? formatDateTime(Number(timestamp) * 1000)
+    : "尚未使用"
+}
+
+const scheduleStatusCopy = (status) =>
+  ({
+    active: "等待执行",
+    running: "正在写入",
+    paused: "已暂停",
+    completed: "已完成",
+    cancelled: "已取消",
+  })[status] || status
+
 const usageCopy = (record) => {
-  if (record.usageStatus === "shared-channel") return "共用渠道，无法拆分"
-  if (record.usageStatus === "quota-missing") return "未录入额度"
-  if (record.usageStatus === "awaiting-balance") return "等待余额查询"
-  if (record.usageStatus === "balance-increased") return "余额增加，暂停计算"
-  return Number.isFinite(record.spent) ? formatUsd(record.spent) : "暂不可算"
+  const spent = gatewaySpent(record)
+  if (spent != null) return formatUsd(spent)
+  if (record.sharedChannel && !Number.isInteger(record.keyIndex)) {
+    return "旧多 Key 记录无法拆分"
+  }
+  return record.channelId ? "等待刷新日志" : "未定位渠道"
+}
+
+const currentRecordFilters = () => ({
+  target: elements.recordsTargetFilter.value,
+  provider: elements.recordsProviderFilter.value,
+  status: elements.recordsStatusFilter.value,
+  query: elements.recordsSearch.value,
+})
+
+function replaceFilterOptions(select, emptyLabel, values) {
+  const selected = select.value
+  select.replaceChildren()
+  const empty = document.createElement("option")
+  empty.value = ""
+  empty.textContent = emptyLabel
+  select.append(empty)
+  for (const value of values) {
+    const option = document.createElement("option")
+    option.value = value
+    option.textContent = value
+    select.append(option)
+  }
+  select.value = values.includes(selected) ? selected : ""
+}
+
+function renderRecordFilterOptions() {
+  replaceFilterOptions(
+    elements.recordsTargetFilter,
+    "全部站点",
+    [
+      ...new Set(
+        state.records.map((record) => record.targetName).filter(Boolean),
+      ),
+    ].sort((left, right) => left.localeCompare(right, "zh-CN")),
+  )
+  replaceFilterOptions(
+    elements.recordsProviderFilter,
+    "全部供应商",
+    [
+      ...new Set(
+        state.records.map((record) => record.providerName).filter(Boolean),
+      ),
+    ].sort((left, right) => left.localeCompare(right, "zh-CN")),
+  )
+}
+
+const formatPercent = (value) =>
+  Number.isFinite(value)
+    ? `${new Intl.NumberFormat("zh-CN", {
+        maximumFractionDigits: 1,
+      }).format(Math.max(0, value))}%`
+    : "—"
+
+function markUsageMonitorRange(range = "") {
+  for (const button of document.querySelectorAll("[data-usage-range]")) {
+    button.classList.toggle("active", button.dataset.usageRange === range)
+  }
+}
+
+function setUsageMonitorRange(range) {
+  markUsageMonitorRange(range)
+  if (range === "all") {
+    elements.usageMonitorStart.value = ""
+    elements.usageMonitorEnd.value = ""
+    return
+  }
+  const end = new Date()
+  const start = new Date(end)
+  const days = range === "today" ? 1 : Number(range)
+  start.setDate(start.getDate() - Math.max(0, days - 1))
+  elements.usageMonitorStart.value = localDateKey(start)
+  elements.usageMonitorEnd.value = localDateKey(end)
+}
+
+function currentUsageMonitorFilters() {
+  return {
+    targetUrl: elements.usageMonitorTarget.value,
+    startDate: elements.usageMonitorStart.value,
+    endDate: elements.usageMonitorEnd.value,
+  }
+}
+
+function currentUsageMonitorRecords() {
+  return filterUsageDashboardRecords(
+    state.records,
+    currentUsageMonitorFilters(),
+  )
+}
+
+function renderUsageMonitorTargetOptions() {
+  const selected = elements.usageMonitorTarget.value
+  const targets = new Map()
+  for (const record of state.records) {
+    if (!record.targetUrl || targets.has(record.targetUrl)) continue
+    targets.set(record.targetUrl, record.targetName || "New API")
+  }
+  elements.usageMonitorTarget.replaceChildren()
+  const all = document.createElement("option")
+  all.value = ""
+  all.textContent = "全部 New API 地址"
+  elements.usageMonitorTarget.append(all)
+  for (const [targetUrl, targetName] of [...targets.entries()].sort(
+    (left, right) => left[1].localeCompare(right[1], "zh-CN"),
+  )) {
+    const option = document.createElement("option")
+    option.value = targetUrl
+    option.textContent = `${targetName} · ${targetUrl}`
+    elements.usageMonitorTarget.append(option)
+  }
+  elements.usageMonitorTarget.value = targets.has(selected) ? selected : ""
+}
+
+function appendSiteUsageCard(group) {
+  const { summary } = group
+  const card = document.createElement("article")
+  card.className = "site-usage-item"
+  const header = document.createElement("header")
+  const identity = document.createElement("div")
+  const name = document.createElement("strong")
+  name.textContent = group.targetName
+  const url = document.createElement("small")
+  url.textContent = group.targetUrl
+  identity.append(name, url)
+  const percent = document.createElement("b")
+  percent.textContent = formatPercent(summary.remainingPercent)
+  header.append(identity, percent)
+
+  const progress = document.createElement("progress")
+  progress.max = 100
+  progress.value = Number.isFinite(summary.remainingPercent)
+    ? Math.min(100, Math.max(0, summary.remainingPercent))
+    : 0
+  progress.className = Number.isFinite(summary.remainingPercent)
+    ? ""
+    : "unknown"
+  progress.setAttribute(
+    "aria-label",
+    Number.isFinite(summary.remainingPercent)
+      ? `${group.targetName} 剩余 ${formatPercent(summary.remainingPercent)}`
+      : `${group.targetName} 暂无可计算剩余比例`,
+  )
+
+  const metrics = document.createElement("div")
+  metrics.className = "site-usage-metrics"
+  for (const [label, value] of [
+    ["录入额度", formatUsd(summary.quotaTotal)],
+    ["已使用", formatUsd(summary.gatewaySpentTotal)],
+    ["已统计剩余", formatUsd(summary.trackedRemainingTotal)],
+    ["Key", `${summary.recordCount} 条`],
+  ]) {
+    const metric = document.createElement("span")
+    const metricLabel = document.createElement("small")
+    metricLabel.textContent = label
+    const metricValue = document.createElement("strong")
+    metricValue.textContent = value
+    metric.append(metricLabel, metricValue)
+    metrics.append(metric)
+  }
+  const coverage = document.createElement("p")
+  coverage.textContent = `用量已刷新 ${summary.trackedCount} / ${summary.recordCount} 条 · ${formatPercent(summary.coveragePercent)}`
+  card.append(header, progress, metrics, coverage)
+  elements.siteUsageList.append(card)
+}
+
+function appendDailyUsageRow(day, maxAmount) {
+  const row = document.createElement("article")
+  row.className = "daily-usage-row"
+  const date = document.createElement("strong")
+  date.textContent = new Date(`${day.date}T00:00:00`).toLocaleDateString(
+    "zh-CN",
+    { month: "numeric", day: "numeric", weekday: "short" },
+  )
+  const bars = document.createElement("div")
+  bars.className = "daily-usage-bars"
+  for (const [className, label, amount] of [
+    ["quota", "录入", day.summary.quotaTotal],
+    ["spent", "累计", day.summary.gatewaySpentTotal],
+  ]) {
+    const bar = document.createElement("div")
+    bar.className = className
+    const copy = document.createElement("span")
+    copy.textContent = label
+    const progress = document.createElement("progress")
+    progress.max = maxAmount
+    progress.value = Math.max(0, amount)
+    const value = document.createElement("b")
+    value.textContent = formatUsd(amount)
+    bar.append(copy, progress, value)
+    bars.append(bar)
+  }
+  const detail = document.createElement("small")
+  detail.textContent = `${day.summary.recordCount} 条 Key · 剩余 ${formatPercent(day.summary.remainingPercent)}`
+  row.append(date, bars, detail)
+  elements.dailyUsageChart.append(row)
+}
+
+function renderUsageMonitor() {
+  const filters = currentUsageMonitorFilters()
+  const records = currentUsageMonitorRecords()
+  const summary = summarizeUsageDashboard(records)
+  const hasRecords = records.length > 0
+  const rangeCopy =
+    filters.startDate || filters.endDate
+      ? `${filters.startDate || "最早记录"} 至 ${filters.endDate || "今天"}`
+      : "全部录入时间"
+  const targetCopy = filters.targetUrl || "全部 New API 地址"
+  elements.usageMonitorRange.textContent = `${targetCopy} · ${rangeCopy} · 共 ${summary.recordCount} 条 Key`
+  elements.monitorKeyCount.textContent = formatInteger(summary.recordCount)
+  elements.monitorKeyDetail.textContent = `${summary.knownQuotaCount} 个已填写额度 · ${summary.unknownQuotaCount} 个额度 x`
+  elements.monitorQuotaTotal.textContent = formatUsd(summary.quotaTotal)
+  elements.monitorQuotaDetail.textContent = `${summary.knownQuotaCount} 个已知额度`
+  elements.monitorSpentTotal.textContent = formatUsd(summary.gatewaySpentTotal)
+  elements.monitorSpentDetail.textContent = `${formatInteger(summary.requestCount)} 次请求 · ${summary.usedKeyCount} 个 Key 已使用`
+  elements.monitorRemainingTotal.textContent = formatUsd(
+    summary.trackedRemainingTotal,
+  )
+  elements.monitorRemainingPercent.textContent = formatPercent(
+    summary.remainingPercent,
+  )
+  const ringValue = Number.isFinite(summary.remainingPercent)
+    ? Math.min(100, Math.max(0, summary.remainingPercent))
+    : 0
+  elements.monitorRemainingRingValue.setAttribute(
+    "stroke-dasharray",
+    `${ringValue} 100`,
+  )
+  elements.monitorRemainingRing.classList.toggle(
+    "unknown",
+    !Number.isFinite(summary.remainingPercent),
+  )
+  elements.monitorRemainingDetail.textContent = Number.isFinite(
+    summary.remainingPercent,
+  )
+    ? `按 ${formatUsd(summary.trackedQuotaTotal)} 已刷新额度计算`
+    : "刷新用量后显示剩余比例"
+  elements.monitorCoveragePercent.textContent = formatPercent(
+    summary.coveragePercent,
+  )
+  elements.monitorCoverageDetail.textContent = `${summary.trackedCount} / ${summary.recordCount} 个已刷新`
+
+  elements.siteUsageList.replaceChildren()
+  for (const group of groupUsageDashboardByTarget(records)) {
+    appendSiteUsageCard(group)
+  }
+  elements.dailyUsageChart.replaceChildren()
+  const days = groupUsageDashboardByDay(records)
+  const maxAmount = Math.max(
+    1,
+    ...days.flatMap((day) => [
+      day.summary.quotaTotal,
+      day.summary.gatewaySpentTotal,
+    ]),
+  )
+  for (const day of days) appendDailyUsageRow(day, maxAmount)
+  elements.usageMonitorEmpty.classList.toggle("hidden", hasRecords)
+  elements.usageMonitorGrid.classList.toggle("hidden", !hasRecords)
+}
+
+function renderUsageSummary(records) {
+  const summary = summarizeUsageRecords(records)
+  const totalRecords = state.records.length
+  elements.usageKeyCount.textContent =
+    records.length === totalRecords
+      ? formatInteger(records.length)
+      : `${formatInteger(records.length)} / ${formatInteger(totalRecords)}`
+  elements.usageKeyDetail.textContent = `${summary.usedKeyCount} 个已使用 · ${summary.unusedKeyCount} 个未使用`
+  elements.usageQuotaTotal.textContent = formatUsd(summary.quotaTotal)
+  elements.usageQuotaDetail.textContent = `${summary.knownQuotaCount} 个已填额度 · ${summary.unknownQuotaCount} 个未知`
+  elements.usageSpentTotal.textContent = formatUsd(summary.gatewaySpentTotal)
+  elements.usageCoverageDetail.textContent = `${summary.trackedCount} / ${summary.recordCount} 个已刷新统计`
+  elements.usageRemainingTotal.textContent = formatUsd(
+    summary.trackedRemainingTotal,
+  )
+  elements.usageRequestCount.textContent = formatInteger(summary.requestCount)
+  elements.usageLastChecked.textContent = summary.lastCheckedAt
+    ? `最近刷新 ${formatDateTime(summary.lastCheckedAt)}`
+    : "尚未刷新"
+  const totalTokens = summary.promptTokens + summary.completionTokens
+  elements.usageTokenTotal.textContent =
+    summary.detailIncompleteCount > 0 ? "—" : formatCompact(totalTokens)
+  elements.usageTokenDetail.textContent =
+    summary.detailIncompleteCount > 0
+      ? `${summary.detailIncompleteCount} 条 Token 明细未完整`
+      : `输入 ${formatCompact(summary.promptTokens)} · 输出 ${formatCompact(
+          summary.completionTokens,
+        )}`
+  const notes = []
+  if (summary.pendingCount > 0) {
+    notes.push(`${summary.pendingCount} 条等待刷新，不计入已消耗金额`)
+  }
+  if (summary.incompleteCount > 0) {
+    notes.push(`${summary.incompleteCount} 条日志量过大，当前统计未完整`)
+  }
+  if (summary.detailIncompleteCount > 0) {
+    notes.push(
+      `${summary.detailIncompleteCount} 条金额已校准，但 Token 明细未完整`,
+    )
+  }
+  notes.push("New API 消耗仅统计录入时间之后的消费日志")
+  elements.usageSummaryNote.textContent = notes.join("；")
+}
+
+function usageStateCopy(record) {
+  const status = usageState(record)
+  if (status === "used") return { copy: "已有消耗", className: "" }
+  if (status === "unused") {
+    return { copy: "已刷新 · 未使用", className: "idle" }
+  }
+  if (status === "incomplete") {
+    return { copy: "统计未完整", className: "warning" }
+  }
+  return { copy: "等待刷新", className: "warning" }
 }
 
 function renderRecords() {
   elements.recordsBody.replaceChildren()
-  const hasRecords = state.records.length > 0
+  const records = filterUsageRecords(state.records, currentRecordFilters())
+  renderUsageSummary(records)
+  const hasRecords = records.length > 0
+  elements.recordsEmpty.textContent =
+    state.records.length > 0
+      ? "没有符合当前筛选的记录。"
+      : "还没有 Key 填入记录。"
   elements.recordsEmpty.classList.toggle("hidden", hasRecords)
   elements.recordsTableWrap.classList.toggle("hidden", !hasRecords)
-  for (const record of state.records) {
+  for (const record of records) {
     const row = document.createElement("tr")
     const timeTarget = document.createElement("td")
     const time = document.createElement("strong")
@@ -849,31 +1267,90 @@ function renderRecords() {
     sourceKey.append(source, key)
 
     const channel = document.createElement("td")
+    channel.className = "channel-cell"
     channel.textContent = record.channelName || "未定位"
-    const quota = document.createElement("td")
+    if (record.channelId) {
+      const channelId = document.createElement("small")
+      channelId.textContent = `渠道 #${record.channelId}`
+      channel.append(channelId)
+    }
+    const quotaBalance = document.createElement("td")
+    const quota = document.createElement("strong")
     quota.textContent = Number.isFinite(record.quota)
       ? formatUsd(record.quota)
-      : "未填写"
-    const balance = document.createElement("td")
+      : "额度 x"
+    const balance = document.createElement("small")
     balance.textContent = Number.isFinite(record.currentBalance)
-      ? formatUsd(record.currentBalance)
-      : "未查询"
+      ? `上游余额 ${formatUsd(record.currentBalance)}`
+      : "上游余额未查询"
+    quotaBalance.append(quota, balance)
+    if (Number.isFinite(record.upstreamSpent)) {
+      const upstreamSpent = document.createElement("small")
+      upstreamSpent.textContent = `上游差额 ${formatUsd(record.upstreamSpent)}`
+      quotaBalance.append(upstreamSpent)
+    }
     const spent = document.createElement("td")
-    spent.textContent = usageCopy(record)
-    if (Number.isFinite(record.quota) && Number.isFinite(record.spent)) {
+    const status = document.createElement("span")
+    const statusInfo = usageStateCopy(record)
+    status.className = `usage-status ${statusInfo.className}`.trim()
+    status.textContent = statusInfo.copy
+    const cost = document.createElement("strong")
+    cost.className = "usage-cost"
+    cost.textContent = usageCopy(record)
+    spent.append(status, cost)
+    const trackedSpent = gatewaySpent(record)
+    if (Number.isFinite(record.quota) && trackedSpent != null) {
       const remaining = document.createElement("small")
       remaining.textContent = `剩余录入额度 ${formatUsd(
-        Math.max(0, record.quota - record.spent),
+        Math.max(0, record.quota - trackedSpent),
       )}`
       spent.append(remaining)
+      const progress = document.createElement("div")
+      progress.className = `quota-progress ${
+        trackedSpent > record.quota ? "over" : ""
+      }`.trim()
+      const progressValue = document.createElement("span")
+      progressValue.style.width = `${Math.min(
+        100,
+        record.quota > 0 ? (trackedSpent / record.quota) * 100 : 0,
+      )}%`
+      progress.append(progressValue)
+      spent.append(progress)
     }
-    if (record.usageStatus === "gateway-usage") {
-      const usageMeta = document.createElement("small")
-      usageMeta.textContent = `${record.requestCount || 0} 次请求 · ${
-        (record.promptTokens || 0) + (record.completionTokens || 0)
-      } tokens`
-      spent.append(usageMeta)
+    if (record.usageTruncated) {
+      const partial = document.createElement("small")
+      partial.textContent = "日志超过 50,000 条，金额和 Token 仅为已扫描部分"
+      spent.append(partial)
     }
+    const traffic = document.createElement("td")
+    const requests = document.createElement("strong")
+    requests.textContent = Number.isFinite(record.requestCount)
+      ? `${formatInteger(record.requestCount)} 次`
+      : "请求数待同步"
+    const inputTokens = document.createElement("small")
+    inputTokens.textContent = Number.isFinite(record.promptTokens)
+      ? `输入 ${formatCompact(record.promptTokens)}`
+      : "输入 Token —"
+    const outputTokens = document.createElement("small")
+    outputTokens.textContent = Number.isFinite(record.completionTokens)
+      ? `输出 ${formatCompact(record.completionTokens)}`
+      : "输出 Token —"
+    const totalTokens = document.createElement("small")
+    totalTokens.textContent =
+      record.usageDetailsComplete === false
+        ? "金额准确 · Token 明细未完整"
+        : `合计 ${formatCompact(
+            (record.promptTokens || 0) + (record.completionTokens || 0),
+          )} tokens`
+    traffic.append(requests, inputTokens, outputTokens, totalTokens)
+    const activity = document.createElement("td")
+    const lastUsed = document.createElement("strong")
+    lastUsed.textContent = formatUsageTime(record.lastUsedAt)
+    const checked = document.createElement("small")
+    checked.textContent = record.checkedAt
+      ? `刷新于 ${formatDateTime(record.checkedAt)}`
+      : "尚未刷新"
+    activity.append(lastUsed, checked)
     const action = document.createElement("td")
     const refresh = document.createElement("button")
     refresh.type = "button"
@@ -886,7 +1363,16 @@ function renderRecords() {
       refreshImportRecord(record, refresh),
     )
     action.append(refresh)
-    row.append(timeTarget, sourceKey, channel, quota, balance, spent, action)
+    row.append(
+      timeTarget,
+      sourceKey,
+      channel,
+      quotaBalance,
+      spent,
+      traffic,
+      activity,
+      action,
+    )
     elements.recordsBody.append(row)
   }
 }
@@ -894,7 +1380,132 @@ function renderRecords() {
 async function loadRecords() {
   const result = await api("/api/imports")
   state.records = result.records
+  renderRecordFilterOptions()
+  renderUsageMonitorTargetOptions()
+  renderUsageMonitor()
   renderRecords()
+}
+
+function renderSchedules() {
+  elements.scheduleList.replaceChildren()
+  const hasSchedules = state.schedules.length > 0
+  elements.scheduleEmpty.classList.toggle("hidden", hasSchedules)
+  for (const schedule of state.schedules) {
+    const card = document.createElement("article")
+    card.className = "schedule-card"
+    const header = document.createElement("header")
+    const titleWrap = document.createElement("div")
+    const title = document.createElement("h3")
+    title.textContent = schedule.name
+    const target = document.createElement("p")
+    target.textContent = `${schedule.targetName || "New API"} · ${
+      schedule.providerName
+    } · ${schedule.targetUrl || ""}`
+    titleWrap.append(title, target)
+    const status = document.createElement("span")
+    status.className = `schedule-status ${schedule.status}`.trim()
+    status.textContent = scheduleStatusCopy(schedule.status)
+    header.append(titleWrap, status)
+
+    const metrics = document.createElement("div")
+    metrics.className = "schedule-metrics"
+    const metricItems = [
+      ["总 Key", `${schedule.counts.total}`],
+      ["待写入", `${schedule.counts.pending}`],
+      ["已写入", `${schedule.counts.imported}`],
+      ["失败", `${schedule.counts.failed}`],
+      [
+        "下一次",
+        schedule.status === "active"
+          ? formatDateTime(schedule.nextRunAt)
+          : scheduleStatusCopy(schedule.status),
+      ],
+    ]
+    for (const [label, value] of metricItems) {
+      const item = document.createElement("div")
+      const small = document.createElement("small")
+      small.textContent = label
+      const strong = document.createElement("strong")
+      strong.textContent = value
+      item.append(small, strong)
+      metrics.append(item)
+    }
+
+    const details = document.createElement("p")
+    details.textContent = `每次 ${schedule.batchSize} 条；间隔 ${
+      schedule.intervalMinutes
+    } 分钟；最近执行 ${formatDateTime(schedule.lastRunAt)}。`
+    if (schedule.lastError) {
+      const error = document.createElement("p")
+      error.className = "schedule-error"
+      error.textContent = schedule.lastError
+      card.append(header, metrics, details, error)
+    } else {
+      card.append(header, metrics, details)
+    }
+
+    const actions = document.createElement("div")
+    actions.className = "schedule-actions"
+    const runNow = document.createElement("button")
+    runNow.type = "button"
+    runNow.className = "table-action"
+    runNow.textContent = "立即上一批"
+    runNow.disabled =
+      schedule.counts.pending === 0 ||
+      ["running", "cancelled"].includes(schedule.status)
+    runNow.addEventListener("click", () =>
+      updateSchedule(schedule.id, "run", runNow),
+    )
+    const toggle = document.createElement("button")
+    toggle.type = "button"
+    toggle.className = "table-action"
+    toggle.textContent = schedule.status === "paused" ? "恢复" : "暂停"
+    toggle.disabled = !["active", "paused"].includes(schedule.status)
+    toggle.addEventListener("click", () =>
+      updateSchedule(
+        schedule.id,
+        schedule.status === "paused" ? "resume" : "pause",
+        toggle,
+      ),
+    )
+    const cancel = document.createElement("button")
+    cancel.type = "button"
+    cancel.className = "table-action"
+    cancel.textContent = "取消"
+    cancel.disabled = ["completed", "cancelled"].includes(schedule.status)
+    cancel.addEventListener("click", () =>
+      updateSchedule(schedule.id, "cancel", cancel),
+    )
+    actions.append(runNow, toggle, cancel)
+    card.append(actions)
+    elements.scheduleList.append(card)
+  }
+}
+
+async function loadSchedules() {
+  const result = await api("/api/schedules")
+  state.schedules = result.schedules || []
+  renderSchedules()
+}
+
+async function updateSchedule(scheduleId, action, button) {
+  setLoading(button, true)
+  try {
+    const result = await api(`/api/schedules/${scheduleId}/${action}`, {
+      method: "POST",
+      body: "{}",
+    })
+    state.schedules = state.schedules.map((schedule) =>
+      schedule.id === result.schedule.id ? result.schedule : schedule,
+    )
+    renderSchedules()
+    if (action === "run") await loadRecords()
+    toast(action === "run" ? "已执行一批定时 Key" : "定时任务已更新")
+  } catch (error) {
+    toast(error.message, true)
+  } finally {
+    setLoading(button, false)
+  }
 }
 
 async function refreshImportRecord(record, button) {
@@ -907,6 +1518,7 @@ async function refreshImportRecord(record, button) {
     state.records = state.records.map((item) =>
       item.id === result.record.id ? result.record : item,
     )
+    renderUsageMonitor()
     renderRecords()
     toast("Key 消耗记录已刷新")
   } catch (error) {
@@ -1361,6 +1973,58 @@ elements.tokenForm.addEventListener("submit", async (event) => {
   }
 })
 
+function buildCredentialRequestBody() {
+  return {
+    providerId: state.selectedProvider.id,
+    name: elements.channelName.value,
+    automaticName: !state.channelNameEdited,
+    groups: selectedGroups(),
+    configSource: selectedTemplateId()
+      ? "template"
+      : elements.configSource.value,
+    templateChannelId: selectedTemplateId(),
+    baseUrl: elements.sourceBaseUrl.value,
+    apiKey: elements.apiKey.value,
+    quotaLines: elements.keyQuotas.value,
+    credentialMode: elements.credentialMode.value,
+    credentialParts: Object.fromEntries(
+      [
+        ...elements.providerConfigFields.querySelectorAll(
+          "[data-credential-part]",
+        ),
+      ].map((input) => [input.dataset.credentialPart, input.value]),
+    ),
+    providerExtra:
+      elements.providerConfigFields.querySelector("[data-provider-extra]")
+        ?.value || "",
+    providerFlags: {
+      ...Object.fromEntries(
+        [
+          ...elements.providerConfigFields.querySelectorAll(
+            "[data-provider-flag]",
+          ),
+        ].map((input) => [input.dataset.providerFlag, input.checked]),
+      ),
+      ...(state.selectedProvider.id === "aws"
+        ? { globalInference: elements.awsGlobalInference.checked }
+        : {}),
+    },
+    providerModels: elements.providerModels.value,
+    providerModelMappings: elements.providerModelMappings.value,
+  }
+}
+
+function clearSensitiveCredentialInputs() {
+  elements.apiKey.value = ""
+  elements.keyQuotas.value = ""
+  elements.providerConfigFields
+    .querySelectorAll('[data-sensitive="true"]')
+    .forEach((input) => {
+      input.value = ""
+    })
+  elements.apiKey.classList.remove("revealed")
+}
+
 elements.credentialForm.addEventListener("submit", async (event) => {
   event.preventDefault()
   if (!state.configured) {
@@ -1371,55 +2035,35 @@ elements.credentialForm.addEventListener("submit", async (event) => {
   hideStatus(elements.credentialStatus)
   setLoading(elements.previewButton, true)
   try {
+    const body = buildCredentialRequestBody()
+    if (elements.scheduleEnabled.checked) {
+      const result = await api("/api/schedules", {
+        method: "POST",
+        body: JSON.stringify({
+          ...body,
+          combineKeys: elements.batchMode.value === "multi_to_single",
+          schedule: {
+            startAt: elements.scheduleStartAt.value,
+            batchSize: elements.scheduleBatchSize.value,
+            intervalMinutes: elements.scheduleIntervalMinutes.value,
+          },
+        }),
+      })
+      clearSensitiveCredentialInputs()
+      state.schedules = [result.schedule, ...state.schedules]
+      renderSchedules()
+      showStatus(
+        elements.credentialStatus,
+        `定时任务已保存：共 ${result.schedule.counts.total} 条 Key，首次执行 ${formatDateTime(result.schedule.nextRunAt)}。`,
+      )
+      toast("定时上 Key 任务已保存")
+      return
+    }
     const preview = await api("/api/preview", {
       method: "POST",
-      body: JSON.stringify({
-        providerId: state.selectedProvider.id,
-        name: elements.channelName.value,
-        automaticName: !state.channelNameEdited,
-        groups: selectedGroups(),
-        configSource: selectedTemplateId()
-          ? "template"
-          : elements.configSource.value,
-        templateChannelId: selectedTemplateId(),
-        baseUrl: elements.sourceBaseUrl.value,
-        apiKey: elements.apiKey.value,
-        quotaLines: elements.keyQuotas.value,
-        credentialMode: elements.credentialMode.value,
-        credentialParts: Object.fromEntries(
-          [
-            ...elements.providerConfigFields.querySelectorAll(
-              "[data-credential-part]",
-            ),
-          ].map((input) => [input.dataset.credentialPart, input.value]),
-        ),
-        providerExtra:
-          elements.providerConfigFields.querySelector("[data-provider-extra]")
-            ?.value || "",
-        providerFlags: {
-          ...Object.fromEntries(
-            [
-              ...elements.providerConfigFields.querySelectorAll(
-                "[data-provider-flag]",
-              ),
-            ].map((input) => [input.dataset.providerFlag, input.checked]),
-          ),
-          ...(state.selectedProvider.id === "aws"
-            ? { globalInference: elements.awsGlobalInference.checked }
-            : {}),
-        },
-        providerModels: elements.providerModels.value,
-        providerModelMappings: elements.providerModelMappings.value,
-      }),
+      body: JSON.stringify(body),
     })
-    elements.apiKey.value = ""
-    elements.keyQuotas.value = ""
-    elements.providerConfigFields
-      .querySelectorAll('[data-sensitive="true"]')
-      .forEach((input) => {
-        input.value = ""
-      })
-    elements.apiKey.classList.remove("revealed")
+    clearSensitiveCredentialInputs()
     elements.channelName.value = preview.name
     renderPreview(preview)
     toast(
@@ -1546,20 +2190,44 @@ elements.refreshBalance.addEventListener("click", async () => {
   }
 })
 
-elements.refreshRecords.addEventListener("click", async () => {
-  setLoading(elements.refreshRecords, true)
+function setUsageMonitorSyncStatus(copy, status = "") {
+  const dot = document.createElement("i")
+  elements.usageMonitorSyncStatus.replaceChildren(
+    dot,
+    document.createTextNode(` ${copy}`),
+  )
+  elements.usageMonitorSyncStatus.classList.toggle(
+    "warning",
+    status === "warning",
+  )
+  elements.usageMonitorSyncStatus.classList.toggle(
+    "syncing",
+    status === "syncing",
+  )
+}
+
+async function refreshUsageRecords(records, button, options = {}) {
+  const originalCopy = button.textContent
+  button.disabled = true
+  setUsageMonitorSyncStatus(
+    options.automatic ? "自动校准中" : "正在校准",
+    "syncing",
+  )
   try {
-    const refreshable = state.records
-      .filter(
-        (record) =>
-          record.channelId &&
-          (!record.sharedChannel || Number.isInteger(record.keyIndex)),
-      )
-      .slice(0, 50)
+    const refreshable = records.filter(
+      (record) =>
+        record.channelId &&
+        (!record.sharedChannel || Number.isInteger(record.keyIndex)),
+    )
     let updatedCount = 0
-    for (let index = 0; index < refreshable.length; index += 5) {
+    let failedCount = 0
+    for (let index = 0; index < refreshable.length; index += 2) {
+      button.textContent = `刷新中 ${Math.min(
+        index + 2,
+        refreshable.length,
+      )}/${refreshable.length}`
       const results = await Promise.allSettled(
-        refreshable.slice(index, index + 5).map((record) =>
+        refreshable.slice(index, index + 2).map((record) =>
           api("/api/imports/refresh", {
             method: "POST",
             body: JSON.stringify({ recordId: record.id }),
@@ -1567,23 +2235,142 @@ elements.refreshRecords.addEventListener("click", async () => {
         ),
       )
       for (const result of results) {
-        if (result.status !== "fulfilled") continue
+        if (result.status !== "fulfilled") {
+          failedCount += 1
+          continue
+        }
         updatedCount += 1
         state.records = state.records.map((record) =>
           record.id === result.value.record.id ? result.value.record : record,
         )
       }
     }
+    renderUsageMonitor()
     renderRecords()
-    toast(`已刷新 ${updatedCount} 条 Key 实时用量`)
+    setUsageMonitorSyncStatus(
+      failedCount > 0 ? `${updatedCount} 条已校准` : "刚刚已校准",
+      failedCount > 0 ? "warning" : "",
+    )
+    if (!options.silent) {
+      toast(
+        failedCount > 0
+          ? `刷新完成：成功 ${updatedCount} 条，失败 ${failedCount} 条`
+          : `已校准 ${updatedCount} 条 Key 累计用量`,
+        failedCount > 0,
+      )
+    }
   } catch (error) {
+    setUsageMonitorSyncStatus("校准失败", "warning")
     toast(error.message, true)
   } finally {
-    setLoading(elements.refreshRecords, false)
+    button.disabled = false
+    button.textContent = originalCopy
   }
+}
+
+async function autoRefreshUsageMonitor() {
+  if (state.usageAutoRefreshStarted) return
+  state.usageAutoRefreshStarted = true
+  const staleBefore = Date.now() - 15 * 60 * 1000
+  const staleRecords = currentUsageMonitorRecords().filter((record) => {
+    if (!record.channelId || Number.isInteger(record.keyIndex)) return false
+    const checkedAt = Date.parse(record.usageCheckedAt || "")
+    return (
+      record.usageMethod !== "database-stat" ||
+      !Number.isFinite(checkedAt) ||
+      checkedAt < staleBefore
+    )
+  })
+  if (staleRecords.length === 0) {
+    setUsageMonitorSyncStatus("数据已是最新")
+    return
+  }
+  await refreshUsageRecords(staleRecords, elements.refreshUsageMonitor, {
+    automatic: true,
+    silent: true,
+  })
+}
+
+elements.refreshRecords.addEventListener("click", async () => {
+  const refreshable = filterUsageRecords(state.records, currentRecordFilters())
+  await refreshUsageRecords(refreshable, elements.refreshRecords)
+})
+
+elements.refreshUsageMonitor.addEventListener("click", async () => {
+  await refreshUsageRecords(
+    currentUsageMonitorRecords(),
+    elements.refreshUsageMonitor,
+  )
+})
+
+elements.usageMonitorTarget.addEventListener("change", renderUsageMonitor)
+for (const input of [elements.usageMonitorStart, elements.usageMonitorEnd]) {
+  input.addEventListener("change", () => {
+    markUsageMonitorRange()
+    const start = elements.usageMonitorStart.value
+    const end = elements.usageMonitorEnd.value
+    if (start && end && start > end) {
+      if (input === elements.usageMonitorStart) {
+        elements.usageMonitorEnd.value = start
+      } else {
+        elements.usageMonitorStart.value = end
+      }
+    }
+    renderUsageMonitor()
+  })
+}
+for (const button of document.querySelectorAll("[data-usage-range]")) {
+  button.addEventListener("click", () => {
+    setUsageMonitorRange(button.dataset.usageRange)
+    renderUsageMonitor()
+  })
+}
+
+for (const filter of [
+  elements.recordsTargetFilter,
+  elements.recordsProviderFilter,
+  elements.recordsStatusFilter,
+]) {
+  filter.addEventListener("change", renderRecords)
+}
+elements.recordsSearch.addEventListener("input", renderRecords)
+elements.resetRecordFilters.addEventListener("click", () => {
+  elements.recordsTargetFilter.value = ""
+  elements.recordsProviderFilter.value = ""
+  elements.recordsStatusFilter.value = ""
+  elements.recordsSearch.value = ""
+  renderRecords()
 })
 
 elements.refreshGroups.addEventListener("click", loadGroups)
+elements.refreshSchedules.addEventListener("click", async () => {
+  setLoading(elements.refreshSchedules, true)
+  try {
+    await loadSchedules()
+    toast("定时队列已刷新")
+  } catch (error) {
+    toast(error.message, true)
+  } finally {
+    setLoading(elements.refreshSchedules, false)
+  }
+})
+
+function updateScheduleForm() {
+  const enabled = elements.scheduleEnabled.checked
+  elements.scheduleOptions.classList.toggle("hidden", !enabled)
+  elements.autoWrite.disabled = enabled
+  if (enabled) elements.autoWrite.checked = false
+  elements.previewButton.querySelector("span").textContent = enabled
+    ? "保存定时上 Key 任务"
+    : "批量添加到 New API"
+  if (enabled && !elements.scheduleStartAt.value) {
+    elements.scheduleStartAt.value = formatDateTimeInput(
+      new Date(Date.now() + 10 * 60 * 1000),
+    )
+  }
+}
+
+elements.scheduleEnabled.addEventListener("change", updateScheduleForm)
 
 async function bootstrap() {
   try {
@@ -1599,10 +2386,15 @@ async function bootstrap() {
     renderCategories()
     renderProviders()
     renderGroups(payload.groups || [])
+    state.schedules = payload.schedules || []
+    renderSchedules()
     if (payload.groupsError) {
       elements.channelGroupsHelp.textContent = `分组读取失败：${payload.groupsError}`
     }
+    setUsageMonitorRange("7")
     await loadRecords()
+    updateScheduleForm()
+    void autoRefreshUsageMonitor()
   } catch (error) {
     toast(error.message, true)
   }

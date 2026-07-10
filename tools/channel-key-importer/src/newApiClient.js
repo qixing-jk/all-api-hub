@@ -1,5 +1,6 @@
 const PAGE_SIZE = 100
 const MAX_CHANNEL_PAGES = 20
+const MAX_USAGE_PAGES = 500
 
 const requestHeaders = (config) => {
   const headers = {
@@ -56,15 +57,19 @@ async function requestJson(url, options, secrets = []) {
 
   if (!response.ok || payload?.success === false) {
     const upstreamMessage = safeUpstreamMessage(payload, secrets)
+    let message
     if (response.status === 401 || response.status === 403) {
-      throw new Error(
-        upstreamMessage
-          ? `New API 管理员认证失败：${upstreamMessage}`
-          : "New API 管理员认证失败",
-      )
+      message = upstreamMessage
+        ? `New API 管理员认证失败：${upstreamMessage}`
+        : "New API 管理员认证失败"
+    } else if (upstreamMessage) {
+      message = `New API：${upstreamMessage}`
+    } else {
+      message = `New API 请求失败（HTTP ${response.status}）`
     }
-    if (upstreamMessage) throw new Error(`New API：${upstreamMessage}`)
-    throw new Error(`New API 请求失败（HTTP ${response.status}）`)
+    const error = new Error(message)
+    error.status = response.status
+    throw error
   }
   return payload
 }
@@ -195,28 +200,63 @@ export async function fetchNewApiSystemName(targetUrl) {
     .slice(0, 80)
 }
 
-export async function fetchChannelUsage(config, input) {
+const wait = (milliseconds) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds))
+
+async function requestUsageJson(url, config) {
+  const secrets = [config.adminToken, config.sessionCookie].filter(Boolean)
+  const retryDelays = [300, 800, 1600]
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await requestJson(
+        url,
+        { headers: requestHeaders(config) },
+        secrets,
+      )
+    } catch (error) {
+      if (error?.status !== 429 || attempt >= retryDelays.length) throw error
+      await wait(retryDelays[attempt])
+    }
+  }
+}
+
+const usageQueryParams = (input) => {
+  const params = new URLSearchParams({
+    type: "2",
+    channel: String(input.channelId),
+    start_timestamp: String(input.startTimestamp),
+  })
+  if (Number.isFinite(input.endTimestamp)) {
+    params.set("end_timestamp", String(input.endTimestamp))
+  }
+  return params
+}
+
+async function scanChannelUsageLogs(config, input) {
   const pageSize = 100
   let quota = 0
   let requestCount = 0
   let promptTokens = 0
   let completionTokens = 0
   let lastUsedAt = null
+  let scannedLogCount = 0
+  let totalLogCount = null
+  let truncated = false
 
-  for (let page = 1; page <= MAX_CHANNEL_PAGES; page += 1) {
-    const params = new URLSearchParams({
-      p: String(page),
-      page_size: String(pageSize),
-      type: "2",
-      channel: String(input.channelId),
-      start_timestamp: String(input.startTimestamp),
-    })
-    const payload = await requestJson(
+  for (let page = 1; page <= MAX_USAGE_PAGES; page += 1) {
+    const params = usageQueryParams(input)
+    params.set("p", String(page))
+    params.set("page_size", String(pageSize))
+    const payload = await requestUsageJson(
       `${config.targetUrl}/api/log/?${params}`,
-      { headers: requestHeaders(config) },
-      [config.adminToken, config.sessionCookie].filter(Boolean),
+      config,
     )
     const items = Array.isArray(payload?.data?.items) ? payload.data.items : []
+    const reportedTotal = Number(payload?.data?.total)
+    if (Number.isFinite(reportedTotal) && reportedTotal >= 0) {
+      totalLogCount = reportedTotal
+    }
+    scannedLogCount += items.length
     for (const item of items) {
       if (Number.isInteger(input.keyIndex)) {
         let other = null
@@ -241,21 +281,138 @@ export async function fetchChannelUsage(config, input) {
         lastUsedAt = createdAt
       }
     }
-    if (items.length < pageSize) break
+    if (
+      items.length < pageSize ||
+      (totalLogCount != null && scannedLogCount >= totalLogCount)
+    ) {
+      break
+    }
+    if (page === MAX_USAGE_PAGES) truncated = true
   }
 
-  const statusPayload = await requestJson(`${config.targetUrl}/api/status`, {
-    headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(4_000),
-  })
-  const quotaPerUnit = Number(statusPayload?.data?.quota_per_unit) || 500_000
   return {
-    spentUsd: Number((quota / quotaPerUnit).toFixed(8)),
+    quota,
     requestCount,
     promptTokens,
     completionTokens,
     lastUsedAt,
+    scannedLogCount,
+    totalLogCount,
+    truncated,
+    usageDetailsComplete: !truncated,
+    usageMethod: "log-scan",
+  }
+}
+
+async function fetchIndependentChannelUsage(config, input) {
+  const params = usageQueryParams(input)
+  // New API's admin stat endpoint performs the quota sum in the database. It
+  // is exact for a one-key channel and avoids hundreds of paginated requests.
+  // https://github.com/QuantumNous/new-api/blob/main/controller/log.go
+  // https://github.com/QuantumNous/new-api/blob/main/model/log.go
+  const statPayload = await requestUsageJson(
+    `${config.targetUrl}/api/log/stat?${params}`,
+    config,
+  )
+  const quota = Number(statPayload?.data?.quota)
+  if (!Number.isFinite(quota)) {
+    throw new Error("New API 没有返回可用的渠道消费统计")
+  }
+
+  let requestCount = null
+  let promptTokens = null
+  let completionTokens = null
+  let lastUsedAt = null
+  let scannedLogCount = 0
+  let totalLogCount = null
+  let usageDetailsComplete = false
+  try {
+    params.set("p", "1")
+    params.set("page_size", "100")
+    const detailPayload = await requestUsageJson(
+      `${config.targetUrl}/api/log/?${params}`,
+      config,
+    )
+    const items = Array.isArray(detailPayload?.data?.items)
+      ? detailPayload.data.items
+      : []
+    const reportedTotal = Number(detailPayload?.data?.total)
+    totalLogCount = Number.isFinite(reportedTotal)
+      ? reportedTotal
+      : items.length
+    requestCount = totalLogCount
+    scannedLogCount = items.length
+    for (const item of items) {
+      const createdAt = Number(item?.created_at)
+      if (
+        Number.isFinite(createdAt) &&
+        (!lastUsedAt || createdAt > lastUsedAt)
+      ) {
+        lastUsedAt = createdAt
+      }
+    }
+    if (totalLogCount <= items.length) {
+      promptTokens = items.reduce(
+        (total, item) => total + (Number(item?.prompt_tokens) || 0),
+        0,
+      )
+      completionTokens = items.reduce(
+        (total, item) => total + (Number(item?.completion_tokens) || 0),
+        0,
+      )
+      usageDetailsComplete = true
+    }
+  } catch (error) {
+    if (error?.status !== 429) throw error
+    // The exact cost is already available from /api/log/stat. Keep it instead
+    // of failing the whole refresh when optional log details are rate limited.
+  }
+
+  return {
+    quota,
+    requestCount,
+    promptTokens,
+    completionTokens,
+    lastUsedAt,
+    scannedLogCount,
+    totalLogCount,
+    truncated: false,
+    usageDetailsComplete,
+    usageMethod: "database-stat",
+  }
+}
+
+export async function fetchChannelUsage(config, input) {
+  let usage
+  if (Number.isInteger(input.keyIndex)) {
+    usage = await scanChannelUsageLogs(config, input)
+  } else {
+    try {
+      usage = await fetchIndependentChannelUsage(config, input)
+    } catch (error) {
+      if (![404, 405].includes(error?.status)) throw error
+      // Compatibility fallback for older New API forks without /api/log/stat.
+      usage = await scanChannelUsageLogs(config, input)
+    }
+  }
+
+  const statusPayload = await requestUsageJson(
+    `${config.targetUrl}/api/status`,
+    config,
+  )
+  const quotaPerUnit = Number(statusPayload?.data?.quota_per_unit) || 500_000
+  return {
+    spentUsd: Number((usage.quota / quotaPerUnit).toFixed(8)),
+    requestCount: usage.requestCount,
+    promptTokens: usage.promptTokens,
+    completionTokens: usage.completionTokens,
+    lastUsedAt: usage.lastUsedAt,
     quotaPerUnit,
+    scannedLogCount: usage.scannedLogCount,
+    totalLogCount: usage.totalLogCount,
+    truncated: usage.truncated,
+    usageDetailsComplete: usage.usageDetailsComplete,
+    usageMethod: usage.usageMethod,
   }
 }
 

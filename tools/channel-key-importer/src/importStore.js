@@ -43,6 +43,7 @@ export function calculateQuotaUsage(
 }
 
 export function applyGatewayUsage(record, usage, binding = {}) {
+  const checkedAt = new Date().toISOString()
   return {
     ...record,
     ...binding,
@@ -52,9 +53,34 @@ export function applyGatewayUsage(record, usage, binding = {}) {
     promptTokens: usage.promptTokens,
     completionTokens: usage.completionTokens,
     lastUsedAt: usage.lastUsedAt,
+    usageLogCount: usage.scannedLogCount,
+    usageTotalLogCount: usage.totalLogCount,
+    usageTruncated: usage.truncated === true,
+    usageDetailsComplete: usage.usageDetailsComplete === true,
+    usageMethod: usage.usageMethod,
+    quotaPerUnit: usage.quotaPerUnit,
     usageStatus: "gateway-usage",
+    usageCheckedAt: checkedAt,
+    checkedAt,
+  }
+}
+
+export function applyBalanceUsage(record, currentBalance) {
+  const balanceUsage = calculateQuotaUsage(
+    record.quota,
+    currentBalance,
+    record.sharedChannel,
+  )
+  const updated = {
+    ...record,
+    currentBalance,
+    upstreamSpent: balanceUsage.spent,
+    balanceStatus: balanceUsage.usageStatus,
     checkedAt: new Date().toISOString(),
   }
+  return Number.isFinite(record.gatewaySpent)
+    ? updated
+    : { ...updated, ...balanceUsage }
 }
 
 export class ImportStore {
@@ -108,6 +134,8 @@ export class ImportStore {
         ...keyIdentity(input.apiKey),
         quota,
         currentBalance,
+        upstreamSpent: usage.spent,
+        balanceStatus: usage.usageStatus,
         ...usage,
         sharedChannel: input.sharedChannel === true,
         keyIndex: Number.isInteger(input.keyIndex) ? input.keyIndex : null,
@@ -132,12 +160,7 @@ export class ImportStore {
       const records = await this.#readAll()
       const record = records.find((item) => item.id === id)
       if (!record) throw new Error("导入记录不存在")
-      record.currentBalance = currentBalance
-      record.checkedAt = new Date().toISOString()
-      Object.assign(
-        record,
-        calculateQuotaUsage(record.quota, currentBalance, record.sharedChannel),
-      )
+      Object.assign(record, applyBalanceUsage(record, currentBalance))
       await this.#writeAll(records)
       return record
     })

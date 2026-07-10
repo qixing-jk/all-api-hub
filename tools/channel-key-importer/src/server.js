@@ -55,6 +55,7 @@ import {
   listPublicProviders,
   resolveProviderBaseUrl,
 } from "./providers.js"
+import { ScheduleStore } from "./scheduleStore.js"
 import {
   isAllowedApiRequestOrigin,
   isAllowedHostHeader,
@@ -74,6 +75,7 @@ const configStore = new ConfigStore()
 const balanceStore = new BalanceStore()
 const importStore = new ImportStore()
 const previewStore = new PreviewStore()
+const scheduleStore = new ScheduleStore()
 
 const sendJson = (response, status, payload) => {
   response.writeHead(status, {
@@ -251,6 +253,493 @@ const buildEntryBaseUrl = (preview, entry) =>
     ? getAwsRuntimeBaseUrl(entry.apiKey)
     : preview.baseUrl
 
+async function buildCredentialPreview(body) {
+  const provider = getProvider(String(body.providerId || ""))
+  if (!provider.importable) throw new Error(provider.description)
+  const configSource = String(body.configSource || "")
+  if (!["template", "fetch", "new-api", "manual"].includes(configSource)) {
+    throw new Error("请选择复制已有渠道、自动获取模型或手动填写")
+  }
+  if (
+    configSource === "fetch" &&
+    provider.channelConfig.supportsModelFetch !== true
+  ) {
+    throw new Error(
+      "该渠道不能从供应商自动获取模型，请复制已有渠道、从 New API 获取或手动填写模型",
+    )
+  }
+  const runtimeConfig = await getRuntimeConfig()
+  const template =
+    configSource === "template"
+      ? await fetchChannelTemplate(
+          runtimeConfig,
+          body.templateChannelId,
+          provider,
+        )
+      : null
+  const normalizedApiKey =
+    provider.id === "aws"
+      ? normalizeAwsBatchCredentialInput(body.apiKey)
+      : String(body.apiKey || "")
+  const useRawCredentials = Boolean(
+    provider.channelConfig.credentialModes?.length && normalizedApiKey.trim(),
+  )
+  const channelInput = resolveChannelInput(provider, {
+    ...body,
+    apiKey: normalizedApiKey,
+    configSource,
+    useRawCredentials,
+  })
+  let keys
+  if (useRawCredentials) {
+    keys = parseBatchKeys(normalizedApiKey, "", {
+      allowInlineQuota: true,
+      deduplicate: false,
+    })
+  } else if (provider.channelConfig.credentialModes?.length) {
+    keys = parseBatchKeys(channelInput.apiKey, "", {
+      allowInlineQuota: true,
+      deduplicate: false,
+    })
+  } else if (provider.keyOptional && !channelInput.apiKey) {
+    keys = [{ apiKey: "", quota: null }]
+  } else {
+    keys = parseBatchKeys(channelInput.apiKey, "", {
+      allowInlineQuota: true,
+      deduplicate: false,
+    })
+  }
+  if (String(body.quotaLines || "").trim()) {
+    keys = applyQuotaLines(keys, body.quotaLines)
+  }
+  const awsAutoCredentialMode = provider.id === "aws" && useRawCredentials
+  const credentialMode = awsAutoCredentialMode
+    ? "auto"
+    : template?.channelSettings?.aws_key_type ||
+      template?.channelSettings?.vertex_key_type ||
+      String(body.credentialMode || "")
+  validateBatchCredentialEntries(provider, credentialMode, keys)
+  keys = [...new Map(keys.map((entry) => [entry.apiKey, entry])).values()]
+  if (!provider.keyOptional && keys.some(({ apiKey }) => apiKey.length < 8)) {
+    throw new Error("存在不完整的 API Key 或组合凭证")
+  }
+  const baseUrl = template
+    ? template.baseUrl
+    : resolveProviderBaseUrl(provider, body.baseUrl)
+  const requestedName = String(body.name || "")
+    .trim()
+    .slice(0, 80)
+  if (!requestedName) throw new Error("请输入渠道名称")
+  const automaticName = body.automaticName === true
+  const name = automaticName
+    ? buildResourceChannelName(provider.name, keys)
+    : requestedName
+  const availableGroups = await fetchNewApiGroups(runtimeConfig)
+  const requestedGroups = Array.isArray(body.groups)
+    ? body.groups.map((group) => String(group).trim()).filter(Boolean)
+    : []
+  const groups = [...new Set(requestedGroups)]
+  if (groups.length === 0) throw new Error("请至少选择一个渠道分组")
+  const invalidGroup = groups.find((group) => !availableGroups.includes(group))
+  if (invalidGroup) throw new Error(`渠道分组已不存在：${invalidGroup}`)
+  if (groups.join(",").length > 64) {
+    throw new Error("所选渠道分组名称总长度不能超过 64 个字符")
+  }
+  const resolvedProvider = { ...provider, resolvedBaseUrl: baseUrl }
+  const defaultModels =
+    configSource === "new-api"
+      ? await fetchNewApiDefaultModels(runtimeConfig, provider.channelType)
+      : configSource === "fetch"
+        ? await fetchChannelModels(runtimeConfig, {
+            provider,
+            baseUrl,
+            apiKey: keys[0]?.apiKey || "",
+          })
+        : []
+  const duplicates = await findSimilarChannels(runtimeConfig, resolvedProvider)
+  const models = template
+    ? template.models
+    : configSource === "new-api" || configSource === "fetch"
+      ? defaultModels
+      : channelInput.models
+  if (models.length === 0) {
+    throw new Error(
+      template
+        ? "所选已有渠道没有配置模型，请换一个渠道"
+        : configSource === "new-api" || configSource === "fetch"
+          ? "没有获取到模型，请改为复制已有渠道或手动填写"
+          : "请填写至少一个模型",
+    )
+  }
+  const globalInference =
+    provider.id === "aws" && body.providerFlags?.globalInference === true
+  let providerMappings = template
+    ? template.modelMappings
+    : channelInput.providerMappings
+  if (globalInference) {
+    providerMappings = buildAwsGlobalMappings(models, providerMappings)
+  }
+  const awsRouting =
+    provider.id === "aws"
+      ? summarizeAwsCredentials(keys, globalInference)
+      : null
+  return {
+    provider,
+    keys,
+    baseUrl,
+    name,
+    groups,
+    models,
+    duplicates,
+    profileId: runtimeConfig.profileId,
+    targetName: runtimeConfig.name,
+    targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
+    channelOther: template?.channelOther ?? channelInput.channelOther,
+    channelSettings: template?.channelSettings ?? channelInput.channelSettings,
+    providerMappings,
+    awsAutoCredentialMode,
+    awsEntryRouting:
+      provider.id === "aws" && useRawCredentials
+        ? true
+        : template
+          ? false
+          : channelInput.awsEntryRouting,
+    templateConfig: template?.advanced || null,
+    templateChannelId: template?.id || null,
+    templateChannelName: template?.name || "",
+    automaticName,
+    awsRouting,
+    modelSource:
+      configSource === "template" ? `template:${template.name}` : configSource,
+  }
+}
+
+const buildPreviewResponse = (preview, previewId) => ({
+  previewId,
+  provider: {
+    name: preview.provider.name,
+    channelType: preview.provider.channelType,
+    baseUrl: preview.baseUrl,
+  },
+  name: preview.name,
+  groups: preview.groups,
+  models: preview.models,
+  duplicates: preview.duplicates,
+  keyCount: preview.keys.length,
+  quotaTotal: preview.keys.every(({ quota }) => Number.isFinite(quota))
+    ? preview.keys.reduce((total, { quota }) => total + quota, 0)
+    : null,
+  modelSource: preview.modelSource,
+  templateChannelId: preview.templateChannelId,
+  templateChannelName: preview.templateChannelName,
+  providerMappings: preview.providerMappings,
+  awsRouting: preview.awsRouting,
+  expiresInSeconds: 300,
+})
+
+async function createChannelsFromPreview(preview, body) {
+  const isTemplateClone = Number.isInteger(preview.templateChannelId)
+  if (
+    !isTemplateClone &&
+    (preview.duplicates || []).length > 0 &&
+    body.confirmDuplicates !== true
+  ) {
+    throw new Error("发现同来源渠道，请确认后再添加")
+  }
+  const existingChannelId = isTemplateClone
+    ? 0
+    : Number(body.existingChannelId || 0)
+  const existingChannel = existingChannelId
+    ? (preview.duplicates || []).find(
+        (channel) => Number(channel.id) === existingChannelId,
+      )
+    : null
+  if (existingChannelId && !existingChannel) {
+    throw new Error("所选同类渠道不在本次预览中，请重新预览")
+  }
+  const runtimeConfig = await getRuntimeConfig(preview.profileId)
+  if (existingChannel) {
+    if (preview.keys.length > 1 && !existingChannel.isMultiKey) {
+      throw new Error("单 Key 渠道不能批量写入，请选择多 Key 渠道或分别新建")
+    }
+    const updatedEntries = []
+    const updateFailures = []
+    let nextKeyIndex = existingChannel.multiKeySize || 0
+    for (const [index, entry] of preview.keys.entries()) {
+      try {
+        await updateExistingChannelKey(runtimeConfig, {
+          channelId: existingChannel.id,
+          apiKey: entry.apiKey,
+          append: existingChannel.isMultiKey,
+        })
+        updatedEntries.push({
+          ...entry,
+          keyIndex: existingChannel.isMultiKey ? nextKeyIndex : null,
+        })
+        if (existingChannel.isMultiKey) nextKeyIndex += 1
+      } catch (error) {
+        updateFailures.push({
+          keyIndex: index + 1,
+          success: false,
+          error: error instanceof Error ? error.message : "写入失败",
+        })
+      }
+    }
+    if (updatedEntries.length === 0) {
+      throw new Error(updateFailures[0]?.error || "Key 写入失败")
+    }
+    let channelEnabled = true
+    try {
+      await setChannelEnabled(runtimeConfig, existingChannel.id)
+    } catch {
+      channelEnabled = false
+    }
+    let balance = {
+      status: "unavailable",
+      reason: "渠道已更新，但暂时无法查询余额",
+    }
+    try {
+      balance = await enrichBalance(runtimeConfig, existingChannel.id)
+    } catch {
+      // The key update already succeeded; balance lookup is best-effort.
+    }
+    const records = []
+    for (const entry of updatedEntries) {
+      records.push(
+        await importStore.record({
+          profileId: runtimeConfig.profileId,
+          targetName: runtimeConfig.name,
+          targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
+          providerName: preview.provider.name,
+          apiKey: entry.apiKey,
+          quota: entry.quota,
+          currentBalance:
+            !existingChannel.isMultiKey && balance.status === "available"
+              ? balance.currentBalance
+              : null,
+          sharedChannel: existingChannel.isMultiKey,
+          keyIndex: entry.keyIndex,
+          operation: existingChannel.isMultiKey ? "appended" : "replaced",
+          channelId: existingChannel.id,
+          channelName: existingChannel.name,
+        }),
+      )
+    }
+    return {
+      success: updateFailures.length === 0 && channelEnabled,
+      operation: "updated",
+      keyAction: existingChannel.isMultiKey ? "appended" : "replaced",
+      channelId: existingChannel.id,
+      channelName: existingChannel.name,
+      balance,
+      keyCount: preview.keys.length,
+      successCount: updatedEntries.length,
+      failedCount: updateFailures.length,
+      channelEnabled,
+      failures: updateFailures,
+      records,
+    }
+  }
+  const modelPlan = buildPreviewModelPlan(preview, body)
+  if (body.combineKeys === true && preview.keys.length > 1) {
+    if (
+      preview.provider.id === "vertex-ai" &&
+      preview.channelSettings?.vertex_key_type === "api_key"
+    ) {
+      throw new Error("Vertex API Key 模式不支持合并为多 Key 渠道")
+    }
+    if (preview.provider.id === "aws" && preview.awsAutoCredentialMode) {
+      const credentialModes = new Set(
+        preview.keys.map((entry) => inferAwsCredentialMode(entry.apiKey)),
+      )
+      if (credentialModes.size > 1) {
+        throw new Error(
+          "AWS API Key 与 AK/SK 不能合并到同一个多 Key 渠道，请使用每条 Key 独立渠道",
+        )
+      }
+      const baseUrls = new Set(
+        preview.keys.map((entry) => buildEntryBaseUrl(preview, entry)),
+      )
+      if (baseUrls.size > 1) {
+        throw new Error(
+          "不同 AWS 地区不能合并到同一个多 Key 渠道，请使用每条 Key 独立渠道",
+        )
+      }
+    }
+    const routedModelPlans = preview.keys.map((entry) =>
+      buildEntryModelPlan(preview, modelPlan, entry),
+    )
+    const mappingVariants = new Set(
+      routedModelPlans.map((plan) => JSON.stringify(plan.modelMapping)),
+    )
+    if (mappingVariants.size > 1) {
+      throw new Error(
+        "AWS Key 的地区需要不同模型映射，请使用每条 Key 独立渠道或启用 Global",
+      )
+    }
+    const createInput = {
+      ...preview,
+      apiKeys: preview.keys.map((entry) => entry.apiKey),
+      name:
+        preview.provider.id === "aws"
+          ? appendAwsRegionToChannelName(preview.name, preview.keys[0].apiKey)
+          : preview.name,
+      baseUrl: buildEntryBaseUrl(preview, preview.keys[0]),
+      channelSettings: buildEntryChannelSettings(preview, preview.keys[0]),
+      ...routedModelPlans[0],
+    }
+    await createNewApiMultiKeyChannel(runtimeConfig, createInput)
+    let createdChannel = null
+    try {
+      createdChannel = await findCreatedChannel(runtimeConfig, createInput)
+    } catch {
+      // The channel is already created; the ledger can still retain the keys.
+    }
+    const records = []
+    for (const [keyIndex, entry] of preview.keys.entries()) {
+      records.push(
+        await importStore.record({
+          profileId: runtimeConfig.profileId,
+          targetName: runtimeConfig.name,
+          targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
+          providerName: preview.provider.name,
+          apiKey: entry.apiKey,
+          quota: entry.quota,
+          currentBalance: null,
+          sharedChannel: true,
+          keyIndex,
+          operation: "created-multi-key",
+          channelId: createdChannel?.id,
+          channelName: createInput.name,
+        }),
+      )
+    }
+    return {
+      success: true,
+      operation: "created-multi-key",
+      channelId: createdChannel?.id ?? null,
+      channelName: createInput.name,
+      keyCount: preview.keys.length,
+      successCount: preview.keys.length,
+      failedCount: 0,
+      modelCount: modelPlan.models.length,
+      mappingCount: Object.keys(modelPlan.modelMapping).length,
+      balance: { status: "unavailable" },
+      records,
+    }
+  }
+
+  const results = []
+  const concurrency = 5
+  for (let offset = 0; offset < preview.keys.length; offset += concurrency) {
+    await Promise.all(
+      preview.keys
+        .slice(offset, offset + concurrency)
+        .map(async (entry, relativeIndex) => {
+          const index = offset + relativeIndex
+          const entryModelPlan = buildEntryModelPlan(preview, modelPlan, entry)
+          const baseName = preview.automaticName
+            ? buildResourceChannelName(preview.provider.name, [entry], {
+                index,
+                total: preview.keys.length,
+              })
+            : preview.keys.length > 1
+              ? `${preview.name} · ${index + 1}`.slice(0, 80)
+              : preview.name
+          const createInput = {
+            ...preview,
+            apiKey: entry.apiKey,
+            baseUrl: buildEntryBaseUrl(preview, entry),
+            channelSettings: buildEntryChannelSettings(preview, entry),
+            name:
+              preview.provider.id === "aws"
+                ? appendAwsRegionToChannelName(baseName, entry.apiKey)
+                : baseName,
+            ...entryModelPlan,
+          }
+          try {
+            await createNewApiChannel(runtimeConfig, createInput)
+            let createdChannel = null
+            let balance = {
+              status: "unavailable",
+              reason: "渠道已创建，但暂时无法定位新渠道进行余额查询",
+            }
+            try {
+              createdChannel = await findCreatedChannel(
+                runtimeConfig,
+                createInput,
+              )
+              if (createdChannel?.id && preview.keys.length === 1) {
+                balance = await enrichBalance(runtimeConfig, createdChannel.id)
+              }
+            } catch {
+              // Channel creation already succeeded; balance lookup is best-effort.
+            }
+            const record = await importStore.record({
+              profileId: runtimeConfig.profileId,
+              targetName: runtimeConfig.name,
+              targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
+              providerName: preview.provider.name,
+              apiKey: entry.apiKey,
+              quota: entry.quota,
+              currentBalance:
+                balance.status === "available" ? balance.currentBalance : null,
+              operation: "created",
+              channelId: createdChannel?.id,
+              channelName: createInput.name,
+            })
+            results.push({
+              success: true,
+              keyIndex: index + 1,
+              channelId: createdChannel?.id ?? null,
+              channelName: createInput.name,
+              balance,
+              record,
+            })
+          } catch (error) {
+            results.push({
+              success: false,
+              keyIndex: index + 1,
+              error: error instanceof Error ? error.message : "写入失败",
+            })
+          }
+        }),
+    )
+  }
+  results.sort((left, right) => (left.keyIndex || 0) - (right.keyIndex || 0))
+  const successful = results.filter((result) => result.success)
+  const failed = results.filter((result) => !result.success)
+  const latest = successful.at(-1)
+  return {
+    success: failed.length === 0,
+    operation: "created",
+    channelId: latest?.channelId ?? null,
+    channelName: latest?.channelName ?? preview.name,
+    keyCount: preview.keys.length,
+    successCount: successful.length,
+    failedCount: failed.length,
+    modelCount: preview.models.length,
+    mappingCount: body.mappings?.length || 0,
+    balance: latest?.balance || { status: "unavailable" },
+    results,
+  }
+}
+
+async function runDueScheduleBatch(now = new Date()) {
+  const claim = await scheduleStore.claimDueJob(now)
+  if (!claim) return null
+  try {
+    const result = await createChannelsFromPreview(claim.preview, {
+      ...claim.createOptions,
+      confirmDuplicates: true,
+      existingChannelId: null,
+    })
+    return await scheduleStore.completeRun(claim.id, result, new Date())
+  } catch (error) {
+    return await scheduleStore.failRun(claim.id, error, new Date())
+  }
+}
+
 async function handleApi(request, response, url, port) {
   if (request.method === "GET" && url.pathname === "/api/bootstrap") {
     let profiles = await configStore.listProfiles()
@@ -298,6 +787,7 @@ async function handleApi(request, response, url, port) {
       config: publicConfig,
       groups,
       groupsError,
+      schedules: await scheduleStore.list(),
     })
   }
 
@@ -322,6 +812,10 @@ async function handleApi(request, response, url, port) {
 
   if (request.method === "GET" && url.pathname === "/api/imports") {
     return sendJson(response, 200, { records: await importStore.list() })
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/schedules") {
+    return sendJson(response, 200, { schedules: await scheduleStore.list() })
   }
 
   if (request.method === "GET" && url.pathname === "/api/groups") {
@@ -442,491 +936,80 @@ async function handleApi(request, response, url, port) {
 
   if (request.method === "POST" && url.pathname === "/api/preview") {
     const body = await readJsonBody(request)
-    const provider = getProvider(String(body.providerId || ""))
-    if (!provider.importable) throw new Error(provider.description)
-    const configSource = String(body.configSource || "")
-    if (!["template", "fetch", "new-api", "manual"].includes(configSource)) {
-      throw new Error("请选择复制已有渠道、自动获取模型或手动填写")
-    }
-    if (
-      configSource === "fetch" &&
-      provider.channelConfig.supportsModelFetch !== true
-    ) {
-      throw new Error(
-        "该渠道不能从供应商自动获取模型，请复制已有渠道、从 New API 获取或手动填写模型",
-      )
-    }
-    const runtimeConfig = await getRuntimeConfig()
-    const template =
-      configSource === "template"
-        ? await fetchChannelTemplate(
-            runtimeConfig,
-            body.templateChannelId,
-            provider,
-          )
-        : null
-    const normalizedApiKey =
-      provider.id === "aws"
-        ? normalizeAwsBatchCredentialInput(body.apiKey)
-        : String(body.apiKey || "")
-    const useRawCredentials = Boolean(
-      provider.channelConfig.credentialModes?.length && normalizedApiKey.trim(),
-    )
-    const channelInput = resolveChannelInput(provider, {
-      ...body,
-      apiKey: normalizedApiKey,
-      configSource,
-      useRawCredentials,
-    })
-    let keys
-    if (useRawCredentials) {
-      keys = parseBatchKeys(normalizedApiKey, "", {
-        allowInlineQuota: true,
-        deduplicate: false,
-      })
-    } else if (provider.channelConfig.credentialModes?.length) {
-      keys = parseBatchKeys(channelInput.apiKey, "", {
-        allowInlineQuota: true,
-        deduplicate: false,
-      })
-    } else if (provider.keyOptional && !channelInput.apiKey) {
-      keys = [{ apiKey: "", quota: null }]
-    } else {
-      keys = parseBatchKeys(channelInput.apiKey, "", {
-        allowInlineQuota: true,
-        deduplicate: false,
-      })
-    }
-    if (String(body.quotaLines || "").trim()) {
-      keys = applyQuotaLines(keys, body.quotaLines)
-    }
-    const awsAutoCredentialMode = provider.id === "aws" && useRawCredentials
-    const credentialMode = awsAutoCredentialMode
-      ? "auto"
-      : template?.channelSettings?.aws_key_type ||
-        template?.channelSettings?.vertex_key_type ||
-        String(body.credentialMode || "")
-    validateBatchCredentialEntries(provider, credentialMode, keys)
-    keys = [...new Map(keys.map((entry) => [entry.apiKey, entry])).values()]
-    if (!provider.keyOptional && keys.some(({ apiKey }) => apiKey.length < 8)) {
-      throw new Error("存在不完整的 API Key 或组合凭证")
-    }
-    const baseUrl = template
-      ? template.baseUrl
-      : resolveProviderBaseUrl(provider, body.baseUrl)
-    const requestedName = String(body.name || "")
-      .trim()
-      .slice(0, 80)
-    if (!requestedName) throw new Error("请输入渠道名称")
-    const automaticName = body.automaticName === true
-    const name = automaticName
-      ? buildResourceChannelName(provider.name, keys)
-      : requestedName
-    const availableGroups = await fetchNewApiGroups(runtimeConfig)
-    const requestedGroups = Array.isArray(body.groups)
-      ? body.groups.map((group) => String(group).trim()).filter(Boolean)
-      : []
-    const groups = [...new Set(requestedGroups)]
-    if (groups.length === 0) throw new Error("请至少选择一个渠道分组")
-    const invalidGroup = groups.find(
-      (group) => !availableGroups.includes(group),
-    )
-    if (invalidGroup) throw new Error(`渠道分组已不存在：${invalidGroup}`)
-    if (groups.join(",").length > 64) {
-      throw new Error("所选渠道分组名称总长度不能超过 64 个字符")
-    }
-    const resolvedProvider = { ...provider, resolvedBaseUrl: baseUrl }
-    const defaultModels =
-      configSource === "new-api"
-        ? await fetchNewApiDefaultModels(runtimeConfig, provider.channelType)
-        : configSource === "fetch"
-          ? await fetchChannelModels(runtimeConfig, {
-              provider,
-              baseUrl,
-              apiKey: keys[0]?.apiKey || "",
-            })
-          : []
-    const duplicates = await findSimilarChannels(
-      runtimeConfig,
-      resolvedProvider,
-    )
-    const models = template
-      ? template.models
-      : configSource === "new-api" || configSource === "fetch"
-        ? defaultModels
-        : channelInput.models
-    if (models.length === 0) {
-      throw new Error(
-        template
-          ? "所选已有渠道没有配置模型，请换一个渠道"
-          : configSource === "new-api" || configSource === "fetch"
-            ? "没有获取到模型，请改为复制已有渠道或手动填写"
-            : "请填写至少一个模型",
-      )
-    }
-    const globalInference =
-      provider.id === "aws" && body.providerFlags?.globalInference === true
-    let providerMappings = template
-      ? template.modelMappings
-      : channelInput.providerMappings
-    if (globalInference) {
-      providerMappings = buildAwsGlobalMappings(models, providerMappings)
-    }
-    const awsRouting =
-      provider.id === "aws"
-        ? summarizeAwsCredentials(keys, globalInference)
-        : null
-    const previewId = previewStore.create({
-      provider,
-      keys,
-      baseUrl,
-      name,
-      groups,
-      models,
-      duplicates,
-      profileId: runtimeConfig.profileId,
-      channelOther: template?.channelOther ?? channelInput.channelOther,
-      channelSettings:
-        template?.channelSettings ?? channelInput.channelSettings,
-      providerMappings,
-      awsAutoCredentialMode,
-      awsEntryRouting:
-        provider.id === "aws" && useRawCredentials
-          ? true
-          : template
-            ? false
-            : channelInput.awsEntryRouting,
-      templateConfig: template?.advanced || null,
-      templateChannelId: template?.id || null,
-      templateChannelName: template?.name || "",
-      automaticName,
-      awsRouting,
-    })
-    return sendJson(response, 200, {
-      previewId,
-      provider: {
-        name: provider.name,
-        channelType: provider.channelType,
-        baseUrl,
-      },
-      name,
-      groups,
-      models,
-      duplicates,
-      keyCount: keys.length,
-      quotaTotal: keys.every(({ quota }) => Number.isFinite(quota))
-        ? keys.reduce((total, { quota }) => total + quota, 0)
-        : null,
-      modelSource:
-        configSource === "template"
-          ? `template:${template.name}`
-          : configSource,
-      templateChannelId: template?.id || null,
-      templateChannelName: template?.name || "",
-      providerMappings,
-      awsRouting,
-      expiresInSeconds: 300,
-    })
+    const preview = await buildCredentialPreview(body)
+    const previewId = previewStore.create(preview)
+    return sendJson(response, 200, buildPreviewResponse(preview, previewId))
   }
 
   if (request.method === "POST" && url.pathname === "/api/create") {
     const body = await readJsonBody(request)
     const previewId = String(body.previewId || "")
     const preview = previewStore.get(previewId)
-    const isTemplateClone = Number.isInteger(preview.templateChannelId)
-    if (
-      !isTemplateClone &&
-      preview.duplicates.length > 0 &&
-      body.confirmDuplicates !== true
-    ) {
-      throw new Error("发现同来源渠道，请确认后再添加")
-    }
-    const existingChannelId = isTemplateClone
-      ? 0
-      : Number(body.existingChannelId || 0)
-    const existingChannel = existingChannelId
-      ? preview.duplicates.find(
-          (channel) => Number(channel.id) === existingChannelId,
-        )
-      : null
-    if (existingChannelId && !existingChannel) {
-      throw new Error("所选同类渠道不在本次预览中，请重新预览")
-    }
-    const runtimeConfig = await getRuntimeConfig(preview.profileId)
-    if (existingChannel) {
-      if (preview.keys.length > 1 && !existingChannel.isMultiKey) {
-        throw new Error("单 Key 渠道不能批量写入，请选择多 Key 渠道或分别新建")
-      }
-      const updatedEntries = []
-      const updateFailures = []
-      let nextKeyIndex = existingChannel.multiKeySize || 0
-      for (const [index, entry] of preview.keys.entries()) {
-        try {
-          await updateExistingChannelKey(runtimeConfig, {
-            channelId: existingChannel.id,
-            apiKey: entry.apiKey,
-            append: existingChannel.isMultiKey,
-          })
-          updatedEntries.push({
-            ...entry,
-            keyIndex: existingChannel.isMultiKey ? nextKeyIndex : null,
-          })
-          if (existingChannel.isMultiKey) nextKeyIndex += 1
-        } catch (error) {
-          updateFailures.push({
-            keyIndex: index + 1,
-            error: error instanceof Error ? error.message : "写入失败",
-          })
-        }
-      }
-      if (updatedEntries.length === 0) {
-        throw new Error(updateFailures[0]?.error || "Key 写入失败")
-      }
-      let channelEnabled = true
-      try {
-        await setChannelEnabled(runtimeConfig, existingChannel.id)
-      } catch {
-        channelEnabled = false
-      }
-      let balance = {
-        status: "unavailable",
-        reason: "渠道已更新，但暂时无法查询余额",
-      }
-      try {
-        balance = await enrichBalance(runtimeConfig, existingChannel.id)
-      } catch {
-        // The key update already succeeded; balance lookup is best-effort.
-      }
-      const records = []
-      for (const entry of updatedEntries) {
-        records.push(
-          await importStore.record({
-            profileId: runtimeConfig.profileId,
-            targetName: runtimeConfig.name,
-            targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
-            providerName: preview.provider.name,
-            apiKey: entry.apiKey,
-            quota: entry.quota,
-            currentBalance:
-              !existingChannel.isMultiKey && balance.status === "available"
-                ? balance.currentBalance
-                : null,
-            sharedChannel: existingChannel.isMultiKey,
-            keyIndex: entry.keyIndex,
-            operation: existingChannel.isMultiKey ? "appended" : "replaced",
-            channelId: existingChannel.id,
-            channelName: existingChannel.name,
-          }),
-        )
-      }
-      previewStore.delete(previewId)
-      return sendJson(response, 200, {
-        success: updateFailures.length === 0 && channelEnabled,
-        operation: "updated",
-        keyAction: existingChannel.isMultiKey ? "appended" : "replaced",
-        channelId: existingChannel.id,
-        channelName: existingChannel.name,
-        balance,
-        keyCount: preview.keys.length,
-        successCount: updatedEntries.length,
-        failedCount: updateFailures.length,
-        channelEnabled,
-        failures: updateFailures,
-        records,
-      })
-    }
-    const modelPlan = buildPreviewModelPlan(preview, body)
-    if (body.combineKeys === true && preview.keys.length > 1) {
-      if (
-        preview.provider.id === "vertex-ai" &&
-        preview.channelSettings?.vertex_key_type === "api_key"
-      ) {
-        throw new Error("Vertex API Key 模式不支持合并为多 Key 渠道")
-      }
-      if (preview.provider.id === "aws" && preview.awsAutoCredentialMode) {
-        const credentialModes = new Set(
-          preview.keys.map((entry) => inferAwsCredentialMode(entry.apiKey)),
-        )
-        if (credentialModes.size > 1) {
-          throw new Error(
-            "AWS API Key 与 AK/SK 不能合并到同一个多 Key 渠道，请使用每条 Key 独立渠道",
-          )
-        }
-        const baseUrls = new Set(
-          preview.keys.map((entry) => buildEntryBaseUrl(preview, entry)),
-        )
-        if (baseUrls.size > 1) {
-          throw new Error(
-            "不同 AWS 地区不能合并到同一个多 Key 渠道，请使用每条 Key 独立渠道",
-          )
-        }
-      }
-      const routedModelPlans = preview.keys.map((entry) =>
-        buildEntryModelPlan(preview, modelPlan, entry),
-      )
-      const mappingVariants = new Set(
-        routedModelPlans.map((plan) => JSON.stringify(plan.modelMapping)),
-      )
-      if (mappingVariants.size > 1) {
-        throw new Error(
-          "AWS Key 的地区需要不同模型映射，请使用每条 Key 独立渠道或启用 Global",
-        )
-      }
-      const createInput = {
-        ...preview,
-        apiKeys: preview.keys.map((entry) => entry.apiKey),
-        name:
-          preview.provider.id === "aws"
-            ? appendAwsRegionToChannelName(preview.name, preview.keys[0].apiKey)
-            : preview.name,
-        baseUrl: buildEntryBaseUrl(preview, preview.keys[0]),
-        channelSettings: buildEntryChannelSettings(preview, preview.keys[0]),
-        ...routedModelPlans[0],
-      }
-      await createNewApiMultiKeyChannel(runtimeConfig, createInput)
-      let createdChannel = null
-      try {
-        createdChannel = await findCreatedChannel(runtimeConfig, createInput)
-      } catch {
-        // The channel is already created; the ledger can still retain the keys.
-      }
-      const records = []
-      for (const [keyIndex, entry] of preview.keys.entries()) {
-        records.push(
-          await importStore.record({
-            profileId: runtimeConfig.profileId,
-            targetName: runtimeConfig.name,
-            targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
-            providerName: preview.provider.name,
-            apiKey: entry.apiKey,
-            quota: entry.quota,
-            currentBalance: null,
-            sharedChannel: true,
-            keyIndex,
-            operation: "created-multi-key",
-            channelId: createdChannel?.id,
-            channelName: createInput.name,
-          }),
-        )
-      }
-      previewStore.delete(previewId)
-      return sendJson(response, 200, {
-        success: true,
-        operation: "created-multi-key",
-        channelId: createdChannel?.id ?? null,
-        channelName: createInput.name,
-        keyCount: preview.keys.length,
-        successCount: preview.keys.length,
-        failedCount: 0,
-        modelCount: modelPlan.models.length,
-        mappingCount: Object.keys(modelPlan.modelMapping).length,
-        balance: { status: "unavailable" },
-        records,
-      })
-    }
-
-    const results = []
-    const concurrency = 5
-    for (let offset = 0; offset < preview.keys.length; offset += concurrency) {
-      await Promise.all(
-        preview.keys
-          .slice(offset, offset + concurrency)
-          .map(async (entry, relativeIndex) => {
-            const index = offset + relativeIndex
-            const entryModelPlan = buildEntryModelPlan(
-              preview,
-              modelPlan,
-              entry,
-            )
-            const baseName = preview.automaticName
-              ? buildResourceChannelName(preview.provider.name, [entry], {
-                  index,
-                  total: preview.keys.length,
-                })
-              : preview.keys.length > 1
-                ? `${preview.name} · ${index + 1}`.slice(0, 80)
-                : preview.name
-            const createInput = {
-              ...preview,
-              apiKey: entry.apiKey,
-              baseUrl: buildEntryBaseUrl(preview, entry),
-              channelSettings: buildEntryChannelSettings(preview, entry),
-              name:
-                preview.provider.id === "aws"
-                  ? appendAwsRegionToChannelName(baseName, entry.apiKey)
-                  : baseName,
-              ...entryModelPlan,
-            }
-            try {
-              await createNewApiChannel(runtimeConfig, createInput)
-              let createdChannel = null
-              let balance = {
-                status: "unavailable",
-                reason: "渠道已创建，但暂时无法定位新渠道进行余额查询",
-              }
-              try {
-                createdChannel = await findCreatedChannel(
-                  runtimeConfig,
-                  createInput,
-                )
-                if (createdChannel?.id && preview.keys.length === 1) {
-                  balance = await enrichBalance(
-                    runtimeConfig,
-                    createdChannel.id,
-                  )
-                }
-              } catch {
-                // Channel creation already succeeded; balance lookup is best-effort.
-              }
-              const record = await importStore.record({
-                profileId: runtimeConfig.profileId,
-                targetName: runtimeConfig.name,
-                targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
-                providerName: preview.provider.name,
-                apiKey: entry.apiKey,
-                quota: entry.quota,
-                currentBalance:
-                  balance.status === "available"
-                    ? balance.currentBalance
-                    : null,
-                operation: "created",
-                channelId: createdChannel?.id,
-                channelName: createInput.name,
-              })
-              results.push({
-                success: true,
-                channelId: createdChannel?.id ?? null,
-                channelName: createInput.name,
-                balance,
-                record,
-              })
-            } catch (error) {
-              results.push({
-                success: false,
-                keyIndex: index + 1,
-                error: error instanceof Error ? error.message : "写入失败",
-              })
-            }
-          }),
-      )
-    }
+    const result = await createChannelsFromPreview(preview, body)
     previewStore.delete(previewId)
-    const successful = results.filter((result) => result.success)
-    const failed = results.filter((result) => !result.success)
-    const latest = successful.at(-1)
-    return sendJson(response, 200, {
-      success: failed.length === 0,
-      operation: "created",
-      channelId: latest?.channelId ?? null,
-      channelName: latest?.channelName ?? preview.name,
-      keyCount: preview.keys.length,
-      successCount: successful.length,
-      failedCount: failed.length,
-      modelCount: preview.models.length,
-      mappingCount: body.mappings?.length || 0,
-      balance: latest?.balance || { status: "unavailable" },
-      results,
+    return sendJson(response, 200, result)
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/schedules") {
+    const body = await readJsonBody(request)
+    const preview = await buildCredentialPreview(body)
+    const schedule = await scheduleStore.create({
+      preview,
+      createOptions: {
+        confirmDuplicates: true,
+        existingChannelId: null,
+        manualModels: [],
+        mappings: [],
+        combineKeys: body.combineKeys === true,
+      },
+      schedule: body.schedule,
     })
+    return sendJson(response, 200, { schedule })
+  }
+
+  const scheduleActionMatch = url.pathname.match(
+    /^\/api\/schedules\/([^/]+)\/(run|pause|resume|cancel)$/,
+  )
+  if (request.method === "POST" && scheduleActionMatch) {
+    const [, scheduleId, action] = scheduleActionMatch
+    if (action === "run") {
+      const claim = await scheduleStore.claimJobNow(scheduleId, new Date())
+      if (!claim || claim.id !== scheduleId) {
+        return sendJson(response, 200, {
+          schedule: (await scheduleStore.list()).find(
+            (item) => item.id === scheduleId,
+          ),
+        })
+      }
+      try {
+        const result = await createChannelsFromPreview(claim.preview, {
+          ...claim.createOptions,
+          confirmDuplicates: true,
+          existingChannelId: null,
+        })
+        const schedule = await scheduleStore.completeRun(
+          claim.id,
+          result,
+          new Date(),
+        )
+        return sendJson(response, 200, { schedule })
+      } catch (error) {
+        const schedule = await scheduleStore.failRun(
+          claim.id,
+          error,
+          new Date(),
+        )
+        return sendJson(response, 200, { schedule })
+      }
+    }
+    const status =
+      action === "cancel"
+        ? "cancelled"
+        : action === "pause"
+          ? "paused"
+          : "active"
+    const schedule = await scheduleStore.updateStatus(scheduleId, status)
+    return sendJson(response, 200, { schedule })
   }
 
   if (request.method === "POST" && url.pathname === "/api/balance") {
@@ -1014,7 +1097,11 @@ async function serveStatic(response, pathname) {
     return
   }
   const fileName = pathname === "/" ? "index.html" : pathname.slice(1)
-  if (!new Set(["index.html", "styles.css", "app.js"]).has(fileName)) {
+  if (
+    !new Set(["index.html", "styles.css", "app.js", "usageStats.js"]).has(
+      fileName,
+    )
+  ) {
     response.writeHead(404).end("Not found")
     return
   }
@@ -1041,6 +1128,23 @@ export async function startImporterServer({
 } = {}) {
   configStore.setTokenStore(tokenStore)
   let activePort = port
+  let scheduleTimer = null
+  let scheduleRunning = false
+  const runSchedules = async () => {
+    if (scheduleRunning) return
+    scheduleRunning = true
+    try {
+      while (await runDueScheduleBatch()) {
+        // Keep draining due batches so a sleeping laptop catches up gradually.
+      }
+    } catch (error) {
+      process.stderr.write(
+        `dataeyesai 定时上 Key 失败：${error instanceof Error ? error.message : "未知错误"}\n`,
+      )
+    } finally {
+      scheduleRunning = false
+    }
+  }
   const server = createServer(async (request, response) => {
     try {
       if (!isAllowedHostHeader(request.headers.host, activePort)) {
@@ -1074,6 +1178,8 @@ export async function startImporterServer({
   })
   const url = `http://${host}:${activePort}`
   process.stdout.write(`dataeyesai 已启动：${url}\n`)
+  scheduleTimer = setInterval(runSchedules, 30_000)
+  void runSchedules()
   if (openBrowser && process.platform === "darwin") {
     const { execFile } = await import("node:child_process")
     execFile("open", [url])
@@ -1081,10 +1187,12 @@ export async function startImporterServer({
   return {
     server,
     url,
-    close: async () =>
+    close: async () => {
+      if (scheduleTimer) clearInterval(scheduleTimer)
       await new Promise((resolveClose, reject) => {
         server.close((error) => (error ? reject(error) : resolveClose()))
-      }),
+      })
+    },
   }
 }
 

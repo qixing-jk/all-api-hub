@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
     <title>dataeyesai · 渠道 Key 导入器</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=20260711-2" />
   </head>
   <body>
     <div class="app-shell">
@@ -20,8 +20,9 @@
         <nav class="side-nav" aria-label="页面导航">
           <a class="active" href="#importer"><span>01</span> 导入渠道</a>
           <a href="#connection"><span>02</span> 目标连接</a>
-          <a href="#records"><span>03</span> 导入记录</a>
-          <a href="#security"><span>04</span> 安全说明</a>
+          <a href="#usage-monitor"><span>03</span> 用量监测</a>
+          <a href="#records"><span>04</span> 导入记录</a>
+          <a href="#security"><span>05</span> 安全说明</a>
         </nav>
 
         <div class="sidebar-spacer"></div>
@@ -439,6 +440,42 @@
                   ></span
                 >
               </label>
+              <label class="check-row">
+                <input id="schedule-enabled" type="checkbox" />
+                <span
+                  ><strong>定时自动上 Key</strong
+                  ><small
+                    >先把 Key 加密放进本机队列，到点后按数量自动写入。</small
+                  ></span
+                >
+              </label>
+              <div class="schedule-options hidden" id="schedule-options">
+                <label class="field">
+                  <span>首次执行时间</span>
+                  <input id="schedule-start-at" type="datetime-local" />
+                </label>
+                <label class="field">
+                  <span>每次上几条</span>
+                  <input
+                    id="schedule-batch-size"
+                    type="number"
+                    min="1"
+                    max="200"
+                    value="1"
+                  />
+                </label>
+                <label class="field">
+                  <span>间隔分钟</span>
+                  <input
+                    id="schedule-interval-minutes"
+                    type="number"
+                    min="0"
+                    max="43200"
+                    value="60"
+                  />
+                  <small>填 0 表示只跑第一批，后续手动继续。</small>
+                </label>
+              </div>
               <button class="primary-button" id="preview-button" type="submit">
                 <span>批量添加到 New API</span><i aria-hidden="true">↗</i>
               </button>
@@ -624,6 +661,151 @@
           </div>
         </section>
 
+        <section class="panel schedule-panel" id="schedules">
+          <div class="panel-heading">
+            <div>
+              <span class="kicker">SCHEDULE</span>
+              <h2>定时上 Key 队列</h2>
+            </div>
+            <button
+              class="secondary-button compact"
+              id="refresh-schedules"
+              type="button"
+            >
+              刷新队列
+            </button>
+          </div>
+          <p class="records-note">
+            待写入 Key 会加密保存在本机，列表只显示尾号和指纹；服务长驻后，即使页面关掉也会按时间执行。
+          </p>
+          <div class="schedule-empty" id="schedule-empty">
+            还没有定时任务。
+          </div>
+          <div class="schedule-list" id="schedule-list"></div>
+        </section>
+
+        <section class="panel usage-monitor-panel" id="usage-monitor">
+          <div class="panel-heading usage-monitor-heading">
+            <div class="usage-monitor-title">
+              <div class="usage-monitor-eyebrow">
+                <span class="kicker">USAGE MONITOR</span>
+                <span class="usage-live-badge" id="usage-monitor-sync-status"
+                  ><i></i> 等待校准</span
+                >
+              </div>
+              <h2>New API 用量监测</h2>
+            </div>
+            <button
+              class="secondary-button compact usage-refresh-button"
+              id="refresh-usage-monitor"
+              type="button"
+            >
+              <span aria-hidden="true">↻</span> 刷新当前用量
+            </button>
+          </div>
+          <p class="records-note usage-monitor-description">
+            日期筛选按 Key 的录入时间计算；已用额度是这些 Key
+            从录入后至今的累计消费。金额使用 New API 数据库汇总接口校准，剩余百分比只计算已填写额度的
+            Key。
+          </p>
+          <div class="usage-monitor-toolbar" aria-label="用量监测时间筛选">
+            <label>
+              <span>New API 地址</span>
+              <select id="usage-monitor-target">
+                <option value="">全部 New API 地址</option>
+              </select>
+            </label>
+            <label>
+              <span>开始日期</span>
+              <input id="usage-monitor-start" type="date" />
+            </label>
+            <label>
+              <span>结束日期</span>
+              <input id="usage-monitor-end" type="date" />
+            </label>
+            <div class="usage-monitor-shortcuts" aria-label="快捷时间范围">
+              <button type="button" data-usage-range="today">今天</button>
+              <button type="button" data-usage-range="7">近 7 天</button>
+              <button type="button" data-usage-range="30">近 30 天</button>
+              <button type="button" data-usage-range="all">全部</button>
+            </div>
+          </div>
+          <div class="usage-monitor-range" id="usage-monitor-range"></div>
+          <div class="usage-monitor-kpis">
+            <article class="kpi-key">
+              <small>录入 Key</small>
+              <strong id="monitor-key-count">0</strong>
+              <span id="monitor-key-detail">0 个已填写额度</span>
+            </article>
+            <article class="kpi-quota">
+              <small>录入总额度</small>
+              <strong id="monitor-quota-total">$0.00</strong>
+              <span id="monitor-quota-detail">0 个未知额度</span>
+            </article>
+            <article class="spent kpi-spent">
+              <small>这些 Key 累计已用</small>
+              <strong id="monitor-spent-total">$0.00</strong>
+              <span id="monitor-spent-detail">0 次请求</span>
+            </article>
+            <article class="kpi-remaining">
+              <small>已统计剩余额度</small>
+              <strong id="monitor-remaining-total">$0.00</strong>
+              <span>只计算已刷新且填写额度的 Key</span>
+            </article>
+            <article class="remaining-card kpi-rate">
+              <div class="remaining-ring" id="monitor-remaining-ring">
+                <svg viewBox="0 0 44 44" aria-hidden="true">
+                  <circle class="ring-track" cx="22" cy="22" r="18"></circle>
+                  <circle
+                    class="ring-value"
+                    id="monitor-remaining-ring-value"
+                    cx="22"
+                    cy="22"
+                    r="18"
+                    pathLength="100"
+                    stroke-dasharray="0 100"
+                  ></circle>
+                </svg>
+                <strong id="monitor-remaining-percent">—</strong>
+              </div>
+              <div>
+                <small>剩余用量百分比</small>
+                <span id="monitor-remaining-detail">暂无可计算数据</span>
+              </div>
+            </article>
+            <article class="kpi-coverage">
+              <small>用量刷新覆盖率</small>
+              <strong id="monitor-coverage-percent">0%</strong>
+              <span id="monitor-coverage-detail">0 / 0 个已刷新</span>
+            </article>
+          </div>
+          <div class="usage-monitor-grid" id="usage-monitor-grid">
+            <section class="usage-visual-card site-visual-card">
+              <header>
+                <div>
+                  <small>BY NEW API</small>
+                  <h3>各站点当前剩余用量</h3>
+                </div>
+                <span>额度 / 累计已用 / 剩余率</span>
+              </header>
+              <div class="site-usage-list" id="site-usage-list"></div>
+            </section>
+            <section class="usage-visual-card daily-visual-card">
+              <header>
+                <div>
+                  <small>BY IMPORT DATE</small>
+                  <h3>按录入日分组的累计用量</h3>
+                </div>
+                <span>使用额累计至最近校准</span>
+              </header>
+              <div class="daily-usage-chart" id="daily-usage-chart"></div>
+            </section>
+          </div>
+          <div class="usage-monitor-empty hidden" id="usage-monitor-empty">
+            当前 New API 地址和日期范围内没有 Key 录入记录。
+          </div>
+        </section>
+
         <section class="panel records-panel" id="records">
           <div class="panel-heading">
             <div>
@@ -643,6 +825,78 @@
             消费日志统计，并按站点、渠道和多 Key
             索引区分；上游余额按供应商支持情况单独展示。
           </p>
+          <div class="usage-summary" id="usage-summary">
+            <div>
+              <small>Key 数量</small>
+              <strong id="usage-key-count">0</strong>
+              <span id="usage-key-detail">0 个已使用</span>
+            </div>
+            <div>
+              <small>录入总额度</small>
+              <strong id="usage-quota-total">$0.00</strong>
+              <span id="usage-quota-detail">0 个未知额度</span>
+            </div>
+            <div class="accent">
+              <small>New API 已消耗</small>
+              <strong id="usage-spent-total">$0.00</strong>
+              <span id="usage-coverage-detail">0 / 0 个已统计</span>
+            </div>
+            <div>
+              <small>已统计额度剩余</small>
+              <strong id="usage-remaining-total">$0.00</strong>
+              <span>仅计算已刷新且填过额度的 Key</span>
+            </div>
+            <div>
+              <small>请求次数</small>
+              <strong id="usage-request-count">0</strong>
+              <span id="usage-last-checked">尚未刷新</span>
+            </div>
+            <div>
+              <small>Token 用量</small>
+              <strong id="usage-token-total">0</strong>
+              <span id="usage-token-detail">输入 0 · 输出 0</span>
+            </div>
+          </div>
+          <div class="records-toolbar" aria-label="消耗记录筛选">
+            <label>
+              <span>New API 站点</span>
+              <select id="records-target-filter">
+                <option value="">全部站点</option>
+              </select>
+            </label>
+            <label>
+              <span>供应商</span>
+              <select id="records-provider-filter">
+                <option value="">全部供应商</option>
+              </select>
+            </label>
+            <label>
+              <span>使用状态</span>
+              <select id="records-status-filter">
+                <option value="">全部状态</option>
+                <option value="used">已产生消耗</option>
+                <option value="unused">已刷新、未使用</option>
+                <option value="pending">等待刷新</option>
+                <option value="incomplete">统计未完整</option>
+              </select>
+            </label>
+            <label class="records-search-field">
+              <span>搜索渠道或 Key</span>
+              <input
+                id="records-search"
+                type="search"
+                placeholder="渠道名称、ID、Key 尾号或指纹"
+              />
+            </label>
+            <button
+              class="table-action"
+              id="reset-record-filters"
+              type="button"
+            >
+              清除筛选
+            </button>
+          </div>
+          <p class="usage-summary-note" id="usage-summary-note"></p>
           <div class="records-empty" id="records-empty">
             还没有 Key 填入记录。
           </div>
@@ -653,9 +907,10 @@
                   <th>时间 / 目标</th>
                   <th>来源 / Key</th>
                   <th>渠道</th>
-                  <th>录入额度</th>
-                  <th>当前余额</th>
-                  <th>New API 已用 / 剩余</th>
+                  <th>额度 / 上游余额</th>
+                  <th>New API 消耗</th>
+                  <th>请求 / Token</th>
+                  <th>最近使用 / 刷新</th>
                   <th>操作</th>
                 </tr>
               </thead>
@@ -672,6 +927,6 @@
     </div>
 
     <div class="toast hidden" id="toast" role="status"></div>
-    <script type="module" src="/app.js?v=20260705-2"></script>
+    <script type="module" src="/app.js?v=20260711-2"></script>
   </body>
 </html>
