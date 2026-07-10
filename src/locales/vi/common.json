@@ -21,6 +21,21 @@
     "cny": "Nhân dân tệ",
     "usd": "Đô la Mỹ"
   },
+  "datePicker": {
+    "in1Year": "+1 năm",
+    "in30Days": "+30 ngày",
+    "in7Days": "+7 ngày",
+    "in90Days": "+90 ngày",
+    "naturalInput": {
+      "invalid": "Nhập ngày có thể nhận dạng, như YYYY-MM-DD hoặc in 7 days",
+      "label": "Nhập ngày",
+      "openCalendar": "Mở lịch",
+      "placeholder": "Ví dụ: in 7 days, tomorrow, hoặc 2026-08-01",
+      "preview": "Sẽ đặt thành: {{date}}"
+    },
+    "noExpiration": "Không hết hạn",
+    "placeholder": "Chọn ngày"
+  },
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",

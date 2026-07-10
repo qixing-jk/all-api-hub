@@ -21,6 +21,21 @@
     "cny": "人民币",
     "usd": "美元"
   },
+  "datePicker": {
+    "in1Year": "+1 年",
+    "in30Days": "+30 天",
+    "in7Days": "+7 天",
+    "in90Days": "+90 天",
+    "naturalInput": {
+      "invalid": "无法识别日期，请输入 YYYY-MM-DD、7天后或明天",
+      "label": "输入日期",
+      "openCalendar": "打开日历",
+      "placeholder": "例如：7天后、明天、2026-08-01",
+      "preview": "将设置为：{{date}}"
+    },
+    "noExpiration": "不过期",
+    "placeholder": "选择日期"
+  },
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",

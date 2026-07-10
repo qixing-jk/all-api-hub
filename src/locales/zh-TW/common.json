@@ -21,6 +21,21 @@
     "cny": "人民幣",
     "usd": "美元"
   },
+  "datePicker": {
+    "in1Year": "+1 年",
+    "in30Days": "+30 天",
+    "in7Days": "+7 天",
+    "in90Days": "+90 天",
+    "naturalInput": {
+      "invalid": "無法辨識日期，請輸入 YYYY-MM-DD、7天後或明天",
+      "label": "輸入日期",
+      "openCalendar": "開啟日曆",
+      "placeholder": "例如：7天後、明天、2026-08-01",
+      "preview": "將設定為：{{date}}"
+    },
+    "noExpiration": "不過期",
+    "placeholder": "選擇日期"
+  },
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",

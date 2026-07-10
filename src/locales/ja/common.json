@@ -21,6 +21,21 @@
     "cny": "CNY",
     "usd": "USD"
   },
+  "datePicker": {
+    "in1Year": "+1 年",
+    "in30Days": "+30 日",
+    "in7Days": "+7 日",
+    "in90Days": "+90 日",
+    "naturalInput": {
+      "invalid": "YYYY-MM-DD または in 7 days のような認識可能な日付を入力してください",
+      "label": "日付を入力",
+      "openCalendar": "カレンダーを開く",
+      "placeholder": "例: in 7 days、tomorrow、2026-08-01",
+      "preview": "設定予定: {{date}}"
+    },
+    "noExpiration": "期限なし",
+    "placeholder": "日付を選択"
+  },
   "labels": {
     "apiKey": "API キー",
     "notAvailable": "N/A",

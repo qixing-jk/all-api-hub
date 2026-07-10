@@ -21,6 +21,21 @@
     "cny": "CNY",
     "usd": "USD"
   },
+  "datePicker": {
+    "in1Year": "+1 año",
+    "in30Days": "+30 días",
+    "in7Days": "+7 días",
+    "in90Days": "+90 días",
+    "naturalInput": {
+      "invalid": "Ingresa una fecha reconocible, como YYYY-MM-DD o in 7 days",
+      "label": "Ingresar fecha",
+      "openCalendar": "Abrir calendario",
+      "placeholder": "Prueba in 7 days, tomorrow o 2026-08-01",
+      "preview": "Se establecerá en: {{date}}"
+    },
+    "noExpiration": "Sin vencimiento",
+    "placeholder": "Seleccionar fecha"
+  },
   "labels": {
     "apiKey": "Clave API",
     "notAvailable": "N/D",
