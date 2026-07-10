@@ -3,6 +3,7 @@ import type { AccountFixture } from "~~/e2e/scenarios/accountFixtures"
 export type AccountUsagePlanCheck<TContext> = {
   name: string
   run: (context: TContext) => Promise<void>
+  timeoutMs?: number
 }
 
 type AccountUsagePlanStep = (

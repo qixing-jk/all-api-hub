@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test"
+import type { BrowserContext, Page } from "@playwright/test"
 
 import type { AccountSiteType } from "~/constants/siteType"
 import { expect } from "~~/e2e/fixtures/extensionTest"
@@ -42,4 +42,40 @@ export async function runCompatibleRealSiteAccountSaveFlow(params: {
       expect(loginResult.user).toBeTruthy()
     },
   })
+}
+
+export function createCompatibleRealSiteAccountFixturePreparer(params: {
+  context: BrowserContext
+  page: Page
+  extensionId: string
+  serviceWorker: ServiceWorker
+  config: CompatibleApiRealSiteConfig
+  siteType: AccountSiteType
+  expectedDetectedSiteType?: AccountSiteType
+  extensionPageGuardOptions?: ExtensionPageGuardOptions
+  login: (
+    page: Page,
+    config: CompatibleApiRealSiteConfig,
+  ) => Promise<CompatibleRealSiteLoginResult>
+}) {
+  return async () => {
+    const sitePage = await params.context.newPage()
+    try {
+      return await runCompatibleRealSiteAccountSaveFlow({
+        page: params.page,
+        extensionId: params.extensionId,
+        serviceWorker: params.serviceWorker,
+        sitePage,
+        config: params.config,
+        siteType: params.siteType,
+        expectedDetectedSiteType: params.expectedDetectedSiteType,
+        extensionPageGuardOptions: params.extensionPageGuardOptions,
+        login: params.login,
+      })
+    } finally {
+      if (!sitePage.isClosed()) {
+        await sitePage.close()
+      }
+    }
+  }
 }
