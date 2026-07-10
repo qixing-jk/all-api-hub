@@ -7,11 +7,17 @@ import { useTranslation } from "react-i18next"
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import {
   Button,
+  DatePicker,
   FormField,
   Input,
   SearchableSelect,
   Textarea,
 } from "~/components/ui"
+import {
+  formatDatePickerTimestamp,
+  getDatePickerLocale,
+  parseDatePickerTimestamp,
+} from "~/components/ui/datePickerValue"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
@@ -106,46 +112,6 @@ function normalizeTelemetryMode(
 }
 
 /**
- * Converts a timestamp into the value shape expected by an HTML date input.
- */
-function formatDateInputValue(timestamp: number | undefined): string {
-  if (!timestamp || timestamp <= 0) return ""
-  const date = new Date(timestamp)
-  if (Number.isNaN(date.getTime())) return ""
-
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
-}
-
-/**
- * Converts a date input value into a local day-level timestamp.
- */
-function parseDateInputValue(value: string): number | null {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-
-  const [yearRaw, monthRaw, dayRaw] = trimmed.split("-")
-  const year = Number(yearRaw)
-  const month = Number(monthRaw)
-  const day = Number(dayRaw)
-  if (!year || !month || !day) return null
-
-  const date = new Date(year, month - 1, day)
-  if (
-    Number.isNaN(date.getTime()) ||
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
-    return null
-  }
-
-  return date.getTime()
-}
-
-/**
  * Add/edit modal for API credential profiles.
  */
 export function ApiCredentialProfileDialog({
@@ -159,7 +125,7 @@ export function ApiCredentialProfileDialog({
   deleteTag,
   onSave,
 }: ApiCredentialProfileDialogProps) {
-  const { t } = useTranslation([
+  const { t, i18n } = useTranslation([
     "apiCredentialProfiles",
     "aiApiVerification",
     "common",
@@ -219,7 +185,7 @@ export function ApiCredentialProfileDialog({
       setApiKey(profile.apiKey ?? "")
       setTagIds(profile.tagIds ?? [])
       setNotes(profile.notes ?? "")
-      setExpiresAtInput(formatDateInputValue(profile.expiresAt))
+      setExpiresAtInput(formatDatePickerTimestamp(profile.expiresAt))
       setTelemetryMode(normalizeTelemetryMode(profile.telemetryConfig?.mode))
       setCustomEndpoint(profile.telemetryConfig?.customEndpoint?.endpoint ?? "")
       setCustomJsonPaths(
@@ -244,6 +210,10 @@ export function ApiCredentialProfileDialog({
     const normalized = normalizeBaseUrl(apiType, baseUrl)
     return normalized ?? ""
   }, [apiType, baseUrl])
+  const datePickerLocale = useMemo(
+    () => getDatePickerLocale(i18n.language),
+    [i18n.language],
+  )
 
   const telemetryJsonPathFields = useMemo(
     () => [
@@ -416,7 +386,7 @@ export function ApiCredentialProfileDialog({
         apiKey: apiKey.trim(),
         tagIds,
         notes: notes.trim(),
-        expiresAt: parseDateInputValue(expiresAtInput),
+        expiresAt: parseDatePickerTimestamp(expiresAtInput),
         telemetryConfig: buildTelemetryConfig(),
       })
 
@@ -635,12 +605,31 @@ export function ApiCredentialProfileDialog({
             description={t("apiCredentialProfiles:dialog.hints.expiresAt")}
             htmlFor={expiresAtInputId}
           >
-            <Input
+            <DatePicker
               id={expiresAtInputId}
-              type="date"
               value={expiresAtInput}
-              onChange={(e) => setExpiresAtInput(e.target.value)}
+              onChange={setExpiresAtInput}
+              labels={{
+                trigger: t("apiCredentialProfiles:dialog.fields.expiresAt"),
+                placeholder: t("common:datePicker.placeholder"),
+                noExpiration: t("common:datePicker.noExpiration"),
+                in7Days: t("common:datePicker.in7Days"),
+                in30Days: t("common:datePicker.in30Days"),
+                in90Days: t("common:datePicker.in90Days"),
+                in1Year: t("common:datePicker.in1Year"),
+                naturalInput: {
+                  invalid: t("common:datePicker.naturalInput.invalid"),
+                  label: t("common:datePicker.naturalInput.label"),
+                  openCalendar: t(
+                    "common:datePicker.naturalInput.openCalendar",
+                  ),
+                  placeholder: t("common:datePicker.naturalInput.placeholder"),
+                  preview: t("common:datePicker.naturalInput.preview"),
+                },
+              }}
+              locale={datePickerLocale}
               disabled={isSaving}
+              naturalInput
             />
           </FormField>
 

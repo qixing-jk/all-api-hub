@@ -100,6 +100,17 @@ vi.mock("react-hot-toast/headless", () => ({
   },
 }))
 
+vi.mock("~/components/ui/DatePicker", () => ({
+  DatePicker: ({ id, value, onChange, disabled }: any) => (
+    <input
+      id={id}
+      value={value ?? ""}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}))
+
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
@@ -3690,6 +3701,10 @@ describe("ApiCheckModalHost", () => {
 
   it("ignores impossible calendar dates when preparing profile metadata", () => {
     expect(parseDateInputValue("2026-02-31")).toBeNull()
+  })
+
+  it("rejects expanded-year calendar dates when preparing profile metadata", () => {
+    expect(parseDateInputValue("202607-01-01")).toBeNull()
   })
 
   it("clears stale global tags before reloading them on modal open", async () => {

@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
+import {
+  getDatePickerLocale,
+  parseDatePickerTimestamp,
+} from "~/components/ui/datePickerValue"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -59,26 +63,7 @@ const logger = createLogger("ApiCheckModalViewModel")
  * Converts an HTML date input value into a local day-level timestamp.
  */
 export function parseDateInputValue(value: string): number | null {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-
-  const [yearRaw, monthRaw, dayRaw] = trimmed.split("-")
-  const year = Number(yearRaw)
-  const month = Number(monthRaw)
-  const day = Number(dayRaw)
-  if (!year || !month || !day) return null
-
-  const date = new Date(year, month - 1, day)
-  if (
-    Number.isNaN(date.getTime()) ||
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
-    return null
-  }
-
-  return date.getTime()
+  return parseDatePickerTimestamp(value)
 }
 
 export interface ApiCheckModalViewModel {
@@ -97,6 +82,7 @@ export interface ApiCheckModalViewModel {
   selectedTagIds: string[]
   notes: string
   expiresAtInput: string
+  datePickerLocale: ReturnType<typeof getDatePickerLocale>
   isProfileOptionsOpen: boolean
   hasProfileMetadataInput: boolean
   isFetchingModels: boolean
@@ -147,7 +133,11 @@ export interface ApiCheckModalActions {
  * Builds the state and action contract for the content API check modal UI.
  */
 export function useApiCheckModalViewModel() {
-  const { t } = useTranslation(["webAiApiCheck", "common", "aiApiVerification"])
+  const { t, i18n } = useTranslation([
+    "webAiApiCheck",
+    "common",
+    "aiApiVerification",
+  ])
 
   const [isOpen, setIsOpen] = useState(false)
   const [trigger, setTrigger] =
@@ -611,6 +601,10 @@ export function useApiCheckModalViewModel() {
     ],
     [],
   )
+  const datePickerLocale = useMemo(
+    () => getDatePickerLocale(i18n.language),
+    [i18n.language],
+  )
 
   return {
     view: {
@@ -629,6 +623,7 @@ export function useApiCheckModalViewModel() {
       selectedTagIds,
       notes,
       expiresAtInput,
+      datePickerLocale,
       isProfileOptionsOpen,
       hasProfileMetadataInput,
       isFetchingModels,
