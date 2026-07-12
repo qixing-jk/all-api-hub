@@ -21,6 +21,7 @@ import {
   type ModelPricing,
 } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
+import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -35,6 +36,7 @@ import { createLogger } from "~/utils/core/logger"
 import { tryParseUrl } from "~/utils/core/urlParsing"
 
 import { formatGroupLabelFromRatios } from "../../groupLabels"
+import { ModelCapabilityBadges } from "./ModelCapabilityBadges"
 import { ModelItemDescription } from "./ModelItemDescription"
 import { ModelItemDetails } from "./ModelItemDetails"
 import { ModelItemExpandButton } from "./ModelItemExpandButton"
@@ -45,6 +47,7 @@ const logger = createLogger("ModelItem")
 
 interface ModelItemProps {
   model: ModelPricing
+  modelMetadata?: ModelMetadata
   calculatedPrice: CalculatedPrice
   exchangeRate: number
   showRealPrice: boolean
@@ -92,6 +95,7 @@ interface ModelItemProps {
 export default function ModelItem(props: ModelItemProps) {
   const {
     model,
+    modelMetadata,
     calculatedPrice,
     exchangeRate,
     showRealPrice,
@@ -405,22 +409,30 @@ export default function ModelItem(props: ModelItemProps) {
           model={model}
           isAvailableForUser={isAvailableForUser}
         />
-        <ModelItemPricing
-          model={model}
-          calculatedPrice={calculatedPrice}
-          exchangeRate={exchangeRate}
-          showRealPrice={showRealPrice}
-          showPricing={showPricing}
-          showRatioColumn={
-            showRatioColumn && effectiveCapabilities.supportsRatioDisplay
-          }
-          isAvailableForUser={isAvailableForUser}
-          isLowestPrice={isLowestPrice}
-          effectiveGroup={effectiveGroup}
-          groupRatios={groupRatios}
-          showsOptimalGroup={showsOptimalGroup}
-          groupSelectionScope={groupSelectionScope}
-        />
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <ModelItemPricing
+              model={model}
+              calculatedPrice={calculatedPrice}
+              exchangeRate={exchangeRate}
+              showRealPrice={showRealPrice}
+              showPricing={showPricing}
+              showRatioColumn={
+                showRatioColumn && effectiveCapabilities.supportsRatioDisplay
+              }
+              isAvailableForUser={isAvailableForUser}
+              isLowestPrice={isLowestPrice}
+              effectiveGroup={effectiveGroup}
+              groupRatios={groupRatios}
+              showsOptimalGroup={showsOptimalGroup}
+              groupSelectionScope={groupSelectionScope}
+            />
+          </div>
+          <ModelCapabilityBadges
+            modelMetadata={modelMetadata}
+            className="mt-1 sm:ml-auto sm:max-w-[48%]"
+          />
+        </div>
 
         {isExpanded &&
           source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && (
