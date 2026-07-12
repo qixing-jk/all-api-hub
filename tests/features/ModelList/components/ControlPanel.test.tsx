@@ -6,6 +6,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { ControlPanel } from "~/features/ModelList/components/ControlPanel"
 import {
+  MODEL_CAPABILITY_FILTER_VALUES,
+  type ModelCapabilitySelectionValue,
+} from "~/features/ModelList/modelCapabilityFilters"
+import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSourceCapabilities,
@@ -17,6 +21,7 @@ import {
 } from "~/features/ModelList/verificationResultFilters"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 
@@ -98,7 +103,12 @@ vi.mock("~/components/ui", () => ({
     placeholder,
     size = "sm",
   }: {
-    options: Array<{ value: string; label: string }>
+    options: Array<{
+      value: string
+      label: string
+      count?: number
+      disabled?: boolean
+    }>
     selected: string[]
     onChange: (selected: string[]) => void
     placeholder?: string
@@ -108,9 +118,12 @@ vi.mock("~/components/ui", () => ({
       {options.map((option) => (
         <label key={option.value}>
           {option.label}
+          {typeof option.count === "number" && <span>{option.count}</span>}
           <input
             type="checkbox"
+            aria-label={option.label}
             checked={selected.includes(option.value)}
+            disabled={option.disabled}
             onChange={(event) => {
               onChange(
                 event.target.checked
@@ -313,6 +326,154 @@ describe("ControlPanel", () => {
         }),
       }),
     )
+  })
+
+  it("applies model capability filters through the control panel", async () => {
+    const user = userEvent.setup()
+    const setSelectedModelCapabilities = vi.fn()
+    const getFilteredResultCount = vi.fn(() => 3)
+
+    renderControlPanel({
+      supportsModelCapabilityFilter: true,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT],
+      setSelectedModelCapabilities,
+      getFilteredResultCount,
+    })
+
+    await user.click(
+      screen.getByLabelText("modelCapabilityFilter.options.toolCall"),
+    )
+
+    expect(setSelectedModelCapabilities).toHaveBeenLastCalledWith(
+      expect.arrayContaining([
+        MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT,
+        MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL,
+      ]),
+    )
+    expect(getFilteredResultCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedModelCapabilities: [
+          MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT,
+          MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL,
+        ],
+      }),
+    )
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: expect.objectContaining({
+          mode: PRODUCT_ANALYTICS_MODE_IDS.ModelCapabilityFilter,
+          filterCount: 4,
+          resultCount: 3,
+        }),
+      }),
+    )
+  })
+
+  it("shows capability result counts and disables unavailable unselected capabilities", () => {
+    const getFilteredResultCount = vi.fn(
+      (filters: {
+        selectedModelCapabilities?: ModelCapabilitySelectionValue[]
+      }) => {
+        const capabilities = filters.selectedModelCapabilities ?? []
+
+        if (capabilities.includes(MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL)) {
+          return 2
+        }
+
+        return 0
+      },
+    )
+
+    renderControlPanel({
+      supportsModelCapabilityFilter: true,
+      searchTerm: "vision",
+      selectedVerificationResults: [
+        MODEL_LIST_VERIFICATION_RESULT_FILTERS.PASS,
+      ],
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT],
+      getFilteredResultCount,
+    })
+
+    expect(
+      screen.getByLabelText("modelCapabilityFilter.options.imageInput"),
+    ).not.toBeDisabled()
+    expect(
+      screen.getByLabelText("modelCapabilityFilter.options.audioOutput"),
+    ).toBeDisabled()
+    expect(
+      screen.getByLabelText("modelCapabilityFilter.options.toolCall"),
+    ).not.toBeDisabled()
+
+    expect(
+      screen.getByText("modelCapabilityFilter.options.imageInput"),
+    ).toHaveTextContent("0")
+    expect(
+      screen.getByText("modelCapabilityFilter.options.audioOutput"),
+    ).toHaveTextContent("0")
+    expect(
+      screen.getByText("modelCapabilityFilter.options.toolCall"),
+    ).toHaveTextContent("2")
+    expect(
+      screen
+        .getByText("modelCapabilityFilter.options.imageInput")
+        .compareDocumentPosition(
+          screen.getByText("modelCapabilityFilter.options.toolCall"),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      screen
+        .getByText("modelCapabilityFilter.options.toolCall")
+        .compareDocumentPosition(
+          screen.getByText("modelCapabilityFilter.options.audioOutput"),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(getFilteredResultCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        searchTerm: "vision",
+        selectedVerificationResults: [
+          MODEL_LIST_VERIFICATION_RESULT_FILTERS.PASS,
+        ],
+        selectedModelCapabilities: [
+          MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT,
+          MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL,
+        ],
+      }),
+    )
+  })
+
+  it("explains capability metadata coverage when some models lack capability details", () => {
+    renderControlPanel({
+      supportsModelCapabilityFilter: true,
+      modelCapabilityMetadataCoverage: {
+        matched: 2,
+        total: 5,
+        unmatched: 3,
+      },
+    })
+
+    const capabilityHint = screen
+      .getByText("modelCapabilityFilter.selectionHint", { exact: false })
+      .closest("p")
+
+    expect(capabilityHint).toHaveTextContent(
+      "modelCapabilityFilter.selectionHint",
+    )
+    expect(capabilityHint).toHaveTextContent(
+      "modelCapabilityFilter.coverageHint",
+    )
+  })
+
+  it("hides model capability filters until capability metadata is available", () => {
+    renderControlPanel({
+      supportsModelCapabilityFilter: false,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT],
+    })
+
+    expect(
+      screen.queryByLabelText("modelCapabilityFilter.options.all"),
+    ).not.toBeInTheDocument()
   })
 
   it("hides the prompt when price comparison is already active", () => {

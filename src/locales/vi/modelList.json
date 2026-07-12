@@ -163,6 +163,43 @@
     "modelNamesCopied": "Đã sao chép tên các mô hình",
     "siteUrlCopied": "Đã sao chép URL trang"
   },
+  "modelCapabilityFilter": {
+    "coverageHint": "{{unmatched}} mô hình trong danh sách này chưa có mô tả năng lực, nên bộ lọc năng lực sẽ tạm bỏ qua chúng.",
+    "descriptions": {
+      "attachment": "Hỗ trợ tệp đính kèm đã tải lên làm ngữ cảnh đầu vào.",
+      "audioInput": "Hỗ trợ đầu vào âm thanh.",
+      "audioOutput": "Hỗ trợ đầu ra âm thanh.",
+      "imageInput": "Hỗ trợ tải hình ảnh lên để nhận dạng, phân tích hoặc hiểu thị giác.",
+      "imageOutput": "Hỗ trợ tạo hình ảnh trực tiếp dưới dạng đầu ra của mô hình.",
+      "pdf": "Hỗ trợ đầu vào tài liệu PDF.",
+      "reasoning": "Hỗ trợ suy luận rõ ràng hoặc các bước suy nghĩ.",
+      "structuredOutput": "Hỗ trợ đầu ra có cấu trúc hoặc ràng buộc JSON Schema.",
+      "toolCall": "Hỗ trợ gọi công cụ hoặc gọi hàm.",
+      "videoInput": "Hỗ trợ đầu vào video.",
+      "videoOutput": "Hỗ trợ đầu ra video."
+    },
+    "groups": {
+      "capabilities": "Năng lực:",
+      "input": "Đầu vào:",
+      "output": "Đầu ra:"
+    },
+    "label": "Năng lực mô hình",
+    "options": {
+      "all": "Tất cả năng lực",
+      "attachment": "Tệp đính kèm",
+      "audioInput": "Đầu vào âm thanh",
+      "audioOutput": "Đầu ra âm thanh",
+      "imageInput": "Đầu vào hình ảnh",
+      "imageOutput": "Tạo hình ảnh",
+      "pdf": "PDF",
+      "reasoning": "Suy luận",
+      "structuredOutput": "Đầu ra có cấu trúc",
+      "toolCall": "Gọi công cụ",
+      "videoInput": "Đầu vào video",
+      "videoOutput": "Đầu ra video"
+    },
+    "selectionHint": "Khi chọn nhiều năng lực, mô hình phải khớp với tất cả năng lực đã chọn."
+  },
   "noMatchingModels": "Không tìm thấy mô hình nào phù hợp",
   "noSourcesDescription": "Vui lòng thêm tài khoản trang web hoặc thông tin xác thực API trước, sau đó xem danh sách mô hình.",
   "noSourcesTitle": "Hiện chưa có nguồn dữ liệu khả dụng",

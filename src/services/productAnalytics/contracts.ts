@@ -180,6 +180,7 @@ export const PRODUCT_ANALYTICS_MODE_IDS = {
   Export: "export",
   SearchFilter: "search_filter",
   ProviderFilter: "provider_filter",
+  ModelCapabilityFilter: "model_capability_filter",
   SortFilter: "sort_filter",
   BillingFilter: "billing_filter",
   GroupFilter: "group_filter",

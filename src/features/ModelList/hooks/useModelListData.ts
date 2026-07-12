@@ -1,7 +1,9 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import { useAccountData } from "~/hooks/useAccountData"
+import { modelMetadataService } from "~/services/models/modelMetadata"
+import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 
 import {
   isAihubmixCatalogFallbackPricing,
@@ -51,6 +53,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     setAllAccountsExcludedGroupsByAccountId,
     searchTerm,
     selectedProvider,
+    selectedModelCapabilities,
     sortMode,
     setSortMode,
     showRealPrice,
@@ -180,6 +183,30 @@ export function useModelListData(routeParams?: Record<string, string>) {
     selectedSource,
     accounts,
   })
+  const [modelMetadata, setModelMetadata] = useState<ModelMetadata[]>([])
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadModelMetadata = async () => {
+      try {
+        await modelMetadataService.initialize()
+        if (isMounted) {
+          setModelMetadata(modelMetadataService.getAllMetadata())
+        }
+      } catch {
+        if (isMounted) {
+          setModelMetadata([])
+        }
+      }
+    }
+
+    void loadModelMetadata()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const isFallbackCatalogActive = modelData.accountFallback?.isActive === true
   const isSelectedAccountAihubmixCatalogFallback =
@@ -261,6 +288,8 @@ export function useModelListData(routeParams?: Record<string, string>) {
     allAccountsExcludedGroupsByAccountId,
     searchTerm,
     selectedProvider,
+    selectedModelCapabilities,
+    modelMetadata,
     sortMode,
     showRealPrice,
     accountFilterAccountIds: allAccountsFilterAccountIds,

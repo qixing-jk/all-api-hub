@@ -163,6 +163,43 @@
     "modelNamesCopied": "模型名稱已複製",
     "siteUrlCopied": "站點 URL 已複製"
   },
+  "modelCapabilityFilter": {
+    "coverageHint": "目前列表中有 {{unmatched}} 個模型暫無能力說明，選擇能力篩選時會先略過。",
+    "descriptions": {
+      "attachment": "支援上傳附件作為輸入上下文。",
+      "audioInput": "支援音訊輸入。",
+      "audioOutput": "支援音訊輸出。",
+      "imageInput": "支援上傳圖片進行辨識、分析或視覺理解。",
+      "imageOutput": "支援直接生成圖片輸出。",
+      "pdf": "支援 PDF 文件輸入。",
+      "reasoning": "支援明確推理或思考過程。",
+      "structuredOutput": "支援結構化輸出或 JSON Schema 約束。",
+      "toolCall": "支援工具呼叫或函式呼叫。",
+      "videoInput": "支援影片輸入。",
+      "videoOutput": "支援影片輸出。"
+    },
+    "groups": {
+      "capabilities": "能力:",
+      "input": "輸入:",
+      "output": "輸出:"
+    },
+    "label": "模型能力",
+    "options": {
+      "all": "全部能力",
+      "attachment": "附件",
+      "audioInput": "音訊輸入",
+      "audioOutput": "音訊輸出",
+      "imageInput": "圖片理解",
+      "imageOutput": "圖片生成",
+      "pdf": "PDF",
+      "reasoning": "思考",
+      "structuredOutput": "結構化輸出",
+      "toolCall": "工具呼叫",
+      "videoInput": "影片輸入",
+      "videoOutput": "影片輸出"
+    },
+    "selectionHint": "選擇多個能力時，模型需要同時符合所有條件。"
+  },
   "noMatchingModels": "沒有找到匹配的模型",
   "noSourcesDescription": "請先新增站點帳號或 API 憑據，然後查看模型列表。",
   "noSourcesTitle": "暫無可用資料來源",

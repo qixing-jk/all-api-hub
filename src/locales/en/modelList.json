@@ -169,6 +169,43 @@
     "modelNamesCopied": "Model names copied",
     "siteUrlCopied": "Site URL copied"
   },
+  "modelCapabilityFilter": {
+    "coverageHint": "{{unmatched}} models in this list do not have capability details yet, so capability filters skip them.",
+    "descriptions": {
+      "attachment": "Supports uploaded attachments as input context.",
+      "audioInput": "Supports audio input.",
+      "audioOutput": "Supports audio output.",
+      "imageInput": "Supports uploaded images for recognition, analysis, or visual understanding.",
+      "imageOutput": "Supports generating images directly as model output.",
+      "pdf": "Supports PDF document input.",
+      "reasoning": "Supports explicit reasoning or thinking steps.",
+      "structuredOutput": "Supports structured output or JSON schema constraints.",
+      "toolCall": "Supports tool calling or function calling.",
+      "videoInput": "Supports video input.",
+      "videoOutput": "Supports video output."
+    },
+    "groups": {
+      "capabilities": "Capabilities:",
+      "input": "Input:",
+      "output": "Output:"
+    },
+    "label": "Model Capabilities",
+    "options": {
+      "all": "All Capabilities",
+      "attachment": "Attachments",
+      "audioInput": "Audio Input",
+      "audioOutput": "Audio Output",
+      "imageInput": "Image Input",
+      "imageOutput": "Image Generation",
+      "pdf": "PDF",
+      "reasoning": "Reasoning",
+      "structuredOutput": "Structured Output",
+      "toolCall": "Tool Calling",
+      "videoInput": "Video Input",
+      "videoOutput": "Video Output"
+    },
+    "selectionHint": "When multiple capabilities are selected, models must match all selected capabilities."
+  },
   "noMatchingModels": "No matching models found",
   "noSourcesDescription": "Add a site account or API credential before viewing the model list.",
   "noSourcesTitle": "No model sources yet",

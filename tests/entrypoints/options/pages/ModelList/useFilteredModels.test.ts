@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
+import { MODEL_CAPABILITY_FILTER_VALUES } from "~/features/ModelList/modelCapabilityFilters"
 import {
   createAccountSource,
   createAccountTokenModelListSourceIdentity,
@@ -20,6 +21,7 @@ import {
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
+import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { MODEL_PROVIDER_FILTER_VALUES } from "~/services/models/utils/modelProviders"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -86,6 +88,8 @@ function renderUseFilteredModels(
         selectedGroups: [],
         searchTerm: "",
         selectedProvider: MODEL_PROVIDER_FILTER_VALUES.ALL,
+        selectedModelCapabilities: [],
+        modelMetadata: [],
         sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
         showRealPrice: false,
         ...overrides,
@@ -374,6 +378,209 @@ describe("useFilteredModels", () => {
     expect(result.current.getFilteredResultCount({ searchTerm: "batch" })).toBe(
       1,
     )
+  })
+
+  it("filters models by explicit metadata capabilities and modalities", async () => {
+    const account = createDisplayAccount({
+      id: "account-model-capability-filter",
+      balance: { USD: 5, CNY: 35 },
+    })
+    const modelMetadata: ModelMetadata[] = [
+      {
+        id: "openai/gpt-4o",
+        name: "GPT-4o",
+        provider_id: "openai",
+        capabilities: {
+          reasoning: false,
+          toolCall: true,
+        },
+        modalities: {
+          input: ["text", "image"],
+          output: ["text"],
+        },
+      },
+      {
+        id: "deepseek/deepseek-reasoner",
+        name: "DeepSeek Reasoner",
+        provider_id: "deepseek",
+        capabilities: {
+          reasoning: true,
+          toolCall: false,
+        },
+        modalities: {
+          input: ["text"],
+          output: ["text"],
+        },
+      },
+      {
+        id: "openai/gpt-image-1",
+        name: "GPT Image 1",
+        provider_id: "openai",
+        modalities: {
+          input: ["text"],
+          output: ["image"],
+        },
+      },
+      {
+        id: "example/media-model",
+        name: "Media Model",
+        provider_id: "example",
+        modalities: {
+          input: ["text", "audio", "video"],
+          output: ["text", "audio", "video"],
+        },
+      },
+    ]
+
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "gpt-4o",
+        "gpt-image-1",
+        "deepseek-reasoner",
+        "media-model",
+        "unknown-audio-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT],
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["gpt-4o"]),
+    )
+
+    rerender({
+      pricingData: createPricingResponse([
+        "gpt-4o",
+        "gpt-image-1",
+        "deepseek-reasoner",
+        "media-model",
+        "unknown-audio-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.REASONING],
+    })
+
+    expect(
+      result.current.filteredModels.map((item) => item.model.model_name),
+    ).toEqual(["deepseek-reasoner"])
+    expect(
+      result.current
+        .getFilteredModels({
+          selectedModelCapabilities: [
+            MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT,
+            MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL,
+          ],
+        })
+        .map((item) => item.model.model_name),
+    ).toEqual(["gpt-4o"])
+    expect(
+      result.current
+        .getFilteredModels({
+          selectedModelCapabilities: [
+            MODEL_CAPABILITY_FILTER_VALUES.IMAGE_OUTPUT,
+          ],
+        })
+        .map((item) => item.model.model_name),
+    ).toEqual(["gpt-image-1"])
+    expect(
+      result.current
+        .getFilteredModels({
+          selectedModelCapabilities: [
+            MODEL_CAPABILITY_FILTER_VALUES.AUDIO_OUTPUT,
+            MODEL_CAPABILITY_FILTER_VALUES.VIDEO_INPUT,
+          ],
+        })
+        .map((item) => item.model.model_name),
+    ).toEqual(["media-model"])
+  })
+
+  it("reports capability metadata coverage before applying capability filters", async () => {
+    const account = createDisplayAccount({
+      id: "account-model-capability-coverage",
+      balance: { USD: 5, CNY: 35 },
+    })
+    const modelMetadata: ModelMetadata[] = [
+      {
+        id: "openai/gpt-4o",
+        name: "GPT-4o",
+        provider_id: "openai",
+        modalities: {
+          input: ["text", "image"],
+          output: ["text"],
+        },
+      },
+      {
+        id: "anthropic/claude-sonnet-4-5",
+        name: "Claude Sonnet 4.5",
+        provider_id: "anthropic",
+        capabilities: {
+          reasoning: true,
+        },
+        modalities: {
+          input: ["text"],
+          output: ["text"],
+        },
+      },
+    ]
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "gpt-4o",
+        "claude-4.5-sonnet-20250929",
+        "unknown-custom-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT],
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["gpt-4o"]),
+    )
+
+    expect(result.current.modelCapabilityMetadataCoverage).toEqual({
+      matched: 2,
+      total: 3,
+      unmatched: 1,
+    })
+    expect(
+      result.current
+        .getFilteredModels({
+          selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.REASONING],
+        })
+        .map((item) => item.model.model_name),
+    ).toEqual(["claude-4.5-sonnet-20250929"])
+  })
+
+  it("does not apply capability filters when capability metadata is unavailable", async () => {
+    const account = createDisplayAccount({
+      id: "account-missing-model-capability-metadata",
+      balance: { USD: 5, CNY: 35 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "gpt-4o",
+        "deepseek-reasoner",
+        "unknown-audio-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata: [],
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT],
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["gpt-4o", "deepseek-reasoner", "unknown-audio-model"]),
+    )
+    expect(result.current.supportsModelCapabilityFilter).toBe(false)
   })
 
   it("skips malformed account pricing payloads while keeping valid account models and groups", async () => {

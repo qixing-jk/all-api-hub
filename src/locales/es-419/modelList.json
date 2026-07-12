@@ -175,6 +175,43 @@
     "modelNamesCopied": "Nombres de modelos copiados",
     "siteUrlCopied": "URL del sitio copiada"
   },
+  "modelCapabilityFilter": {
+    "coverageHint": "{{unmatched}} modelos de esta lista aún no tienen detalles de capacidades, por eso los filtros de capacidades los omiten.",
+    "descriptions": {
+      "attachment": "Admite adjuntos cargados como contexto de entrada.",
+      "audioInput": "Admite entrada de audio.",
+      "audioOutput": "Admite salida de audio.",
+      "imageInput": "Admite imágenes cargadas para reconocimiento, análisis o comprensión visual.",
+      "imageOutput": "Admite generar imágenes directamente como salida del modelo.",
+      "pdf": "Admite entrada de documentos PDF.",
+      "reasoning": "Admite razonamiento explícito o pasos de pensamiento.",
+      "structuredOutput": "Admite salida estructurada o restricciones de esquema JSON.",
+      "toolCall": "Admite llamadas a herramientas o funciones.",
+      "videoInput": "Admite entrada de video.",
+      "videoOutput": "Admite salida de video."
+    },
+    "groups": {
+      "capabilities": "Capacidades:",
+      "input": "Entrada:",
+      "output": "Salida:"
+    },
+    "label": "Capacidades del modelo",
+    "options": {
+      "all": "Todas las capacidades",
+      "attachment": "Adjuntos",
+      "audioInput": "Entrada de audio",
+      "audioOutput": "Salida de audio",
+      "imageInput": "Entrada de imagen",
+      "imageOutput": "Generación de imagen",
+      "pdf": "PDF",
+      "reasoning": "Razonamiento",
+      "structuredOutput": "Salida estructurada",
+      "toolCall": "Llamada a herramientas",
+      "videoInput": "Entrada de video",
+      "videoOutput": "Salida de video"
+    },
+    "selectionHint": "Cuando se seleccionan varias capacidades, los modelos deben coincidir con todas las capacidades seleccionadas."
+  },
   "noMatchingModels": "No se encontraron modelos coincidentes",
   "noSourcesDescription": "Agrega una cuenta de sitio o una credencial de API antes de ver la lista de modelos.",
   "noSourcesTitle": "Aún no hay fuentes de modelos",

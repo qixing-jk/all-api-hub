@@ -725,6 +725,7 @@ describe("ControlPanel profile capabilities", () => {
       searchTerm: "private-search",
       sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
       selectedBillingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
+      selectedModelCapabilities: [],
       selectedGroups: [],
       selectedVerificationResults: ["pass", "fail", "unverified"],
     })

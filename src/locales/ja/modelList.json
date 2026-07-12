@@ -163,6 +163,43 @@
     "modelNamesCopied": "モデル名をコピーしました",
     "siteUrlCopied": "サイト URL をコピーしました"
   },
+  "modelCapabilityFilter": {
+    "coverageHint": "この一覧には能力説明がまだないモデルが {{unmatched}} 件あり、能力フィルターでは一時的に除外されます。",
+    "descriptions": {
+      "attachment": "アップロードした添付ファイルを入力コンテキストとして利用できます。",
+      "audioInput": "音声入力に対応します。",
+      "audioOutput": "音声出力に対応します。",
+      "imageInput": "画像のアップロードによる認識、分析、視覚理解に対応します。",
+      "imageOutput": "モデル出力として画像を直接生成できます。",
+      "pdf": "PDF ドキュメント入力に対応します。",
+      "reasoning": "明示的な推論または思考ステップに対応します。",
+      "structuredOutput": "構造化出力または JSON スキーマ制約に対応します。",
+      "toolCall": "ツール呼び出しまたは関数呼び出しに対応します。",
+      "videoInput": "動画入力に対応します。",
+      "videoOutput": "動画出力に対応します。"
+    },
+    "groups": {
+      "capabilities": "能力:",
+      "input": "入力:",
+      "output": "出力:"
+    },
+    "label": "モデル能力",
+    "options": {
+      "all": "すべての能力",
+      "attachment": "添付",
+      "audioInput": "音声入力",
+      "audioOutput": "音声出力",
+      "imageInput": "画像理解",
+      "imageOutput": "画像生成",
+      "pdf": "PDF",
+      "reasoning": "推論",
+      "structuredOutput": "構造化出力",
+      "toolCall": "ツール呼び出し",
+      "videoInput": "動画入力",
+      "videoOutput": "動画出力"
+    },
+    "selectionHint": "複数の能力を選択すると、モデルは選択したすべての能力を満たす必要があります。"
+  },
   "noMatchingModels": "一致するモデルが見つかりません",
   "noSourcesDescription": "モデル一覧を表示するには、先にサイトアカウントまたは API 認証情報を追加してください。",
   "noSourcesTitle": "利用できるデータソースがありません",

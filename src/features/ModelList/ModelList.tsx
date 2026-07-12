@@ -112,6 +112,8 @@ export default function ModelList(props: {
     setSortMode,
     selectedBillingMode,
     setSelectedBillingMode,
+    selectedModelCapabilities,
+    setSelectedModelCapabilities,
     selectedGroups,
     setSelectedGroups,
     allAccountsExcludedGroupsByAccountId,
@@ -146,6 +148,8 @@ export default function ModelList(props: {
     availableGroups,
     availableAccountGroupsByAccountId,
     availableAccountGroupOptionsByAccountId,
+    supportsModelCapabilityFilter,
+    modelCapabilityMetadataCoverage,
 
     // Operations
     loadPricingData,
@@ -700,6 +704,10 @@ export default function ModelList(props: {
             setSortMode={setSortMode}
             selectedBillingMode={selectedBillingMode}
             setSelectedBillingMode={setSelectedBillingMode}
+            supportsModelCapabilityFilter={supportsModelCapabilityFilter}
+            modelCapabilityMetadataCoverage={modelCapabilityMetadataCoverage}
+            selectedModelCapabilities={selectedModelCapabilities}
+            setSelectedModelCapabilities={setSelectedModelCapabilities}
             selectedGroups={selectedGroups}
             setSelectedGroups={setSelectedGroups}
             availableGroups={availableGroups}

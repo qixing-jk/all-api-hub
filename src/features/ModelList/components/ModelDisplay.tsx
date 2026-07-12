@@ -197,6 +197,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
           return (
             <ModelItem
               model={item.model}
+              modelMetadata={item.modelMetadata}
               calculatedPrice={item.calculatedPrice}
               exchangeRate={exchangeRate}
               showRealPrice={showRealPrice}

@@ -481,6 +481,30 @@ describe("CompactMultiSelect", () => {
     expect(onChange).toHaveBeenCalledWith([])
   })
 
+  it("renders option counts without adding them to the selected summary", async () => {
+    const user = userEvent.setup()
+
+    renderCompact(
+      <CompactMultiSelect
+        displayMode="summary"
+        options={[
+          { value: "alpha", label: "Alpha", count: 12 },
+          { value: "beta", label: "Beta", count: 0 },
+        ]}
+        selected={["alpha"]}
+        onChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("combobox")).toHaveTextContent("Alpha")
+    expect(screen.getByRole("combobox")).not.toHaveTextContent("12")
+
+    await user.click(screen.getByRole("combobox"))
+
+    expect(screen.getByRole("option", { name: "Alpha 12" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Beta 0" })).toBeInTheDocument()
+  })
+
   it("keeps duplicate custom batches as a no-op and clears the search term", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()

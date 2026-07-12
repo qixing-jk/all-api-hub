@@ -163,6 +163,43 @@
     "modelNamesCopied": "模型名称已复制",
     "siteUrlCopied": "站点 URL 已复制"
   },
+  "modelCapabilityFilter": {
+    "coverageHint": "当前列表中有 {{unmatched}} 个模型暂无能力说明，选择能力筛选时会先跳过。",
+    "descriptions": {
+      "attachment": "支持上传附件作为输入上下文。",
+      "audioInput": "支持音频输入。",
+      "audioOutput": "支持音频输出。",
+      "imageInput": "支持上传图片进行识别、分析或视觉理解。",
+      "imageOutput": "支持直接生成图片输出。",
+      "pdf": "支持 PDF 文档输入。",
+      "reasoning": "支持显式推理或思考过程。",
+      "structuredOutput": "支持结构化输出或 JSON Schema 约束。",
+      "toolCall": "支持工具调用或函数调用。",
+      "videoInput": "支持视频输入。",
+      "videoOutput": "支持视频输出。"
+    },
+    "groups": {
+      "capabilities": "能力:",
+      "input": "输入:",
+      "output": "输出:"
+    },
+    "label": "模型能力",
+    "options": {
+      "all": "全部能力",
+      "attachment": "附件",
+      "audioInput": "音频输入",
+      "audioOutput": "音频输出",
+      "imageInput": "图片理解",
+      "imageOutput": "图片生成",
+      "pdf": "PDF",
+      "reasoning": "思考",
+      "structuredOutput": "结构化输出",
+      "toolCall": "工具调用",
+      "videoInput": "视频输入",
+      "videoOutput": "视频输出"
+    },
+    "selectionHint": "选择多个能力时，模型需要同时满足所有条件。"
+  },
   "noMatchingModels": "没有找到匹配的模型",
   "noSourcesDescription": "请先添加站点账号或 API 凭据，然后查看模型列表。",
   "noSourcesTitle": "暂无可用数据源",

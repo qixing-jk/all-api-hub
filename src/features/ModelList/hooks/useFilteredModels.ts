@@ -3,6 +3,14 @@ import { useCallback, useMemo } from "react"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { applyAihubmixModelListCapabilities } from "~/features/ModelList/aihubmixModelList"
 import {
+  createModelMetadataIndex,
+  hasFilterableModelCapabilityMetadata,
+  matchesModelCapabilityFilters,
+  resolveModelMetadata,
+  type ModelCapabilityMetadataCoverage,
+  type ModelCapabilitySelectionValue,
+} from "~/features/ModelList/modelCapabilityFilters"
+import {
   createAccountSource,
   deriveModelListSourceCapabilities,
   MODEL_MANAGEMENT_SOURCE_KINDS,
@@ -19,6 +27,7 @@ import {
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
+import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import {
   calculateModelPrice,
   isTokenBillingType,
@@ -45,6 +54,8 @@ interface UseFilteredModelsProps {
   allAccountsExcludedGroupsByAccountId?: Record<string, string[]>
   searchTerm: string
   selectedProvider: ModelProviderFilterValue
+  selectedModelCapabilities: ModelCapabilitySelectionValue[]
+  modelMetadata: ModelMetadata[]
   sortMode: ModelListSortMode
   showRealPrice: boolean
   accountFilterAccountIds?: string[]
@@ -71,6 +82,7 @@ interface RawModelItem {
   sourceIdentity?: ModelListSourceIdentity
   groupRatios: Record<string, number>
   exchangeRate: number
+  modelMetadata?: ModelMetadata
 }
 
 export interface AccountGroupOption {
@@ -90,6 +102,7 @@ export type CalculatedModelItem = {
   sourceIdentity?: ModelListSourceIdentity
   groupRatios: Record<string, number>
   effectiveGroup?: string
+  modelMetadata?: ModelMetadata
   hasAutoSelectedGroup?: boolean
   isLowestPrice?: boolean
 }
@@ -371,6 +384,7 @@ function resolveBestCalculatedItem(
       sourceIdentity: rawItem.sourceIdentity,
       groupRatios: rawItem.groupRatios,
       effectiveGroup: supportsGroupFiltering ? group : undefined,
+      modelMetadata: rawItem.modelMetadata,
       hasAutoSelectedGroup: groupsToEvaluate.length > 1,
     }
     const candidateKey = getComparablePriceKey(candidateItem, showRealPrice)
@@ -428,7 +442,11 @@ function resolveCalculatedModels(params: {
 type FilterOverrides = Partial<
   Pick<
     UseFilteredModelsProps,
-    "searchTerm" | "sortMode" | "selectedBillingMode" | "selectedGroups"
+    | "searchTerm"
+    | "sortMode"
+    | "selectedBillingMode"
+    | "selectedGroups"
+    | "selectedModelCapabilities"
   >
 >
 
@@ -456,10 +474,21 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     allAccountsExcludedGroupsByAccountId = {},
     searchTerm,
     selectedProvider,
+    selectedModelCapabilities,
+    modelMetadata,
     sortMode,
     showRealPrice,
     accountFilterAccountIds = [],
   } = params
+
+  const modelMetadataIndex = useMemo(
+    () => createModelMetadataIndex(modelMetadata),
+    [modelMetadata],
+  )
+  const supportsModelCapabilityFilter = useMemo(
+    () => hasFilterableModelCapabilityMetadata(modelMetadata),
+    [modelMetadata],
+  )
 
   const rawModelItems = useMemo<RawModelItem[]>(() => {
     if (pricingContexts && pricingContexts.length > 0) {
@@ -498,6 +527,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
           sourceIdentity,
           groupRatios: pricing.group_ratio ?? {},
           exchangeRate,
+          modelMetadata: resolveModelMetadata(
+            modelMetadataIndex,
+            model.model_name,
+          ),
         }))
       })
     }
@@ -512,6 +545,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         source: selectedSource,
         groupRatios: {},
         exchangeRate: 1,
+        modelMetadata: resolveModelMetadata(
+          modelMetadataIndex,
+          model.model_name,
+        ),
       }))
     }
 
@@ -541,8 +578,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       source,
       groupRatios: pricingData.group_ratio ?? {},
       exchangeRate,
+      modelMetadata: resolveModelMetadata(modelMetadataIndex, model.model_name),
     }))
-  }, [pricingContexts, pricingData, selectedSource])
+  }, [modelMetadataIndex, pricingContexts, pricingData, selectedSource])
 
   const availableGroups = useMemo(() => {
     if (
@@ -808,6 +846,8 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       const nextSelectedBillingMode =
         overrides.selectedBillingMode ?? selectedBillingMode
       const nextSelectedGroups = overrides.selectedGroups ?? selectedGroups
+      const nextSelectedModelCapabilities =
+        overrides.selectedModelCapabilities ?? selectedModelCapabilities
 
       if (nextSearchTerm) {
         const searchLower = nextSearchTerm.toLowerCase()
@@ -849,6 +889,18 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         )
       }
 
+      if (
+        supportsModelCapabilityFilter &&
+        nextSelectedModelCapabilities.length > 0
+      ) {
+        filtered = filtered.filter((item) =>
+          matchesModelCapabilityFilters({
+            metadata: item.modelMetadata,
+            filters: nextSelectedModelCapabilities,
+          }),
+        )
+      }
+
       return filtered
     },
     [
@@ -856,8 +908,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       rawModelItems,
       searchTerm,
       selectedBillingMode,
+      selectedModelCapabilities,
       selectedGroups,
       selectedSource?.capabilities.supportsGroupFiltering,
+      supportsModelCapabilityFilter,
     ],
   )
 
@@ -932,6 +986,23 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     (overrides: FilterOverrides = {}) => getFilteredModels(overrides).length,
     [getFilteredModels],
   )
+
+  const modelCapabilityMetadataCoverage =
+    useMemo<ModelCapabilityMetadataCoverage>(() => {
+      const modelsBeforeCapabilityFilters = getFilteredModels({
+        selectedModelCapabilities: [],
+      })
+      const matched = modelsBeforeCapabilityFilters.filter(
+        (item) => !!item.modelMetadata,
+      ).length
+      const total = modelsBeforeCapabilityFilters.length
+
+      return {
+        matched,
+        total,
+        unmatched: total - matched,
+      }
+    }, [getFilteredModels])
 
   const accountSummaryCountsByAccountId = useMemo(() => {
     if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
@@ -1171,8 +1242,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     getProviderFilteredCount,
     getFilteredModels,
     getFilteredResultCount,
+    modelCapabilityMetadataCoverage,
     availableGroups,
     availableAccountGroupsByAccountId,
     availableAccountGroupOptionsByAccountId,
+    supportsModelCapabilityFilter,
   }
 }
