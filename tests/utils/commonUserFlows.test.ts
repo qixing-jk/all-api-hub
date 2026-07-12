@@ -4,6 +4,7 @@ import {
   SPONSOR_CATALOG_SCHEMA_VERSION,
   SPONSOR_REMOTE_CATALOG_V5_URL,
 } from "~/features/AccountManagement/sponsors/constants"
+import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
 import {
   installExtensionPageGuards,
   stubLlmMetadataIndex,
@@ -77,7 +78,7 @@ describe("E2E external route stubs", () => {
     await stubLlmMetadataIndex(context)
 
     expect(context.route).toHaveBeenCalledWith(
-      "https://llm-metadata.pages.dev/api/index.json",
+      MODEL_METADATA_URL,
       expect.any(Function),
     )
     expect(context.route).toHaveBeenCalledWith(
