@@ -164,7 +164,8 @@
     "siteUrlCopied": "站點 URL 已複製"
   },
   "modelCapabilityFilter": {
-    "coverageHint": "目前列表中有 {{unmatched}} 個模型暫無能力說明，選擇能力篩選時會先略過。",
+    "coverageHint_one": "目前列表中有 {{count}} 個模型暫無能力說明，選擇能力篩選時會先略過。",
+    "coverageHint_other": "目前列表中有 {{count}} 個模型暫無能力說明，選擇能力篩選時會先略過。",
     "descriptions": {
       "attachment": "支援上傳附件作為輸入上下文。",
       "audioInput": "支援音訊輸入。",

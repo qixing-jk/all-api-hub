@@ -164,7 +164,8 @@
     "siteUrlCopied": "サイト URL をコピーしました"
   },
   "modelCapabilityFilter": {
-    "coverageHint": "この一覧には能力説明がまだないモデルが {{unmatched}} 件あり、能力フィルターでは一時的に除外されます。",
+    "coverageHint_one": "この一覧には能力説明がまだないモデルが {{count}} 件あり、能力フィルターでは一時的に除外されます。",
+    "coverageHint_other": "この一覧には能力説明がまだないモデルが {{count}} 件あり、能力フィルターでは一時的に除外されます。",
     "descriptions": {
       "attachment": "アップロードした添付ファイルを入力コンテキストとして利用できます。",
       "audioInput": "音声入力に対応します。",

@@ -18,6 +18,12 @@ const mockUseAccountData = vi.fn()
 const mockUseApiCredentialProfiles = vi.fn()
 const mockUseModelData = vi.fn()
 const mockUseFilteredModels = vi.fn()
+const { mockModelMetadataService } = vi.hoisted(() => ({
+  mockModelMetadataService: {
+    initialize: vi.fn(),
+    getAllMetadata: vi.fn(),
+  },
+}))
 
 vi.mock("~/hooks/useAccountData", () => ({
   useAccountData: (...args: unknown[]) => mockUseAccountData(...args),
@@ -37,6 +43,10 @@ vi.mock("~/features/ModelList/hooks/useModelData", () => ({
 
 vi.mock("~/features/ModelList/hooks/useFilteredModels", () => ({
   useFilteredModels: (...args: unknown[]) => mockUseFilteredModels(...args),
+}))
+
+vi.mock("~/services/models/modelMetadata", () => ({
+  modelMetadataService: mockModelMetadataService,
 }))
 
 const ACCOUNT: DisplaySiteData = {
@@ -97,6 +107,48 @@ describe("useModelListData", () => {
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
       availableGroups: [],
+    })
+    mockModelMetadataService.initialize.mockResolvedValue(undefined)
+    mockModelMetadataService.getAllMetadata.mockReturnValue([])
+  })
+
+  it("passes loaded model metadata into the filter pipeline", async () => {
+    mockModelMetadataService.getAllMetadata.mockReturnValue([
+      {
+        id: "openai/gpt-4o",
+        name: "GPT-4o",
+        provider_id: "openai",
+      },
+    ])
+
+    renderHook(() => useModelListData())
+
+    await waitFor(() => {
+      expect(mockUseFilteredModels).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          modelMetadata: [
+            {
+              id: "openai/gpt-4o",
+              name: "GPT-4o",
+              provider_id: "openai",
+            },
+          ],
+        }),
+      )
+    })
+  })
+
+  it("falls back to empty model metadata when metadata loading fails", async () => {
+    mockModelMetadataService.initialize.mockRejectedValue(new Error("offline"))
+
+    renderHook(() => useModelListData())
+
+    await waitFor(() => {
+      expect(mockUseFilteredModels).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          modelMetadata: [],
+        }),
+      )
     })
   })
 

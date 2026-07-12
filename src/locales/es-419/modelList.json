@@ -176,7 +176,9 @@
     "siteUrlCopied": "URL del sitio copiada"
   },
   "modelCapabilityFilter": {
-    "coverageHint": "{{unmatched}} modelos de esta lista aún no tienen detalles de capacidades, por eso los filtros de capacidades los omiten.",
+    "coverageHint_one": "{{count}} modelo de esta lista aún no tiene detalles de capacidades, por eso los filtros de capacidades lo omiten.",
+    "coverageHint_many": "{{count}} modelos de esta lista aún no tienen detalles de capacidades, por eso los filtros de capacidades los omiten.",
+    "coverageHint_other": "{{count}} modelos de esta lista aún no tienen detalles de capacidades, por eso los filtros de capacidades los omiten.",
     "descriptions": {
       "attachment": "Admite adjuntos cargados como contexto de entrada.",
       "audioInput": "Admite entrada de audio.",

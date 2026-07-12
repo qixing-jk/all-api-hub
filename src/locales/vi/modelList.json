@@ -164,7 +164,8 @@
     "siteUrlCopied": "Đã sao chép URL trang"
   },
   "modelCapabilityFilter": {
-    "coverageHint": "{{unmatched}} mô hình trong danh sách này chưa có mô tả năng lực, nên bộ lọc năng lực sẽ tạm bỏ qua chúng.",
+    "coverageHint_one": "{{count}} mô hình trong danh sách này chưa có mô tả năng lực, nên bộ lọc năng lực sẽ tạm bỏ qua mô hình này.",
+    "coverageHint_other": "{{count}} mô hình trong danh sách này chưa có mô tả năng lực, nên bộ lọc năng lực sẽ tạm bỏ qua chúng.",
     "descriptions": {
       "attachment": "Hỗ trợ tệp đính kèm đã tải lên làm ngữ cảnh đầu vào.",
       "audioInput": "Hỗ trợ đầu vào âm thanh.",

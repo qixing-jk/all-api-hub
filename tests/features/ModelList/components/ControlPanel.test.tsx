@@ -476,6 +476,27 @@ describe("ControlPanel", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("renders capability options without counts when count lookup is unavailable", async () => {
+    const user = userEvent.setup()
+
+    renderControlPanel({
+      supportsModelCapabilityFilter: true,
+      modelCapabilityMetadataCoverage: {
+        matched: 1,
+        total: 1,
+        unmatched: 0,
+      },
+      getFilteredResultCount: undefined,
+    })
+
+    const imageInput = screen.getByLabelText(
+      "modelCapabilityFilter.options.imageInput",
+    )
+
+    expect(imageInput.closest("label")).not.toHaveTextContent("7")
+    await user.click(imageInput)
+  })
+
   it("hides the prompt when price comparison is already active", () => {
     renderControlPanel({
       selectedSource: ALL_ACCOUNTS_SOURCE,

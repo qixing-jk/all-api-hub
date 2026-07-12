@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next"
+
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { extractActualModel } from "~/services/models/modelRedirect/modelNormalization"
 import { toModelTokenKey } from "~/services/models/utils/modelName"
@@ -61,6 +63,34 @@ export const MODEL_CAPABILITY_FILTER_LABEL_KEYS: Record<
     "modelCapabilityFilter.options.attachment",
 }
 
+export const MODEL_CAPABILITY_FILTER_LABEL_TRANSLATORS: Record<
+  ModelCapabilitySelectionValue,
+  (t: TFunction) => string
+> = {
+  [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT]: (t) =>
+    t("modelCapabilityFilter.options.imageInput", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_OUTPUT]: (t) =>
+    t("modelCapabilityFilter.options.imageOutput", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.AUDIO_INPUT]: (t) =>
+    t("modelCapabilityFilter.options.audioInput", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.AUDIO_OUTPUT]: (t) =>
+    t("modelCapabilityFilter.options.audioOutput", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.VIDEO_INPUT]: (t) =>
+    t("modelCapabilityFilter.options.videoInput", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.VIDEO_OUTPUT]: (t) =>
+    t("modelCapabilityFilter.options.videoOutput", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.PDF]: (t) =>
+    t("modelCapabilityFilter.options.pdf", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.REASONING]: (t) =>
+    t("modelCapabilityFilter.options.reasoning", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL]: (t) =>
+    t("modelCapabilityFilter.options.toolCall", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.STRUCTURED_OUTPUT]: (t) =>
+    t("modelCapabilityFilter.options.structuredOutput", { ns: "modelList" }),
+  [MODEL_CAPABILITY_FILTER_VALUES.ATTACHMENT]: (t) =>
+    t("modelCapabilityFilter.options.attachment", { ns: "modelList" }),
+}
+
 type ModelCapabilityMatchInput = {
   metadata: ModelMetadata | undefined
   filter: ModelCapabilitySelectionValue
@@ -87,7 +117,7 @@ function toMetadataTokenLookupKey(value: string) {
  * Builds lookup keys for provider-prefixed and plain model ids.
  */
 export function createModelMetadataIndex(modelMetadata: ModelMetadata[]) {
-  const index = new Map<string, ModelMetadata>()
+  const index = new Map<string, ModelMetadata | null>()
   const tokenIndex = new Map<string, ModelMetadata | null>()
 
   modelMetadata.forEach((metadata) => {
@@ -100,8 +130,13 @@ export function createModelMetadataIndex(modelMetadata: ModelMetadata[]) {
 
     candidateKeys.forEach((key) => {
       const normalized = normalizeModelKey(key)
-      if (normalized && !index.has(normalized)) {
-        index.set(normalized, metadata)
+      if (normalized) {
+        const existingMatch = index.get(normalized)
+        if (existingMatch === undefined) {
+          index.set(normalized, metadata)
+        } else if (existingMatch !== metadata) {
+          index.set(normalized, null)
+        }
       }
 
       const tokenLookupKey = toMetadataTokenLookupKey(key)
@@ -122,7 +157,11 @@ export function createModelMetadataIndex(modelMetadata: ModelMetadata[]) {
     }
   })
 
-  return index
+  return new Map(
+    Array.from(index.entries()).filter(
+      (entry): entry is [string, ModelMetadata] => entry[1] !== null,
+    ),
+  )
 }
 
 /**

@@ -89,6 +89,26 @@ describe("CompactMultiSelect", () => {
     expect(onChange).toHaveBeenCalledWith(["id-alpha"])
   })
 
+  it("shows option counts in chips display mode", async () => {
+    const user = userEvent.setup()
+
+    renderCompact(
+      <CompactMultiSelect
+        displayMode="chips"
+        options={[{ value: "id-alpha", label: "Alpha", count: 3 }]}
+        selected={[]}
+        onChange={vi.fn()}
+        placeholder="Pick"
+      />,
+    )
+
+    await user.click(await screen.findByPlaceholderText("Pick"))
+
+    expect(screen.getByRole("option", { name: "Alpha 3" })).toHaveTextContent(
+      "3",
+    )
+  })
+
   it("copies chip text when the selected chip label is clicked", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()

@@ -164,7 +164,7 @@
     "siteUrlCopied": "站点 URL 已复制"
   },
   "modelCapabilityFilter": {
-    "coverageHint": "当前列表中有 {{unmatched}} 个模型暂无能力说明，选择能力筛选时会先跳过。",
+    "coverageHint": "当前列表中有 {{count}} 个模型暂无能力说明，选择能力筛选时会先跳过。",
     "descriptions": {
       "attachment": "支持上传附件作为输入上下文。",
       "audioInput": "支持音频输入。",

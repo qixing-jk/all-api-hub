@@ -32,6 +32,7 @@ import {
   resolveGroupRatio,
 } from "~/features/ModelList/groupLabels"
 import {
+  MODEL_CAPABILITY_FILTER_LABEL_TRANSLATORS,
   MODEL_CAPABILITY_FILTER_VALUES,
   type ModelCapabilityMetadataCoverage,
   type ModelCapabilitySelectionValue,
@@ -200,6 +201,8 @@ export function ControlPanel({
     !!modelCapabilityMetadataCoverage &&
     modelCapabilityMetadataCoverage.total > 0 &&
     modelCapabilityMetadataCoverage.unmatched > 0
+  const unmatchedCapabilityMetadataCount =
+    modelCapabilityMetadataCoverage?.unmatched ?? 0
   const groupOptions = availableGroups.map((group) => ({
     value: group,
     label: formatGroupLabel(
@@ -279,10 +282,7 @@ export function ControlPanel({
         selectedVerificationResults,
       })
     }
-    const buildCapabilityOption = (
-      value: ModelCapabilitySelectionValue,
-      label: string,
-    ) => {
+    const buildCapabilityOption = (value: ModelCapabilitySelectionValue) => {
       const count = supportsModelCapabilityFilter
         ? resolveCapabilityCount(value)
         : undefined
@@ -290,57 +290,24 @@ export function ControlPanel({
 
       return {
         value,
-        label,
+        label: MODEL_CAPABILITY_FILTER_LABEL_TRANSLATORS[value](t),
         count,
         disabled: !isSelected && count === 0,
       }
     }
 
     const capabilityOptions = [
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT,
-        t("modelCapabilityFilter.options.imageInput"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.IMAGE_OUTPUT,
-        t("modelCapabilityFilter.options.imageOutput"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.AUDIO_INPUT,
-        t("modelCapabilityFilter.options.audioInput"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.AUDIO_OUTPUT,
-        t("modelCapabilityFilter.options.audioOutput"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.VIDEO_INPUT,
-        t("modelCapabilityFilter.options.videoInput"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.VIDEO_OUTPUT,
-        t("modelCapabilityFilter.options.videoOutput"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.PDF,
-        t("modelCapabilityFilter.options.pdf"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.REASONING,
-        t("modelCapabilityFilter.options.reasoning"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL,
-        t("modelCapabilityFilter.options.toolCall"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.STRUCTURED_OUTPUT,
-        t("modelCapabilityFilter.options.structuredOutput"),
-      ),
-      buildCapabilityOption(
-        MODEL_CAPABILITY_FILTER_VALUES.ATTACHMENT,
-        t("modelCapabilityFilter.options.attachment"),
-      ),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.IMAGE_OUTPUT),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.AUDIO_INPUT),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.AUDIO_OUTPUT),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.VIDEO_INPUT),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.VIDEO_OUTPUT),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.PDF),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.REASONING),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.STRUCTURED_OUTPUT),
+      buildCapabilityOption(MODEL_CAPABILITY_FILTER_VALUES.ATTACHMENT),
     ]
 
     return [
@@ -594,9 +561,10 @@ export function ControlPanel({
                   <>
                     {" "}
                     {t("modelCapabilityFilter.coverageHint", {
+                      count: unmatchedCapabilityMetadataCount,
                       matched: modelCapabilityMetadataCoverage.matched,
                       total: modelCapabilityMetadataCoverage.total,
-                      unmatched: modelCapabilityMetadataCoverage.unmatched,
+                      unmatched: unmatchedCapabilityMetadataCount,
                     })}
                   </>
                 )}

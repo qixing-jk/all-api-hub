@@ -280,8 +280,21 @@ describe("ModelMetadataService", () => {
           open_weights: false,
           limit: {
             context: 128000,
+            input: 64000,
             output: 16384,
           },
+        },
+        "example/metadata-with-empty-modalities": {
+          name: "Metadata With Empty Modalities",
+          provider_id: "example",
+          modalities: {
+            input: "text",
+            output: [],
+          },
+        },
+        "openai/family/gpt-4o-mini": {
+          id: "openai/family/gpt-4o-mini",
+          name: "Nested GPT-4o mini",
         },
       }),
     })
@@ -309,14 +322,31 @@ describe("ModelMetadataService", () => {
         open_weights: false,
         limits: {
           context: 128000,
+          input: 64000,
           output: 16384,
         },
         release_date: "2024-05-13",
         last_updated: "2024-08-06",
       },
+      {
+        id: "example/metadata-with-empty-modalities",
+        name: "Metadata With Empty Modalities",
+        provider_id: "example",
+      },
+      {
+        id: "openai/family/gpt-4o-mini",
+        name: "Nested GPT-4o mini",
+        provider_id: "openai",
+      },
     ])
     expect(modelMetadataService.findStandardModelName("gpt-4o")).toEqual({
       standardName: "openai/gpt-4o",
+      vendorName: "OpenAI",
+    })
+    expect(
+      modelMetadataService.findStandardModelName("openai/family/gpt-4o-mini"),
+    ).toEqual({
+      standardName: "openai/family/gpt-4o-mini",
       vendorName: "OpenAI",
     })
   })
@@ -347,6 +377,23 @@ describe("ModelMetadataService", () => {
         models: {
           id: "gpt-4o",
         },
+      }),
+    })
+
+    const modelMetadataService = await loadService()
+    await modelMetadataService.initialize()
+
+    expect(modelMetadataService.findStandardModelName("gpt-4o")).toEqual({
+      standardName: "gpt-4o",
+      vendorName: "OpenAI",
+    })
+  })
+
+  it("falls back to bundled metadata when the models field is primitive", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        models: "invalid models",
       }),
     })
 

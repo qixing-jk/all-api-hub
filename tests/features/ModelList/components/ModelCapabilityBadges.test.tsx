@@ -15,6 +15,59 @@ vi.mock("react-i18next", async (importOriginal) => {
 })
 
 describe("ModelCapabilityBadges", () => {
+  it("does not render groups when the model has no displayable capabilities", () => {
+    const { container } = render(
+      <ModelCapabilityBadges
+        modelMetadata={{
+          id: "example/text-only",
+          name: "Text Only",
+          provider_id: "example",
+          modalities: {
+            input: ["text"],
+            output: ["text"],
+          },
+        }}
+      />,
+    )
+
+    expect(container).toBeEmptyDOMElement()
+    expect(
+      screen.queryByText("modelCapabilityFilter.groups.input"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("modelCapabilityFilter.groups.output"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("modelCapabilityFilter.groups.capabilities"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("skips empty capability groups while rendering populated groups", () => {
+    render(
+      <ModelCapabilityBadges
+        modelMetadata={{
+          id: "example/image-input",
+          name: "Image Input",
+          provider_id: "example",
+          modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+          },
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByText("modelCapabilityFilter.groups.input"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("modelCapabilityFilter.groups.output"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("modelCapabilityFilter.groups.capabilities"),
+    ).not.toBeInTheDocument()
+  })
+
   it("renders granular model capability badges with explanations", () => {
     render(
       <ModelCapabilityBadges

@@ -170,7 +170,8 @@
     "siteUrlCopied": "Site URL copied"
   },
   "modelCapabilityFilter": {
-    "coverageHint": "{{unmatched}} models in this list do not have capability details yet, so capability filters skip them.",
+    "coverageHint_one": "{{count}} model in this list does not have capability details yet, so capability filters skip it.",
+    "coverageHint_other": "{{count}} models in this list do not have capability details yet, so capability filters skip them.",
     "descriptions": {
       "attachment": "Supports uploaded attachments as input context.",
       "audioInput": "Supports audio input.",

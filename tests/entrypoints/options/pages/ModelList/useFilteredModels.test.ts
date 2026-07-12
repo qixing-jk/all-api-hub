@@ -4,7 +4,13 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
-import { MODEL_CAPABILITY_FILTER_VALUES } from "~/features/ModelList/modelCapabilityFilters"
+import {
+  createModelMetadataIndex,
+  getModelCapabilityBadges,
+  matchesModelCapabilityFilters,
+  MODEL_CAPABILITY_FILTER_VALUES,
+  resolveModelMetadata,
+} from "~/features/ModelList/modelCapabilityFilters"
 import {
   createAccountSource,
   createAccountTokenModelListSourceIdentity,
@@ -496,6 +502,41 @@ describe("useFilteredModels", () => {
         })
         .map((item) => item.model.model_name),
     ).toEqual(["media-model"])
+  })
+
+  it("skips ambiguous bare aliases while preserving exact provider aliases", () => {
+    const metadata: ModelMetadata[] = [
+      {
+        id: "provider-a/shared-model",
+        name: "Shared Model A",
+        provider_id: "provider-a",
+      },
+      {
+        id: "provider-b/shared-model",
+        name: "Shared Model B",
+        provider_id: "provider-b",
+      },
+    ]
+
+    const index = createModelMetadataIndex(metadata)
+
+    expect(resolveModelMetadata(index, "shared-model")).toBeUndefined()
+    expect(resolveModelMetadata(index, "provider-a/shared-model")).toBe(
+      metadata[0],
+    )
+  })
+
+  it("matches every model when no capability filters are selected", () => {
+    expect(
+      matchesModelCapabilityFilters({
+        metadata: undefined,
+        filters: [],
+      }),
+    ).toBe(true)
+  })
+
+  it("returns no capability badges when metadata is missing", () => {
+    expect(getModelCapabilityBadges()).toEqual([])
   })
 
   it("reports capability metadata coverage before applying capability filters", async () => {

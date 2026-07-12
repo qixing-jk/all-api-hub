@@ -42,7 +42,7 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   doubao: "豆包",
 }
 
-const MODELS_DEV_MODEL_ID_PATTERN = /^[^/]+\/[^/]+$/
+const MODELS_DEV_MODEL_ID_PATTERN = /^[^/]+\/.+$/
 
 /**
  * Normalizes optional array fields from the remote metadata payload.
@@ -92,6 +92,7 @@ function deriveProviderId(item: any, id: string): string {
     return explicitProviderId
   }
 
+  // models.dev ids are provider-prefixed paths; nested model ids keep the first path segment as provider.
   if (MODELS_DEV_MODEL_ID_PATTERN.test(id)) {
     return id.slice(0, id.indexOf("/"))
   }
@@ -301,6 +302,18 @@ class ModelMetadataService {
   private initPromise: Promise<void> | null = null
   private lastFetch: number = 0
 
+  private addMetadataLookupKeys(model: ModelMetadata): void {
+    const normalizedId = model.id.trim().toLowerCase()
+    if (normalizedId) {
+      this.metadataMap.set(normalizedId, model)
+    }
+
+    const actualModel = extractActualModel(model.id)
+    if (actualModel) {
+      this.metadataMap.set(actualModel, model)
+    }
+  }
+
   /**
    * Initialize metadata (idempotent). Reuses in-flight init promise.
    * @returns Promise that resolves when initialization completes or reuses the in-flight promise.
@@ -395,10 +408,7 @@ class ModelMetadataService {
     this.metadataMap.clear()
 
     for (const model of this.cache.models) {
-      const actualModel = extractActualModel(model.id)
-      if (actualModel) {
-        this.metadataMap.set(actualModel, model)
-      }
+      this.addMetadataLookupKeys(model)
     }
   }
 
@@ -586,10 +596,7 @@ class ModelMetadataService {
 
     this.metadataMap.clear()
     for (const model of defaultMetadata) {
-      const actualModel = extractActualModel(model.id)
-      if (actualModel) {
-        this.metadataMap.set(actualModel, model)
-      }
+      this.addMetadataLookupKeys(model)
     }
 
     this.vendorRules = defaultRules
