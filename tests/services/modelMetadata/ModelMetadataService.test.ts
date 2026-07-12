@@ -258,6 +258,69 @@ describe("ModelMetadataService", () => {
     })
   })
 
+  it("normalizes models.dev model metadata without dropping capability fields", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        "openai/gpt-4o": {
+          id: "openai/gpt-4o",
+          name: "GPT-4o",
+          description: "Multimodal model",
+          attachment: true,
+          reasoning: false,
+          tool_call: true,
+          structured_output: true,
+          temperature: true,
+          release_date: "2024-05-13",
+          last_updated: "2024-08-06",
+          modalities: {
+            input: ["text", "image", "pdf"],
+            output: ["text"],
+          },
+          open_weights: false,
+          limit: {
+            context: 128000,
+            output: 16384,
+          },
+        },
+      }),
+    })
+
+    const modelMetadataService = await loadService()
+    await modelMetadataService.initialize()
+
+    expect(modelMetadataService.getAllMetadata()).toEqual([
+      {
+        id: "openai/gpt-4o",
+        name: "GPT-4o",
+        provider_id: "openai",
+        description: "Multimodal model",
+        capabilities: {
+          attachment: true,
+          reasoning: false,
+          toolCall: true,
+          structuredOutput: true,
+          temperature: true,
+        },
+        modalities: {
+          input: ["text", "image", "pdf"],
+          output: ["text"],
+        },
+        open_weights: false,
+        limits: {
+          context: 128000,
+          output: 16384,
+        },
+        release_date: "2024-05-13",
+        last_updated: "2024-08-06",
+      },
+    ])
+    expect(modelMetadataService.findStandardModelName("gpt-4o")).toEqual({
+      standardName: "openai/gpt-4o",
+      vendorName: "OpenAI",
+    })
+  })
+
   it("falls back to bundled metadata when the remote payload is not an object", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,

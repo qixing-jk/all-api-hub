@@ -2,6 +2,13 @@ export interface ModelMetadata {
   id: string
   name: string
   provider_id: string
+  description?: string
+  capabilities?: ModelMetadataCapabilities
+  modalities?: ModelMetadataModalities
+  open_weights?: boolean
+  limits?: ModelMetadataLimits
+  release_date?: string
+  last_updated?: string
 }
 
 export interface ModelMetadataCache {
@@ -14,4 +21,23 @@ export interface VendorRule {
   providerID: string
   displayName: string
   pattern: RegExp
+}
+
+export interface ModelMetadataCapabilities {
+  attachment?: boolean
+  reasoning?: boolean
+  toolCall?: boolean
+  structuredOutput?: boolean
+  temperature?: boolean
+}
+
+export interface ModelMetadataModalities {
+  input: string[]
+  output: string[]
+}
+
+export interface ModelMetadataLimits {
+  context?: number
+  input?: number
+  output?: number
 }

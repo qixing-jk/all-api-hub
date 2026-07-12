@@ -9,7 +9,14 @@ import {
   MODEL_METADATA_REFRESH_INTERVAL,
   MODEL_METADATA_URL,
 } from "./constants"
-import type { ModelMetadata, ModelMetadataCache, VendorRule } from "./types"
+import type {
+  ModelMetadata,
+  ModelMetadataCache,
+  ModelMetadataCapabilities,
+  ModelMetadataLimits,
+  ModelMetadataModalities,
+  VendorRule,
+} from "./types"
 
 const logger = createLogger("ModelMetadata")
 
@@ -33,6 +40,251 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   alibaba: "阿里巴巴",
   "alibaba-cn": "通义千问",
   doubao: "豆包",
+}
+
+const MODELS_DEV_MODEL_ID_PATTERN = /^[^/]+\/[^/]+$/
+
+/**
+ * Normalizes optional array fields from the remote metadata payload.
+ */
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+/**
+ * Keeps non-empty string fields and drops missing or blank values.
+ */
+function normalizeOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined
+}
+
+/**
+ * Keeps boolean metadata flags without coercing truthy or falsy strings.
+ */
+function normalizeOptionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined
+}
+
+/**
+ * Keeps finite numeric metadata limits.
+ */
+function normalizeOptionalNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined
+}
+
+/**
+ * Resolves provider ids from explicit fields or models.dev path-style ids.
+ */
+function deriveProviderId(item: any, id: string): string {
+  const explicitProviderId =
+    normalizeOptionalString(item.providerId) ??
+    normalizeOptionalString(item.provider_id) ??
+    normalizeOptionalString(item.provider)
+
+  if (explicitProviderId) {
+    return explicitProviderId
+  }
+
+  if (MODELS_DEV_MODEL_ID_PATTERN.test(id)) {
+    return id.slice(0, id.indexOf("/"))
+  }
+
+  return ""
+}
+
+/**
+ * Converts models.dev modality arrays into the internal metadata shape.
+ */
+function normalizeModalities(
+  value: unknown,
+): ModelMetadataModalities | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined
+  }
+
+  const record = value as Record<string, unknown>
+  const input = normalizeStringArray(record.input)
+  const output = normalizeStringArray(record.output)
+
+  if (input.length === 0 && output.length === 0) {
+    return undefined
+  }
+
+  return { input, output }
+}
+
+/**
+ * Converts models.dev capability flags into camelCase internal fields.
+ */
+function normalizeCapabilities(
+  item: any,
+): ModelMetadataCapabilities | undefined {
+  const flags = item.flags && typeof item.flags === "object" ? item.flags : {}
+  const capabilities: ModelMetadataCapabilities = {}
+  const attachment =
+    normalizeOptionalBoolean(item.attachment) ??
+    normalizeOptionalBoolean(flags.attachment)
+  const reasoning =
+    normalizeOptionalBoolean(item.reasoning) ??
+    normalizeOptionalBoolean(flags.reasoning)
+  const toolCall =
+    normalizeOptionalBoolean(item.tool_call) ??
+    normalizeOptionalBoolean(item.toolCall) ??
+    normalizeOptionalBoolean(flags.tool_call) ??
+    normalizeOptionalBoolean(flags.toolCall)
+  const structuredOutput =
+    normalizeOptionalBoolean(item.structured_output) ??
+    normalizeOptionalBoolean(item.structuredOutput) ??
+    normalizeOptionalBoolean(flags.structured_output) ??
+    normalizeOptionalBoolean(flags.structuredOutput)
+  const temperature =
+    normalizeOptionalBoolean(item.temperature) ??
+    normalizeOptionalBoolean(flags.temperature)
+
+  if (attachment !== undefined) {
+    capabilities.attachment = attachment
+  }
+  if (reasoning !== undefined) {
+    capabilities.reasoning = reasoning
+  }
+  if (toolCall !== undefined) {
+    capabilities.toolCall = toolCall
+  }
+  if (structuredOutput !== undefined) {
+    capabilities.structuredOutput = structuredOutput
+  }
+  if (temperature !== undefined) {
+    capabilities.temperature = temperature
+  }
+
+  return Object.keys(capabilities).length > 0 ? capabilities : undefined
+}
+
+/**
+ * Converts context/input/output limit fields into the internal metadata shape.
+ */
+function normalizeLimits(value: unknown): ModelMetadataLimits | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined
+  }
+
+  const record = value as Record<string, unknown>
+  const limits: ModelMetadataLimits = {}
+  const context = normalizeOptionalNumber(record.context)
+  const input = normalizeOptionalNumber(record.input)
+  const output = normalizeOptionalNumber(record.output)
+
+  if (context !== undefined) {
+    limits.context = context
+  }
+  if (input !== undefined) {
+    limits.input = input
+  }
+  if (output !== undefined) {
+    limits.output = output
+  }
+
+  return Object.keys(limits).length > 0 ? limits : undefined
+}
+
+/**
+ * Converts one remote metadata record into the cached internal shape.
+ */
+function normalizeModelMetadataItem(item: any, key?: string): ModelMetadata {
+  const id = item.id || key || ""
+  const metadata: ModelMetadata = {
+    id,
+    name: item.name || id,
+    provider_id: deriveProviderId(item, id),
+  }
+  const description = normalizeOptionalString(item.description)
+  const capabilities = normalizeCapabilities(item)
+  const modalities = normalizeModalities(item.modalities)
+  const openWeights = normalizeOptionalBoolean(item.open_weights)
+  const limits = normalizeLimits(item.limit ?? item.limits)
+  const releaseDate = normalizeOptionalString(item.release_date)
+  const lastUpdated =
+    normalizeOptionalString(item.last_updated) ??
+    normalizeOptionalString(item.updated)
+
+  if (description) {
+    metadata.description = description
+  }
+  if (capabilities) {
+    metadata.capabilities = capabilities
+  }
+  if (modalities) {
+    metadata.modalities = modalities
+  }
+  if (openWeights !== undefined) {
+    metadata.open_weights = openWeights
+  }
+  if (limits) {
+    metadata.limits = limits
+  }
+  if (releaseDate) {
+    metadata.release_date = releaseDate
+  }
+  if (lastUpdated) {
+    metadata.last_updated = lastUpdated
+  }
+
+  return metadata
+}
+
+/**
+ * Accepts both legacy array payloads and models.dev object-map payloads.
+ */
+function normalizeMetadataPayload(data: any): ModelMetadata[] {
+  const modelsPayload = data.models || data
+
+  if (Array.isArray(modelsPayload)) {
+    return modelsPayload.map((item: any) => normalizeModelMetadataItem(item))
+  }
+
+  if (modelsPayload && typeof modelsPayload === "object") {
+    const entries = Object.entries(modelsPayload)
+    if (
+      entries.length === 0 ||
+      entries.some(
+        ([, item]) => !item || typeof item !== "object" || Array.isArray(item),
+      )
+    ) {
+      throw new Error(
+        "Invalid metadata format: model map values should be objects",
+      )
+    }
+
+    return entries.map(([key, item]) => normalizeModelMetadataItem(item, key))
+  }
+
+  throw new Error("Invalid metadata format: models should be array or object")
+}
+
+/**
+ * Returns defensive copies of nested metadata objects exposed to consumers.
+ */
+function cloneMetadata(model: ModelMetadata): ModelMetadata {
+  return {
+    ...model,
+    ...(model.capabilities ? { capabilities: { ...model.capabilities } } : {}),
+    ...(model.modalities
+      ? {
+          modalities: {
+            input: [...model.modalities.input],
+            output: [...model.modalities.output],
+          },
+        }
+      : {}),
+    ...(model.limits ? { limits: { ...model.limits } } : {}),
+  }
 }
 
 /**
@@ -111,16 +363,7 @@ class ModelMetadataService {
         throw new Error("Invalid metadata format: expected object")
       }
 
-      const modelsArray = data.models || data
-      if (!Array.isArray(modelsArray)) {
-        throw new Error("Invalid metadata format: models should be array")
-      }
-
-      const models: ModelMetadata[] = modelsArray.map((item: any) => ({
-        id: item.id || "",
-        name: item.name || item.id || "",
-        provider_id: item.providerId || item.provider_id || "",
-      }))
+      const models = normalizeMetadataPayload(data)
 
       this.cache = {
         models,
@@ -180,8 +423,9 @@ class ModelMetadataService {
         providerPrefixes.set(model.provider_id, new Set())
       }
 
+      const actualModel = extractActualModel(model.id)
       // 提取前缀（取第一个 '-' 前的部分）
-      const parts = model.id.split("-")
+      const parts = actualModel.split("-")
       if (parts.length > 0) {
         const prefix = parts[0].toLowerCase().trim()
         if (prefix) {
@@ -190,8 +434,8 @@ class ModelMetadataService {
       }
 
       // 如果没有 '-'，使用完整ID作为前缀（某些简短模型名）
-      if (!model.id.includes("-")) {
-        const prefix = model.id.toLowerCase().trim()
+      if (!actualModel.includes("-")) {
+        const prefix = actualModel.toLowerCase().trim()
         if (prefix && prefix.length <= 15) {
           providerPrefixes.get(model.provider_id)!.add(prefix)
         }
@@ -468,7 +712,7 @@ class ModelMetadataService {
     if (!this.cache) {
       return []
     }
-    return [...this.cache.models]
+    return this.cache.models.map(cloneMetadata)
   }
 
   /**
