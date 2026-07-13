@@ -328,6 +328,43 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTabMock).toHaveBeenCalledWith(101)
   })
 
+  it("cleans up a successful popup temp-context fetch after the quiet idle timeout", async () => {
+    tempContextMode = "window"
+    createWindowMock.mockResolvedValueOnce({ id: 111 })
+    tabsQueryMock.mockResolvedValueOnce([{ id: 112 }])
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/window-success",
+        fetchOptions: { method: "GET" },
+        requestId: "req-window-success",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "ok",
+      },
+    })
+
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(removeWindowMock).toHaveBeenCalledWith(111)
+    expect(removeTabMock).not.toHaveBeenCalledWith(112)
+  })
+
   it("installs and removes a temp-context download block rule for the owned tab", async () => {
     tempContextMode = "tab"
     const setupOrder: string[] = []
@@ -546,6 +583,88 @@ describe("tempWindowPool window fallback", () => {
 
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabMock).toHaveBeenCalledWith(304)
+  })
+
+  it("rolls back composite temp-context creation when the window handle is missing", async () => {
+    tempContextMode = "composite"
+    createWindowMock.mockResolvedValueOnce({})
+    createTabMock.mockResolvedValueOnce({ id: 307 })
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/composite-missing-window",
+        fetchOptions: { method: "GET" },
+        requestId: "req-composite-missing-window",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "ok",
+      },
+    })
+    expect(removeWindowMock).not.toHaveBeenCalled()
+    expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(307, {
+      url: "https://example.com",
+    })
+  })
+
+  it("still rolls back composite creation when half-created window cleanup fails", async () => {
+    tempContextMode = "composite"
+    createWindowMock.mockResolvedValueOnce({ id: 308 })
+    tabsQueryMock.mockResolvedValueOnce([])
+    removeWindowMock.mockRejectedValueOnce(new Error("cleanup failed"))
+    createTabMock.mockResolvedValueOnce({ id: 309 })
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/composite-cleanup-failed",
+        fetchOptions: { method: "GET" },
+        requestId: "req-composite-cleanup-failed",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "ok",
+      },
+    })
+    expect(removeWindowMock).toHaveBeenCalledWith(308)
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      "Failed to cleanup composite temp context after creation error",
+      expect.any(Error),
+    )
+    expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(309, {
+      url: "https://example.com",
+    })
   })
 
   it("continues composite temp-window fetches when minimizing the shared window fails", async () => {

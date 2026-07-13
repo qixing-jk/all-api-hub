@@ -2639,14 +2639,10 @@ async function openTabInCompositeWindowLocked(params: {
       throw error
     }
 
-    const missingWindowReason = classifyWindowCreationFailure({
-      missingHandle: !compositeWindow?.id,
-    })
     const compositeWindowHandle = compositeWindow?.id
-    if (missingWindowReason || compositeWindowHandle == null) {
+    if (compositeWindowHandle == null) {
       throw createRecoverableWindowCreationError(
-        missingWindowReason ??
-          WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+        WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
       )
     }
 
@@ -2677,13 +2673,9 @@ async function openTabInCompositeWindowLocked(params: {
     })
     const tabId = tabs[0]?.id
 
-    const missingTabReason = classifyWindowCreationFailure({
-      missingHandle: !tabId,
-    })
-    if (missingTabReason || tabId == null) {
+    if (tabId == null) {
       throw createRecoverableWindowCreationError(
-        missingTabReason ??
-          WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+        WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
       )
     }
 
