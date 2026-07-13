@@ -13,7 +13,8 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
+import { expectKiloCodeUsageGuidance } from "~~/tests/test-utils/kiloCodeExportGuidance"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 const mockBuildKiloCodeExportOutput = vi.fn()
@@ -21,57 +22,6 @@ const toastSuccessMock = vi.fn()
 const toastErrorMock = vi.fn()
 const completeProductAnalyticsActionMock = vi.fn()
 const startProductAnalyticsActionMock = vi.fn()
-const KILO_V7_GUIDANCE_KEYS = [
-  "ui:dialog.kiloCode.help.kiloV7DownloadInstructions",
-  "ui:dialog.kiloCode.help.kiloV7CopyInstructions",
-] as const
-const LEGACY_GUIDANCE_KEYS = [
-  "ui:dialog.kiloCode.help.legacyDownloadInstructions",
-  "ui:dialog.kiloCode.help.legacyCopyInstructions",
-] as const
-
-function expectUsageGuidance(
-  instructionsKeys: readonly string[],
-  oppositeTargetInstructionsKeys: readonly string[],
-) {
-  const usageAlert = screen
-    .getByText("ui:dialog.kiloCode.help.usageTitle")
-    .closest<HTMLElement>('[role="alert"]')!
-  const securityAlert = screen
-    .getByText("ui:dialog.kiloCode.warning.title")
-    .closest<HTMLElement>('[role="alert"]')!
-
-  const renderedInstructions = instructionsKeys.map((instructionsKey) => {
-    const renderedInstruction = within(usageAlert).getByText(instructionsKey)
-    expect(renderedInstruction).toBeVisible()
-    return renderedInstruction
-  })
-  for (let index = 1; index < renderedInstructions.length; index += 1) {
-    expect(
-      renderedInstructions[index - 1].compareDocumentPosition(
-        renderedInstructions[index],
-      ) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-  }
-  for (const instructionsKey of oppositeTargetInstructionsKeys) {
-    expect(screen.queryByText(instructionsKey)).not.toBeInTheDocument()
-  }
-  expect(screen.getAllByRole("alert").indexOf(usageAlert)).toBeLessThan(
-    screen.getAllByRole("alert").indexOf(securityAlert),
-  )
-  expect(
-    screen.queryByText("ui:dialog.kiloCode.help.afterExportTitle"),
-  ).not.toBeInTheDocument()
-  expect(
-    screen.queryByText("ui:dialog.kiloCode.help.manualTitle"),
-  ).not.toBeInTheDocument()
-  expect(
-    screen.queryByText("ui:dialog.kiloCode.help.kiloV7Title"),
-  ).not.toBeInTheDocument()
-  expect(
-    screen.queryByText("ui:dialog.kiloCode.help.legacyTitle"),
-  ).not.toBeInTheDocument()
-}
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: any[]) =>
@@ -327,7 +277,7 @@ describe("KiloCodeProfileExportDialog", () => {
       name: "ui:dialog.kiloCode.labels.exportTarget",
     })
     expect(targetSelect).toHaveTextContent("ui:dialog.kiloCode.targets.kiloV7")
-    expectUsageGuidance(KILO_V7_GUIDANCE_KEYS, LEGACY_GUIDANCE_KEYS)
+    expectKiloCodeUsageGuidance(KILO_CODE_EXPORT_TARGETS.KiloV7)
     expect(
       screen.queryByText("ui:dialog.kiloCode.help.kiloV7Description"),
     ).not.toBeInTheDocument()
@@ -433,7 +383,7 @@ describe("KiloCodeProfileExportDialog", () => {
     )
     expect(downloadedFilename).toBe("kilo-code-settings.json")
     expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(1)
-    expectUsageGuidance(LEGACY_GUIDANCE_KEYS, KILO_V7_GUIDANCE_KEYS)
+    expectKiloCodeUsageGuidance(KILO_CODE_EXPORT_TARGETS.Legacy)
     expect(
       screen.queryByText("ui:dialog.kiloCode.help.legacyDescription"),
     ).not.toBeInTheDocument()

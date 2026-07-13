@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   buildKiloCodeApiConfigs,
   buildKiloCodeV7SettingsFile,
+  KILO_CODE_EXPORT_FILENAMES,
   KILO_CODE_EXPORT_TARGETS,
 } from "~/services/integrations/kiloCodeExport"
 
@@ -50,6 +51,10 @@ describe("buildKiloCodeV7SettingsFile", () => {
       KiloV7: "kilo-v7",
       Legacy: "legacy",
     })
+    expect(KILO_CODE_EXPORT_FILENAMES).toEqual({
+      KiloV7: "kilo-settings.json",
+      Legacy: "kilo-code-settings.json",
+    })
   })
 
   it("keeps the provider ID stable when only the secret changes", () => {
@@ -67,6 +72,20 @@ describe("buildKiloCodeV7SettingsFile", () => {
     })
 
     expect(Object.keys(result.provider)).toEqual(["example-default-f58ad972"])
+  })
+
+  it("falls back to a settings-safe provider label for non-Latin names", () => {
+    const result = buildKiloCodeV7SettingsFile({
+      selections: [
+        {
+          ...v7Selection,
+          siteName: "示例",
+          tokenName: "默认",
+        },
+      ],
+    })
+
+    expect(Object.keys(result.provider)[0]).toMatch(/^provider-[a-f0-9]{8}$/)
   })
 
   it("creates unique, settings-safe provider IDs", () => {
@@ -102,6 +121,7 @@ describe("buildKiloCodeV7SettingsFile", () => {
     ["blank token key", { tokenKey: "  " }],
     ["blank model ID", { modelId: "  " }],
     ["invalid base URL", { baseUrl: "not-a-url" }],
+    ["non-HTTP base URL", { baseUrl: "ftp://api.example.invalid" }],
   ])("rejects %s", (_name, overrides) => {
     expect(() =>
       buildKiloCodeV7SettingsFile({
@@ -120,6 +140,15 @@ describe("buildKiloCodeV7SettingsFile", () => {
         generateProviderId: () => "duplicate-provider",
       }),
     ).toThrow("Kilo Code provider IDs must be unique")
+  })
+
+  it("rejects generated provider IDs that are not settings-safe", () => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        selections: [v7Selection],
+        generateProviderId: () => "Unsafe Provider",
+      }),
+    ).toThrow("Kilo Code provider IDs must be settings-safe")
   })
 })
 

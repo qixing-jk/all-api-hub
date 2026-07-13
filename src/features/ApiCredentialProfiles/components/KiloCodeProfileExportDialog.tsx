@@ -20,10 +20,12 @@ import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
+  KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
   type KiloCodeExportTuple,
 } from "~/services/integrations/kiloCodeExport"
+import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCodeExportAnalytics"
 import { buildKiloCodeExportOutput } from "~/services/integrations/kiloCodeExportPolicy"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -31,7 +33,6 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
@@ -49,21 +50,6 @@ const exportDialogAnalyticsContext = {
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
   surfaceId: exportDialogSurface,
-}
-
-const exportTargetOptions = [
-  KILO_CODE_EXPORT_TARGETS.KiloV7,
-  KILO_CODE_EXPORT_TARGETS.Legacy,
-] as const
-
-/** Map the shared export target to the analytics contract's canonical value. */
-function getAnalyticsExportTarget(target: KiloCodeExportTarget) {
-  switch (target) {
-    case KILO_CODE_EXPORT_TARGETS.KiloV7:
-      return PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7
-    case KILO_CODE_EXPORT_TARGETS.Legacy:
-      return PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.Legacy
-  }
 }
 
 interface KiloCodeProfileExportDialogProps {
@@ -160,7 +146,7 @@ export function KiloCodeProfileExportDialog({
     itemCount: 1,
     modelCount: modelId.trim() ? 1 : 0,
     selectedCount: 1,
-    kiloCodeExportTarget: getAnalyticsExportTarget(exportTarget),
+    kiloCodeExportTarget: getKiloCodeExportAnalyticsTarget(exportTarget),
   }
 
   const handleCopyApiConfigs = async () => {
@@ -318,7 +304,7 @@ export function KiloCodeProfileExportDialog({
           <Select
             value={exportTarget}
             onValueChange={(value) => {
-              const target = exportTargetOptions.find(
+              const target = KILO_CODE_EXPORT_TARGET_OPTIONS.find(
                 (candidate) => candidate === value,
               )
               if (target) setExportTarget(target)

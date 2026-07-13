@@ -301,7 +301,7 @@
         "selectedSites": "已選站點：{{sites}}，已選金鑰：{{keys}}。"
       },
       "help": {
-        "kiloV7CopyInstructions": "如需手動維護設定，可點擊「複製提供者設定」，將複製的內容合併到設定 JSON 頂層的 provider 欄位。",
+        "kiloV7CopyInstructions": "如需手動維護設定，可點擊「複製 provider 設定」，將複製的內容合併到設定 JSON 頂層的 provider 欄位。",
         "kiloV7DownloadInstructions": "點擊「下載 Kilo 7.x 設定」。然後在 Kilo Code 中點擊齒輪開啟設定，進入 About Kilo Code → Import，選擇下載的 kilo-settings.json，確認匯入內容後儲存。",
         "legacyCopyInstructions": "點擊「複製舊版 apiConfigs」，將內容貼到 Roo Code 或 Kilo Code 5.x 設定的 providerProfiles.apiConfigs 中。",
         "legacyDownloadInstructions": "如需完整設定檔，可點擊「下載舊版設定」取得 kilo-code-settings.json，並透過對應版本的設定匯入功能匯入。",

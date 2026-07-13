@@ -2,7 +2,9 @@ import {
   buildKiloCodeApiConfigs,
   buildKiloCodeSettingsFile,
   buildKiloCodeV7SettingsFile,
+  KILO_CODE_EXPORT_FILENAMES,
   KILO_CODE_EXPORT_TARGETS,
+  type KiloCodeExportFilename,
   type KiloCodeExportTarget,
   type KiloCodeExportTuple,
   type KiloCodeSettingsFile,
@@ -17,7 +19,7 @@ export interface BuildKiloCodeExportOutputOptions {
 }
 
 export interface KiloCodeExportOutput {
-  filename: "kilo-settings.json" | "kilo-code-settings.json"
+  filename: KiloCodeExportFilename
   copyPayload: Record<string, unknown>
   downloadPayload: KiloCodeV7SettingsFile | KiloCodeSettingsFile
   itemCount: number
@@ -39,7 +41,7 @@ export function buildKiloCodeExportOutput(
     })
 
     return {
-      filename: "kilo-settings.json",
+      filename: KILO_CODE_EXPORT_FILENAMES.KiloV7,
       copyPayload: downloadPayload.provider,
       downloadPayload,
       itemCount: Object.keys(downloadPayload.provider).length,
@@ -60,7 +62,7 @@ export function buildKiloCodeExportOutput(
     })
 
     return {
-      filename: "kilo-code-settings.json",
+      filename: KILO_CODE_EXPORT_FILENAMES.Legacy,
       copyPayload: apiConfigs,
       downloadPayload,
       itemCount: Object.keys(apiConfigs).length,

@@ -35,10 +35,13 @@ import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTok
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
+  KILO_CODE_EXPORT_FILENAMES,
+  KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
   type KiloCodeExportTuple,
 } from "~/services/integrations/kiloCodeExport"
+import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCodeExportAnalytics"
 import {
   buildKiloCodeExportOutput,
   type BuildKiloCodeExportOutputOptions,
@@ -50,7 +53,6 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
@@ -74,21 +76,6 @@ const KILO_CODE_INVENTORY_STATUSES = {
   Loaded: "loaded",
   Error: "error",
 } as const
-
-const exportTargetOptions = [
-  KILO_CODE_EXPORT_TARGETS.KiloV7,
-  KILO_CODE_EXPORT_TARGETS.Legacy,
-] as const
-
-/** Map the shared export target to the analytics contract's canonical value. */
-function getAnalyticsExportTarget(target: KiloCodeExportTarget) {
-  switch (target) {
-    case KILO_CODE_EXPORT_TARGETS.KiloV7:
-      return PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7
-    case KILO_CODE_EXPORT_TARGETS.Legacy:
-      return PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.Legacy
-  }
-}
 
 /**
  * Builds the stable toast id used while Kilo Code export creates a missing token.
@@ -720,7 +707,7 @@ export function KiloCodeExportDialog({
   const canExport = hasExportableProfiles && missingModelIdCount === 0
   const effectiveCurrentApiConfigName =
     currentApiConfigName || profileNames[0] || ""
-  const legacyFilename = "kilo-code-settings.json"
+  const legacyFilename = KILO_CODE_EXPORT_FILENAMES.Legacy
   const selectionSummary = t("ui:dialog.kiloCode.descriptions.selectedSites", {
     sites: selectedSiteIds.length,
     keys: exportSelections.length,
@@ -730,7 +717,7 @@ export function KiloCodeExportDialog({
     modelCount: exportSelections.filter((tuple) => tuple.modelId?.trim())
       .length,
     selectedCount: selectedSiteIds.length,
-    kiloCodeExportTarget: getAnalyticsExportTarget(exportTarget),
+    kiloCodeExportTarget: getKiloCodeExportAnalyticsTarget(exportTarget),
   }
   const isKiloV7Export = exportTarget === KILO_CODE_EXPORT_TARGETS.KiloV7
   const copyActionLabel = isKiloV7Export
@@ -1211,7 +1198,7 @@ export function KiloCodeExportDialog({
           <Select
             value={exportTarget}
             onValueChange={(value) => {
-              const target = exportTargetOptions.find(
+              const target = KILO_CODE_EXPORT_TARGET_OPTIONS.find(
                 (candidate) => candidate === value,
               )
               if (target) setExportTarget(target)

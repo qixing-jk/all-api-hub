@@ -26,6 +26,7 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import { expectKiloCodeUsageGuidance } from "~~/tests/test-utils/kiloCodeExportGuidance"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const mockUseAccountData = vi.fn()
@@ -106,57 +107,6 @@ const mockFetchAccountAvailableModels = vi.fn()
 const mockFetchUserGroups = vi.fn()
 const mockEnsureAccountApiToken = vi.fn()
 const mockResolveDefaultTokenQuickCreateResolution = vi.fn()
-const KILO_V7_GUIDANCE_KEYS = [
-  "ui:dialog.kiloCode.help.kiloV7DownloadInstructions",
-  "ui:dialog.kiloCode.help.kiloV7CopyInstructions",
-] as const
-const LEGACY_GUIDANCE_KEYS = [
-  "ui:dialog.kiloCode.help.legacyDownloadInstructions",
-  "ui:dialog.kiloCode.help.legacyCopyInstructions",
-] as const
-
-function expectUsageGuidance(
-  instructionsKeys: readonly string[],
-  oppositeTargetInstructionsKeys: readonly string[],
-) {
-  const usageAlert = screen
-    .getByText("ui:dialog.kiloCode.help.usageTitle")
-    .closest<HTMLElement>('[role="alert"]')!
-  const securityAlert = screen
-    .getByText("ui:dialog.kiloCode.warning.title")
-    .closest<HTMLElement>('[role="alert"]')!
-
-  const renderedInstructions = instructionsKeys.map((instructionsKey) => {
-    const renderedInstruction = within(usageAlert).getByText(instructionsKey)
-    expect(renderedInstruction).toBeVisible()
-    return renderedInstruction
-  })
-  for (let index = 1; index < renderedInstructions.length; index += 1) {
-    expect(
-      renderedInstructions[index - 1].compareDocumentPosition(
-        renderedInstructions[index],
-      ) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-  }
-  for (const instructionsKey of oppositeTargetInstructionsKeys) {
-    expect(screen.queryByText(instructionsKey)).not.toBeInTheDocument()
-  }
-  expect(screen.getAllByRole("alert").indexOf(usageAlert)).toBeLessThan(
-    screen.getAllByRole("alert").indexOf(securityAlert),
-  )
-  expect(
-    screen.queryByText("ui:dialog.kiloCode.help.afterExportTitle"),
-  ).not.toBeInTheDocument()
-  expect(
-    screen.queryByText("ui:dialog.kiloCode.help.manualTitle"),
-  ).not.toBeInTheDocument()
-  expect(
-    screen.queryByText("ui:dialog.kiloCode.help.kiloV7Title"),
-  ).not.toBeInTheDocument()
-  expect(
-    screen.queryByText("ui:dialog.kiloCode.help.legacyTitle"),
-  ).not.toBeInTheDocument()
-}
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: (...args: unknown[]) =>
@@ -340,7 +290,7 @@ describe("KiloCodeExportDialog", () => {
     ).toBeInTheDocument()
 
     await screen.findByText("ui:dialog.kiloCode.help.usageTitle")
-    expectUsageGuidance(KILO_V7_GUIDANCE_KEYS, LEGACY_GUIDANCE_KEYS)
+    expectKiloCodeUsageGuidance(KILO_CODE_EXPORT_TARGETS.KiloV7)
 
     expect(
       await screen.findByRole("button", {
@@ -1408,7 +1358,7 @@ describe("KiloCodeExportDialog", () => {
     expect(downloadButton).toHaveAccessibleName(
       "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
     )
-    expectUsageGuidance(KILO_V7_GUIDANCE_KEYS, LEGACY_GUIDANCE_KEYS)
+    expectKiloCodeUsageGuidance(KILO_CODE_EXPORT_TARGETS.KiloV7)
     expect(
       screen.queryByText("ui:dialog.kiloCode.help.kiloV7Description"),
     ).not.toBeInTheDocument()
@@ -1525,7 +1475,7 @@ describe("KiloCodeExportDialog", () => {
     expect(downloadButton).toHaveAccessibleName(
       "ui:dialog.kiloCode.actions.downloadLegacySettings",
     )
-    expectUsageGuidance(LEGACY_GUIDANCE_KEYS, KILO_V7_GUIDANCE_KEYS)
+    expectKiloCodeUsageGuidance(KILO_CODE_EXPORT_TARGETS.Legacy)
     expect(
       screen.getByText("ui:dialog.kiloCode.labels.currentApiConfigName"),
     ).toBeVisible()

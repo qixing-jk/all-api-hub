@@ -9,6 +9,19 @@ export const KILO_CODE_EXPORT_TARGETS = {
 export type KiloCodeExportTarget =
   (typeof KILO_CODE_EXPORT_TARGETS)[keyof typeof KILO_CODE_EXPORT_TARGETS]
 
+export const KILO_CODE_EXPORT_TARGET_OPTIONS = [
+  KILO_CODE_EXPORT_TARGETS.KiloV7,
+  KILO_CODE_EXPORT_TARGETS.Legacy,
+] as const satisfies readonly KiloCodeExportTarget[]
+
+export const KILO_CODE_EXPORT_FILENAMES = {
+  KiloV7: "kilo-settings.json",
+  Legacy: "kilo-code-settings.json",
+} as const satisfies Record<keyof typeof KILO_CODE_EXPORT_TARGETS, string>
+
+export type KiloCodeExportFilename =
+  (typeof KILO_CODE_EXPORT_FILENAMES)[keyof typeof KILO_CODE_EXPORT_FILENAMES]
+
 type KiloCodeApiProvider = "openai"
 
 interface KiloCodeApiConfig {

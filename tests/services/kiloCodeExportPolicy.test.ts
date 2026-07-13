@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   KILO_CODE_EXPORT_TARGETS,
+  type KiloCodeExportTarget,
   type KiloCodeExportTuple,
 } from "~/services/integrations/kiloCodeExport"
 import { buildKiloCodeExportOutput } from "~/services/integrations/kiloCodeExportPolicy"
@@ -61,4 +62,14 @@ describe("buildKiloCodeExportOutput", () => {
       ).toThrow("Legacy current profile name cannot be blank")
     },
   )
+
+  it("rejects an unsupported runtime export target", () => {
+    expect(() =>
+      buildKiloCodeExportOutput({
+        target: "unsupported" as KiloCodeExportTarget,
+        selections: [selection],
+        currentLegacyProfileName: "Example - Default",
+      }),
+    ).toThrow("Unsupported Kilo Code export target: unsupported")
+  })
 })
