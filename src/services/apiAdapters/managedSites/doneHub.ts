@@ -37,11 +37,13 @@ import type {
   UpdateChannelPayload,
 } from "~/types/managedSite"
 import {
+  assertManagedUpstreamResourceRefScope,
   createManagedUpstreamResourceRef,
   MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES,
   MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
   MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
   MANAGED_UPSTREAM_RESOURCE_STATUSES,
+  normalizeManagedUpstreamResourceScopeKey,
   type ManagedUpstreamResourceDetail,
   type ManagedUpstreamResourceFieldDescriptor,
   type ManagedUpstreamResourceRef,
@@ -155,18 +157,14 @@ const doneHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const normalizeResourceScopeKey = (baseUrl: string): string => {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
-}
+const assertDoneHubResourceRef = (
+  config: DoneHubConfig,
+  ref: ManagedUpstreamResourceRef,
+) =>
+  assertManagedUpstreamResourceRefScope(ref, {
+    managedSiteType: SITE_TYPES.DONE_HUB,
+    scopeKey: config.baseUrl,
+  })
 
 const toResourceStatus = (status: ManagedSiteChannel["status"]) => {
   switch (status) {
@@ -208,7 +206,7 @@ const toDoneHubResourceSummary = (
   return {
     ref: createManagedUpstreamResourceRef({
       managedSiteType: SITE_TYPES.DONE_HUB,
-      scopeKey: normalizeResourceScopeKey(config.baseUrl),
+      scopeKey: normalizeManagedUpstreamResourceScopeKey(config.baseUrl),
       resourceId: channel.id,
     }),
     displayName: channel.name,
@@ -240,11 +238,13 @@ const toDoneHubResourceListData = (
 const fetchDoneHubChannelByRef = async (
   config: DoneHubConfig,
   ref: ManagedUpstreamResourceRef,
-): Promise<DoneHubResourceDetailNative> =>
-  await fetchChannelRaw(
+): Promise<DoneHubResourceDetailNative> => {
+  assertDoneHubResourceRef(config, ref)
+  return await fetchChannelRaw(
     toManagedSiteApiServiceRequest(config),
     Number(ref.resourceId),
   )
+}
 
 const prepareDoneHubEditDraft = (
   detail: ManagedUpstreamResourceDetail<DoneHubResourceDetailNative>,
@@ -383,11 +383,13 @@ const doneHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
           toDoneHubUpdatePayload(detail, draft),
         ),
       ),
-    delete: async (config, ref) =>
-      await deleteChannel(
+    delete: async (config, ref) => {
+      assertDoneHubResourceRef(config, ref)
+      return await deleteChannel(
         toManagedSiteApiServiceRequest(config),
         Number(ref.resourceId),
-      ),
+      )
+    },
   },
   drafts: {
     prepareImportDraft: async (input) => {
@@ -432,13 +434,15 @@ const doneHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       const secret = await fetchSecretKey(config, Number(ref.resourceId))
       if (hasUsableManagedSiteChannelKey(secret)) {
         return {
-          status: "available",
+          status: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available,
           secret: secret.trim(),
         }
       }
 
       return {
-        status: secret?.trim() ? "masked" : "unavailable",
+        status: secret?.trim()
+          ? MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Masked
+          : MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Unavailable,
       }
     },
   },

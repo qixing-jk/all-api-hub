@@ -39,11 +39,13 @@ import type {
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
 import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
 import {
+  assertManagedUpstreamResourceRefScope,
   createManagedUpstreamResourceRef,
   MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES,
   MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
   MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
   MANAGED_UPSTREAM_RESOURCE_STATUSES,
+  normalizeManagedUpstreamResourceScopeKey,
   type ManagedUpstreamResourceDetail,
   type ManagedUpstreamResourceFieldDescriptor,
   type ManagedUpstreamResourceRef,
@@ -87,18 +89,14 @@ type ClaudeCodeHubChannelFormData = ChannelFormData & {
   [CLAUDE_CODE_HUB_NATIVE_ALLOWED_MODELS_FIELD]?: ClaudeCodeHubAllowedModel[]
 }
 
-const normalizeResourceScopeKey = (baseUrl: string): string => {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
-}
+const assertClaudeCodeHubResourceRef = (
+  config: ClaudeCodeHubConfig,
+  ref: ManagedUpstreamResourceRef,
+) =>
+  assertManagedUpstreamResourceRefScope(ref, {
+    managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+    scopeKey: config.baseUrl,
+  })
 
 const normalizeAllowedModels = (
   allowedModels?: ClaudeCodeHubAllowedModel[],
@@ -118,6 +116,14 @@ const toAllowedModelRules = (models: string[]): ClaudeCodeHubAllowedModel[] =>
     matchType: "exact",
     pattern: model,
   }))
+
+const getNativeNonExactAllowedModelRules = (
+  allowedModels?: ClaudeCodeHubAllowedModel[],
+): ClaudeCodeHubAllowedModel[] =>
+  (allowedModels ?? []).filter(
+    (item) =>
+      typeof item !== "string" && item?.matchType && item.matchType !== "exact",
+  )
 
 const haveSameAllowedModelDraft = (
   provider: ClaudeCodeHubProviderDisplay,
@@ -155,7 +161,10 @@ const resolveAllowedModelRules = (
 
   return haveSameAllowedModelDraft(provider, models)
     ? provider.allowedModels
-    : toAllowedModelRules(models)
+    : [
+        ...getNativeNonExactAllowedModelRules(provider.allowedModels),
+        ...toAllowedModelRules(models),
+      ]
 }
 
 const toSafeWeight = (weight?: number): number => {
@@ -203,7 +212,7 @@ const toClaudeCodeHubResourceSummary = (
   return {
     ref: createManagedUpstreamResourceRef({
       managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
-      scopeKey: normalizeResourceScopeKey(config.baseUrl),
+      scopeKey: normalizeManagedUpstreamResourceScopeKey(config.baseUrl),
       resourceId: provider.id,
     }),
     displayName: provider.name || `Provider ${provider.id}`,
@@ -237,6 +246,8 @@ const findClaudeCodeHubProviderByRef = async (
   config: ClaudeCodeHubConfig,
   ref: ManagedUpstreamResourceRef,
 ): Promise<ClaudeCodeHubProviderDisplay> => {
+  assertClaudeCodeHubResourceRef(config, ref)
+
   const providers = await listProviders(config)
   const provider = providers.find((item) => String(item.id) === ref.resourceId)
 
@@ -396,6 +407,7 @@ const claudeCodeHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
         updateProvider(config, toClaudeCodeHubUpdatePayload(detail, draft)),
       ),
     delete: async (config, ref) => {
+      assertClaudeCodeHubResourceRef(config, ref)
       const response = await deleteProvider(config, Number(ref.resourceId))
       return {
         success: true,
@@ -459,13 +471,15 @@ const claudeCodeHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       )
       if (hasUsableManagedSiteChannelKey(secret)) {
         return {
-          status: "available",
+          status: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available,
           secret: secret.trim(),
         }
       }
 
       return {
-        status: secret?.trim() ? "masked" : "unavailable",
+        status: secret?.trim()
+          ? MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Masked
+          : MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Unavailable,
       }
     },
   },

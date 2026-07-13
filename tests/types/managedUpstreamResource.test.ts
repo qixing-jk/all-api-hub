@@ -11,6 +11,7 @@ import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/site
 import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
+  normalizeManagedUpstreamResourceScopeKey,
   type ManagedUpstreamResourceDraftValidationResult,
   type ManagedUpstreamResourceSummary,
 } from "~/types/managedUpstreamResource"
@@ -40,6 +41,25 @@ describe("managed upstream resource contracts", () => {
     })
 
     expect(ref.resourceId).toBe("123")
+  })
+
+  it("normalizes scope keys at the shared resource-ref boundary", () => {
+    expect(
+      normalizeManagedUpstreamResourceScopeKey(
+        " https://admin.example.invalid/path?token=private ",
+      ),
+    ).toBe("https://admin.example.invalid")
+    expect(normalizeManagedUpstreamResourceScopeKey(" custom-scope/// ")).toBe(
+      "custom-scope",
+    )
+
+    const ref = createManagedUpstreamResourceRef({
+      managedSiteType: SITE_TYPES.NEW_API,
+      scopeKey: " https://admin.example.invalid/path ",
+      resourceId: 123,
+    })
+
+    expect(ref.scopeKey).toBe("https://admin.example.invalid")
   })
 
   it("allows optional resources capabilities to coexist with legacy channel capabilities", () => {

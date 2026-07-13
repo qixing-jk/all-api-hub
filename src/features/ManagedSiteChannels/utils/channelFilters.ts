@@ -17,8 +17,12 @@ const logger = createLogger("ChannelFilters")
 export type ChannelFilterStorageIdentity =
   | number
   | {
-      channelId?: number
+      channelId: number
       resourceRef?: ManagedUpstreamResourceRef
+    }
+  | {
+      channelId?: number
+      resourceRef: ManagedUpstreamResourceRef
     }
 
 /**

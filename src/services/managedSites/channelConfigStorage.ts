@@ -96,6 +96,28 @@ function shouldMirrorResourceConfigToChannelConfig(
   )
 }
 
+/**
+ * Projects channel-shaped resource configs for legacy numeric readers.
+ */
+function toMirroredChannelConfig(
+  config: ChannelResourceConfig,
+): ChannelConfig | null {
+  const channelId = toValidChannelId(config.channelId)
+  if (
+    channelId === null ||
+    !shouldMirrorResourceConfigToChannelConfig(config.resourceRef, channelId)
+  ) {
+    return null
+  }
+
+  return {
+    channelId,
+    modelFilterSettings: config.modelFilterSettings,
+    createdAt: config.createdAt,
+    updatedAt: config.updatedAt,
+  }
+}
+
 class ChannelConfigStorage {
   private storage: Storage
 
@@ -110,7 +132,17 @@ class ChannelConfigStorage {
       const stored = (await this.storage.get(STORAGE_KEYS.CHANNEL_CONFIGS)) as
         | ChannelConfigMap
         | undefined
-      return stored ?? {}
+      const resourceConfigs = await this.getAllResourceConfigs()
+      const merged: ChannelConfigMap = { ...(stored ?? {}) }
+
+      for (const resourceConfig of Object.values(resourceConfigs)) {
+        const mirrored = toMirroredChannelConfig(resourceConfig)
+        if (mirrored) {
+          merged[mirrored.channelId] = mirrored
+        }
+      }
+
+      return merged
     } catch (error) {
       logger.error("Failed to load configs", error)
       return {}
@@ -270,7 +302,18 @@ class ChannelConfigStorage {
       return true
     }
 
-    return this.upsertFilters(channelId, rules)
+    const mirrorSaved = await this.upsertFilters(channelId, rules)
+    if (!mirrorSaved) {
+      logger.warn(
+        "Failed to mirror resource config to numeric channel config",
+        {
+          channelId,
+          resourceRef,
+        },
+      )
+    }
+
+    return true
   }
 }
 
@@ -320,7 +363,11 @@ export async function resolveChannelConfigGetMessage(
 ): Promise<ChannelConfigGetResponse> {
   try {
     const channelId = toValidChannelId(request.channelId)
-    if (request.channelId !== undefined && channelId === null) {
+    if (
+      !request.resourceRef &&
+      request.channelId !== undefined &&
+      channelId === null
+    ) {
       throw new Error("channelId is required")
     }
 
@@ -356,7 +403,11 @@ export async function resolveChannelConfigUpsertFiltersMessage(
 ): Promise<ChannelConfigUpsertFiltersResponse> {
   try {
     const channelId = toValidChannelId(request.channelId)
-    if (request.channelId !== undefined && channelId === null) {
+    if (
+      !request.resourceRef &&
+      request.channelId !== undefined &&
+      channelId === null
+    ) {
       throw new Error("channelId is required")
     }
 

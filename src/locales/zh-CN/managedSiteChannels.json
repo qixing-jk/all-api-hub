@@ -222,6 +222,9 @@
     "channelsDeleted": "已删除 {{count}} 个渠道",
     "channelUpdated": "渠道已更新",
     "revealKeyFailed": "加载真实渠道 key 失败：{{error}}",
+    "revealKeyMasked": "渠道 key 仍处于遮罩状态",
+    "revealKeyUnavailable": "渠道 key 不可用",
+    "revealKeyUnsupported": "当前托管站点不支持显示渠道 key",
     "someDeletesFailed": "删除 {{count}} 个渠道失败：{{error}}",
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
     "syncFailed": "模型同步失败：{{error}}"

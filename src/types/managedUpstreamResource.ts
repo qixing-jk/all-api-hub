@@ -51,6 +51,11 @@ type ManagedUpstreamResourceRefInput = Omit<
   resourceId: string | number
 }
 
+type ManagedUpstreamResourceRefScope = Pick<
+  ManagedUpstreamResourceRef,
+  "managedSiteType" | "scopeKey"
+>
+
 export type ManagedUpstreamResourceCapabilitySet = {
   canCreate?: boolean
   canUpdate?: boolean
@@ -140,8 +145,51 @@ export function createManagedUpstreamResourceRef(
 ): ManagedUpstreamResourceRef {
   return {
     managedSiteType: input.managedSiteType,
-    scopeKey: input.scopeKey,
+    scopeKey: normalizeManagedUpstreamResourceScopeKey(input.scopeKey),
     resourceId: String(input.resourceId),
+  }
+}
+
+/**
+ * Canonicalizes a managed-resource scope so refs omit incidental URL paths and trailing slashes.
+ */
+export function normalizeManagedUpstreamResourceScopeKey(
+  scopeKey: string,
+): string {
+  const trimmed = scopeKey.trim()
+  if (!trimmed) {
+    return ""
+  }
+
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    return trimmed.replace(/\/+$/, "")
+  }
+}
+
+/**
+ * Checks whether a resource ref belongs to the expected managed-site type and scope.
+ */
+function matchesManagedUpstreamResourceRefScope(
+  ref: ManagedUpstreamResourceRef,
+  scope: ManagedUpstreamResourceRefScope,
+): boolean {
+  return (
+    ref.managedSiteType === scope.managedSiteType &&
+    ref.scopeKey === normalizeManagedUpstreamResourceScopeKey(scope.scopeKey)
+  )
+}
+
+/**
+ * Rejects resource refs that were created for a different managed site or base scope.
+ */
+export function assertManagedUpstreamResourceRefScope(
+  ref: ManagedUpstreamResourceRef,
+  scope: ManagedUpstreamResourceRefScope,
+): void {
+  if (!matchesManagedUpstreamResourceRefScope(ref, scope)) {
+    throw new Error("Resource reference does not match this managed site")
   }
 }
 

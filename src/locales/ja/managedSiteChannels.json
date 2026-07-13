@@ -222,6 +222,9 @@
     "channelsDeleted_other": "{{count}} 個のチャネルを削除しました",
     "channelUpdated": "チャネルを更新しました",
     "revealKeyFailed": "実際のチャネルキーの読み込みに失敗しました: {{error}}",
+    "revealKeyMasked": "チャネルキーはまだマスクされています",
+    "revealKeyUnavailable": "チャネルキーを取得できません",
+    "revealKeyUnsupported": "この管理対象サイトではチャネルキーを表示できません",
     "someDeletesFailed_other": "{{count}} 個のチャネル削除に失敗しました: {{error}}",
     "syncCompleted": "モデル同期が完了しました ({{success}}/{{total}})",
     "syncFailed": "モデル同期に失敗しました: {{error}}"

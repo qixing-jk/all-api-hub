@@ -492,6 +492,30 @@ describe("Octopus managed-site channel capability", () => {
     })
   })
 
+  it("rejects stale Octopus resource refs from a different site or scope before native access", async () => {
+    const { octopusManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(
+      octopusManagedSiteCapabilities.resources.items.getDetail(config, {
+        managedSiteType: SITE_TYPES.NEW_API,
+        scopeKey: "https://octopus.example.invalid",
+        resourceId: "7",
+      }),
+    ).rejects.toThrow("Resource reference does not match this managed site")
+    await expect(
+      octopusManagedSiteCapabilities.resources.items.delete(config, {
+        managedSiteType: SITE_TYPES.OCTOPUS,
+        scopeKey: "https://other.example.invalid",
+        resourceId: "7",
+      }),
+    ).rejects.toThrow("Resource reference does not match this managed site")
+
+    expect(octopusApi.listChannels).not.toHaveBeenCalled()
+    expect(octopusApi.deleteChannel).not.toHaveBeenCalled()
+  })
+
   it("preserves native Octopus fields through resource edit updates while omitting masked keys", async () => {
     octopusApi.updateChannel.mockResolvedValue({
       success: true,

@@ -35,11 +35,13 @@ import type {
   UpdateChannelPayload,
 } from "~/types/managedSite"
 import {
+  assertManagedUpstreamResourceRefScope,
   createManagedUpstreamResourceRef,
   MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES,
   MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
   MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
   MANAGED_UPSTREAM_RESOURCE_STATUSES,
+  normalizeManagedUpstreamResourceScopeKey,
   type ManagedUpstreamResourceDetail,
   type ManagedUpstreamResourceFieldDescriptor,
   type ManagedUpstreamResourceRef,
@@ -147,18 +149,14 @@ const veloeraManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const normalizeResourceScopeKey = (baseUrl: string): string => {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
-}
+const assertVeloeraResourceRef = (
+  config: VeloeraConfig,
+  ref: ManagedUpstreamResourceRef,
+) =>
+  assertManagedUpstreamResourceRefScope(ref, {
+    managedSiteType: SITE_TYPES.VELOERA,
+    scopeKey: config.baseUrl,
+  })
 
 const toResourceStatus = (status: ManagedSiteChannel["status"]) => {
   switch (status) {
@@ -194,7 +192,7 @@ const toVeloeraResourceSummary = (
   return {
     ref: createManagedUpstreamResourceRef({
       managedSiteType: SITE_TYPES.VELOERA,
-      scopeKey: normalizeResourceScopeKey(config.baseUrl),
+      scopeKey: normalizeManagedUpstreamResourceScopeKey(config.baseUrl),
       resourceId: channel.id,
     }),
     displayName: channel.name,
@@ -226,11 +224,13 @@ const toVeloeraResourceListData = (
 const fetchVeloeraChannelByRef = async (
   config: VeloeraConfig,
   ref: ManagedUpstreamResourceRef,
-): Promise<ManagedSiteChannel> =>
-  await fetchChannel(
+): Promise<ManagedSiteChannel> => {
+  assertVeloeraResourceRef(config, ref)
+  return await fetchChannel(
     toManagedSiteApiServiceRequest(config),
     Number(ref.resourceId),
   )
+}
 
 const prepareVeloeraEditDraft = (
   detail: ManagedUpstreamResourceDetail<ManagedSiteChannel>,
@@ -367,11 +367,13 @@ const veloeraManagedUpstreamResources: ManagedUpstreamResourcesCapability<
           toVeloeraUpdatePayload(detail, draft),
         ),
       ),
-    delete: async (config, ref) =>
-      await deleteChannel(
+    delete: async (config, ref) => {
+      assertVeloeraResourceRef(config, ref)
+      return await deleteChannel(
         toManagedSiteApiServiceRequest(config),
         Number(ref.resourceId),
-      ),
+      )
+    },
   },
   drafts: {
     prepareImportDraft: async (input) => {
@@ -416,13 +418,15 @@ const veloeraManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       const secret = await fetchSecretKey(config, Number(ref.resourceId))
       if (hasUsableManagedSiteChannelKey(secret)) {
         return {
-          status: "available",
+          status: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available,
           secret: secret.trim(),
         }
       }
 
       return {
-        status: secret?.trim() ? "masked" : "unavailable",
+        status: secret?.trim()
+          ? MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Masked
+          : MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Unavailable,
       }
     },
   },

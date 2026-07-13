@@ -494,6 +494,54 @@ describe("Claude Code Hub managed-site channel capability", () => {
     ).not.toHaveProperty("key")
   })
 
+  it("preserves non-exact native model rules when exact models are edited", async () => {
+    const { claudeCodeHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/claudeCodeHub"
+    )
+    const mixedRuleProvider = {
+      ...provider,
+      allowedModels: [
+        { matchType: "prefix", pattern: "claude-" },
+        { matchType: "exact", pattern: "claude-3-5-sonnet" },
+      ],
+    }
+    claudeCodeHubApi.listProviders.mockResolvedValue([mixedRuleProvider])
+    claudeCodeHubApi.updateProvider.mockResolvedValue(mixedRuleProvider)
+
+    const detail =
+      await claudeCodeHubManagedSiteCapabilities.resources.items.getDetail(
+        config,
+        {
+          managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+          scopeKey: "https://claude-code-hub.example.invalid",
+          resourceId: "7",
+        },
+      )
+    const draft =
+      claudeCodeHubManagedSiteCapabilities.resources.drafts.prepareEditDraft(
+        detail,
+      )
+
+    await claudeCodeHubManagedSiteCapabilities.resources.items.update(
+      config,
+      detail,
+      {
+        ...draft,
+        models: ["claude-3-7-sonnet"],
+      },
+    )
+
+    expect(claudeCodeHubApi.updateProvider).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        allowed_models: [
+          { matchType: "prefix", pattern: "claude-" },
+          { matchType: "exact", pattern: "claude-3-7-sonnet" },
+        ],
+      }),
+    )
+  })
+
   it("blocks clearing exact model rules instead of silently preserving old allowed models", async () => {
     const { claudeCodeHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/claudeCodeHub"

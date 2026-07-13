@@ -932,10 +932,12 @@ test("loads managed-site channels, deep-links into manual model sync, and runs a
   ).toBeVisible()
   await expect(page.getByText("Successful")).toBeVisible()
 
-  expect(updatePayloads).toContainEqual({
-    id: 101,
-    models: "gpt-4o-mini,gpt-4.1-mini",
-  })
+  expect(updatePayloads).toContainEqual(
+    expect.objectContaining({
+      id: 101,
+      models: "gpt-4o-mini,gpt-4.1-mini",
+    }),
+  )
 
   const storedExecution = await readStoredModelSyncExecution(context)
 

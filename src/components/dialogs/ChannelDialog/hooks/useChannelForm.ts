@@ -31,6 +31,7 @@ import type {
   ManagedUpstreamResourceFieldDescriptor,
   ManagedUpstreamResourceRef,
 } from "~/types/managedUpstreamResource"
+import { getManagedUpstreamResourceRefKey } from "~/types/managedUpstreamResource"
 import type { OctopusOutboundType } from "~/types/octopus"
 import { createLogger } from "~/utils/core/logger"
 
@@ -67,11 +68,11 @@ export type ChannelResourceEditContext = {
   ref: ManagedUpstreamResourceRef
   capabilities: {
     items: Pick<
-      ManagedUpstreamResourceItemsCapability<unknown, unknown, unknown>,
+      ManagedUpstreamResourceItemsCapability<unknown, unknown, ChannelFormData>,
       "getDetail" | "update"
     >
     drafts: Pick<
-      ManagedUpstreamResourceDraftsCapability<unknown, unknown>,
+      ManagedUpstreamResourceDraftsCapability<unknown, ChannelFormData>,
       "prepareEditDraft" | "describeFields" | "validateDraft"
     >
   }
@@ -90,6 +91,7 @@ export type ChannelResourceEditContext = {
  * @param props.initialValues Prefilled form values supplied externally.
  * @param props.initialModels Prefilled model list for the multiselect.
  * @param props.initialGroups Prefilled group list for the multiselect.
+ * @param props.resourceEdit Resource-backed edit context for loading and updating the selected item.
  * @returns Binding helpers plus UI/loading flags for the form consumer.
  */
 export function useChannelForm({
@@ -183,6 +185,12 @@ export function useChannelForm({
     useState<Error | null>(null)
   const [isLoadingResourceEdit, setIsLoadingResourceEdit] = useState(false)
   const [resourceEditLoadAttempt, setResourceEditLoadAttempt] = useState(0)
+  const [resourceEditLoadRefKey, setResourceEditLoadRefKey] = useState<
+    string | null
+  >(null)
+  const activeResourceEditRefKey = resourceEdit
+    ? getManagedUpstreamResourceRefKey(resourceEdit.ref)
+    : null
 
   const loadManagedSiteType = useCallback(async () => {
     const service = await getManagedSiteService()
@@ -250,14 +258,17 @@ export function useChannelForm({
       setResourceFieldDescriptors(null)
       setResourceEditLoadError(null)
       setIsLoadingResourceEdit(false)
+      setResourceEditLoadRefKey(null)
       return
     }
 
     let cancelled = false
+    const loadRefKey = getManagedUpstreamResourceRefKey(resourceEdit.ref)
     setResourceDetail(null)
     setResourceFieldDescriptors(null)
     setResourceEditLoadError(null)
     setIsLoadingResourceEdit(true)
+    setResourceEditLoadRefKey(null)
 
     void (async () => {
       try {
@@ -273,12 +284,11 @@ export function useChannelForm({
           mode: "edit",
           detail,
         })
-        const draft = resourceEdit.capabilities.drafts.prepareEditDraft(
-          detail,
-        ) as ChannelFormData
+        const draft = resourceEdit.capabilities.drafts.prepareEditDraft(detail)
 
         setResourceDetail(detail)
         setResourceFieldDescriptors(descriptors)
+        setResourceEditLoadRefKey(loadRefKey)
         setFormData(draft)
       } catch (error) {
         if (!cancelled) {
@@ -494,7 +504,8 @@ export function useChannelForm({
           isLoadingResourceEdit ||
           resourceEditLoadError ||
           !resourceDetail ||
-          !resourceFieldDescriptors
+          !resourceFieldDescriptors ||
+          resourceEditLoadRefKey !== activeResourceEditRefKey
         ) {
           return
         }
@@ -594,7 +605,8 @@ export function useChannelForm({
         !isLoadingResourceEdit &&
         !resourceEditLoadError &&
         resourceDetail &&
-        resourceFieldDescriptors),
+        resourceFieldDescriptors &&
+        resourceEditLoadRefKey === activeResourceEditRefKey),
   )
 
   const resourceDraftValidation =

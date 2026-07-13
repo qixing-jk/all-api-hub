@@ -34,11 +34,13 @@ import type {
   UpdateChannelPayload,
 } from "~/types/managedSite"
 import {
+  assertManagedUpstreamResourceRefScope,
   createManagedUpstreamResourceRef,
   MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES,
   MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
   MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
   MANAGED_UPSTREAM_RESOURCE_STATUSES,
+  normalizeManagedUpstreamResourceScopeKey,
   type ManagedUpstreamResourceDetail,
   type ManagedUpstreamResourceFieldDescriptor,
   type ManagedUpstreamResourceRef,
@@ -117,18 +119,14 @@ const newApiManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const normalizeResourceScopeKey = (baseUrl: string): string => {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
-}
+const assertNewApiResourceRef = (
+  config: NewApiConfig,
+  ref: ManagedUpstreamResourceRef,
+) =>
+  assertManagedUpstreamResourceRefScope(ref, {
+    managedSiteType: SITE_TYPES.NEW_API,
+    scopeKey: config.baseUrl,
+  })
 
 const toResourceStatus = (status: ManagedSiteChannel["status"]) => {
   switch (status) {
@@ -164,7 +162,7 @@ const toNewApiResourceSummary = (
   return {
     ref: createManagedUpstreamResourceRef({
       managedSiteType: SITE_TYPES.NEW_API,
-      scopeKey: normalizeResourceScopeKey(config.baseUrl),
+      scopeKey: normalizeManagedUpstreamResourceScopeKey(config.baseUrl),
       resourceId: channel.id,
     }),
     displayName: channel.name,
@@ -197,6 +195,8 @@ const findNewApiChannelByRef = async (
   config: NewApiConfig,
   ref: ManagedUpstreamResourceRef,
 ): Promise<ManagedSiteChannel> => {
+  assertNewApiResourceRef(config, ref)
+
   const list = await listAllChannels(toManagedSiteApiServiceRequest(config))
   const channel = (list.items ?? []).find(
     (item) => String(item.id) === ref.resourceId,
@@ -344,11 +344,13 @@ const newApiManagedUpstreamResources: ManagedUpstreamResourcesCapability<
           toNewApiUpdatePayload(detail, draft),
         ),
       ),
-    delete: async (config, ref) =>
-      await deleteChannel(
+    delete: async (config, ref) => {
+      assertNewApiResourceRef(config, ref)
+      return await deleteChannel(
         toManagedSiteApiServiceRequest(config),
         Number(ref.resourceId),
-      ),
+      )
+    },
   },
   drafts: {
     prepareImportDraft: async (input) => {

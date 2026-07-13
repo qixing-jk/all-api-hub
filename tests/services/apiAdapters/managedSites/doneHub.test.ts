@@ -472,6 +472,30 @@ describe("DoneHub managed-site channel capability", () => {
     })
   })
 
+  it("rejects stale DoneHub resource refs from a different site or scope before native access", async () => {
+    const { doneHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+
+    await expect(
+      doneHubManagedSiteCapabilities.resources.items.getDetail(config, {
+        managedSiteType: SITE_TYPES.NEW_API,
+        scopeKey: "https://done-hub.example.invalid",
+        resourceId: "19",
+      }),
+    ).rejects.toThrow("Resource reference does not match this managed site")
+    await expect(
+      doneHubManagedSiteCapabilities.resources.items.delete(config, {
+        managedSiteType: SITE_TYPES.DONE_HUB,
+        scopeKey: "https://other.example.invalid",
+        resourceId: "19",
+      }),
+    ).rejects.toThrow("Resource reference does not match this managed site")
+
+    expect(doneHubApi.fetchChannelRaw).not.toHaveBeenCalled()
+    expect(doneHubApi.deleteChannel).not.toHaveBeenCalled()
+  })
+
   it("preserves DoneHub raw-only fields through resource edit updates while omitting masked keys", async () => {
     const { doneHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/doneHub"

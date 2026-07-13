@@ -387,6 +387,39 @@ async function stubManagedSiteAdminRoutes(
       return
     }
 
+    if (
+      method === "POST" &&
+      /^\/api\/channel\/\d+\/status$/.test(url.pathname)
+    ) {
+      const channelId = Number(url.pathname.split("/").at(-2))
+      const payload = request.postDataJSON()
+      const channel = channels.find((item) => item.id === channelId)
+      const status =
+        payload && typeof payload === "object" && "status" in payload
+          ? (payload as { status?: unknown }).status
+          : undefined
+
+      if (
+        channel &&
+        (status === CHANNEL_STATUS.Enable ||
+          status === CHANNEL_STATUS.ManuallyDisabled ||
+          status === CHANNEL_STATUS.AutoDisabled)
+      ) {
+        channel.status = status
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          message: "status updated",
+          data: null,
+        }),
+      })
+      return
+    }
+
     await route.fulfill({
       status: 404,
       contentType: "application/json",
@@ -1638,8 +1671,10 @@ test("runs managed-site model sync when its MV3 alarm fires", async ({
       }),
     )
 
-  expect(updatePayloads).toContainEqual({
-    id: 101,
-    models: "gpt-4o-mini,gpt-4.1-mini",
-  })
+  expect(updatePayloads).toContainEqual(
+    expect.objectContaining({
+      id: 101,
+      models: "gpt-4o-mini,gpt-4.1-mini",
+    }),
+  )
 })

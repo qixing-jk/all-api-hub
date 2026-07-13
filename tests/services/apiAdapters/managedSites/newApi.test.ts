@@ -341,10 +341,31 @@ describe("newApi managed-site channel capability", () => {
         config,
         list.items[0].ref,
       ),
-    ).resolves.toEqual({
-      summary: list.items[0],
-      native: channel,
-    })
+    ).resolves.toEqual({ summary: list.items[0], native: channel })
+  })
+
+  it("rejects stale resource refs from a different site or scope before native access", async () => {
+    const { newApiManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+
+    await expect(
+      newApiManagedSiteCapabilities.resources.items.getDetail(config, {
+        managedSiteType: SITE_TYPES.DONE_HUB,
+        scopeKey: "https://new-api.example.invalid",
+        resourceId: "12",
+      }),
+    ).rejects.toThrow("Resource reference does not match this managed site")
+    await expect(
+      newApiManagedSiteCapabilities.resources.items.delete(config, {
+        managedSiteType: SITE_TYPES.NEW_API,
+        scopeKey: "https://other.example.invalid",
+        resourceId: "12",
+      }),
+    ).rejects.toThrow("Resource reference does not match this managed site")
+
+    expect(channelManagement.listAllChannels).not.toHaveBeenCalled()
+    expect(channelManagement.deleteChannel).not.toHaveBeenCalled()
   })
 
   it("updates resource drafts by preserving native fields and omitting masked keys", async () => {

@@ -43,11 +43,13 @@ import {
   type ManagedSiteChannelListData,
 } from "~/types/managedSite"
 import {
+  assertManagedUpstreamResourceRefScope,
   createManagedUpstreamResourceRef,
   MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES,
   MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
   MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
   MANAGED_UPSTREAM_RESOURCE_STATUSES,
+  normalizeManagedUpstreamResourceScopeKey,
   type ManagedUpstreamResourceDetail,
   type ManagedUpstreamResourceFieldDescriptor,
   type ManagedUpstreamResourceRef,
@@ -80,18 +82,14 @@ const axonHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const normalizeResourceScopeKey = (baseUrl: string): string => {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
-}
+const assertAxonHubResourceRef = (
+  config: AxonHubConfig,
+  ref: ManagedUpstreamResourceRef,
+) =>
+  assertManagedUpstreamResourceRefScope(ref, {
+    managedSiteType: SITE_TYPES.AXON_HUB,
+    scopeKey: config.baseUrl,
+  })
 
 const toAxonHubStatus = (status?: number) =>
   status === CHANNEL_STATUS.Enable
@@ -152,7 +150,7 @@ const toAxonHubResourceSummary = (
   return {
     ref: createManagedUpstreamResourceRef({
       managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: normalizeResourceScopeKey(config.baseUrl),
+      scopeKey: normalizeManagedUpstreamResourceScopeKey(config.baseUrl),
       resourceId: channel.id,
     }),
     displayName: channel.name,
@@ -202,6 +200,8 @@ const findAxonHubChannelByRef = async (
   config: AxonHubConfig,
   ref: ManagedUpstreamResourceRef,
 ): Promise<AxonHubChannel> => {
+  assertAxonHubResourceRef(config, ref)
+
   const channels = await listChannels(config)
   const channel = channels.items
     .map(rowToAxonHubNativeChannel)
@@ -412,6 +412,7 @@ const axonHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       return toAxonHubResourceMutationResponse(config, finalChannel)
     },
     delete: async (config, ref) => {
+      assertAxonHubResourceRef(config, ref)
       const deleted = await deleteAxonHubChannel(config, ref.resourceId)
       return {
         success: deleted,

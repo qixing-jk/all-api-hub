@@ -34,11 +34,13 @@ import type {
   UpdateChannelPayload,
 } from "~/types/managedSite"
 import {
+  assertManagedUpstreamResourceRefScope,
   createManagedUpstreamResourceRef,
   MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES,
   MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
   MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
   MANAGED_UPSTREAM_RESOURCE_STATUSES,
+  normalizeManagedUpstreamResourceScopeKey,
   type ManagedUpstreamResourceDetail,
   type ManagedUpstreamResourceFieldDescriptor,
   type ManagedUpstreamResourceRef,
@@ -196,18 +198,14 @@ const octopusManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   buildPayload: buildChannelPayload,
 }
 
-const normalizeResourceScopeKey = (baseUrl: string): string => {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
-}
+const assertOctopusResourceRef = (
+  config: OctopusConfig,
+  ref: ManagedUpstreamResourceRef,
+) =>
+  assertManagedUpstreamResourceRefScope(ref, {
+    managedSiteType: SITE_TYPES.OCTOPUS,
+    scopeKey: config.baseUrl,
+  })
 
 const splitDelimitedValues = (value?: string | null): string[] =>
   value
@@ -240,7 +238,7 @@ const toOctopusResourceSummary = (
   return {
     ref: createManagedUpstreamResourceRef({
       managedSiteType: SITE_TYPES.OCTOPUS,
-      scopeKey: normalizeResourceScopeKey(config.baseUrl),
+      scopeKey: normalizeManagedUpstreamResourceScopeKey(config.baseUrl),
       resourceId: channel.id,
     }),
     displayName: channel.name,
@@ -272,6 +270,8 @@ const findOctopusChannelByRef = async (
   config: OctopusConfig,
   ref: ManagedUpstreamResourceRef,
 ): Promise<OctopusChannel> => {
+  assertOctopusResourceRef(config, ref)
+
   const channels = await listChannels(config)
   const channel = channels.find((item) => String(item.id) === ref.resourceId)
 
@@ -467,10 +467,12 @@ const octopusManagedUpstreamResources: ManagedUpstreamResourcesCapability<
           toOctopusResourceUpdatePayload(detail, draft),
         ),
       ),
-    delete: async (config, ref) =>
-      await toOctopusResourceDeleteResponse(
+    delete: async (config, ref) => {
+      assertOctopusResourceRef(config, ref)
+      return await toOctopusResourceDeleteResponse(
         deleteOctopusChannel(config, Number(ref.resourceId)),
-      ),
+      )
+    },
   },
   drafts: {
     prepareImportDraft: async (input) => {

@@ -345,6 +345,31 @@ describe("AxonHub managed-site channel capability", () => {
     expect(axonHubApi.updateAxonHubChannelStatus).not.toHaveBeenCalled()
   })
 
+  it("rejects stale AxonHub resource refs from a different site or scope before native access", async () => {
+    const { axonHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+    const resources = axonHubManagedSiteCapabilities.resources!
+
+    await expect(
+      resources.items.getDetail(config, {
+        managedSiteType: SITE_TYPES.NEW_API,
+        scopeKey: "https://axonhub.example.invalid",
+        resourceId: "gid://axonhub/Channel/native-string-id",
+      }),
+    ).rejects.toThrow("Resource reference does not match this managed site")
+    await expect(
+      resources.items.delete(config, {
+        managedSiteType: SITE_TYPES.AXON_HUB,
+        scopeKey: "https://other.example.invalid",
+        resourceId: "gid://axonhub/Channel/native-string-id",
+      }),
+    ).rejects.toThrow("Resource reference does not match this managed site")
+
+    expect(axonHubProvider.listChannels).not.toHaveBeenCalled()
+    expect(axonHubApi.deleteAxonHubChannel).not.toHaveBeenCalled()
+  })
+
   it("preserves null AxonHub settings when building resource update payloads", async () => {
     const native = buildAxonHubChannel({
       settings: null,

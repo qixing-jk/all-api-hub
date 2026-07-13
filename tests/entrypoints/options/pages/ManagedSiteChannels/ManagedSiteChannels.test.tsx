@@ -13,6 +13,7 @@ import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/entrypoints/options/pages/ManagedSiteChannels"
 import {
+  attachChannelFilterResourceRef,
   isChannelRowLike,
   upsertChannelRow,
 } from "~/features/ManagedSiteChannels/ManagedSiteChannels"
@@ -47,6 +48,7 @@ import {
 import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { navigateWithinOptionsPage, openSettingsTab } from "~/utils/navigation"
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -552,6 +554,29 @@ describe("ManagedSiteChannels", () => {
         ...alphaEdited,
         resourceRef: alphaResourceRef,
       },
+    ])
+  })
+
+  it("attaches resource refs to newly inserted mutation rows before upsert", () => {
+    const created = buildCompleteChannelRow({
+      id: 3,
+      name: "Created",
+    })
+    const attached = attachChannelFilterResourceRef({
+      channel: created,
+      managedSiteType: SITE_TYPES.NEW_API,
+      baseUrl: " https://managed.example.invalid/admin ",
+    })
+
+    expect(upsertChannelRow([], attached)).toEqual([
+      expect.objectContaining({
+        id: 3,
+        resourceRef: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.invalid",
+          resourceId: "3",
+        },
+      }),
     ])
   })
 
@@ -1798,6 +1823,129 @@ describe("ManagedSiteChannels", () => {
       )
     })
     expect(updateChannel).not.toHaveBeenCalled()
+  })
+
+  it("keeps the latest resource edit when an earlier config load resolves late", async () => {
+    const user = userEvent.setup()
+    const alpha = buildCompleteChannelRow({
+      id: 51,
+      name: "Alpha",
+      key: "sk-********",
+    })
+    const beta = buildCompleteChannelRow({
+      id: 52,
+      name: "Beta",
+      key: "sk-********",
+    })
+    const config = {
+      baseUrl: "https://admin.example",
+      adminToken: "t",
+      userId: "1",
+    }
+    let resolveAlphaConfig: (value: typeof config) => void = () => {}
+    const service = mockChannels([alpha, beta])
+    service.getConfig = vi
+      .fn()
+      .mockResolvedValueOnce(config)
+      .mockImplementationOnce(
+        () =>
+          new Promise<typeof config>((resolve) => {
+            resolveAlphaConfig = resolve
+          }),
+      )
+      .mockResolvedValue(config)
+
+    const getDetail = vi.fn(
+      async (_config: unknown, ref: { resourceId: string }) => {
+        const channel = ref.resourceId === "51" ? alpha : beta
+        return {
+          summary: {
+            ref,
+            displayName: `${channel.name} Detail`,
+            nativeKind: "channel",
+            status: "enabled",
+            secretState: "masked",
+            capabilities: { canUpdate: true },
+          },
+          native: {
+            ...channel,
+            name: `${channel.name} Detail`,
+          },
+        }
+      },
+    )
+    mockResolveManagedUpstreamResourceCapabilities.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.NEW_API,
+      capabilities: {
+        items: {
+          getDetail,
+          update: vi.fn(),
+        },
+        drafts: {
+          prepareEditDraft: vi.fn((detail) => ({
+            name: detail.native.name,
+            type: detail.native.type,
+            key: detail.native.key,
+            base_url: detail.native.base_url,
+            models: detail.native.models.split(","),
+            groups: detail.native.group.split(","),
+            priority: detail.native.priority,
+            weight: detail.native.weight,
+            status: detail.native.status,
+          })),
+          describeFields: vi.fn(() => [
+            { name: "name", label: "Name", type: "text", required: true },
+          ]),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    })
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForRowText("Alpha")
+    await openRowActionsMenu(screen.getByText("Alpha").closest("tr")!, user)
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+    await waitFor(() => {
+      expect(service.getConfig).toHaveBeenCalledTimes(2)
+    })
+
+    await openRowActionsMenu(screen.getByText("Beta").closest("tr")!, user)
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)).toHaveValue(
+        "Beta Detail",
+      )
+    })
+
+    await act(async () => {
+      resolveAlphaConfig(config)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)).toHaveValue(
+        "Beta Detail",
+      )
+      expect(getDetail).not.toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({ resourceId: "51" }),
+      )
+    })
   })
 
   it("opens Veloera channel edits through the resource detail path when its core slice is migrated", async () => {

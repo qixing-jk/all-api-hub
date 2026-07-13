@@ -1,6 +1,8 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
+import type { ChannelFormData } from "~/types/managedSite"
 
 import {
   getDefaultManagedUpstreamResourceMigrationGates,
@@ -13,11 +15,18 @@ type ManagedUpstreamResourceUnsupportedReason =
   | "feature-slice-disabled"
   | "capability-missing"
 
+type ManagedSiteUpstreamResourcesCapability =
+  ManagedUpstreamResourcesCapability<
+    ManagedSiteRuntimeConfigValue,
+    unknown,
+    ChannelFormData
+  >
+
 type ManagedUpstreamResourceCapabilityResolution =
   | {
       supported: true
       siteType: ManagedSiteType
-      capabilities: ManagedUpstreamResourcesCapability
+      capabilities: ManagedSiteUpstreamResourcesCapability
     }
   | {
       supported: false
@@ -33,7 +42,7 @@ type ManagedUpstreamResourceFeatureCapabilityResolution =
       supported: true
       siteType: ManagedSiteType
       feature: ManagedUpstreamResourceFeature
-      capabilities: ManagedUpstreamResourcesCapability
+      capabilities: ManagedSiteUpstreamResourcesCapability
     }
   | {
       supported: false
@@ -76,7 +85,8 @@ export function resolveManagedUpstreamResourceCapabilities(
   return {
     supported: true,
     siteType,
-    capabilities: resources,
+    // Managed-site resource adapters normalize edit/import drafts to ChannelFormData.
+    capabilities: resources as ManagedSiteUpstreamResourcesCapability,
   }
 }
 

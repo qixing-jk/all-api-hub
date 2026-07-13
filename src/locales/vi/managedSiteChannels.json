@@ -222,6 +222,9 @@
     "channelsDeleted_other": "Đã xóa {{count}} kênh",
     "channelUpdated": "Đã cập nhật kênh",
     "revealKeyFailed": "Tải key của kênh thật thất bại: {{error}}",
+    "revealKeyMasked": "Key của kênh vẫn đang bị che",
+    "revealKeyUnavailable": "Không thể lấy key của kênh",
+    "revealKeyUnsupported": "Trang được quản lý này không hỗ trợ hiển thị key của kênh",
     "someDeletesFailed_other": "Xóa {{count}} kênh thất bại: {{error}}",
     "syncCompleted": "Đồng bộ mô hình hoàn tất ({{success}}/{{total}})",
     "syncFailed": "Đồng bộ mô hình thất bại: {{error}}"

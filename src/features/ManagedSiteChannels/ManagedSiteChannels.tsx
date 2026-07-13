@@ -135,7 +135,10 @@ import {
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
-import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
+import {
+  createManagedUpstreamResourceRef,
+  normalizeManagedUpstreamResourceScopeKey,
+} from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
 import {
   navigateWithinOptionsPage,
@@ -230,19 +233,6 @@ export function upsertChannelRow(rows: ChannelRow[], channel: ChannelRow) {
   return rows.map((row, index) => (index === existingIndex ? nextChannel : row))
 }
 
-const normalizeManagedSiteResourceScopeKey = (baseUrl: string): string => {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
-}
-
 /**
  * Main management page for New API channels including table, filters, and dialogs.
  * Fetches channel data, exposes filtering tools, and handles CRUD operations.
@@ -309,6 +299,22 @@ const getManagedUpstreamResourceId = (
   return channel.id
 }
 
+export const attachChannelFilterResourceRef = (params: {
+  channel: ChannelRow
+  managedSiteType: ManagedSiteType
+  baseUrl: string
+}): ChannelRow => {
+  const { channel, managedSiteType, baseUrl } = params
+  return {
+    ...channel,
+    resourceRef: createManagedUpstreamResourceRef({
+      managedSiteType,
+      scopeKey: normalizeManagedUpstreamResourceScopeKey(baseUrl),
+      resourceId: getManagedUpstreamResourceId(managedSiteType, channel),
+    }),
+  }
+}
+
 const attachChannelFilterResourceRefs = (params: {
   channels: ChannelRow[]
   managedSiteType: ManagedSiteType
@@ -324,15 +330,13 @@ const attachChannelFilterResourceRefs = (params: {
     return channels
   }
 
-  const scopeKey = normalizeManagedSiteResourceScopeKey(baseUrl)
-  return channels.map((channel) => ({
-    ...channel,
-    resourceRef: createManagedUpstreamResourceRef({
+  return channels.map((channel) =>
+    attachChannelFilterResourceRef({
+      channel,
       managedSiteType,
-      scopeKey,
-      resourceId: getManagedUpstreamResourceId(managedSiteType, channel),
+      baseUrl,
     }),
-  }))
+  )
 }
 
 /**
@@ -408,6 +412,8 @@ export default function ManagedSiteChannels({
   const [isMigrationMode, setIsMigrationMode] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const activeRefreshRef = useRef<ActiveRefresh | null>(null)
+  const channelFilterResourceScopeBaseUrlRef = useRef("")
+  const editOpenGenerationRef = useRef(0)
   const refreshAnalyticsCompletionRef =
     useRef<RefreshAnalyticsCompletion | null>(null)
   const verification = useNewApiManagedVerification()
@@ -488,10 +494,13 @@ export default function ManagedSiteChannels({
         const response = await service.listChannels(config, {
           signal: refreshAbortController.signal,
         })
+        const resourceScopeBaseUrl = String(
+          (config as { baseUrl?: string }).baseUrl ?? "",
+        )
         const items = attachChannelFilterResourceRefs({
           channels: response.items ?? [],
           managedSiteType,
-          baseUrl: String((config as { baseUrl?: string }).baseUrl ?? ""),
+          baseUrl: resourceScopeBaseUrl,
         })
         if (
           activeRefreshRef.current !== activeRefresh ||
@@ -507,6 +516,7 @@ export default function ManagedSiteChannels({
           return
         }
 
+        channelFilterResourceScopeBaseUrlRef.current = resourceScopeBaseUrl
         setChannels(items)
         completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
@@ -575,6 +585,8 @@ export default function ManagedSiteChannels({
   }, [managedSiteAnalyticsType])
 
   useLayoutEffect(() => {
+    editOpenGenerationRef.current += 1
+    channelFilterResourceScopeBaseUrlRef.current = ""
     setChannels([])
     setError(null)
   }, [managedSiteType])
@@ -617,6 +629,16 @@ export default function ManagedSiteChannels({
     }
   }, [refreshChannels, refreshKey])
 
+  const attachMutationChannelResourceRef = useCallback(
+    (channel: ChannelRow) =>
+      attachChannelFilterResourceRefs({
+        channels: [channel],
+        managedSiteType,
+        baseUrl: channelFilterResourceScopeBaseUrlRef.current,
+      })[0] ?? channel,
+    [managedSiteType],
+  )
+
   const handleOpenCreateDialog = useCallback(() => {
     openWithCustom({
       mode: undefined,
@@ -644,16 +666,24 @@ export default function ManagedSiteChannels({
       onSuccess: (response) => {
         toast.success(t("toasts.channelSaved"))
         if (isChannelRowLike(response?.data)) {
-          setChannels((prev) => upsertChannelRow(prev, response.data))
+          const channel = attachMutationChannelResourceRef(response.data)
+          setChannels((prev) => upsertChannelRow(prev, channel))
         } else {
           void refreshChannels()
         }
       },
     })
-  }, [managedSiteAnalyticsType, openWithCustom, refreshChannels, t])
+  }, [
+    attachMutationChannelResourceRef,
+    managedSiteAnalyticsType,
+    openWithCustom,
+    refreshChannels,
+    t,
+  ])
 
   const openChannelDialogForMode = useCallback(
     (channel: ChannelRow, mode: DialogMode) => {
+      const openGeneration = ++editOpenGenerationRef.current
       const groups =
         channel.group?.split(",").map((value) => value.trim()) ?? []
       const models =
@@ -720,7 +750,7 @@ export default function ManagedSiteChannels({
                   ) {
                     const resourceRef = createManagedUpstreamResourceRef({
                       managedSiteType,
-                      scopeKey: normalizeManagedSiteResourceScopeKey(
+                      scopeKey: normalizeManagedUpstreamResourceScopeKey(
                         String((config as { baseUrl?: string }).baseUrl ?? ""),
                       ),
                       resourceId: getManagedUpstreamResourceId(
@@ -741,16 +771,18 @@ export default function ManagedSiteChannels({
                     const revealFailureMessage =
                       result.message ??
                       (result.status === "masked"
-                        ? "Channel key is still masked"
+                        ? t("managedSiteChannels:toasts.revealKeyMasked")
                         : result.status === "unsupported"
-                          ? "Channel key reveal is not supported"
-                          : "Channel key is unavailable")
+                          ? t("managedSiteChannels:toasts.revealKeyUnsupported")
+                          : t(
+                              "managedSiteChannels:toasts.revealKeyUnavailable",
+                            ))
                     throw new Error(revealFailureMessage)
                   }
 
                   if (!service.fetchChannelSecretKey) {
                     throw new Error(
-                      "Channel key loading is not supported for this managed site",
+                      t("managedSiteChannels:toasts.revealKeyUnsupported"),
                     )
                   }
 
@@ -777,7 +809,10 @@ export default function ManagedSiteChannels({
             ? (response) => {
                 toast.success(t("toasts.channelUpdated"))
                 if (isChannelRowLike(response?.data)) {
-                  setChannels((prev) => upsertChannelRow(prev, response.data))
+                  const updatedChannel = attachMutationChannelResourceRef(
+                    response.data,
+                  )
+                  setChannels((prev) => upsertChannelRow(prev, updatedChannel))
                 } else {
                   void refreshChannels()
                 }
@@ -821,6 +856,9 @@ export default function ManagedSiteChannels({
                 getManagedSiteConfigMissingMessage(t, service.messagesKey),
               )
             }
+            if (editOpenGenerationRef.current !== openGeneration) {
+              return
+            }
 
             await openWithCustom({
               ...dialogOptions,
@@ -828,7 +866,7 @@ export default function ManagedSiteChannels({
                 config,
                 ref: createManagedUpstreamResourceRef({
                   managedSiteType,
-                  scopeKey: normalizeManagedSiteResourceScopeKey(
+                  scopeKey: normalizeManagedUpstreamResourceScopeKey(
                     String((config as { baseUrl?: string }).baseUrl ?? ""),
                   ),
                   resourceId: getManagedUpstreamResourceId(
@@ -840,7 +878,9 @@ export default function ManagedSiteChannels({
               },
             })
           } catch (error) {
-            toast.error(getErrorMessage(error))
+            if (editOpenGenerationRef.current === openGeneration) {
+              toast.error(getErrorMessage(error))
+            }
           }
         })()
         return
@@ -849,6 +889,7 @@ export default function ManagedSiteChannels({
       void openWithCustom(dialogOptions)
     },
     [
+      attachMutationChannelResourceRef,
       isNewApiManagedSite,
       managedSiteType,
       managedSiteAnalyticsType,
