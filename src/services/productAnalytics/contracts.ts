@@ -67,6 +67,14 @@ export const PRODUCT_ANALYTICS_RESULTS = {
 export type ProductAnalyticsResult =
   (typeof PRODUCT_ANALYTICS_RESULTS)[keyof typeof PRODUCT_ANALYTICS_RESULTS]
 
+export const PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS = {
+  KiloV7: "kilo-v7",
+  Legacy: "legacy",
+} as const
+
+export type ProductAnalyticsKiloCodeExportTarget =
+  (typeof PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS)[keyof typeof PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS]
+
 export const PRODUCT_ANALYTICS_ERROR_CATEGORIES = {
   Network: "network",
   Auth: "auth",
@@ -951,6 +959,7 @@ export type ProductAnalyticsEventPayloadMap = {
     stale_response_ignored?: boolean
     background_execution?: boolean
     current_tab_matched?: boolean
+    kilo_code_export_target?: ProductAnalyticsKiloCodeExportTarget
     item_count?: number
     selected_count?: number
     success_count?: number

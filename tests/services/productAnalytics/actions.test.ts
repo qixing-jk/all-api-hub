@@ -13,6 +13,7 @@ import {
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_REQUESTED_AUTH_MODES,
@@ -453,6 +454,7 @@ describe("product analytics action helpers", () => {
         staleResponseIgnored: false,
         backgroundExecution: true,
         currentTabMatched: false,
+        kiloCodeExportTarget: PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.Legacy,
         selectedCount: 2,
         itemCount: 3,
         successCount: 3,
@@ -510,6 +512,8 @@ describe("product analytics action helpers", () => {
         stale_response_ignored: false,
         background_execution: true,
         current_tab_matched: false,
+        kilo_code_export_target:
+          PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.Legacy,
         selected_count: 2,
         item_count: 3,
         success_count: 3,
@@ -783,6 +787,37 @@ describe("product analytics action helpers", () => {
           result: PRODUCT_ANALYTICS_RESULTS.Success,
           duration_ms: 1250,
         },
+      )
+    })
+  })
+
+  it("serializes the controlled Kilo export target and item count on completion", async () => {
+    const { startProductAnalyticsAction } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsImportExportPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      insights: {
+        kiloCodeExportTarget: PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7,
+        itemCount: 2,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(trackMock).toHaveBeenNthCalledWith(
+        2,
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        expect.objectContaining({
+          kilo_code_export_target: "kilo-v7",
+          item_count: 2,
+        }),
       )
     })
   })
