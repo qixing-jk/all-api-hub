@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.52.0](https://github.com/qixing-jk/all-api-hub/compare/v3.51.0...v3.52.0) (2026-07-13)
+
+
+### Features
+
+* **account:** guide auto-detect fallback paths ([#1162](https://github.com/qixing-jk/all-api-hub/issues/1162)) ([96f0326](https://github.com/qixing-jk/all-api-hub/commit/96f032692e43db119ebe1c3cfa5e6f7ef45d8e27))
+* **api-credentials:** use natural expiry date picker ([#1165](https://github.com/qixing-jk/all-api-hub/issues/1165)) ([3dcf06b](https://github.com/qixing-jk/all-api-hub/commit/3dcf06bf5d63c35764da01da2b0078a4a2343277))
+* **kilocode:** add Kilo Code 7.x settings export ([#1170](https://github.com/qixing-jk/all-api-hub/issues/1170)) ([ffa4da7](https://github.com/qixing-jk/all-api-hub/commit/ffa4da7332e15c0f540b76405605d0568b85b41a))
+* **model-list:** add metadata-backed capability filters and badges ([#1167](https://github.com/qixing-jk/all-api-hub/issues/1167)) ([2adb937](https://github.com/qixing-jk/all-api-hub/commit/2adb937a8429c7a1b9a40cca1ce6e04ed3c95814))
+* **site-announcements:** support New API structured notices ([#1153](https://github.com/qixing-jk/all-api-hub/issues/1153)) ([169c812](https://github.com/qixing-jk/all-api-hub/commit/169c8129c4bf8b46b509847f2352eab323a2ee4b))
+* **sponsors:** add v5 catalog visibility controls ([#1148](https://github.com/qixing-jk/all-api-hub/issues/1148)) ([88c188c](https://github.com/qixing-jk/all-api-hub/commit/88c188ca5fb393c41c204f3f08088f237554f924))
+
+
+### Bug Fixes
+
+* **background:** close completed composite temp windows ([#1173](https://github.com/qixing-jk/all-api-hub/issues/1173)) ([ede25cc](https://github.com/qixing-jk/all-api-hub/commit/ede25ccd3ce9166b5aebdcb18d2323e90663687b))
+* **feedback:** prefill site support extension version ([a4e29c5](https://github.com/qixing-jk/all-api-hub/commit/a4e29c57a677294ed46ff47b77982c15b831d8ae))
+* **key-management:** prefill auto token name ([#1151](https://github.com/qixing-jk/all-api-hub/issues/1151)) ([7b19d0a](https://github.com/qixing-jk/all-api-hub/commit/7b19d0a21baa2a37923bd8e73db27fbb7a3e7c67))
+* **key-management:** stabilize New API duplicate channel checks ([#1146](https://github.com/qixing-jk/all-api-hub/issues/1146)) ([621e4fb](https://github.com/qixing-jk/all-api-hub/commit/621e4fb6eb394f2d4a1960faffb712415623df7f))
+* **runtime-messaging:** retry typed message sends ([#1142](https://github.com/qixing-jk/all-api-hub/issues/1142)) ([9b3e338](https://github.com/qixing-jk/all-api-hub/commit/9b3e338d73fcbbca8420f318b20f6fd50ff62106))
+* **sponsors:** prioritize fallback actions ([#1147](https://github.com/qixing-jk/all-api-hub/issues/1147)) ([6f315d4](https://github.com/qixing-jk/all-api-hub/commit/6f315d4ab4aa6a6d730426c182da4b83481fc0f2))
+* **ui:** prevent modal select interactions from closing dialog ([#1154](https://github.com/qixing-jk/all-api-hub/issues/1154)) ([f68578c](https://github.com/qixing-jk/all-api-hub/commit/f68578cf0479f37940269951d8ff674e3df35438))
+* **updates:** clarify store rollout pending state ([#1145](https://github.com/qixing-jk/all-api-hub/issues/1145)) ([1d4e512](https://github.com/qixing-jk/all-api-hub/commit/1d4e512e76fc0732a6aab04c54247e4579b554e4))
+* **webdav:** encode move destination headers ([#1144](https://github.com/qixing-jk/all-api-hub/issues/1144)) ([356fd2a](https://github.com/qixing-jk/all-api-hub/commit/356fd2adc987b6de073b39bb2d2cb1420f11d0a8))
+
 ## [3.51.0](https://github.com/qixing-jk/all-api-hub/compare/v3.50.0...v3.51.0) (2026-07-06)
 
 
