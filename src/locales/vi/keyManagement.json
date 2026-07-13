@@ -13,7 +13,7 @@
     "enable": "Kích hoạt",
     "expandAll": "Mở rộng tất cả",
     "exportToCCSwitch": "Xuất sang CC Switch",
-    "exportToKiloCode": "Xuất sang Kilo Code",
+    "exportToKiloCode": "Xuất cấu hình Kilo Code",
     "hideKey": "Ẩn khóa",
     "importToClaudeCodeRouter": "Nhập vào Claude Code Router",
     "importToCliProxy": "Nhập vào CLIProxyAPI",

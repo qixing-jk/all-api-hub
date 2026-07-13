@@ -35,15 +35,22 @@ import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTok
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
-  buildKiloCodeSettingsFile,
+  KILO_CODE_EXPORT_TARGETS,
+  type KiloCodeExportTarget,
   type KiloCodeExportTuple,
 } from "~/services/integrations/kiloCodeExport"
+import {
+  buildKiloCodeExportOutput,
+  type BuildKiloCodeExportOutputOptions,
+  type KiloCodeExportOutput,
+} from "~/services/integrations/kiloCodeExportPolicy"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
@@ -51,6 +58,7 @@ import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
+import { KiloCodeExportGuidance } from "./KiloCodeExportGuidance"
 import { pickNewestKiloCodeToken } from "./kiloCodeTokenSelection"
 
 const kiloCodeAccountExportAnalyticsContext = {
@@ -66,6 +74,21 @@ const KILO_CODE_INVENTORY_STATUSES = {
   Loaded: "loaded",
   Error: "error",
 } as const
+
+const exportTargetOptions = [
+  KILO_CODE_EXPORT_TARGETS.KiloV7,
+  KILO_CODE_EXPORT_TARGETS.Legacy,
+] as const
+
+/** Map the shared export target to the analytics contract's canonical value. */
+function getAnalyticsExportTarget(target: KiloCodeExportTarget) {
+  switch (target) {
+    case KILO_CODE_EXPORT_TARGETS.KiloV7:
+      return PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7
+    case KILO_CODE_EXPORT_TARGETS.Legacy:
+      return PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.Legacy
+  }
+}
 
 /**
  * Builds the stable toast id used while Kilo Code export creates a missing token.
@@ -161,6 +184,9 @@ export function KiloCodeExportDialog({
     Record<string, string[]>
   >({})
   const [currentApiConfigName, setCurrentApiConfigName] = useState("")
+  const [exportTarget, setExportTarget] = useState<KiloCodeExportTarget>(
+    KILO_CODE_EXPORT_TARGETS.KiloV7,
+  )
 
   const [tokenInventories, setTokenInventories] = useState<
     Record<string, TokenInventoryState>
@@ -194,6 +220,7 @@ export function KiloCodeExportDialog({
     setSelectedSiteIds([])
     setSelectedTokenIdsBySite({})
     setCurrentApiConfigName("")
+    setExportTarget(KILO_CODE_EXPORT_TARGETS.KiloV7)
     setTokenInventories({})
     setIsCreatingToken({})
     setDefaultTokenCreateContext(null)
@@ -693,7 +720,7 @@ export function KiloCodeExportDialog({
   const canExport = hasExportableProfiles && missingModelIdCount === 0
   const effectiveCurrentApiConfigName =
     currentApiConfigName || profileNames[0] || ""
-  const filename = "kilo-code-settings.json"
+  const legacyFilename = "kilo-code-settings.json"
   const selectionSummary = t("ui:dialog.kiloCode.descriptions.selectedSites", {
     sites: selectedSiteIds.length,
     keys: exportSelections.length,
@@ -703,8 +730,15 @@ export function KiloCodeExportDialog({
     modelCount: exportSelections.filter((tuple) => tuple.modelId?.trim())
       .length,
     selectedCount: selectedSiteIds.length,
+    kiloCodeExportTarget: getAnalyticsExportTarget(exportTarget),
   }
-
+  const isKiloV7Export = exportTarget === KILO_CODE_EXPORT_TARGETS.KiloV7
+  const copyActionLabel = isKiloV7Export
+    ? t("ui:dialog.kiloCode.actions.copyKiloV7Provider")
+    : t("ui:dialog.kiloCode.actions.copyLegacyApiConfigs")
+  const downloadActionLabel = isKiloV7Export
+    ? t("ui:dialog.kiloCode.actions.downloadKiloV7Settings")
+    : t("ui:dialog.kiloCode.actions.downloadLegacySettings")
   const handleCopyApiConfigs = async () => {
     if (!canExport) return
 
@@ -719,13 +753,17 @@ export function KiloCodeExportDialog({
       }
 
       const resolvedSelections = await buildResolvedExportSelections()
-      const { apiConfigs: resolvedApiConfigs } = buildKiloCodeApiConfigs({
+      const outputOptions: BuildKiloCodeExportOutputOptions = {
+        target: exportTarget,
         selections: resolvedSelections,
-      })
+        currentLegacyProfileName: effectiveCurrentApiConfigName,
+      }
+      const output: KiloCodeExportOutput =
+        buildKiloCodeExportOutput(outputOptions)
       await navigator.clipboard.writeText(
-        JSON.stringify(resolvedApiConfigs, null, 2),
+        JSON.stringify(output.copyPayload, null, 2),
       )
-      toast.success(t("ui:dialog.kiloCode.messages.copiedApiConfigs"))
+      toast.success(t("ui:dialog.kiloCode.messages.copiedExportConfig"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: exportInsights,
       })
@@ -754,21 +792,19 @@ export function KiloCodeExportDialog({
 
     try {
       const resolvedSelections = await buildResolvedExportSelections()
-      const { apiConfigs: resolvedApiConfigs } = buildKiloCodeApiConfigs({
+      const output = buildKiloCodeExportOutput({
+        target: exportTarget,
         selections: resolvedSelections,
-      })
-      const payload = buildKiloCodeSettingsFile({
-        currentApiConfigName: effectiveCurrentApiConfigName,
-        apiConfigs: resolvedApiConfigs,
+        currentLegacyProfileName: effectiveCurrentApiConfigName,
       })
 
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      const blob = new Blob([JSON.stringify(output.downloadPayload, null, 2)], {
         type: "application/json",
       })
       url = URL.createObjectURL(blob)
       link = document.createElement("a")
       link.href = url
-      link.download = filename
+      link.download = output.filename
       document.body.appendChild(link)
       link.click()
 
@@ -1130,14 +1166,14 @@ export function KiloCodeExportDialog({
               onClick={handleCopyApiConfigs}
               disabled={!canExport}
             >
-              {t("ui:dialog.kiloCode.actions.copyApiConfigs")}
+              {copyActionLabel}
             </Button>
             <Button
               type="button"
               onClick={handleDownloadSettings}
               disabled={!canExport}
             >
-              {t("ui:dialog.kiloCode.actions.downloadSettings")}
+              {downloadActionLabel}
             </Button>
           </div>
         }
@@ -1169,35 +1205,64 @@ export function KiloCodeExportDialog({
         )}
 
         <FormField
-          label={t("ui:dialog.kiloCode.labels.currentApiConfigName")}
-          description={t(
-            "ui:dialog.kiloCode.descriptions.currentApiConfigName",
-            {
-              filename,
-            },
-          )}
+          label={t("ui:dialog.kiloCode.labels.exportTarget")}
+          htmlFor="kilo-code-account-export-target"
         >
           <Select
-            value={effectiveCurrentApiConfigName}
-            onValueChange={setCurrentApiConfigName}
-            disabled={!hasExportableProfiles}
+            value={exportTarget}
+            onValueChange={(value) => {
+              const target = exportTargetOptions.find(
+                (candidate) => candidate === value,
+              )
+              if (target) setExportTarget(target)
+            }}
           >
-            <SelectTrigger className="min-w-[240px]">
-              <SelectValue
-                placeholder={t(
-                  "ui:dialog.kiloCode.placeholders.currentApiConfigName",
-                )}
-              />
+            <SelectTrigger id="kilo-code-account-export-target">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {profileNames.map((name) => (
-                <SelectItem key={name} value={name}>
-                  {name}
-                </SelectItem>
-              ))}
+              <SelectItem value={KILO_CODE_EXPORT_TARGETS.KiloV7}>
+                {t("ui:dialog.kiloCode.targets.kiloV7")}
+              </SelectItem>
+              <SelectItem value={KILO_CODE_EXPORT_TARGETS.Legacy}>
+                {t("ui:dialog.kiloCode.targets.legacy")}
+              </SelectItem>
             </SelectContent>
           </Select>
         </FormField>
+
+        {!isKiloV7Export && (
+          <FormField
+            label={t("ui:dialog.kiloCode.labels.currentApiConfigName")}
+            description={t(
+              "ui:dialog.kiloCode.descriptions.currentApiConfigName",
+              {
+                filename: legacyFilename,
+              },
+            )}
+          >
+            <Select
+              value={effectiveCurrentApiConfigName}
+              onValueChange={setCurrentApiConfigName}
+              disabled={!hasExportableProfiles}
+            >
+              <SelectTrigger className="min-w-[240px]">
+                <SelectValue
+                  placeholder={t(
+                    "ui:dialog.kiloCode.placeholders.currentApiConfigName",
+                  )}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {profileNames.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        )}
 
         {hasExportableProfiles && missingModelIdCount > 0 && (
           <Alert
@@ -1222,36 +1287,13 @@ export function KiloCodeExportDialog({
           />
         )}
 
+        <KiloCodeExportGuidance target={exportTarget} />
+
         <Alert
           variant="warning"
           title={t("ui:dialog.kiloCode.warning.title")}
           description={t("ui:dialog.kiloCode.warning.description")}
         />
-
-        <Alert
-          variant="info"
-          title={t("ui:dialog.kiloCode.help.afterExportTitle")}
-          description={t("ui:dialog.kiloCode.help.afterExportDescription")}
-        >
-          <div className="space-y-2 text-sm">
-            <div className="space-y-1">
-              <div className="font-medium">
-                {t("ui:dialog.kiloCode.help.manualTitle")}
-              </div>
-              <div className="dark:text-dark-text-secondary text-gray-600">
-                {t("ui:dialog.kiloCode.help.manualDescription")}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="font-medium">
-                {t("ui:dialog.kiloCode.help.importTitle")}
-              </div>
-              <div className="dark:text-dark-text-secondary text-gray-600">
-                {t("ui:dialog.kiloCode.help.importDescription", { filename })}
-              </div>
-            </div>
-          </div>
-        </Alert>
       </Modal>
       {defaultTokenQuickCreateSite && defaultTokenQuickCreatePrefill ? (
         <AddTokenDialog

@@ -13,7 +13,7 @@
     "enable": "启用",
     "expandAll": "全部展开",
     "exportToCCSwitch": "导出到 CC Switch",
-    "exportToKiloCode": "导出到 Kilo Code",
+    "exportToKiloCode": "导出 Kilo Code 配置",
     "hideKey": "隐藏密钥",
     "importToClaudeCodeRouter": "导入到 Claude Code Router",
     "importToCliProxy": "导入到 CLIProxyAPI",

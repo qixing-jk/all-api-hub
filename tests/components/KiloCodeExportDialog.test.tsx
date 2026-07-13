@@ -9,11 +9,13 @@ import { pickNewestKiloCodeToken } from "~/components/kiloCodeTokenSelection"
 import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
+import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCodeExport"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
@@ -84,6 +86,12 @@ vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
 }))
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
+const mockBuildKiloCodeExportOutput = vi.fn()
+
+vi.mock("~/services/integrations/kiloCodeExportPolicy", () => ({
+  buildKiloCodeExportOutput: (...args: unknown[]) =>
+    mockBuildKiloCodeExportOutput(...args),
+}))
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({
   // Forward through a typed wrapper so call sites avoid `any[]`.
@@ -98,6 +106,57 @@ const mockFetchAccountAvailableModels = vi.fn()
 const mockFetchUserGroups = vi.fn()
 const mockEnsureAccountApiToken = vi.fn()
 const mockResolveDefaultTokenQuickCreateResolution = vi.fn()
+const KILO_V7_GUIDANCE_KEYS = [
+  "ui:dialog.kiloCode.help.kiloV7DownloadInstructions",
+  "ui:dialog.kiloCode.help.kiloV7CopyInstructions",
+] as const
+const LEGACY_GUIDANCE_KEYS = [
+  "ui:dialog.kiloCode.help.legacyDownloadInstructions",
+  "ui:dialog.kiloCode.help.legacyCopyInstructions",
+] as const
+
+function expectUsageGuidance(
+  instructionsKeys: readonly string[],
+  oppositeTargetInstructionsKeys: readonly string[],
+) {
+  const usageAlert = screen
+    .getByText("ui:dialog.kiloCode.help.usageTitle")
+    .closest<HTMLElement>('[role="alert"]')!
+  const securityAlert = screen
+    .getByText("ui:dialog.kiloCode.warning.title")
+    .closest<HTMLElement>('[role="alert"]')!
+
+  const renderedInstructions = instructionsKeys.map((instructionsKey) => {
+    const renderedInstruction = within(usageAlert).getByText(instructionsKey)
+    expect(renderedInstruction).toBeVisible()
+    return renderedInstruction
+  })
+  for (let index = 1; index < renderedInstructions.length; index += 1) {
+    expect(
+      renderedInstructions[index - 1].compareDocumentPosition(
+        renderedInstructions[index],
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  }
+  for (const instructionsKey of oppositeTargetInstructionsKeys) {
+    expect(screen.queryByText(instructionsKey)).not.toBeInTheDocument()
+  }
+  expect(screen.getAllByRole("alert").indexOf(usageAlert)).toBeLessThan(
+    screen.getAllByRole("alert").indexOf(securityAlert),
+  )
+  expect(
+    screen.queryByText("ui:dialog.kiloCode.help.afterExportTitle"),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByText("ui:dialog.kiloCode.help.manualTitle"),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByText("ui:dialog.kiloCode.help.kiloV7Title"),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByText("ui:dialog.kiloCode.help.legacyTitle"),
+  ).not.toBeInTheDocument()
+}
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: (...args: unknown[]) =>
@@ -207,6 +266,18 @@ describe("KiloCodeExportDialog", () => {
     })
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue(["gpt-4o-mini"])
+    mockBuildKiloCodeExportOutput.mockReset()
+    mockBuildKiloCodeExportOutput.mockImplementation(
+      ({ target, selections }: any) => ({
+        filename:
+          target === KILO_CODE_EXPORT_TARGETS.KiloV7
+            ? "kilo-settings.json"
+            : "kilo-code-settings.json",
+        copyPayload: { target, selections },
+        downloadPayload: { target, selections },
+        itemCount: selections.length,
+      }),
+    )
     mockFetchAccountTokens.mockReset()
     mockgetSiteTypeCapabilities.mockReset()
     mockgetSiteTypeCapabilities.mockReturnValue({
@@ -268,17 +339,12 @@ describe("KiloCodeExportDialog", () => {
       await screen.findByText("ui:dialog.kiloCode.help.perSiteTitle"),
     ).toBeInTheDocument()
 
-    expect(
-      await screen.findByText("ui:dialog.kiloCode.help.afterExportTitle"),
-    ).toBeInTheDocument()
-
-    expect(
-      await screen.findByText("ui:dialog.kiloCode.help.manualTitle"),
-    ).toBeInTheDocument()
+    await screen.findByText("ui:dialog.kiloCode.help.usageTitle")
+    expectUsageGuidance(KILO_V7_GUIDANCE_KEYS, LEGACY_GUIDANCE_KEYS)
 
     expect(
       await screen.findByRole("button", {
-        name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+        name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
       }),
     ).toBeDisabled()
 
@@ -304,18 +370,18 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("button", {
-          name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
         }),
       ).not.toBeDisabled()
     })
     expect(
       screen.getByRole("button", {
-        name: "ui:dialog.kiloCode.actions.downloadSettings",
+        name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: "ui:dialog.kiloCode.actions.downloadSettings",
+        name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
       }),
     ).not.toBeDisabled()
 
@@ -338,12 +404,12 @@ describe("KiloCodeExportDialog", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+        name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
       }),
     ).toBeDisabled()
     expect(
       await screen.findByRole("button", {
-        name: "ui:dialog.kiloCode.actions.downloadSettings",
+        name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
       }),
     ).toBeDisabled()
     expect(
@@ -380,10 +446,10 @@ describe("KiloCodeExportDialog", () => {
     )
 
     const copyButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
     })
     const downloadButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.downloadSettings",
+      name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
     })
 
     await waitFor(() => {
@@ -436,10 +502,10 @@ describe("KiloCodeExportDialog", () => {
     )
 
     const copyButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
     })
     const downloadButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.downloadSettings",
+      name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
     })
 
     await waitFor(() => {
@@ -497,7 +563,7 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("button", {
-          name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
         }),
       ).not.toBeDisabled()
     })
@@ -556,7 +622,7 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("button", {
-          name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
         }),
       ).not.toBeDisabled()
     })
@@ -596,7 +662,7 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("button", {
-          name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
         }),
       ).not.toBeDisabled()
     })
@@ -671,7 +737,7 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("button", {
-          name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
         }),
       ).toBeEnabled()
     })
@@ -706,7 +772,7 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("button", {
-          name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
         }),
       ).toBeEnabled()
     })
@@ -727,7 +793,7 @@ describe("KiloCodeExportDialog", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+        name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
       }),
     ).toBeDisabled()
   })
@@ -1183,7 +1249,7 @@ describe("KiloCodeExportDialog", () => {
     )
 
     const copyButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
     })
     await waitFor(() => expect(copyButton).toBeEnabled())
 
@@ -1201,7 +1267,15 @@ describe("KiloCodeExportDialog", () => {
     )
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
-      { insights: { itemCount: 1, modelCount: 1, selectedCount: 1 } },
+      {
+        insights: {
+          itemCount: 1,
+          modelCount: 1,
+          selectedCount: 1,
+          kiloCodeExportTarget:
+            PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7,
+        },
+      },
     )
   })
 
@@ -1248,7 +1322,7 @@ describe("KiloCodeExportDialog", () => {
     )
 
     const copyButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
     })
     await waitFor(() => expect(copyButton).toBeEnabled())
 
@@ -1265,12 +1339,18 @@ describe("KiloCodeExportDialog", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: { itemCount: 1, modelCount: 1, selectedCount: 1 },
+        insights: {
+          itemCount: 1,
+          modelCount: 1,
+          selectedCount: 1,
+          kiloCodeExportTarget:
+            PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7,
+        },
       },
     )
   })
 
-  it("downloads settings with resolved full keys and cleans up the blob URL", async () => {
+  it("defaults to Kilo v7 and downloads policy output with resolved full keys", async () => {
     const user = userEvent.setup()
     const createObjectUrl = vi
       .spyOn(URL, "createObjectURL")
@@ -1297,6 +1377,12 @@ describe("KiloCodeExportDialog", () => {
       { id: 1, name: "Default", key: "sk-abcd************wxyz" },
     ])
     mockResolveApiTokenKey.mockResolvedValue("sk-full-secret")
+    mockBuildKiloCodeExportOutput.mockReturnValueOnce({
+      filename: "kilo-settings.json",
+      copyPayload: { format: "v7-copy" },
+      downloadPayload: { format: "v7-download" },
+      itemCount: 1,
+    })
 
     render(
       <KiloCodeExportDialog
@@ -1307,9 +1393,25 @@ describe("KiloCodeExportDialog", () => {
     )
 
     const downloadButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.downloadSettings",
+      name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
     })
     await waitFor(() => expect(downloadButton).toBeEnabled())
+
+    expect(
+      screen.getByRole("combobox", {
+        name: "ui:dialog.kiloCode.labels.exportTarget",
+      }),
+    ).toHaveTextContent("ui:dialog.kiloCode.targets.kiloV7")
+    expect(
+      screen.queryByText("ui:dialog.kiloCode.labels.currentApiConfigName"),
+    ).not.toBeInTheDocument()
+    expect(downloadButton).toHaveAccessibleName(
+      "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
+    )
+    expectUsageGuidance(KILO_V7_GUIDANCE_KEYS, LEGACY_GUIDANCE_KEYS)
+    expect(
+      screen.queryByText("ui:dialog.kiloCode.help.kiloV7Description"),
+    ).not.toBeInTheDocument()
 
     await user.click(downloadButton)
 
@@ -1326,8 +1428,12 @@ describe("KiloCodeExportDialog", () => {
       reader.readAsText(blob)
     })
 
-    expect(payload).toContain("sk-full-secret")
-    expect(payload).not.toContain("sk-abcd************wxyz")
+    expect(mockBuildKiloCodeExportOutput).toHaveBeenCalledWith({
+      target: KILO_CODE_EXPORT_TARGETS.KiloV7,
+      selections: [expect.objectContaining({ tokenKey: "sk-full-secret" })],
+      currentLegacyProfileName: expect.any(String),
+    })
+    expect(payload).toBe(JSON.stringify({ format: "v7-download" }, null, 2))
     expect(clickSpy).toHaveBeenCalledTimes(1)
     expect(revokeObjectUrl).toHaveBeenCalledWith("blob:kilo-code-settings")
     expect(toastSuccessMock).toHaveBeenCalledWith(
@@ -1338,12 +1444,161 @@ describe("KiloCodeExportDialog", () => {
     )
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
-      { insights: { itemCount: 1, modelCount: 1, selectedCount: 1 } },
+      {
+        insights: {
+          itemCount: 1,
+          modelCount: 1,
+          selectedCount: 1,
+          kiloCodeExportTarget:
+            PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7,
+        },
+      },
     )
 
     clickSpy.mockRestore()
     revokeObjectUrl.mockRestore()
     createObjectUrl.mockRestore()
+  })
+
+  it("switches to legacy policy output without refetching or resolving another secret", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:legacy")
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {})
+    let downloadedFilename = ""
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloadedFilename = this.download
+    })
+
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "b",
+          name: "Site B",
+          baseUrl: "https://b.test",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+    mockResolveApiTokenKey.mockResolvedValue("sk-full-secret")
+
+    const { rerender } = render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
+    )
+
+    const targetSelect = await screen.findByRole("combobox", {
+      name: "ui:dialog.kiloCode.labels.exportTarget",
+    })
+    const downloadButton = screen.getByRole("button", {
+      name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
+    })
+    await waitFor(() => expect(downloadButton).toBeEnabled())
+
+    const tokenFetchCount = mockFetchAccountTokens.mock.calls.length
+    const modelFetchCount = mockFetchOpenAICompatibleModelIds.mock.calls.length
+    mockResolveApiTokenKey.mockClear()
+
+    await user.click(targetSelect)
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.kiloCode.targets.legacy",
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "ui:dialog.kiloCode.actions.copyLegacyApiConfigs",
+      }),
+    ).toBeVisible()
+    expect(downloadButton).toHaveAccessibleName(
+      "ui:dialog.kiloCode.actions.downloadLegacySettings",
+    )
+    expectUsageGuidance(LEGACY_GUIDANCE_KEYS, KILO_V7_GUIDANCE_KEYS)
+    expect(
+      screen.getByText("ui:dialog.kiloCode.labels.currentApiConfigName"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("ui:dialog.kiloCode.help.legacyDescription"),
+    ).not.toBeInTheDocument()
+
+    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(tokenFetchCount)
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(
+      modelFetchCount,
+    )
+    expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.kiloCode.actions.copyLegacyApiConfigs",
+      }),
+    )
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "ui:dialog.kiloCode.messages.copiedExportConfig",
+    )
+    expect(JSON.parse(String(writeText.mock.calls[0]?.[0]))).toEqual({
+      target: KILO_CODE_EXPORT_TARGETS.Legacy,
+      selections: [expect.objectContaining({ tokenKey: "sk-full-secret" })],
+    })
+
+    await user.click(downloadButton)
+    await waitFor(() =>
+      expect(downloadedFilename).toBe("kilo-code-settings.json"),
+    )
+    expect(mockBuildKiloCodeExportOutput).toHaveBeenLastCalledWith(
+      expect.objectContaining({ target: KILO_CODE_EXPORT_TARGETS.Legacy }),
+    )
+    expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(2)
+    expect(completeProductAnalyticsActionMock).toHaveBeenLastCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: expect.objectContaining({
+          kiloCodeExportTarget:
+            PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.Legacy,
+        }),
+      },
+    )
+
+    const tokenFetchCountBeforeReopen = mockFetchAccountTokens.mock.calls.length
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+    rerender(
+      <KiloCodeExportDialog
+        isOpen={false}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
+    )
+    rerender(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
+    )
+    await waitFor(() => {
+      expect(mockFetchAccountTokens).toHaveBeenCalledTimes(
+        tokenFetchCountBeforeReopen + 1,
+      )
+    })
+    expect(
+      screen.getByRole("combobox", {
+        name: "ui:dialog.kiloCode.labels.exportTarget",
+      }),
+    ).toHaveTextContent("ui:dialog.kiloCode.targets.kiloV7")
   })
 
   it("tracks download completion failure when resolving export secrets throws", async () => {
@@ -1376,7 +1631,7 @@ describe("KiloCodeExportDialog", () => {
     )
 
     const downloadButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.downloadSettings",
+      name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
     })
     await waitFor(() => expect(downloadButton).toBeEnabled())
 
@@ -1390,7 +1645,13 @@ describe("KiloCodeExportDialog", () => {
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: { itemCount: 1, modelCount: 1, selectedCount: 1 },
+          insights: {
+            itemCount: 1,
+            modelCount: 1,
+            selectedCount: 1,
+            kiloCodeExportTarget:
+              PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7,
+          },
         },
       )
     })

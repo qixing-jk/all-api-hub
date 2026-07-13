@@ -294,9 +294,11 @@
     },
     "kiloCode": {
       "actions": {
-        "copyApiConfigs": "Copy apiConfigs",
+        "copyKiloV7Provider": "Copy provider config",
+        "copyLegacyApiConfigs": "Copy legacy apiConfigs",
         "createDefaultToken": "Create default token",
-        "downloadSettings": "Download settings"
+        "downloadKiloV7Settings": "Download Kilo 7.x settings",
+        "downloadLegacySettings": "Download legacy settings"
       },
       "description": "Generate Kilo Code / Roo Code provider profiles from your selected sites and tokens.",
       "descriptions": {
@@ -305,24 +307,24 @@
         "selectedSites": "Selected sites: {{sites}}, selected keys: {{keys}}."
       },
       "help": {
-        "afterExportDescription": "Choose one of the following:",
-        "afterExportTitle": "After export: how to use it",
-        "importDescription": "Click “Download settings” to save {{filename}}, then import it in Kilo Code. Import is incremental: it adds providers and won’t remove your existing providers (same-name entries may be updated).",
-        "importTitle": "2) Import file (Download settings)",
-        "manualDescription": "Click \"Copy apiConfigs\" and find providerProfiles.apiConfigs in the Kilo Code / Roo Code export configurations and paste them in.",
-        "manualTitle": "1) Manual (Copy apiConfigs)",
+        "kiloV7CopyInstructions": "To maintain the configuration manually, click \"Copy provider config\" and merge the copied content into the top-level provider field in the settings JSON.",
+        "kiloV7DownloadInstructions": "Click \"Download Kilo 7.x settings\". Then, in Kilo Code, click the gear to open Settings, go to About Kilo Code → Import, select the downloaded kilo-settings.json, review the content to import, and save.",
+        "legacyCopyInstructions": "Click \"Copy legacy apiConfigs\" and paste the content into providerProfiles.apiConfigs in the Roo Code or Kilo Code 5.x settings.",
+        "legacyDownloadInstructions": "To get a complete settings file, click \"Download legacy settings\" to download kilo-code-settings.json, then import it using the settings import feature in the corresponding version.",
         "perSiteDescription": "Select sites to load tokens automatically. The first token is preselected, and you can select multiple tokens per site.",
-        "perSiteTitle": "Per-site export"
+        "perSiteTitle": "Per-site export",
+        "usageTitle": "How to use"
       },
       "labels": {
         "currentApiConfigName": "Current profile",
+        "exportTarget": "Export target",
         "modelId": "Model ID",
         "selectedSites": "Selected sites",
         "selectedTokens": "Selected tokens"
       },
       "messages": {
         "accountNotFound": "Account not found.",
-        "copiedApiConfigs": "apiConfigs copied to clipboard",
+        "copiedExportConfig": "Export configuration copied to clipboard",
         "copyFailed": "Copy failed",
         "createTokenBlockedFallback": "Token creation was blocked. Check the site policy and try again.",
         "createTokenFailed": "Failed to create token.",
@@ -347,6 +349,10 @@
         "modelId": "Search or enter model ID",
         "selectSites": "Select sites",
         "selectTokens": "Select tokens"
+      },
+      "targets": {
+        "kiloV7": "Kilo Code 7.x",
+        "legacy": "Roo Code / Kilo Code 5.x (legacy)"
       },
       "title": "Export Kilo Code JSON",
       "warning": {

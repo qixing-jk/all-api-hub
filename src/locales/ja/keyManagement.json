@@ -13,7 +13,7 @@
     "enable": "有効化",
     "expandAll": "すべて展開",
     "exportToCCSwitch": "CC Switch にエクスポート",
-    "exportToKiloCode": "Kilo Code にエクスポート",
+    "exportToKiloCode": "Kilo Code 設定をエクスポート",
     "hideKey": "キーを隠す",
     "importToClaudeCodeRouter": "Claude Code Router にインポート",
     "importToCliProxy": "CLIProxyAPI にインポート",
