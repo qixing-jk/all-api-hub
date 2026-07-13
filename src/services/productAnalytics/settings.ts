@@ -98,7 +98,7 @@ function getUsageHistoryScheduleMode(mode: string | undefined) {
 }
 
 function getTempWindowMode(
-  mode: TempWindowFallbackPreferences["tempContextMode"] | undefined,
+  mode: TempWindowFallbackPreferences["tempContextMode"],
 ): ProductAnalyticsModeId {
   if (mode === TEMP_CONTEXT_MODES.Window) {
     return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow

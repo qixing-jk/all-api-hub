@@ -102,8 +102,8 @@ const TEMP_CONTEXT_IDLE_TIMEOUT = 5000
 const TEMP_CONTEXT_INITIAL_URL = "about:blank"
 const QUIET_WINDOW_IDLE_TIMEOUT = 3000
 const TEMP_CONTEXT_TYPES = {
-  Window: "window",
-  Tab: "tab",
+  Window: TEMP_CONTEXT_MODES.Window,
+  Tab: TEMP_CONTEXT_MODES.Tab,
 } as const
 const DEFAULT_TEMP_CONTEXT_MODE: TempWindowFallbackPreferences["tempContextMode"] =
   TEMP_CONTEXT_MODES.Composite
@@ -832,47 +832,28 @@ async function removeTempWindowHandle(handle: TempWindowHandle) {
   }
 }
 
-/**
- * Builds the browser-removal handle for an already registered temp context.
- */
-function getTempContextHandle(context: TempContext): TempWindowHandle {
-  switch (context.mode) {
-    case TEMP_CONTEXT_MODES.Window:
-      return {
-        kind: TEMP_CONTEXT_MODES.Window,
-        windowId: context.ownerWindowId,
-      }
-    case TEMP_CONTEXT_MODES.Composite:
-      return {
-        kind: TEMP_CONTEXT_MODES.Composite,
-        windowId: context.ownerWindowId,
-        tabId: context.tabId,
-      }
-    case TEMP_CONTEXT_MODES.Tab:
-      return { kind: TEMP_CONTEXT_MODES.Tab, tabId: context.tabId }
-  }
-}
+type TempContextHandleSource = TempContext | TempContextOpenResult
 
 /**
- * Builds the browser-removal handle for a partially opened temp context.
+ * Builds the browser-removal handle for a registered or partially opened temp context.
  */
-function getTempContextOpenResultHandle(
-  opened: TempContextOpenResult,
+function getTempContextHandle(
+  source: TempContextHandleSource,
 ): TempWindowHandle {
-  switch (opened.mode) {
+  switch (source.mode) {
     case TEMP_CONTEXT_MODES.Window:
       return {
         kind: TEMP_CONTEXT_MODES.Window,
-        windowId: opened.ownerWindowId,
+        windowId: source.ownerWindowId,
       }
     case TEMP_CONTEXT_MODES.Composite:
       return {
         kind: TEMP_CONTEXT_MODES.Composite,
-        windowId: opened.ownerWindowId,
-        tabId: opened.tabId,
+        windowId: source.ownerWindowId,
+        tabId: source.tabId,
       }
     case TEMP_CONTEXT_MODES.Tab:
-      return { kind: TEMP_CONTEXT_MODES.Tab, tabId: opened.tabId }
+      return { kind: TEMP_CONTEXT_MODES.Tab, tabId: source.tabId }
   }
 }
 
@@ -2507,7 +2488,7 @@ async function createTempContextInstance(
     })
     if (opened) {
       try {
-        await removeTempWindowHandle(getTempContextOpenResultHandle(opened))
+        await removeTempWindowHandle(getTempContextHandle(opened))
       } catch (cleanupError) {
         logger.warn(
           "Failed to cleanup temp context after creation error",

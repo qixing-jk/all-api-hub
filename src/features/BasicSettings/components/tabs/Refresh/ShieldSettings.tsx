@@ -71,8 +71,7 @@ export default function ShieldSettings() {
   const shieldOptions = tempWindowFallback.useInOptions
   const shieldAutoRefresh = tempWindowFallback.useForAutoRefresh
   const shieldManualRefresh = tempWindowFallback.useForManualRefresh
-  const shieldTempContextMode =
-    tempWindowFallback.tempContextMode ?? TEMP_CONTEXT_MODES.Composite
+  const shieldTempContextMode = tempWindowFallback.tempContextMode
 
   const disableShieldUI = !canUseTempWindowFallback
   const shieldMethodHint =
