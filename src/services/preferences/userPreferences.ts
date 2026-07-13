@@ -101,6 +101,15 @@ import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 const logger = createLogger("UserPreferences")
 
+export const TEMP_CONTEXT_MODES = {
+  Window: "window",
+  Composite: "composite",
+  Tab: "tab",
+} as const
+
+export type TempContextMode =
+  (typeof TEMP_CONTEXT_MODES)[keyof typeof TEMP_CONTEXT_MODES]
+
 export interface TempWindowFallbackPreferences {
   enabled: boolean
   useInPopup: boolean
@@ -114,7 +123,7 @@ export interface TempWindowFallbackPreferences {
    * - "window": Open a popup window
    * - "composite": Open temporary tabs inside a shared window
    */
-  tempContextMode: "tab" | "window" | "composite"
+  tempContextMode: TempContextMode
 }
 
 export interface TempWindowFallbackReminderPreferences {
@@ -623,7 +632,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     useInOptions: true,
     useForAutoRefresh: true,
     useForManualRefresh: true,
-    tempContextMode: "composite",
+    tempContextMode: TEMP_CONTEXT_MODES.Composite,
   },
   tempWindowFallbackReminder: {
     dismissed: false,

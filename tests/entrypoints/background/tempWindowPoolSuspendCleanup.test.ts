@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { TEMP_CONTEXT_MODES } from "~/services/preferences/userPreferences"
 
 const originalBrowser = (globalThis as any).browser
 
@@ -62,13 +63,14 @@ describe("cleanupTempContextsOnSuspend", () => {
     vi.doMock("~/services/preferences/userPreferences", () => ({
       DEFAULT_PREFERENCES: {
         tempWindowFallback: {
-          tempContextMode: "tab",
+          tempContextMode: TEMP_CONTEXT_MODES.Tab,
         },
       },
+      TEMP_CONTEXT_MODES,
       userPreferences: {
         getPreferences: vi.fn().mockResolvedValue({
           tempWindowFallback: {
-            tempContextMode: "tab",
+            tempContextMode: TEMP_CONTEXT_MODES.Tab,
           },
         }),
       },

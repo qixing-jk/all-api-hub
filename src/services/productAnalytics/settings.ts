@@ -2,6 +2,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   DEFAULT_PREFERENCES,
+  TEMP_CONTEXT_MODES,
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type RedemptionAssistPreferences,
   type TempWindowFallbackPreferences,
@@ -99,8 +100,12 @@ function getUsageHistoryScheduleMode(mode: string | undefined) {
 function getTempWindowMode(
   mode: TempWindowFallbackPreferences["tempContextMode"] | undefined,
 ): ProductAnalyticsModeId {
-  if (mode === "window") return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow
-  if (mode === "tab") return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab
+  if (mode === TEMP_CONTEXT_MODES.Window) {
+    return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow
+  }
+  if (mode === TEMP_CONTEXT_MODES.Tab) {
+    return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab
+  }
   return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeComposite
 }
 

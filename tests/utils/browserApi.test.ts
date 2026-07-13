@@ -1288,6 +1288,14 @@ describe("browserApi window and manifest helpers", () => {
     expect(removeTabMock).not.toHaveBeenCalled()
   })
 
+  it("rejects known-window removal when the windows API is unavailable", async () => {
+    ;(globalThis as any).browser.windows = undefined
+
+    await expect(removeWindow(45)).rejects.toThrow(
+      "browser.windows.remove is unavailable",
+    )
+  })
+
   it("returns null from createWindow when the windows API is unavailable", async () => {
     ;(globalThis as any).browser.windows = undefined
 

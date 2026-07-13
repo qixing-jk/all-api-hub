@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  TEMP_CONTEXT_MODES,
+  type TempContextMode,
+} from "~/services/preferences/userPreferences"
+
 const originalBrowser = (globalThis as any).browser
 
 describe("tempWindowPool open/close handlers", () => {
@@ -13,7 +18,7 @@ describe("tempWindowPool open/close handlers", () => {
   let removeTabOrWindowMock: ReturnType<typeof vi.fn>
   let tabsQueryMock: ReturnType<typeof vi.fn>
   let windowsGetMock: ReturnType<typeof vi.fn>
-  let tempContextMode: "window" | "composite" | "tab"
+  let tempContextMode: TempContextMode
 
   beforeEach(() => {
     createTabMock = vi.fn()
@@ -26,7 +31,7 @@ describe("tempWindowPool open/close handlers", () => {
     removeTabOrWindowMock = vi.fn().mockResolvedValue(undefined)
     tabsQueryMock = vi.fn().mockResolvedValue([{ id: 902 }])
     windowsGetMock = vi.fn().mockResolvedValue({ id: 901 })
-    tempContextMode = "window"
+    tempContextMode = TEMP_CONTEXT_MODES.Window
 
     vi.useFakeTimers()
     vi.resetModules()
@@ -65,6 +70,7 @@ describe("tempWindowPool open/close handlers", () => {
           tempContextMode,
         },
       },
+      TEMP_CONTEXT_MODES,
       userPreferences: {
         getPreferences: vi.fn().mockImplementation(() =>
           Promise.resolve({
@@ -91,7 +97,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("opens and closes a popup temp window in window mode", async () => {
-    tempContextMode = "window"
+    tempContextMode = TEMP_CONTEXT_MODES.Window
     createWindowMock.mockResolvedValueOnce({ id: 801 })
 
     const { handleCloseTempWindow, handleOpenTempWindow } = await import(
@@ -121,7 +127,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("opens a composite temp tab when composite mode is enabled", async () => {
-    tempContextMode = "composite"
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
     createWindowMock.mockResolvedValueOnce({ id: 901 })
 
     const { handleOpenTempWindow } = await import(
@@ -152,7 +158,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("reuses the existing composite window for later temp opens", async () => {
-    tempContextMode = "composite"
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
     createWindowMock.mockResolvedValueOnce({ id: 901 })
     createTabMock.mockResolvedValueOnce({ id: 903 })
 
@@ -193,7 +199,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("closes the owner window for the final manual composite tab", async () => {
-    tempContextMode = "composite"
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
     createWindowMock.mockResolvedValueOnce({ id: 901 })
     tabsQueryMock.mockResolvedValue([{ id: 902 }])
 
@@ -221,7 +227,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("removes only the completed composite tab when another tab exists", async () => {
-    tempContextMode = "composite"
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
     createWindowMock.mockResolvedValueOnce({ id: 911 })
     tabsQueryMock
       .mockResolvedValueOnce([{ id: 912 }])
@@ -245,15 +251,13 @@ describe("tempWindowPool open/close handlers", () => {
     expect(removeTabOrWindowMock).not.toHaveBeenCalled()
   })
 
-  it("recreates the composite window after a stale reuse failure", async () => {
-    tempContextMode = "composite"
-    createWindowMock
-      .mockResolvedValueOnce({ id: 901 })
-      .mockResolvedValueOnce({ id: 905 })
+  it("preserves a confirmed composite window when tab creation fails", async () => {
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
+    createWindowMock.mockResolvedValueOnce({ id: 901 })
     createTabMock.mockResolvedValueOnce({})
     tabsQueryMock
       .mockResolvedValueOnce([{ id: 902 }])
-      .mockResolvedValueOnce([{ id: 906 }])
+      .mockResolvedValueOnce([{ id: 902 }, { id: 905 }])
 
     const { handleOpenTempWindow } = await import(
       "~/entrypoints/background/tempWindowPool"
@@ -268,27 +272,48 @@ describe("tempWindowPool open/close handlers", () => {
       firstResponse,
     )
 
-    const secondResponse = vi.fn()
+    const failedResponse = vi.fn()
     await handleOpenTempWindow(
       {
-        requestId: "req-composite-recreated",
-        url: "https://example.com/composite/recreated",
+        requestId: "req-composite-tab-failure",
+        url: "https://example.com/composite/tab-failure",
       },
-      secondResponse,
+      failedResponse,
     )
 
-    expect(createWindowMock).toHaveBeenCalledTimes(2)
-    expect(removeWindowMock).toHaveBeenCalledWith(901)
+    expect(createWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeWindowMock).not.toHaveBeenCalled()
     expect(removeTabOrWindowMock).not.toHaveBeenCalled()
-    expect(secondResponse).toHaveBeenCalledWith({
+    expect(failedResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "messages:background.windowCreationUnavailable",
+    })
+
+    createTabMock.mockResolvedValueOnce({ id: 905 })
+    const reusedResponse = vi.fn()
+    await handleOpenTempWindow(
+      {
+        requestId: "req-composite-reused-after-tab-failure",
+        url: "https://example.com/composite/reused-after-tab-failure",
+      },
+      reusedResponse,
+    )
+
+    expect(createWindowMock).toHaveBeenCalledTimes(1)
+    expect(createTabMock).toHaveBeenLastCalledWith(
+      "https://example.com/composite/reused-after-tab-failure",
+      false,
+      { windowId: 901 },
+    )
+    expect(reusedResponse).toHaveBeenCalledWith({
       success: true,
-      windowId: 905,
-      tabId: 906,
+      windowId: 901,
+      tabId: 905,
     })
   })
 
   it("recreates the composite window when the existing window handle is unavailable", async () => {
-    tempContextMode = "composite"
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
     createWindowMock
       .mockResolvedValueOnce({ id: 901 })
       .mockResolvedValueOnce({ id: 905 })
@@ -329,15 +354,11 @@ describe("tempWindowPool open/close handlers", () => {
     })
   })
 
-  it("recreates the composite window even when stale-window cleanup fails", async () => {
-    tempContextMode = "composite"
-    createWindowMock
-      .mockResolvedValueOnce({ id: 901 })
-      .mockResolvedValueOnce({ id: 905 })
+  it("does not remove a confirmed composite window when tab creation fails", async () => {
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
+    createWindowMock.mockResolvedValueOnce({ id: 901 })
     createTabMock.mockResolvedValueOnce({})
-    tabsQueryMock
-      .mockResolvedValueOnce([{ id: 902 }])
-      .mockResolvedValueOnce([{ id: 906 }])
+    tabsQueryMock.mockResolvedValueOnce([{ id: 902 }])
 
     const { handleOpenTempWindow } = await import(
       "~/entrypoints/background/tempWindowPool"
@@ -352,29 +373,26 @@ describe("tempWindowPool open/close handlers", () => {
       firstResponse,
     )
 
-    removeWindowMock.mockRejectedValueOnce(new Error("cleanup failed"))
-
     const secondResponse = vi.fn()
     await handleOpenTempWindow(
       {
-        requestId: "req-composite-cleanup-failure-second",
-        url: "https://example.com/composite/cleanup-failure/second",
+        requestId: "req-composite-preserve-after-tab-failure",
+        url: "https://example.com/composite/preserve-after-tab-failure",
       },
       secondResponse,
     )
 
-    expect(createWindowMock).toHaveBeenCalledTimes(2)
-    expect(removeWindowMock).toHaveBeenNthCalledWith(1, 901)
+    expect(createWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeWindowMock).not.toHaveBeenCalled()
     expect(removeTabOrWindowMock).not.toHaveBeenCalled()
     expect(secondResponse).toHaveBeenCalledWith({
-      success: true,
-      windowId: 905,
-      tabId: 906,
+      success: false,
+      error: "messages:background.windowCreationUnavailable",
     })
   })
 
   it("shares an in-flight composite window creation across concurrent opens", async () => {
-    tempContextMode = "composite"
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
 
     let resolveWindow!: (value: { id: number }) => void
     const windowCreated = new Promise<{ id: number }>((resolve) => {
@@ -430,7 +448,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("surfaces a concurrent composite-tab creation failure after the shared window is created", async () => {
-    tempContextMode = "composite"
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
 
     let resolveWindow!: (value: { id: number }) => void
     const windowCreated = new Promise<{ id: number }>((resolve) => {
@@ -485,7 +503,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("serializes final composite cleanup with a concurrent open", async () => {
-    tempContextMode = "composite"
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
     createWindowMock
       .mockResolvedValueOnce({ id: 921 })
       .mockResolvedValueOnce({ id: 925 })
@@ -538,7 +556,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("falls back to a plain tab when window mode is unavailable", async () => {
-    tempContextMode = "window"
+    tempContextMode = TEMP_CONTEXT_MODES.Window
     hasWindowsApiMock.mockReturnValue(false)
     createTabMock.mockResolvedValueOnce({ id: 701 })
 
@@ -563,7 +581,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("returns an error when window mode cannot provide a window id", async () => {
-    tempContextMode = "window"
+    tempContextMode = TEMP_CONTEXT_MODES.Window
     createWindowMock.mockResolvedValueOnce({})
 
     const { handleOpenTempWindow } = await import(
@@ -586,7 +604,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("returns an error when tab mode cannot provide a tab id", async () => {
-    tempContextMode = "tab"
+    tempContextMode = TEMP_CONTEXT_MODES.Tab
     createTabMock.mockResolvedValueOnce({})
 
     const { handleOpenTempWindow } = await import(
@@ -609,7 +627,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("surfaces unexpected popup-window creation failures to the caller", async () => {
-    tempContextMode = "window"
+    tempContextMode = TEMP_CONTEXT_MODES.Window
     createWindowMock.mockRejectedValueOnce(new Error("window blocked"))
 
     const { handleOpenTempWindow } = await import(
@@ -632,7 +650,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("surfaces unexpected plain-tab creation failures to the caller", async () => {
-    tempContextMode = "tab"
+    tempContextMode = TEMP_CONTEXT_MODES.Tab
     createTabMock.mockRejectedValueOnce(new Error("tab blocked"))
 
     const { handleOpenTempWindow } = await import(
@@ -681,7 +699,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("drops tracked popup-window mappings when the browser reports the temp window was closed", async () => {
-    tempContextMode = "window"
+    tempContextMode = TEMP_CONTEXT_MODES.Window
     createWindowMock.mockResolvedValueOnce({ id: 811 })
 
     const {
@@ -723,7 +741,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("recreates the composite window after the browser reports the shared window was closed", async () => {
-    tempContextMode = "composite"
+    tempContextMode = TEMP_CONTEXT_MODES.Composite
     createWindowMock
       .mockResolvedValueOnce({ id: 901 })
       .mockResolvedValueOnce({ id: 905 })
@@ -767,7 +785,7 @@ describe("tempWindowPool open/close handlers", () => {
   })
 
   it("drops tracked plain-tab mappings when the browser reports the temp tab was closed", async () => {
-    tempContextMode = "tab"
+    tempContextMode = TEMP_CONTEXT_MODES.Tab
     createTabMock.mockResolvedValueOnce({ id: 711 })
 
     const {

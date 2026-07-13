@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import { TEMP_CONTEXT_MODES } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum } from "~/types"
 
 const originalBrowser = (globalThis as any).browser
@@ -116,13 +117,14 @@ describe("tempWindowPool native check-in page action", () => {
     vi.doMock("~/services/preferences/userPreferences", () => ({
       DEFAULT_PREFERENCES: {
         tempWindowFallback: {
-          tempContextMode: "tab",
+          tempContextMode: TEMP_CONTEXT_MODES.Tab,
         },
       },
+      TEMP_CONTEXT_MODES,
       userPreferences: {
         getPreferences: vi.fn().mockResolvedValue({
           tempWindowFallback: {
-            tempContextMode: "tab",
+            tempContextMode: TEMP_CONTEXT_MODES.Tab,
           },
         }),
       },
