@@ -767,7 +767,6 @@ export function KiloCodeExportDialog({
 
   const handleDownloadSettings = async () => {
     if (!canExport) return
-    if (!effectiveCurrentApiConfigName) return
 
     const tracker = startProductAnalyticsAction({
       ...kiloCodeAccountExportAnalyticsContext,
