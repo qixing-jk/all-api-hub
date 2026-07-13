@@ -415,6 +415,45 @@ describe("Veloera managed-site channel capability", () => {
     )
   })
 
+  it("returns masked and unavailable Veloera secret reveal states", async () => {
+    const { veloeraManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+    const ref = {
+      managedSiteType: SITE_TYPES.VELOERA,
+      scopeKey: "https://veloera.example.invalid",
+      resourceId: "15",
+    } as const
+
+    veloeraApi.fetchChannel
+      .mockResolvedValueOnce({ id: 15, key: "sk-********" })
+      .mockResolvedValueOnce({ id: 15, key: "" })
+
+    await expect(
+      veloeraManagedSiteCapabilities.resources.secrets?.revealSecret(
+        config,
+        ref,
+      ),
+    ).resolves.toEqual({ status: "masked" })
+    await expect(
+      veloeraManagedSiteCapabilities.resources.secrets?.revealSecret(
+        config,
+        ref,
+      ),
+    ).resolves.toEqual({ status: "unavailable" })
+  })
+
+  it("returns null for Veloera resource search misses", async () => {
+    const { veloeraManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+    veloeraApi.searchChannel.mockResolvedValue(null)
+
+    await expect(
+      veloeraManagedSiteCapabilities.resources.items.search(config, "missing"),
+    ).resolves.toBeNull()
+  })
+
   it("loads Veloera resource detail from fetchChannel and prepares edit drafts from native detail", async () => {
     const { veloeraManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/veloera"
@@ -626,5 +665,69 @@ describe("Veloera managed-site channel capability", () => {
       buildChannelPayload(draft),
     )
     expect(veloeraApi.deleteChannel).toHaveBeenCalledWith(expect.anything(), 25)
+  })
+
+  it("prepares and validates Veloera resource import drafts", async () => {
+    const { veloeraManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+    const sourceDraft: ChannelFormData = {
+      name: "Source",
+      type: 1,
+      key: "sk-source",
+      base_url: "https://source.example.invalid",
+      models: ["gpt-4o"],
+      groups: ["vip"],
+      priority: 1,
+      weight: 2,
+      status: CHANNEL_STATUS.Enable,
+    }
+
+    await expect(
+      veloeraManagedSiteCapabilities.resources.drafts.prepareImportDraft({
+        source: sourceDraft,
+      }),
+    ).resolves.toBe(sourceDraft)
+    await expect(
+      veloeraManagedSiteCapabilities.resources.drafts.prepareImportDraft({
+        resource: {
+          ref: {
+            managedSiteType: SITE_TYPES.VELOERA,
+            scopeKey: "https://veloera.example.invalid",
+            resourceId: "34",
+          },
+          displayName: "Imported Veloera",
+          nativeKind: "channel",
+          status: "enabled",
+          endpointLabel: "https://imported.example.invalid",
+          modelPreview: ["gpt-4o-mini"],
+          secretState: "masked",
+          capabilities: {},
+        },
+      }),
+    ).resolves.toEqual({
+      name: "Imported Veloera",
+      type: 1,
+      key: "",
+      base_url: "https://imported.example.invalid",
+      models: ["gpt-4o-mini"],
+      groups: [],
+      priority: 0,
+      weight: 0,
+      status: CHANNEL_STATUS.Enable,
+    })
+    expect(
+      veloeraManagedSiteCapabilities.resources.drafts.validateDraft({
+        ...sourceDraft,
+        name: "",
+        models: [],
+      }),
+    ).toEqual({
+      valid: false,
+      errors: [
+        { field: "name", message: "Channel name is required" },
+        { field: "models", message: "At least one model is required" },
+      ],
+    })
   })
 })

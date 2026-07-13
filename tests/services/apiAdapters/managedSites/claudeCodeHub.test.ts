@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { CHANNEL_STATUS } from "~/types/managedSite"
 
 const claudeCodeHubProvider = vi.hoisted(() => ({
   checkValidClaudeCodeHubConfig: vi.fn(),
@@ -240,6 +241,42 @@ describe("Claude Code Hub managed-site channel capability", () => {
     })
   })
 
+  it("maps Claude Code Hub fallback labels and secret states", async () => {
+    const { claudeCodeHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/claudeCodeHub"
+    )
+    claudeCodeHubApi.listProviders.mockResolvedValue([
+      {
+        ...provider,
+        id: 10,
+        name: "",
+        url: undefined,
+        maskedKey: undefined,
+        key: "",
+        providerType: "custom_native",
+        allowedModels: ["claude-3-opus", "claude-3-haiku"],
+        isEnabled: true,
+      },
+    ])
+
+    await expect(
+      claudeCodeHubManagedSiteCapabilities.resources.items.list(config),
+    ).resolves.toEqual({
+      total: 1,
+      items: [
+        expect.objectContaining({
+          displayName: "Provider 10",
+          status: "enabled",
+          typeLabel: "custom_native",
+          endpointLabel: "",
+          modelCount: 2,
+          modelPreview: ["claude-3-opus", "claude-3-haiku"],
+          secretState: "unavailable",
+        }),
+      ],
+    })
+  })
+
   it("reveals Claude Code Hub provider secrets through resource capabilities", async () => {
     const { claudeCodeHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/claudeCodeHub"
@@ -265,6 +302,34 @@ describe("Claude Code Hub managed-site channel capability", () => {
       config,
       7,
     )
+  })
+
+  it("returns masked and unavailable Claude Code Hub secret reveal states", async () => {
+    const { claudeCodeHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/claudeCodeHub"
+    )
+    claudeCodeHubApi.getUnmaskedProviderKey
+      .mockResolvedValueOnce("sk-********")
+      .mockResolvedValueOnce("")
+
+    const ref = {
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      scopeKey: "https://claude-code-hub.example.invalid",
+      resourceId: "7",
+    }
+
+    await expect(
+      claudeCodeHubManagedSiteCapabilities.resources.secrets?.revealSecret(
+        config,
+        ref,
+      ),
+    ).resolves.toEqual({ status: "masked" })
+    await expect(
+      claudeCodeHubManagedSiteCapabilities.resources.secrets?.revealSecret(
+        config,
+        ref,
+      ),
+    ).resolves.toEqual({ status: "unavailable" })
   })
 
   it("uses channel wording when resource detail cannot find a provider", async () => {
@@ -369,6 +434,41 @@ describe("Claude Code Hub managed-site channel capability", () => {
     expect(claudeCodeHubApi.deleteProvider).toHaveBeenCalledWith(config, 7)
   })
 
+  it("returns empty Claude Code Hub resource search results and null mutation summaries", async () => {
+    const { claudeCodeHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/claudeCodeHub"
+    )
+    claudeCodeHubApi.searchProviders.mockResolvedValue([])
+    claudeCodeHubApi.createProvider.mockResolvedValue({ id: "not-native" })
+
+    await expect(
+      claudeCodeHubManagedSiteCapabilities.resources.items.search(
+        config,
+        "missing",
+      ),
+    ).resolves.toEqual({
+      total: 0,
+      items: [],
+    })
+    await expect(
+      claudeCodeHubManagedSiteCapabilities.resources.items.create(config, {
+        name: "Created Claude Provider",
+        type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+        key: "sk-created-provider-key",
+        base_url: "https://created-provider.example.invalid/v1",
+        models: ["claude-3-5-sonnet"],
+        groups: ["vip"],
+        priority: 2,
+        weight: 5,
+        status: 1,
+      }),
+    ).resolves.toEqual({
+      success: true,
+      message: "success",
+      data: null,
+    })
+  })
+
   it("preserves native provider fields through resource edits while omitting masked keys", async () => {
     const { claudeCodeHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/claudeCodeHub"
@@ -439,6 +539,58 @@ describe("Claude Code Hub managed-site channel capability", () => {
     ).not.toHaveProperty("key")
   })
 
+  it("normalizes Claude Code Hub resource edit payload fallbacks", async () => {
+    const { claudeCodeHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/claudeCodeHub"
+    )
+    claudeCodeHubApi.listProviders.mockResolvedValue([provider])
+    claudeCodeHubApi.updateProvider.mockResolvedValue(provider)
+
+    const detail =
+      await claudeCodeHubManagedSiteCapabilities.resources.items.getDetail(
+        config,
+        {
+          managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+          scopeKey: "https://claude-code-hub.example.invalid",
+          resourceId: "7",
+        },
+      )
+
+    await claudeCodeHubManagedSiteCapabilities.resources.items.update(
+      config,
+      detail,
+      {
+        name: " Edited Claude Provider ",
+        type: "",
+        key: " sk-new-provider-key ",
+        base_url: " https://edited-provider.example.invalid/v1 ",
+        models: ["claude-3-7-sonnet"],
+        groups: [],
+        priority: 0,
+        weight: Number.NaN,
+        status: 1,
+      },
+    )
+
+    expect(claudeCodeHubApi.updateProvider).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        providerId: 7,
+        name: "Edited Claude Provider",
+        key: "sk-new-provider-key",
+        url: "https://edited-provider.example.invalid/v1",
+        provider_type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+        allowed_models: [
+          { matchType: "prefix", pattern: "claude-" },
+          { matchType: "exact", pattern: "claude-3-7-sonnet" },
+        ],
+        is_enabled: true,
+        weight: 1,
+        group_tag: "default",
+      }),
+    )
+  })
+
   it("allows ordinary edits for prefix-only model rules while preserving native allowed models", async () => {
     const { claudeCodeHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/claudeCodeHub"
@@ -492,6 +644,73 @@ describe("Claude Code Hub managed-site channel capability", () => {
     expect(
       claudeCodeHubApi.updateProvider.mock.calls.at(-1)?.[1],
     ).not.toHaveProperty("key")
+  })
+
+  it("prepares and validates Claude Code Hub resource import drafts", async () => {
+    const { claudeCodeHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/claudeCodeHub"
+    )
+    const sourceDraft = {
+      name: "Source Claude Provider",
+      type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+      key: "sk-source",
+      base_url: "https://source.example.invalid/v1",
+      models: ["claude-3-5-sonnet"],
+      groups: ["vip"],
+      priority: 3,
+      weight: 4,
+      status: CHANNEL_STATUS.Enable,
+    }
+
+    await expect(
+      claudeCodeHubManagedSiteCapabilities.resources.drafts.prepareImportDraft({
+        source: sourceDraft,
+      }),
+    ).resolves.toBe(sourceDraft)
+    await expect(
+      claudeCodeHubManagedSiteCapabilities.resources.drafts.prepareImportDraft({
+        resource: {
+          ref: {
+            managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+            scopeKey: "https://claude-code-hub.example.invalid",
+            resourceId: "10",
+          },
+          displayName: "Imported Claude Provider",
+          nativeKind: "provider",
+          status: "enabled",
+          endpointLabel: "https://imported.example.invalid/v1",
+          modelPreview: ["claude-3-5-sonnet"],
+          secretState: "masked",
+          capabilities: {},
+        },
+      }),
+    ).resolves.toEqual({
+      name: "Imported Claude Provider",
+      type: "",
+      key: "",
+      base_url: "https://imported.example.invalid/v1",
+      models: ["claude-3-5-sonnet"],
+      groups: ["default"],
+      priority: 0,
+      weight: 1,
+      status: CHANNEL_STATUS.Enable,
+    })
+
+    expect(
+      claudeCodeHubManagedSiteCapabilities.resources.drafts.validateDraft({
+        ...sourceDraft,
+        name: " ",
+        base_url: "",
+        models: [],
+      }),
+    ).toEqual({
+      valid: false,
+      errors: [
+        { field: "name", message: "Channel name is required" },
+        { field: "base_url", message: "Base URL is required" },
+        { field: "models", message: "At least one model is required" },
+      ],
+    })
   })
 
   it("preserves non-exact native model rules when exact models are edited", async () => {

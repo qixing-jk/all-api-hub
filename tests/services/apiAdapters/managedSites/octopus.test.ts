@@ -376,6 +376,36 @@ describe("Octopus managed-site channel capability", () => {
     })
   })
 
+  it("maps Octopus resource summaries without usable keys and search failures", async () => {
+    octopusApi.listChannels.mockResolvedValue([
+      {
+        ...octopusChannel,
+        id: 10,
+        keys: [],
+      },
+    ])
+    octopusApi.searchChannels.mockRejectedValue(new Error("search failed"))
+    const { octopusManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(
+      octopusManagedSiteCapabilities.resources.items.list(config),
+    ).resolves.toEqual({
+      total: 1,
+      items: [
+        expect.objectContaining({
+          displayName: "Octopus channel",
+          secretState: "unavailable",
+          ref: expect.objectContaining({ resourceId: "10" }),
+        }),
+      ],
+    })
+    await expect(
+      octopusManagedSiteCapabilities.resources.items.search(config, "missing"),
+    ).resolves.toBeNull()
+  })
+
   it("delegates Octopus resource create and delete through existing channel operations with normalized responses", async () => {
     octopusApi.createChannel.mockResolvedValue({
       success: true,
@@ -718,5 +748,69 @@ describe("Octopus managed-site channel capability", () => {
     expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).not.toHaveProperty(
       "keys_to_update",
     )
+  })
+
+  it("prepares and validates Octopus resource import drafts", async () => {
+    const { octopusManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+    const sourceDraft: ChannelFormData = {
+      name: "Source",
+      type: OctopusOutboundType.OpenAIChat,
+      key: "sk-source",
+      base_url: "https://source.example.invalid",
+      models: ["gpt-4o"],
+      groups: ["vip"],
+      priority: 1,
+      weight: 2,
+      status: 1,
+    }
+
+    await expect(
+      octopusManagedSiteCapabilities.resources.drafts.prepareImportDraft({
+        source: sourceDraft,
+      }),
+    ).resolves.toBe(sourceDraft)
+    await expect(
+      octopusManagedSiteCapabilities.resources.drafts.prepareImportDraft({
+        resource: {
+          ref: {
+            managedSiteType: SITE_TYPES.OCTOPUS,
+            scopeKey: "https://octopus.example.invalid",
+            resourceId: "11",
+          },
+          displayName: "Imported Octopus",
+          nativeKind: "outbound",
+          status: "enabled",
+          endpointLabel: "https://imported.example.invalid",
+          modelPreview: ["gpt-4o-mini"],
+          secretState: "masked",
+          capabilities: {},
+        },
+      }),
+    ).resolves.toEqual({
+      name: "Imported Octopus",
+      type: OctopusOutboundType.OpenAIChat,
+      key: "",
+      base_url: "https://imported.example.invalid",
+      models: ["gpt-4o-mini"],
+      groups: ["default"],
+      priority: 0,
+      weight: 0,
+      status: 1,
+    })
+    expect(
+      octopusManagedSiteCapabilities.resources.drafts.validateDraft({
+        ...sourceDraft,
+        name: "",
+        models: [],
+      }),
+    ).toEqual({
+      valid: false,
+      errors: [
+        { field: "name", message: "Channel name is required" },
+        { field: "models", message: "At least one model is required" },
+      ],
+    })
   })
 })

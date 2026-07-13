@@ -417,6 +417,45 @@ describe("DoneHub managed-site channel capability", () => {
     )
   })
 
+  it("returns masked and unavailable DoneHub secret reveal states", async () => {
+    const { doneHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+    const ref = {
+      managedSiteType: SITE_TYPES.DONE_HUB,
+      scopeKey: "https://done-hub.example.invalid",
+      resourceId: "15",
+    } as const
+
+    doneHubApi.fetchChannel
+      .mockResolvedValueOnce({ id: 15, key: "sk-********" })
+      .mockResolvedValueOnce({ id: 15, key: "" })
+
+    await expect(
+      doneHubManagedSiteCapabilities.resources.secrets?.revealSecret(
+        config,
+        ref,
+      ),
+    ).resolves.toEqual({ status: "masked" })
+    await expect(
+      doneHubManagedSiteCapabilities.resources.secrets?.revealSecret(
+        config,
+        ref,
+      ),
+    ).resolves.toEqual({ status: "unavailable" })
+  })
+
+  it("returns null for DoneHub resource search misses", async () => {
+    const { doneHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+    doneHubApi.searchChannel.mockResolvedValue(null)
+
+    await expect(
+      doneHubManagedSiteCapabilities.resources.items.search(config, "missing"),
+    ).resolves.toBeNull()
+  })
+
   it("loads DoneHub resource detail from fetchChannel and prepares edit drafts from native detail", async () => {
     const { doneHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/doneHub"
@@ -723,5 +762,69 @@ describe("DoneHub managed-site channel capability", () => {
       buildChannelPayload(draft),
     )
     expect(doneHubApi.deleteChannel).toHaveBeenCalledWith(expect.anything(), 25)
+  })
+
+  it("prepares and validates DoneHub resource import drafts", async () => {
+    const { doneHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+    const sourceDraft: ChannelFormData = {
+      name: "Source",
+      type: 1,
+      key: "sk-source",
+      base_url: "https://source.example.invalid",
+      models: ["gpt-4o"],
+      groups: ["vip"],
+      priority: 1,
+      weight: 2,
+      status: CHANNEL_STATUS.Enable,
+    }
+
+    await expect(
+      doneHubManagedSiteCapabilities.resources.drafts.prepareImportDraft({
+        source: sourceDraft,
+      }),
+    ).resolves.toBe(sourceDraft)
+    await expect(
+      doneHubManagedSiteCapabilities.resources.drafts.prepareImportDraft({
+        resource: {
+          ref: {
+            managedSiteType: SITE_TYPES.DONE_HUB,
+            scopeKey: "https://done-hub.example.invalid",
+            resourceId: "34",
+          },
+          displayName: "Imported DoneHub",
+          nativeKind: "channel",
+          status: "enabled",
+          endpointLabel: "https://imported.example.invalid",
+          modelPreview: ["gpt-4o-mini"],
+          secretState: "masked",
+          capabilities: {},
+        },
+      }),
+    ).resolves.toEqual({
+      name: "Imported DoneHub",
+      type: 1,
+      key: "",
+      base_url: "https://imported.example.invalid",
+      models: ["gpt-4o-mini"],
+      groups: [],
+      priority: 0,
+      weight: 0,
+      status: CHANNEL_STATUS.Enable,
+    })
+    expect(
+      doneHubManagedSiteCapabilities.resources.drafts.validateDraft({
+        ...sourceDraft,
+        name: "",
+        models: [],
+      }),
+    ).toEqual({
+      valid: false,
+      errors: [
+        { field: "name", message: "Channel name is required" },
+        { field: "models", message: "At least one model is required" },
+      ],
+    })
   })
 })
