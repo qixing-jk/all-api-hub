@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   TEMP_CONTEXT_MODES,
   type TempContextMode,
-} from "~/services/preferences/userPreferences"
+} from "~/constants/tempContextMode"
 
 const originalBrowser = (globalThis as any).browser
 
@@ -70,7 +70,6 @@ describe("tempWindowPool open/close handlers", () => {
           tempContextMode,
         },
       },
-      TEMP_CONTEXT_MODES,
       userPreferences: {
         getPreferences: vi.fn().mockImplementation(() =>
           Promise.resolve({

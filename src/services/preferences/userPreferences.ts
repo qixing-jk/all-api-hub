@@ -3,6 +3,10 @@ import { Storage } from "@plasmohq/storage"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
+  TEMP_CONTEXT_MODES,
+  type TempContextMode,
+} from "~/constants/tempContextMode"
+import {
   STORAGE_LOCKS,
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
@@ -100,15 +104,6 @@ import { createLogger } from "~/utils/core/logger"
 import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 const logger = createLogger("UserPreferences")
-
-export const TEMP_CONTEXT_MODES = {
-  Window: "window",
-  Composite: "composite",
-  Tab: "tab",
-} as const
-
-export type TempContextMode =
-  (typeof TEMP_CONTEXT_MODES)[keyof typeof TEMP_CONTEXT_MODES]
 
 export interface TempWindowFallbackPreferences {
   enabled: boolean

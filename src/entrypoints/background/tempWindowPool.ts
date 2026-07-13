@@ -1,5 +1,9 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
+import {
+  TEMP_CONTEXT_MODES,
+  type TempContextMode,
+} from "~/constants/tempContextMode"
 import { TURNSTILE_DEFAULT_QUERY_PARAM_NAME } from "~/constants/turnstile"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { accountStorage } from "~/services/accounts/accountStorage"
@@ -9,10 +13,8 @@ import {
 } from "~/services/apiTransport/errors"
 import {
   DEFAULT_PREFERENCES,
-  TEMP_CONTEXT_MODES,
   TempWindowFallbackPreferences,
   userPreferences,
-  type TempContextMode,
 } from "~/services/preferences/userPreferences"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {

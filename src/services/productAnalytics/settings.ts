@@ -1,8 +1,8 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { SITE_TYPES } from "~/constants/siteType"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import {
   DEFAULT_PREFERENCES,
-  TEMP_CONTEXT_MODES,
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type RedemptionAssistPreferences,
   type TempWindowFallbackPreferences,

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
-import { TEMP_CONTEXT_MODES } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -246,7 +245,6 @@ describe("tempWindowPool window fallback", () => {
           tempContextMode: defaultTempContextMode,
         },
       },
-      TEMP_CONTEXT_MODES,
       userPreferences: {
         getPreferences: getPreferencesMock,
       },

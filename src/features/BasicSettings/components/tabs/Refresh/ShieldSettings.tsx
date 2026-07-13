@@ -19,8 +19,8 @@ import {
   Switch,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { TEMP_CONTEXT_MODES } from "~/services/preferences/userPreferences"
 import {
   getProtectionBypassUiVariant,
   isProtectionBypassFirefoxEnv,
