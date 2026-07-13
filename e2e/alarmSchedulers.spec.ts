@@ -1676,4 +1676,13 @@ test("runs managed-site model sync when its MV3 alarm fires", async ({
       models: "gpt-4o-mini,gpt-4.1-mini",
     }),
   )
+  const modelSyncPayload = updatePayloads.find(
+    (payload) =>
+      typeof payload === "object" &&
+      payload !== null &&
+      (payload as { id?: unknown }).id === 101 &&
+      (payload as { models?: unknown }).models === "gpt-4o-mini,gpt-4.1-mini",
+  ) as Record<string, unknown> | undefined
+  expect(modelSyncPayload).toBeDefined()
+  expect(modelSyncPayload).not.toHaveProperty("key")
 })

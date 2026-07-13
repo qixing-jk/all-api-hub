@@ -580,6 +580,21 @@ describe("ManagedSiteChannels", () => {
     ])
   })
 
+  it("leaves mutation rows unreferenced when the resource scope is unavailable", () => {
+    const created = buildCompleteChannelRow({
+      id: 3,
+      name: "Created",
+    })
+
+    expect(
+      attachChannelFilterResourceRef({
+        channel: created,
+        managedSiteType: SITE_TYPES.NEW_API,
+        baseUrl: " ",
+      }),
+    ).toBe(created)
+  })
+
   const fillAndSubmitChannelDialog = async (
     user: ReturnType<typeof userEvent.setup>,
     params: {

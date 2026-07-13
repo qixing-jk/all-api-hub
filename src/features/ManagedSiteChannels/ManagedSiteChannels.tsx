@@ -305,11 +305,17 @@ export const attachChannelFilterResourceRef = (params: {
   baseUrl: string
 }): ChannelRow => {
   const { channel, managedSiteType, baseUrl } = params
+  const scopeKey = normalizeManagedUpstreamResourceScopeKey(baseUrl)
+
+  if (!scopeKey) {
+    return channel
+  }
+
   return {
     ...channel,
     resourceRef: createManagedUpstreamResourceRef({
       managedSiteType,
-      scopeKey: normalizeManagedUpstreamResourceScopeKey(baseUrl),
+      scopeKey,
       resourceId: getManagedUpstreamResourceId(managedSiteType, channel),
     }),
   }
