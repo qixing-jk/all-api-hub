@@ -406,18 +406,17 @@ async function stubManagedSiteAdminRoutes(
           status === CHANNEL_STATUS.AutoDisabled)
       ) {
         channel.status = status
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            message: "status updated",
+            data: null,
+          }),
+        })
+        return
       }
-
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          message: "status updated",
-          data: null,
-        }),
-      })
-      return
     }
 
     await route.fulfill({
