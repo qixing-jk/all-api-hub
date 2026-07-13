@@ -54,7 +54,8 @@ import {
   onTabRemoved,
   onWindowRemoved,
   queryTabs,
-  removeTabOrWindow,
+  removeTab,
+  removeWindow,
   sendTabMessageWithRetry,
   updateTab,
   updateWindow,
@@ -430,6 +431,8 @@ type TempContext = {
   tabId: number
   origin: string
   type: "window" | "tab"
+  mode: TempContextOpenMode
+  ownerWindowId?: number
   currentUrl?: string
   activeRequestIds: Set<string>
   lastUsed: number
@@ -440,10 +443,17 @@ type TempContext = {
 
 type TempContextOpenMode = "window" | "composite" | "tab"
 
+type TempWindowHandle =
+  | { kind: "window"; windowId: number }
+  | { kind: "tab"; tabId: number }
+  | { kind: "composite"; tabId: number; windowId: number }
+
 type TempContextOpenResult = {
   id: number
   tabId: number
   type: "window" | "tab"
+  mode: TempContextOpenMode
+  ownerWindowId?: number
 }
 
 type RecoverableWindowCreationError = Error & {
@@ -685,7 +695,7 @@ function trackTempWindowFetchCompleted(input: {
 }
 
 // 手动打开的临时窗口/标签页
-const tempWindows = new Map<string, number>()
+const tempWindows = new Map<string, TempWindowHandle>()
 
 const tempRequestContextMap = new Map<string, TempContext>()
 const tempContextById = new Map<number, TempContext>()
@@ -698,8 +708,93 @@ const destroyingOrigins = new Set<string>()
 type CompositeWindowCreationResult = { windowId: number; tabId: number }
 
 let compositeWindowId: number | null = null
-let compositeWindowCreatePromise: Promise<CompositeWindowCreationResult> | null =
-  null
+let compositeWindowOperationQueue: Promise<void> = Promise.resolve()
+let compositeWindowOperationPending = false
+
+/**
+ * Serialize composite temp-window open and close operations.
+ */
+async function withCompositeWindowLock<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  const result = compositeWindowOperationQueue.then(operation, operation)
+  compositeWindowOperationPending = true
+  const nextQueue = result.then(
+    () => undefined,
+    () => undefined,
+  )
+  compositeWindowOperationQueue = nextQueue
+  void nextQueue.finally(() => {
+    if (compositeWindowOperationQueue === nextQueue) {
+      compositeWindowOperationPending = false
+    }
+  })
+  return await result
+}
+
+/**
+ * Remove a composite tab while closing the shared owner window when it is the
+ * final remaining tab.
+ */
+async function removeCompositeTab(windowId: number, tabId: number) {
+  await withCompositeWindowLock(() => removeCompositeTabLocked(windowId, tabId))
+}
+
+/**
+ * Remove a composite tab after the composite operation lock is held.
+ */
+async function removeCompositeTabLocked(windowId: number, tabId: number) {
+  let tabs: browser.tabs.Tab[]
+
+  try {
+    tabs = await queryTabs({ windowId })
+  } catch (error) {
+    logger.warn("Failed to inspect composite temp window; removing tab only", {
+      windowId,
+      tabId,
+      error,
+    })
+    await removeTab(tabId)
+    return
+  }
+
+  const isOnlyTab = tabs.length === 1 && tabs[0]?.id === tabId
+  if (!isOnlyTab) {
+    await removeTab(tabId)
+    return
+  }
+
+  if (compositeWindowId === windowId) {
+    compositeWindowId = null
+  }
+
+  try {
+    await removeWindow(windowId)
+  } catch (error) {
+    logger.warn(
+      "Failed to remove final composite temp window; falling back to tab",
+      { windowId, tabId, error },
+    )
+    await removeTab(tabId)
+  }
+}
+
+/**
+ * Remove a known temp-window handle through the typed browser adapter that
+ * matches the handle owner.
+ */
+async function removeTempWindowHandle(handle: TempWindowHandle) {
+  switch (handle.kind) {
+    case "window":
+      await removeWindow(handle.windowId)
+      return
+    case "composite":
+      await removeCompositeTab(handle.windowId, handle.tabId)
+      return
+    case "tab":
+      await removeTab(handle.tabId)
+  }
+}
 
 /**
  * 设置临时窗口/标签页相关的浏览器事件监听器。
@@ -792,11 +887,14 @@ function handleTempWindowRemoved(windowId: number) {
   }
 
   let removedRequestId: string | undefined
-  for (const [requestId, storedId] of tempWindows.entries()) {
-    if (storedId === windowId) {
+  for (const [requestId, handle] of tempWindows.entries()) {
+    const belongsToRemovedWindow =
+      (handle.kind === "window" && handle.windowId === windowId) ||
+      (handle.kind === "composite" && handle.windowId === windowId)
+
+    if (belongsToRemovedWindow) {
       tempWindows.delete(requestId)
-      removedRequestId = requestId
-      break
+      removedRequestId ??= requestId
     }
   }
 
@@ -823,8 +921,12 @@ function handleTempWindowRemoved(windowId: number) {
  */
 function handleTempTabRemoved(tabId: number) {
   let removedRequestId: string | undefined
-  for (const [requestId, storedId] of tempWindows.entries()) {
-    if (storedId === tabId) {
+  for (const [requestId, handle] of tempWindows.entries()) {
+    const belongsToRemovedTab =
+      (handle.kind === "tab" && handle.tabId === tabId) ||
+      (handle.kind === "composite" && handle.tabId === tabId)
+
+    if (belongsToRemovedTab) {
       tempWindows.delete(requestId)
       removedRequestId = requestId
       break
@@ -879,7 +981,7 @@ export async function handleOpenTempWindow(
         suppressMinimize: true,
       })
 
-      tempWindows.set(requestId, tabId)
+      tempWindows.set(requestId, { kind: "composite", windowId, tabId })
       logTempWindow("openTempCompositeTabSuccess", {
         requestId,
         windowId,
@@ -898,7 +1000,7 @@ export async function handleOpenTempWindow(
 
       if (window?.id) {
         // 记录窗口ID
-        tempWindows.set(requestId, window.id)
+        tempWindows.set(requestId, { kind: "window", windowId: window.id })
         logTempWindow("openTempWindowSuccess", {
           requestId,
           windowId: window.id,
@@ -919,7 +1021,7 @@ export async function handleOpenTempWindow(
       // 使用标签页
       const tab = await createTab(url, false)
       if (tab?.id) {
-        tempWindows.set(requestId, tab.id)
+        tempWindows.set(requestId, { kind: "tab", tabId: tab.id })
         logTempWindow("openTempTabSuccess", {
           requestId,
           tabId: tab.id,
@@ -956,22 +1058,22 @@ export async function handleCloseTempWindow(
 ) {
   try {
     const { requestId } = request
-    const id = tempWindows.get(requestId)
+    const handle = tempWindows.get(requestId)
 
     logTempWindow(RuntimeActionIds.CloseTempWindow, {
       requestId,
-      mappedId: id ?? null,
+      mappedHandle: handle ?? null,
       hasRequestContext: requestId
         ? tempRequestContextMap.has(requestId)
         : false,
     })
 
-    if (id) {
-      await removeTabOrWindow(id)
+    if (handle) {
+      await removeTempWindowHandle(handle)
       tempWindows.delete(requestId)
       logTempWindow("closeTempWindowSuccess", {
         requestId,
-        removedId: id,
+        removedHandle: handle,
       })
       sendResponse({ success: true })
       return
@@ -2028,6 +2130,7 @@ async function openPlainTabTempContext(
     id: tab.id,
     tabId: tab.id,
     type: "tab",
+    mode: "tab",
   }
 }
 
@@ -2114,11 +2217,13 @@ async function openPopupWindowTempContext(params: {
       id: windowId,
       tabId,
       type: "window",
+      mode: "window",
+      ownerWindowId: windowId,
     }
   } catch (error) {
     if (windowId != null) {
       try {
-        await removeTabOrWindow(windowId)
+        await removeWindow(windowId)
       } catch (cleanupError) {
         logger.warn(
           "Failed to cleanup temp context after popup creation error",
@@ -2160,6 +2265,8 @@ async function openFallbackAwareTempContext(params: {
         id: opened.tabId,
         tabId: opened.tabId,
         type: "tab",
+        mode: "composite",
+        ownerWindowId: opened.windowId,
       }
     }
 
@@ -2217,6 +2324,8 @@ async function createTempContextInstance(
   let downloadBlockRuleId: number | null = null
   let firefoxDownloadBlockTabId: number | null = null
   let type: "window" | "tab" = "window"
+  let mode: TempContextOpenMode = "window"
+  let ownerWindowId: number | undefined
   const useIncognito = Boolean(options.incognito)
   const requestedMode = resolveTempContextOpenMode({
     preferredMode,
@@ -2240,6 +2349,8 @@ async function createTempContextInstance(
     contextId = opened.id
     tabId = opened.tabId
     type = opened.type
+    mode = opened.mode
+    ownerWindowId = opened.ownerWindowId
     ;[downloadBlockRuleId, firefoxDownloadBlockTabId] = await Promise.all([
       applyTempWindowDownloadBlockRule(tabId),
       applyFirefoxTempWindowDownloadBlockRule(tabId),
@@ -2258,6 +2369,8 @@ async function createTempContextInstance(
       contextId,
       tabId,
       type,
+      mode,
+      ownerWindowId: ownerWindowId ?? null,
       downloadBlockRuleInstalled: downloadBlockRuleId != null,
       firefoxDownloadBlockRuleInstalled: firefoxDownloadBlockTabId != null,
       preferredMode,
@@ -2277,6 +2390,8 @@ async function createTempContextInstance(
       contextId,
       tabId,
       type,
+      mode,
+      ownerWindowId: ownerWindowId ?? null,
       preferredMode,
       requestedMode,
     })
@@ -2286,6 +2401,8 @@ async function createTempContextInstance(
       tabId,
       origin,
       type,
+      mode,
+      ...(ownerWindowId != null ? { ownerWindowId } : {}),
       currentUrl: readyTab?.url ?? url,
       activeRequestIds: new Set<string>(),
       lastUsed: Date.now(),
@@ -2301,13 +2418,21 @@ async function createTempContextInstance(
       contextId: contextId ?? null,
       tabId: tabId ?? null,
       type,
+      mode,
+      ownerWindowId: ownerWindowId ?? null,
       error: getErrorMessage(error),
       preferredMode,
       requestedMode,
     })
     if (contextId) {
       try {
-        await removeTabOrWindow(contextId)
+        await removeTempWindowHandle(
+          mode === "composite" && ownerWindowId != null && tabId != null
+            ? { kind: "composite", windowId: ownerWindowId, tabId }
+            : type === "window"
+              ? { kind: "window", windowId: contextId }
+              : { kind: "tab", tabId: contextId },
+        )
       } catch (cleanupError) {
         logger.warn(
           "Failed to cleanup temp context after creation error",
@@ -2373,6 +2498,24 @@ async function openTabInCompositeWindow(params: {
   requestId: string
   suppressMinimize?: boolean
 }): Promise<{ windowId: number; tabId: number }> {
+  const wasQueuedBehindCompositeOperation = compositeWindowOperationPending
+  return await withCompositeWindowLock(() =>
+    openTabInCompositeWindowLocked(params, wasQueuedBehindCompositeOperation),
+  )
+}
+
+/**
+ * Open a composite temp tab after the composite operation lock is held.
+ */
+async function openTabInCompositeWindowLocked(
+  params: {
+    initialUrl?: string
+    origin: string
+    requestId: string
+    suppressMinimize?: boolean
+  },
+  wasQueuedBehindCompositeOperation: boolean,
+): Promise<CompositeWindowCreationResult> {
   const initialUrl = params.initialUrl ?? TEMP_CONTEXT_INITIAL_URL
   if (!hasWindowsAPI()) {
     throw createRecoverableWindowCreationError(
@@ -2416,8 +2559,12 @@ async function openTabInCompositeWindow(params: {
       })
 
       if (existingCompositeWindowConfirmed) {
+        if (wasQueuedBehindCompositeOperation) {
+          throw error
+        }
+
         try {
-          await removeTabOrWindow(previousCompositeWindowId)
+          await removeWindow(previousCompositeWindowId)
         } catch (cleanupError) {
           logger.warn(
             "Failed to cleanup stale composite temp window after reuse error",
@@ -2430,10 +2577,65 @@ async function openTabInCompositeWindow(params: {
     }
   }
 
-  if (compositeWindowCreatePromise) {
-    const { windowId } = await compositeWindowCreatePromise
-    const tab = await createTab(initialUrl, false, { windowId })
-    const tabId = tab?.id
+  let windowId: number | null = null
+
+  try {
+    let compositeWindow: browser.windows.Window | null = null
+
+    try {
+      compositeWindow = await createWindow({
+        url: initialUrl,
+        type: "normal",
+        width: 420,
+        height: 520,
+        focused: false,
+      })
+    } catch (error) {
+      const reason = classifyWindowCreationFailure({ error })
+      if (reason) {
+        throw createRecoverableWindowCreationError(reason, error)
+      }
+      throw error
+    }
+
+    const missingWindowReason = classifyWindowCreationFailure({
+      missingHandle: !compositeWindow?.id,
+    })
+    const compositeWindowHandle = compositeWindow?.id
+    if (missingWindowReason || compositeWindowHandle == null) {
+      throw createRecoverableWindowCreationError(
+        missingWindowReason ??
+          WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+      )
+    }
+
+    windowId = compositeWindowHandle
+    compositeWindowId = windowId
+
+    if (!params.suppressMinimize) {
+      try {
+        await updateWindow(windowId, { state: "minimized" })
+        logTempWindow("compositeWindowMinimized", {
+          requestId: params.requestId,
+          origin: params.origin,
+          windowId,
+        })
+      } catch (minErr) {
+        logTempWindow("compositeWindowMinimizeFailed", {
+          requestId: params.requestId,
+          origin: params.origin,
+          windowId,
+          error: getErrorMessage(minErr),
+        })
+      }
+    }
+
+    const tabs = await queryTabs({
+      windowId,
+      active: true,
+    })
+    const tabId = tabs[0]?.id
+
     const missingTabReason = classifyWindowCreationFailure({
       missingHandle: !tabId,
     })
@@ -2445,102 +2647,21 @@ async function openTabInCompositeWindow(params: {
     }
 
     return { windowId, tabId }
-  }
-
-  compositeWindowCreatePromise = (async () => {
-    let windowId: number | null = null
-
-    try {
-      let compositeWindow: browser.windows.Window | null = null
+  } catch (error) {
+    if (windowId != null) {
+      compositeWindowId = null
 
       try {
-        compositeWindow = await createWindow({
-          url: initialUrl,
-          type: "normal",
-          width: 420,
-          height: 520,
-          focused: false,
-        })
-      } catch (error) {
-        const reason = classifyWindowCreationFailure({ error })
-        if (reason) {
-          throw createRecoverableWindowCreationError(reason, error)
-        }
-        throw error
-      }
-
-      const missingWindowReason = classifyWindowCreationFailure({
-        missingHandle: !compositeWindow?.id,
-      })
-      const compositeWindowHandle = compositeWindow?.id
-      if (missingWindowReason || compositeWindowHandle == null) {
-        throw createRecoverableWindowCreationError(
-          missingWindowReason ??
-            WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+        await removeWindow(windowId)
+      } catch (cleanupError) {
+        logger.warn(
+          "Failed to cleanup composite temp context after creation error",
+          cleanupError,
         )
       }
-
-      windowId = compositeWindowHandle
-      compositeWindowId = windowId
-
-      if (!params.suppressMinimize) {
-        try {
-          await updateWindow(windowId, { state: "minimized" })
-          logTempWindow("compositeWindowMinimized", {
-            requestId: params.requestId,
-            origin: params.origin,
-            windowId,
-          })
-        } catch (minErr) {
-          logTempWindow("compositeWindowMinimizeFailed", {
-            requestId: params.requestId,
-            origin: params.origin,
-            windowId,
-            error: getErrorMessage(minErr),
-          })
-        }
-      }
-
-      const tabs = await queryTabs({
-        windowId,
-        active: true,
-      })
-      const tabId = tabs[0]?.id
-
-      const missingTabReason = classifyWindowCreationFailure({
-        missingHandle: !tabId,
-      })
-      if (missingTabReason || tabId == null) {
-        throw createRecoverableWindowCreationError(
-          missingTabReason ??
-            WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
-        )
-      }
-
-      return { windowId, tabId }
-    } catch (error) {
-      if (windowId != null) {
-        compositeWindowId = null
-
-        try {
-          await removeTabOrWindow(windowId)
-        } catch (cleanupError) {
-          logger.warn(
-            "Failed to cleanup composite temp context after creation error",
-            cleanupError,
-          )
-        }
-      }
-
-      throw error
     }
-  })()
 
-  try {
-    const { windowId, tabId } = await compositeWindowCreatePromise
-    return { windowId, tabId }
-  } finally {
-    compositeWindowCreatePromise = null
+    throw error
   }
 }
 
@@ -2669,6 +2790,8 @@ async function destroyContext(
     contextId: context.id,
     tabId: context.tabId,
     type: context.type,
+    mode: context.mode,
+    ownerWindowId: context.ownerWindowId ?? null,
     skipBrowserRemoval: Boolean(options.skipBrowserRemoval),
     reason: options.reason ?? null,
   })
@@ -2704,7 +2827,17 @@ async function destroyContext(
 
   if (!options.skipBrowserRemoval) {
     try {
-      await removeTabOrWindow(context.id)
+      await removeTempWindowHandle(
+        context.mode === "composite" && context.ownerWindowId != null
+          ? {
+              kind: "composite",
+              windowId: context.ownerWindowId,
+              tabId: context.tabId,
+            }
+          : context.type === "window"
+            ? { kind: "window", windowId: context.id }
+            : { kind: "tab", tabId: context.tabId },
+      )
     } catch (error) {
       logger.warn("Failed to remove temp context", error)
     }

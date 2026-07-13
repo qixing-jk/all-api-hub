@@ -64,6 +64,8 @@ const createDeferred = <T>() => {
 describe("tempWindowPool window fallback", () => {
   let createTabMock: ReturnType<typeof vi.fn>
   let createWindowMock: ReturnType<typeof vi.fn>
+  let removeTabMock: ReturnType<typeof vi.fn>
+  let removeWindowMock: ReturnType<typeof vi.fn>
   let removeTabOrWindowMock: ReturnType<typeof vi.fn>
   let hasWindowsApiMock: ReturnType<typeof vi.fn>
   let isAllowedIncognitoAccessMock: ReturnType<typeof vi.fn>
@@ -91,6 +93,8 @@ describe("tempWindowPool window fallback", () => {
   beforeEach(() => {
     createTabMock = vi.fn()
     createWindowMock = vi.fn()
+    removeTabMock = vi.fn().mockResolvedValue(undefined)
+    removeWindowMock = vi.fn().mockResolvedValue(undefined)
     removeTabOrWindowMock = vi.fn().mockResolvedValue(undefined)
     hasWindowsApiMock = vi.fn(() => true)
     isAllowedIncognitoAccessMock = vi.fn().mockResolvedValue(true)
@@ -197,7 +201,9 @@ describe("tempWindowPool window fallback", () => {
         isAllowedIncognitoAccess: isAllowedIncognitoAccessMock,
         onTabRemoved: onTabRemovedMock,
         onWindowRemoved: onWindowRemovedMock,
+        removeTab: removeTabMock,
         removeTabOrWindow: removeTabOrWindowMock,
+        removeWindow: removeWindowMock,
       }
     })
     vi.doMock("~/services/accounts/accountStorage", () => ({
@@ -319,7 +325,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(101)
+    expect(removeTabMock).toHaveBeenCalledWith(101)
   })
 
   it("installs and removes a temp-context download block rule for the owned tab", async () => {
@@ -379,7 +385,7 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(
       2_000_601,
     )
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(601)
+    expect(removeTabMock).toHaveBeenCalledWith(601)
   })
 
   it("installs and removes a Firefox temp-context download block rule for the owned tab", async () => {
@@ -414,7 +420,7 @@ describe("tempWindowPool window fallback", () => {
     expect(removeFirefoxTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(
       602,
     )
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(602)
+    expect(removeTabMock).toHaveBeenCalledWith(602)
   })
 
   it("warns when no temp-context download blocker can be installed before navigation", async () => {
@@ -497,7 +503,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(202)
+    expect(removeTabMock).toHaveBeenCalledWith(202)
   })
 
   it("cleans up a half-created composite window before rolling back to a plain tab", async () => {
@@ -532,20 +538,22 @@ describe("tempWindowPool window fallback", () => {
         data: "ok",
       },
     })
-    expect(removeTabOrWindowMock).toHaveBeenNthCalledWith(1, 303)
+    expect(removeWindowMock).toHaveBeenCalledWith(303)
     expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
     expect(tabsUpdateMock).toHaveBeenCalledWith(304, {
       url: "https://example.com",
     })
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenNthCalledWith(2, 304)
+    expect(removeTabMock).toHaveBeenCalledWith(304)
   })
 
   it("continues composite temp-window fetches when minimizing the shared window fails", async () => {
     tempContextMode = "composite"
     createWindowMock.mockResolvedValueOnce({ id: 305 })
-    tabsQueryMock.mockResolvedValueOnce([{ id: 306 }])
+    tabsQueryMock
+      .mockResolvedValueOnce([{ id: 306 }])
+      .mockResolvedValueOnce([{ id: 306 }])
     ;(globalThis as any).browser.windows.update.mockRejectedValueOnce(
       new Error("minimize failed"),
     )
@@ -584,7 +592,9 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(306)
+    expect(removeWindowMock).toHaveBeenCalledWith(305)
+    expect(removeTabMock).not.toHaveBeenCalledWith(306)
+    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(306)
   })
 
   it("preserves a structured unsupported result for incognito temp contexts", async () => {
@@ -682,7 +692,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     expect(createTabMock).not.toHaveBeenCalled()
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(404)
+    expect(removeWindowMock).toHaveBeenCalledWith(404)
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "messages:background.windowCreationUnavailable",
@@ -964,7 +974,7 @@ describe("tempWindowPool window fallback", () => {
     expect(closeResponse).toHaveBeenCalledWith({ success: true })
 
     await vi.advanceTimersByTimeAsync(2000)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(493)
+    expect(removeTabMock).toHaveBeenCalledWith(493)
 
     deferredFetch.reject(new Error("manual close canceled the fetch"))
     await request
@@ -976,7 +986,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2000)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
   })
 
   it("rejects invalid temp-window fetch requests before opening any context", async () => {
@@ -1073,7 +1083,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(508)
+    expect(removeTabMock).toHaveBeenCalledWith(508)
   })
 
   it("uses an incognito temp context for incognito auto-detect requests", async () => {
@@ -1289,7 +1299,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(509)
+    expect(removeTabMock).toHaveBeenCalledWith(509)
   })
 
   it("surfaces auto-detect failures when site-type detection throws", async () => {
@@ -1363,7 +1373,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2100)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(514)
+    expect(removeTabMock).toHaveBeenCalledWith(514)
   })
 
   it("returns a failure response when rendered-title content never answers and still cleans up the temp context", async () => {
@@ -1407,8 +1417,8 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2100)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(511)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledWith(511)
   })
 
   it("keeps rendered-title fetches working when popup window minimization fails", async () => {
@@ -1447,7 +1457,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2100)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(612)
+    expect(removeWindowMock).toHaveBeenCalledWith(612)
   })
 
   it("allows manual close while a rendered-title request is still in delayed-release state", async () => {
@@ -1483,8 +1493,8 @@ describe("tempWindowPool window fallback", () => {
     expect(closeResponse).toHaveBeenCalledWith({ success: true })
 
     await vi.advanceTimersByTimeAsync(2100)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(512)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledWith(512)
   })
 
   it("returns a structured close failure when browser removal throws for an open temp window", async () => {
@@ -1509,7 +1519,7 @@ describe("tempWindowPool window fallback", () => {
       tabId: 5120,
     })
 
-    removeTabOrWindowMock.mockRejectedValueOnce(new Error("close failed"))
+    removeTabMock.mockRejectedValueOnce(new Error("close failed"))
 
     const closeResponse = vi.fn()
     await handleCloseTempWindow({ requestId: "req-close-error" }, closeResponse)
@@ -1659,11 +1669,11 @@ describe("tempWindowPool window fallback", () => {
 
     await cleanupTempContextsOnSuspend()
 
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(615)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledWith(615)
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
 
     const secondResponse = vi.fn()
     const secondRequest = handleTempWindowFetch(
@@ -1725,11 +1735,11 @@ describe("tempWindowPool window fallback", () => {
 
     await cleanupTempContextsOnSuspend()
 
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(617)
+    expect(removeWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeWindowMock).toHaveBeenCalledWith(617)
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeWindowMock).toHaveBeenCalledTimes(1)
 
     const secondResponse = vi.fn()
     const secondRequest = handleTempWindowGetRenderedTitle(
@@ -1775,7 +1785,7 @@ describe("tempWindowPool window fallback", () => {
       error: "tab disappeared",
       code: undefined,
     })
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(506)
+    expect(removeTabMock).toHaveBeenCalledWith(506)
     expect(sendMessageMock).not.toHaveBeenCalledWith(
       506,
       expect.objectContaining({
@@ -1812,7 +1822,7 @@ describe("tempWindowPool window fallback", () => {
       error: "messages:background.pageLoadTimeout",
       code: undefined,
     })
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(507)
+    expect(removeTabMock).toHaveBeenCalledWith(507)
     expect(sendMessageMock).not.toHaveBeenCalledWith(
       507,
       expect.objectContaining({
@@ -1865,7 +1875,7 @@ describe("tempWindowPool window fallback", () => {
       success: false,
       error: "No response from temp window fetch",
     })
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(505)
+    expect(removeTabMock).toHaveBeenCalledWith(505)
   })
 
   it("classifies downstream unsuccessful temp fetch responses by status and code", async () => {
@@ -1929,7 +1939,7 @@ describe("tempWindowPool window fallback", () => {
         statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
       },
     })
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(510)
+    expect(removeTabMock).toHaveBeenCalledWith(510)
   })
 
   it("waits for protection guards to pass before issuing the temp fetch", async () => {
@@ -2114,7 +2124,7 @@ describe("tempWindowPool window fallback", () => {
     expect(fetchCallsBeforeCleanup).toHaveLength(2)
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(606)
+    expect(removeTabMock).toHaveBeenCalledWith(606)
 
     const thirdResponse = vi.fn()
     const thirdRequest = handleTempWindowFetch(
@@ -2239,8 +2249,8 @@ describe("tempWindowPool window fallback", () => {
     await secondRequest
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(608)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledWith(608)
     expect(secondResponse).toHaveBeenCalledWith({
       success: true,
       data: {
@@ -2350,8 +2360,8 @@ describe("tempWindowPool window fallback", () => {
     expect(closeResponse).toHaveBeenCalledWith({ success: true })
 
     await vi.advanceTimersByTimeAsync(2000)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(650)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledWith(650)
 
     const otherCloseResponse = vi.fn()
     await handleCloseTempWindow(
@@ -2380,7 +2390,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2000)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
 
     const thirdResponse = vi.fn()
     const thirdRequest = handleTempWindowFetch(
@@ -2449,7 +2459,7 @@ describe("tempWindowPool window fallback", () => {
     await secondRequest
 
     expect(createTabMock).toHaveBeenCalledTimes(2)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(708)
+    expect(removeTabMock).not.toHaveBeenCalledWith(708)
     const fetchCalls = sendMessageMock.mock.calls.filter(
       ([, message]) =>
         message.action === RuntimeActionIds.ContentPerformTempWindowFetch,
@@ -3274,7 +3284,7 @@ describe("tempWindowPool window fallback", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
     )
     await new Promise((resolve) => setTimeout(resolve, 2500))
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(809)
+    expect(removeTabMock).toHaveBeenCalledWith(809)
     expect(removeTempWindowCookieRuleMock).not.toHaveBeenCalled()
   })
 
@@ -3372,7 +3382,7 @@ describe("tempWindowPool window fallback", () => {
     )
     expect(analyticsCallsJson).not.toContain("cf_clearance=1")
     expect(removeTempWindowCookieRuleMock).toHaveBeenCalledWith(1_000_810)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(810)
+    expect(removeTabMock).toHaveBeenCalledWith(810)
   })
 
   it("classifies downstream unsuccessful turnstile temp fetch responses by status and code", async () => {
@@ -3452,6 +3462,6 @@ describe("tempWindowPool window fallback", () => {
         statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
       },
     })
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(813)
+    expect(removeTabMock).toHaveBeenCalledWith(813)
   })
 })

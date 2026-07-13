@@ -6,6 +6,7 @@ const originalBrowser = (globalThis as any).browser
 
 describe("cleanupTempContextsOnSuspend", () => {
   let createTabMock: ReturnType<typeof vi.fn>
+  let removeTabMock: ReturnType<typeof vi.fn>
   let removeTabOrWindowMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
@@ -13,6 +14,7 @@ describe("cleanupTempContextsOnSuspend", () => {
       .fn()
       .mockResolvedValueOnce({ id: 101 })
       .mockResolvedValueOnce({ id: 202 })
+    removeTabMock = vi.fn().mockResolvedValue(undefined)
     removeTabOrWindowMock = vi.fn().mockResolvedValue(undefined)
 
     vi.useFakeTimers()
@@ -53,6 +55,7 @@ describe("cleanupTempContextsOnSuspend", () => {
         isAllowedIncognitoAccess: vi.fn().mockResolvedValue(true),
         onTabRemoved: vi.fn(() => () => {}),
         onWindowRemoved: vi.fn(() => () => {}),
+        removeTab: removeTabMock,
         removeTabOrWindow: removeTabOrWindowMock,
       }
     })
@@ -113,7 +116,8 @@ describe("cleanupTempContextsOnSuspend", () => {
 
     await cleanupTempContextsOnSuspend()
 
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(101)
+    expect(removeTabMock).toHaveBeenCalledWith(101)
+    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
 
     const closeResponse = vi.fn()
     await handleCloseTempWindow({ requestId: "req-1" }, closeResponse)
@@ -123,7 +127,8 @@ describe("cleanupTempContextsOnSuspend", () => {
     )
 
     await vi.advanceTimersByTimeAsync(2000)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
+    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
 
     const secondResponse = vi.fn()
     const secondRequest = handleTempWindowGetRenderedTitle(
@@ -146,8 +151,9 @@ describe("cleanupTempContextsOnSuspend", () => {
     await cleanupTempContextsOnSuspend()
     await vi.advanceTimersByTimeAsync(2000)
 
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(2)
-    expect(removeTabOrWindowMock).toHaveBeenLastCalledWith(202)
+    expect(removeTabMock).toHaveBeenCalledTimes(2)
+    expect(removeTabMock).toHaveBeenLastCalledWith(202)
+    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
   })
 
   it("resolves without closing anything when no temp contexts are tracked", async () => {
@@ -156,6 +162,7 @@ describe("cleanupTempContextsOnSuspend", () => {
     )
 
     await expect(cleanupTempContextsOnSuspend()).resolves.toBeUndefined()
+    expect(removeTabMock).not.toHaveBeenCalled()
     expect(removeTabOrWindowMock).not.toHaveBeenCalled()
   })
 })
