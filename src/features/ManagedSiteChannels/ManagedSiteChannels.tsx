@@ -646,6 +646,7 @@ export default function ManagedSiteChannels({
   )
 
   const handleOpenCreateDialog = useCallback(() => {
+    editOpenGenerationRef.current += 1
     openWithCustom({
       mode: undefined,
       onMutationOutcome: (outcome) => {

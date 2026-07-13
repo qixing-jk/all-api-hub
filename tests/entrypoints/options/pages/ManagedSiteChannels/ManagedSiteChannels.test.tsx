@@ -1963,6 +1963,84 @@ describe("ManagedSiteChannels", () => {
     })
   })
 
+  it("keeps the create dialog open when an earlier edit config load resolves late", async () => {
+    const user = userEvent.setup()
+    const alpha = buildCompleteChannelRow({
+      id: 51,
+      name: "Alpha",
+      key: "sk-********",
+    })
+    const config = {
+      baseUrl: "https://admin.example",
+      adminToken: "t",
+      userId: "1",
+    }
+    let resolveAlphaConfig: (value: typeof config) => void = () => {}
+    const service = mockChannels([alpha])
+    service.getConfig = vi
+      .fn()
+      .mockResolvedValueOnce(config)
+      .mockImplementationOnce(
+        () =>
+          new Promise<typeof config>((resolve) => {
+            resolveAlphaConfig = resolve
+          }),
+      )
+
+    const getDetail = vi.fn()
+    mockResolveManagedUpstreamResourceCapabilities.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.NEW_API,
+      capabilities: {
+        items: {
+          getDetail,
+          update: vi.fn(),
+        },
+        drafts: {
+          prepareEditDraft: vi.fn(),
+          describeFields: vi.fn(() => [
+            { name: "name", label: "Name", type: "text", required: true },
+          ]),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    })
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForRowText("Alpha")
+    await openRowActionsMenu(screen.getByText("Alpha").closest("tr")!, user)
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+    await waitFor(() => {
+      expect(service.getConfig).toHaveBeenCalledTimes(2)
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.addChannel",
+      }),
+    )
+    expect(await screen.findByText("channelDialog:title.add")).toBeVisible()
+
+    await act(async () => {
+      resolveAlphaConfig(config)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText("channelDialog:title.add")).toBeVisible()
+      expect(getDetail).not.toHaveBeenCalled()
+    })
+  })
+
   it("opens Veloera channel edits through the resource detail path when its core slice is migrated", async () => {
     const user = userEvent.setup()
     const row = buildCompleteChannelRow({
