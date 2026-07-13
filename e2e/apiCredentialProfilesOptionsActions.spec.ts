@@ -349,19 +349,78 @@ test("downloads Kilo Code settings for an API credential profile", async ({
   await expect(page.getByText("Export Kilo Code JSON")).toBeVisible()
   await expect(page.getByText("gpt-kilo-export")).toBeVisible()
 
-  const downloadPromise = page.waitForEvent("download")
-  await page.getByRole("button", { name: "Download settings" }).click()
-  const download = await downloadPromise
+  const v7DownloadPromise = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Download Kilo 7.x settings" }).click()
+  const v7Download = await v7DownloadPromise
 
-  expect(download.suggestedFilename()).toBe("kilo-code-settings.json")
-  const downloadPath = await download.path()
-  if (!downloadPath) {
+  expect(v7Download.suggestedFilename()).toBe("kilo-settings.json")
+  const v7DownloadPath = await v7Download.path()
+  if (!v7DownloadPath) {
     throw new Error(
       "Kilo Code settings export did not produce a readable download",
     )
   }
 
-  const settings = JSON.parse(await fs.readFile(downloadPath, "utf8")) as {
+  const v7Settings = JSON.parse(await fs.readFile(v7DownloadPath, "utf8")) as {
+    _meta?: { version?: number }
+    provider?: Record<
+      string,
+      {
+        npm?: string
+        models?: Record<string, unknown>
+        options?: { apiKey?: string; baseURL?: string }
+      }
+    >
+    model?: string
+  }
+
+  expect(v7Settings._meta?.version).toBe(1)
+  expect(Object.keys(v7Settings.provider ?? {})).toHaveLength(1)
+  const [providerId, provider] = Object.entries(v7Settings.provider ?? {})[0]
+  expect(provider).toMatchObject({
+    npm: "@ai-sdk/openai-compatible",
+    options: {
+      apiKey: "sk-kilo-export-profile",
+      baseURL: "https://kilo-export.example.com/v1",
+    },
+  })
+  expect(Object.keys(provider.models ?? {})).toContain("gpt-kilo-export")
+  expect(v7Settings.model).toBe(`${providerId}/gpt-kilo-export`)
+
+  await page.getByRole("button", { name: "Cancel" }).click()
+  await expect(page.getByText("Export Kilo Code JSON")).toHaveCount(0)
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton)
+    .click()
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.exportToKiloCodeMenuItem)
+    .click()
+  await expect(page.getByText("Export Kilo Code JSON")).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Download Kilo 7.x settings" }),
+  ).toBeEnabled()
+
+  const exportTarget = page.getByRole("combobox", { name: "Export target" })
+  const legacyTargetName = "Roo Code / Kilo Code 5.x (legacy)"
+  await exportTarget.click()
+  await page.getByRole("option", { name: legacyTargetName }).click()
+  await expect(exportTarget).toContainText(legacyTargetName)
+
+  const legacyDownloadPromise = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Download legacy settings" }).click()
+  const legacyDownload = await legacyDownloadPromise
+
+  expect(legacyDownload.suggestedFilename()).toBe("kilo-code-settings.json")
+  const legacyDownloadPath = await legacyDownload.path()
+  if (!legacyDownloadPath) {
+    throw new Error(
+      "Legacy Kilo Code settings export did not produce a readable download",
+    )
+  }
+
+  const legacySettings = JSON.parse(
+    await fs.readFile(legacyDownloadPath, "utf8"),
+  ) as {
     providerProfiles?: {
       currentApiConfigName?: string
       apiConfigs?: Record<
@@ -378,16 +437,20 @@ test("downloads Kilo Code settings for an API credential profile", async ({
   }
 
   const profileName = "Kilo Export Profile - API Key"
-  expect(settings.providerProfiles?.currentApiConfigName).toBe(profileName)
-  expect(settings.providerProfiles?.apiConfigs?.[profileName]).toMatchObject({
+  expect(legacySettings.providerProfiles?.currentApiConfigName).toBe(
+    profileName,
+  )
+  expect(
+    legacySettings.providerProfiles?.apiConfigs?.[profileName],
+  ).toMatchObject({
     apiProvider: "openai",
     openAiBaseUrl: "https://kilo-export.example.com/v1",
     openAiApiKey: "sk-kilo-export-profile",
     openAiModelId: "gpt-kilo-export",
   })
-  expect(settings.providerProfiles?.apiConfigs?.[profileName]?.id).toEqual(
-    expect.any(String),
-  )
+  expect(
+    legacySettings.providerProfiles?.apiConfigs?.[profileName]?.id,
+  ).toEqual(expect.any(String))
 })
 
 test("imports an API credential profile into CLI Proxy", async ({
