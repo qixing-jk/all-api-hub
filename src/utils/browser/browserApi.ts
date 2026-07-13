@@ -147,29 +147,40 @@ export async function queryTabs(
 }
 
 /**
- * 移除标签页或窗口
- * 自动检测平台能力并选择合适的 API
- * @param id 目标窗口或标签页的 ID。
+ * Removes a known browser tab without probing other removal APIs.
+ */
+export async function removeTab(tabId: number): Promise<void> {
+  await browser.tabs.remove(tabId)
+}
+
+/**
+ * Removes a known browser window when the windows API is available.
+ */
+export async function removeWindow(windowId: number): Promise<void> {
+  if (!hasWindowsAPI()) {
+    throw new Error("browser.windows.remove is unavailable")
+  }
+
+  await browser.windows.remove(windowId)
+}
+
+/**
+ * Removes an id that may refer to a window first, then falls back to tab removal.
  */
 export async function removeTabOrWindow(id: number): Promise<void> {
   if (hasWindowsAPI()) {
     try {
-      await browser.windows.remove(id)
+      await removeWindow(id)
       return
     } catch (error) {
-      // 如果不是窗口 ID，尝试作为标签页 ID
-      logger.debug(
-        "removeTabOrWindow: Failed to remove as window, trying as tab",
-        {
-          id,
-          error,
-        },
+      logger.warn(
+        "removeTabOrWindow: Failed to remove as window, falling back to tab",
+        { id, error },
       )
     }
   }
 
-  // Firefox Android 或窗口 API 失败：使用标签页 API
-  await browser.tabs.remove(id)
+  await removeTab(id)
 }
 
 /**

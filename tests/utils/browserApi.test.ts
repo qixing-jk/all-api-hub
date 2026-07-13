@@ -63,7 +63,9 @@ import {
   removeContextMenu,
   removePermissions,
   removePermissionsDetailed,
+  removeTab,
   removeTabOrWindow,
+  removeWindow,
   requestPermissions,
   requestPermissionsDetailed,
   requestRuntimeUpdateCheck,
@@ -1241,10 +1243,9 @@ describe("browserApi window and manifest helpers", () => {
     ;(globalThis as any).chrome = originalChrome
   })
 
-  it("falls back to removing a tab when removing a window fails", async () => {
-    const removeWindowMock = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("not a window"))
+  it("warns before falling back to tab removal", async () => {
+    const error = new Error("not a window")
+    const removeWindowMock = vi.fn().mockRejectedValueOnce(error)
     const removeTabMock = vi.fn().mockResolvedValue(undefined)
     ;(globalThis as any).browser.windows.remove = removeWindowMock
     ;(globalThis as any).browser.tabs.remove = removeTabMock
@@ -1252,7 +1253,39 @@ describe("browserApi window and manifest helpers", () => {
     await removeTabOrWindow(42)
 
     expect(removeWindowMock).toHaveBeenCalledWith(42)
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      "removeTabOrWindow: Failed to remove as window, falling back to tab",
+      { id: 42, error },
+    )
     expect(removeTabMock).toHaveBeenCalledWith(42)
+    expect(removeWindowMock.mock.invocationCallOrder[0]).toBeLessThan(
+      removeTabMock.mock.invocationCallOrder[0],
+    )
+  })
+
+  it("removes a known tab without probing the windows API", async () => {
+    const removeTabMock = vi.fn().mockResolvedValue(undefined)
+    const removeWindowMock = vi.fn().mockResolvedValue(undefined)
+    ;(globalThis as any).browser.tabs.remove = removeTabMock
+    ;(globalThis as any).browser.windows.remove = removeWindowMock
+
+    await removeTab(43)
+
+    expect(removeTabMock).toHaveBeenCalledWith(43)
+    expect(removeWindowMock).not.toHaveBeenCalled()
+    expect(loggerMock.warn).not.toHaveBeenCalled()
+  })
+
+  it("removes a known window without probing the tabs API", async () => {
+    const removeTabMock = vi.fn().mockResolvedValue(undefined)
+    const removeWindowMock = vi.fn().mockResolvedValue(undefined)
+    ;(globalThis as any).browser.tabs.remove = removeTabMock
+    ;(globalThis as any).browser.windows.remove = removeWindowMock
+
+    await removeWindow(44)
+
+    expect(removeWindowMock).toHaveBeenCalledWith(44)
+    expect(removeTabMock).not.toHaveBeenCalled()
   })
 
   it("returns null from createWindow when the windows API is unavailable", async () => {
