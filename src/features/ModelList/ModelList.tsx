@@ -1,6 +1,6 @@
 import { ArrowPathIcon } from "@heroicons/react/24/outline"
 import { Cpu, KeyRound } from "lucide-react"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
@@ -31,10 +31,7 @@ import {
   canCreateAccountApiTokens,
   canListAccountRuntimeKeys,
 } from "~/services/accounts/keyProductCapabilities"
-import {
-  getAllProviders,
-  MODEL_PROVIDER_FILTER_VALUES,
-} from "~/services/models/utils/modelProviders"
+import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -113,7 +110,6 @@ export default function ModelList(props: {
     setSelectedSourceValue,
     searchTerm,
     setSearchTerm,
-    selectedProvider,
     setSelectedProvider,
     sortMode,
     setSortMode,
@@ -149,7 +145,10 @@ export default function ModelList(props: {
 
     filteredModels,
     accountSummaryCountsByAccountId,
-    allProvidersFilteredCount,
+    vendorCatalog,
+    effectiveSelectedVendor,
+    shouldRepairSelectedVendor,
+    allVendorsFilteredCount,
     getFilteredModels,
     getFilteredResultCount,
     availableGroups,
@@ -160,22 +159,18 @@ export default function ModelList(props: {
 
     // Operations
     loadPricingData,
-    getProviderFilteredCount,
     accountQueryStates,
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
   } = useModelListData(routeParams)
 
-  const providers = getAllProviders()
   const hasAnySources = accounts.length > 0 || profiles.length > 0
 
-  const sortedProviders = useMemo(
-    () =>
-      [...providers].sort(
-        (a, b) => getProviderFilteredCount(b) - getProviderFilteredCount(a),
-      ),
-    [providers, getProviderFilteredCount],
-  )
+  useEffect(() => {
+    if (!shouldRepairSelectedVendor) return
+    setSelectedProvider(MODEL_VENDOR_FILTER_VALUES.All)
+  }, [setSelectedProvider, shouldRepairSelectedVendor])
+
   const sortedAccounts = useMemo(
     () =>
       sortModelListAccounts({
@@ -758,17 +753,16 @@ export default function ModelList(props: {
           />
 
           <ProviderTabs
-            providers={sortedProviders}
-            selectedProvider={selectedProvider}
+            vendorCatalog={vendorCatalog}
+            effectiveSelectedVendor={effectiveSelectedVendor}
             setSelectedProvider={setSelectedProvider}
-            allProvidersFilteredCount={allProvidersFilteredCount}
-            getProviderFilteredCount={getProviderFilteredCount}
+            allVendorsFilteredCount={allVendorsFilteredCount}
           >
-            <TabsContent value={MODEL_PROVIDER_FILTER_VALUES.ALL}>
+            <TabsContent value={MODEL_VENDOR_FILTER_VALUES.All}>
               {renderModelDisplay()}
             </TabsContent>
-            {providers.map((provider) => (
-              <TabsContent key={provider} value={provider}>
+            {vendorCatalog.map((vendor) => (
+              <TabsContent key={vendor.key} value={vendor.key}>
                 {renderModelDisplay()}
               </TabsContent>
             ))}

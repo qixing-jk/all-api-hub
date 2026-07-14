@@ -1,18 +1,17 @@
 import { CpuChipIcon } from "@heroicons/react/24/outline"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { useEffect, type ReactNode } from "react"
+import { useLayoutEffect, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
+import type { ModelVendorCatalogEntry } from "~/services/models/modelMetadata/types"
 import {
-  getProviderConfig,
-  MODEL_PROVIDER_FILTER_VALUES,
-  type ModelProviderFilterValue,
-  type ProviderType,
-} from "~/services/models/utils/modelProviders"
+  MODEL_VENDOR_FILTER_VALUES,
+  type ModelVendorFilterValue,
+} from "~/services/models/modelVendor"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -24,20 +23,22 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
 
+type CountedModelVendorCatalogEntry = ModelVendorCatalogEntry & {
+  count: number
+}
+
 interface ProviderTabsProps {
-  providers: ProviderType[]
-  selectedProvider: ModelProviderFilterValue
-  setSelectedProvider: (provider: ModelProviderFilterValue) => void
-  allProvidersFilteredCount: number
-  getProviderFilteredCount: (provider: ProviderType) => number
+  vendorCatalog: CountedModelVendorCatalogEntry[]
+  effectiveSelectedVendor: ModelVendorFilterValue
+  setSelectedProvider: (provider: ModelVendorFilterValue) => void
+  allVendorsFilteredCount: number
   children: ReactNode
 }
 
 interface ProviderTabListProps {
-  providers: ProviderType[]
+  vendorCatalog: CountedModelVendorCatalogEntry[]
   selectedIndex: number
-  allProvidersFilteredCount: number
-  getProviderFilteredCount: (provider: ProviderType) => number
+  allVendorsFilteredCount: number
 }
 
 const providerTabClassName = `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} data-[state=active]:dark:bg-dark-bg-secondary data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow data-[state=active]:dark:text-blue-400 dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900`
@@ -46,16 +47,16 @@ const providerTabClassName = `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 
  * Renders the provider tab list.
  */
 function ProviderTabList({
-  providers,
+  vendorCatalog,
   selectedIndex,
-  allProvidersFilteredCount,
-  getProviderFilteredCount,
+  allVendorsFilteredCount,
 }: ProviderTabListProps) {
   const { t } = useTranslation("modelList")
   const {
     scrollRef: tabListRef,
     canScrollLeft,
     canScrollRight,
+    updateScrollState,
     scrollLeft,
     scrollRight,
     scrollChildIntoCenter,
@@ -63,12 +64,14 @@ function ProviderTabList({
     enableWheelScroll: true,
   })
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    updateScrollState()
     const rafId = window.requestAnimationFrame(() => {
       scrollChildIntoCenter(selectedIndex)
+      updateScrollState()
     })
     return () => window.cancelAnimationFrame(rafId)
-  }, [selectedIndex, providers.length, scrollChildIntoCenter])
+  }, [selectedIndex, vendorCatalog, scrollChildIntoCenter, updateScrollState])
 
   return (
     <div className="mb-6 flex items-center gap-2">
@@ -89,36 +92,30 @@ function ProviderTabList({
         className={`flex min-w-0 flex-1 space-x-1 rounded-xl ${COLORS.background.tertiary} scrollbar-hide touch-pan-x overflow-x-auto p-1`}
       >
         <TabsTrigger
-          value={MODEL_PROVIDER_FILTER_VALUES.ALL}
+          value={MODEL_VENDOR_FILTER_VALUES.All}
           className={providerTabClassName}
         >
           <div className="flex items-center justify-center space-x-2">
             <CpuChipIcon className="dark:text-dark-text-secondary h-4 w-4 text-gray-600" />
             <span>
-              {t("allProviders")} ({allProvidersFilteredCount})
+              {t("allProviders")} ({allVendorsFilteredCount})
             </span>
           </div>
         </TabsTrigger>
-        {providers.map((provider) => {
-          const providerConfig = getProviderConfig(
-            provider.toLowerCase().replace(/\s/g, "-"),
-          )
-          const IconComponent = providerConfig.icon
-          return (
-            <TabsTrigger
-              key={provider}
-              value={provider}
-              className={providerTabClassName}
-            >
-              <div className="flex items-center justify-center space-x-2">
-                <IconComponent className="h-4 w-4" />
-                <span>
-                  {provider} ({getProviderFilteredCount(provider)})
-                </span>
-              </div>
-            </TabsTrigger>
-          )
-        })}
+        {vendorCatalog.map((vendor) => (
+          <TabsTrigger
+            key={vendor.key}
+            value={vendor.key}
+            className={providerTabClassName}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <CpuChipIcon className="dark:text-dark-text-secondary h-4 w-4 text-gray-600" />
+              <span>
+                {vendor.label} ({vendor.count})
+              </span>
+            </div>
+          </TabsTrigger>
+        ))}
       </TabsList>
 
       <Button
@@ -139,44 +136,35 @@ function ProviderTabList({
 /**
  * Provider filter tabs with horizontal scroll and counts.
  * @param props Component props container.
- * @param props.providers Provider list with available models.
- * @param props.selectedProvider Currently selected provider or all providers.
+ * @param props.vendorCatalog Dynamic vendor entries available after base filters.
+ * @param props.effectiveSelectedVendor Already-clamped vendor selection.
  * @param props.setSelectedProvider Setter to change provider filter.
- * @param props.allProvidersFilteredCount Count of models after non-provider filters.
- * @param props.getProviderFilteredCount Helper to get count per provider.
+ * @param props.allVendorsFilteredCount Count of models after non-vendor filters.
  * @param props.children Tab panels content to render.
  * @returns Radix tab group with provider tabs.
  */
 export function ProviderTabs({
-  providers,
-  selectedProvider,
+  vendorCatalog,
+  effectiveSelectedVendor,
   setSelectedProvider,
-  allProvidersFilteredCount,
-  getProviderFilteredCount,
+  allVendorsFilteredCount,
   children,
 }: ProviderTabsProps) {
-  // Filter out providers with zero models
-  const filteredProviders = providers.filter(
-    (provider) => getProviderFilteredCount(provider) > 0,
-  )
-
   const selectedIndex =
-    selectedProvider === MODEL_PROVIDER_FILTER_VALUES.ALL
+    effectiveSelectedVendor === MODEL_VENDOR_FILTER_VALUES.All
       ? 0
       : Math.max(
           0,
-          filteredProviders.indexOf(selectedProvider as ProviderType) + 1,
+          vendorCatalog.findIndex(
+            (vendor) => vendor.key === effectiveSelectedVendor,
+          ) + 1,
         )
 
   return (
     <Tabs
-      value={
-        filteredProviders.includes(selectedProvider as ProviderType)
-          ? selectedProvider
-          : MODEL_PROVIDER_FILTER_VALUES.ALL
-      }
+      value={effectiveSelectedVendor}
       onValueChange={(value) => {
-        const newProvider = value as ModelProviderFilterValue
+        const newProvider = value as ModelVendorFilterValue
         setSelectedProvider(newProvider)
         void trackProductAnalyticsActionCompleted({
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
@@ -187,21 +175,20 @@ export function ProviderTabs({
           insights: {
             targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
             mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
-            filterCount:
-              newProvider === MODEL_PROVIDER_FILTER_VALUES.ALL ? 0 : 1,
+            filterCount: newProvider === MODEL_VENDOR_FILTER_VALUES.All ? 0 : 1,
             resultCount:
-              newProvider === MODEL_PROVIDER_FILTER_VALUES.ALL
-                ? allProvidersFilteredCount
-                : getProviderFilteredCount(newProvider),
+              newProvider === MODEL_VENDOR_FILTER_VALUES.All
+                ? allVendorsFilteredCount
+                : vendorCatalog.find((vendor) => vendor.key === newProvider)
+                    ?.count ?? 0,
           },
         })
       }}
     >
       <ProviderTabList
-        providers={filteredProviders}
+        vendorCatalog={vendorCatalog}
         selectedIndex={selectedIndex}
-        allProvidersFilteredCount={allProvidersFilteredCount}
-        getProviderFilteredCount={getProviderFilteredCount}
+        allVendorsFilteredCount={allVendorsFilteredCount}
       />
       {children}
     </Tabs>

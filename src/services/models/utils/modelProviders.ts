@@ -24,17 +24,6 @@ import {
 
 import { resolveCuratedModelVendor } from "~/services/models/modelVendor"
 
-// 厂商类型
-export type ProviderType = keyof typeof PROVIDER_CONFIGS
-
-export const MODEL_PROVIDER_FILTER_VALUES = {
-  ALL: "all",
-} as const
-
-export type ModelProviderFilterValue =
-  | ProviderType
-  | (typeof MODEL_PROVIDER_FILTER_VALUES)[keyof typeof MODEL_PROVIDER_FILTER_VALUES]
-
 // 厂商配置接口
 interface ProviderConfig {
   name: string
@@ -46,7 +35,7 @@ interface ProviderConfig {
 
 // todo: 考虑优先使用owner_by来识别厂商
 // 厂商配置映射
-export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
+export const PROVIDER_CONFIGS = {
   OpenAI: {
     name: "OpenAI",
     icon: OpenAI,
@@ -179,7 +168,9 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     color: "text-gray-600",
     bgColor: "bg-gray-50",
   },
-}
+} satisfies Record<string, ProviderConfig>
+
+type ProviderType = keyof typeof PROVIDER_CONFIGS
 
 const PROTOCOL_COMPATIBILITY_RULES: ReadonlyArray<{
   provider: "Claude" | "Gemini"
@@ -247,27 +238,4 @@ export const identifyProvider = (modelName: string): ProviderType => {
 export const getProviderConfig = (modelName: string): ProviderConfig => {
   const providerType = identifyProvider(modelName)
   return PROVIDER_CONFIGS[providerType]
-}
-
-/**
- * 获取所有厂商类型
- */
-export const getAllProviders = (): ProviderType[] => {
-  return Object.keys(PROVIDER_CONFIGS).filter(
-    (key) => key !== "Unknown",
-  ) as ProviderType[]
-}
-
-/**
- * 根据厂商类型过滤模型
- */
-export const filterModelsByProvider = <T extends { model_name: string }>(
-  models: T[],
-  providerType: ModelProviderFilterValue,
-): T[] => {
-  if (providerType === MODEL_PROVIDER_FILTER_VALUES.ALL) return models
-
-  return models.filter(
-    (model) => identifyProvider(model.model_name) === providerType,
-  )
 }

@@ -1,10 +1,6 @@
 import type { TFunction } from "i18next"
 
-import {
-  createModelIdentityIndex,
-  resolveModelIdentity,
-  type ModelIdentityIndex,
-} from "~/services/models/modelMetadata/modelIdentityIndex"
+import { createModelIdentityIndex } from "~/services/models/modelMetadata/modelIdentityIndex"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 
 export const MODEL_CAPABILITY_FILTER_VALUES = {
@@ -103,17 +99,6 @@ type ModelCapabilityMatchInput = {
  * Builds the shared identity index consumed by capability policy.
  */
 export const createModelMetadataIndex = createModelIdentityIndex
-
-/**
- * Finds unambiguous metadata for a displayed model name.
- */
-export function resolveModelMetadata(
-  index: ModelIdentityIndex,
-  modelName: string,
-) {
-  const result = resolveModelIdentity(index, modelName)
-  return result.state === "resolved" ? result.metadata : undefined
-}
 
 /**
  * Checks whether one model metadata record satisfies a capability filter.

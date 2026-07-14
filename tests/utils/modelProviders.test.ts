@@ -2,8 +2,6 @@ import React from "react"
 import { describe, expect, it } from "vitest"
 
 import {
-  filterModelsByProvider,
-  getAllProviders,
   getProviderConfig,
   identifyProvider,
   PROVIDER_CONFIGS,
@@ -262,117 +260,6 @@ describe("modelProviders utils", () => {
       const claudeConfig = getProviderConfig("claude-3")
       expect(openAIConfig.name).not.toBe(claudeConfig.name)
       expect(openAIConfig.color).not.toBe(claudeConfig.color)
-    })
-  })
-
-  describe("getAllProviders", () => {
-    it("should return array of provider types", () => {
-      const providers = getAllProviders()
-      expect(Array.isArray(providers)).toBe(true)
-      expect(providers.length).toBeGreaterThan(0)
-    })
-
-    it("should not include Unknown in the list", () => {
-      const providers = getAllProviders()
-      expect(providers).not.toContain("Unknown")
-    })
-
-    it("should include all major providers", () => {
-      const providers = getAllProviders()
-      expect(providers).toContain("OpenAI")
-      expect(providers).toContain("Claude")
-      expect(providers).toContain("Gemini")
-      expect(providers).toContain("DeepSeek")
-      expect(providers).toContain("Mistral")
-    })
-
-    it("should match PROVIDER_CONFIGS keys except Unknown", () => {
-      const providers = getAllProviders()
-      const configKeys = Object.keys(PROVIDER_CONFIGS).filter(
-        (key) => key !== "Unknown",
-      )
-      expect(providers).toEqual(configKeys)
-    })
-  })
-
-  describe("filterModelsByProvider", () => {
-    interface TestModel {
-      model_name: string
-      id: string
-    }
-
-    const models: TestModel[] = [
-      { model_name: "gpt-4", id: "1" },
-      { model_name: "gpt-3.5-turbo", id: "2" },
-      { model_name: "claude-3-opus", id: "3" },
-      { model_name: "claude-2", id: "4" },
-      { model_name: "gemini-pro", id: "5" },
-      { model_name: "deepseek-chat", id: "6" },
-      { model_name: "unknown-model", id: "7" },
-    ]
-
-    it("should return all models when provider is 'all'", () => {
-      const filtered = filterModelsByProvider(models, "all")
-      expect(filtered).toHaveLength(models.length)
-      expect(filtered).toEqual(models)
-    })
-
-    it("should filter OpenAI models", () => {
-      const filtered = filterModelsByProvider(models, "OpenAI")
-      expect(filtered).toHaveLength(2)
-      expect(filtered.map((m) => m.id)).toEqual(["1", "2"])
-    })
-
-    it("should filter Claude models", () => {
-      const filtered = filterModelsByProvider(models, "Claude")
-      expect(filtered).toHaveLength(2)
-      expect(filtered.map((m) => m.id)).toEqual(["3", "4"])
-    })
-
-    it("should filter single provider models", () => {
-      const filtered = filterModelsByProvider(models, "Gemini")
-      expect(filtered).toHaveLength(1)
-      expect(filtered[0].id).toBe("5")
-    })
-
-    it("should return empty array when no models match", () => {
-      const filtered = filterModelsByProvider(models, "Mistral")
-      expect(filtered).toHaveLength(0)
-    })
-
-    it("should filter Unknown models", () => {
-      const filtered = filterModelsByProvider(models, "Unknown")
-      expect(filtered).toHaveLength(1)
-      expect(filtered[0].id).toBe("7")
-    })
-
-    it("should handle empty model list", () => {
-      const filtered = filterModelsByProvider([], "OpenAI")
-      expect(filtered).toHaveLength(0)
-    })
-
-    it("should preserve model properties", () => {
-      const filtered = filterModelsByProvider(models, "OpenAI")
-      expect(filtered[0]).toHaveProperty("model_name")
-      expect(filtered[0]).toHaveProperty("id")
-    })
-
-    it("should work with different model types", () => {
-      interface ExtendedModel {
-        model_name: string
-        price: number
-        enabled: boolean
-      }
-
-      const extendedModels: ExtendedModel[] = [
-        { model_name: "gpt-4", price: 0.03, enabled: true },
-        { model_name: "claude-3", price: 0.015, enabled: false },
-      ]
-
-      const filtered = filterModelsByProvider(extendedModels, "OpenAI")
-      expect(filtered).toHaveLength(1)
-      expect(filtered[0].price).toBe(0.03)
-      expect(filtered[0].enabled).toBe(true)
     })
   })
 

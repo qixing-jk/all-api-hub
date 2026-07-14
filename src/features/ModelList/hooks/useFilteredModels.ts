@@ -6,7 +6,6 @@ import {
   createModelMetadataIndex,
   hasFilterableModelCapabilityMetadata,
   matchesModelCapabilityFilters,
-  resolveModelMetadata,
   type ModelCapabilityMetadataCoverage,
   type ModelCapabilitySelectionValue,
 } from "~/features/ModelList/modelCapabilityFilters"
@@ -27,17 +26,23 @@ import {
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
-import type { ModelMetadata } from "~/services/models/modelMetadata/types"
+import { resolveModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
+import type {
+  ModelMetadata,
+  ModelVendorCandidate,
+  ModelVendorCatalogEntry,
+  ResolvedModelVendor,
+} from "~/services/models/modelMetadata/types"
+import {
+  aggregateModelVendors,
+  MODEL_VENDOR_FILTER_VALUES,
+  resolveModelVendorCandidate,
+  type ModelVendorFilterValue,
+} from "~/services/models/modelVendor"
 import {
   calculateModelPrice,
   isTokenBillingType,
 } from "~/services/models/utils/modelPricing"
-import {
-  filterModelsByProvider,
-  MODEL_PROVIDER_FILTER_VALUES,
-  type ModelProviderFilterValue,
-  type ProviderType,
-} from "~/services/models/utils/modelProviders"
 
 import {
   MODEL_LIST_BILLING_MODES,
@@ -53,7 +58,7 @@ interface UseFilteredModelsProps {
   selectedGroups: string[]
   allAccountsExcludedGroupsByAccountId?: Record<string, string[]>
   searchTerm: string
-  selectedProvider: ModelProviderFilterValue
+  selectedProvider: ModelVendorFilterValue
   selectedModelCapabilities: ModelCapabilitySelectionValue[]
   modelMetadata: ModelMetadata[]
   sortMode: ModelListSortMode
@@ -83,6 +88,15 @@ interface RawModelItem {
   groupRatios: Record<string, number>
   exchangeRate: number
   modelMetadata?: ModelMetadata
+  resolvedVendor: ResolvedModelVendor
+}
+
+type CandidateRawModelItem = Omit<RawModelItem, "resolvedVendor"> & {
+  vendorCandidate: ModelVendorCandidate
+}
+
+type CountedModelVendorCatalogEntry = ModelVendorCatalogEntry & {
+  count: number
 }
 
 export interface AccountGroupOption {
@@ -103,6 +117,7 @@ export type CalculatedModelItem = {
   groupRatios: Record<string, number>
   effectiveGroup?: string
   modelMetadata?: ModelMetadata
+  resolvedVendor: ResolvedModelVendor
   hasAutoSelectedGroup?: boolean
   isLowestPrice?: boolean
 }
@@ -110,6 +125,79 @@ export type CalculatedModelItem = {
 const BILLING_MODE_ORDER: Record<PricingBillingMode, number> = {
   [MODEL_LIST_BILLING_MODES.TOKEN_BASED]: 0,
   [MODEL_LIST_BILLING_MODES.PER_CALL]: 1,
+}
+
+/** Compares stable vendor keys without locale-dependent collation. */
+function compareVendorKeys(left: string, right: string) {
+  return left < right ? -1 : left > right ? 1 : 0
+}
+
+/** Derives tab entries and counts from rows that passed every base filter. */
+function deriveVendorCatalog(
+  items: readonly CalculatedModelItem[],
+): CountedModelVendorCatalogEntry[] {
+  const entriesByKey = new Map<string, CountedModelVendorCatalogEntry>()
+
+  for (const item of items) {
+    const vendor = item.resolvedVendor
+    if (vendor.state !== "resolved") continue
+
+    const existing = entriesByKey.get(vendor.key)
+    if (existing) {
+      existing.count += 1
+      continue
+    }
+
+    entriesByKey.set(
+      vendor.key,
+      vendor.kind === "known"
+        ? {
+            kind: "known",
+            key: vendor.key,
+            knownId: vendor.knownId,
+            label: vendor.label,
+            count: 1,
+          }
+        : {
+            kind: "custom",
+            key: vendor.key,
+            label: vendor.label,
+            count: 1,
+          },
+    )
+  }
+
+  return Array.from(entriesByKey.values()).sort(
+    (left, right) =>
+      right.count - left.count || compareVendorKeys(left.key, right.key),
+  )
+}
+
+/** Clamps a stored selection against the catalog available this render. */
+function resolveEffectiveSelectedVendor(
+  selectedVendor: ModelVendorFilterValue,
+  catalog: readonly CountedModelVendorCatalogEntry[],
+): ModelVendorFilterValue {
+  if (selectedVendor === MODEL_VENDOR_FILTER_VALUES.All) {
+    return selectedVendor
+  }
+
+  return catalog.some((entry) => entry.key === selectedVendor)
+    ? selectedVendor
+    : MODEL_VENDOR_FILTER_VALUES.All
+}
+
+/** Applies only an already-clamped vendor selection. */
+function filterCalculatedModelsByVendor(
+  items: CalculatedModelItem[],
+  selectedVendor: ModelVendorFilterValue,
+) {
+  if (selectedVendor === MODEL_VENDOR_FILTER_VALUES.All) return items
+  return items.filter(
+    (item) =>
+      item.resolvedVendor.state === "resolved" &&
+      item.resolvedVendor.key === selectedVendor,
+  )
 }
 
 /** Returns true when the value is a finite number. */
@@ -385,6 +473,7 @@ function resolveBestCalculatedItem(
       groupRatios: rawItem.groupRatios,
       effectiveGroup: supportsGroupFiltering ? group : undefined,
       modelMetadata: rawItem.modelMetadata,
+      resolvedVendor: rawItem.resolvedVendor,
       hasAutoSelectedGroup: groupsToEvaluate.length > 1,
     }
     const candidateKey = getComparablePriceKey(candidateItem, showRealPrice)
@@ -491,95 +580,129 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   )
 
   const rawModelItems = useMemo<RawModelItem[]>(() => {
-    if (pricingContexts && pricingContexts.length > 0) {
-      return pricingContexts.flatMap(({ account, pricing, sourceIdentity }) => {
-        if (!pricing || !Array.isArray(pricing.data)) {
-          return []
-        }
+    const attachVendorCandidate = (
+      item: Omit<RawModelItem, "resolvedVendor" | "modelMetadata">,
+    ): CandidateRawModelItem => {
+      const lookupResult = resolveModelIdentity(
+        modelMetadataIndex,
+        item.model.model_name,
+      )
 
-        const exchangeRate =
-          account.balance?.USD > 0
-            ? account.balance.CNY / account.balance.USD
-            : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-
-        const accountSource = createAccountSource(account)
-        const allAccountsRowSource = {
-          ...accountSource,
-          capabilities: {
-            ...accountSource.capabilities,
-            supportsAccountSummary: true,
-          },
-        }
-        const source = applyAihubmixModelListCapabilities(
+      return {
+        ...item,
+        modelMetadata:
+          lookupResult.state === "resolved" ? lookupResult.metadata : undefined,
+        vendorCandidate: resolveModelVendorCandidate(
           {
-            ...allAccountsRowSource,
-            capabilities: deriveModelListSourceCapabilities({
-              capabilities: allAccountsRowSource.capabilities,
-              modelListSource: pricing.model_list_source,
-            }),
+            id: item.model.model_name,
+            vendorEvidence: item.model.vendorEvidence,
           },
-          pricing,
-        )
+          lookupResult,
+        ),
+      }
+    }
 
-        return pricing.data.map((model) => ({
+    const candidateItems = (() => {
+      if (pricingContexts && pricingContexts.length > 0) {
+        return pricingContexts.flatMap(
+          ({ account, pricing, sourceIdentity }) => {
+            if (!pricing || !Array.isArray(pricing.data)) {
+              return []
+            }
+
+            const exchangeRate =
+              account.balance?.USD > 0
+                ? account.balance.CNY / account.balance.USD
+                : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+
+            const accountSource = createAccountSource(account)
+            const allAccountsRowSource = {
+              ...accountSource,
+              capabilities: {
+                ...accountSource.capabilities,
+                supportsAccountSummary: true,
+              },
+            }
+            const source = applyAihubmixModelListCapabilities(
+              {
+                ...allAccountsRowSource,
+                capabilities: deriveModelListSourceCapabilities({
+                  capabilities: allAccountsRowSource.capabilities,
+                  modelListSource: pricing.model_list_source,
+                }),
+              },
+              pricing,
+            )
+
+            return pricing.data.map((model) =>
+              attachVendorCandidate({
+                model,
+                source,
+                sourceIdentity,
+                groupRatios: pricing.group_ratio ?? {},
+                exchangeRate,
+              }),
+            )
+          },
+        )
+      }
+
+      if (!pricingData || !selectedSource || !Array.isArray(pricingData.data)) {
+        return []
+      }
+
+      if (selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
+        return pricingData.data.map((model) =>
+          attachVendorCandidate({
+            model,
+            source: selectedSource,
+            groupRatios: {},
+            exchangeRate: 1,
+          }),
+        )
+      }
+
+      if (selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
+        return []
+      }
+
+      const exchangeRate =
+        selectedSource.account.balance?.USD > 0
+          ? selectedSource.account.balance.CNY /
+            selectedSource.account.balance.USD
+          : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+
+      const source = applyAihubmixModelListCapabilities(
+        {
+          ...selectedSource,
+          capabilities: deriveModelListSourceCapabilities({
+            capabilities: selectedSource.capabilities,
+            modelListSource: pricingData.model_list_source,
+          }),
+        },
+        pricingData,
+      )
+
+      return pricingData.data.map((model) =>
+        attachVendorCandidate({
           model,
           source,
-          sourceIdentity,
-          groupRatios: pricing.group_ratio ?? {},
+          groupRatios: pricingData.group_ratio ?? {},
           exchangeRate,
-          modelMetadata: resolveModelMetadata(
-            modelMetadataIndex,
-            model.model_name,
-          ),
-        }))
-      })
-    }
-
-    if (!pricingData || !selectedSource || !Array.isArray(pricingData.data)) {
-      return []
-    }
-
-    if (selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
-      return pricingData.data.map((model) => ({
-        model,
-        source: selectedSource,
-        groupRatios: {},
-        exchangeRate: 1,
-        modelMetadata: resolveModelMetadata(
-          modelMetadataIndex,
-          model.model_name,
-        ),
-      }))
-    }
-
-    if (selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
-      return []
-    }
-
-    const exchangeRate =
-      selectedSource.account.balance?.USD > 0
-        ? selectedSource.account.balance.CNY /
-          selectedSource.account.balance.USD
-        : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-
-    const source = applyAihubmixModelListCapabilities(
-      {
-        ...selectedSource,
-        capabilities: deriveModelListSourceCapabilities({
-          capabilities: selectedSource.capabilities,
-          modelListSource: pricingData.model_list_source,
         }),
-      },
-      pricingData,
+      )
+    })()
+
+    const { resolved } = aggregateModelVendors(
+      candidateItems.map((item) => item.vendorCandidate),
     )
 
-    return pricingData.data.map((model) => ({
-      model,
-      source,
-      groupRatios: pricingData.group_ratio ?? {},
-      exchangeRate,
-      modelMetadata: resolveModelMetadata(modelMetadataIndex, model.model_name),
-    }))
+    return candidateItems.map(
+      ({ vendorCandidate: _candidate, ...item }, index) => ({
+        ...item,
+        resolvedVendor: resolved[index],
+      }),
+    )
   }, [modelMetadataIndex, pricingContexts, pricingData, selectedSource])
 
   const availableGroups = useMemo(() => {
@@ -962,14 +1085,11 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         showRealPrice,
       })
 
-      if (selectedProvider === MODEL_PROVIDER_FILTER_VALUES.ALL) {
-        return baseModels
-      }
-
-      return baseModels.filter(
-        (item) =>
-          filterModelsByProvider([item.model], selectedProvider).length > 0,
+      const effectiveVendor = resolveEffectiveSelectedVendor(
+        selectedProvider,
+        deriveVendorCatalog(baseModels),
       )
+      return filterCalculatedModelsByVendor(baseModels, effectiveVendor)
     },
     [
       getAccountFilteredRawModels,
@@ -1046,17 +1166,25 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     ],
   )
 
+  const vendorCatalog = useMemo(
+    () => deriveVendorCatalog(baseFilteredModels),
+    [baseFilteredModels],
+  )
+  const effectiveSelectedVendor = useMemo(
+    () => resolveEffectiveSelectedVendor(selectedProvider, vendorCatalog),
+    [selectedProvider, vendorCatalog],
+  )
+  const shouldRepairSelectedVendor =
+    effectiveSelectedVendor !== selectedProvider
+
   const filteredModels = useMemo(() => {
-    const providerFilteredModels =
-      selectedProvider === MODEL_PROVIDER_FILTER_VALUES.ALL
-        ? baseFilteredModels
-        : baseFilteredModels.filter(
-            (item) =>
-              filterModelsByProvider([item.model], selectedProvider).length > 0,
-          )
+    const vendorFilteredModels = filterCalculatedModelsByVendor(
+      baseFilteredModels,
+      effectiveSelectedVendor,
+    )
 
     const priceKeys = new Map<string, ComparablePriceKey>()
-    providerFilteredModels.forEach((item) => {
+    vendorFilteredModels.forEach((item) => {
       if (!supportsPricingDerivedBehavior(item)) {
         if (isModelPriceUnavailable(item.model)) {
           priceKeys.set(
@@ -1077,7 +1205,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     if (selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
       const groups = new Map<string, CalculatedModelItem[]>()
 
-      providerFilteredModels.forEach((item) => {
+      vendorFilteredModels.forEach((item) => {
         const priceKey = priceKeys.get(getModelItemKey(item))
         if (!priceKey) {
           return
@@ -1133,7 +1261,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
     const direction = sortMode === MODEL_LIST_SORT_MODES.PRICE_DESC ? -1 : 1
 
-    const indexedItems = providerFilteredModels.map((item, index) => ({
+    const indexedItems = vendorFilteredModels.map((item, index) => ({
       item,
       index,
       itemKey: getModelItemKey(item),
@@ -1222,24 +1350,20 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     }))
   }, [
     baseFilteredModels,
-    selectedProvider,
+    effectiveSelectedVendor,
     selectedSource?.kind,
     showRealPrice,
     sortMode,
   ])
 
-  const getProviderFilteredCount = (provider: ProviderType) => {
-    return baseFilteredModels.filter(
-      (item) => filterModelsByProvider([item.model], provider).length > 0,
-    ).length
-  }
-
   return {
     filteredModels,
     accountSummaryCountsByAccountId,
     baseFilteredModels,
-    allProvidersFilteredCount: baseFilteredModels.length,
-    getProviderFilteredCount,
+    vendorCatalog,
+    effectiveSelectedVendor,
+    shouldRepairSelectedVendor,
+    allVendorsFilteredCount: baseFilteredModels.length,
     getFilteredModels,
     getFilteredResultCount,
     modelCapabilityMetadataCoverage,

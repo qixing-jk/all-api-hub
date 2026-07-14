@@ -11,6 +11,14 @@ import type {
   ResolvedModelVendor,
 } from "~/services/models/modelMetadata/types"
 
+export const MODEL_VENDOR_FILTER_VALUES = {
+  All: "filter:all",
+} as const
+
+export type ModelVendorFilterValue =
+  | ModelVendorCatalogEntry["key"]
+  | (typeof MODEL_VENDOR_FILTER_VALUES)[keyof typeof MODEL_VENDOR_FILTER_VALUES]
+
 type KnownVendor = {
   id: string
   label: string

@@ -133,8 +133,14 @@ vi.mock("~/features/ModelList/components/ProviderTabs", async () => {
   const { Tabs } = await import("~/components/ui")
 
   return {
-    ProviderTabs: ({ children }: { children: ReactNode }) => (
-      <Tabs value="all">
+    ProviderTabs: ({
+      children,
+      effectiveSelectedVendor,
+    }: {
+      children: ReactNode
+      effectiveSelectedVendor: string
+    }) => (
+      <Tabs value={effectiveSelectedVendor}>
         <div data-testid="provider-tabs">{children}</div>
       </Tabs>
     ),
@@ -278,8 +284,11 @@ function createModelListData() {
     setSelectedSourceValue: vi.fn(),
     searchTerm: "",
     setSearchTerm: vi.fn(),
-    selectedProvider: "all",
+    selectedProvider: "filter:all",
     setSelectedProvider: vi.fn(),
+    effectiveSelectedVendor: "filter:all",
+    shouldRepairSelectedVendor: false,
+    vendorCatalog: [],
     sortMode: "default",
     setSortMode: vi.fn(),
     selectedBillingMode: "all",
@@ -320,13 +329,12 @@ function createModelListData() {
     isAihubmixCatalogFallbackActive: false,
     filteredModels: [],
     accountSummaryCountsByAccountId: new Map(),
-    allProvidersFilteredCount: 1,
+    allVendorsFilteredCount: 1,
     getFilteredResultCount: vi.fn(() => 1),
     availableGroups: ["vip"],
     availableAccountGroupsByAccountId: {},
     availableAccountGroupOptionsByAccountId: {},
     loadPricingData: vi.fn(),
-    getProviderFilteredCount: vi.fn(() => 1),
     accountQueryStates: [],
     allAccountsFilterAccountIds: [],
     setAllAccountsFilterAccountIds: vi.fn(),

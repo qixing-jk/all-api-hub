@@ -221,6 +221,7 @@ const createCalculatedModel = (
     source: overrides.source ?? ACCOUNT_SOURCE,
     groupRatios: { default: 1, vip: 2 },
     effectiveGroup: overrides.effectiveGroup,
+    resolvedVendor: { state: "unknown" },
   }
 }
 
