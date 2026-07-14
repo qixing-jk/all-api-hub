@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import type { ModelVendorEvidence } from "~/services/models/modelDescriptor"
 
 export type PerCallPrice = number | { input: number; output: number }
 
@@ -6,6 +7,7 @@ export type PerCallPrice = number | { input: number; output: number }
 // payloads into this shape before Model List consumes it.
 export interface ModelPricing {
   model_name: string
+  vendorEvidence?: ModelVendorEvidence
   model_description?: string
   quota_type: number // 0 = token billing, 1 = per-call billing
   model_ratio: number
