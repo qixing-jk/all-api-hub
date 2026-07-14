@@ -188,7 +188,7 @@ describe("resolveSub2ApiKeyGroupForPriceEstimation", () => {
 
 describe("buildSub2ApiRuntimePricingResponse", () => {
   it("builds Sub2API runtime-key source metadata without pricing", () => {
-    const result = buildSub2ApiRuntimePricingResponse(["runtime-model"])
+    const result = buildSub2ApiRuntimePricingResponse([{ id: "runtime-model" }])
 
     expect(result.model_list_source).toEqual({
       kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
@@ -210,7 +210,7 @@ describe("buildSub2ApiRuntimePricingResponse", () => {
 describe("applySub2ApiPriceEstimates", () => {
   it("uses user-specific group rates before the default group rate", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-priced-model"],
+      models: [{ id: "example-priced-model" }],
       group: { groupId: "9", groupName: "vip", rate_multiplier: 1.5 },
       groupRates: { "9": 2 },
       priceTable,
@@ -234,7 +234,7 @@ describe("applySub2ApiPriceEstimates", () => {
 
   it("normalizes invalid and zero group rates before estimating prices", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-priced-model", "example-cache-model"],
+      models: [{ id: "example-priced-model" }, { id: "example-cache-model" }],
       group: { groupId: "9", groupName: "vip", rate_multiplier: 1.5 },
       groupRates: { "9": "invalid", "10": 0 } as any,
       priceTable,
@@ -254,7 +254,7 @@ describe("applySub2ApiPriceEstimates", () => {
 
   it("normalizes negative user-specific group rates before estimating prices", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-priced-model"],
+      models: [{ id: "example-priced-model" }],
       group: { groupId: "9", groupName: "vip", rate_multiplier: 1.5 },
       groupRates: { "9": -2 },
       priceTable,
@@ -268,7 +268,7 @@ describe("applySub2ApiPriceEstimates", () => {
 
   it("normalizes zero group rate multipliers before estimating prices", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-priced-model"],
+      models: [{ id: "example-priced-model" }],
       group: { groupId: "9", groupName: "vip", rate_multiplier: 0 },
       groupRates: {},
       priceTable,
@@ -282,7 +282,7 @@ describe("applySub2ApiPriceEstimates", () => {
 
   it("normalizes negative group rate multipliers before estimating prices", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-priced-model"],
+      models: [{ id: "example-priced-model" }],
       group: { groupId: "9", groupName: "vip", rate_multiplier: -1.5 },
       groupRates: {},
       priceTable,
@@ -296,7 +296,7 @@ describe("applySub2ApiPriceEstimates", () => {
 
   it("normalizes invalid group rate multipliers before estimating prices", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-priced-model"],
+      models: [{ id: "example-priced-model" }],
       group: {
         groupId: "9",
         groupName: "vip",
@@ -314,7 +314,7 @@ describe("applySub2ApiPriceEstimates", () => {
 
   it("keeps unmatched official prices visible as unavailable model rows", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-unpriced-model", "missing-from-table"],
+      models: [{ id: "example-unpriced-model" }, { id: "missing-from-table" }],
       group: { groupId: "9", groupName: "vip", rate_multiplier: 1.5 },
       groupRates: {},
       priceTable,
@@ -344,7 +344,10 @@ describe("applySub2ApiPriceEstimates", () => {
 
   it("treats partial official token price rows as unavailable", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-input-only-model", "example-output-only-model"],
+      models: [
+        { id: "example-input-only-model" },
+        { id: "example-output-only-model" },
+      ],
       group: { groupId: "9", groupName: "vip", rate_multiplier: 1.5 },
       groupRates: {},
       priceTable,
@@ -376,7 +379,7 @@ describe("applySub2ApiPriceEstimates", () => {
 
   it("applies cache read and cache write estimates when official prices include them", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-cache-model"],
+      models: [{ id: "example-cache-model" }],
       group: { groupId: "9", groupName: "vip", rate_multiplier: 1.5 },
       groupRates: {},
       priceTable,
@@ -392,7 +395,7 @@ describe("applySub2ApiPriceEstimates", () => {
 
   it("disables estimation when the selected key group is unknown", () => {
     const result = applySub2ApiPriceEstimates({
-      modelIds: ["example-priced-model"],
+      models: [{ id: "example-priced-model" }],
       group: null,
       groupRates: {},
       priceTable,

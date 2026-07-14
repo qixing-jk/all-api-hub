@@ -62,5 +62,7 @@ export const normalizeApiCredentialModelIds = normalizeModelListModelIds
 export function buildApiCredentialProfilePricingResponse(
   modelIds: string[],
 ): PricingResponse {
-  return buildModelListCatalogPricingResponse({ modelIds })
+  return buildModelListCatalogPricingResponse({
+    models: modelIds.map((id) => ({ id })),
+  })
 }

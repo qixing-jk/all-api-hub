@@ -29,6 +29,7 @@ import {
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { buildModelListCatalogPricingResponse } from "~/services/modelList/pricingResponse"
+import type { ModelDescriptor } from "~/services/models/modelDescriptor"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   isAbortError,
@@ -93,11 +94,11 @@ const createRuntimeCatalogRequest = (
 
 const buildRuntimeModelCatalogPricingResponse = (
   account: LoadAccountRuntimeKeyFallbackPricingParams["account"],
-  modelIds: string[],
+  models: readonly ModelDescriptor[],
   unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
 ): PricingResponse =>
   buildModelListCatalogPricingResponse({
-    modelIds,
+    models,
     unavailableReason,
     source: {
       kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
@@ -175,7 +176,7 @@ export async function loadAccountRuntimeKeyFallbackPricingResponse(
       readiness.route ===
       MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
     ) {
-      const runtimeModelIds = await readiness.modelCatalog.fetchModels(
+      const runtimeModels = await readiness.modelCatalog.fetchModels(
         createRuntimeCatalogRequest(
           params.account,
           resolvedRuntimeKey,
@@ -189,7 +190,7 @@ export async function loadAccountRuntimeKeyFallbackPricingResponse(
         ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api
       ) {
         const modelOnlyResponse =
-          buildSub2ApiRuntimePricingResponse(runtimeModelIds)
+          buildSub2ApiRuntimePricingResponse(runtimeModels)
 
         if (!isAccountTokenRuntimeKey(resolvedRuntimeKey)) {
           return modelOnlyResponse
@@ -199,15 +200,14 @@ export async function loadAccountRuntimeKeyFallbackPricingResponse(
           account: params.account,
           selectedToken: resolvedRuntimeKey.token,
           resolvedKey: resolvedRuntimeKey.secret,
-          runtimeModelIds,
-          fallbackResponse: modelOnlyResponse,
+          runtimeModels,
           abortSignal: params.abortSignal,
         })
       }
 
       return buildRuntimeModelCatalogPricingResponse(
         params.account,
-        runtimeModelIds,
+        runtimeModels,
       )
     }
 

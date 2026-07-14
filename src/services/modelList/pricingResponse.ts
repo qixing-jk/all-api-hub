@@ -6,9 +6,13 @@ import {
   type ModelPricing,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import {
+  normalizeModelDescriptors,
+  type ModelDescriptor,
+} from "~/services/models/modelDescriptor"
 
 interface BuildModelListCatalogPricingResponseParams {
-  modelIds: unknown[]
+  models: readonly ModelDescriptor[]
   unavailableReason?: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS]
   source?: PricingResponse["model_list_source"]
 }
@@ -29,14 +33,17 @@ export function normalizeModelListModelIds(modelIds: unknown[]): string[] {
 }
 
 /**
- * Convert a raw model id into the minimal pricing-model shape used by Model List.
+ * Convert a model descriptor into the minimal pricing-model shape used by Model List.
  */
 function createModelListCatalogModel(
-  modelId: string,
+  model: ModelDescriptor,
   unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
 ): ModelPricing {
   return {
-    model_name: modelId,
+    model_name: model.id,
+    ...(model.vendorEvidence === undefined
+      ? {}
+      : { vendorEvidence: model.vendorEvidence }),
     quota_type: 0,
     model_ratio: 0,
     model_price: 0,
@@ -55,7 +62,7 @@ function createModelListCatalogModel(
  * Build a minimal Model-List-compatible response for catalog-only sources.
  */
 export function buildModelListCatalogPricingResponse({
-  modelIds,
+  models,
   unavailableReason = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
   source = {
     kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
@@ -63,8 +70,8 @@ export function buildModelListCatalogPricingResponse({
   },
 }: BuildModelListCatalogPricingResponseParams): PricingResponse {
   return {
-    data: normalizeModelListModelIds(modelIds).map((modelId) =>
-      createModelListCatalogModel(modelId, unavailableReason),
+    data: normalizeModelDescriptors(models).map((model) =>
+      createModelListCatalogModel(model, unavailableReason),
     ),
     group_ratio: {},
     model_list_source: source,
