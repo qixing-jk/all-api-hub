@@ -101,6 +101,9 @@ export default function DelAccountDialog({
       })}
       cancelLabel={t("common:actions.cancel")}
       confirmLabel={t("ui:dialog.delete.confirmDelete")}
+      workingLabel={t("ui:dialog.delete.deleting", {
+        name: account?.name ?? "",
+      })}
       onConfirm={() => {
         void handleDelete()
       }}

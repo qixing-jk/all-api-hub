@@ -48,11 +48,12 @@ export function RepairMissingKeysSetupCard({
         <Button
           type="button"
           onClick={onStartRepair}
-          disabled={isStarting}
           loading={isStarting}
           className="w-full sm:w-auto"
         >
-          {t("keyManagement:repairMissingKeys.actions.start")}
+          {isStarting
+            ? t("common:status.starting")
+            : t("keyManagement:repairMissingKeys.actions.start")}
         </Button>
       </CardFooter>
     </Card>

@@ -2127,6 +2127,7 @@ export default function ManagedSiteChannels({
         description={t("dialog.deleteDescription")}
         cancelLabel={t("dialog.cancel")}
         confirmLabel={t("dialog.confirm")}
+        workingLabel={t("common:status.deleting")}
         confirmButtonTestId={
           MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton
         }

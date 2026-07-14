@@ -844,10 +844,11 @@ export default function ManagedSiteModelSyncSettings() {
             </Button>
             <Button
               onClick={handleSaveGlobalChannelModelFilters}
-              disabled={isSavingGlobalChannelModelFilters}
               loading={isSavingGlobalChannelModelFilters}
             >
-              {t("managedSiteChannels:filters.actions.save")}
+              {isSavingGlobalChannelModelFilters
+                ? t("common:status.saving")
+                : t("managedSiteChannels:filters.actions.save")}
             </Button>
           </div>
         }

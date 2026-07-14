@@ -412,14 +412,15 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                     }}
                     disabled={
                       !canCreateToken ||
-                      isCreating ||
                       (requiresCreateGroupSelection && !createGroup)
                     }
                     loading={isCreating}
                     variant="default"
                     leftIcon={<PlusIcon className="h-4 w-4" />}
                   >
-                    {t("modelList:keyDialog.createKey")}
+                    {isCreating
+                      ? t("common:status.creating")
+                      : t("modelList:keyDialog.createKey")}
                   </Button>
 
                   <Button

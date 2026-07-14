@@ -1018,7 +1018,6 @@ export default function WebDAVSettings() {
               <Button
                 id={WEBDAV_TARGET_IDS.saveConfig}
                 onClick={handleSaveConfig}
-                disabled={saving}
                 loading={saving}
                 variant="default"
                 size="sm"
@@ -1031,7 +1030,7 @@ export default function WebDAVSettings() {
               <Button
                 id={WEBDAV_TARGET_IDS.testConnection}
                 onClick={handleTestConnection}
-                disabled={testing || !webdavConfigFilled}
+                disabled={!webdavConfigFilled}
                 loading={testing}
                 variant="secondary"
                 size="sm"
@@ -1051,7 +1050,7 @@ export default function WebDAVSettings() {
                 id={WEBDAV_TARGET_IDS.uploadBackup}
                 data-testid={IMPORT_EXPORT_TEST_IDS.webdavUploadBackupButton}
                 onClick={handleUploadBackup}
-                disabled={uploading || !webdavConfigFilled}
+                disabled={!webdavConfigFilled}
                 loading={uploading}
                 variant="success"
                 size="sm"
@@ -1071,7 +1070,7 @@ export default function WebDAVSettings() {
                 id={WEBDAV_TARGET_IDS.downloadImport}
                 data-testid={IMPORT_EXPORT_TEST_IDS.webdavDownloadImportButton}
                 onClick={handleDownloadAndImport}
-                disabled={downloading || !webdavConfigFilled}
+                disabled={!webdavConfigFilled}
                 loading={downloading}
                 variant="default"
                 size="sm"
@@ -1122,9 +1121,12 @@ export default function WebDAVSettings() {
               size="sm"
               onClick={handleConfirmRebuildBackup}
               loading={uploading || rebuildPending}
-              disabled={uploading || rebuildPending}
             >
-              {t("webdav.rebuildDialog.confirm")}
+              {uploading
+                ? t("common:status.uploading")
+                : rebuildPending
+                  ? t("common:status.processing")
+                  : t("webdav.rebuildDialog.confirm")}
             </Button>
           </div>
         }

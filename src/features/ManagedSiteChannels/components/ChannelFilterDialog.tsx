@@ -404,8 +404,8 @@ export default function ChannelFilterDialog({
           >
             {t("filters.actions.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={isSaving} loading={isSaving}>
-            {t("filters.actions.save")}
+          <Button onClick={handleSave} loading={isSaving}>
+            {isSaving ? t("common:status.saving") : t("filters.actions.save")}
           </Button>
         </div>
       }

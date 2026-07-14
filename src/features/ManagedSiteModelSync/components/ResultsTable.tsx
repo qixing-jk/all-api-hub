@@ -201,6 +201,7 @@ export default function ResultsTable({
                       onClick={() => onRunSingle(item.channelId)}
                       disabled={isRunning}
                       loading={isRunningThis}
+                      aria-label={t("execution.table.syncChannel")}
                       title={t("execution.table.syncChannel")}
                     >
                       {!isRunningThis && <ArrowPathIcon className="h-4 w-4" />}

@@ -147,11 +147,12 @@ export function RepairAccountCoverageList({
                       size="sm"
                       variant="outline"
                       onClick={() => onOpenSub2ApiTokenDialog(result.accountId)}
-                      disabled={openingSub2ApiAccountId === result.accountId}
                       loading={openingSub2ApiAccountId === result.accountId}
                       className="w-full sm:w-auto"
                     >
-                      {t("keyManagement:dialog.createToken")}
+                      {openingSub2ApiAccountId === result.accountId
+                        ? t("common:status.opening")
+                        : t("keyManagement:dialog.createToken")}
                     </Button>
                   ) : null}
                 </div>

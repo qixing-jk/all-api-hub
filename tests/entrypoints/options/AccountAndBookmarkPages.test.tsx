@@ -455,10 +455,10 @@ describe("options AccountManagement page", () => {
     render(<AccountManagement />)
 
     const globalRefreshButton = await screen.findByRole("button", {
-      name: /common:actions\.refresh/,
+      name: "account:refresh.refreshingAll",
     })
     const disabledRefreshButton = await screen.findByRole("button", {
-      name: /account:actions\.refreshDisabledAccounts/,
+      name: "account:actions.refreshDisabledAccounts",
     })
 
     expect(globalRefreshButton).toBeDisabled()

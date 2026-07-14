@@ -1,6 +1,7 @@
-import { render, screen, within } from "@testing-library/react"
+import { render as rtlRender, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/features/ModelList/ModelList"
@@ -9,6 +10,7 @@ import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { mockUseModelListData, openKeysPageMock, replaceWithinOptionsPageMock } =
   vi.hoisted(() => ({
@@ -16,17 +18,6 @@ const { mockUseModelListData, openKeysPageMock, replaceWithinOptionsPageMock } =
     openKeysPageMock: vi.fn(),
     replaceWithinOptionsPageMock: vi.fn(),
   }))
-
-vi.mock("react-i18next", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-i18next")>()
-
-  return {
-    ...actual,
-    useTranslation: () => ({
-      t: (key: string) => key,
-    }),
-  }
-})
 
 vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: (...args: unknown[]) => mockUseModelListData(...args),
@@ -221,6 +212,14 @@ vi.mock("~/features/ModelList/components/ModelKeyDialog", () => ({
     </div>
   ),
 }))
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>
+    ),
+  })
+}
 
 const ACCOUNT = {
   id: "account-1",

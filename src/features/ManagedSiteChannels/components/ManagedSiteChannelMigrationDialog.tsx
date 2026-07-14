@@ -958,6 +958,7 @@ export function ManagedSiteChannelMigrationDialog({
         warningTitle={t("managedSiteChannels:migration.confirm.warningTitle")}
         cancelLabel={t("managedSiteChannels:migration.actions.cancel")}
         confirmLabel={t("managedSiteChannels:migration.confirm.confirm")}
+        workingLabel={t("managedSiteChannels:migration.actions.running")}
         onConfirm={() => {
           void handleConfirm()
         }}

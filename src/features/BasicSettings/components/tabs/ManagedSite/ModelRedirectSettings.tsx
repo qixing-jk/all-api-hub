@@ -200,7 +200,6 @@ export default function ModelRedirectSettings() {
                 <Button
                   id="managed-site-model-redirect-regenerate"
                   type="button"
-                  disabled={isRegenerating}
                   loading={isRegenerating}
                   onClick={handleRegenerateMapping}
                   variant="default"

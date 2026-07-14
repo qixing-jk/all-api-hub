@@ -555,6 +555,7 @@ export function TagPicker({
         })}
         cancelLabel={t("form.tagsDeleteCancel")}
         confirmLabel={t("form.tagsDeleteConfirm")}
+        workingLabel={t("common:status.deleting")}
         onConfirm={() => {
           void confirmDelete()
         }}

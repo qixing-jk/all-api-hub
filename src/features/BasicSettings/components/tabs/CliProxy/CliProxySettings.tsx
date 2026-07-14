@@ -183,7 +183,9 @@ export default function CliProxySettings() {
                     await runConnectionCheckWithToast()
                   }}
                 >
-                  {t("cliProxy.checkConnectionAction")}
+                  {isCheckingConnection
+                    ? t("common:status.checking")
+                    : t("cliProxy.checkConnectionAction")}
                 </Button>
                 <Link
                   href={CLI_PROXY_MANAGEMENT_DOC_URL}

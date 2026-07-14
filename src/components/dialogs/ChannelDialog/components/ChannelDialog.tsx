@@ -459,6 +459,14 @@ export function ChannelDialog({
     </div>
   )
 
+  const submitButtonLabel = isSaving
+    ? isAddMode
+      ? t("common:status.creating")
+      : t("common:status.updating")
+    : isAddMode
+      ? t("channelDialog:actions.create")
+      : t("channelDialog:actions.update")
+
   const footer = (
     <div className="flex justify-end gap-3">
       <Button
@@ -477,9 +485,7 @@ export function ChannelDialog({
           type="submit"
           data-testid={CHANNEL_DIALOG_TEST_IDS.submitButton}
         >
-          {isAddMode
-            ? t("channelDialog:actions.create")
-            : t("channelDialog:actions.update")}
+          {submitButtonLabel}
         </Button>
       )}
     </div>

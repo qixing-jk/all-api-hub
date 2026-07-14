@@ -43,10 +43,12 @@ export default function PermissionSettings() {
           variant="outline"
           size="sm"
           onClick={() => void loadStatuses()}
-          disabled={isRefreshing || isLoading}
+          disabled={isLoading}
           loading={isRefreshing}
         >
-          {t("permissions.actions.refresh")}
+          {isRefreshing
+            ? t("common:status.refreshing")
+            : t("permissions.actions.refresh")}
         </Button>
       </div>
 
@@ -67,12 +69,14 @@ export default function PermissionSettings() {
                     onClick={() =>
                       void handleToggle(permission.id, !permission.granted)
                     }
-                    disabled={permission.pending || permission.granted === null}
+                    disabled={permission.granted === null}
                     loading={permission.pending}
                   >
-                    {permission.granted
-                      ? t("permissions.actions.remove")
-                      : t("permissions.actions.allow")}
+                    {permission.pending
+                      ? t("common:status.applying")
+                      : permission.granted
+                        ? t("permissions.actions.remove")
+                        : t("permissions.actions.allow")}
                   </Button>
                 </div>
               ),

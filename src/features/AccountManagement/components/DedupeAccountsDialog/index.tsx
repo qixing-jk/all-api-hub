@@ -308,6 +308,7 @@ export default function DedupeAccountsDialog({
         })}
         cancelLabel={t("common:actions.cancel")}
         confirmLabel={t("ui:dialog.dedupeAccounts.confirm.confirmDelete")}
+        workingLabel={t("ui:dialog.dedupeAccounts.deleting")}
         onConfirm={() => void handleConfirmDelete()}
         isWorking={isWorking}
         size="lg"

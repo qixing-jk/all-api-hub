@@ -121,6 +121,7 @@ export function ManagedSiteTokenBatchExportDialog({
           },
         )}
         confirmLabel={t("keyManagement:batchManagedSiteExport.actions.start")}
+        workingLabel={t("keyManagement:batchManagedSiteExport.actions.running")}
         cancelLabel={t("common:actions.cancel")}
         isWorking={dialog.isRunning}
       />

@@ -393,10 +393,12 @@ export function NewApiManagedVerificationDialog(
                 <div className="flex flex-wrap justify-center gap-2 pt-1">
                   <Button
                     onClick={() => void handleSaveQuickConfig()}
-                    disabled={props.isBusy || isSavingQuickConfig}
+                    disabled={props.isBusy}
                     loading={isSavingQuickConfig}
                   >
-                    {t("dialog.actions.saveAndRetry")}
+                    {isSavingQuickConfig
+                      ? t("common:status.saving")
+                      : t("dialog.actions.saveAndRetry")}
                   </Button>
                 </div>
               </div>

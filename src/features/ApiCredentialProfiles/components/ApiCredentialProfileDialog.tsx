@@ -443,10 +443,9 @@ export function ApiCredentialProfileDialog({
             <Button
               onClick={handleSave}
               loading={isSaving}
-              disabled={isSaving}
               data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.dialogSaveButton}
             >
-              {t("common:actions.save")}
+              {isSaving ? t("common:status.saving") : t("common:actions.save")}
             </Button>
           </div>
         }

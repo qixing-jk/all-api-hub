@@ -124,9 +124,12 @@ describe("RepairMissingKeysProgressCard", () => {
 
     expect(
       screen.getByRole("button", {
-        name: /keyManagement:repairMissingKeys\.actions\.rerun/,
+        name: "common:status.starting",
       }),
     ).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "common:status.starting" }),
+    ).toHaveAttribute("aria-busy", "true")
   })
 
   it("shows a cancel action while running", async () => {

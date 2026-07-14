@@ -37,27 +37,31 @@ describe("Button", () => {
   })
 
   it("keeps caller pending content and exposes the loading state", async () => {
-    render(
+    const { container } = render(
       <Button
         loading
         aria-busy={false}
         leftIcon={<span data-testid="left-icon" />}
+        spinnerProps={{
+          "aria-hidden": false,
+          id: "button-spinner",
+        }}
       >
         Saving changes
       </Button>,
     )
 
     const button = await screen.findByRole("button", {
-      name: /Saving changes/,
+      name: "Saving changes",
     })
+    const spinner = container.querySelector("#button-spinner")
 
     expect(button).toHaveTextContent("Saving changes")
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute("aria-busy", "true")
     expect(screen.queryByTestId("left-icon")).not.toBeInTheDocument()
-    expect(
-      screen.getAllByRole("status", { name: "common:status.loading" }),
-    ).toHaveLength(1)
+    expect(spinner).toHaveAttribute("aria-hidden", "true")
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
   })
 
   it("locks a loading slotted link and exposes its busy state", async () => {
@@ -73,7 +77,7 @@ describe("Button", () => {
     )
 
     const anchor = await screen.findByRole("link", {
-      name: /Saving changes/,
+      name: "Saving changes",
     })
 
     expect(anchor.tagName).toBe("A")
@@ -123,15 +127,21 @@ describe("Button", () => {
     )
   })
 
-  it("renders Spinner when loading without leftIcon", async () => {
-    render(<Button loading>Save</Button>)
+  it("renders a visual Spinner when loading without leftIcon", async () => {
+    const { container } = render(
+      <Button loading spinnerProps={{ id: "button-spinner" }}>
+        Save
+      </Button>,
+    )
 
     expect(
-      await screen.findByRole("button", { name: /Save/ }),
+      await screen.findByRole("button", { name: "Save" }),
     ).toBeInTheDocument()
-    expect(
-      screen.getAllByRole("status", { name: "common:status.loading" }),
-    ).toHaveLength(1)
+    expect(container.querySelector("#button-spinner")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    )
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
   })
 
   it("disables user interaction while loading", async () => {
@@ -143,7 +153,7 @@ describe("Button", () => {
       </Button>,
     )
 
-    const button = await screen.findByRole("button", { name: /Save/ })
+    const button = await screen.findByRole("button", { name: "Save" })
     expect(button).toBeDisabled()
 
     fireEvent.click(button)

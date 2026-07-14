@@ -166,7 +166,9 @@ export function StatusIndicator({
                   )
                 }
               >
-                {t("status.fallback.reloadKeys")}
+                {accountFallback.isLoadingRuntimeKeys
+                  ? t("status.fallback.loadingKeys")
+                  : t("status.fallback.reloadKeys")}
               </Button>
             </div>
           </Alert>
@@ -200,7 +202,9 @@ export function StatusIndicator({
                   )
                 }
               >
-                {t("status.fallback.reloadKeys")}
+                {accountFallback.isLoadingRuntimeKeys
+                  ? t("status.fallback.loadingKeys")
+                  : t("status.fallback.reloadKeys")}
               </Button>
             </div>
           </Alert>
@@ -269,9 +273,11 @@ export function StatusIndicator({
                 loading={accountFallback.isLoadingCatalog}
                 disabled={!canLoadWithSelectedKey}
               >
-                {accountFallback.catalogLoadErrorMessage
-                  ? t("status.fallback.retryLoadWithKey")
-                  : t("status.fallback.loadWithKey")}
+                {accountFallback.isLoadingCatalog
+                  ? t("status.loading")
+                  : accountFallback.catalogLoadErrorMessage
+                    ? t("status.fallback.retryLoadWithKey")
+                    : t("status.fallback.loadWithKey")}
               </Button>
               <Button
                 variant="secondary"
@@ -284,7 +290,9 @@ export function StatusIndicator({
                   )
                 }
               >
-                {t("status.fallback.reloadKeys")}
+                {accountFallback.isLoadingRuntimeKeys
+                  ? t("status.fallback.loadingKeys")
+                  : t("status.fallback.reloadKeys")}
               </Button>
             </div>
           </div>

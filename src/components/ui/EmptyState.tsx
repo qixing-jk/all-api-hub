@@ -6,6 +6,7 @@ import { Button } from "./button"
 
 export type EmptyStateAction = {
   label: string
+  loadingLabel?: string
   onClick: () => void
   variant?: React.ComponentProps<typeof Button>["variant"]
   leftIcon?: React.ReactNode
@@ -27,6 +28,24 @@ export interface EmptyStateProps {
   variant?: "default" | "destructive"
   className?: string
   descriptionClassName?: string
+}
+
+/** Renders an empty-state action with shared loading, icon, and analytics semantics. */
+function EmptyStateActionButton({ action }: { action: EmptyStateAction }) {
+  return (
+    <Button
+      variant={action.variant || "default"}
+      onClick={action.onClick}
+      leftIcon={action.leftIcon ?? action.icon}
+      rightIcon={action.rightIcon}
+      disabled={action.disabled}
+      loading={action.loading}
+      data-testid={action.testId}
+      analyticsAction={action.analyticsAction}
+    >
+      {action.loading ? action.loadingLabel ?? action.label : action.label}
+    </Button>
+  )
 }
 
 export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
@@ -85,34 +104,14 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
           </p>
         )}
         {resolvedActions.length === 1 ? (
-          <Button
-            variant={resolvedActions[0].variant || "default"}
-            onClick={resolvedActions[0].onClick}
-            leftIcon={resolvedActions[0].leftIcon ?? resolvedActions[0].icon}
-            rightIcon={resolvedActions[0].rightIcon}
-            disabled={resolvedActions[0].disabled}
-            loading={resolvedActions[0].loading}
-            data-testid={resolvedActions[0].testId}
-            analyticsAction={resolvedActions[0].analyticsAction}
-          >
-            {resolvedActions[0].label}
-          </Button>
+          <EmptyStateActionButton action={resolvedActions[0]} />
         ) : resolvedActions.length > 1 ? (
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
             {resolvedActions.map((resolvedAction, index) => (
-              <Button
+              <EmptyStateActionButton
                 key={`${resolvedAction.label}-${index}`}
-                variant={resolvedAction.variant || "default"}
-                onClick={resolvedAction.onClick}
-                leftIcon={resolvedAction.leftIcon ?? resolvedAction.icon}
-                rightIcon={resolvedAction.rightIcon}
-                disabled={resolvedAction.disabled}
-                loading={resolvedAction.loading}
-                data-testid={resolvedAction.testId}
-                analyticsAction={resolvedAction.analyticsAction}
-              >
-                {resolvedAction.label}
-              </Button>
+                action={resolvedAction}
+              />
             ))}
           </div>
         ) : null}

@@ -671,7 +671,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     fireEvent.click(repairButton)
     const pendingStartButton = screen.getByRole("button", {
-      name: /keyManagement:repairMissingKeys\.actions\.start/,
+      name: "common:status.starting",
     })
     expect(pendingStartButton).toBeDisabled()
     fireEvent.click(pendingStartButton)

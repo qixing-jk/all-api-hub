@@ -114,7 +114,9 @@ export default function ActionBar({
             loading={isRefreshing}
             leftIcon={<ArrowPathIcon className="h-4 w-4" />}
           >
-            {t("execution.refresh")}
+            {isRefreshing
+              ? t("common:status.refreshing")
+              : t("execution.refresh")}
           </Button>
           <Button
             onClick={onOpenFailedManualSignIns}
@@ -128,7 +130,9 @@ export default function ActionBar({
             leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
             title={bulkManualHint}
           >
-            {t("execution.actions.openFailedManual")}
+            {isOpeningFailedManualSignIns
+              ? t("common:status.opening")
+              : t("execution.actions.openFailedManual")}
           </Button>
           {canOpenExternalCheckIns && onOpenExternalCheckIns ? (
             <Button
@@ -139,7 +143,9 @@ export default function ActionBar({
               leftIcon={<CalendarDaysIcon className="h-4 w-4" />}
               title={externalCheckInHint}
             >
-              {t("execution.actions.openExternal")}
+              {isOpeningExternalCheckIns
+                ? t("common:status.opening")
+                : t("execution.actions.openExternal")}
             </Button>
           ) : null}
           {showDebugButtons && (

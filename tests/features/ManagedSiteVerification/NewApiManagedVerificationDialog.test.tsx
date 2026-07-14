@@ -1,16 +1,17 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render as rtlRender, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { useState, type ComponentProps, type ReactNode } from "react"
+import {
+  useState,
+  type ComponentProps,
+  type ReactElement,
+  type ReactNode,
+} from "react"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { NEW_API_MANAGED_VERIFICATION_STEPS } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}))
+import { testI18n } from "~~/tests/test-utils/i18n"
 
 const updateNewApiBaseUrlMock = vi.fn()
 const updateNewApiUsernameMock = vi.fn()
@@ -149,6 +150,14 @@ const createProps = (
   ...overrides,
 })
 
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>
+    ),
+  })
+}
+
 describe("NewApiManagedVerificationDialog", () => {
   beforeEach(() => {
     document.elementFromPoint ??= (() =>
@@ -168,7 +177,9 @@ describe("NewApiManagedVerificationDialog", () => {
     render(<NewApiManagedVerificationDialog {...createProps()} />)
 
     expect(
-      screen.getByText("dialog.hints.openSettingsShortcut"),
+      screen.getByText(
+        "newApiManagedVerification:dialog.hints.openSettingsShortcut",
+      ),
     ).toBeInTheDocument()
     expect(
       screen.getByLabelText("settings:newApi.fields.usernameLabel"),
@@ -194,7 +205,7 @@ describe("NewApiManagedVerificationDialog", () => {
     )
     await user.click(
       screen.getByRole("button", {
-        name: "dialog.actions.saveAndRetry",
+        name: "newApiManagedVerification:dialog.actions.saveAndRetry",
       }),
     )
 
@@ -224,13 +235,15 @@ describe("NewApiManagedVerificationDialog", () => {
     )
     await user.click(
       screen.getByRole("button", {
-        name: "dialog.actions.saveAndRetry",
+        name: "newApiManagedVerification:dialog.actions.saveAndRetry",
       }),
     )
 
     expect(updateNewApiUsernameMock).toHaveBeenCalledWith("admin")
     expect(
-      await screen.findByText("dialog.messages.quickConfigSaveFailed"),
+      await screen.findByText(
+        "newApiManagedVerification:dialog.messages.quickConfigSaveFailed",
+      ),
     ).toBeInTheDocument()
     expect(updateNewApiPasswordMock).not.toHaveBeenCalled()
     expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
@@ -263,7 +276,7 @@ describe("NewApiManagedVerificationDialog", () => {
     )
     await user.click(
       screen.getByRole("button", {
-        name: "dialog.actions.saveAndRetry",
+        name: "newApiManagedVerification:dialog.actions.saveAndRetry",
       }),
     )
 
@@ -271,7 +284,9 @@ describe("NewApiManagedVerificationDialog", () => {
       "https://changed.example",
     )
     expect(
-      await screen.findByText("dialog.messages.quickConfigSaveFailed"),
+      await screen.findByText(
+        "newApiManagedVerification:dialog.messages.quickConfigSaveFailed",
+      ),
     ).toBeInTheDocument()
     expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
     expect(props.onRetry).not.toHaveBeenCalled()
@@ -294,14 +309,16 @@ describe("NewApiManagedVerificationDialog", () => {
     )
     await user.click(
       screen.getByRole("button", {
-        name: "dialog.actions.saveAndRetry",
+        name: "newApiManagedVerification:dialog.actions.saveAndRetry",
       }),
     )
 
     expect(updateNewApiUsernameMock).toHaveBeenCalledWith("admin")
     expect(updateNewApiPasswordMock).toHaveBeenCalledWith("secret")
     expect(
-      await screen.findByText("dialog.messages.quickConfigSaveFailed"),
+      await screen.findByText(
+        "newApiManagedVerification:dialog.messages.quickConfigSaveFailed",
+      ),
     ).toBeInTheDocument()
     expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
     expect(props.onRetry).not.toHaveBeenCalled()
@@ -332,7 +349,7 @@ describe("NewApiManagedVerificationDialog", () => {
     ).toHaveValue("secret")
     await user.click(
       screen.getByRole("button", {
-        name: "dialog.actions.saveAndRetry",
+        name: "newApiManagedVerification:dialog.actions.saveAndRetry",
       }),
     )
 
@@ -368,7 +385,7 @@ describe("NewApiManagedVerificationDialog", () => {
     ).toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
-        name: "dialog.actions.retry",
+        name: "newApiManagedVerification:dialog.actions.retry",
       }),
     ).toBeNull()
   })
@@ -399,7 +416,7 @@ describe("NewApiManagedVerificationDialog", () => {
     )
     await user.click(
       screen.getByRole("button", {
-        name: "dialog.actions.saveAndRetry",
+        name: "newApiManagedVerification:dialog.actions.saveAndRetry",
       }),
     )
 
@@ -421,7 +438,7 @@ describe("NewApiManagedVerificationDialog", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "dialog.actions.saveAndRetry",
+        name: "newApiManagedVerification:dialog.actions.saveAndRetry",
       }),
     ).toBeNull()
   })
@@ -435,7 +452,11 @@ describe("NewApiManagedVerificationDialog", () => {
       />,
     )
 
-    expect(screen.getByLabelText("dialog.fields.codeLabel")).toBeInTheDocument()
+    expect(
+      screen.getByLabelText(
+        "newApiManagedVerification:dialog.fields.codeLabel",
+      ),
+    ).toBeInTheDocument()
     expect(
       container.querySelectorAll('[data-slot="input-otp-slot"]'),
     ).toHaveLength(6)
@@ -466,11 +487,16 @@ describe("NewApiManagedVerificationDialog", () => {
 
     render(<ControlledDialog />)
 
-    fireEvent.change(screen.getByLabelText("dialog.fields.codeLabel"), {
-      target: {
-        value: "12a3 4-567",
+    fireEvent.change(
+      screen.getByLabelText(
+        "newApiManagedVerification:dialog.fields.codeLabel",
+      ),
+      {
+        target: {
+          value: "12a3 4-567",
+        },
       },
-    })
+    )
 
     expect(onCodeChange).toHaveBeenLastCalledWith("123456")
   })
@@ -487,7 +513,7 @@ describe("NewApiManagedVerificationDialog", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "dialog.actions.submitVerificationCode",
+        name: "newApiManagedVerification:dialog.actions.submitVerificationCode",
       }),
     ).toBeDisabled()
 
@@ -502,7 +528,7 @@ describe("NewApiManagedVerificationDialog", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "dialog.actions.submitVerificationCode",
+        name: "newApiManagedVerification:dialog.actions.submitVerificationCode",
       }),
     ).toBeEnabled()
   })

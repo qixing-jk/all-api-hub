@@ -293,7 +293,9 @@ export function ReleaseUpdateStatusPanel() {
                   RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.checkNowButton
                 }
               >
-                {t("settings:releaseUpdate.checkNow")}
+                {isChecking
+                  ? t("common:status.checking")
+                  : t("settings:releaseUpdate.checkNow")}
               </Button>
               {isStoreUpdateReady ? (
                 <Button

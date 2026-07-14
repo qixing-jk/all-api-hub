@@ -184,7 +184,10 @@ describe("RepairAccountCoverageList", () => {
     })
 
     expect(
-      screen.getByText("keyManagement:dialog.createToken").closest("button"),
+      screen.getByRole("button", { name: "common:status.opening" }),
     ).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "common:status.opening" }),
+    ).toHaveAttribute("aria-busy", "true")
   })
 })

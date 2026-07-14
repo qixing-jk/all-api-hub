@@ -69,6 +69,7 @@ export function RepairInvalidKeysDeleteConfirm({
         "keyManagement:repairMissingKeys.deleteConfirm.description",
       )}
       confirmLabel={t("keyManagement:repairMissingKeys.deleteConfirm.confirm")}
+      workingLabel={t("common:status.deleting")}
       cancelLabel={t("common:actions.cancel")}
       details={details}
       isWorking={isWorking}

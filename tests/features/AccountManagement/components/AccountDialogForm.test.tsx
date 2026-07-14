@@ -593,7 +593,7 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onImportSub2apiSession).not.toHaveBeenCalled()
     expect(
       screen.getByRole("button", {
-        name: /accountDialog:form\.sub2apiImportRefreshToken/i,
+        name: "common:status.importing",
       }),
     ).toBeDisabled()
   })

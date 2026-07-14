@@ -366,17 +366,22 @@ describe("ManagedSiteModelSync components", () => {
     const firstRowCheckbox = within(alphaRow).getByRole("checkbox", {
       name: "managedSiteModelSync:execution.table.selectChannel",
     }) as HTMLInputElement
+    const runningRetryButton = within(alphaRow).getByRole("button", {
+      name: "managedSiteModelSync:execution.table.syncChannel",
+    })
+    const betaRow = screen.getByRole("row", { name: /Beta#12/ })
+    const idleRetryButton = within(betaRow).getByRole("button", {
+      name: "managedSiteModelSync:execution.table.syncChannel",
+    })
 
     expect(selectAllCheckbox).not.toBeChecked()
     expect(selectAllCheckbox.indeterminate).toBe(true)
+    expect(runningRetryButton).toHaveAttribute("aria-busy", "true")
+    expect(idleRetryButton).not.toHaveAttribute("aria-busy", "true")
 
     fireEvent.click(selectAllCheckbox)
     fireEvent.click(firstRowCheckbox)
-    fireEvent.click(
-      screen.getAllByTitle(
-        "managedSiteModelSync:execution.table.syncChannel",
-      )[1],
-    )
+    fireEvent.click(idleRetryButton)
 
     expect(
       screen.getByText("managedSiteModelSync:execution.status.failed"),

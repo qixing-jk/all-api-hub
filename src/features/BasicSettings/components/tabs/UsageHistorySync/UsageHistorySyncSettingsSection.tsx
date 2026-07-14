@@ -184,7 +184,9 @@ export default function UsageHistorySyncSettingsSection({
               disabled={isLoading || isSyncingAll}
               loading={isLoading}
             >
-              {t("syncTab.actions.refreshStatus")}
+              {isLoading
+                ? t("common:status.refreshing")
+                : t("syncTab.actions.refreshStatus")}
             </Button>
           </div>
         </CardContent>

@@ -543,14 +543,13 @@ export default function ModelList(props: {
               <Button
                 onClick={loadPricingData}
                 variant="secondary"
-                leftIcon={!isLoading && <ArrowPathIcon className="h-4 w-4" />}
+                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
                 loading={isLoading}
-                disabled={isLoading}
                 analyticsAction={
                   PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData
                 }
               >
-                {t("refreshData")}
+                {isLoading ? t("common:status.refreshing") : t("refreshData")}
               </Button>
             </ProductAnalyticsScope>
           ) : undefined

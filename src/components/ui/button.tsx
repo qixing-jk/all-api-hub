@@ -106,6 +106,7 @@ function Button({
       size={resolvedSpinnerSize}
       variant={resolvedSpinnerVariant}
       {...restSpinnerProps}
+      aria-hidden="true"
     />
   ) : (
     leftIcon

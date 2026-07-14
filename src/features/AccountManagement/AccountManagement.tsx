@@ -270,7 +270,9 @@ function AccountManagementContent({
                 loading={isRefreshing}
                 disabled={isAnyRefreshRunning}
               >
-                {t("common:actions.refresh")}
+                {isRefreshing
+                  ? t("account:refresh.refreshingAll")
+                  : t("common:actions.refresh")}
               </Button>
               {canRefreshDisabledAccounts && (
                 <Button
@@ -280,7 +282,9 @@ function AccountManagementContent({
                   loading={isRefreshingDisabledAccounts}
                   disabled={isAnyRefreshRunning}
                 >
-                  {t("account:actions.refreshDisabledAccounts")}
+                  {isRefreshingDisabledAccounts
+                    ? t("account:refresh.refreshingDisabled")
+                    : t("account:actions.refreshDisabledAccounts")}
                 </Button>
               )}
               {canOpenExternalCheckIns && (

@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
 
-interface DeleteConfirmModalProps {
+interface DestructiveConfirmDialogProps {
   /**
    * Controls whether the modal is visible.
    */
@@ -30,6 +30,10 @@ interface DeleteConfirmModalProps {
    * Label for the confirm (destructive) button.
    */
   confirmLabel: string
+  /**
+   * Optional label shown while the destructive action is in progress.
+   */
+  workingLabel?: string
   /**
    * Label for the cancel button.
    */
@@ -69,13 +73,14 @@ export function DestructiveConfirmDialog({
   description,
   warningTitle,
   confirmLabel,
+  workingLabel,
   cancelLabel,
   onConfirm,
   details,
   isWorking = false,
   size = "sm",
   confirmButtonTestId,
-}: DeleteConfirmModalProps) {
+}: DestructiveConfirmDialogProps) {
   return (
     <Modal
       isOpen={isOpen}
@@ -112,10 +117,9 @@ export function DestructiveConfirmDialog({
             variant="destructive"
             className="flex-1"
             loading={isWorking}
-            disabled={isWorking}
             data-testid={confirmButtonTestId}
           >
-            {confirmLabel}
+            {isWorking ? workingLabel ?? confirmLabel : confirmLabel}
           </Button>
         </div>
       }

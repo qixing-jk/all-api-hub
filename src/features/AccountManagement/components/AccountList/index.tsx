@@ -1149,7 +1149,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
                     }
                     loading={isBulkDisabling}
                   >
-                    {t("account:bulk.disableSelected")}
+                    {isBulkDisabling
+                      ? t("common:status.disabling")
+                      : t("account:bulk.disableSelected")}
                   </Button>
                   <Button
                     type="button"
@@ -1329,6 +1331,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         })}
         cancelLabel={t("common:actions.cancel")}
         confirmLabel={t("account:bulk.deleteConfirmAction")}
+        workingLabel={t("account:bulk.deleting", {
+          count: selectedAccountIds.length,
+        })}
         onConfirm={() => {
           void handleBulkDelete()
         }}

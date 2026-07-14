@@ -140,6 +140,7 @@ export function ApiCredentialProfilesDialogs({
         title={t("apiCredentialProfiles:delete.title")}
         description={t("apiCredentialProfiles:delete.description")}
         confirmLabel={t("common:actions.delete")}
+        workingLabel={t("common:status.deleting")}
         cancelLabel={t("common:actions.cancel")}
         onConfirm={controller.handleConfirmDelete}
         isWorking={controller.isDeleting}

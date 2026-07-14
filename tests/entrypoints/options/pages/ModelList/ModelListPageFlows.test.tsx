@@ -874,7 +874,7 @@ describe("ModelList page flows", () => {
     })
 
     expect(
-      await screen.findByRole("button", { name: /modelList:refreshData/i }),
+      await screen.findByRole("button", { name: "common:status.refreshing" }),
     ).toBeDisabled()
   })
 

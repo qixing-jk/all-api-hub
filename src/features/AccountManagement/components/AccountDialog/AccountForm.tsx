@@ -345,7 +345,9 @@ export default function AccountForm({
                       }
                       leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
                     >
-                      {t("form.sub2apiImportRefreshToken")}
+                      {isImportingSub2apiSession
+                        ? t("common:status.importing")
+                        : t("form.sub2apiImportRefreshToken")}
                     </Button>
                     <Input
                       type="password"

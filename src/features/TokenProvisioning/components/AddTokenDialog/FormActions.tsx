@@ -36,7 +36,7 @@ export function FormActions({
       </Button>
       <Button
         onClick={onSubmit}
-        disabled={isSubmitting || !canSubmit}
+        disabled={!canSubmit}
         loading={isSubmitting}
         data-testid={TOKEN_PROVISIONING_TEST_IDS.addTokenSubmitButton}
       >

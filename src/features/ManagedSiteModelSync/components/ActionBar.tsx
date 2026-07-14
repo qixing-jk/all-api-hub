@@ -84,7 +84,9 @@ export default function ActionBar({
           loading={isRefreshing}
           leftIcon={<ArrowPathIcon className="h-4 w-4" />}
         >
-          {t("execution.actions.refresh")}
+          {isRefreshing
+            ? t("common:status.refreshing")
+            : t("execution.actions.refresh")}
         </Button>
       </div>
     </ProductAnalyticsScope>
