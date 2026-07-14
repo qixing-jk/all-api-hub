@@ -1218,7 +1218,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       return
     }
 
-    const requestedAccountId = routeParams.accountId?.trim()
+    const requestedAccountId = routeParams?.accountId?.trim()
     if (!requestedAccountId) {
       setSelectedAccount("")
       return

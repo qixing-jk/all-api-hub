@@ -15,7 +15,6 @@ import {
   seedStoredAccounts,
   stubLlmMetadataIndex,
   stubNewApiSiteRoutes,
-  waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
@@ -240,40 +239,33 @@ test("creates an API profile from the empty model list and loads models from it"
 
   expect(profileId).toBeTruthy()
 
-  const modelsPagePromise = waitForExtensionPage(context, {
-    extensionId,
-    path: OPTIONS_PAGE_PATH,
-    hash: `#${MENU_ITEM_IDS.MODELS}`,
-    searchParams: { profileId: profileId! },
-  })
-
   await page
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.openModelManagementButton)
     .click()
 
-  const modelsPage = await modelsPagePromise
-  installExtensionPageGuards(modelsPage)
-  await waitForExtensionRoot(modelsPage)
+  await expect(page).toHaveURL((url) => {
+    return (
+      url.hash === `#${MENU_ITEM_IDS.MODELS}` &&
+      url.searchParams.get("profileId") === profileId
+    )
+  })
+  await waitForExtensionRoot(page)
 
-  const targetUrl = new URL(modelsPage.url())
+  const targetUrl = new URL(page.url())
   expect(targetUrl.hash).toBe(`#${MENU_ITEM_IDS.MODELS}`)
   expect(targetUrl.searchParams.get("profileId")).toBe(profileId)
 
+  await expect(page.getByRole("heading", { name: "Model List" })).toBeVisible()
   await expect(
-    modelsPage.getByRole("heading", { name: "Model List" }),
-  ).toBeVisible()
-  await expect(
-    modelsPage.getByRole("heading", {
+    page.getByRole("heading", {
       name: "gpt-first-profile",
       exact: true,
     }),
   ).toBeVisible()
   await expect(
-    modelsPage.getByRole("heading", { name: "gpt-first-profile-pro" }),
+    page.getByRole("heading", { name: "gpt-first-profile-pro" }),
   ).toBeVisible()
   await expect(
-    modelsPage
-      .getByText("Profile: First Model Profile", { exact: false })
-      .first(),
+    page.getByText("Profile: First Model Profile", { exact: false }).first(),
   ).toBeVisible()
 })

@@ -300,6 +300,26 @@ describe("useModelListData", () => {
     )
   })
 
+  it("clears an all-accounts route when enabled accounts disappear", async () => {
+    const { result, rerender } = renderHook(() =>
+      useModelListData({ accountId: ALL_ACCOUNTS_SOURCE_VALUE }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe(ALL_ACCOUNTS_SOURCE_VALUE)
+    })
+
+    mockUseAccountData.mockReturnValue({ enabledDisplayData: [] })
+    rerender()
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe(
+        NO_MODEL_MANAGEMENT_SOURCE_VALUE,
+      )
+    })
+    expect(result.current.selectedSource).toBeNull()
+  })
+
   it.each([
     ["an empty route", {}],
     ["an invalid account route", { accountId: "missing-account" }],
@@ -349,6 +369,31 @@ describe("useModelListData", () => {
     expect(result.current.selectedSource?.kind).toBe(
       MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
     )
+  })
+
+  it("clears a profile route without an account fallback when the profile is deleted", async () => {
+    const { result, rerender } = renderHook(() =>
+      useModelListData({ profileId: PROFILE.id }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe(
+        toProfileSourceValue(PROFILE.id),
+      )
+    })
+
+    mockUseApiCredentialProfiles.mockReturnValue({
+      profiles: [],
+      isLoading: false,
+    })
+    rerender()
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe(
+        NO_MODEL_MANAGEMENT_SOURCE_VALUE,
+      )
+    })
+    expect(result.current.selectedSource).toBeNull()
   })
 
   it("waits for profile storage before falling back from a stale profile deep link to accountId", async () => {

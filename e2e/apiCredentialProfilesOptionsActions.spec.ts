@@ -14,7 +14,6 @@ import {
   seedApiCredentialProfiles,
   seedUserPreferences,
   stubLlmMetadataIndex,
-  waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
@@ -256,27 +255,22 @@ test("opens model management for an options-page API credential profile", async 
 
   await openProfilesPage(page, extensionId)
 
-  const targetPagePromise = waitForExtensionPage(context, {
-    extensionId,
-    path: OPTIONS_PAGE_PATH,
-    hash: `#${MENU_ITEM_IDS.MODELS}`,
-    searchParams: {
-      profileId: "profile-models",
-    },
-  })
-
   await page
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.openModelManagementButton)
     .click()
 
-  const targetPage = await targetPagePromise
-  installExtensionPageGuards(targetPage)
-  await waitForExtensionRoot(targetPage)
+  await expect(page).toHaveURL((url) => {
+    return (
+      url.hash === `#${MENU_ITEM_IDS.MODELS}` &&
+      url.searchParams.get("profileId") === "profile-models"
+    )
+  })
+  await waitForExtensionRoot(page)
 
-  const targetUrl = new URL(targetPage.url())
+  const targetUrl = new URL(page.url())
   expect(targetUrl.hash).toBe(`#${MENU_ITEM_IDS.MODELS}`)
   expect(targetUrl.searchParams.get("profileId")).toBe("profile-models")
-  await expect(targetPage.getByText("gpt-options-model")).toBeVisible()
+  await expect(page.getByText("gpt-options-model")).toBeVisible()
 })
 
 test("opens the CC Switch model picker for an API credential profile", async ({

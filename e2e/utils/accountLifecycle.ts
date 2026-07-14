@@ -15,7 +15,6 @@ import {
   type ApiCredentialProfile,
 } from "~/types/apiCredentialProfiles"
 import { expect } from "~~/e2e/fixtures/extensionTest"
-import { waitForExtensionPage } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageRawValue,
@@ -203,7 +202,6 @@ async function openKeyManagementPage(params: {
 
 async function openKeyManagementPageFromAccountRow(params: {
   page: Page
-  extensionId: string
   accountId?: string
   siteType?: AccountSiteType
   baseUrl?: string
@@ -217,11 +215,6 @@ async function openKeyManagementPageFromAccountRow(params: {
         })
 
   await row.hover()
-  const keyManagementPagePromise = waitForExtensionPage(params.page.context(), {
-    extensionId: params.extensionId,
-    path: OPTIONS_PAGE_PATH,
-    hash: `#${MENU_ITEM_IDS.KEYS}`,
-  })
   await row
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
     .click()
@@ -229,11 +222,17 @@ async function openKeyManagementPageFromAccountRow(params: {
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem)
     .click()
 
-  const keyManagementPage = await keyManagementPagePromise
-  await keyManagementPage.waitForLoadState("domcontentloaded")
-  await waitForExtensionRoot(keyManagementPage)
-  await expectPermissionOnboardingHidden(keyManagementPage)
-  return keyManagementPage
+  await expect(params.page).toHaveURL((url) => {
+    return (
+      url.pathname === `/${OPTIONS_PAGE_PATH}` &&
+      url.hash === `#${MENU_ITEM_IDS.KEYS}` &&
+      (params.accountId === undefined ||
+        url.searchParams.get("accountId") === params.accountId)
+    )
+  })
+  await waitForExtensionRoot(params.page)
+  await expectPermissionOnboardingHidden(params.page)
+  return params.page
 }
 
 async function submitCreateTokenForm(params: {
@@ -331,7 +330,6 @@ export async function openKeyManagementForAccount(params: {
   if (params.openFromAccountRow) {
     return await openKeyManagementPageFromAccountRow({
       page: params.page,
-      extensionId: params.extensionId,
       accountId: params.accountId,
       siteType: params.siteType,
       baseUrl: params.baseUrl,
