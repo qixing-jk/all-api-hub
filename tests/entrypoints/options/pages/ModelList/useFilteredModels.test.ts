@@ -5,11 +5,9 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import {
-  createModelMetadataIndex,
   getModelCapabilityBadges,
   matchesModelCapabilityFilters,
   MODEL_CAPABILITY_FILTER_VALUES,
-  resolveModelMetadata,
 } from "~/features/ModelList/modelCapabilityFilters"
 import {
   createAccountSource,
@@ -504,25 +502,40 @@ describe("useFilteredModels", () => {
     ).toEqual(["media-model"])
   })
 
-  it("skips ambiguous bare aliases while preserving exact provider aliases", () => {
+  it("skips ambiguous bare aliases while preserving exact provider identities", async () => {
     const metadata: ModelMetadata[] = [
       {
         id: "provider-a/shared-model",
         name: "Shared Model A",
         provider_id: "provider-a",
+        capabilities: { toolCall: true },
       },
       {
         id: "provider-b/shared-model",
         name: "Shared Model B",
         provider_id: "provider-b",
+        capabilities: { toolCall: false },
       },
     ]
+    const account = createDisplayAccount({
+      id: "account-ambiguous-model-metadata",
+      balance: { USD: 5, CNY: 35 },
+    })
 
-    const index = createModelMetadataIndex(metadata)
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "shared-model",
+        "provider-a/shared-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata: metadata,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL],
+    })
 
-    expect(resolveModelMetadata(index, "shared-model")).toBeUndefined()
-    expect(resolveModelMetadata(index, "provider-a/shared-model")).toBe(
-      metadata[0],
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["provider-a/shared-model"]),
     )
   })
 

@@ -1,14 +1,15 @@
 import { extractActualModel } from "~/services/models/modelRedirect/modelNormalization"
-import {
-  removeDateSuffix,
-  toModelTokenKey,
-} from "~/services/models/utils/modelName"
 import { createLogger } from "~/utils/core/logger"
 
 import {
   MODEL_METADATA_REFRESH_INTERVAL,
   MODEL_METADATA_URL,
 } from "./constants"
+import {
+  createModelIdentityIndex,
+  resolveRedirectModelIdentity,
+  type ModelIdentityIndex,
+} from "./modelIdentityIndex"
 import type {
   ModelMetadata,
   ModelMetadataCache,
@@ -206,6 +207,7 @@ function normalizeModelMetadataItem(item: any, key?: string): ModelMetadata {
     provider_id: deriveProviderId(item, id),
   }
   const description = normalizeOptionalString(item.description)
+  const family = normalizeOptionalString(item.family)
   const capabilities = normalizeCapabilities(item)
   const modalities = normalizeModalities(item.modalities)
   const openWeights = normalizeOptionalBoolean(item.open_weights)
@@ -217,6 +219,9 @@ function normalizeModelMetadataItem(item: any, key?: string): ModelMetadata {
 
   if (description) {
     metadata.description = description
+  }
+  if (family) {
+    metadata.family = family
   }
   if (capabilities) {
     metadata.capabilities = capabilities
@@ -292,27 +297,15 @@ function cloneMetadata(model: ModelMetadata): ModelMetadata {
  * Loads and caches model metadata from a remote source with fallback defaults.
  * Responsibilities:
  * - Fetch remote metadata (with refresh interval).
- * - Build lookup maps for fuzzy vendor/model resolution.
+ * - Delegate vendor/model identity lookup to the shared metadata index.
  * - Provide cache info and vendor rules for downstream consumers.
  */
 class ModelMetadataService {
   private cache: ModelMetadataCache | null = null
   private vendorRules: VendorRule[] = []
-  private metadataMap: Map<string, ModelMetadata> = new Map()
+  private metadataIndex: ModelIdentityIndex = createModelIdentityIndex([])
   private initPromise: Promise<void> | null = null
   private lastFetch: number = 0
-
-  private addMetadataLookupKeys(model: ModelMetadata): void {
-    const normalizedId = model.id.trim().toLowerCase()
-    if (normalizedId) {
-      this.metadataMap.set(normalizedId, model)
-    }
-
-    const actualModel = extractActualModel(model.id)
-    if (actualModel) {
-      this.metadataMap.set(actualModel, model)
-    }
-  }
 
   /**
    * Initialize metadata (idempotent). Reuses in-flight init promise.
@@ -357,7 +350,7 @@ class ModelMetadataService {
    * Fetch metadata from remote endpoint and rebuild caches.
    * Falls back to existing cache if fetch fails.
    *
-   * Refreshes cache, metadata map, and vendor rules on success.
+   * Refreshes cache, identity index, and vendor rules on success.
    */
   async refreshMetadata(): Promise<void> {
     try {
@@ -385,7 +378,7 @@ class ModelMetadataService {
       }
 
       this.lastFetch = Date.now()
-      this.buildMetaDataMapFromCache()
+      this.buildMetadataIndexFromCache()
       this.buildVendorRules()
 
       logger.info("Refreshed successfully", { models: models.length })
@@ -398,18 +391,12 @@ class ModelMetadataService {
   }
 
   /**
-   * Build internal map from cleaned model id to metadata.
-   *
-   * Uses extractActualModel to strip prefixes/suffixes for lookup.
+   * Build the shared identity index from cached metadata.
    */
-  private buildMetaDataMapFromCache(): void {
+  private buildMetadataIndexFromCache(): void {
     if (!this.cache) return
 
-    this.metadataMap.clear()
-
-    for (const model of this.cache.models) {
-      this.addMetadataLookupKeys(model)
-    }
+    this.metadataIndex = createModelIdentityIndex(this.cache.models)
   }
 
   /**
@@ -594,10 +581,7 @@ class ModelMetadataService {
 
     this.lastFetch = Date.now()
 
-    this.metadataMap.clear()
-    for (const model of defaultMetadata) {
-      this.addMetadataLookupKeys(model)
-    }
+    this.metadataIndex = createModelIdentityIndex(defaultMetadata)
 
     this.vendorRules = defaultRules
   }
@@ -611,68 +595,16 @@ class ModelMetadataService {
   ): { standardName: string; vendorName: string } | null {
     if (!this.cache) return null
 
-    const cleaned = modelName.trim().toLowerCase()
-    if (!cleaned) return null
+    const result = resolveRedirectModelIdentity(this.metadataIndex, modelName)
+    if (result.state !== "resolved") return null
 
-    // 精确匹配
-    const metadata = this.metadataMap.get(cleaned)
-    if (metadata) {
-      const vendorName =
-        PROVIDER_DISPLAY_NAMES[metadata.provider_id] ||
-        this.capitalizeFirst(metadata.provider_id)
-      return {
-        standardName: metadata.id,
-        vendorName,
-      }
+    const vendorName =
+      PROVIDER_DISPLAY_NAMES[result.metadata.provider_id] ||
+      this.capitalizeFirst(result.metadata.provider_id)
+    return {
+      standardName: result.metadata.id,
+      vendorName,
     }
-
-    // 但如果输入已包含日期后缀（如 claude-3-haiku-20240307），则不进行模糊匹配
-    // 因为这表示用户指定了特定的模型版本，不应该被重命名为其他版本
-    if (removeDateSuffix(modelName) !== modelName) {
-      return null
-    }
-
-    // 模糊匹配（处理同版本别名格式，如 claude-4.5-sonnet ↔ claude-sonnet-4-5）
-    for (const [key, metadata] of this.metadataMap) {
-      if (this.isFuzzyMatch(cleaned, key)) {
-        const vendorName =
-          PROVIDER_DISPLAY_NAMES[metadata.provider_id] ||
-          this.capitalizeFirst(metadata.provider_id)
-        return {
-          standardName: metadata.id,
-          vendorName,
-        }
-      }
-    }
-
-    return null
-  }
-
-  /**
-   * Check if an input model name fuzzily matches a candidate.
-   *
-   * This is intentionally conservative: it supports harmless alias formats
-   * (separator/order differences) but MUST NOT match across model versions.
-   */
-  private isFuzzyMatch(input: string, candidate: string): boolean {
-    const cleanedInput = removeDateSuffix(input)
-    const cleanedCandidate = removeDateSuffix(candidate)
-
-    if (cleanedInput === cleanedCandidate) return true
-
-    const inputParts = cleanedInput.split("-")
-    const candidateParts = cleanedCandidate.split("-")
-
-    if (inputParts.length === 0 || candidateParts.length === 0) return false
-
-    // Require the same vendor/model-family prefix to reduce accidental matches
-    if (inputParts[0] !== candidateParts[0]) return false
-
-    const inputKey = toModelTokenKey(cleanedInput)
-    const candidateKey = toModelTokenKey(cleanedCandidate)
-    if (!inputKey || !candidateKey) return false
-
-    return inputKey === candidateKey
   }
 
   /**
@@ -727,7 +659,7 @@ class ModelMetadataService {
    */
   clearCache(): void {
     this.cache = null
-    this.metadataMap.clear()
+    this.metadataIndex = createModelIdentityIndex([])
     this.vendorRules = []
     this.lastFetch = 0
   }

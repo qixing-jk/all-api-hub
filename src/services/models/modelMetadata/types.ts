@@ -2,6 +2,7 @@ export interface ModelMetadata {
   id: string
   name: string
   provider_id: string
+  family?: string
   description?: string
   capabilities?: ModelMetadataCapabilities
   modalities?: ModelMetadataModalities
@@ -10,6 +11,15 @@ export interface ModelMetadata {
   release_date?: string
   last_updated?: string
 }
+
+export type ModelIdentityLookupResult =
+  | {
+      state: "resolved"
+      match: "exact" | "normalized-alias"
+      metadata: ModelMetadata
+    }
+  | { state: "ambiguous" }
+  | { state: "unmatched" }
 
 export interface ModelMetadataCache {
   models: ModelMetadata[]

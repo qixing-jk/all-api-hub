@@ -265,6 +265,7 @@ describe("ModelMetadataService", () => {
         "openai/gpt-4o": {
           id: "openai/gpt-4o",
           name: "GPT-4o",
+          family: "gpt-4o",
           description: "Multimodal model",
           attachment: true,
           reasoning: false,
@@ -307,6 +308,7 @@ describe("ModelMetadataService", () => {
         id: "openai/gpt-4o",
         name: "GPT-4o",
         provider_id: "openai",
+        family: "gpt-4o",
         description: "Multimodal model",
         capabilities: {
           attachment: true,
@@ -516,6 +518,39 @@ describe("ModelMetadataService", () => {
     expect(
       modelMetadataService.findStandardModelName("claude-3-5-haiku-20240307"),
     ).toBeNull()
+  })
+
+  it("does not choose the first metadata match for an ambiguous bare id", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        models: [
+          {
+            id: "provider-a/shared-model",
+            name: "Shared Model A",
+            providerId: "provider-a",
+          },
+          {
+            id: "provider-b/shared-model",
+            name: "Shared Model B",
+            providerId: "provider-b",
+          },
+        ],
+      }),
+    })
+
+    const modelMetadataService = await loadService()
+    await modelMetadataService.initialize()
+
+    expect(
+      modelMetadataService.findStandardModelName("shared-model"),
+    ).toBeNull()
+    expect(
+      modelMetadataService.findStandardModelName("provider-a/shared-model"),
+    ).toEqual({
+      standardName: "provider-a/shared-model",
+      vendorName: "Provider A",
+    })
   })
 
   it("returns defensive copies for cached metadata and vendor rules", async () => {

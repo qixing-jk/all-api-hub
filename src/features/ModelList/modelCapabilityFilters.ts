@@ -1,8 +1,11 @@
 import type { TFunction } from "i18next"
 
+import {
+  createModelIdentityIndex,
+  resolveModelIdentity,
+  type ModelIdentityIndex,
+} from "~/services/models/modelMetadata/modelIdentityIndex"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
-import { extractActualModel } from "~/services/models/modelRedirect/modelNormalization"
-import { toModelTokenKey } from "~/services/models/utils/modelName"
 
 export const MODEL_CAPABILITY_FILTER_VALUES = {
   ALL: "all",
@@ -96,87 +99,20 @@ type ModelCapabilityMatchInput = {
   filter: ModelCapabilitySelectionValue
 }
 
-const MODEL_METADATA_TOKEN_KEY_PREFIX = "token:"
-
 /**
- * Normalizes model ids and names for metadata lookup.
+ * Builds the shared identity index consumed by capability policy.
  */
-function normalizeModelKey(value: string) {
-  return value.trim().toLowerCase()
-}
+export const createModelMetadataIndex = createModelIdentityIndex
 
 /**
- * Builds a deterministic token lookup key without fuzzy model-name matching.
- */
-function toMetadataTokenLookupKey(value: string) {
-  const tokenKey = toModelTokenKey(extractActualModel(value))
-  return tokenKey ? `${MODEL_METADATA_TOKEN_KEY_PREFIX}${tokenKey}` : null
-}
-
-/**
- * Builds lookup keys for provider-prefixed and plain model ids.
- */
-export function createModelMetadataIndex(modelMetadata: ModelMetadata[]) {
-  const index = new Map<string, ModelMetadata | null>()
-  const tokenIndex = new Map<string, ModelMetadata | null>()
-
-  modelMetadata.forEach((metadata) => {
-    const candidateKeys = [
-      metadata.id,
-      metadata.name,
-      extractActualModel(metadata.id),
-      extractActualModel(metadata.name),
-    ]
-
-    candidateKeys.forEach((key) => {
-      const normalized = normalizeModelKey(key)
-      if (normalized) {
-        const existingMatch = index.get(normalized)
-        if (existingMatch === undefined) {
-          index.set(normalized, metadata)
-        } else if (existingMatch !== metadata) {
-          index.set(normalized, null)
-        }
-      }
-
-      const tokenLookupKey = toMetadataTokenLookupKey(key)
-      if (!tokenLookupKey) return
-
-      const existingTokenMatch = tokenIndex.get(tokenLookupKey)
-      if (existingTokenMatch === undefined) {
-        tokenIndex.set(tokenLookupKey, metadata)
-      } else if (existingTokenMatch !== metadata) {
-        tokenIndex.set(tokenLookupKey, null)
-      }
-    })
-  })
-
-  tokenIndex.forEach((metadata, key) => {
-    if (metadata && !index.has(key)) {
-      index.set(key, metadata)
-    }
-  })
-
-  return new Map(
-    Array.from(index.entries()).filter(
-      (entry): entry is [string, ModelMetadata] => entry[1] !== null,
-    ),
-  )
-}
-
-/**
- * Finds metadata for a displayed model name using exact and normalized keys.
+ * Finds unambiguous metadata for a displayed model name.
  */
 export function resolveModelMetadata(
-  index: Map<string, ModelMetadata>,
+  index: ModelIdentityIndex,
   modelName: string,
 ) {
-  const normalized = normalizeModelKey(modelName)
-  return (
-    index.get(normalized) ??
-    index.get(normalizeModelKey(extractActualModel(modelName))) ??
-    index.get(toMetadataTokenLookupKey(modelName) ?? "")
-  )
+  const result = resolveModelIdentity(index, modelName)
+  return result.state === "resolved" ? result.metadata : undefined
 }
 
 /**
