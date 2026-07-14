@@ -18,9 +18,7 @@ const mocks = vi.hoisted(() => ({
     toHaveCount: vi.fn().mockResolvedValue(undefined),
     toHaveValue: vi.fn().mockResolvedValue(undefined),
     toHaveURL: vi.fn().mockResolvedValue(undefined),
-    toBe: vi.fn((expected: unknown) => {
-      expect(locator).toBe(expected)
-    }),
+    toBe: vi.fn(),
   })),
   runModelListCatalogScenario: vi.fn(),
   deleteTokenFromKeyManagementPage: vi.fn(),
@@ -363,7 +361,9 @@ function createE2eAssertions(locator?: unknown) {
         throw new Error(`Expected page URL to match, received ${url ?? "none"}`)
       }
     }),
-    toBe: vi.fn(),
+    toBe: vi.fn((expected: unknown) => {
+      expect(locator).toBe(expected)
+    }),
   }
 }
 
