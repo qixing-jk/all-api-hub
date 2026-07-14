@@ -35,6 +35,11 @@ import {
   type ModelPricing,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import {
+  MODEL_VENDOR_EVIDENCE_KINDS,
+  normalizeModelDescriptors,
+  type ModelVendorEvidence,
+} from "~/services/models/modelDescriptor"
 import { AuthTypeEnum, SiteHealthStatus, type ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
@@ -369,6 +374,56 @@ const getAIHubMixCatalogModelId = (model: AIHubMixModelCatalogItem): string => {
   return typeof candidate === "string" ? candidate.trim() : ""
 }
 
+const getNonEmptyCatalogString = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined
+  const normalized = value.trim()
+  return normalized || undefined
+}
+
+const getDeveloperExternalId = (value: unknown): string | undefined => {
+  if (typeof value === "string") return getNonEmptyCatalogString(value)
+  if (typeof value === "number" && Number.isFinite(value)) return String(value)
+  return undefined
+}
+
+const buildAIHubMixVendorEvidence = (
+  modelId: string,
+  catalogItem?: AIHubMixModelCatalogItem,
+): ModelVendorEvidence | undefined => {
+  const developerName =
+    getNonEmptyCatalogString(catalogItem?.developer_name) ??
+    getNonEmptyCatalogString(catalogItem?.developer)
+  const routingOwner = getNonEmptyCatalogString(catalogItem?.owner_by)
+  const externalId = developerName
+    ? getDeveloperExternalId(catalogItem?.developer_id)
+    : undefined
+
+  // Official Models API docs describe only legacy `owned_by` as Developer.
+  // Optional `developer_name`, `developer`, and `owner_by` names are used only
+  // when present; the current public ID-only shape intentionally emits no
+  // evidence because a standalone `developer_id` is opaque.
+  // https://docs.aihubmix.com/en/api/Models-API.md
+  const candidate = developerName
+    ? {
+        kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+        name: developerName,
+        ...(externalId === undefined ? {} : { externalId }),
+      }
+    : routingOwner
+      ? {
+          kind: MODEL_VENDOR_EVIDENCE_KINDS.RoutingProvider,
+          name: routingOwner,
+        }
+      : undefined
+
+  return normalizeModelDescriptors([
+    {
+      id: modelId,
+      ...(candidate === undefined ? {} : { vendorEvidence: candidate }),
+    },
+  ])[0]?.vendorEvidence
+}
+
 const buildAIHubMixModelPricing = (
   modelId: string,
   catalogItem?: AIHubMixModelCatalogItem,
@@ -377,9 +432,11 @@ const buildAIHubMixModelPricing = (
   const outputPrice = toFiniteNumber(catalogItem?.pricing?.output)
   const cacheReadPrice = toFiniteNumber(catalogItem?.pricing?.cache_read)
   const hasTokenPricing = inputPrice > 0 || outputPrice > 0
+  const vendorEvidence = buildAIHubMixVendorEvidence(modelId, catalogItem)
 
   return {
     model_name: modelId,
+    ...(vendorEvidence === undefined ? {} : { vendorEvidence }),
     model_description:
       typeof catalogItem?.desc === "string"
         ? catalogItem.desc

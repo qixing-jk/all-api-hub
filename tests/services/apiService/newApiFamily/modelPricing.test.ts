@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { defaultModelPricingImplementation } from "~/services/apiService/newApiFamily/default/modelPricing"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum } from "~/types"
 
 const { fetchApiMock, loggerErrorMock } = vi.hoisted(() => ({
@@ -29,10 +28,11 @@ const request = {
   },
 }
 
-const pricingResponse: PricingResponse = {
+const nativePricingResponse = {
   data: [
     {
       model_name: "example-model",
+      vendor_id: 1,
       quota_type: 0,
       model_ratio: 1,
       model_price: 0,
@@ -44,6 +44,7 @@ const pricingResponse: PricingResponse = {
   group_ratio: {},
   success: true,
   usable_group: {},
+  vendors: [{ id: 1, name: "Example Publisher" }],
 }
 
 describe("newApiFamily modelPricing", () => {
@@ -51,13 +52,13 @@ describe("newApiFamily modelPricing", () => {
     vi.clearAllMocks()
   })
 
-  it("fetches New API-family model pricing from the pricing endpoint", async () => {
-    fetchApiMock.mockResolvedValueOnce(pricingResponse)
+  it("returns the native pricing payload without claiming adapter normalization", async () => {
+    fetchApiMock.mockResolvedValueOnce(nativePricingResponse)
 
     const modelPricing = defaultModelPricingImplementation
 
     await expect(modelPricing.fetchModelPricing(request)).resolves.toBe(
-      pricingResponse,
+      nativePricingResponse,
     )
 
     expect(fetchApiMock).toHaveBeenCalledWith(

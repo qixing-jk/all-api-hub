@@ -8,6 +8,10 @@ import {
   type ModelPricing,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import {
+  MODEL_VENDOR_EVIDENCE_KINDS,
+  normalizeModelDescriptors,
+} from "~/services/models/modelDescriptor"
 
 /**
  * 将 OneHub 模型定价转换为通用定价
@@ -22,9 +26,23 @@ export function transformModelPricing(
   const data: ModelPricing[] = Object.entries(modelPricing).map(
     ([modelName, model]) => {
       const enableGroups = model.groups.length > 0 ? model.groups : ["default"]
+      // OneHub derives `owned_by` from an editable channel-type mapping, so it
+      // is routing-provider evidence rather than immutable publisher metadata.
+      // https://github.com/MartialBE/one-hub/blob/387f8bf16ed0d601fdede7ade378adb10aa1a35a/relay/model.go
+      // https://github.com/MartialBE/one-hub/blob/387f8bf16ed0d601fdede7ade378adb10aa1a35a/model/model_ownedby.go
+      const vendorEvidence = normalizeModelDescriptors([
+        {
+          id: modelName,
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.RoutingProvider,
+            name: model.owned_by,
+          },
+        },
+      ])[0]?.vendorEvidence
 
       return {
         model_name: modelName,
+        ...(vendorEvidence === undefined ? {} : { vendorEvidence }),
         quota_type: model.price.type === "tokens" ? 0 : 1,
         model_ratio: 1,
         model_price: {

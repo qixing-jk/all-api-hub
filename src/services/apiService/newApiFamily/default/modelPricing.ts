@@ -1,19 +1,18 @@
 import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
 import { createLogger } from "~/utils/core/logger"
 
 const MODEL_PRICING_ENDPOINT = "/api/pricing"
 const logger = createLogger("NewApiFamilyModelPricing")
 
 interface ModelPricingImplementation {
-  fetchModelPricing: (request: ApiServiceRequest) => Promise<PricingResponse>
+  fetchModelPricing: (request: ApiServiceRequest) => Promise<unknown>
 }
 
 export const defaultModelPricingImplementation: ModelPricingImplementation = {
   fetchModelPricing: async (request) => {
     try {
-      return await fetchApi<PricingResponse>(
+      return await fetchApi<unknown>(
         request,
         { endpoint: MODEL_PRICING_ENDPOINT },
         true,
