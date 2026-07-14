@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import type { ComponentProps, SVGProps } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -141,5 +141,32 @@ describe("AccountActionMenuItem analytics", () => {
       "aria-describedby",
       expect.stringMatching(/.+/),
     )
+  })
+
+  it("exposes loading on the actual menu item with the idle-label fallback", () => {
+    const { onClick } = renderMenuItem({ loading: true })
+
+    const menuItem = screen.getByRole("menuitem", { name: "Refresh" })
+    expect(menuItem).toBeDisabled()
+    expect(menuItem).toHaveAttribute("aria-busy", "true")
+    expect(
+      within(menuItem).getByRole("status", { hidden: true }),
+    ).toHaveAttribute("aria-hidden", "true")
+
+    fireEvent.click(menuItem)
+    fireEvent.click(menuItem)
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
+  it("uses the caller-provided pending label as visible and accessible text", () => {
+    renderMenuItem({ loading: true, loadingLabel: "Refreshing..." })
+
+    const menuItem = screen.getByRole("menuitem", {
+      name: "Refreshing...",
+    })
+    expect(menuItem).toHaveTextContent("Refreshing...")
+    expect(
+      screen.queryByRole("menuitem", { name: "Refresh" }),
+    ).not.toBeInTheDocument()
   })
 })

@@ -1600,6 +1600,7 @@ export default function ManagedSiteChannels({
                 <>
                   <Button
                     variant="outline"
+                    aria-busy={isLoading}
                     data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton}
                     {...{
                       [MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE]: isLoading

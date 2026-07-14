@@ -639,6 +639,7 @@ export default function ManagedSiteModelSync({
         {
           action: {
             label: t("execution.actions.retryFailed"),
+            pendingLabel: t("common:status.retrying"),
             onClick: handleRetryFailed,
           },
         },

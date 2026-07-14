@@ -277,6 +277,7 @@ describe("toastHelpers", () => {
       showWarningToast("Warning with action", {
         action: {
           label: "Retry failed only",
+          pendingLabel: "Retrying...",
           onClick: actionMock,
         },
       })
@@ -304,6 +305,7 @@ describe("toastHelpers", () => {
 
       expect(element?.props.action).toEqual({
         label: "Retry failed only",
+        pendingLabel: "Retrying...",
         onClick: actionMock,
       })
     })

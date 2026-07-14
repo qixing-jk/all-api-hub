@@ -272,6 +272,7 @@ export default function AccountActionButtons({
   } = useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
+  const [isRefreshMenuPending, setIsRefreshMenuPending] = useState(false)
   const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false)
 
   const isAccountDisabled = site.disabled === true
@@ -569,8 +570,15 @@ export default function AccountActionButtons({
     onCopyKey(site)
   }
 
-  const handleRefreshLocal = () => {
-    handleRefreshAccount(site)
+  const handleRefreshLocal = async () => {
+    if (isRefreshMenuPending) return
+
+    setIsRefreshMenuPending(true)
+    try {
+      await handleRefreshAccount(site)
+    } finally {
+      setIsRefreshMenuPending(false)
+    }
   }
 
   const handleDeleteLocal = () => {
@@ -994,6 +1002,8 @@ export default function AccountActionButtons({
                   onClick={handleRefreshLocal}
                   icon={ArrowPathIcon}
                   label={t("actions.refresh")}
+                  loading={isRefreshMenuPending}
+                  loadingLabel={t("common:status.refreshing")}
                   disabled={refreshingAccountId === site.id}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem}
                 />

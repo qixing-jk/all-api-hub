@@ -1999,6 +1999,7 @@ export function useAccountDialog({
           action: warningAccountId
             ? {
                 label: t("common:actions.refresh"),
+                pendingLabel: t("common:status.refreshing"),
                 onClick: async () => {
                   const accountName =
                     siteName.trim() ||

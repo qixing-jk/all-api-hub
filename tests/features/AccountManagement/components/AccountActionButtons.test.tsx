@@ -42,6 +42,7 @@ const createDeferred = <T,>() => {
 
 const {
   mockHandleSetAccountDisabled,
+  mockHandleRefreshAccount,
   mockTogglePinAccount,
   fetchAccountTokensMock,
   getManagedSiteServiceMock,
@@ -54,6 +55,7 @@ const {
   exportShareSnapshotWithToastMock,
   userPreferencesContextValue,
   accountDataContextValue,
+  accountActionsContextValue,
   toastDismissMock,
   toastLoadingMock,
   toastSuccessMock,
@@ -69,6 +71,7 @@ const {
   resolveManagedUpstreamResourceFeatureCapabilitiesMock,
 } = vi.hoisted(() => ({
   mockHandleSetAccountDisabled: vi.fn(),
+  mockHandleRefreshAccount: vi.fn(),
   mockTogglePinAccount: vi.fn(),
   fetchAccountTokensMock: vi.fn(),
   getManagedSiteServiceMock: vi.fn(),
@@ -96,6 +99,9 @@ const {
     togglePinAccount: vi.fn(),
     isPinFeatureEnabled: false,
     loadAccountData: vi.fn(),
+  },
+  accountActionsContextValue: {
+    refreshingAccountId: null as string | null,
   },
   toastDismissMock: vi.fn(),
   toastLoadingMock: vi.fn(),
@@ -156,8 +162,8 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
 
 vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
   useAccountActionsContext: () => ({
-    refreshingAccountId: null,
-    handleRefreshAccount: vi.fn(),
+    refreshingAccountId: accountActionsContextValue.refreshingAccountId,
+    handleRefreshAccount: mockHandleRefreshAccount,
     handleSetAccountDisabled: mockHandleSetAccountDisabled,
   }),
 }))
@@ -299,6 +305,8 @@ describe("AccountActionButtons", () => {
       }),
     )
     exportShareSnapshotWithToastMock.mockResolvedValue(undefined)
+    mockHandleRefreshAccount.mockResolvedValue(undefined)
+    accountActionsContextValue.refreshingAccountId = null
   })
 
   afterEach(() => {
@@ -314,6 +322,81 @@ describe("AccountActionButtons", () => {
     userPreferencesContextValue.showTodayCashflow = true
     hasValidManagedSiteConfigMock.mockReturnValue(true)
     resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReset()
+    accountActionsContextValue.refreshingAccountId = null
+  })
+
+  it("shows local menu refresh as busy and restores it after completion", async () => {
+    const deferredRefresh = createDeferred<void>()
+    mockHandleRefreshAccount.mockReturnValueOnce(deferredRefresh.promise)
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-local-refresh",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.refresh" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const pendingRefresh = screen.getByRole("menuitem", {
+      name: "common:status.refreshing",
+    })
+    expect(pendingRefresh).toBeDisabled()
+    expect(pendingRefresh).toHaveAttribute("aria-busy", "true")
+    await user.click(pendingRefresh)
+    expect(mockHandleRefreshAccount).toHaveBeenCalledTimes(1)
+
+    deferredRefresh.resolve()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("menuitem", { name: "account:actions.refresh" }),
+      ).toBeEnabled()
+    })
+    expect(
+      screen.getByRole("menuitem", { name: "account:actions.refresh" }),
+    ).not.toHaveAttribute("aria-busy")
+  })
+
+  it("locks externally refreshed accounts without announcing local menu work", async () => {
+    accountActionsContextValue.refreshingAccountId = "acc-external-refresh"
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-external-refresh",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const refreshMenuItem = screen.getByRole("menuitem", {
+      name: "account:actions.refresh",
+    })
+    expect(refreshMenuItem).toBeDisabled()
+    expect(refreshMenuItem).not.toHaveAttribute("aria-busy")
   })
 
   it("tracks controlled analytics for primary account action buttons", async () => {

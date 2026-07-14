@@ -38,6 +38,7 @@ export const exportShareSnapshotWithToast = async ({
             caption={result.caption}
             hint={t("shareSnapshots:toast.captionHint")}
             copyLabel={t("shareSnapshots:toast.copyCaption")}
+            copyingLabel={t("common:status.copying")}
             closeLabel={t("common:actions.close")}
             onCopy={async () => {
               try {

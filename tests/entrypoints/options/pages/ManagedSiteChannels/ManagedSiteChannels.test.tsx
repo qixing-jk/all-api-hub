@@ -1137,11 +1137,17 @@ describe("ManagedSiteChannels", () => {
       expect(service.listChannels).toHaveBeenCalledTimes(1)
     })
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "managedSiteChannels:toolbar.cancelRefresh",
-      }),
-    )
+    const cancelRefreshButton = screen.getByRole("button", {
+      name: "managedSiteChannels:toolbar.cancelRefresh",
+    })
+    expect(cancelRefreshButton).toBeEnabled()
+    expect(cancelRefreshButton).toHaveAttribute("aria-busy", "true")
+    expect(
+      within(cancelRefreshButton).getByRole("status", { hidden: true }),
+    ).toHaveAttribute("aria-hidden", "true")
+    expect(within(cancelRefreshButton).queryByRole("status")).toBeNull()
+
+    await user.click(cancelRefreshButton)
 
     expect(signal?.aborted).toBe(true)
     expect(service.listChannels).toHaveBeenCalledTimes(1)

@@ -1,7 +1,8 @@
 import { XMarkIcon } from "@heroicons/react/24/outline"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import toast, { ToastBar, type Toast } from "react-hot-toast"
 
+import { Button } from "~/components/ui/button"
 import { useTheme } from "~/contexts/ThemeContext"
 
 import { getThemeAwareToastStyles } from "./themeAwareToastStyles"
@@ -26,6 +27,7 @@ export function WarningToast({
 }: WarningToastProps) {
   const { resolvedTheme } = useTheme()
   const [isActionPending, setIsActionPending] = useState(false)
+  const isActionPendingRef = useRef(false)
 
   const warningToast: Toast = {
     ...toastInstance,
@@ -40,8 +42,9 @@ export function WarningToast({
   }
 
   const handleActionClick = async () => {
-    if (!action || isActionPending) return
+    if (!action || isActionPendingRef.current) return
 
+    isActionPendingRef.current = true
     setIsActionPending(true)
     try {
       await action.onClick()
@@ -49,6 +52,7 @@ export function WarningToast({
     } catch {
       // Keep the warning toast available so callers can surface retry/error UI.
     } finally {
+      isActionPendingRef.current = false
       setIsActionPending(false)
     }
   }
@@ -61,14 +65,18 @@ export function WarningToast({
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="min-w-0">{renderedMessage}</div>
             {action ? (
-              <button
+              <Button
                 type="button"
                 onClick={handleActionClick}
-                disabled={isActionPending}
-                className="w-fit text-sm font-medium text-blue-600 transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60 dark:text-blue-400"
+                variant="link"
+                size="sm"
+                loading={isActionPending}
+                className="h-auto w-fit p-0"
               >
-                {action.label}
-              </button>
+                {isActionPending
+                  ? action.pendingLabel ?? action.label
+                  : action.label}
+              </Button>
             ) : null}
           </div>
           <button

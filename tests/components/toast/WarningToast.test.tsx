@@ -3,6 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { WarningToast } from "~/components/toast/WarningToast"
 
+const createDeferred = () => {
+  let resolve!: () => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
 const { dismissMock } = vi.hoisted(() => ({
   dismissMock: vi.fn(),
 }))
@@ -65,7 +76,8 @@ describe("WarningToast", () => {
   })
 
   it("renders an action and runs it before dismissing the toast", async () => {
-    const actionMock = vi.fn().mockResolvedValue(undefined)
+    const deferredAction = createDeferred()
+    const actionMock = vi.fn(() => deferredAction.promise)
 
     render(
       <WarningToast
@@ -87,12 +99,26 @@ describe("WarningToast", () => {
         message="Model sync finished with failed channels"
         action={{
           label: "Retry failed only",
+          pendingLabel: "Retrying...",
           onClick: actionMock,
         }}
       />,
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Retry failed only" }))
+
+    const pendingAction = screen.getByRole("button", { name: "Retrying..." })
+    expect(pendingAction).toBeDisabled()
+    expect(pendingAction).toHaveAttribute("aria-busy", "true")
+    const closeButton = screen.getByRole("button", {
+      name: "Close notification",
+    })
+    expect(closeButton).toBeEnabled()
+    expect(closeButton).not.toHaveAttribute("aria-busy")
+    fireEvent.click(pendingAction)
+    expect(actionMock).toHaveBeenCalledTimes(1)
+
+    deferredAction.resolve()
 
     await waitFor(() => {
       expect(actionMock).toHaveBeenCalledTimes(1)
@@ -102,7 +128,8 @@ describe("WarningToast", () => {
   })
 
   it("keeps the toast open and re-enables the action when the action rejects", async () => {
-    const actionMock = vi.fn().mockRejectedValue(new Error("retry failed"))
+    const deferredAction = createDeferred()
+    const actionMock = vi.fn(() => deferredAction.promise)
 
     render(
       <WarningToast
@@ -135,9 +162,15 @@ describe("WarningToast", () => {
 
     fireEvent.click(retryButton)
 
+    expect(retryButton).toBeDisabled()
+    expect(retryButton).toHaveAttribute("aria-busy", "true")
+    expect(retryButton).toHaveAccessibleName("Retry failed only")
+    deferredAction.reject(new Error("retry failed"))
+
     await waitFor(() => {
       expect(actionMock).toHaveBeenCalledTimes(1)
       expect(retryButton).toBeEnabled()
+      expect(retryButton).not.toHaveAttribute("aria-busy")
     })
 
     expect(dismissMock).not.toHaveBeenCalled()
