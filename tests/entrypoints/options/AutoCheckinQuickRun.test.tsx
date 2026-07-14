@@ -15,6 +15,17 @@ import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageType
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
 const {
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
@@ -67,6 +78,16 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
   return {
     ...actual,
     sendAutoCheckinMessage: sendAutoCheckinMessageMock,
+  }
+})
+
+vi.mock("~/utils/core/environment", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/core/environment")>()
+
+  return {
+    ...actual,
+    isDevelopmentMode: () => true,
   }
 })
 
@@ -327,5 +348,101 @@ describe("AutoCheckin quick run", () => {
         },
       },
     )
+  })
+
+  it("keeps run now busy through rejection cleanup and permits retry", async () => {
+    const user = userEvent.setup()
+    const firstAttempt = createDeferred<{ success: boolean }>()
+    let runNowAttempts = 0
+
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return { success: true, data: { perAccount: {} } }
+      }
+      if (type === AutoCheckinMessageTypes.RunNow) {
+        runNowAttempts += 1
+        if (runNowAttempts === 1) return await firstAttempt.promise
+        return { success: true }
+      }
+      return { success: true }
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.runNow",
+      }),
+    )
+
+    const pendingButton = screen.getByRole("button", {
+      name: "autoCheckin:messages.loading.running",
+    })
+    expect(pendingButton).toBeDisabled()
+    expect(pendingButton).toHaveAttribute("aria-busy", "true")
+    const refreshButton = screen.getByRole("button", {
+      name: "autoCheckin:execution.refresh",
+    })
+    expect(refreshButton).toBeDisabled()
+    expect(refreshButton).not.toHaveAttribute("aria-busy")
+    await user.click(pendingButton)
+    expect(runNowAttempts).toBe(1)
+
+    firstAttempt.reject(new Error("run failed"))
+    const restoredButton = await screen.findByRole("button", {
+      name: "autoCheckin:execution.runNow",
+    })
+    expect(restoredButton).toBeEnabled()
+
+    await user.click(restoredButton)
+    await waitFor(() => expect(runNowAttempts).toBe(2))
+  })
+
+  it("keeps the initiating debug action busy while locking debug siblings", async () => {
+    const user = userEvent.setup()
+    const firstAttempt = createDeferred<{ success: boolean }>()
+    let debugAttempts = 0
+
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return { success: true, data: { perAccount: {} } }
+      }
+      if (type === AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow) {
+        debugAttempts += 1
+        if (debugAttempts === 1) return await firstAttempt.promise
+        return { success: true }
+      }
+      return { success: true }
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.triggerDailyAlarmNow",
+      }),
+    )
+
+    const pendingButton = screen.getByRole("button", {
+      name: "autoCheckin:messages.loading.triggeringDailyAlarm",
+    })
+    expect(pendingButton).toBeDisabled()
+    expect(pendingButton).toHaveAttribute("aria-busy", "true")
+    const retryAlarmButton = screen.getByRole("button", {
+      name: "autoCheckin:execution.debug.triggerRetryAlarmNow",
+    })
+    expect(retryAlarmButton).toBeDisabled()
+    expect(retryAlarmButton).not.toHaveAttribute("aria-busy")
+    await user.click(pendingButton)
+    expect(debugAttempts).toBe(1)
+
+    firstAttempt.reject(new Error("debug failed"))
+    const restoredButton = await screen.findByRole("button", {
+      name: "autoCheckin:execution.debug.triggerDailyAlarmNow",
+    })
+    expect(restoredButton).toBeEnabled()
+
+    await user.click(restoredButton)
+    await waitFor(() => expect(debugAttempts).toBe(2))
   })
 })

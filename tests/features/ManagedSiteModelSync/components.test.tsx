@@ -9,6 +9,7 @@ import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MANAGED_SITE_MODEL_SYNC_ACTIONS } from "~/features/ManagedSiteModelSync/actionState"
 import ActionBar from "~/features/ManagedSiteModelSync/components/ActionBar"
 import EmptyResults from "~/features/ManagedSiteModelSync/components/EmptyResults"
 import FilterBar from "~/features/ManagedSiteModelSync/components/FilterBar"
@@ -293,6 +294,68 @@ describe("ManagedSiteModelSync components", () => {
       screen.getByRole("button", { name: "common:actions.clear" }),
     )
     expect(onKeywordChange).toHaveBeenCalledWith("")
+  })
+
+  it.each([
+    [
+      MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_ALL,
+      "managedSiteModelSync:execution.actions.runningAll",
+    ],
+    [
+      MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_SELECTED_HISTORY,
+      "managedSiteModelSync:execution.actions.runningSelected",
+    ],
+    [
+      MANAGED_SITE_MODEL_SYNC_ACTIONS.RETRY_FAILED,
+      "managedSiteModelSync:execution.actions.retryingFailed",
+    ],
+  ])(
+    "marks only action %s busy while locking sibling actions",
+    (activeAction, pendingName) => {
+      render(
+        <ActionBar
+          isRunning={false}
+          activeAction={activeAction}
+          selectedCount={2}
+          failedCount={1}
+          onRunAll={vi.fn()}
+          onRunSelected={vi.fn()}
+          onRetryFailed={vi.fn()}
+          onRefresh={vi.fn()}
+        />,
+      )
+
+      const activeButton = screen.getByRole("button", { name: pendingName })
+      expect(activeButton).toBeDisabled()
+      expect(activeButton).toHaveAttribute("aria-busy", "true")
+
+      for (const siblingButton of screen
+        .getAllByRole("button")
+        .filter((button) => button !== activeButton)) {
+        expect(siblingButton).toBeDisabled()
+        expect(siblingButton).not.toHaveAttribute("aria-busy")
+      }
+    },
+  )
+
+  it("uses aggregate progress only as a sibling lock", () => {
+    render(
+      <ActionBar
+        isRunning
+        activeAction={null}
+        selectedCount={2}
+        failedCount={1}
+        onRunAll={vi.fn()}
+        onRunSelected={vi.fn()}
+        onRetryFailed={vi.fn()}
+        onRefresh={vi.fn()}
+      />,
+    )
+
+    for (const button of screen.getAllByRole("button")) {
+      expect(button).toBeDisabled()
+      expect(button).not.toHaveAttribute("aria-busy")
+    }
   })
 
   it("exposes status filter pressed state", () => {

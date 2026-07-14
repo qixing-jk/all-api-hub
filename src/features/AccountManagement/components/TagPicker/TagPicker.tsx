@@ -32,6 +32,12 @@ import { createLogger } from "~/utils/core/logger"
  */
 const logger = createLogger("TagPicker")
 
+type ActiveTagAction =
+  | { kind: "create" }
+  | { kind: "rename"; tagId: string }
+  | { kind: "delete"; tagId: string }
+  | null
+
 export interface TagPickerProps {
   /**
    * Full list of available tags from the global tag store.
@@ -108,9 +114,10 @@ export function TagPicker({
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<Tag | null>(null)
-  const [isWorking, setIsWorking] = useState(false)
+  const [activeTagAction, setActiveTagAction] = useState<ActiveTagAction>(null)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [tagActionError, setTagActionError] = useState<string | null>(null)
+  const isWorking = activeTagAction !== null
 
   const tagById = useMemo(() => {
     const map = new Map<string, Tag>()
@@ -198,7 +205,7 @@ export function TagPicker({
   const handleCreate = async () => {
     const normalized = normalizeTagNameForUniqueness(query)
     if (!normalized || disabled || isWorking) return
-    setIsWorking(true)
+    setActiveTagAction({ kind: "create" })
     setTagActionError(null)
     try {
       const created = await onCreateTag(normalized.displayName)
@@ -219,7 +226,7 @@ export function TagPicker({
       setTagActionError(message)
       toast.error(message)
     } finally {
-      setIsWorking(false)
+      setActiveTagAction(null)
     }
   }
 
@@ -287,10 +294,11 @@ export function TagPicker({
     if (!editingTagId || disabled || isWorking) return
     const normalized = normalizeTagNameForUniqueness(editingName)
     if (!normalized) return
-    setIsWorking(true)
+    const tagId = editingTagId
+    setActiveTagAction({ kind: "rename", tagId })
     setTagActionError(null)
     try {
-      await onRenameTag(editingTagId, normalized.displayName)
+      await onRenameTag(tagId, normalized.displayName)
       cancelRename()
     } catch (error) {
       const message = t("messages.operationFailed", {
@@ -298,35 +306,34 @@ export function TagPicker({
       })
       logger.error("Failed to rename tag", {
         error,
-        tagId: editingTagId,
+        tagId,
         displayName: normalized.displayName,
       })
       setTagActionError(message)
       toast.error(message)
     } finally {
-      setIsWorking(false)
+      setActiveTagAction(null)
     }
   }
 
   const confirmDelete = async () => {
     if (!deleteTarget || !onDeleteTag || disabled || isWorking) return
-    setIsWorking(true)
+    const target = deleteTarget
+    setActiveTagAction({ kind: "delete", tagId: target.id })
     setTagActionError(null)
     try {
-      await onDeleteTag(deleteTarget.id)
+      await onDeleteTag(target.id)
       // Ensure current selection is updated immediately in the form.
-      onSelectedTagIdsChange(
-        selectedTagIds.filter((id) => id !== deleteTarget.id),
-      )
+      onSelectedTagIdsChange(selectedTagIds.filter((id) => id !== target.id))
     } catch (error) {
       const message = t("messages.operationFailed", {
         error: getErrorMessage(error),
       })
-      logger.error("Failed to delete tag", { error, tagId: deleteTarget.id })
+      logger.error("Failed to delete tag", { error, tagId: target.id })
       setTagActionError(message)
       toast.error(message)
     } finally {
-      setIsWorking(false)
+      setActiveTagAction(null)
       setDeleteTarget(null)
     }
   }
@@ -383,11 +390,14 @@ export function TagPicker({
                 className="w-full justify-start"
                 onClick={handleCreate}
                 disabled={disabled || isWorking}
+                loading={activeTagAction?.kind === "create"}
+                leftIcon={<PlusIcon className="h-4 w-4" />}
                 id={getOptionId("create")}
                 data-active={activeIndex === 0}
               >
-                <PlusIcon className="mr-2 h-4 w-4" />
-                {t("form.tagsCreate", { name: query.trim() })}
+                {activeTagAction?.kind === "create"
+                  ? t("common:status.creating")
+                  : t("form.tagsCreate", { name: query.trim() })}
               </Button>
             )}
 
@@ -407,6 +417,9 @@ export function TagPicker({
                   const count = tagCountsById?.[tag.id] ?? 0
                   const optionIndex = (canCreate ? 1 : 0) + index
                   const isActive = optionIndex === activeIndex
+                  const isRenamingThisTag =
+                    activeTagAction?.kind === "rename" &&
+                    activeTagAction.tagId === tag.id
 
                   return (
                     <div
@@ -442,8 +455,13 @@ export function TagPicker({
                                 e.stopPropagation()
                                 void submitRename()
                               }}
-                              aria-label={t("form.tagsRenameSave")}
+                              aria-label={
+                                isRenamingThisTag
+                                  ? t("common:status.saving")
+                                  : t("form.tagsRenameSave")
+                              }
                               disabled={disabled || isWorking}
+                              loading={isRenamingThisTag}
                             >
                               <CheckIcon className="h-4 w-4" />
                             </IconButton>
@@ -559,7 +577,10 @@ export function TagPicker({
         onConfirm={() => {
           void confirmDelete()
         }}
-        isWorking={isWorking}
+        isWorking={
+          activeTagAction?.kind === "delete" &&
+          activeTagAction.tagId === deleteTarget?.id
+        }
       />
     </div>
   )

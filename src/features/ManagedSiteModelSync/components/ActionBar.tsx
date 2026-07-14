@@ -4,6 +4,10 @@ import { useTranslation } from "react-i18next"
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
+  MANAGED_SITE_MODEL_SYNC_ACTIONS,
+  type ManagedSiteModelSyncAction,
+} from "~/features/ManagedSiteModelSync/actionState"
+import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -15,6 +19,7 @@ const actionBarSurface =
 
 interface ActionBarProps {
   isRunning: boolean
+  activeAction?: ManagedSiteModelSyncAction | null
   isRefreshing?: boolean
   selectedCount: number
   failedCount: number
@@ -28,6 +33,7 @@ interface ActionBarProps {
  * Action button cluster for New API Model Sync execution controls.
  * @param props Component props container with run/retry callbacks.
  * @param props.isRunning Disables buttons while sync is in progress.
+ * @param props.activeAction Identifies the action awaiting its execution promise.
  * @param props.isRefreshing Shows refresh progress while the latest snapshot is being reloaded.
  * @param props.selectedCount Number of selected items for targeted runs.
  * @param props.failedCount Number of failed items eligible for retry.
@@ -38,6 +44,7 @@ interface ActionBarProps {
  */
 export default function ActionBar({
   isRunning,
+  activeAction,
   isRefreshing,
   selectedCount,
   failedCount,
@@ -47,6 +54,7 @@ export default function ActionBar({
   onRefresh,
 }: ActionBarProps) {
   const { t } = useTranslation("managedSiteModelSync")
+  const isBusy = isRunning || activeAction != null
 
   return (
     <ProductAnalyticsScope
@@ -58,29 +66,43 @@ export default function ActionBar({
         <Button
           onClick={onRunAll}
           variant="default"
-          disabled={isRunning}
+          disabled={isBusy}
+          loading={activeAction === MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_ALL}
           leftIcon={<ArrowPathIcon className="h-4 w-4" />}
         >
-          {t("execution.actions.runAll")}
+          {activeAction === MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_ALL
+            ? t("execution.actions.runningAll")
+            : t("execution.actions.runAll")}
         </Button>
         <Button
           onClick={onRunSelected}
           variant="secondary"
-          disabled={isRunning || selectedCount === 0}
+          disabled={isBusy || selectedCount === 0}
+          loading={
+            activeAction ===
+            MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_SELECTED_HISTORY
+          }
         >
-          {t("execution.actions.runSelected")} ({selectedCount})
+          {activeAction === MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_SELECTED_HISTORY
+            ? t("execution.actions.runningSelected")
+            : `${t("execution.actions.runSelected")} (${selectedCount})`}
         </Button>
         <Button
           onClick={onRetryFailed}
           variant="outline"
-          disabled={isRunning || failedCount === 0}
+          disabled={isBusy || failedCount === 0}
+          loading={
+            activeAction === MANAGED_SITE_MODEL_SYNC_ACTIONS.RETRY_FAILED
+          }
         >
-          {t("execution.actions.retryFailed")}
+          {activeAction === MANAGED_SITE_MODEL_SYNC_ACTIONS.RETRY_FAILED
+            ? t("execution.actions.retryingFailed")
+            : t("execution.actions.retryFailed")}
         </Button>
         <Button
           onClick={onRefresh}
           variant="ghost"
-          disabled={isRunning || isRefreshing === true}
+          disabled={isBusy}
           loading={isRefreshing}
           leftIcon={<ArrowPathIcon className="h-4 w-4" />}
         >

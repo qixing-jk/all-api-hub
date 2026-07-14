@@ -63,6 +63,10 @@ import {
   pushWithinOptionsPage,
 } from "~/utils/navigation"
 
+import {
+  AUTO_CHECKIN_DEBUG_ACTIONS,
+  type AutoCheckinDebugAction,
+} from "./actionState"
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"
 import EmptyResults from "./components/EmptyResults"
@@ -207,7 +211,9 @@ export default function AutoCheckin(props: {
   const [searchKeyword, setSearchKeyword] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
-  const [isDebugTriggering, setIsDebugTriggering] = useState(false)
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false)
+  const [activeDebugAction, setActiveDebugAction] =
+    useState<AutoCheckinDebugAction | null>(null)
   const [isOpeningFailedManualSignIns, setIsOpeningFailedManualSignIns] =
     useState(false)
   const [isOpeningExternalCheckIns, setIsOpeningExternalCheckIns] =
@@ -233,6 +239,8 @@ export default function AutoCheckin(props: {
   const [accountInfoById, setAccountInfoById] = useState<
     Record<string, DisplaySiteData>
   >({})
+  const activeStatusLoadCountRef = useRef(0)
+  const latestStatusLoadIdRef = useRef(0)
   const prefetchingAccountInfoIdsRef = useRef<Set<string>>(new Set())
 
   // Dev-only: diagnostics and simulation state for the UI-open pre-trigger flow.
@@ -256,22 +264,35 @@ export default function AutoCheckin(props: {
   const quickRunTriggeredRef = useRef(false)
 
   const loadStatus = useCallback(async () => {
+    const loadId = latestStatusLoadIdRef.current + 1
+    latestStatusLoadIdRef.current = loadId
+    activeStatusLoadCountRef.current += 1
+
     try {
       setIsLoading(true)
       const [response, nextAccountSetupState] = await Promise.all([
         sendAutoCheckinMessage(AutoCheckinMessageTypes.GetStatus),
         resolveAutoCheckinAccountSetupState(),
       ])
-      setAccountSetupState(nextAccountSetupState)
+
+      if (loadId === latestStatusLoadIdRef.current) {
+        setAccountSetupState(nextAccountSetupState)
+
+        if (response.success) {
+          setStatus(response.data)
+        }
+      }
 
       if (response.success) {
-        setStatus(response.data)
         return response.data as AutoCheckinStatus
       }
     } catch (error) {
       logger.error("Failed to load status", error)
     } finally {
-      setIsLoading(false)
+      activeStatusLoadCountRef.current -= 1
+      if (activeStatusLoadCountRef.current === 0) {
+        setIsLoading(false)
+      }
     }
 
     return null
@@ -344,7 +365,7 @@ export default function AutoCheckin(props: {
 
   const handleDebugTriggerDailyAlarmNow = useCallback(async () => {
     try {
-      setIsDebugTriggering(true)
+      setActiveDebugAction(AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_DAILY_ALARM)
       toast.loading(t("messages.loading.triggeringDailyAlarm"))
 
       const response = await sendAutoCheckinMessage(
@@ -371,13 +392,13 @@ export default function AutoCheckin(props: {
         }),
       )
     } finally {
-      setIsDebugTriggering(false)
+      setActiveDebugAction(null)
     }
   }, [loadStatus, t])
 
   const handleDebugTriggerRetryAlarmNow = useCallback(async () => {
     try {
-      setIsDebugTriggering(true)
+      setActiveDebugAction(AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_RETRY_ALARM)
       toast.loading(t("messages.loading.triggeringRetryAlarm"))
 
       const response = await sendAutoCheckinMessage(
@@ -404,14 +425,14 @@ export default function AutoCheckin(props: {
         }),
       )
     } finally {
-      setIsDebugTriggering(false)
+      setActiveDebugAction(null)
     }
   }, [loadStatus, t])
 
   // Dev-only: schedule the daily alarm to target today so UI-open pre-trigger eligibility can be tested.
   const handleDebugScheduleDailyAlarmForToday = useCallback(async () => {
     try {
-      setIsDebugTriggering(true)
+      setActiveDebugAction(AUTO_CHECKIN_DEBUG_ACTIONS.SCHEDULE_DAILY_ALARM)
       toast.loading(t("messages.loading.schedulingDailyAlarmForToday"))
 
       const response = await sendAutoCheckinMessage(
@@ -441,14 +462,16 @@ export default function AutoCheckin(props: {
         }),
       )
     } finally {
-      setIsDebugTriggering(false)
+      setActiveDebugAction(null)
     }
   }, [loadStatus, t])
 
   // Dev-only: evaluate eligibility and show the decision inputs without executing the daily run.
   const handleDebugEvaluateUiOpenPretrigger = useCallback(async () => {
     try {
-      setIsDebugTriggering(true)
+      setActiveDebugAction(
+        AUTO_CHECKIN_DEBUG_ACTIONS.EVALUATE_UI_OPEN_PRETRIGGER,
+      )
       toast.loading(t("messages.loading.evaluatingUiOpenPretrigger"))
 
       const response = await sendAutoCheckinMessage(
@@ -491,7 +514,7 @@ export default function AutoCheckin(props: {
         }),
       )
     } finally {
-      setIsDebugTriggering(false)
+      setActiveDebugAction(null)
     }
   }, [t])
 
@@ -501,7 +524,9 @@ export default function AutoCheckin(props: {
     let unsubscribe = () => {}
 
     try {
-      setIsDebugTriggering(true)
+      setActiveDebugAction(
+        AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_UI_OPEN_PRETRIGGER,
+      )
       toast.loading(t("messages.loading.triggeringUiOpenPretrigger"))
 
       unsubscribe = onRuntimeMessage((message) => {
@@ -560,14 +585,14 @@ export default function AutoCheckin(props: {
       )
     } finally {
       unsubscribe()
-      setIsDebugTriggering(false)
+      setActiveDebugAction(null)
     }
   }, [loadStatus, t])
 
   // Dev-only: reset the stored daily marker so the UI-open pre-trigger can be tested again on the same day.
   const handleDebugResetLastDailyRunDay = useCallback(async () => {
     try {
-      setIsDebugTriggering(true)
+      setActiveDebugAction(AUTO_CHECKIN_DEBUG_ACTIONS.RESET_LAST_DAILY_RUN_DAY)
       toast.loading(t("messages.loading.resettingLastDailyRunDay"))
 
       const response = await sendAutoCheckinMessage(
@@ -594,7 +619,7 @@ export default function AutoCheckin(props: {
         }),
       )
     } finally {
-      setIsDebugTriggering(false)
+      setActiveDebugAction(null)
     }
   }, [loadStatus, t])
 
@@ -644,7 +669,7 @@ export default function AutoCheckin(props: {
     [externalCheckInAccounts],
   )
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
@@ -652,7 +677,9 @@ export default function AutoCheckin(props: {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
 
-    void loadStatus().then((updatedStatus) => {
+    try {
+      setIsManualRefreshing(true)
+      const updatedStatus = await loadStatus()
       tracker.complete(
         updatedStatus
           ? PRODUCT_ANALYTICS_RESULTS.Success
@@ -667,7 +694,9 @@ export default function AutoCheckin(props: {
               }),
         },
       )
-    })
+    } finally {
+      setIsManualRefreshing(false)
+    }
   }
 
   const handleOpenAccountManagement = () => {
@@ -1323,8 +1352,9 @@ export default function AutoCheckin(props: {
       <div className="mb-6">
         <ActionBar
           isRunning={isRunning}
-          isRefreshing={isLoading && status !== null}
-          isDebugTriggering={isDebugTriggering}
+          isRefreshing={isManualRefreshing}
+          isRefreshLocked={isLoading}
+          activeDebugAction={activeDebugAction}
           isOpeningFailedManualSignIns={isOpeningFailedManualSignIns}
           isOpeningExternalCheckIns={isOpeningExternalCheckIns}
           canOpenFailedManualSignIns={failedManualAccountIds.length > 0}
