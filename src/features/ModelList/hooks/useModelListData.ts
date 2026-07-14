@@ -10,6 +10,7 @@ import {
   isAihubmixModelListPricing,
 } from "../aihubmixModelList"
 import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
   deriveModelListSourceCapabilities,
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   isProfileSourceValue,
@@ -30,6 +31,25 @@ import { useModelListState } from "./useModelListState"
 
 const ROUTE_SOURCE_PENDING = Symbol("route-source-pending")
 
+/** Resolves account routing after profile-route precedence has been settled. */
+function resolveRouteAccountSourceValue(
+  requestedAccountId: string | undefined,
+  accounts: readonly { id: string }[],
+): string {
+  if (requestedAccountId === ALL_ACCOUNTS_SOURCE_VALUE) {
+    return accounts.length > 0
+      ? ALL_ACCOUNTS_SOURCE_VALUE
+      : NO_MODEL_MANAGEMENT_SOURCE_VALUE
+  }
+
+  const matchedAccount = requestedAccountId
+    ? accounts.find((account) => account.id === requestedAccountId)
+    : null
+  return matchedAccount
+    ? toAccountSourceValue(matchedAccount.id)
+    : NO_MODEL_MANAGEMENT_SOURCE_VALUE
+}
+
 /**
  * Aggregates model list state, data loading, and filtering in one hook.
  * Route-driven source selection lives here so it can wait for profile storage
@@ -37,6 +57,7 @@ const ROUTE_SOURCE_PENDING = Symbol("route-source-pending")
  * @returns Combined account data, UI state, model data, and filtered results.
  */
 export function useModelListData(routeParams?: Record<string, string>) {
+  const isRouteControlled = routeParams !== undefined
   // Single source of account data
   const { enabledDisplayData } = useAccountData()
   const accounts = useMemo(() => enabledDisplayData || [], [enabledDisplayData])
@@ -79,24 +100,17 @@ export function useModelListData(routeParams?: Record<string, string>) {
         return ROUTE_SOURCE_PENDING
       }
 
-      const matchedAccount = requestedAccountId
-        ? accounts.find((account) => account.id === requestedAccountId)
-        : null
-      return matchedAccount
-        ? toAccountSourceValue(matchedAccount.id)
-        : NO_MODEL_MANAGEMENT_SOURCE_VALUE
+      return resolveRouteAccountSourceValue(requestedAccountId, accounts)
     }
 
     if (requestedAccountId) {
-      const matchedAccount = accounts.find(
-        (account) => account.id === requestedAccountId,
-      )
-      return matchedAccount ? toAccountSourceValue(matchedAccount.id) : null
+      return resolveRouteAccountSourceValue(requestedAccountId, accounts)
     }
 
-    return null
+    return isRouteControlled ? NO_MODEL_MANAGEMENT_SOURCE_VALUE : null
   }, [
     accounts,
+    isRouteControlled,
     profiles,
     profilesLoading,
     routeParams?.accountId,

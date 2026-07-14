@@ -170,6 +170,19 @@ describe("navigation utilities", () => {
     )
   })
 
+  it("openKeysPage should push within the current options tab", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#models`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+
+    await openKeysPage("123")
+
+    expect(pushStateSpy).toHaveBeenCalledTimes(1)
+    expect(window.location.href).toBe(`${OPTIONS_PAGE_URL}?accountId=123#keys`)
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    pushStateSpy.mockRestore()
+  })
+
   it("openKeysPage should close popup after dispatching navigation", async () => {
     const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {})
     mockedIsExtensionPopup.mockReturnValue(true)
@@ -250,6 +263,21 @@ describe("navigation utilities", () => {
     expect(closeSpy).toHaveBeenCalledTimes(1)
 
     closeSpy.mockRestore()
+  })
+
+  it("openModelsPage should push within the current options tab", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#keys`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+
+    await openModelsPage({ profileId: "profile-7" })
+
+    expect(pushStateSpy).toHaveBeenCalledTimes(1)
+    expect(window.location.href).toBe(
+      `${OPTIONS_PAGE_URL}?profileId=profile-7#models`,
+    )
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    pushStateSpy.mockRestore()
   })
 
   it("openAutoCheckinPage should omit undefined params and close popup", async () => {

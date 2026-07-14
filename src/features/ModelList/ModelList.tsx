@@ -22,7 +22,9 @@ import {
   type BatchVerifyModelItem,
 } from "~/features/ModelList/batchVerification"
 import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
   MODEL_MANAGEMENT_SOURCE_KINDS,
+  resolveModelManagementSource,
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
@@ -48,7 +50,11 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { openKeysPage, pushWithinOptionsPage } from "~/utils/navigation"
+import {
+  openKeysPage,
+  pushWithinOptionsPage,
+  replaceWithinOptionsPage,
+} from "~/utils/navigation"
 
 import { sortModelListAccounts } from "./accountOrdering"
 import { AccountSelector } from "./components/AccountSelector"
@@ -177,6 +183,29 @@ export default function ModelList(props: {
         accountSummaryCountsByAccountId,
       }),
     [accountQueryStates, accountSummaryCountsByAccountId, accounts],
+  )
+
+  const handleSelectedSourceValueChange = useCallback(
+    (sourceValue: string) => {
+      setSelectedSourceValue(sourceValue)
+
+      const source = resolveModelManagementSource({
+        value: sourceValue,
+        accounts,
+        profiles,
+      })
+      const searchParams =
+        source?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+          ? { accountId: source.account.id }
+          : source?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+            ? { profileId: source.profile.id }
+            : source?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+              ? { accountId: ALL_ACCOUNTS_SOURCE_VALUE }
+              : undefined
+
+      replaceWithinOptionsPage(`#${MENU_ITEM_IDS.MODELS}`, searchParams)
+    },
+    [accounts, profiles, setSelectedSourceValue],
   )
 
   const handleGroupClick = (group: string) => {
@@ -529,7 +558,7 @@ export default function ModelList(props: {
       />
       <AccountSelector
         selectedSourceValue={selectedSourceValue}
-        setSelectedSourceValue={setSelectedSourceValue}
+        setSelectedSourceValue={handleSelectedSourceValueChange}
         accounts={sortedAccounts}
         profiles={profiles}
         showAllAccountsGroupFilter={isAllAccountsScope}
@@ -697,7 +726,7 @@ export default function ModelList(props: {
             selectedSource={selectedSource}
             sourceCapabilities={sourceCapabilities}
             selectedSourceValue={selectedSourceValue}
-            setSelectedSourceValue={setSelectedSourceValue}
+            setSelectedSourceValue={handleSelectedSourceValueChange}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             sortMode={sortMode}

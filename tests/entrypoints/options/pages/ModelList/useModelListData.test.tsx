@@ -286,6 +286,55 @@ describe("useModelListData", () => {
     )
   })
 
+  it("restores all-accounts selection from routeParams.accountId", async () => {
+    const { result } = renderHook(() =>
+      useModelListData({ accountId: ALL_ACCOUNTS_SOURCE_VALUE }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe(ALL_ACCOUNTS_SOURCE_VALUE)
+    })
+
+    expect(result.current.selectedSource?.kind).toBe(
+      MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+    )
+  })
+
+  it.each([
+    ["an empty route", {}],
+    ["an invalid account route", { accountId: "missing-account" }],
+  ] satisfies Array<[string, Record<string, string>]>)(
+    "clears the selected source when a controlled route changes to %s",
+    async (_label, nextRouteParams) => {
+      const { result, rerender } = renderHook(
+        ({ routeParams }: { routeParams: Record<string, string> }) =>
+          useModelListData(routeParams),
+        {
+          initialProps: {
+            routeParams: {
+              accountId: ACCOUNT.id,
+            } as Record<string, string>,
+          },
+        },
+      )
+
+      await waitFor(() =>
+        expect(result.current.selectedSourceValue).toBe(
+          toAccountSourceValue(ACCOUNT.id),
+        ),
+      )
+
+      rerender({ routeParams: nextRouteParams })
+
+      await waitFor(() =>
+        expect(result.current.selectedSourceValue).toBe(
+          NO_MODEL_MANAGEMENT_SOURCE_VALUE,
+        ),
+      )
+      expect(result.current.selectedSource).toBeNull()
+    },
+  )
+
   it("prefers a valid route profile over a simultaneous account target", async () => {
     const { result } = renderHook(() =>
       useModelListData({ profileId: "profile-1", accountId: "acc-1" }),
@@ -332,6 +381,40 @@ describe("useModelListData", () => {
 
     expect(result.current.selectedSource?.kind).toBe(
       MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+    )
+  })
+
+  it("waits for profile storage before falling back from a stale profile deep link to all accounts", async () => {
+    mockUseApiCredentialProfiles.mockReturnValue({
+      profiles: [],
+      isLoading: true,
+    })
+
+    const { result, rerender } = renderHook(() =>
+      useModelListData({
+        profileId: "missing-profile",
+        accountId: ALL_ACCOUNTS_SOURCE_VALUE,
+      }),
+    )
+
+    expect(result.current.selectedSourceValue).toBe(
+      NO_MODEL_MANAGEMENT_SOURCE_VALUE,
+    )
+    expect(result.current.selectedSource).toBeNull()
+
+    mockUseApiCredentialProfiles.mockReturnValue({
+      profiles: [],
+      isLoading: false,
+    })
+
+    rerender()
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe(ALL_ACCOUNTS_SOURCE_VALUE)
+    })
+
+    expect(result.current.selectedSource?.kind).toBe(
+      MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
     )
   })
 

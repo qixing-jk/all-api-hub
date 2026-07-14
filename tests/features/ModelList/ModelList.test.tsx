@@ -4,13 +4,18 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/features/ModelList/ModelList"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+} from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 
-const { mockUseModelListData, openKeysPageMock } = vi.hoisted(() => ({
-  mockUseModelListData: vi.fn(),
-  openKeysPageMock: vi.fn(),
-}))
+const { mockUseModelListData, openKeysPageMock, replaceWithinOptionsPageMock } =
+  vi.hoisted(() => ({
+    mockUseModelListData: vi.fn(),
+    openKeysPageMock: vi.fn(),
+    replaceWithinOptionsPageMock: vi.fn(),
+  }))
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()
@@ -33,6 +38,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   return {
     ...actual,
     openKeysPage: openKeysPageMock,
+    replaceWithinOptionsPage: replaceWithinOptionsPageMock,
   }
 })
 
@@ -52,7 +58,35 @@ vi.mock(
 )
 
 vi.mock("~/features/ModelList/components/AccountSelector", () => ({
-  AccountSelector: () => <div data-testid="account-selector" />,
+  AccountSelector: ({
+    setSelectedSourceValue,
+  }: {
+    setSelectedSourceValue: (value: string) => void
+  }) => (
+    <div data-testid="account-selector">
+      <button
+        type="button"
+        onClick={() => setSelectedSourceValue("account:account-1")}
+      >
+        select-account-source
+      </button>
+      <button
+        type="button"
+        onClick={() => setSelectedSourceValue("profile:profile-1")}
+      >
+        select-profile-source
+      </button>
+      <button
+        type="button"
+        onClick={() => setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)}
+      >
+        select-all-sources
+      </button>
+      <button type="button" onClick={() => setSelectedSourceValue("")}>
+        clear-source
+      </button>
+    </div>
+  ),
 }))
 
 vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
@@ -222,6 +256,18 @@ const ACCOUNT_SOURCE = {
   capabilities: CAPABILITIES,
 } as any
 
+const PROFILE = {
+  id: "profile-1",
+  name: "Reusable Key",
+  apiType: "openai-compatible",
+  baseUrl: "https://profile.example.com",
+  apiKey: "sk-example",
+  tagIds: [],
+  notes: "",
+  createdAt: 1,
+  updatedAt: 1,
+} as any
+
 function createModelListData() {
   return {
     accounts: [ACCOUNT],
@@ -307,6 +353,38 @@ describe("ModelList", () => {
 
     expect(openKeysPageMock).toHaveBeenCalledWith(ACCOUNT.id)
   })
+
+  it.each([
+    ["select-account-source", "account:account-1", { accountId: ACCOUNT.id }],
+    ["select-profile-source", "profile:profile-1", { profileId: PROFILE.id }],
+    [
+      "select-all-sources",
+      ALL_ACCOUNTS_SOURCE_VALUE,
+      { accountId: ALL_ACCOUNTS_SOURCE_VALUE },
+    ],
+    ["clear-source", "", undefined],
+  ])(
+    "replaces the model-list route when the user chooses %s",
+    async (buttonName, selectedValue, expectedParams) => {
+      const user = userEvent.setup()
+      const setSelectedSourceValue = vi.fn()
+      mockUseModelListData.mockReturnValue({
+        ...createModelListData(),
+        profiles: [PROFILE],
+        setSelectedSourceValue,
+      })
+
+      render(<ModelList />)
+
+      await user.click(screen.getByRole("button", { name: buttonName }))
+
+      expect(setSelectedSourceValue).toHaveBeenCalledWith(selectedValue)
+      expect(replaceWithinOptionsPageMock).toHaveBeenCalledWith(
+        "#models",
+        expectedParams,
+      )
+    },
+  )
 
   it("does not show the key-management title shortcut for non-account sources", () => {
     mockUseModelListData.mockReturnValue({
