@@ -22,6 +22,8 @@ import {
   Zhipu,
 } from "@lobehub/icons"
 
+import { resolveCuratedModelVendor } from "~/services/models/modelVendor"
+
 // 厂商类型
 export type ProviderType = keyof typeof PROVIDER_CONFIGS
 
@@ -179,21 +181,64 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
   },
 }
 
+const PROTOCOL_COMPATIBILITY_RULES: ReadonlyArray<{
+  provider: "Claude" | "Gemini"
+  pattern: RegExp
+}> = [
+  {
+    provider: "Claude",
+    pattern:
+      /(?:^|[^\p{L}\p{N}])(?:claude|sonnet|haiku|neptune|opus)(?:[-_.]|$)/iu,
+  },
+  {
+    provider: "Gemini",
+    pattern: /(?:^|[^\p{L}\p{N}])gemini(?:[-_.]|$)/iu,
+  },
+]
+
+/** Keeps protocol-family aliases independent from publisher taxonomy. */
+function identifyProtocolCompatibilityProvider(
+  modelName: string,
+): "Claude" | "Gemini" | null {
+  return (
+    PROTOCOL_COMPATIBILITY_RULES.find(({ pattern }) => pattern.test(modelName))
+      ?.provider ?? null
+  )
+}
+
 /**
  * 根据模型名称识别厂商
  */
 export const identifyProvider = (modelName: string): ProviderType => {
-  for (const [providerType, config] of Object.entries(PROVIDER_CONFIGS)) {
-    if (providerType === "Unknown") continue
+  const protocolProvider = identifyProtocolCompatibilityProvider(modelName)
+  if (protocolProvider) return protocolProvider
 
-    for (const pattern of config.patterns) {
-      if (pattern.test(modelName)) {
-        return providerType as ProviderType
-      }
-    }
+  const vendor = resolveCuratedModelVendor(modelName)
+  if (vendor.state !== "candidate" || vendor.kind !== "known") {
+    return "Unknown"
   }
 
-  return "Unknown"
+  const legacyProviderByVendor: Partial<Record<string, ProviderType>> = {
+    openai: "OpenAI",
+    anthropic: "Claude",
+    google: /(?:^|[^a-z0-9])(?:gemma|imagen)(?:[-_.]|$)/i.test(modelName)
+      ? "DeepMind"
+      : "Gemini",
+    meta: "Ollama",
+    alibaba: "Qwen",
+    xai: "Grok",
+    deepseek: "DeepSeek",
+    mistral: "Mistral",
+    moonshot: "Moonshot",
+    zhipu: "ZhipuAI",
+    cohere: "Cohere",
+    tencent: "Tencent",
+    baidu: "Baidu",
+    baichuan: "Baichuan",
+    "01-ai": "yi",
+  }
+
+  return legacyProviderByVendor[vendor.knownId] ?? "Unknown"
 }
 
 /**

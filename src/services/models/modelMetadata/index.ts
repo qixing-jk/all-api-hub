@@ -1,2 +1,9 @@
 export { modelMetadataService } from "./ModelMetadataService"
-export type { ModelMetadata, VendorRule } from "./types"
+export type {
+  ModelIdentityLookupResult,
+  ModelMetadata,
+  ModelVendorCandidate,
+  ModelVendorCatalogEntry,
+  ModelVendorProvenance,
+  ResolvedModelVendor,
+} from "./types"

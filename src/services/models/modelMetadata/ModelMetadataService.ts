@@ -1,4 +1,3 @@
-import { extractActualModel } from "~/services/models/modelRedirect/modelNormalization"
 import { createLogger } from "~/utils/core/logger"
 
 import {
@@ -7,6 +6,7 @@ import {
 } from "./constants"
 import {
   createModelIdentityIndex,
+  resolveModelIdentity as resolveIndexedModelIdentity,
   resolveRedirectModelIdentity,
   type ModelIdentityIndex,
 } from "./modelIdentityIndex"
@@ -16,7 +16,6 @@ import type {
   ModelMetadataCapabilities,
   ModelMetadataLimits,
   ModelMetadataModalities,
-  VendorRule,
 } from "./types"
 
 const logger = createLogger("ModelMetadata")
@@ -298,11 +297,10 @@ function cloneMetadata(model: ModelMetadata): ModelMetadata {
  * Responsibilities:
  * - Fetch remote metadata (with refresh interval).
  * - Delegate vendor/model identity lookup to the shared metadata index.
- * - Provide cache info and vendor rules for downstream consumers.
+ * - Provide cache info and normalized metadata for downstream consumers.
  */
 class ModelMetadataService {
   private cache: ModelMetadataCache | null = null
-  private vendorRules: VendorRule[] = []
   private metadataIndex: ModelIdentityIndex = createModelIdentityIndex([])
   private initPromise: Promise<void> | null = null
   private lastFetch: number = 0
@@ -350,7 +348,7 @@ class ModelMetadataService {
    * Fetch metadata from remote endpoint and rebuild caches.
    * Falls back to existing cache if fetch fails.
    *
-   * Refreshes cache, identity index, and vendor rules on success.
+   * Refreshes cache and identity index on success.
    */
   async refreshMetadata(): Promise<void> {
     try {
@@ -379,7 +377,6 @@ class ModelMetadataService {
 
       this.lastFetch = Date.now()
       this.buildMetadataIndexFromCache()
-      this.buildVendorRules()
 
       logger.info("Refreshed successfully", { models: models.length })
     } catch (error) {
@@ -400,76 +397,6 @@ class ModelMetadataService {
   }
 
   /**
-   * Build vendor detection rules from cached models.
-   * Groups by provider and derives regex prefixes.
-   *
-   * Populates vendorRules with provider display names and regex patterns.
-   */
-  private buildVendorRules(): void {
-    if (!this.cache) return
-
-    // 按 providerId 分组，收集模型前缀
-    const providerPrefixes: Map<string, Set<string>> = new Map()
-
-    for (const model of this.cache.models) {
-      if (!model.provider_id || !model.id) {
-        continue
-      }
-
-      if (!providerPrefixes.has(model.provider_id)) {
-        providerPrefixes.set(model.provider_id, new Set())
-      }
-
-      const actualModel = extractActualModel(model.id)
-      // 提取前缀（取第一个 '-' 前的部分）
-      const parts = actualModel.split("-")
-      if (parts.length > 0) {
-        const prefix = parts[0].toLowerCase().trim()
-        if (prefix) {
-          providerPrefixes.get(model.provider_id)!.add(prefix)
-        }
-      }
-
-      // 如果没有 '-'，使用完整ID作为前缀（某些简短模型名）
-      if (!actualModel.includes("-")) {
-        const prefix = actualModel.toLowerCase().trim()
-        if (prefix && prefix.length <= 15) {
-          providerPrefixes.get(model.provider_id)!.add(prefix)
-        }
-      }
-    }
-
-    // 生成规则
-    const rules: VendorRule[] = []
-
-    for (const [providerID, prefixes] of providerPrefixes) {
-      if (prefixes.size === 0) continue
-
-      const displayName =
-        PROVIDER_DISPLAY_NAMES[providerID] || this.capitalizeFirst(providerID)
-
-      // 构建正则表达式（匹配任意前缀）
-      const prefixList = Array.from(prefixes).map((prefix) =>
-        prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-      )
-
-      const patternStr = `^(${prefixList.join("|")})`
-
-      try {
-        const pattern = new RegExp(patternStr, "i")
-        rules.push({ providerID, displayName, pattern })
-      } catch (error) {
-        logger.warn("Failed to build pattern for provider", {
-          providerID,
-          error,
-        })
-      }
-    }
-
-    this.vendorRules = rules
-  }
-
-  /**
    * Capitalize hyphen/space-delimited provider id for display.
    * @param str Provider id.
    * @returns Capitalized display string.
@@ -483,9 +410,9 @@ class ModelMetadataService {
   }
 
   /**
-   * Initialize fallback metadata/rules when remote fetch is unavailable.
+   * Initialize fallback metadata when remote fetch is unavailable.
    *
-   * Seeds cache, metadata map, and vendor rules with bundled defaults.
+   * Seeds cache and the metadata index with bundled defaults.
    */
   private initializeFallback(): void {
     logger.warn("Using fallback default data")
@@ -539,40 +466,6 @@ class ModelMetadataService {
       },
     ]
 
-    const defaultRules: VendorRule[] = [
-      {
-        providerID: "anthropic",
-        displayName: "Anthropic",
-        pattern: /^claude/i,
-      },
-      {
-        providerID: "openai",
-        displayName: "OpenAI",
-        pattern: /^(gpt|chatgpt|o1|o3)/i,
-      },
-      { providerID: "google", displayName: "Google", pattern: /^gemini/i },
-      { providerID: "alibaba", displayName: "阿里巴巴", pattern: /^qwen/i },
-      {
-        providerID: "alibaba-cn",
-        displayName: "通义千问",
-        pattern: /^(qwen|tongyi)/i,
-      },
-      {
-        providerID: "deepseek",
-        displayName: "DeepSeek",
-        pattern: /^deepseek/i,
-      },
-      {
-        providerID: "moonshot",
-        displayName: "Moonshot",
-        pattern: /^moonshot/i,
-      },
-      { providerID: "zhipu", displayName: "智谱", pattern: /^(glm|bigmodel)/i },
-      { providerID: "mistral", displayName: "MistralAI", pattern: /^mistral/i },
-      { providerID: "xai", displayName: "xAI", pattern: /^grok/i },
-      { providerID: "meta", displayName: "Meta", pattern: /^llama/i },
-    ]
-
     this.cache = {
       models: defaultMetadata,
       lastUpdated: Date.now(),
@@ -582,8 +475,11 @@ class ModelMetadataService {
     this.lastFetch = Date.now()
 
     this.metadataIndex = createModelIdentityIndex(defaultMetadata)
+  }
 
-    this.vendorRules = defaultRules
+  /** Resolve a displayed model id without discarding ambiguity information. */
+  resolveModelIdentity(modelName: string) {
+    return resolveIndexedModelIdentity(this.metadataIndex, modelName)
   }
 
   /**
@@ -605,28 +501,6 @@ class ModelMetadataService {
       standardName: result.metadata.id,
       vendorName,
     }
-  }
-
-  /**
-   * Find vendor display name by regex pattern match.
-   */
-  findVendorByPattern(modelName: string): string | null {
-    const cleaned = modelName.toLowerCase().trim()
-
-    for (const rule of this.vendorRules) {
-      if (rule.pattern.test(cleaned)) {
-        return rule.displayName
-      }
-    }
-
-    return null
-  }
-
-  /**
-   * Return a copy of vendor rules for callers.
-   */
-  getVendorRules(): VendorRule[] {
-    return [...this.vendorRules]
   }
 
   /**
@@ -655,12 +529,11 @@ class ModelMetadataService {
   }
 
   /**
-   * Clear in-memory cache and derived maps/rules.
+   * Clear in-memory cache and the derived identity index.
    */
   clearCache(): void {
     this.cache = null
     this.metadataIndex = createModelIdentityIndex([])
-    this.vendorRules = []
     this.lastFetch = 0
   }
 }

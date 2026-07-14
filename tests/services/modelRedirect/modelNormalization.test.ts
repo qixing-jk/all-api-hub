@@ -12,8 +12,6 @@ vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: {
     initialize: vi.fn().mockResolvedValue(undefined),
     findStandardModelName: vi.fn(),
-    findVendorByPattern: vi.fn(),
-    getVendorRules: () => [],
     getCacheInfo: () => ({
       isLoaded: true,
       modelCount: 0,
@@ -128,7 +126,6 @@ describe("renameModel", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(null)
 
       expect(renameModel("openai/gpt-4o", true)).toBe("openai/gpt-4o")
       expect(renameModel("anthropic/claude-3-5-sonnet", true)).toBe(
@@ -143,27 +140,21 @@ describe("renameModel", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "DeepSeek",
-      )
 
       expect(renameModel("BigModel/deepseek-r1", true)).toBe(
         "DeepSeek/deepseek-r1",
       )
-      expect(renameModel("BigModel/glm-4", true)).toBe("DeepSeek/glm-4")
+      expect(renameModel("BigModel/glm-4", true)).toBe("Zhipu AI/glm-4")
     })
 
     it("should exclude Pro/ prefix from vendor-inclusive logic", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "OpenAI",
-      )
 
       expect(renameModel("Pro/gpt-4o", true)).toBe("OpenAI/gpt-4o")
       expect(renameModel("Pro/claude-3-5-sonnet", true)).toBe(
-        "OpenAI/claude-3-5-sonnet",
+        "Anthropic/claude-3-5-sonnet",
       )
     })
 
@@ -171,13 +162,10 @@ describe("renameModel", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "OpenAI",
-      )
 
       expect(renameModel("openai/gpt-4o:free", true)).toBe("OpenAI/gpt-4o")
       expect(renameModel("anthropic/claude-3-5-sonnet:premium", true)).toBe(
-        "OpenAI/claude-3-5-sonnet",
+        "Anthropic/claude-3-5-sonnet",
       )
     })
 
@@ -185,13 +173,10 @@ describe("renameModel", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "OpenAI",
-      )
 
       expect(renameModel("vendor/submodel/gpt-4o", true)).toBe("OpenAI/gpt-4o")
       expect(renameModel("api/v1/models/claude-3-5-sonnet", true)).toBe(
-        "OpenAI/claude-3-5-sonnet",
+        "Anthropic/claude-3-5-sonnet",
       )
     })
 
@@ -199,13 +184,10 @@ describe("renameModel", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "OpenAI",
-      )
 
       expect(renameModel("/gpt-4o", true)).toBe("OpenAI/gpt-4o")
-      expect(renameModel("openai/", true)).toBe("OpenAI/")
-      expect(renameModel("openai/ ", true)).toBe("OpenAI/") // space gets trimmed, making second part empty
+      expect(renameModel("openai/", true)).toBe("")
+      expect(renameModel("openai/ ", true)).toBe("") // space gets trimmed, making second part empty
     })
   })
 
@@ -273,13 +255,10 @@ describe("renameModel", () => {
     })
   })
 
-  describe("Vendor pattern fallback scenarios", () => {
-    it("should handle metadata miss but vendor pattern fallback found (includeVendor: true)", () => {
+  describe("Curated vendor fallback scenarios", () => {
+    it("adds a curated vendor after a metadata miss", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
-      )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "OpenAI",
       )
 
       expect(renameModel("gpt-4o", true)).toBe("OpenAI/gpt-4o")
@@ -291,20 +270,16 @@ describe("renameModel", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "OpenAI",
-      )
 
       expect(renameModel("gpt-4o", false)).toBe("gpt-4o")
       expect(renameModel("openai/gpt-4o:free", false)).toBe("gpt-4o")
       expect(renameModel("gpt-4o-turbo", false)).toBe("gpt-4o-turbo")
     })
 
-    it("should handle vendor pattern fallback with no match", () => {
+    it("does not add a vendor when no curated rule matches", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(null)
 
       expect(renameModel("unknown-model", true)).toBe("unknown-model")
       expect(renameModel("vendor/unknown-model:free", true)).toBe(
@@ -325,16 +300,13 @@ describe("renameModel", () => {
       expect(renameModel("BigModel/glm-4", false)).toBe("glm-4")
     })
 
-    it("should handle BigModel prefix with vendor fallback", () => {
+    it("should handle BigModel prefix with curated fallback", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "ZhipuAI",
-      )
 
-      expect(renameModel("BigModel/glm-4", true)).toBe("ZhipuAI/glm-4")
-      expect(renameModel("BigModel/glm-4:free", true)).toBe("ZhipuAI/glm-4")
+      expect(renameModel("BigModel/glm-4", true)).toBe("Zhipu AI/glm-4")
+      expect(renameModel("BigModel/glm-4:free", true)).toBe("Zhipu AI/glm-4")
       expect(renameModel("BigModel/glm-4", false)).toBe("glm-4")
     })
 
@@ -351,12 +323,9 @@ describe("renameModel", () => {
       expect(renameModel("api/v1/models/gpt-4o", false)).toBe("gpt-4o")
     })
 
-    it("should handle multiple slashes with vendor fallback", () => {
+    it("should handle multiple slashes with curated fallback", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
-      )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "OpenAI",
       )
 
       expect(renameModel("api/v1/models/gpt-4o", true)).toBe("OpenAI/gpt-4o")
@@ -380,12 +349,9 @@ describe("renameModel", () => {
       )
     })
 
-    it("should handle colon suffixes with vendor fallback", () => {
+    it("should handle colon suffixes with curated fallback", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
-      )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "Anthropic",
       )
 
       expect(renameModel("claude-3-5-sonnet:free", true)).toBe(
@@ -422,12 +388,9 @@ describe("renameModel", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "OpenAI",
-      )
 
       // This happens when input ends with slash like "vendor/"
-      expect(renameModel("vendor/", true)).toBe("OpenAI/")
+      expect(renameModel("vendor/", true)).toBe("")
       expect(renameModel("vendor/", false)).toBe("")
     })
 
@@ -446,9 +409,6 @@ describe("renameModel", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "DeepSeek",
-      )
 
       expect(renameModel("BigModel/deepseek/deepseek-r1:free", true)).toBe(
         "DeepSeek/deepseek-r1",
@@ -461,12 +421,9 @@ describe("renameModel", () => {
       vi.mocked(modelMetadataService.findStandardModelName).mockReturnValue(
         null,
       )
-      vi.mocked(modelMetadataService.findVendorByPattern).mockReturnValue(
-        "TestVendor",
-      )
 
       expect(renameModel("openai/gpt-4o", true)).toBe("openai/gpt-4o") // vendor-inclusive logic
-      expect(renameModel("openai/gpt-4o:free", true)).toBe("TestVendor/gpt-4o") // fallback
+      expect(renameModel("openai/gpt-4o:free", true)).toBe("OpenAI/gpt-4o") // fallback
     })
   })
 })

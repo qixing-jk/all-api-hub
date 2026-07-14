@@ -48,6 +48,8 @@ describe("modelProviders utils", () => {
         expect(identifyProvider("haiku-3")).toBe("Claude")
         expect(identifyProvider("opus-4")).toBe("Claude")
         expect(identifyProvider("neptune")).toBe("Claude")
+        expect(identifyProvider("vendor/neptune-3")).toBe("Claude")
+        expect(identifyProvider("xneptuney")).toBe("Unknown")
       })
     })
 
@@ -112,14 +114,11 @@ describe("modelProviders utils", () => {
       })
     })
 
-    describe("Azure models", () => {
-      it("should identify Azure models", () => {
-        // Azure pattern is /azure/i
-        // Note: "azure-gpt-4" would match OpenAI first due to "gpt"
-        // Use model names that only contain "azure"
-        expect(identifyProvider("azure-model")).toBe("Azure")
-        expect(identifyProvider("azure-deployment")).toBe("Azure")
-        expect(identifyProvider("custom-azure-endpoint")).toBe("Azure")
+    describe("deployment labels", () => {
+      it("does not treat Azure deployment labels as model publishers", () => {
+        expect(identifyProvider("azure-model")).toBe("Unknown")
+        expect(identifyProvider("azure-deployment")).toBe("Unknown")
+        expect(identifyProvider("custom-azure-endpoint")).toBe("Unknown")
       })
     })
 
@@ -208,6 +207,12 @@ describe("modelProviders utils", () => {
       it("should return Unknown for empty string", () => {
         expect(identifyProvider("")).toBe("Unknown")
       })
+
+      it("does not classify vendor-name fragments", () => {
+        expect(identifyProvider("copying-model")).toBe("Unknown")
+        expect(identifyProvider("model-o2-fragment")).toBe("Unknown")
+        expect(identifyProvider("songsonnetfragment")).toBe("Unknown")
+      })
     })
 
     describe("Case insensitivity", () => {
@@ -219,11 +224,9 @@ describe("modelProviders utils", () => {
       })
     })
 
-    describe("Pattern precedence", () => {
-      it("should match first matching provider", () => {
-        // If a model name could match multiple patterns, it should return the first match
-        const result = identifyProvider("gemma") // Could be Gemini or DeepMind
-        expect(result).toMatch(/Gemini|DeepMind/)
+    describe("legacy presentation mapping", () => {
+      it("keeps Gemma on the existing DeepMind presentation config", () => {
+        expect(identifyProvider("gemma")).toBe("DeepMind")
       })
     })
   })

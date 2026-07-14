@@ -192,9 +192,6 @@ describe("ModelMetadataService", () => {
     const info = modelMetadataService.getCacheInfo()
     expect(info.isLoaded).toBe(true)
     expect(info.modelCount).toBeGreaterThan(0)
-    expect(modelMetadataService.findVendorByPattern("qwen-max")).toBe(
-      "阿里巴巴",
-    )
     expect(
       modelMetadataService.findStandardModelName("claude-sonnet-4-5")
         ?.standardName,
@@ -367,9 +364,13 @@ describe("ModelMetadataService", () => {
       modelCount: expect.any(Number),
       lastUpdated: expect.any(Number),
     })
-    expect(modelMetadataService.findVendorByPattern("gemini-2.0-flash")).toBe(
-      "Google",
-    )
+    expect(
+      modelMetadataService.resolveModelIdentity("gemini-2.0-flash-exp"),
+    ).toMatchObject({
+      state: "resolved",
+      match: "exact",
+      metadata: { provider_id: "google" },
+    })
   })
 
   it("falls back to bundled metadata when the models field is not an array", async () => {
@@ -467,13 +468,6 @@ describe("ModelMetadataService", () => {
         provider_id: "",
       },
     ])
-    expect(modelMetadataService.findVendorByPattern("mixtral-large")).toBe(
-      "Mistral Ai",
-    )
-    expect(modelMetadataService.findVendorByPattern("valid-skip")).toBeNull()
-    expect(
-      modelMetadataService.findVendorByPattern("blank-prefix-anything"),
-    ).toBe(null)
     expect(
       modelMetadataService.findStandardModelName("acme-4.5-sonnet"),
     ).toEqual({
@@ -545,6 +539,16 @@ describe("ModelMetadataService", () => {
     expect(
       modelMetadataService.findStandardModelName("shared-model"),
     ).toBeNull()
+    expect(modelMetadataService.resolveModelIdentity("shared-model")).toEqual({
+      state: "ambiguous",
+    })
+    expect(
+      modelMetadataService.resolveModelIdentity("provider-a/shared-model"),
+    ).toMatchObject({
+      state: "resolved",
+      match: "exact",
+      metadata: { provider_id: "provider-a" },
+    })
     expect(
       modelMetadataService.findStandardModelName("provider-a/shared-model"),
     ).toEqual({
@@ -553,7 +557,7 @@ describe("ModelMetadataService", () => {
     })
   })
 
-  it("returns defensive copies for cached metadata and vendor rules", async () => {
+  it("returns defensive copies for cached metadata", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -577,12 +581,11 @@ describe("ModelMetadataService", () => {
       provider_id: "fake",
     })
 
-    const vendorRules = modelMetadataService.getVendorRules()
-    vendorRules.length = 0
-
     expect(modelMetadataService.getAllMetadata()).toHaveLength(1)
-    expect(modelMetadataService.getVendorRules()).not.toHaveLength(0)
-    expect(modelMetadataService.findVendorByPattern("gpt-4o")).toBe("OpenAI")
-    expect(modelMetadataService.findVendorByPattern("unknown-model")).toBeNull()
+    expect(modelMetadataService.resolveModelIdentity("gpt-4o")).toMatchObject({
+      state: "resolved",
+      match: "exact",
+      metadata: { provider_id: "openai" },
+    })
   })
 })

@@ -302,7 +302,7 @@ describe("model list batch verification helpers", () => {
     ])
   })
 
-  it("auto-detects the closest verification API type from model id", () => {
+  it("keeps batch AUTO protocol defaults based on the model id", () => {
     expect(
       resolveBatchVerifyApiType(
         MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO,

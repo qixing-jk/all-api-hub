@@ -27,11 +27,57 @@ export interface ModelMetadataCache {
   version: string
 }
 
-export interface VendorRule {
-  providerID: string
-  displayName: string
-  pattern: RegExp
-}
+export type ModelVendorProvenance =
+  | { source: "metadata"; identityMatch: "exact" | "normalized-alias" }
+  | {
+      source:
+        | "publisher-evidence"
+        | "deployment-alias"
+        | "curated-rule"
+        | "routing-alias"
+      identityMatch?: never
+    }
+
+export type ModelVendorCandidate =
+  | ({
+      state: "candidate"
+      kind: "known"
+      key: `known:${string}`
+      knownId: string
+      labelCandidate: string
+    } & ModelVendorProvenance)
+  | ({
+      state: "candidate"
+      kind: "custom"
+      key: `custom:${string}`
+      labelCandidate: string
+    } & ModelVendorProvenance)
+  | { state: "unknown" }
+
+export type ResolvedModelVendor =
+  | ({
+      state: "resolved"
+      kind: "known"
+      key: `known:${string}`
+      knownId: string
+      label: string
+    } & ModelVendorProvenance)
+  | ({
+      state: "resolved"
+      kind: "custom"
+      key: `custom:${string}`
+      label: string
+    } & ModelVendorProvenance)
+  | { state: "unknown" }
+
+export type ModelVendorCatalogEntry =
+  | {
+      kind: "known"
+      key: `known:${string}`
+      knownId: string
+      label: string
+    }
+  | { kind: "custom"; key: `custom:${string}`; label: string }
 
 export interface ModelMetadataCapabilities {
   attachment?: boolean

@@ -1,4 +1,5 @@
 import { modelMetadataService } from "~/services/models/modelMetadata"
+import { resolveCuratedModelVendor } from "~/services/models/modelVendor"
 import { removeDateSuffix } from "~/services/models/utils/modelName"
 
 /**
@@ -96,16 +97,9 @@ export const renameModel = (
   }
 
   if (includeVendor) {
-    // 未找到标准化名称，使用传统逻辑识别厂商
-    let vendor = ""
-    const fallbackVendor = modelMetadataService.findVendorByPattern(actualModel)
-    if (fallbackVendor) {
-      vendor = fallbackVendor
-    }
-
-    if (vendor) {
-      // 组合最终名称
-      return `${vendor}/${actualModel}`
+    const fallbackVendor = resolveCuratedModelVendor(actualModel)
+    if (fallbackVendor.state === "candidate") {
+      return `${fallbackVendor.labelCandidate}/${actualModel}`
     }
   }
 
