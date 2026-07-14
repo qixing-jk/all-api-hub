@@ -255,6 +255,107 @@ describe("ModelMetadataService", () => {
     })
   })
 
+  it("skips malformed array rows and normalizes only string identity fields", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        models: [
+          { id: 123, name: "Numeric ID" },
+          { id: { nested: "id" }, name: "Object ID" },
+          { name: "Missing ID" },
+          null,
+          [],
+          "not-a-record",
+          {
+            id: "  numeric-name  ",
+            name: 456,
+            providerId: 789,
+          },
+          {
+            id: "object-name",
+            name: { label: "Object Name" },
+            provider: { id: "object-provider" },
+          },
+          {
+            id: "valid-neighbor",
+            name: "Valid Neighbor",
+            provider: "valid-provider",
+          },
+        ],
+      }),
+    })
+
+    const modelMetadataService = await loadService()
+    await modelMetadataService.initialize()
+
+    expect(modelMetadataService.getAllMetadata()).toEqual([
+      {
+        id: "numeric-name",
+        name: "numeric-name",
+        provider_id: "",
+      },
+      {
+        id: "object-name",
+        name: "object-name",
+        provider_id: "",
+      },
+      {
+        id: "valid-neighbor",
+        name: "Valid Neighbor",
+        provider_id: "valid-provider",
+      },
+    ])
+    expect(modelMetadataService.resolveModelIdentity("Missing ID")).toEqual({
+      state: "unmatched",
+    })
+  })
+
+  it("keeps valid object-map rows and derives ids from map keys", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        "  example/key-fallback  ": {
+          id: 123,
+          name: "Key Fallback",
+          provider_id: "example",
+        },
+        "example/object-id": {
+          id: { nested: "id" },
+          name: 456,
+          providerId: { nested: "provider" },
+        },
+        "example/explicit-key": {
+          id: "  explicit-id  ",
+          name: "Explicit ID",
+          provider: "explicit-provider",
+        },
+        malformed: null,
+        array: [],
+      }),
+    })
+
+    const modelMetadataService = await loadService()
+    await modelMetadataService.initialize()
+
+    expect(modelMetadataService.getAllMetadata()).toEqual([
+      {
+        id: "example/key-fallback",
+        name: "Key Fallback",
+        provider_id: "example",
+      },
+      {
+        id: "example/object-id",
+        name: "example/object-id",
+        provider_id: "example",
+      },
+      {
+        id: "explicit-id",
+        name: "Explicit ID",
+        provider_id: "explicit-provider",
+      },
+    ])
+  })
+
   it("normalizes models.dev model metadata without dropping capability fields", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -451,16 +552,6 @@ describe("ModelMetadataService", () => {
         id: "mixtral",
         name: "mixtral",
         provider_id: "mistral-ai",
-      },
-      {
-        id: "",
-        name: "Named only",
-        provider_id: "openai",
-      },
-      {
-        id: "   ",
-        name: "   ",
-        provider_id: "blank-prefix",
       },
       {
         id: "valid-skip",

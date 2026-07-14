@@ -45,6 +45,18 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
 const MODELS_DEV_MODEL_ID_PATTERN = /^[^/]+\/.+$/
 
 /**
+ * Checks whether an unknown payload value is a plain metadata record.
+ */
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
+
+/**
  * Normalizes optional array fields from the remote metadata payload.
  */
 function normalizeStringArray(value: unknown): string[] {
@@ -63,6 +75,16 @@ function normalizeStringArray(value: unknown): string[] {
  */
 function normalizeOptionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined
+}
+
+/**
+ * Returns a trimmed, non-empty metadata id from an unknown value.
+ */
+function normalizeModelId(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined
+
+  const trimmed = value.trim()
+  return trimmed || undefined
 }
 
 /**
@@ -198,11 +220,18 @@ function normalizeLimits(value: unknown): ModelMetadataLimits | undefined {
 /**
  * Converts one remote metadata record into the cached internal shape.
  */
-function normalizeModelMetadataItem(item: any, key?: string): ModelMetadata {
-  const id = item.id || key || ""
+function normalizeModelMetadataItem(
+  item: unknown,
+  key?: string,
+): ModelMetadata | null {
+  if (!isPlainRecord(item)) return null
+
+  const id = normalizeModelId(item.id) ?? normalizeModelId(key)
+  if (!id) return null
+
   const metadata: ModelMetadata = {
     id,
-    name: item.name || id,
+    name: normalizeOptionalString(item.name) ?? id,
     provider_id: deriveProviderId(item, id),
   }
   const description = normalizeOptionalString(item.description)
@@ -251,23 +280,26 @@ function normalizeMetadataPayload(data: any): ModelMetadata[] {
   const modelsPayload = data.models || data
 
   if (Array.isArray(modelsPayload)) {
-    return modelsPayload.map((item: any) => normalizeModelMetadataItem(item))
+    return modelsPayload.flatMap((item) => {
+      const metadata = normalizeModelMetadataItem(item)
+      return metadata ? [metadata] : []
+    })
   }
 
-  if (modelsPayload && typeof modelsPayload === "object") {
+  if (isPlainRecord(modelsPayload)) {
     const entries = Object.entries(modelsPayload)
-    if (
-      entries.length === 0 ||
-      entries.some(
-        ([, item]) => !item || typeof item !== "object" || Array.isArray(item),
-      )
-    ) {
+    const models = entries.flatMap(([key, item]) => {
+      const metadata = normalizeModelMetadataItem(item, key)
+      return metadata ? [metadata] : []
+    })
+
+    if (models.length === 0) {
       throw new Error(
         "Invalid metadata format: model map values should be objects",
       )
     }
 
-    return entries.map(([key, item]) => normalizeModelMetadataItem(item, key))
+    return models
   }
 
   throw new Error("Invalid metadata format: models should be array or object")
