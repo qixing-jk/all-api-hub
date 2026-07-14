@@ -195,6 +195,8 @@ export function VerifyApiCredentialProfileDialog({
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
   const [isPersisting, setIsPersisting] = useState(false)
+  const [activeProbeId, setActiveProbeId] =
+    useState<ApiVerificationProbeId | null>(null)
 
   const apiTypeRef = useRef(apiType)
   const fetchModelsRequestIdRef = useRef(0)
@@ -593,6 +595,15 @@ export function VerifyApiCredentialProfileDialog({
     }
   }
 
+  const runSingleProbe = async (probeId: ApiVerificationProbeId) => {
+    setActiveProbeId(probeId)
+    try {
+      await runProbe(probeId)
+    } finally {
+      setActiveProbeId(null)
+    }
+  }
+
   const runAll = async () => {
     if (!profile) return
     const tracker = startProductAnalyticsAction({
@@ -910,19 +921,21 @@ export function VerifyApiCredentialProfileDialog({
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => runProbe(probe.definition.id)}
+                      onClick={() => void runSingleProbe(probe.definition.id)}
                       data-testid={
                         API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton
                       }
                       disabled={
                         isRunning ||
                         isPersisting ||
+                        isAnyProbeRunning ||
                         probe.isRunning ||
                         isDisabledForModel ||
                         !profile
                       }
+                      loading={activeProbeId === probe.definition.id}
                     >
-                      {probe.isRunning
+                      {activeProbeId === probe.definition.id
                         ? t("aiApiVerification:verifyDialog.actions.running")
                         : probe.attempts > 0
                           ? t("aiApiVerification:verifyDialog.actions.retry")

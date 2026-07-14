@@ -351,6 +351,118 @@ describe("VerifyApiCredentialProfileDialog", () => {
     })
   })
 
+  it("marks only the initiating probe busy through rejected execution and persistence", async () => {
+    const user = userEvent.setup()
+    const deferredProbe = createDeferred<never>()
+    const persistDeferred =
+      createDeferred<
+        Awaited<
+          ReturnType<
+            typeof verificationResultHistoryStorage.upsertLatestSummary
+          >
+        >
+      >()
+    vi.spyOn(
+      verificationResultHistoryStorage,
+      "upsertLatestSummary",
+    ).mockImplementationOnce(() => persistDeferred.promise)
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "models",
+      status: "pass",
+      latencyMs: 1,
+      summary: "OK",
+    })
+    mockRunApiVerificationProbe.mockReturnValueOnce(deferredProbe.promise)
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "profile-1",
+          name: "Example profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://api.example.invalid",
+          apiKey: "example-api-key",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="model-1"
+      />,
+    )
+
+    const initiatingProbe = await screen.findByTestId(
+      getApiCredentialProfileVerifyProbeTestId("models"),
+    )
+    const siblingProbe = await screen.findByTestId(
+      getApiCredentialProfileVerifyProbeTestId("text-generation"),
+    )
+    const initiatingButton = within(initiatingProbe).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    const siblingButton = within(siblingProbe).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    const suiteButton = screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.run",
+    })
+
+    await user.click(initiatingButton)
+
+    await waitFor(() => {
+      expect(initiatingButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.running",
+      )
+    })
+    expect(initiatingButton).toBeDisabled()
+    expect(initiatingButton).toHaveAttribute("aria-busy", "true")
+    expect(siblingButton).toBeDisabled()
+    expect(siblingButton).toHaveAccessibleName(
+      "aiApiVerification:verifyDialog.actions.runOne",
+    )
+    expect(siblingButton).not.toHaveAttribute("aria-busy")
+    expect(suiteButton).toBeDisabled()
+    expect(suiteButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(initiatingButton)
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+
+    deferredProbe.reject(new Error("probe failed"))
+
+    await waitFor(() => {
+      expect(
+        verificationResultHistoryStorage.upsertLatestSummary,
+      ).toHaveBeenCalledTimes(1)
+    })
+    expect(initiatingButton).toHaveAccessibleName(
+      "aiApiVerification:verifyDialog.actions.running",
+    )
+    expect(initiatingButton).toHaveAttribute("aria-busy", "true")
+
+    persistDeferred.reject(new Error("persist failed"))
+
+    await waitFor(() => {
+      expect(initiatingButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.retry",
+      )
+      expect(initiatingButton).toBeEnabled()
+      expect(initiatingButton).not.toHaveAttribute("aria-busy")
+      expect(siblingButton).toBeEnabled()
+    })
+
+    await user.click(initiatingButton)
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2)
+      expect(initiatingButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.retry",
+      )
+      expect(initiatingButton).toBeEnabled()
+      expect(initiatingButton).not.toHaveAttribute("aria-busy")
+    })
+  })
+
   it("auto-fetches model ids on open", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
       "ada-1",

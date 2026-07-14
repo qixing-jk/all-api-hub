@@ -3,6 +3,11 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import WebAiApiCheckSettings from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckSettings"
+import {
+  PREFERENCE_WRITE_FAILURE_TYPES,
+  type PreferenceWriteResult,
+} from "~/services/preferences/userPreferences"
+import { buildUserPreferences } from "~~/tests/test-utils/factories"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -70,12 +75,22 @@ vi.mock("~/components/ui", () => ({
     children,
     onClick,
     disabled,
+    loading,
+    id,
   }: {
     children: ReactNode
     onClick?: () => void
     disabled?: boolean
+    loading?: boolean
+    id?: string
   }) => (
-    <button type="button" disabled={disabled} onClick={() => onClick?.()}>
+    <button
+      id={id}
+      type="button"
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      onClick={() => onClick?.()}
+    >
       {children}
     </button>
   ),
@@ -173,10 +188,17 @@ const createDeferred = <T,>() => {
   return { promise, resolve, reject }
 }
 
+const createSuccessfulPreferenceWriteResult = (): PreferenceWriteResult => ({
+  ok: true,
+  preferences: buildUserPreferences(),
+})
+
 describe("WebAiApiCheckSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUpdateWebAiApiCheck.mockResolvedValue(true)
+    mockUpdateWebAiApiCheck.mockResolvedValue(
+      createSuccessfulPreferenceWriteResult(),
+    )
     mockResetWebAiApiCheckConfig.mockResolvedValue(true)
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
   })
@@ -370,7 +392,7 @@ describe("WebAiApiCheckSettings", () => {
   })
 
   it("disables controls while a switch save is in flight and shows an error toast when persistence fails", async () => {
-    const deferredSave = createDeferred<boolean>()
+    const deferredSave = createDeferred<PreferenceWriteResult>()
     mockUpdateWebAiApiCheck.mockReturnValue(deferredSave.promise)
 
     render(<WebAiApiCheckSettings />)
@@ -398,7 +420,13 @@ describe("WebAiApiCheckSettings", () => {
       expect(saveButton).toBeDisabled()
     })
 
-    deferredSave.resolve(false)
+    deferredSave.resolve({
+      ok: false,
+      reason: {
+        type: PREFERENCE_WRITE_FAILURE_TYPES.StorageError,
+        error: new Error("write failed"),
+      },
+    })
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -447,6 +475,74 @@ describe("WebAiApiCheckSettings", () => {
       )
     })
   })
+
+  it.each([
+    {
+      action: "URL patterns",
+      buttonName: "common:actions.save",
+      siblingName: "webAiApiCheck:settings.keyCleanup.save",
+    },
+    {
+      action: "key cleanup patterns",
+      buttonName: "webAiApiCheck:settings.keyCleanup.save",
+      siblingName: "common:actions.save",
+    },
+  ])(
+    "marks only the initiating $action save busy and restores it after rejection",
+    async ({ buttonName, siblingName }) => {
+      const deferredSave = createDeferred<PreferenceWriteResult>()
+      mockUpdateWebAiApiCheck.mockReturnValueOnce(deferredSave.promise)
+
+      render(<WebAiApiCheckSettings />)
+
+      const initiatingButton = screen.getByRole("button", {
+        name: buttonName,
+      })
+      const siblingButton = screen.getByRole("button", {
+        name: siblingName,
+      })
+
+      fireEvent.click(initiatingButton)
+
+      await waitFor(() => {
+        expect(initiatingButton).toHaveAccessibleName("common:status.saving")
+      })
+      expect(initiatingButton).toBeDisabled()
+      expect(initiatingButton).toHaveAttribute("aria-busy", "true")
+      expect(siblingButton).toBeDisabled()
+      expect(siblingButton).toHaveAccessibleName(siblingName)
+      expect(siblingButton).not.toHaveAttribute("aria-busy")
+      for (const control of screen.getAllByRole("switch")) {
+        expect(control).toBeDisabled()
+        expect(control).not.toHaveAttribute("aria-busy")
+      }
+
+      fireEvent.click(initiatingButton)
+      expect(mockUpdateWebAiApiCheck).toHaveBeenCalledTimes(1)
+
+      deferredSave.reject(new Error("write failed"))
+
+      await waitFor(() => {
+        expect(initiatingButton).toHaveAccessibleName(buttonName)
+        expect(initiatingButton).toBeEnabled()
+        expect(initiatingButton).not.toHaveAttribute("aria-busy")
+      })
+
+      mockUpdateWebAiApiCheck.mockResolvedValueOnce(
+        createSuccessfulPreferenceWriteResult(),
+      )
+      fireEvent.click(initiatingButton)
+      await waitFor(() => {
+        expect(mockUpdateWebAiApiCheck).toHaveBeenCalledTimes(2)
+        expect(initiatingButton).toHaveAccessibleName(buttonName)
+        expect(initiatingButton).toBeEnabled()
+        expect(initiatingButton).not.toHaveAttribute("aria-busy")
+        expect(toast.success).toHaveBeenCalledWith(
+          "webAiApiCheck:messages.success.settingsSaved",
+        )
+      })
+    },
+  )
 
   it("resyncs the whitelist draft when stored preferences change", async () => {
     let contextValue = createContextValue()

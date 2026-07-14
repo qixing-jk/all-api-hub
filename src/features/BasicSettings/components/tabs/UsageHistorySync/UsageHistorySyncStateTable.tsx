@@ -50,7 +50,7 @@ interface UsageHistorySyncStateTableProps {
   hasAnyAccounts: boolean
   isSyncingAll: boolean
   syncingAccountIds: Set<string>
-  onSyncAccounts: (accountIds: string[]) => void | Promise<void>
+  onSyncAccounts: (accountIds: string[]) => Promise<void>
 }
 
 /**
@@ -89,6 +89,7 @@ export default function UsageHistorySyncStateTable({
   const [sorting, setSorting] = useState<SortingState>([
     { id: "accountName", desc: false },
   ])
+  const [isSyncingSelection, setIsSyncingSelection] = useState(false)
 
   const getStatusBadgeVariant = (state: UsageHistorySyncState) => {
     return state === "success"
@@ -114,7 +115,7 @@ export default function UsageHistorySyncStateTable({
               table.toggleAllRowsSelected(!!value)
             }
             aria-label={t("syncTab.table.selectAll")}
-            disabled={isSyncingAll}
+            disabled={isSyncingAll || isSyncingSelection}
           />
         ),
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
@@ -127,7 +128,7 @@ export default function UsageHistorySyncStateTable({
               name: row.original.accountName,
             })}
             data-testid={`${BASIC_SETTINGS_TEST_IDS.usageHistorySyncAccountCheckboxPrefix}-${row.original.id}`}
-            disabled={isSyncingAll}
+            disabled={isSyncingAll || isSyncingSelection}
           />
         ),
         size: 16,
@@ -207,7 +208,7 @@ export default function UsageHistorySyncStateTable({
         enableSorting: false,
       },
     ]
-  }, [isSyncingAll, onSyncAccounts, syncingAccountIds, t])
+  }, [isSyncingAll, isSyncingSelection, onSyncAccounts, syncingAccountIds, t])
 
   const table = useReactTable({
     data: rows,
@@ -233,6 +234,15 @@ export default function UsageHistorySyncStateTable({
 
   const isInitialLoading = isLoading && rows.length === 0
 
+  const handleSyncSelection = async () => {
+    setIsSyncingSelection(true)
+    try {
+      await onSyncAccounts(selectedAccountIds)
+    } finally {
+      setIsSyncingSelection(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -245,17 +255,22 @@ export default function UsageHistorySyncStateTable({
           <Button
             variant="default"
             size="sm"
-            onClick={() => void onSyncAccounts(selectedAccountIds)}
+            onClick={() => void handleSyncSelection()}
             disabled={!selectedAccountIds.length || isSyncingAll}
+            loading={isSyncingSelection}
             data-testid={BASIC_SETTINGS_TEST_IDS.usageHistorySyncSelectedButton}
           >
-            {t("syncTab.actions.syncSelected")}
+            {isSyncingSelection
+              ? t("syncTab.actions.syncing")
+              : t("syncTab.actions.syncSelected")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.resetRowSelection()}
-            disabled={!selectedAccountIds.length || isSyncingAll}
+            disabled={
+              !selectedAccountIds.length || isSyncingAll || isSyncingSelection
+            }
           >
             {t("syncTab.actions.clearSelection")}
           </Button>

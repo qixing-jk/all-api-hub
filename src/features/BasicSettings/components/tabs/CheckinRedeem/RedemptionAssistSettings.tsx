@@ -22,6 +22,12 @@ import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
  * Unified logger scoped to the Basic Settings redemption assist section.
  */
 const logger = createLogger("RedemptionAssistSettings")
+const REDEMPTION_ASSIST_SAVE_ACTIONS = {
+  URL_PATTERNS: "url_patterns",
+} as const
+
+type RedemptionAssistSaveAction =
+  (typeof REDEMPTION_ASSIST_SAVE_ACTIONS)[keyof typeof REDEMPTION_ASSIST_SAVE_ACTIONS]
 
 /**
  * Settings section for toggling redemption assist feature.
@@ -34,6 +40,8 @@ export default function RedemptionAssistSettings() {
     resetRedemptionAssistConfig,
   } = useUserPreferencesContext()
   const [isSaving, setIsSaving] = useState(false)
+  const [activeSaveAction, setActiveSaveAction] =
+    useState<RedemptionAssistSaveAction | null>(null)
 
   const config =
     userPrefs.redemptionAssist ?? DEFAULT_PREFERENCES.redemptionAssist!
@@ -78,6 +86,25 @@ export default function RedemptionAssistSettings() {
       toast.error(msg || t("settings:messages.saveSettingsFailed"))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleSaveUrlPatterns = async () => {
+    const nextPatterns = patternsDraft
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+
+    setActiveSaveAction(REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS)
+    try {
+      await saveSettings({
+        urlWhitelist: {
+          ...whitelist,
+          patterns: nextPatterns,
+        },
+      })
+    } finally {
+      setActiveSaveAction(null)
     }
   }
 
@@ -244,20 +271,16 @@ export default function RedemptionAssistSettings() {
                 type="button"
                 variant="outline"
                 disabled={isSaving}
-                onClick={() => {
-                  const nextPatterns = patternsDraft
-                    .split(/\r?\n/)
-                    .map((line) => line.trim())
-                    .filter(Boolean)
-                  void saveSettings({
-                    urlWhitelist: {
-                      ...whitelist,
-                      patterns: nextPatterns,
-                    },
-                  })
-                }}
+                loading={
+                  activeSaveAction ===
+                  REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS
+                }
+                onClick={() => void handleSaveUrlPatterns()}
               >
-                {t("common:actions.save")}
+                {activeSaveAction ===
+                REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS
+                  ? t("common:status.saving")
+                  : t("common:actions.save")}
               </Button>
             </div>
           </div>

@@ -26,6 +26,13 @@ import { WEB_AI_API_CHECK_TARGET_IDS } from "./searchTargets"
  * Unified logger scoped to the Basic Settings Web AI API Check section.
  */
 const logger = createLogger("WebAiApiCheckSettings")
+const SETTINGS_SAVE_ACTIONS = {
+  URL_PATTERNS: "url_patterns",
+  KEY_CLEANUP_PATTERNS: "key_cleanup_patterns",
+} as const
+
+type SettingsSaveAction =
+  (typeof SETTINGS_SAVE_ACTIONS)[keyof typeof SETTINGS_SAVE_ACTIONS]
 
 /**
  * Parse a newline-separated list of RegExp pattern strings and report invalid items.
@@ -94,6 +101,8 @@ export default function WebAiApiCheckSettings() {
   } = useUserPreferencesContext()
 
   const [isSaving, setIsSaving] = useState(false)
+  const [activeSaveAction, setActiveSaveAction] =
+    useState<SettingsSaveAction | null>(null)
 
   const config = userPrefs.webAiApiCheck ?? DEFAULT_PREFERENCES.webAiApiCheck!
 
@@ -156,6 +165,37 @@ export default function WebAiApiCheckSettings() {
       toast.error(t("settings:messages.saveSettingsFailed"))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleSaveUrlPatterns = async () => {
+    setActiveSaveAction(SETTINGS_SAVE_ACTIONS.URL_PATTERNS)
+    try {
+      await saveSettings({
+        autoDetect: {
+          ...autoDetect,
+          enhanced: enhancedAutoDetect,
+          urlWhitelist: {
+            ...whitelist,
+            patterns,
+          },
+        },
+      })
+    } finally {
+      setActiveSaveAction(null)
+    }
+  }
+
+  const handleSaveKeyCleanupPatterns = async () => {
+    setActiveSaveAction(SETTINGS_SAVE_ACTIONS.KEY_CLEANUP_PATTERNS)
+    try {
+      await saveSettings({
+        keyCleanup: {
+          removalPatterns: keyCleanupPatterns,
+        },
+      })
+    } finally {
+      setActiveSaveAction(null)
     }
   }
 
@@ -276,20 +316,14 @@ export default function WebAiApiCheckSettings() {
                 type="button"
                 variant="outline"
                 disabled={isSaving}
-                onClick={() => {
-                  void saveSettings({
-                    autoDetect: {
-                      ...autoDetect,
-                      enhanced: enhancedAutoDetect,
-                      urlWhitelist: {
-                        ...whitelist,
-                        patterns,
-                      },
-                    },
-                  })
-                }}
+                loading={
+                  activeSaveAction === SETTINGS_SAVE_ACTIONS.URL_PATTERNS
+                }
+                onClick={() => void handleSaveUrlPatterns()}
               >
-                {t("common:actions.save")}
+                {activeSaveAction === SETTINGS_SAVE_ACTIONS.URL_PATTERNS
+                  ? t("common:status.saving")
+                  : t("common:actions.save")}
               </Button>
             </div>
           </div>
@@ -332,15 +366,15 @@ export default function WebAiApiCheckSettings() {
                 type="button"
                 variant="outline"
                 disabled={isSaving}
-                onClick={() => {
-                  void saveSettings({
-                    keyCleanup: {
-                      removalPatterns: keyCleanupPatterns,
-                    },
-                  })
-                }}
+                loading={
+                  activeSaveAction ===
+                  SETTINGS_SAVE_ACTIONS.KEY_CLEANUP_PATTERNS
+                }
+                onClick={() => void handleSaveKeyCleanupPatterns()}
               >
-                {t("webAiApiCheck:settings.keyCleanup.save")}
+                {activeSaveAction === SETTINGS_SAVE_ACTIONS.KEY_CLEANUP_PATTERNS
+                  ? t("common:status.saving")
+                  : t("webAiApiCheck:settings.keyCleanup.save")}
               </Button>
             </div>
           </div>

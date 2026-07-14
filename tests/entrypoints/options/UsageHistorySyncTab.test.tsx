@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -339,6 +340,144 @@ describe("UsageHistorySyncTab", () => {
         UsageHistoryMessageTypes.SyncNow,
         { accountIds: ["a1"] },
       )
+    })
+  })
+
+  it("marks only selected sync busy and restores it after rejection", async () => {
+    const deferredResponse = createDeferred<any>()
+    mockedSendUsageHistoryMessage.mockReturnValueOnce(deferredResponse.promise)
+
+    renderSubject()
+
+    const account1Cell = await screen.findByText("Account 1")
+    const account1Row = account1Cell.closest("tr")
+    if (!account1Row) throw new Error("Missing account row for Account 1")
+
+    fireEvent.click(within(account1Row).getByRole("checkbox"))
+
+    const syncSelectedButton = screen.getByRole("button", {
+      name: "usageAnalytics:syncTab.actions.syncSelected",
+    })
+    fireEvent.click(syncSelectedButton)
+
+    await waitFor(() => {
+      expect(syncSelectedButton).toHaveAccessibleName(
+        "usageAnalytics:syncTab.actions.syncing",
+      )
+    })
+    expect(syncSelectedButton).toBeDisabled()
+    expect(syncSelectedButton).toHaveAttribute("aria-busy", "true")
+
+    const rowActionButton = within(account1Row).getByRole("button", {
+      name: "usageAnalytics:syncTab.table.rowActions",
+    })
+    expect(rowActionButton).toBeDisabled()
+    expect(rowActionButton).not.toHaveAttribute("aria-busy")
+    expect(
+      screen.getByRole("button", {
+        name: "usageAnalytics:actions.syncNow",
+      }),
+    ).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(syncSelectedButton)
+    expect(mockedSendUsageHistoryMessage).toHaveBeenCalledTimes(1)
+
+    deferredResponse.reject(new Error("background down"))
+
+    await waitFor(() => {
+      expect(syncSelectedButton).toHaveAccessibleName(
+        "usageAnalytics:syncTab.actions.syncSelected",
+      )
+      expect(syncSelectedButton).toBeEnabled()
+      expect(syncSelectedButton).not.toHaveAttribute("aria-busy")
+    })
+
+    fireEvent.click(syncSelectedButton)
+    await waitFor(() => {
+      expect(mockedSendUsageHistoryMessage).toHaveBeenCalledTimes(2)
+      expect(syncSelectedButton).toHaveAccessibleName(
+        "usageAnalytics:syncTab.actions.syncSelected",
+      )
+      expect(syncSelectedButton).toBeEnabled()
+      expect(syncSelectedButton).not.toHaveAttribute("aria-busy")
+    })
+  })
+
+  it("keeps selected sync locked but non-busy during aggregate sync", async () => {
+    const deferredResponse = createDeferred<any>()
+    mockedSendUsageHistoryMessage.mockReturnValueOnce(deferredResponse.promise)
+
+    renderSubject()
+
+    const account1Cell = await screen.findByText("Account 1")
+    const account1Row = account1Cell.closest("tr")
+    if (!account1Row) throw new Error("Missing account row for Account 1")
+    fireEvent.click(within(account1Row).getByRole("checkbox"))
+
+    const syncSelectedButton = screen.getByRole("button", {
+      name: "usageAnalytics:syncTab.actions.syncSelected",
+    })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "usageAnalytics:actions.syncNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(syncSelectedButton).toBeDisabled()
+    })
+    expect(syncSelectedButton).toHaveAccessibleName(
+      "usageAnalytics:syncTab.actions.syncSelected",
+    )
+    expect(syncSelectedButton).not.toHaveAttribute("aria-busy")
+
+    deferredResponse.resolve({ success: true, data: {} })
+
+    await waitFor(() => {
+      expect(syncSelectedButton).toBeEnabled()
+    })
+  })
+
+  it("does not mark selected sync busy when a row sync initiated the request", async () => {
+    const user = userEvent.setup()
+    const deferredResponse = createDeferred<any>()
+    mockedSendUsageHistoryMessage.mockReturnValueOnce(deferredResponse.promise)
+
+    renderSubject()
+
+    const account1Cell = await screen.findByText("Account 1")
+    const account1Row = account1Cell.closest("tr")
+    if (!account1Row) throw new Error("Missing account row for Account 1")
+    fireEvent.click(within(account1Row).getByRole("checkbox"))
+
+    const syncSelectedButton = screen.getByRole("button", {
+      name: "usageAnalytics:syncTab.actions.syncSelected",
+    })
+    const rowActionButton = within(account1Row).getByRole("button", {
+      name: "usageAnalytics:syncTab.table.rowActions",
+    })
+    await user.click(rowActionButton)
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "usageAnalytics:syncTab.actions.syncAccount",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+        UsageHistoryMessageTypes.SyncNow,
+        { accountIds: ["a1"] },
+      )
+    })
+    expect(syncSelectedButton).toHaveAccessibleName(
+      "usageAnalytics:syncTab.actions.syncSelected",
+    )
+    expect(syncSelectedButton).not.toHaveAttribute("aria-busy")
+
+    deferredResponse.resolve({ success: true, data: {} })
+
+    await waitFor(() => {
+      expect(rowActionButton).not.toHaveAttribute("aria-busy")
     })
   })
 
