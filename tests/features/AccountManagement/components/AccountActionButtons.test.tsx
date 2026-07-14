@@ -33,8 +33,10 @@ const {
   mockTogglePinAccount,
   fetchAccountTokensMock,
   getManagedSiteServiceMock,
+  openKeysPageMock,
   openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
+  openModelsPageMock,
   sendRuntimeMessageMock,
   loadAccountDataMock,
   exportShareSnapshotWithToastMock,
@@ -58,8 +60,10 @@ const {
   mockTogglePinAccount: vi.fn(),
   fetchAccountTokensMock: vi.fn(),
   getManagedSiteServiceMock: vi.fn(),
+  openKeysPageMock: vi.fn(),
   openManagedSiteChannelsForChannelMock: vi.fn(),
   openManagedSiteChannelsPageMock: vi.fn(),
+  openModelsPageMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
   loadAccountDataMock: vi.fn(),
   exportShareSnapshotWithToastMock: vi.fn(),
@@ -162,10 +166,10 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 
 vi.mock("~/utils/navigation", () => ({
-  openKeysPage: vi.fn(),
+  openKeysPage: openKeysPageMock,
   openManagedSiteChannelsForChannel: openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPage: openManagedSiteChannelsPageMock,
-  openModelsPage: vi.fn(),
+  openModelsPage: openModelsPageMock,
   openRedeemPage: vi.fn(),
   openUsagePage: vi.fn(),
 }))
@@ -444,6 +448,46 @@ describe("AccountActionButtons", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       })
     })
+  })
+
+  it("closes the account action menu before starting in-page navigation", async () => {
+    const user = userEvent.setup()
+    const site = buildDisplaySiteData({
+      id: "acc-in-page-navigation",
+      disabled: false,
+      name: "In-page Navigation Site",
+    })
+    let menuExpandedWhenNavigationStarted: string | null = null
+
+    render(
+      <AccountActionButtons
+        site={site}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    const moreActionsButton = screen.getByRole("button", {
+      name: "common:actions.more",
+    })
+    openKeysPageMock.mockImplementation(() => {
+      menuExpandedWhenNavigationStarted =
+        moreActionsButton.getAttribute("aria-expanded")
+    })
+
+    await user.click(moreActionsButton)
+    const menu = await screen.findByRole("menu")
+    const keyManagementButton = (
+      await within(menu).findByText("account:actions.keyManagement")
+    ).closest("button")
+    expect(keyManagementButton).not.toBeNull()
+
+    await user.click(keyManagementButton!)
+
+    await waitFor(() => {
+      expect(openKeysPageMock).toHaveBeenCalledWith(site.id)
+    })
+    expect(menuExpandedWhenNavigationStarted).toBe("false")
   })
 
   it("does not track analytics for disabled account action menu entries", async () => {

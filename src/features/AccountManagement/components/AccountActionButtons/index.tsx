@@ -272,6 +272,7 @@ export default function AccountActionButtons({
   } = useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
+  const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false)
 
   const isAccountDisabled = site.disabled === true
   const isQuickCheckinEligible =
@@ -403,12 +404,18 @@ export default function AccountActionButtons({
   }
 
   // Navigation functions for secondary menu items
+  const navigateAfterClosingMoreActions = (navigate: () => void) => {
+    setIsMoreActionsOpen(false)
+    // Let Radix release its scroll lock before the options route unmounts it.
+    window.requestAnimationFrame(navigate)
+  }
+
   const handleNavigateToKeyManagement = () => {
-    openKeysPage(site.id)
+    navigateAfterClosingMoreActions(() => openKeysPage(site.id))
   }
 
   const handleNavigateToModelManagement = () => {
-    openModelsPage(site.id)
+    navigateAfterClosingMoreActions(() => openModelsPage(site.id))
   }
 
   const handleNavigateToUsageManagement = () => {
@@ -843,7 +850,10 @@ export default function AccountActionButtons({
         </IconButton>
 
         {/* Secondary Level - Dropdown menu */}
-        <DropdownMenu>
+        <DropdownMenu
+          open={isMoreActionsOpen}
+          onOpenChange={setIsMoreActionsOpen}
+        >
           <DropdownMenuTrigger asChild>
             <IconButton
               variant="ghost"
