@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import type { ComponentProps, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -27,6 +27,17 @@ import {
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
 
 const {
   mockAllowDisabledVerificationButtonClicks,
@@ -164,6 +175,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/components/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/components/ui")>()
+  const ActualButton = actual.Button
 
   return {
     ...actual,
@@ -171,32 +183,25 @@ vi.mock("~/components/ui", async (importOriginal) => {
     Button: ({
       children,
       disabled,
-      onClick,
-      type = "button",
-    }: {
-      children: ReactNode
-      disabled?: boolean
-      onClick?: () => void
-      type?: "button" | "submit" | "reset"
-    }) => {
+      ...props
+    }: ComponentProps<typeof ActualButton>) => {
       const isVerificationButton =
         children ===
           "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh" ||
         children === "keyManagement:batchManagedSiteExport.actions.verifying"
 
       return (
-        <button
-          type={type}
+        <ActualButton
+          {...props}
           disabled={
             isVerificationButton &&
             mockAllowDisabledVerificationButtonClicks.current
               ? false
               : disabled
           }
-          onClick={onClick}
         >
           {children}
-        </button>
+        </ActualButton>
       )
     },
     Checkbox: ({
@@ -910,6 +915,71 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     )
     expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledTimes(2)
     expect(mockPreparePreview).toHaveBeenCalledTimes(1)
+  })
+
+  it("marks only the active verification row busy and restores sibling actions after settlement", async () => {
+    const user = userEvent.setup()
+    const deferredVerification = createDeferred<boolean>()
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 2,
+      readyCount: 0,
+      warningCount: 2,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+        buildRecoverablePreviewItem(preview.items[1], {
+          id: 8,
+          name: "Second potential channel",
+        }),
+      ],
+    }
+    mockPreparePreview.mockResolvedValueOnce(recoverablePreview)
+    mockLoadNewApiChannelKeyWithVerification.mockReturnValueOnce(
+      deferredVerification.promise,
+    )
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    const [firstVerifyButton] = screen.getAllByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+    })
+    await user.click(firstVerifyButton!)
+
+    const verifyingButton = screen.getByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifying",
+    })
+    const siblingVerifyButton = screen.getByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+    })
+    expect(verifyingButton).toHaveAttribute("aria-busy", "true")
+    expect(verifyingButton).toBeDisabled()
+    expect(siblingVerifyButton).toBeDisabled()
+    expect(siblingVerifyButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(verifyingButton)
+    expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledTimes(1)
+
+    deferredVerification.resolve(false)
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      ).toHaveLength(2)
+    })
+    for (const button of screen.getAllByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+    })) {
+      expect(button).toBeEnabled()
+      expect(button).not.toHaveAttribute("aria-busy")
+    }
   })
 
   it("removes verified skipped rows from execution selection using the current preview item", async () => {

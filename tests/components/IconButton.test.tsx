@@ -106,6 +106,7 @@ describe("IconButton", () => {
     expect(button).toHaveAttribute("aria-busy", "true")
     expect(button).toBeDisabled()
     expect(screen.queryByTestId("refresh-icon")).not.toBeInTheDocument()
+    expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true")
 
     fireEvent.click(button)
 

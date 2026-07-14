@@ -6,7 +6,18 @@ import { SITE_TYPES } from "~/constants/siteType"
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
 import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
-import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
@@ -154,6 +165,8 @@ describe("SiteInfo", () => {
     accountDataScenario.togglePinAccount.mockReset()
     accountActionsScenario.refreshingAccountId = null
     getLdohSearchUrlForAccountUrlMock.mockReturnValue(null)
+    mockHandleRefreshAccount.mockReset()
+    mockHandleRefreshAccount.mockResolvedValue(undefined)
   })
 
   it("shows a disabled badge and still opens the site URL", async () => {
@@ -229,6 +242,7 @@ describe("SiteInfo", () => {
   })
 
   it("shows a warning check-in indicator when the last check-in status detection is not today", async () => {
+    const user = userEvent.setup()
     const dateNowSpy = vi
       .spyOn(Date, "now")
       .mockReturnValue(new Date(2026, 0, 2, 10, 0, 0).getTime())
@@ -260,7 +274,7 @@ describe("SiteInfo", () => {
         }),
       ).not.toBeInTheDocument()
 
-      fireEvent.click(staleStatusButton)
+      await user.click(staleStatusButton)
 
       expect(mockHandleRefreshAccount).toHaveBeenCalledTimes(1)
       expect(mockHandleRefreshAccount).toHaveBeenCalledWith(
@@ -632,6 +646,98 @@ describe("SiteInfo", () => {
     expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
   })
 
+  it("marks only stale check-in refresh busy and restores both refresh controls after rejection", async () => {
+    const user = userEvent.setup()
+    const deferredRefresh = createDeferred<void>()
+    mockHandleRefreshAccount.mockReturnValueOnce(deferredRefresh.promise)
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          checkIn: {
+            enableDetection: true,
+            siteStatus: {
+              isCheckedInToday: true,
+              lastDetectedAt: 1,
+            },
+          },
+        })}
+      />,
+    )
+
+    const staleCheckInButton = screen.getByRole("button", {
+      name: "account:list.site.checkInStatusOutdated",
+    })
+    const healthButton = screen.getByRole("button", {
+      name: "account:list.site.refreshHealthStatus",
+    })
+
+    await user.click(staleCheckInButton)
+
+    expect(staleCheckInButton).toHaveAttribute("aria-busy", "true")
+    expect(staleCheckInButton).toBeDisabled()
+    expect(healthButton).toBeDisabled()
+    expect(healthButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(staleCheckInButton)
+    await user.click(healthButton)
+    expect(mockHandleRefreshAccount).toHaveBeenCalledTimes(1)
+
+    deferredRefresh.reject(new Error("refresh failed"))
+
+    await waitFor(() => {
+      expect(staleCheckInButton).toBeEnabled()
+    })
+    expect(staleCheckInButton).not.toHaveAttribute("aria-busy")
+    expect(healthButton).toBeEnabled()
+  })
+
+  it("marks only health refresh busy and restores both refresh controls after rejection", async () => {
+    const user = userEvent.setup()
+    const deferredRefresh = createDeferred<void>()
+    mockHandleRefreshAccount.mockReturnValueOnce(deferredRefresh.promise)
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          checkIn: {
+            enableDetection: true,
+            siteStatus: {
+              isCheckedInToday: true,
+              lastDetectedAt: 1,
+            },
+          },
+        })}
+      />,
+    )
+
+    const staleCheckInButton = screen.getByRole("button", {
+      name: "account:list.site.checkInStatusOutdated",
+    })
+    const healthButton = screen.getByRole("button", {
+      name: "account:list.site.refreshHealthStatus",
+    })
+
+    await user.click(healthButton)
+
+    expect(healthButton).toHaveAttribute("aria-busy", "true")
+    expect(healthButton).toBeDisabled()
+    expect(staleCheckInButton).toBeDisabled()
+    expect(staleCheckInButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(healthButton)
+    await user.click(staleCheckInButton)
+    expect(mockHandleRefreshAccount).toHaveBeenCalledTimes(1)
+
+    deferredRefresh.reject(new Error("refresh failed"))
+
+    await waitFor(() => {
+      expect(healthButton).toBeEnabled()
+    })
+    expect(healthButton).not.toHaveAttribute("aria-busy")
+    expect(staleCheckInButton).toBeEnabled()
+  })
+
   it("does not re-trigger health refresh while the current row is already refreshing", async () => {
     const user = userEvent.setup()
 
@@ -641,6 +747,13 @@ describe("SiteInfo", () => {
       <SiteInfo
         site={buildSite({
           id: "acc-refreshing",
+          checkIn: {
+            enableDetection: true,
+            siteStatus: {
+              isCheckedInToday: true,
+              lastDetectedAt: 1,
+            },
+          },
         })}
       />,
     )
@@ -650,6 +763,13 @@ describe("SiteInfo", () => {
     })
 
     expect(healthButton).toHaveClass("animate-pulse")
+    expect(healthButton).toBeDisabled()
+    expect(healthButton).not.toHaveAttribute("aria-busy")
+    const staleCheckInButton = screen.getByRole("button", {
+      name: "account:list.site.checkInStatusOutdated",
+    })
+    expect(staleCheckInButton).toBeDisabled()
+    expect(staleCheckInButton).not.toHaveAttribute("aria-busy")
     await user.click(healthButton)
 
     expect(mockHandleRefreshAccount).not.toHaveBeenCalled()

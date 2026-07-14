@@ -18,6 +18,17 @@ import {
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
 const {
   mockBuildBatchExportResult,
   mockCompleteProductAnalyticsAction,
@@ -589,6 +600,42 @@ describe("TokenList batch export selection", () => {
     expect(screen.getByRole("checkbox", { name: "Token 1" })).not.toBeChecked()
     expect(screen.getByRole("checkbox", { name: "Token 2" })).not.toBeChecked()
     expect(saveButton).toBeDisabled()
+  })
+
+  it("shows a shared saving state, suppresses duplicate saves, and restores the count label after rejection", async () => {
+    const user = userEvent.setup()
+    const deferredSave = createDeferred<{ savedCount: number }>()
+    mockSaveApiCredentialProfiles.mockReturnValueOnce(deferredSave.promise)
+    renderTokenList()
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.batchSaveToApiProfilesButton),
+    )
+
+    const savingButton = screen.getByRole("button", {
+      name: "common:status.saving",
+    })
+    expect(savingButton).toHaveAttribute("aria-busy", "true")
+    expect(savingButton).toBeDisabled()
+
+    await user.click(savingButton)
+    expect(mockSaveApiCredentialProfiles).toHaveBeenCalledTimes(1)
+
+    deferredSave.reject(new Error("storage failed"))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: /keyManagement:batchApiCredentialProfiles.actions.open/,
+        }),
+      ).toBeEnabled()
+    })
+    expect(
+      screen.getByRole("button", {
+        name: /keyManagement:batchApiCredentialProfiles.actions.open/,
+      }),
+    ).not.toHaveAttribute("aria-busy")
   })
 
   it("includes selected service credentials in API profile, CLIProxy, and managed-site export actions", async () => {

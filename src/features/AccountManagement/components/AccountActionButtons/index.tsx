@@ -824,7 +824,8 @@ export default function AccountActionButtons({
           variant="ghost"
           size="sm"
           className="touch-manipulation"
-          disabled={isCheckingTokens || isAccountDisabled}
+          loading={isCheckingTokens}
+          disabled={isAccountDisabled}
           aria-label={t("actions.copyKey")}
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyKeyButton}
           title={t("actions.copyKey")}

@@ -28,6 +28,17 @@ import {
 } from "~/utils/navigation"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
@@ -96,11 +107,13 @@ vi.mock("~/utils/navigation", () => ({
 }))
 
 const {
+  accountDataScenario,
   handleRefreshMock,
   startProductAnalyticsActionMock,
   trackerCompleteMock,
   trackProductAnalyticsActionStartedMock,
 } = vi.hoisted(() => ({
+  accountDataScenario: { isRefreshing: false },
   handleRefreshMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   trackerCompleteMock: vi.fn(),
@@ -109,7 +122,7 @@ const {
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
-    isRefreshing: false,
+    isRefreshing: accountDataScenario.isRefreshing,
     handleRefresh: handleRefreshMock,
   }),
 }))
@@ -164,6 +177,7 @@ describe("popup HeaderSection", () => {
     })
     handleRefreshMock.mockReset()
     handleRefreshMock.mockResolvedValue({ success: 0, failed: 0 })
+    accountDataScenario.isRefreshing = false
     mockedIsExtensionSidePanel.mockReturnValue(false)
     mockedGetSidePanelSupport.mockReturnValue({
       supported: true,
@@ -347,6 +361,75 @@ describe("popup HeaderSection", () => {
         },
       )
     })
+    expect(
+      screen.getByRole("button", { name: "common:actions.refresh" }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "common:actions.refresh" }),
+    ).not.toHaveAttribute("aria-busy")
+  })
+
+  it("disables the refresh action without marking it busy during an external refresh", async () => {
+    const { rerender } = render(<HeaderSection />, {
+      withReleaseUpdateStatusProvider: false,
+    })
+
+    const refreshButton = await screen.findByRole("button", {
+      name: "common:actions.refresh",
+    })
+    expect(refreshButton).toBeEnabled()
+    expect(refreshButton).not.toHaveAttribute("aria-busy")
+
+    accountDataScenario.isRefreshing = true
+    rerender(<HeaderSection />)
+
+    const externallyLockedRefreshButton = screen.getByRole("button", {
+      name: "common:actions.refresh",
+    })
+    expect(externallyLockedRefreshButton).not.toHaveAttribute("aria-busy")
+    expect(externallyLockedRefreshButton).toBeDisabled()
+
+    fireEvent.click(externallyLockedRefreshButton)
+    expect(handleRefreshMock).not.toHaveBeenCalled()
+
+    accountDataScenario.isRefreshing = false
+    rerender(<HeaderSection />)
+
+    expect(
+      screen.getByRole("button", { name: "common:actions.refresh" }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "common:actions.refresh" }),
+    ).not.toHaveAttribute("aria-busy")
+  })
+
+  it("marks only a locally initiated refresh busy and restores it after settlement", async () => {
+    const deferredRefresh = createDeferred<{
+      success: number
+      failed: number
+      refreshedCount: number
+    }>()
+    handleRefreshMock.mockReturnValueOnce(deferredRefresh.promise)
+
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
+
+    const refreshButton = await screen.findByRole("button", {
+      name: "common:actions.refresh",
+    })
+    fireEvent.click(refreshButton)
+
+    expect(refreshButton).toHaveAttribute("aria-busy", "true")
+    expect(refreshButton).toBeDisabled()
+
+    fireEvent.click(refreshButton)
+    expect(handleRefreshMock).toHaveBeenCalledTimes(1)
+
+    deferredRefresh.resolve({ success: 1, failed: 0, refreshedCount: 1 })
+
+    await waitFor(() => {
+      expect(refreshButton).toBeEnabled()
+    })
+    expect(refreshButton).not.toHaveAttribute("aria-busy")
   })
 
   it("tracks popup header settings shortcut as started-only analytics", async () => {

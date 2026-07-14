@@ -29,6 +29,17 @@ import {
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
 const {
   mockHandleSetAccountDisabled,
   mockTogglePinAccount,
@@ -795,6 +806,45 @@ describe("AccountActionButtons", () => {
         },
       },
     )
+  })
+
+  it("keeps the smart-copy action busy and suppresses duplicate token probes until rejection settles", async () => {
+    const deferredTokens = createDeferred<Array<{ key: string }>>()
+    fetchAccountTokensMock.mockReturnValueOnce(deferredTokens.promise)
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-pending-copy",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    const copyButton = screen.getByRole("button", {
+      name: "account:actions.copyKey",
+    })
+    await user.click(copyButton)
+
+    expect(copyButton).toHaveAttribute("aria-busy", "true")
+    expect(copyButton).toBeDisabled()
+    await user.click(copyButton)
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+
+    deferredTokens.reject(new Error("token probe failed"))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "account:actions.copyKey" }),
+      ).toBeEnabled()
+    })
+    expect(
+      screen.getByRole("button", { name: "account:actions.copyKey" }),
+    ).not.toHaveAttribute("aria-busy")
   })
 
   it("shows a fetch-info error when the token probe returns a non-array payload", async () => {

@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
+import { Button } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -15,6 +16,16 @@ const formatCompactNumber = (value: number) =>
     notation: Math.abs(value) >= 10000 ? "compact" : "standard",
     maximumFractionDigits: 1,
   }).format(value)
+
+const BALANCE_REFRESH_TARGETS = {
+  BALANCE: "balance",
+  CASHFLOW: "cashflow",
+  INCOME: "income",
+  ESTIMATED_INCOME: "estimated_income",
+} as const
+
+type BalanceRefreshTarget =
+  (typeof BALANCE_REFRESH_TARGETS)[keyof typeof BALANCE_REFRESH_TARGETS]
 
 interface BalanceDisplayProps {
   site: DisplaySiteData
@@ -30,6 +41,8 @@ const AnimatedValue: React.FC<{
   title?: string
   onClick?: () => void
   isRefreshing?: boolean
+  loading?: boolean
+  disabled?: boolean
 }> = React.memo(
   ({
     value,
@@ -40,6 +53,8 @@ const AnimatedValue: React.FC<{
     title,
     onClick,
     isRefreshing = false,
+    loading = false,
+    disabled = false,
   }) => {
     const { isInitialLoad } = useAccountDataContext()
     const { currencyType } = useUserPreferencesContext()
@@ -79,9 +94,13 @@ const AnimatedValue: React.FC<{
 
     if (onClick) {
       return (
-        <button
+        <Button
           type="button"
-          className={`ml-auto block max-w-full truncate bg-transparent p-0 text-right transition-all duration-200 ${
+          variant="ghost"
+          size="sm"
+          loading={loading}
+          disabled={disabled}
+          className={`ml-auto h-auto max-w-full min-w-0 shrink justify-end truncate bg-transparent px-0 py-0 text-right transition-all duration-200 ${
             isRefreshing
               ? "animate-pulse opacity-60"
               : "cursor-pointer hover:scale-105 hover:opacity-80"
@@ -91,7 +110,7 @@ const AnimatedValue: React.FC<{
           aria-label={title}
         >
           {content}
-        </button>
+        </Button>
       )
     }
 
@@ -120,6 +139,8 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
     useUserPreferencesContext()
   const { handleRefreshAccount, refreshingAccountId } =
     useAccountActionsContext()
+  const [activeRefreshTarget, setActiveRefreshTarget] =
+    useState<BalanceRefreshTarget | null>(null)
 
   const isRefreshing = refreshingAccountId === site.id
   const isAccountDisabled = site.disabled === true
@@ -128,11 +149,21 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
     preferences?.balanceHistory?.estimatedTodayIncome?.enabled === true
   const estimatedTodayIncome = site.estimatedTodayIncome?.[currencyType]
 
-  const handleRefreshClick = async () => {
-    if (isAccountDisabled) return
-    if (!isRefreshing) {
+  const isRefreshLocked = isRefreshing || activeRefreshTarget !== null
+
+  const handleRefreshClick = async (target: BalanceRefreshTarget) => {
+    if (isAccountDisabled || isRefreshLocked) return
+
+    setActiveRefreshTarget(target)
+    try {
       await handleRefreshAccount(site, true) // Force refresh
+    } finally {
+      setActiveRefreshTarget(null)
     }
+  }
+
+  const refreshMetric = (target: BalanceRefreshTarget) => {
+    void handleRefreshClick(target).catch(() => undefined)
   }
 
   const refreshTitle = isAccountDisabled
@@ -149,8 +180,14 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
         }
         className="dark:text-dark-text-primary mb-0.5 text-sm font-semibold text-gray-900 sm:text-base md:text-lg"
         title={refreshTitle}
-        onClick={isAccountDisabled ? undefined : handleRefreshClick}
+        onClick={
+          isAccountDisabled
+            ? undefined
+            : () => refreshMetric(BALANCE_REFRESH_TARGETS.BALANCE)
+        }
         isRefreshing={isRefreshing}
+        loading={activeRefreshTarget === BALANCE_REFRESH_TARGETS.BALANCE}
+        disabled={isRefreshLocked}
       />
 
       {/* Today's Statistics */}
@@ -171,8 +208,14 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 ? t("list.site.disabled")
                 : t("list.balance.refreshCashflow")
             }
-            onClick={isAccountDisabled ? undefined : handleRefreshClick}
+            onClick={
+              isAccountDisabled
+                ? undefined
+                : () => refreshMetric(BALANCE_REFRESH_TARGETS.CASHFLOW)
+            }
             isRefreshing={isRefreshing}
+            loading={activeRefreshTarget === BALANCE_REFRESH_TARGETS.CASHFLOW}
+            disabled={isRefreshLocked}
           />
 
           {/* Income */}
@@ -190,8 +233,14 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 ? t("list.site.disabled")
                 : t("list.balance.refreshIncome")
             }
-            onClick={isAccountDisabled ? undefined : handleRefreshClick}
+            onClick={
+              isAccountDisabled
+                ? undefined
+                : () => refreshMetric(BALANCE_REFRESH_TARGETS.INCOME)
+            }
             isRefreshing={isRefreshing}
+            loading={activeRefreshTarget === BALANCE_REFRESH_TARGETS.INCOME}
+            disabled={isRefreshLocked}
           />
 
           {estimatedTodayIncomeEnabled &&
@@ -210,8 +259,18 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                     ? t("list.site.disabled")
                     : t("stats.estimatedTodayIncome")
                 }
-                onClick={isAccountDisabled ? undefined : handleRefreshClick}
+                onClick={
+                  isAccountDisabled
+                    ? undefined
+                    : () =>
+                        refreshMetric(BALANCE_REFRESH_TARGETS.ESTIMATED_INCOME)
+                }
                 isRefreshing={isRefreshing}
+                loading={
+                  activeRefreshTarget ===
+                  BALANCE_REFRESH_TARGETS.ESTIMATED_INCOME
+                }
+                disabled={isRefreshLocked}
               />
             )}
         </div>

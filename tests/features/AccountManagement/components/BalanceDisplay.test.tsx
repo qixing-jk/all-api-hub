@@ -6,7 +6,18 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import BalanceDisplay from "~/features/AccountManagement/components/AccountList/BalanceDisplay"
 import { getDisplayMoneyValue } from "~/utils/core/money"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
 
 const {
   mockUseAccountActionsContext,
@@ -401,10 +412,72 @@ describe("BalanceDisplay", () => {
 
     const balanceNode = screen.getByTitle("account:list.balance.refreshBalance")
     expect(balanceNode).toHaveClass("animate-pulse", "opacity-60")
+    expect(balanceNode).toBeDisabled()
+    expect(balanceNode).not.toHaveAttribute("aria-busy")
+    expect(
+      screen.getByRole("button", {
+        name: "account:list.balance.refreshCashflow",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "account:list.balance.refreshCashflow",
+      }),
+    ).not.toHaveAttribute("aria-busy")
 
     await user.click(balanceNode)
 
     expect(handleRefreshAccount).not.toHaveBeenCalled()
+  })
+
+  it("marks only the clicked metric busy and restores every metric after a rejected refresh", async () => {
+    const user = userEvent.setup()
+    const site = buildDisplaySiteData({
+      balance: { USD: 18, CNY: 126 },
+      todayConsumption: { USD: 1, CNY: 7 },
+      todayIncome: { USD: 2, CNY: 14 },
+    })
+    const deferredRefresh = createDeferred<void>()
+    const handleRefreshAccount = vi.fn(() => deferredRefresh.promise)
+
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    render(<BalanceDisplay site={site} />)
+
+    const balanceButton = screen.getByRole("button", {
+      name: "account:list.balance.refreshBalance",
+    })
+    const cashflowButton = screen.getByRole("button", {
+      name: "account:list.balance.refreshCashflow",
+    })
+    const incomeButton = screen.getByRole("button", {
+      name: "account:list.balance.refreshIncome",
+    })
+
+    await user.click(balanceButton)
+
+    expect(balanceButton).toHaveAttribute("aria-busy", "true")
+    expect(balanceButton).toBeDisabled()
+    expect(cashflowButton).toBeDisabled()
+    expect(cashflowButton).not.toHaveAttribute("aria-busy")
+    expect(incomeButton).toBeDisabled()
+    expect(incomeButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(balanceButton)
+    await user.click(cashflowButton)
+    expect(handleRefreshAccount).toHaveBeenCalledTimes(1)
+
+    deferredRefresh.reject(new Error("refresh failed"))
+
+    await waitFor(() => {
+      expect(balanceButton).toBeEnabled()
+    })
+    expect(balanceButton).not.toHaveAttribute("aria-busy")
+    expect(cashflowButton).toBeEnabled()
+    expect(incomeButton).toBeEnabled()
   })
 
   it("renders static values on the first paint and hides today cashflow when that preference is disabled", () => {

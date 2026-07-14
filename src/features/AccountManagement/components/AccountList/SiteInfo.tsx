@@ -12,7 +12,7 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { PinIcon } from "lucide-react"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -67,6 +67,14 @@ interface SiteInfoProps {
   showCreatedAt?: boolean
 }
 
+const SITE_INFO_REFRESH_TARGETS = {
+  STALE_CHECK_IN: "stale_check_in",
+  HEALTH: "health",
+} as const
+
+type SiteInfoRefreshTarget =
+  (typeof SITE_INFO_REFRESH_TARGETS)[keyof typeof SITE_INFO_REFRESH_TARGETS]
+
 /**
  * Logger scoped to account list rows so navigation failures can be diagnosed without leaking account secrets.
  */
@@ -119,6 +127,8 @@ export default function SiteInfo({
     handleMarkCustomCheckInAsCheckedIn,
   } = useAccountActionsContext()
   const { getLdohSearchUrlForAccountUrl } = useLdohSiteLookupContext()
+  const [activeRefreshTarget, setActiveRefreshTarget] =
+    useState<SiteInfoRefreshTarget | null>(null)
   const detectedAccountIdSet = useMemo(
     () => new Set(detectedSiteAccounts.map((account) => account.id)),
     [detectedSiteAccounts],
@@ -127,6 +137,7 @@ export default function SiteInfo({
   const isPinned = isAccountPinned(site.id)
   const pinTooltipLabel = isPinned ? t("actions.unpin") : t("actions.pin")
   const isRefreshing = refreshingAccountId === site.id
+  const isRefreshLocked = isRefreshing || activeRefreshTarget !== null
   const isAccountDisabled = site.disabled === true
   const ldohSearchUrl = getLdohSearchUrlForAccountUrl(site.baseUrl)
   const customCheckInUrl = site.checkIn?.customCheckIn?.url
@@ -231,6 +242,27 @@ export default function SiteInfo({
     }
   }
 
+  const handleAccountRefresh = async (target: SiteInfoRefreshTarget) => {
+    if (isAccountDisabled || isRefreshLocked) return
+
+    setActiveRefreshTarget(target)
+    try {
+      await handleRefreshAccount(site, true)
+    } finally {
+      setActiveRefreshTarget(null)
+    }
+  }
+
+  const refreshAccount = (target: SiteInfoRefreshTarget) => {
+    void handleAccountRefresh(target).catch((error) => {
+      logger.error("Failed to refresh account row", {
+        error,
+        accountId: site.id,
+        target,
+      })
+    })
+  }
+
   const renderCheckInIndicators = () => {
     if (isAccountDisabled) {
       return null
@@ -290,9 +322,15 @@ export default function SiteInfo({
             wrapperClassName="flex items-center"
           >
             <IconButton
-              onClick={() => void handleRefreshAccount(site, true)}
+              onClick={() =>
+                refreshAccount(SITE_INFO_REFRESH_TARGETS.STALE_CHECK_IN)
+              }
               variant="ghost"
               size="xs"
+              loading={
+                activeRefreshTarget === SITE_INFO_REFRESH_TARGETS.STALE_CHECK_IN
+              }
+              disabled={isRefreshLocked}
               aria-label={staleStatusLabel}
             >
               <ExclamationTriangleIcon className="h-4 w-4 text-orange-500" />
@@ -386,13 +424,6 @@ export default function SiteInfo({
 
   const checkInIndicator = renderCheckInIndicators()
 
-  const handleHealthClick = async () => {
-    if (isAccountDisabled) return
-    if (!isRefreshing) {
-      await handleRefreshAccount(site, true)
-    }
-  }
-
   return (
     <div className="flex w-full min-w-0 items-center gap-2">
       <div className="flex shrink-0 flex-col items-center justify-center gap-2 self-stretch">
@@ -458,20 +489,29 @@ export default function SiteInfo({
           }
           position="right"
         >
-          <button
-            className={`h-2 w-2 shrink-0 rounded-full transition-all duration-200 ${
+          <IconButton
+            variant="ghost"
+            size="none"
+            className={`h-4 w-4 shrink-0 rounded-full transition-all duration-200 hover:bg-transparent ${
               isRefreshing
                 ? "animate-pulse opacity-60"
                 : isAccountDisabled
                   ? "cursor-not-allowed opacity-60"
                   : "cursor-pointer hover:scale-125"
-            } ${
-              getStatusIndicatorColor(site.health?.status) ||
-              UI_CONSTANTS.STYLES.STATUS_INDICATOR.UNKNOWN
             }`}
-            onClick={handleHealthClick}
+            onClick={() => refreshAccount(SITE_INFO_REFRESH_TARGETS.HEALTH)}
+            loading={activeRefreshTarget === SITE_INFO_REFRESH_TARGETS.HEALTH}
+            disabled={isAccountDisabled || isRefreshLocked}
             aria-label={t("list.site.refreshHealthStatus")}
-          />
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                getStatusIndicatorColor(site.health?.status) ||
+                UI_CONSTANTS.STYLES.STATUS_INDICATOR.UNKNOWN
+              }`}
+              aria-hidden="true"
+            />
+          </IconButton>
         </Tooltip>
 
         {!isAccountDisabled && isPinFeatureEnabled && isPinned && (

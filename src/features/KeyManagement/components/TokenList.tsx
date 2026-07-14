@@ -7,7 +7,7 @@ import {
   KeyIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
-import { Library, Loader2, Network, SendToBack } from "lucide-react"
+import { Library, Network, SendToBack } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -804,22 +804,17 @@ export function TokenList(props: TokenListProps) {
             size="sm"
             type="button"
             data-testid={KEY_MANAGEMENT_TEST_IDS.batchSaveToApiProfilesButton}
-            disabled={
-              selectedApiProfileItems.length === 0 || isBatchApiProfilesSaving
-            }
+            loading={isBatchApiProfilesSaving}
+            disabled={selectedApiProfileItems.length === 0}
             variant="outline"
             onClick={() => void handleBatchSaveToApiProfiles()}
-            leftIcon={
-              isBatchApiProfilesSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Library className="h-4 w-4" />
-              )
-            }
+            leftIcon={<Library className="h-4 w-4" />}
           >
-            {t("batchApiCredentialProfiles.actions.open", {
-              selectedCount: selectedApiProfileItems.length,
-            })}
+            {isBatchApiProfilesSaving
+              ? t("common:status.saving")
+              : t("batchApiCredentialProfiles.actions.open", {
+                  selectedCount: selectedApiProfileItems.length,
+                })}
           </Button>
           <Button
             size="sm"
