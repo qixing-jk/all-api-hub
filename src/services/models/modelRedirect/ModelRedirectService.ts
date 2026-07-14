@@ -18,7 +18,10 @@ import type {
 } from "~/services/managedSites/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelSyncService } from "~/services/models/modelSync"
-import { toModelTokenKey } from "~/services/models/utils/modelName"
+import {
+  removeDateSuffix,
+  toModelTokenKey,
+} from "~/services/models/utils/modelName"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
@@ -37,7 +40,11 @@ import {
   userPreferences,
   type UserPreferences,
 } from "../../preferences/userPreferences"
-import { extractActualModel, renameModel } from "./modelNormalization"
+import {
+  extractActualModel,
+  extractCoreModelIdentity,
+  renameModel,
+} from "./modelNormalization"
 import { isEmptyModelMapping } from "./utils"
 
 /**
@@ -81,6 +88,11 @@ const splitChannelModels = (models?: string | null): string[] =>
     ?.split(",")
     .map((model) => model.trim())
     .filter(Boolean) ?? []
+
+const hasDateSuffix = (rawModelId: string): boolean => {
+  const coreIdentity = extractCoreModelIdentity(rawModelId)
+  return removeDateSuffix(coreIdentity) !== coreIdentity
+}
 
 class ResourceBackedModelRedirectMappingWriter
   implements ModelRedirectMappingWriter
@@ -777,6 +789,10 @@ export class ModelRedirectService {
       if (!actualModel) continue
       actualModelSet.add(actualModel)
 
+      // A dated model is only compatible with the same exact raw identity.
+      // Keep it in the exact-match set, but never expose a date-stripped alias.
+      if (hasDateSuffix(actualModel)) continue
+
       // Normalize actual model name
       const normalizedModelName = renameModel(actualModel, false)?.trim()
       if (!normalizedModelName) continue
@@ -807,6 +823,9 @@ export class ModelRedirectService {
       if (actualModelSet.has(standardModel)) {
         continue
       }
+      if (hasDateSuffix(standardModel)) {
+        continue
+      }
       if (mapping[standardModel]) {
         continue
       }
@@ -825,12 +844,21 @@ export class ModelRedirectService {
       )
       const versionCandidates =
         versionKey && versionKeyToActualMap.get(versionKey)
+      const standardCandidateKey = toModelTokenKey(
+        extractActualModel(standardModel),
+      )
+      if (!standardCandidateKey) continue
 
       // Filter out already used actual models
       const availableCandidate = [
         ...(candidates ?? []),
         ...(versionCandidates ?? []),
-      ].find((candidate) => !usedActualModels.has(candidate))
+      ].find((candidate) => {
+        if (usedActualModels.has(candidate)) return false
+
+        const candidateKey = toModelTokenKey(extractActualModel(candidate))
+        return Boolean(candidateKey && standardCandidateKey === candidateKey)
+      })
 
       // Map the standard model to the first available candidate
       if (availableCandidate) {

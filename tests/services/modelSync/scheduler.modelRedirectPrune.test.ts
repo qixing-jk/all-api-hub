@@ -7,6 +7,9 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
+const realGenerateModelMappingForChannel =
+  ModelRedirectService.generateModelMappingForChannel
+
 const {
   mockGetAllChannelConfigs,
   mockGetPreferences,
@@ -81,15 +84,18 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
     mockGetAllChannelConfigs.mockResolvedValue({})
     mockSaveLastExecution.mockResolvedValue(undefined)
 
-    mockedModelRedirectService.generateModelMappingForChannel = vi
-      .fn()
-      .mockReturnValue({})
+    mockedModelRedirectService.generateModelMappingForChannel = vi.fn(
+      realGenerateModelMappingForChannel,
+    )
     mockedModelRedirectService.applyModelMappingToChannel = vi
       .fn()
       .mockResolvedValue({ updated: false, prunedCount: 0 })
   })
 
-  const setPrefs = (overrides: { pruneMissingTargetsOnModelSync: boolean }) => {
+  const setPrefs = (overrides: {
+    pruneMissingTargetsOnModelSync: boolean
+    standardModels?: string[]
+  }) => {
     mockedUserPreferences.getPreferences.mockResolvedValue({
       managedSiteType: SITE_TYPES.NEW_API,
       newApi: {
@@ -109,7 +115,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       modelRedirect: {
         ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
         enabled: true,
-        standardModels: ["gpt-4o"],
+        standardModels: overrides.standardModels ?? ["gpt-4o"],
         pruneMissingTargetsOnModelSync:
           overrides.pruneMissingTargetsOnModelSync,
       },
@@ -173,6 +179,28 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
     expect(mockListChannels).toHaveBeenCalledWith({
       preferResourceBacked: false,
     })
+    expect(
+      mockedModelRedirectService.applyModelMappingToChannel,
+    ).toHaveBeenCalledWith(channel, {}, expect.anything(), {
+      pruneMissingTargets: true,
+      availableModels: newModels,
+      siteType: SITE_TYPES.NEW_API,
+    })
+  })
+
+  it("preserves dated model identities while applying normal prune orchestration", async () => {
+    setPrefs({
+      pruneMissingTargetsOnModelSync: true,
+      standardModels: ["model-a-2025-01-01"],
+    })
+    const newModels = ["model-a-2025-02-02"]
+    const { channel } = setServiceMocks({
+      oldModels: ["model-a-2025-01-01"],
+      newModels,
+    })
+
+    await modelSyncScheduler.executeSync([1])
+
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,
     ).toHaveBeenCalledWith(channel, {}, expect.anything(), {

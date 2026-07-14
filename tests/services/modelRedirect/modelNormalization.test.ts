@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import {
   extractActualModel,
+  extractCoreModelIdentity,
   renameModel,
 } from "~/services/models/modelRedirect/modelNormalization"
 
@@ -22,6 +23,15 @@ vi.mock("~/services/models/modelMetadata", () => ({
 }))
 
 describe("extractActualModel", () => {
+  it("can retain date identity after removing provider and colon decoration", () => {
+    expect(extractCoreModelIdentity("vendor/model-a-2025-01-01:free")).toBe(
+      "model-a-2025-01-01",
+    )
+    expect(extractCoreModelIdentity("vendor/model-a-20250101:free")).toBe(
+      "model-a-20250101",
+    )
+  })
+
   it("should handle basic model names with vendor and suffix", () => {
     expect(extractActualModel("openai/gpt-4o:free")).toBe("gpt-4o")
     expect(extractActualModel("anthropic/claude-3-5-sonnet:premium")).toBe(
