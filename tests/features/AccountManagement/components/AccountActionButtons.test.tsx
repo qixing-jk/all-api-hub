@@ -450,45 +450,60 @@ describe("AccountActionButtons", () => {
     })
   })
 
-  it("closes the account action menu before starting in-page navigation", async () => {
-    const user = userEvent.setup()
-    const site = buildDisplaySiteData({
-      id: "acc-in-page-navigation",
-      disabled: false,
-      name: "In-page Navigation Site",
-    })
-    let menuExpandedWhenNavigationStarted: string | null = null
+  it.each([
+    {
+      actionLabel: "account:actions.keyManagement",
+      getOpenPageMock: () => openKeysPageMock,
+      destination: "key management",
+    },
+    {
+      actionLabel: "account:actions.modelManagement",
+      getOpenPageMock: () => openModelsPageMock,
+      destination: "model management",
+    },
+  ])(
+    "closes the account action menu before starting $destination navigation",
+    async ({ actionLabel, getOpenPageMock }) => {
+      const user = userEvent.setup()
+      const site = buildDisplaySiteData({
+        id: "acc-in-page-navigation",
+        disabled: false,
+        name: "In-page Navigation Site",
+      })
+      let menuExpandedWhenNavigationStarted: string | null = null
 
-    render(
-      <AccountActionButtons
-        site={site}
-        onCopyKey={vi.fn()}
-        onDeleteAccount={vi.fn()}
-      />,
-    )
+      render(
+        <AccountActionButtons
+          site={site}
+          onCopyKey={vi.fn()}
+          onDeleteAccount={vi.fn()}
+        />,
+      )
 
-    const moreActionsButton = screen.getByRole("button", {
-      name: "common:actions.more",
-    })
-    openKeysPageMock.mockImplementation(() => {
-      menuExpandedWhenNavigationStarted =
-        moreActionsButton.getAttribute("aria-expanded")
-    })
+      const moreActionsButton = screen.getByRole("button", {
+        name: "common:actions.more",
+      })
+      const openPageMock = getOpenPageMock()
+      openPageMock.mockImplementation(() => {
+        menuExpandedWhenNavigationStarted =
+          moreActionsButton.getAttribute("aria-expanded")
+      })
 
-    await user.click(moreActionsButton)
-    const menu = await screen.findByRole("menu")
-    const keyManagementButton = (
-      await within(menu).findByText("account:actions.keyManagement")
-    ).closest("button")
-    expect(keyManagementButton).not.toBeNull()
+      await user.click(moreActionsButton)
+      const menu = await screen.findByRole("menu")
+      const navigationButton = (
+        await within(menu).findByText(actionLabel)
+      ).closest("button")
+      expect(navigationButton).not.toBeNull()
 
-    await user.click(keyManagementButton!)
+      await user.click(navigationButton!)
 
-    await waitFor(() => {
-      expect(openKeysPageMock).toHaveBeenCalledWith(site.id)
-    })
-    expect(menuExpandedWhenNavigationStarted).toBe("false")
-  })
+      await waitFor(() => {
+        expect(openPageMock).toHaveBeenCalledWith(site.id)
+      })
+      expect(menuExpandedWhenNavigationStarted).toBe("false")
+    },
+  )
 
   it("does not track analytics for disabled account action menu entries", async () => {
     userPreferencesContextValue.preferences = {
