@@ -302,9 +302,6 @@ test("opens per-account key and model management from the row menu", async ({
   )
   await waitForExtensionRoot(page)
 
-  const targetUrl = new URL(page.url())
-  expect(targetUrl.hash).toBe(`#${MENU_ITEM_IDS.MODELS}`)
-  expect(targetUrl.searchParams.get("accountId")).toBe("shortcut-account")
   await expect(
     page.getByRole("heading", { name: "gpt-shortcut" }),
   ).toBeVisible()

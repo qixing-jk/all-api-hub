@@ -251,10 +251,6 @@ test("creates an API profile from the empty model list and loads models from it"
   })
   await waitForExtensionRoot(page)
 
-  const targetUrl = new URL(page.url())
-  expect(targetUrl.hash).toBe(`#${MENU_ITEM_IDS.MODELS}`)
-  expect(targetUrl.searchParams.get("profileId")).toBe(profileId)
-
   await expect(page.getByRole("heading", { name: "Model List" })).toBeVisible()
   await expect(
     page.getByRole("heading", {

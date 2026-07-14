@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { runModelListCatalogScenario } from "~~/e2e/scenarios/modelListCatalog"
 import { runModelToKeyManagementScenario } from "~~/e2e/scenarios/modelToKeyManagement"
 import { expectPermissionOnboardingHidden } from "~~/e2e/utils/extensionState"
@@ -17,7 +18,9 @@ const mocks = vi.hoisted(() => ({
     toHaveCount: vi.fn().mockResolvedValue(undefined),
     toHaveValue: vi.fn().mockResolvedValue(undefined),
     toHaveURL: vi.fn().mockResolvedValue(undefined),
-    toBe: vi.fn(),
+    toBe: vi.fn((expected: unknown) => {
+      expect(locator).toBe(expected)
+    }),
   })),
   runModelListCatalogScenario: vi.fn(),
   deleteTokenFromKeyManagementPage: vi.fn(),
@@ -469,7 +472,9 @@ function createModelToKeyPage(
     url: vi.fn(() => currentUrl),
     getByTestId: vi.fn((testId: string) => {
       if (testId === MODEL_LIST_TEST_IDS.modelKeyDialog) return keyDialog
-      if (testId === "key-management-add-token-dialog") return addKeyDialog
+      if (testId === TOKEN_PROVISIONING_TEST_IDS.addTokenDialog) {
+        return addKeyDialog
+      }
 
       return {
         first: vi.fn(() => ({

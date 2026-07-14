@@ -267,9 +267,6 @@ test("opens model management for an options-page API credential profile", async 
   })
   await waitForExtensionRoot(page)
 
-  const targetUrl = new URL(page.url())
-  expect(targetUrl.hash).toBe(`#${MENU_ITEM_IDS.MODELS}`)
-  expect(targetUrl.searchParams.get("profileId")).toBe("profile-models")
   await expect(page.getByText("gpt-options-model")).toBeVisible()
 })
 

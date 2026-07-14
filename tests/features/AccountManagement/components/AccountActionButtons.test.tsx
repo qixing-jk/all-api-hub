@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
@@ -452,18 +453,18 @@ describe("AccountActionButtons", () => {
 
   it.each([
     {
-      actionLabel: "account:actions.keyManagement",
+      testId: ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem,
       getOpenPageMock: () => openKeysPageMock,
       destination: "key management",
     },
     {
-      actionLabel: "account:actions.modelManagement",
+      testId: ACCOUNT_MANAGEMENT_TEST_IDS.rowModelManagementMenuItem,
       getOpenPageMock: () => openModelsPageMock,
       destination: "model management",
     },
   ])(
     "closes the account action menu before starting $destination navigation",
-    async ({ actionLabel, getOpenPageMock }) => {
+    async ({ testId, getOpenPageMock }) => {
       const user = userEvent.setup()
       const site = buildDisplaySiteData({
         id: "acc-in-page-navigation",
@@ -491,12 +492,9 @@ describe("AccountActionButtons", () => {
 
       await user.click(moreActionsButton)
       const menu = await screen.findByRole("menu")
-      const navigationButton = (
-        await within(menu).findByText(actionLabel)
-      ).closest("button")
-      expect(navigationButton).not.toBeNull()
+      const navigationButton = within(menu).getByTestId(testId)
 
-      await user.click(navigationButton!)
+      await user.click(navigationButton)
 
       await waitFor(() => {
         expect(openPageMock).toHaveBeenCalledWith(site.id)
