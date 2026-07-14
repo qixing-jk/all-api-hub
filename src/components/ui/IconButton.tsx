@@ -61,6 +61,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       disableAutoTitle,
       analyticsAction,
       onClick,
+      "aria-busy": ariaBusy,
       ...props
     },
     ref,
@@ -89,6 +90,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         disabled={isDisabled}
         onClick={handleClick}
         {...props}
+        aria-busy={loading ? true : ariaBusy}
         title={
           disableAutoTitle ? props.title : props.title ?? props["aria-label"]
         }
