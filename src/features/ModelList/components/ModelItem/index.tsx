@@ -21,7 +21,10 @@ import {
   type ModelPricing,
 } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
-import type { ModelMetadata } from "~/services/models/modelMetadata/types"
+import type {
+  ModelMetadata,
+  ResolvedModelVendor,
+} from "~/services/models/modelMetadata/types"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -47,6 +50,7 @@ const logger = createLogger("ModelItem")
 
 interface ModelItemProps {
   model: ModelPricing
+  resolvedVendor: ResolvedModelVendor
   modelMetadata?: ModelMetadata
   calculatedPrice: CalculatedPrice
   exchangeRate: number
@@ -95,6 +99,7 @@ interface ModelItemProps {
 export default function ModelItem(props: ModelItemProps) {
   const {
     model,
+    resolvedVendor,
     modelMetadata,
     calculatedPrice,
     exchangeRate,
@@ -347,6 +352,7 @@ export default function ModelItem(props: ModelItemProps) {
         <div className="flex min-w-0 flex-wrap items-start gap-2">
           <ModelItemHeader
             model={model}
+            resolvedVendor={resolvedVendor}
             isAvailableForUser={isAvailableForUser}
             handleCopyModelName={handleCopyModelName}
             showPricingMetadata={showPricing}

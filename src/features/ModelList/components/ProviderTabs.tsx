@@ -1,4 +1,3 @@
-import { CpuChipIcon } from "@heroicons/react/24/outline"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useLayoutEffect, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
@@ -6,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Button } from "~/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { getModelVendorPresentation } from "~/features/ModelList/modelVendorPresentation"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import type { ModelVendorCatalogEntry } from "~/services/models/modelMetadata/types"
 import {
@@ -63,6 +63,9 @@ function ProviderTabList({
   } = useHorizontalScrollControls<HTMLDivElement>({
     enableWheelScroll: true,
   })
+  const allVendorsPresentation = getModelVendorPresentation({
+    state: "unknown",
+  })
 
   useLayoutEffect(() => {
     updateScrollState()
@@ -96,26 +99,36 @@ function ProviderTabList({
           className={providerTabClassName}
         >
           <div className="flex items-center justify-center space-x-2">
-            <CpuChipIcon className="dark:text-dark-text-secondary h-4 w-4 text-gray-600" />
+            <allVendorsPresentation.Icon
+              aria-hidden={true}
+              className={`h-4 w-4 ${allVendorsPresentation.iconClassName}`}
+            />
             <span>
               {t("allProviders")} ({allVendorsFilteredCount})
             </span>
           </div>
         </TabsTrigger>
-        {vendorCatalog.map((vendor) => (
-          <TabsTrigger
-            key={vendor.key}
-            value={vendor.key}
-            className={providerTabClassName}
-          >
-            <div className="flex items-center justify-center space-x-2">
-              <CpuChipIcon className="dark:text-dark-text-secondary h-4 w-4 text-gray-600" />
-              <span>
-                {vendor.label} ({vendor.count})
-              </span>
-            </div>
-          </TabsTrigger>
-        ))}
+        {vendorCatalog.map((vendor) => {
+          const presentation = getModelVendorPresentation(vendor)
+
+          return (
+            <TabsTrigger
+              key={vendor.key}
+              value={vendor.key}
+              className={providerTabClassName}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <presentation.Icon
+                  aria-hidden={true}
+                  className={`h-4 w-4 ${presentation.iconClassName}`}
+                />
+                <span>
+                  {vendor.label} ({vendor.count})
+                </span>
+              </div>
+            </TabsTrigger>
+          )
+        })}
       </TabsList>
 
       <Button

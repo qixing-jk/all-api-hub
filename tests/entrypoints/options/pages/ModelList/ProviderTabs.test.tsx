@@ -28,9 +28,47 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     trackProductAnalyticsActionCompletedMock(...args),
 }))
 
-vi.mock("@heroicons/react/24/outline", () => ({
-  CpuChipIcon: () => <svg role="img" aria-label="Generic vendor icon" />,
-}))
+vi.mock("@heroicons/react/24/outline", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@heroicons/react/24/outline")>()
+  const CpuChipIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="generic" {...props} />
+  )
+
+  return { ...actual, CpuChipIcon }
+})
+
+vi.mock("@lobehub/icons", () => {
+  const createIcon = (name: string) =>
+    function PublisherIcon(props: React.SVGProps<SVGSVGElement>) {
+      return <svg role="img" data-publisher-icon={name} {...props} />
+    }
+
+  return Object.fromEntries(
+    [
+      "Alibaba",
+      "Anthropic",
+      "Baichuan",
+      "Baidu",
+      "ByteDance",
+      "Cohere",
+      "DeepSeek",
+      "Google",
+      "Meta",
+      "Minimax",
+      "Mistral",
+      "Moonshot",
+      "Nvidia",
+      "OpenAI",
+      "Perplexity",
+      "Stepfun",
+      "Tencent",
+      "XAI",
+      "Yi",
+      "Zhipu",
+    ].map((name) => [name, createIcon(name)]),
+  )
+})
 
 type CountedVendor = ModelVendorCatalogEntry & { count: number }
 
@@ -59,6 +97,10 @@ const VENDOR_CATALOG: CountedVendor[] = [
 const TABLIST_CLIENT_WIDTH_PX = 100
 const TABLIST_SCROLL_WIDTH_PX = 300
 const BASE_FILTERED_MODELS_COUNT = 10
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
 const renderProviderTabs = ({
   vendorCatalog = VENDOR_CATALOG,
@@ -96,10 +138,6 @@ const renderProviderTabs = ({
 }
 
 describe("ProviderTabs scroll arrows", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it("enables right arrow when tab list overflows", async () => {
     renderProviderTabs()
 
@@ -240,8 +278,30 @@ describe("ProviderTabs selection", () => {
     expect(allProvidersTab).toHaveAttribute("aria-selected", "false")
     expect(customVendorTab).toHaveAttribute("aria-selected", "true")
     expect(
-      screen.getAllByRole("img", { name: "Generic vendor icon" }),
-    ).toHaveLength(4)
+      screen.queryByRole("tab", { name: /Unknown/ }),
+    ).not.toBeInTheDocument()
+
+    const orderedTabs = screen.getAllByRole("tab")
+    expect(orderedTabs).toEqual([
+      allProvidersTab,
+      screen.getByRole("tab", { name: /OpenAI \(2\)/ }),
+      screen.getByRole("tab", { name: /Anthropic \(1\)/ }),
+      customVendorTab,
+    ])
+
+    const decorativeIcons = screen.getAllByRole("img", { hidden: true })
+    expect(decorativeIcons).toHaveLength(4)
+    expect(decorativeIcons.map((icon) => icon.dataset.publisherIcon)).toEqual([
+      "generic",
+      "OpenAI",
+      "Anthropic",
+      "generic",
+    ])
+    for (const icon of decorativeIcons) {
+      expect(icon).toHaveAttribute("aria-hidden", "true")
+    }
+    expect(screen.queryAllByRole("img")).toHaveLength(0)
+    expect(screen.queryByText(/https?:\/\//)).not.toBeInTheDocument()
   })
 
   it("selects a vendor tab and reports the namespaced key", async () => {

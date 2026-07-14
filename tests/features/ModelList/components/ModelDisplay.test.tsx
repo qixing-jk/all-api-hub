@@ -179,6 +179,7 @@ type CalculatedModelOverrides = {
   >
   source?: CalculatedModelItem["source"]
   effectiveGroup?: string
+  resolvedVendor?: CalculatedModelItem["resolvedVendor"]
 }
 
 function requireHistoryTarget(
@@ -221,7 +222,7 @@ const createCalculatedModel = (
     source: overrides.source ?? ACCOUNT_SOURCE,
     groupRatios: { default: 1, vip: 2 },
     effectiveGroup: overrides.effectiveGroup,
-    resolvedVendor: { state: "unknown" },
+    resolvedVendor: overrides.resolvedVendor ?? { state: "unknown" },
   }
 }
 
@@ -241,6 +242,37 @@ describe("ModelDisplay", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockTotalListHeightChanged.current = undefined
+  })
+
+  it("passes each calculated row's resolved vendor to ModelItem unchanged", () => {
+    const resolvedVendor = {
+      state: "resolved",
+      kind: "known",
+      key: "known:anthropic",
+      knownId: "anthropic",
+      label: "Anthropic",
+      source: "publisher-evidence",
+    } as const
+    const item = createCalculatedModel({
+      model: { model_name: "gpt-4o-mini" },
+      resolvedVendor,
+    })
+
+    render(
+      <ModelDisplay
+        models={[item]}
+        verificationSummariesByKey={{}}
+        showRealPrice={false}
+        showRatioColumn={false}
+        showEndpointTypes={false}
+        selectedGroups={[]}
+        handleGroupClick={vi.fn()}
+        availableGroups={[]}
+      />,
+    )
+
+    const renderedProps = modelItemSpy.mock.calls.at(-1)?.[0]
+    expect(renderedProps.resolvedVendor).toBe(resolvedVendor)
   })
 
   it("shows an empty state when no filtered models are available", () => {

@@ -19,152 +19,138 @@ export type ModelVendorFilterValue =
   | ModelVendorCatalogEntry["key"]
   | (typeof MODEL_VENDOR_FILTER_VALUES)[keyof typeof MODEL_VENDOR_FILTER_VALUES]
 
-type KnownVendor = {
-  id: string
+type KnownVendorDefinition = {
   label: string
   aliases: readonly string[]
   modelPatterns: readonly RegExp[]
 }
 
-const KNOWN_VENDORS: readonly KnownVendor[] = [
-  {
-    id: "openai",
+const KNOWN_MODEL_VENDORS = {
+  openai: {
     label: "OpenAI",
     aliases: ["openai"],
     modelPatterns: [
       /(?:^|[^\p{L}\p{N}])(?:gpt(?:[-_.]?\d+(?:[a-z])?(?=$|[-_.])|[-_.]oss(?=$|[-_.]))|chatgpt(?:[-_.]|$)|dall[-_. ]?e(?:[-_.]|$)|whisper(?:[-_.]|$)|(?:text[-_.])?embeddings?(?:[-_.]|$)|image(?:[-_.]\d|[-_.]|$)|audio(?:[-_.]|$)|o(?:1|3|4)(?:[-_.]|$))/iu,
     ],
   },
-  {
-    id: "anthropic",
+  anthropic: {
     label: "Anthropic",
     aliases: ["anthropic", "claude"],
     modelPatterns: [
       /(?:^|[^\p{L}\p{N}])(?:claude|sonnet|haiku|opus)(?:[-_.]|$)/iu,
     ],
   },
-  {
-    id: "google",
+  google: {
     label: "Google",
     aliases: ["google", "gemini", "gemma", "deepmind", "deep mind"],
     modelPatterns: [
       /(?:^|[^\p{L}\p{N}])(?:gemini|gemma|deepmind|imagen)(?:[-_.]|$)/iu,
     ],
   },
-  {
-    id: "meta",
+  meta: {
     label: "Meta",
     aliases: ["meta", "llama"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])llama(?:[-_.]|$)/iu],
   },
-  {
-    id: "alibaba",
+  alibaba: {
     label: "Alibaba",
-    aliases: ["alibaba", "qwen", "tongyi", "tongyi qianwen"],
+    aliases: ["alibaba", "alibaba-cn", "qwen", "tongyi", "tongyi qianwen"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])(?:qwen|tongyi)(?:[-_.]|$)/iu],
   },
-  {
-    id: "xai",
+  xai: {
     label: "xAI",
     aliases: ["xai", "x.ai", "grok"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])grok(?:[-_.]|$)/iu],
   },
-  {
-    id: "deepseek",
+  deepseek: {
     label: "DeepSeek",
     aliases: ["deepseek", "deepseek ai", "deepseek-ai"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])deepseek(?:[-_.]|$)/iu],
   },
-  {
-    id: "mistral",
+  mistral: {
     label: "Mistral",
     aliases: ["mistral", "mistral ai", "mistralai"],
     modelPatterns: [
       /(?:^|[^\p{L}\p{N}])(?:mistral|mixtral|magistral|codestral|pixtral|devstral|voxtral|ministral)(?:[-_.]|$)/iu,
     ],
   },
-  {
-    id: "moonshot",
+  moonshot: {
     label: "Moonshot AI",
     // https://models.dev/models.json publishes Moonshot records as moonshotai/<model>.
     aliases: ["moonshot", "moonshot ai", "moonshotai", "kimi"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])(?:moonshot|kimi)(?:[-_.]|$)/iu],
   },
-  {
-    id: "zhipu",
+  zhipu: {
     label: "Zhipu AI",
     aliases: ["zhipu", "zhipu ai", "zhipuai", "glm", "bigmodel"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])(?:glm|bigmodel)(?:[-_.]|$)/iu],
   },
-  {
-    id: "minimax",
+  minimax: {
     label: "MiniMax",
     aliases: ["minimax", "mini max"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])minimax(?:[-_.]|$)/iu],
   },
-  {
-    id: "cohere",
+  cohere: {
     label: "Cohere",
     aliases: ["cohere"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])(?:cohere|command|c4ai)(?:[-_.]|$)/iu],
   },
-  {
-    id: "tencent",
+  tencent: {
     label: "Tencent",
     aliases: ["tencent", "hunyuan"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])hunyuan(?:[-_.]|$)/iu],
   },
-  {
-    id: "baidu",
+  baidu: {
     label: "Baidu",
     aliases: ["baidu", "ernie"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])ernie(?:[-_.]|$)/iu],
   },
-  {
-    id: "baichuan",
+  baichuan: {
     label: "Baichuan",
     aliases: ["baichuan"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])baichuan(?:[-_.]|$)/iu],
   },
-  {
-    id: "01-ai",
+  "01-ai": {
     label: "01.AI",
     aliases: ["01-ai", "01.ai", "01 ai", "yi"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])(?:01[-_.]?ai|yi)(?:[-_.]|$)/iu],
   },
-  {
-    id: "bytedance",
+  bytedance: {
     label: "ByteDance",
     aliases: ["bytedance", "byte dance", "doubao"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])doubao(?:[-_.]|$)/iu],
   },
-  {
-    id: "nvidia",
+  nvidia: {
     label: "NVIDIA",
     aliases: ["nvidia", "nemotron"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])nemotron(?:[-_.]|$)/iu],
   },
-  {
-    id: "xiaomi",
+  xiaomi: {
     label: "Xiaomi",
     aliases: ["xiaomi", "mimo"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])mimo(?:[-_.]|$)/iu],
   },
-  {
-    id: "stepfun",
+  stepfun: {
     label: "StepFun",
     aliases: ["stepfun", "step fun"],
     modelPatterns: [
       /(?:^|[^\p{L}\p{N}])(?:stepfun|step(?=[-_.]\d))(?:[-_.]|$)/iu,
     ],
   },
-  {
-    id: "perplexity",
+  perplexity: {
     label: "Perplexity",
     aliases: ["perplexity", "sonar"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])sonar(?:[-_.]|$)/iu],
   },
-]
+} as const satisfies Record<string, KnownVendorDefinition>
+
+export type KnownModelVendorId = keyof typeof KNOWN_MODEL_VENDORS
+
+type KnownVendor = KnownVendorDefinition & { id: KnownModelVendorId }
+
+const KNOWN_VENDORS: readonly KnownVendor[] = (
+  Object.keys(KNOWN_MODEL_VENDORS) as KnownModelVendorId[]
+).map((id) => ({ id, ...KNOWN_MODEL_VENDORS[id] }))
 
 const KNOWN_VENDOR_BY_ALIAS = new Map<string, KnownVendor>()
 

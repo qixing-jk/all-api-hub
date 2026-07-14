@@ -18,8 +18,6 @@ vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: {
     initialize: vi.fn().mockResolvedValue(undefined),
     findStandardModelName: vi.fn(),
-    findVendorByPattern: vi.fn(),
-    getVendorRules: () => [],
     getCacheInfo: () => ({
       isLoaded: true,
       modelCount: 0,

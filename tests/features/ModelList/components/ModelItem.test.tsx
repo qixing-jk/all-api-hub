@@ -77,6 +77,7 @@ vi.mock("react-i18next", async (importOriginal) => {
 vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
   ModelItemHeader: ({
     model,
+    resolvedVendor,
     trailingContent,
     onOpenKeyDialog,
     onVerifyApi,
@@ -84,6 +85,7 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
     groupSummary,
   }: {
     model: { model_name: string }
+    resolvedVendor: { state: string; label?: string }
     trailingContent?: React.ReactNode
     onOpenKeyDialog?: () => void
     onVerifyApi?: () => void
@@ -96,6 +98,9 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
   }) => (
     <div>
       {model.model_name}
+      <span role="status" aria-label="resolved vendor">
+        {resolvedVendor.state === "resolved" ? resolvedVendor.label : "Unknown"}
+      </span>
       {groupSummary ? (
         <span title={groupSummary.title}>
           {groupSummary.label}
@@ -201,6 +206,7 @@ function createDefaultProps() {
 
   return {
     model,
+    resolvedVendor: { state: "unknown" } as const,
     calculatedPrice,
     exchangeRate: 7,
     showRealPrice: false,
@@ -234,6 +240,26 @@ describe("ModelItem", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllEnvs()
+  })
+
+  it("passes the supplied resolved vendor to the row header unchanged", () => {
+    render(
+      <ModelItem
+        {...createDefaultProps()}
+        resolvedVendor={{
+          state: "resolved",
+          kind: "known",
+          key: "known:anthropic",
+          knownId: "anthropic",
+          label: "Anthropic",
+          source: "publisher-evidence",
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByRole("status", { name: "resolved vendor" }),
+    ).toHaveTextContent("Anthropic")
   })
 
   it("falls back to the default group label when an unavailable model has no selected or effective group", () => {

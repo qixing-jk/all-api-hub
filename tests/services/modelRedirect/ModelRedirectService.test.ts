@@ -35,14 +35,6 @@ vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: {
     initialize: vi.fn().mockResolvedValue(undefined),
     findStandardModelName: MOCKED_METADATA.findStandardModelNameMock,
-    findVendorByPattern: (modelName: string) => {
-      const lower = modelName.toLowerCase()
-      if (/^gpt/.test(lower)) return "OpenAI"
-      if (/^claude/.test(lower)) return "Anthropic"
-      if (/^deepseek/.test(lower)) return "DeepSeek"
-      return null
-    },
-    getVendorRules: () => [],
     getCacheInfo: () => ({
       isLoaded: true,
       modelCount: MOCKED_METADATA.modelCount,

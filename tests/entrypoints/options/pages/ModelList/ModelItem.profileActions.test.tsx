@@ -73,6 +73,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "gpt-4o-mini",
           quota_type: 0,
@@ -186,6 +187,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "gpt-4o-mini",
           quota_type: 0,
@@ -240,6 +242,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "gpt-4o-mini",
           quota_type: 0,
@@ -297,6 +300,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "gpt-4o-mini",
           quota_type: 0,
@@ -367,6 +371,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "gpt-4o-mini",
           quota_type: 0,
@@ -426,6 +431,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "gpt-4o-mini",
           quota_type: 0,
@@ -485,6 +491,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "claude-haiku-4-5-20251001",
           quota_type: 0,
@@ -556,6 +563,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "example-runtime-model",
           quota_type: 0,
@@ -631,6 +639,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "gpt-4o-mini",
           quota_type: 0,
@@ -699,6 +708,7 @@ describe("ModelItem profile actions", () => {
 
     render(
       <ModelItem
+        resolvedVendor={{ state: "unknown" }}
         model={{
           model_name: "gpt-4o-mini",
           quota_type: 0,

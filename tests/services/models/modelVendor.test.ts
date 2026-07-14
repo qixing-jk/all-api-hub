@@ -66,6 +66,21 @@ describe("resolveModelVendorCandidate", () => {
 
     expect(
       resolveModelVendorCandidate(
+        { id: "qwen-max" },
+        resolvedLookup("alibaba-cn", "exact"),
+      ),
+    ).toMatchObject({
+      state: "candidate",
+      kind: "known",
+      key: "known:alibaba",
+      knownId: "alibaba",
+      labelCandidate: "Alibaba",
+      source: "metadata",
+      identityMatch: "exact",
+    })
+
+    expect(
+      resolveModelVendorCandidate(
         { id: "dataset-alias" },
         resolvedLookup("Example Publisher", "normalized-alias"),
       ),
