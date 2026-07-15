@@ -196,14 +196,14 @@ GitHub Stable and Nightly are manual installation channels and do not auto-updat
 <hr>
 
 <div>
-  <a href="https://www.right.codes/register?aff=690a8be5">
+  <a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">
     <img src="resources/partners/aicodemirror.png" alt="AICodeMirror" width="128" align="left" hspace="10" vspace="4">
   </a>
   <p>
     Thanks to AICodeMirror for sponsoring this project! AICodeMirror provides official high-stability relay services for Claude Code / Codex / Gemini CLI, with
     enterprise-grade concurrency, fast invoicing, and 24/7 dedicated technical support. Claude Code / Codex / Gemini official channels are available from 38% / 2% /
     9% of the original price, with extra discounts on top-ups. AICodeMirror offers special benefits for All API Hub users: register via
-    <a href="https://www.right.codes/register?aff=690a8be5">this link</a> to enjoy 20% off your first top-up, and enterprise customers can get up to 25% off.
+    <a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">this link</a> to enjoy 20% off your first top-up, and enterprise customers can get up to 25% off.
   </p>
 </div>
 
