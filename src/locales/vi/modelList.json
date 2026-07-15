@@ -222,7 +222,9 @@
   },
   "providerTabs": {
     "scrollLeft": "Cuộn thẻ nhà cung cấp sang trái",
-    "scrollRight": "Cuộn thẻ nhà cung cấp sang phải"
+    "scrollRight": "Cuộn thẻ nhà cung cấp sang phải",
+    "unclassified": "Chưa phân loại",
+    "unclassifiedDescription": "Không thể xác định nhà cung cấp; điều này không có nghĩa là mô hình không khả dụng."
   },
   "ratio": "Tỷ lệ:",
   "realAmount": "Số tiền nạp thực tế",

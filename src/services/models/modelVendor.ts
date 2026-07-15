@@ -13,6 +13,7 @@ import type {
 
 export const MODEL_VENDOR_FILTER_VALUES = {
   All: "filter:all",
+  Unclassified: "filter:unclassified",
 } as const
 
 export type ModelVendorFilterValue =

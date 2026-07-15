@@ -400,6 +400,41 @@ describe("useFilteredModels", () => {
     )
   })
 
+  it("keeps pending-filter estimates scoped to unclassified rows", async () => {
+    const account = createDisplayAccount({
+      id: "account-unclassified-estimate",
+    })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "gpt-4o-mini",
+          model_description: "Batch known model",
+        },
+        {
+          model_name: "unclassified-batch-model",
+          model_description: "Batch unresolved model",
+        },
+        {
+          model_name: "other-unclassified-model",
+          model_description: "Other unresolved model",
+        },
+      ]),
+      selectedSource: createAccountSource(account),
+      selectedProvider: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(
+      result.current
+        .getFilteredModels({ searchTerm: "batch" })
+        .map((item) => item.model.model_name),
+    ).toEqual(["unclassified-batch-model"])
+    expect(result.current.getFilteredResultCount({ searchTerm: "batch" })).toBe(
+      1,
+    )
+  })
+
   it("resolves vendors for direct-pricing rows and preserves row alignment", async () => {
     const account = createDisplayAccount({ id: "account-direct-vendors" })
     const { result } = renderUseFilteredModels({
@@ -688,6 +723,77 @@ describe("useFilteredModels", () => {
     expect(
       result.current.filteredModels.map((item) => item.model.model_name),
     ).toEqual(["claude-3-5-sonnet"])
+  })
+
+  it("counts unclassified rows from the same base-filtered model set", async () => {
+    const account = createDisplayAccount({ id: "account-unclassified-count" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "gpt-4o-mini",
+        "unclassified-model",
+        "another-unclassified-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      searchTerm: "unclassified",
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(result.current.unclassifiedVendorCount).toBe(2)
+    expect(result.current.allVendorsFilteredCount).toBe(2)
+    expect(result.current.vendorCatalog).toEqual([])
+  })
+
+  it("filters the model list to unresolved vendor rows", async () => {
+    const account = createDisplayAccount({ id: "account-unclassified-filter" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(["gpt-4o-mini", "unclassified-model"]),
+      selectedSource: createAccountSource(account),
+      selectedProvider: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.effectiveSelectedVendor).toBe(
+      MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    )
+    expect(result.current.filteredModels[0]?.model.model_name).toBe(
+      "unclassified-model",
+    )
+  })
+
+  it("clamps an unclassified selection when base filters remove every unresolved row", async () => {
+    const account = createDisplayAccount({ id: "account-unclassified-stale" })
+    const pricingData = createPricingResponse([
+      "gpt-4o-mini",
+      "unclassified-model",
+    ])
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      selectedProvider: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    })
+
+    await waitFor(() =>
+      expect(result.current.effectiveSelectedVendor).toBe(
+        MODEL_VENDOR_FILTER_VALUES.Unclassified,
+      ),
+    )
+    rerender({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      selectedProvider: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+      searchTerm: "gpt",
+    })
+
+    expect(result.current.effectiveSelectedVendor).toBe(
+      MODEL_VENDOR_FILTER_VALUES.All,
+    )
+    expect(result.current.shouldRepairSelectedVendor).toBe(true)
+    expect(result.current.unclassifiedVendorCount).toBe(0)
+    expect(result.current.filteredModels[0]?.model.model_name).toBe(
+      "gpt-4o-mini",
+    )
   })
 
   it("excludes unknown vendors and sorts counted catalog entries by count then key", async () => {

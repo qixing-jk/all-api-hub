@@ -228,7 +228,9 @@
   },
   "providerTabs": {
     "scrollLeft": "Scroll provider tabs left",
-    "scrollRight": "Scroll provider tabs right"
+    "scrollRight": "Scroll provider tabs right",
+    "unclassified": "Unclassified",
+    "unclassifiedDescription": "The vendor could not be identified; this does not mean the model is unavailable."
   },
   "ratio": "Ratio:",
   "realAmount": "Real Recharge Amount",

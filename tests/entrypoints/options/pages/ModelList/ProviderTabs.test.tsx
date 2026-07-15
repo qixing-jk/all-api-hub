@@ -108,11 +108,13 @@ const renderProviderTabs = ({
   vendorCatalog = VENDOR_CATALOG,
   effectiveSelectedVendor = MODEL_VENDOR_FILTER_VALUES.All,
   allVendorsFilteredCount = BASE_FILTERED_MODELS_COUNT,
+  unclassifiedVendorCount = 0,
   setSelectedProvider = vi.fn(),
 }: {
   vendorCatalog?: CountedVendor[]
   effectiveSelectedVendor?: ModelVendorFilterValue
   allVendorsFilteredCount?: number
+  unclassifiedVendorCount?: number
   setSelectedProvider?: ReturnType<typeof vi.fn>
 } = {}) => {
   const createElement = (catalog: CountedVendor[]) => (
@@ -121,6 +123,7 @@ const renderProviderTabs = ({
       effectiveSelectedVendor={effectiveSelectedVendor}
       setSelectedProvider={setSelectedProvider}
       allVendorsFilteredCount={allVendorsFilteredCount}
+      unclassifiedVendorCount={unclassifiedVendorCount}
     >
       <TabsContent value={MODEL_VENDOR_FILTER_VALUES.All}>All</TabsContent>
       {catalog.map((vendor) => (
@@ -128,6 +131,11 @@ const renderProviderTabs = ({
           {vendor.label}
         </TabsContent>
       ))}
+      {unclassifiedVendorCount > 0 && (
+        <TabsContent value={MODEL_VENDOR_FILTER_VALUES.Unclassified}>
+          Unclassified
+        </TabsContent>
+      )}
     </ProviderTabs>
   )
   const renderResult = render(createElement(vendorCatalog))
@@ -280,7 +288,7 @@ describe("ProviderTabs selection", () => {
     expect(allProvidersTab).toHaveAttribute("aria-selected", "false")
     expect(customVendorTab).toHaveAttribute("aria-selected", "true")
     expect(
-      screen.queryByRole("tab", { name: /Unknown/ }),
+      screen.queryByRole("tab", { name: /unclassified/i }),
     ).not.toBeInTheDocument()
 
     const orderedTabs = screen.getAllByRole("tab")
@@ -304,6 +312,58 @@ describe("ProviderTabs selection", () => {
     }
     expect(screen.queryAllByRole("img")).toHaveLength(0)
     expect(screen.queryByText(/https?:\/\//)).not.toBeInTheDocument()
+  })
+
+  it("renders the unclassified tab after every vendor with generic presentation and explanatory copy", async () => {
+    renderProviderTabs({
+      effectiveSelectedVendor: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+      allVendorsFilteredCount: 6,
+      unclassifiedVendorCount: 2,
+    })
+
+    const unclassifiedTab = await screen.findByRole("tab", {
+      name: /unclassified.*\(2\)/i,
+    })
+    expect(unclassifiedTab).toHaveAttribute("aria-selected", "true")
+    expect(unclassifiedTab).toHaveAttribute(
+      "title",
+      "modelList:providerTabs.unclassifiedDescription",
+    )
+    expect(screen.getAllByRole("tab").at(-1)).toBe(unclassifiedTab)
+
+    const decorativeIcons = screen.getAllByRole("img", { hidden: true })
+    expect(decorativeIcons.at(-1)).toHaveAttribute(
+      "data-publisher-icon",
+      "generic",
+    )
+  })
+
+  it("reuses provider-filter analytics with the unclassified result count", async () => {
+    const user = userEvent.setup()
+    const { setSelectedProvider } = renderProviderTabs({
+      unclassifiedVendorCount: 3,
+    })
+
+    await user.click(
+      await screen.findByRole("tab", { name: /unclassified.*\(3\)/i }),
+    )
+
+    expect(setSelectedProvider).toHaveBeenCalledWith(
+      MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    )
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
+        filterCount: 1,
+        resultCount: 3,
+      },
+    })
   })
 
   it("selects a vendor tab and reports the namespaced key", async () => {

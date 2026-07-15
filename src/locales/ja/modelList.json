@@ -222,7 +222,9 @@
   },
   "providerTabs": {
     "scrollLeft": "プロバイダータブを左にスクロール",
-    "scrollRight": "プロバイダータブを右にスクロール"
+    "scrollRight": "プロバイダータブを右にスクロール",
+    "unclassified": "未分類",
+    "unclassifiedDescription": "ベンダーを特定できませんでしたが、モデルが利用できないという意味ではありません。"
   },
   "ratio": "倍率:",
   "realAmount": "実際のチャージ額",

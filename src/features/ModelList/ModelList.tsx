@@ -146,6 +146,7 @@ export default function ModelList(props: {
     filteredModels,
     accountSummaryCountsByAccountId,
     vendorCatalog,
+    unclassifiedVendorCount,
     effectiveSelectedVendor,
     shouldRepairSelectedVendor,
     allVendorsFilteredCount,
@@ -757,6 +758,7 @@ export default function ModelList(props: {
             effectiveSelectedVendor={effectiveSelectedVendor}
             setSelectedProvider={setSelectedProvider}
             allVendorsFilteredCount={allVendorsFilteredCount}
+            unclassifiedVendorCount={unclassifiedVendorCount}
           >
             <TabsContent value={MODEL_VENDOR_FILTER_VALUES.All}>
               {renderModelDisplay()}
@@ -766,6 +768,11 @@ export default function ModelList(props: {
                 {renderModelDisplay()}
               </TabsContent>
             ))}
+            {unclassifiedVendorCount > 0 && (
+              <TabsContent value={MODEL_VENDOR_FILTER_VALUES.Unclassified}>
+                {renderModelDisplay()}
+              </TabsContent>
+            )}
           </ProviderTabs>
 
           <Footer showPricingNote={sourceCapabilities.supportsPricing} />

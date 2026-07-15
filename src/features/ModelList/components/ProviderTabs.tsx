@@ -32,6 +32,7 @@ interface ProviderTabsProps {
   effectiveSelectedVendor: ModelVendorFilterValue
   setSelectedProvider: (provider: ModelVendorFilterValue) => void
   allVendorsFilteredCount: number
+  unclassifiedVendorCount: number
   children: ReactNode
 }
 
@@ -39,6 +40,7 @@ interface ProviderTabListProps {
   vendorCatalog: CountedModelVendorCatalogEntry[]
   selectedIndex: number
   allVendorsFilteredCount: number
+  unclassifiedVendorCount: number
 }
 
 const providerTabClassName = `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} data-[state=active]:dark:bg-dark-bg-secondary data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow data-[state=active]:dark:text-blue-400 dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900`
@@ -50,6 +52,7 @@ function ProviderTabList({
   vendorCatalog,
   selectedIndex,
   allVendorsFilteredCount,
+  unclassifiedVendorCount,
 }: ProviderTabListProps) {
   const { t } = useTranslation("modelList")
   const {
@@ -129,6 +132,23 @@ function ProviderTabList({
             </TabsTrigger>
           )
         })}
+        {unclassifiedVendorCount > 0 && (
+          <TabsTrigger
+            value={MODEL_VENDOR_FILTER_VALUES.Unclassified}
+            className={providerTabClassName}
+            title={t("providerTabs.unclassifiedDescription")}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <allVendorsPresentation.Icon
+                aria-hidden={true}
+                className={`h-4 w-4 ${allVendorsPresentation.iconClassName}`}
+              />
+              <span>
+                {t("providerTabs.unclassified")} ({unclassifiedVendorCount})
+              </span>
+            </div>
+          </TabsTrigger>
+        )}
       </TabsList>
 
       <Button
@@ -153,6 +173,7 @@ function ProviderTabList({
  * @param props.effectiveSelectedVendor Already-clamped vendor selection.
  * @param props.setSelectedProvider Setter to change provider filter.
  * @param props.allVendorsFilteredCount Count of models after non-vendor filters.
+ * @param props.unclassifiedVendorCount Count of rows whose vendor is unresolved.
  * @param props.children Tab panels content to render.
  * @returns Radix tab group with provider tabs.
  */
@@ -161,17 +182,20 @@ export function ProviderTabs({
   effectiveSelectedVendor,
   setSelectedProvider,
   allVendorsFilteredCount,
+  unclassifiedVendorCount,
   children,
 }: ProviderTabsProps) {
   const selectedIndex =
     effectiveSelectedVendor === MODEL_VENDOR_FILTER_VALUES.All
       ? 0
-      : Math.max(
-          0,
-          vendorCatalog.findIndex(
-            (vendor) => vendor.key === effectiveSelectedVendor,
-          ) + 1,
-        )
+      : effectiveSelectedVendor === MODEL_VENDOR_FILTER_VALUES.Unclassified
+        ? vendorCatalog.length + 1
+        : Math.max(
+            0,
+            vendorCatalog.findIndex(
+              (vendor) => vendor.key === effectiveSelectedVendor,
+            ) + 1,
+          )
 
   return (
     <Tabs
@@ -192,8 +216,10 @@ export function ProviderTabs({
             resultCount:
               newProvider === MODEL_VENDOR_FILTER_VALUES.All
                 ? allVendorsFilteredCount
-                : vendorCatalog.find((vendor) => vendor.key === newProvider)
-                    ?.count ?? 0,
+                : newProvider === MODEL_VENDOR_FILTER_VALUES.Unclassified
+                  ? unclassifiedVendorCount
+                  : vendorCatalog.find((vendor) => vendor.key === newProvider)
+                      ?.count ?? 0,
           },
         })
       }}
@@ -202,6 +228,7 @@ export function ProviderTabs({
         vendorCatalog={vendorCatalog}
         selectedIndex={selectedIndex}
         allVendorsFilteredCount={allVendorsFilteredCount}
+        unclassifiedVendorCount={unclassifiedVendorCount}
       />
       {children}
     </Tabs>

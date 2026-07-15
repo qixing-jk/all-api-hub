@@ -222,7 +222,9 @@
   },
   "providerTabs": {
     "scrollLeft": "向左滾動廠商標籤",
-    "scrollRight": "向右滾動廠商標籤"
+    "scrollRight": "向右滾動廠商標籤",
+    "unclassified": "未分類",
+    "unclassifiedDescription": "無法識別模型供應商；這不表示該模型無法使用。"
   },
   "ratio": "倍率:",
   "realAmount": "真實充值金額",

@@ -221,7 +221,9 @@
   },
   "providerTabs": {
     "scrollLeft": "向左滚动厂商标签",
-    "scrollRight": "向右滚动厂商标签"
+    "scrollRight": "向右滚动厂商标签",
+    "unclassified": "未分类",
+    "unclassifiedDescription": "无法识别模型厂商；这并不表示该模型不可用。"
   },
   "ratio": "倍率:",
   "realAmount": "真实充值金额",

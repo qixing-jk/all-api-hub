@@ -173,13 +173,26 @@ function deriveVendorCatalog(
   )
 }
 
+/** Counts rows that passed every base filter but have no resolved vendor. */
+function deriveUnclassifiedVendorCount(
+  items: readonly CalculatedModelItem[],
+): number {
+  return items.filter((item) => item.resolvedVendor.state === "unknown").length
+}
+
 /** Clamps a stored selection against the catalog available this render. */
 function resolveEffectiveSelectedVendor(
   selectedVendor: ModelVendorFilterValue,
   catalog: readonly CountedModelVendorCatalogEntry[],
+  unclassifiedVendorCount: number,
 ): ModelVendorFilterValue {
   if (selectedVendor === MODEL_VENDOR_FILTER_VALUES.All) {
     return selectedVendor
+  }
+  if (selectedVendor === MODEL_VENDOR_FILTER_VALUES.Unclassified) {
+    return unclassifiedVendorCount > 0
+      ? selectedVendor
+      : MODEL_VENDOR_FILTER_VALUES.All
   }
 
   return catalog.some((entry) => entry.key === selectedVendor)
@@ -193,6 +206,9 @@ function filterCalculatedModelsByVendor(
   selectedVendor: ModelVendorFilterValue,
 ) {
   if (selectedVendor === MODEL_VENDOR_FILTER_VALUES.All) return items
+  if (selectedVendor === MODEL_VENDOR_FILTER_VALUES.Unclassified) {
+    return items.filter((item) => item.resolvedVendor.state === "unknown")
+  }
   return items.filter(
     (item) =>
       item.resolvedVendor.state === "resolved" &&
@@ -1088,6 +1104,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       const effectiveVendor = resolveEffectiveSelectedVendor(
         selectedProvider,
         deriveVendorCatalog(baseModels),
+        deriveUnclassifiedVendorCount(baseModels),
       )
       return filterCalculatedModelsByVendor(baseModels, effectiveVendor)
     },
@@ -1170,9 +1187,18 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     () => deriveVendorCatalog(baseFilteredModels),
     [baseFilteredModels],
   )
+  const unclassifiedVendorCount = useMemo(
+    () => deriveUnclassifiedVendorCount(baseFilteredModels),
+    [baseFilteredModels],
+  )
   const effectiveSelectedVendor = useMemo(
-    () => resolveEffectiveSelectedVendor(selectedProvider, vendorCatalog),
-    [selectedProvider, vendorCatalog],
+    () =>
+      resolveEffectiveSelectedVendor(
+        selectedProvider,
+        vendorCatalog,
+        unclassifiedVendorCount,
+      ),
+    [selectedProvider, unclassifiedVendorCount, vendorCatalog],
   )
   const shouldRepairSelectedVendor =
     effectiveSelectedVendor !== selectedProvider
@@ -1361,6 +1387,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     accountSummaryCountsByAccountId,
     baseFilteredModels,
     vendorCatalog,
+    unclassifiedVendorCount,
     effectiveSelectedVendor,
     shouldRepairSelectedVendor,
     allVendorsFilteredCount: baseFilteredModels.length,
