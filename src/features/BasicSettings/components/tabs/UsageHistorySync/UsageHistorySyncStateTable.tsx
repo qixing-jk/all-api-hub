@@ -231,6 +231,9 @@ export default function UsageHistorySyncStateTable({
       .filter(([, selected]) => Boolean(selected))
       .map(([id]) => id)
   }, [rowSelection])
+  const hasSyncingSelectedAccount = selectedAccountIds.some((id) =>
+    syncingAccountIds.has(id),
+  )
 
   const isInitialLoading = isLoading && rows.length === 0
 
@@ -256,7 +259,11 @@ export default function UsageHistorySyncStateTable({
             variant="default"
             size="sm"
             onClick={() => void handleSyncSelection()}
-            disabled={!selectedAccountIds.length || isSyncingAll}
+            disabled={
+              !selectedAccountIds.length ||
+              isSyncingAll ||
+              hasSyncingSelectedAccount
+            }
             loading={isSyncingSelection}
             data-testid={BASIC_SETTINGS_TEST_IDS.usageHistorySyncSelectedButton}
           >

@@ -2,6 +2,10 @@ import type { TFunction } from "i18next"
 import { useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 
+import {
+  PREVIEW_LOAD_ORIGINS,
+  type PreviewLoadOrigin,
+} from "~/constants/previewLoadOrigin"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import {
@@ -58,15 +62,6 @@ interface UseManagedSiteTokenBatchExportDialogParams
   extends ManagedSiteTokenBatchExportDialogProps {
   t: TFunction
 }
-
-const PREVIEW_LOAD_ORIGINS = {
-  AUTOMATIC: "automatic",
-  MANUAL: "manual",
-} as const
-
-type PreviewLoadOrigin =
-  | (typeof PREVIEW_LOAD_ORIGINS)[keyof typeof PREVIEW_LOAD_ORIGINS]
-  | null
 
 const getBatchExportAnalyticsContext = () => ({
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,

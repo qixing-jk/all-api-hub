@@ -88,101 +88,89 @@ vi.mock("~/components/Tooltip", () => ({
   ),
 }))
 
-vi.mock("~/components/ui", () => ({
-  Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    loading,
-    "aria-busy": ariaBusy,
-  }: {
-    children: ReactNode
-    onClick?: () => void
-    disabled?: boolean
-    loading?: boolean
-    "aria-busy"?: boolean | "false" | "true"
-  }) => (
-    <button
-      disabled={disabled || loading}
-      aria-busy={loading ? true : ariaBusy}
-      onClick={() => onClick?.()}
-    >
-      {children}
-    </button>
-  ),
-  CollapsibleSection: ({
-    title,
-    children,
-  }: {
-    title: ReactNode
-    children: ReactNode
-  }) => (
-    <section>
-      <div>{title}</div>
-      <div>{children}</div>
-    </section>
-  ),
-  DestructiveConfirmDialog: ({
-    isOpen,
-    title,
-    description,
-    onClose,
-    onConfirm,
-    cancelLabel,
-    confirmLabel,
-  }: {
-    isOpen: boolean
-    title: ReactNode
-    description?: ReactNode
-    onClose: () => void
-    onConfirm: () => void
-    cancelLabel: ReactNode
-    confirmLabel: ReactNode
-  }) =>
-    isOpen ? (
-      <div role="alertdialog">
+vi.mock("~/components/ui", async () => {
+  const { Button } = await import("~/components/ui/button")
+
+  return {
+    Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+    Button,
+    CollapsibleSection: ({
+      title,
+      children,
+    }: {
+      title: ReactNode
+      children: ReactNode
+    }) => (
+      <section>
         <div>{title}</div>
-        <div>{description}</div>
-        <button onClick={onClose}>{cancelLabel}</button>
-        <button onClick={onConfirm}>{confirmLabel}</button>
-      </div>
-    ) : null,
-  Modal: ({
-    isOpen,
-    header,
-    children,
-    footer,
-    onClose,
-  }: {
-    isOpen: boolean
-    header?: ReactNode
-    children: ReactNode
-    footer?: ReactNode
-    onClose: () => void
-  }) =>
-    isOpen ? (
-      <div role="dialog">
-        {header}
-        <button onClick={onClose}>modal-close</button>
-        {children}
-        {footer}
-      </div>
-    ) : null,
-  Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SelectContent: ({ children }: { children: ReactNode }) => (
-    <div>{children}</div>
-  ),
-  SelectItem: ({ children, value }: { children: ReactNode; value: string }) => (
-    <div data-value={value}>{children}</div>
-  ),
-  SelectTrigger: ({ children }: { children: ReactNode }) => (
-    <div>{children}</div>
-  ),
-  SelectValue: ({ placeholder }: { placeholder?: string }) => (
-    <div>{placeholder}</div>
-  ),
-}))
+        <div>{children}</div>
+      </section>
+    ),
+    DestructiveConfirmDialog: ({
+      isOpen,
+      title,
+      description,
+      onClose,
+      onConfirm,
+      cancelLabel,
+      confirmLabel,
+    }: {
+      isOpen: boolean
+      title: ReactNode
+      description?: ReactNode
+      onClose: () => void
+      onConfirm: () => void
+      cancelLabel: ReactNode
+      confirmLabel: ReactNode
+    }) =>
+      isOpen ? (
+        <div role="alertdialog">
+          <div>{title}</div>
+          <div>{description}</div>
+          <button onClick={onClose}>{cancelLabel}</button>
+          <button onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      ) : null,
+    Modal: ({
+      isOpen,
+      header,
+      children,
+      footer,
+      onClose,
+    }: {
+      isOpen: boolean
+      header?: ReactNode
+      children: ReactNode
+      footer?: ReactNode
+      onClose: () => void
+    }) =>
+      isOpen ? (
+        <div role="dialog">
+          {header}
+          <button onClick={onClose}>modal-close</button>
+          {children}
+          {footer}
+        </div>
+      ) : null,
+    Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    SelectContent: ({ children }: { children: ReactNode }) => (
+      <div>{children}</div>
+    ),
+    SelectItem: ({
+      children,
+      value,
+    }: {
+      children: ReactNode
+      value: string
+    }) => <div data-value={value}>{children}</div>,
+    SelectTrigger: ({ children }: { children: ReactNode }) => (
+      <div>{children}</div>
+    ),
+    SelectValue: ({ placeholder }: { placeholder?: string }) => (
+      <div>{placeholder}</div>
+    ),
+  }
+})
 
 const mockedPreparePreview =
   prepareManagedSiteChannelMigrationPreview as unknown as ReturnType<

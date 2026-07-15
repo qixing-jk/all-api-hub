@@ -20,6 +20,10 @@ import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
 import { ChannelTypeNames, type ChannelType } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
+import {
+  PREVIEW_LOAD_ORIGINS,
+  type PreviewLoadOrigin,
+} from "~/constants/previewLoadOrigin"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   executeManagedSiteChannelMigration,
@@ -241,15 +245,6 @@ const formatArrayValues = (items: string[] | null | undefined) =>
 
 const SCROLLABLE_RESULT_LIST_CLASS =
   "max-h-[60vh] space-y-3 overflow-y-auto rounded-md border p-3 md:max-h-[min(70vh,48rem)]"
-
-const PREVIEW_LOAD_ORIGINS = {
-  AUTOMATIC: "automatic",
-  MANUAL: "manual",
-} as const
-
-type PreviewLoadOrigin =
-  | (typeof PREVIEW_LOAD_ORIGINS)[keyof typeof PREVIEW_LOAD_ORIGINS]
-  | null
 
 /**
  * Render a single source-to-target field comparison row in the migration preview.

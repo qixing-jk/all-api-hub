@@ -189,6 +189,28 @@ function createDeferred<T>() {
   return { promise, reject, resolve }
 }
 
+function createExecution(channelName: string, channelId: number) {
+  return {
+    items: [
+      {
+        channelId,
+        channelName,
+        ok: true,
+        attempts: 1,
+        finishedAt: 1_700_000_005_000,
+      },
+    ],
+    statistics: {
+      total: 1,
+      successCount: 1,
+      failureCount: 0,
+      durationMs: 1000,
+      startedAt: 1_700_000_004_000,
+      endedAt: 1_700_000_005_000,
+    },
+  }
+}
+
 const actionBarAnalyticsContext = (actionId: string) => ({
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
   actionId,
@@ -1175,6 +1197,241 @@ describe("ManagedSiteModelSync page", () => {
 
     backgroundExecution.resolve(refreshedExecution)
     await waitFor(() => expect(idleRefresh).toBeEnabled())
+  })
+
+  it("keeps the newest execution when same-context reloads resolve out of order", async () => {
+    const manualRefresh = createDeferred<{ success: boolean; data: any }>()
+    const runtimeReload = createDeferred<{ success: boolean; data: any }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+    let lastExecutionCalls = 0
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.GetLastExecution) {
+          lastExecutionCalls += 1
+          if (lastExecutionCalls === 2) return await manualRefresh.promise
+          if (lastExecutionCalls === 3) return await runtimeReload.promise
+        }
+
+        return await originalImplementation(type, data)
+      },
+    )
+
+    const user = userEvent.setup()
+    render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.refresh",
+      }),
+    )
+    await waitFor(() => expect(lastExecutionCalls).toBe(2))
+
+    const listener = addListener.mock.calls.at(-1)?.[0] as (
+      message: any,
+    ) => void
+    act(() => {
+      listener({
+        type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+        payload: { isRunning: false, completed: 1, total: 1, failed: 0 },
+      })
+    })
+    await waitFor(() => expect(lastExecutionCalls).toBe(3))
+
+    runtimeReload.resolve({
+      success: true,
+      data: createExecution("Newest", 301),
+    })
+    expect(await screen.findByText("Newest#301")).toBeInTheDocument()
+
+    manualRefresh.resolve({
+      success: true,
+      data: createExecution("Stale", 302),
+    })
+
+    const refreshButton = await screen.findByRole("button", {
+      name: "managedSiteModelSync:execution.actions.refresh",
+    })
+    expect(refreshButton).toBeEnabled()
+    expect(screen.getByText("Newest#301")).toBeInTheDocument()
+    expect(screen.queryByText("Stale#302")).not.toBeInTheDocument()
+  })
+
+  it("ignores an old execution response after the managed-site context changes", async () => {
+    const oldContextLoad = createDeferred<{ success: boolean; data: any }>()
+    const newContextLoad = createDeferred<{ success: boolean; data: any }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    let lastExecutionCalls = 0
+    let context = {
+      preferences: {
+        managedSiteType: "new-api",
+        newApi: {
+          baseUrl: "https://admin.example",
+          adminToken: "token",
+          userId: "1",
+        },
+        veloera: {
+          baseUrl: "https://veloera.example",
+          adminToken: "token",
+          userId: "2",
+        },
+      },
+      managedSiteType: "new-api",
+    }
+
+    mockUseUserPreferencesContext.mockImplementation(() => context)
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.GetLastExecution) {
+          lastExecutionCalls += 1
+          if (lastExecutionCalls === 1) return await oldContextLoad.promise
+          if (lastExecutionCalls === 2) return await newContextLoad.promise
+        }
+
+        return await originalImplementation(type, data)
+      },
+    )
+
+    const view = render(<ManagedSiteModelSync />)
+    await waitFor(() => expect(lastExecutionCalls).toBe(1))
+
+    context = {
+      ...context,
+      preferences: {
+        ...context.preferences,
+        managedSiteType: "Veloera",
+      },
+      managedSiteType: "Veloera",
+    }
+    view.rerender(
+      <I18nextProvider i18n={testI18n}>
+        <ManagedSiteModelSync />
+      </I18nextProvider>,
+    )
+    await waitFor(() => expect(lastExecutionCalls).toBe(2))
+
+    newContextLoad.resolve({
+      success: true,
+      data: createExecution("New Context", 401),
+    })
+    expect(await screen.findByText("New Context#401")).toBeInTheDocument()
+
+    await act(async () => {
+      oldContextLoad.resolve({
+        success: true,
+        data: createExecution("Old Context", 402),
+      })
+      await oldContextLoad.promise
+    })
+
+    expect(screen.queryByText("Old Context#402")).not.toBeInTheDocument()
+    expect(screen.getByText("New Context#401")).toBeInTheDocument()
+  })
+
+  it("keeps a new-context sync locked when the old-context sync settles", async () => {
+    const oldContextSync = createDeferred<{ success: boolean; data: any }>()
+    const newContextSync = createDeferred<{ success: boolean; data: any }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    let triggerAllCalls = 0
+    let lastExecutionCalls = 0
+    let context = {
+      preferences: {
+        managedSiteType: "new-api",
+        newApi: {
+          baseUrl: "https://admin.example",
+          adminToken: "token",
+          userId: "1",
+        },
+        veloera: {
+          baseUrl: "https://veloera.example",
+          adminToken: "token",
+          userId: "2",
+        },
+      },
+      managedSiteType: "new-api",
+    }
+
+    mockUseUserPreferencesContext.mockImplementation(() => context)
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.TriggerAll) {
+          triggerAllCalls += 1
+          return await (triggerAllCalls === 1
+            ? oldContextSync.promise
+            : newContextSync.promise)
+        }
+        if (type === ModelSyncMessageTypes.GetLastExecution) {
+          lastExecutionCalls += 1
+          if (lastExecutionCalls === 2) {
+            return {
+              success: true,
+              data: createExecution("New Context", 501),
+            }
+          }
+        }
+
+        return await originalImplementation(type, data)
+      },
+    )
+
+    const user = userEvent.setup()
+    const view = render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    )
+    await waitFor(() => expect(triggerAllCalls).toBe(1))
+
+    context = {
+      ...context,
+      preferences: {
+        ...context.preferences,
+        managedSiteType: "Veloera",
+      },
+      managedSiteType: "Veloera",
+    }
+    view.rerender(
+      <I18nextProvider i18n={testI18n}>
+        <ManagedSiteModelSync />
+      </I18nextProvider>,
+    )
+    expect(await screen.findByText("New Context#501")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    )
+    await waitFor(() => expect(triggerAllCalls).toBe(2))
+
+    await act(async () => {
+      oldContextSync.resolve({
+        success: true,
+        data: createExecution("Old Sync", 502),
+      })
+      await oldContextSync.promise
+    })
+
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runningAll",
+      }),
+    ).toHaveAttribute("aria-busy", "true")
+    expect(screen.queryByText("Old Sync#502")).not.toBeInTheDocument()
+
+    newContextSync.resolve({
+      success: true,
+      data: createExecution("New Sync", 503),
+    })
+    expect(await screen.findByText("New Sync#503")).toBeInTheDocument()
   })
 
   it("uses a warning toast when run-all completes with failed channels still present", async () => {

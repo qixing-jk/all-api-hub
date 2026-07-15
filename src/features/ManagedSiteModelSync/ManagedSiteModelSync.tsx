@@ -184,6 +184,11 @@ interface ManagedSiteModelSyncProps {
   routeParams?: Record<string, string>
 }
 
+interface SyncRequestToken {
+  generation: number
+  requestId: number
+}
+
 /**
  * Managed Site Model Sync Page
  */
@@ -202,7 +207,11 @@ export default function ManagedSiteModelSync({
   const configMissingTrackedFor = useRef<string | null>(null)
   const historySearchAnalyticsKey = useRef<string | null>(null)
   const manualSearchAnalyticsKey = useRef<string | null>(null)
-  const lastExecutionLoadingCountRef = useRef(0)
+  const contextGenerationRef = useRef(0)
+  const lastExecutionRequestIdRef = useRef(0)
+  const lastExecutionLoadingRequestIdsRef = useRef<Set<number>>(new Set())
+  const nextSyncRequestIdRef = useRef(0)
+  const activeSyncRequestRef = useRef<SyncRequestToken | null>(null)
   const isConfigMissing = !hasValidManagedSiteConfig(
     preferences,
     managedSiteType,
@@ -236,17 +245,32 @@ export default function ManagedSiteModelSync({
   const [manualSearchKeyword, setManualSearchKeyword] = useState("")
   const [hasAttemptedChannelsLoad, setHasAttemptedChannelsLoad] =
     useState(false)
-  const syncRequestPendingRef = useRef(false)
 
   const tryStartSyncRequest = () => {
-    if (syncRequestPendingRef.current || progress?.isRunning) return false
+    if (activeSyncRequestRef.current || progress?.isRunning) return null
 
-    syncRequestPendingRef.current = true
-    return true
+    const token = {
+      generation: contextGenerationRef.current,
+      requestId: ++nextSyncRequestIdRef.current,
+    }
+    activeSyncRequestRef.current = token
+    return token
   }
 
-  const finishSyncRequest = () => {
-    syncRequestPendingRef.current = false
+  const isCurrentSyncRequest = (token: SyncRequestToken) => {
+    const activeToken = activeSyncRequestRef.current
+    return (
+      token.generation === contextGenerationRef.current &&
+      activeToken?.generation === token.generation &&
+      activeToken.requestId === token.requestId
+    )
+  }
+
+  const finishSyncRequest = (token: SyncRequestToken) => {
+    if (!isCurrentSyncRequest(token)) return false
+
+    activeSyncRequestRef.current = null
+    return true
   }
 
   const managedSiteAnalyticsInsights = useMemo(
@@ -317,7 +341,9 @@ export default function ManagedSiteModelSync({
   )
 
   const loadLastExecution = useCallback(async () => {
-    lastExecutionLoadingCountRef.current += 1
+    const generation = contextGenerationRef.current
+    const requestId = ++lastExecutionRequestIdRef.current
+    lastExecutionLoadingRequestIdsRef.current.add(requestId)
     try {
       setIsLoading(true)
       const response = await sendModelSyncMessage(
@@ -325,15 +351,22 @@ export default function ManagedSiteModelSync({
       )
 
       if (response.success) {
-        setLastExecution(response.data)
+        if (
+          generation === contextGenerationRef.current &&
+          requestId === lastExecutionRequestIdRef.current
+        ) {
+          setLastExecution(response.data)
+        }
         return getItemCount(response.data?.items)
       }
     } catch (error) {
       logger.error("Failed to load last execution", error)
     } finally {
-      lastExecutionLoadingCountRef.current -= 1
-      if (lastExecutionLoadingCountRef.current === 0) {
-        setIsLoading(false)
+      if (generation === contextGenerationRef.current) {
+        lastExecutionLoadingRequestIdsRef.current.delete(requestId)
+        if (lastExecutionLoadingRequestIdsRef.current.size === 0) {
+          setIsLoading(false)
+        }
       }
     }
 
@@ -480,6 +513,30 @@ export default function ManagedSiteModelSync({
   }
 
   useEffect(() => {
+    contextGenerationRef.current += 1
+    lastExecutionRequestIdRef.current += 1
+    lastExecutionLoadingRequestIdsRef.current.clear()
+    activeSyncRequestRef.current = null
+    hasInitializedTab.current = false
+    setLastExecution(null)
+    setProgress(null)
+    setNextScheduledAt(null)
+    setIsAutoSyncEnabled(false)
+    setIntervalMs(undefined)
+    setHistorySelectedIds(new Set())
+    setManualSelectedIds(new Set())
+    setIsManualRefreshPending(false)
+    setActiveAction(null)
+    setRunningChannelId(null)
+    setChannels([])
+    setIsChannelsLoading(false)
+    setIsManualChannelRefresh(false)
+    setChannelsError(null)
+    setHasAttemptedChannelsLoad(false)
+    setIsLoading(!isConfigMissing && !isModelSyncUnsupported)
+  }, [isConfigMissing, isModelSyncUnsupported, managedSiteType])
+
+  useEffect(() => {
     if (isModelSyncUnsupported) {
       setIsLoading(false)
       return
@@ -533,21 +590,6 @@ export default function ManagedSiteModelSync({
     loadProgress,
     managedSiteType,
   ])
-
-  useEffect(() => {
-    hasInitializedTab.current = false
-    setLastExecution(null)
-    setProgress(null)
-    setNextScheduledAt(null)
-    setIsAutoSyncEnabled(false)
-    setIntervalMs(undefined)
-    setHistorySelectedIds(new Set())
-    setManualSelectedIds(new Set())
-    setChannels([])
-    setChannelsError(null)
-    setHasAttemptedChannelsLoad(false)
-    setIsLoading(!isConfigMissing && !isModelSyncUnsupported)
-  }, [isConfigMissing, isModelSyncUnsupported, managedSiteType])
 
   useEffect(() => {
     if (!progress?.isRunning) {
@@ -696,7 +738,8 @@ export default function ManagedSiteModelSync({
    * Handles retrying only the failed channels from the last execution, showing appropriate success or error toasts based on the result.
    */
   async function handleRetryFailed() {
-    if (!tryStartSyncRequest()) return
+    const requestToken = tryStartSyncRequest()
+    if (!requestToken) return
 
     const tracker = startModelSyncAnalytics({
       ...actionBarAnalyticsScope,
@@ -708,6 +751,8 @@ export default function ManagedSiteModelSync({
       const response = await sendModelSyncMessage(
         ModelSyncMessageTypes.TriggerFailedOnly,
       )
+
+      if (!isCurrentSyncRequest(requestToken)) return
 
       if (response.success) {
         notifySyncCompletion(response.data)
@@ -726,6 +771,8 @@ export default function ManagedSiteModelSync({
         )
       }
     } catch (error: any) {
+      if (!isCurrentSyncRequest(requestToken)) return
+
       toast.error(t("messages.error.syncFailed", { error: error.message }))
       completeModelSyncActionAnalytics(
         tracker,
@@ -735,13 +782,15 @@ export default function ManagedSiteModelSync({
         },
       )
     } finally {
-      finishSyncRequest()
-      setActiveAction(null)
+      if (finishSyncRequest(requestToken)) {
+        setActiveAction(null)
+      }
     }
   }
 
   const handleRunAll = async () => {
-    if (!tryStartSyncRequest()) return
+    const requestToken = tryStartSyncRequest()
+    if (!requestToken) return
 
     const tracker = startModelSyncAnalytics({
       ...actionBarAnalyticsScope,
@@ -753,6 +802,8 @@ export default function ManagedSiteModelSync({
       const response = await sendModelSyncMessage(
         ModelSyncMessageTypes.TriggerAll,
       )
+
+      if (!isCurrentSyncRequest(requestToken)) return
 
       if (response.success) {
         notifySyncCompletion(response.data)
@@ -771,6 +822,8 @@ export default function ManagedSiteModelSync({
         )
       }
     } catch (error: any) {
+      if (!isCurrentSyncRequest(requestToken)) return
+
       toast.error(t("messages.error.syncFailed", { error: error.message }))
       completeModelSyncActionAnalytics(
         tracker,
@@ -780,8 +833,9 @@ export default function ManagedSiteModelSync({
         },
       )
     } finally {
-      finishSyncRequest()
-      setActiveAction(null)
+      if (finishSyncRequest(requestToken)) {
+        setActiveAction(null)
+      }
     }
   }
 
@@ -789,7 +843,8 @@ export default function ManagedSiteModelSync({
     const selectedSet =
       source === "history" ? historySelectedIds : manualSelectedIds
 
-    if (selectedSet.size > 0 && !tryStartSyncRequest()) return
+    const requestToken = selectedSet.size > 0 ? tryStartSyncRequest() : null
+    if (selectedSet.size > 0 && !requestToken) return
 
     const tracker = startModelSyncAnalytics({
       ...(source === "history"
@@ -817,6 +872,8 @@ export default function ManagedSiteModelSync({
       return
     }
 
+    if (!requestToken) return
+
     setActiveAction(
       source === "history"
         ? MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_SELECTED_HISTORY
@@ -829,6 +886,8 @@ export default function ManagedSiteModelSync({
           channelIds: Array.from(selectedSet),
         },
       )
+
+      if (!isCurrentSyncRequest(requestToken)) return
 
       if (response.success) {
         notifySyncCompletion(response.data)
@@ -857,6 +916,8 @@ export default function ManagedSiteModelSync({
         )
       }
     } catch (error: any) {
+      if (!isCurrentSyncRequest(requestToken)) return
+
       toast.error(t("messages.error.syncFailed", { error: error.message }))
       completeModelSyncActionAnalytics(
         tracker,
@@ -866,13 +927,15 @@ export default function ManagedSiteModelSync({
         },
       )
     } finally {
-      finishSyncRequest()
-      setActiveAction(null)
+      if (finishSyncRequest(requestToken)) {
+        setActiveAction(null)
+      }
     }
   }
 
   const handleRunSingle = async (channelId: number) => {
-    if (!tryStartSyncRequest()) return
+    const requestToken = tryStartSyncRequest()
+    if (!requestToken) return
 
     const tracker = startModelSyncAnalytics({
       ...resultsTableAnalyticsScope,
@@ -887,6 +950,8 @@ export default function ManagedSiteModelSync({
           channelIds: [channelId],
         },
       )
+
+      if (!isCurrentSyncRequest(requestToken)) return
 
       if (response.success) {
         const newItem = response.data.items[0]
@@ -946,6 +1011,8 @@ export default function ManagedSiteModelSync({
         )
       }
     } catch (error: any) {
+      if (!isCurrentSyncRequest(requestToken)) return
+
       toast.error(t("messages.error.syncFailed", { error: error.message }))
       completeModelSyncActionAnalytics(
         tracker,
@@ -955,8 +1022,9 @@ export default function ManagedSiteModelSync({
         },
       )
     } finally {
-      finishSyncRequest()
-      setRunningChannelId(null)
+      if (finishSyncRequest(requestToken)) {
+        setRunningChannelId(null)
+      }
     }
   }
 

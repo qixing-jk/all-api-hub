@@ -14,6 +14,66 @@ const createDeferred = <T,>() => {
 }
 
 describe("UsageHistorySyncStateTable", () => {
+  it("disables bulk sync without marking it busy when the selection overlaps a row sync", async () => {
+    const user = userEvent.setup()
+    const onSyncAccounts = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <UsageHistorySyncStateTable
+        rows={[
+          {
+            id: "account-1",
+            accountName: "Example Account 1",
+            state: "never",
+            lastSyncAtMs: null,
+            lastSyncAtLabel: "Never",
+          },
+          {
+            id: "account-2",
+            accountName: "Example Account 2",
+            state: "never",
+            lastSyncAtMs: null,
+            lastSyncAtLabel: "Never",
+          },
+        ]}
+        isLoading={false}
+        hasAnyAccounts={true}
+        isSyncingAll={false}
+        syncingAccountIds={new Set(["account-1"])}
+        onSyncAccounts={onSyncAccounts}
+      />,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await user.click(
+      within(screen.getByRole("row", { name: /Example Account 1/ })).getByRole(
+        "checkbox",
+      ),
+    )
+    await user.click(
+      within(screen.getByRole("row", { name: /Example Account 2/ })).getByRole(
+        "checkbox",
+      ),
+    )
+
+    const syncSelectedButton = screen.getByRole("button", {
+      name: "usageAnalytics:syncTab.actions.syncSelected",
+    })
+    expect(syncSelectedButton).toBeDisabled()
+    expect(syncSelectedButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(syncSelectedButton)
+    expect(onSyncAccounts).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole("button", {
+        name: "usageAnalytics:syncTab.actions.clearSelection",
+      }),
+    ).toBeEnabled()
+  })
+
   it("locks selection controls without marking them busy while selected accounts sync", async () => {
     const user = userEvent.setup()
     const deferredSync = createDeferred<void>()
