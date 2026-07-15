@@ -18,7 +18,7 @@ export function CookieAuthPermissionRecommendation({
   isRequestingCookieAuthPermissions = false,
   onRequestCookieAuthPermissions,
 }: CookieAuthPermissionRecommendationProps) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "common"])
   const shouldShowAction =
     cookieAuthPermissionsGranted === false && !!onRequestCookieAuthPermissions
 

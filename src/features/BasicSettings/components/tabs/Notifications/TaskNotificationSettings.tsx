@@ -200,7 +200,7 @@ function getTaskDescription(
  * General settings section for background scheduled-task system notifications.
  */
 export default function TaskNotificationSettings() {
-  const { i18n, t } = useTranslation("settings")
+  const { i18n, t } = useTranslation(["settings", "common"])
   const {
     siteAnnouncementNotifications,
     taskNotifications,

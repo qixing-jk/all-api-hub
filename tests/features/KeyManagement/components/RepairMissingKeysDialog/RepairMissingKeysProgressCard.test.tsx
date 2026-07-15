@@ -136,7 +136,7 @@ describe("RepairMissingKeysProgressCard", () => {
     const user = userEvent.setup()
     const onCancelAudit = vi.fn()
 
-    renderCard({ onCancelAudit })
+    const { rerender } = renderCard({ onCancelAudit })
 
     await user.click(
       screen.getByRole("button", {
@@ -144,6 +144,25 @@ describe("RepairMissingKeysProgressCard", () => {
       }),
     )
 
+    expect(onCancelAudit).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <RepairMissingKeysProgressCard
+        progress={buildProgress()}
+        isCancelling
+        isStarting={false}
+        onStartAudit={vi.fn()}
+        onCancelAudit={onCancelAudit}
+        t={t}
+      />,
+    )
+
+    const cancellingButton = screen.getByRole("button", {
+      name: "common:status.cancelling",
+    })
+    expect(cancellingButton).toBeDisabled()
+    expect(cancellingButton).toHaveAttribute("aria-busy", "true")
+    await user.click(cancellingButton)
     expect(onCancelAudit).toHaveBeenCalledTimes(1)
   })
 

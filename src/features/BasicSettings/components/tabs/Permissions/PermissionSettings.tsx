@@ -13,7 +13,7 @@ import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
  * Settings section for managing optional browser permissions: refresh, request, remove.
  */
 export default function PermissionSettings() {
-  const { t } = useTranslation("settings")
+  const { t } = useTranslation(["settings", "common"])
   const {
     isLoading,
     isRefreshing,

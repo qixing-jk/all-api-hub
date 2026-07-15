@@ -33,7 +33,7 @@ export function OneTimeApiKeyDialog({
   autoCopy = true,
   saveAction,
 }: OneTimeApiKeyDialogProps) {
-  const { t } = useTranslation("keyManagement")
+  const { t } = useTranslation(["keyManagement", "common"])
   const keyInputId = useId()
   const [copied, setCopied] = useState(false)
   const [isSaving, setIsSaving] = useState(false)

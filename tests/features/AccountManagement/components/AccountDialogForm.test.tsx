@@ -508,7 +508,7 @@ describe("AccountDialog AccountForm", () => {
     props.draft.authType = AuthTypeEnum.Cookie
     props.cookieAuthPermissionsGranted = false
 
-    render(<AccountForm {...withSitePolicy(props)} />)
+    const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByTestId(
@@ -529,6 +529,17 @@ describe("AccountDialog AccountForm", () => {
     )
 
     expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
+
+    props.isRequestingCookieAuthPermissions = true
+    rerender(<AccountForm {...withSitePolicy(props)} />)
+
+    const applyingButton = screen.getByRole("button", {
+      name: "common:status.applying",
+    })
+    expect(applyingButton).toBeDisabled()
+    expect(applyingButton).toHaveAttribute("aria-busy", "true")
+    await user.click(applyingButton)
+    expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
     expect(
       screen.getByPlaceholderText(
         "accountDialog:form.cookieAuthSessionCookiePlaceholder",
@@ -545,7 +556,7 @@ describe("AccountDialog AccountForm", () => {
     props.draft.sub2apiTokenExpiresAt = 1700000000000
     props.isImportingSub2apiSession = true
 
-    render(<AccountForm {...withSitePolicy(props)} />)
+    const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
       await screen.findByText(
@@ -594,11 +605,21 @@ describe("AccountDialog AccountForm", () => {
     )
     expect(props.onSub2apiUseRefreshTokenChange).toHaveBeenCalledWith(false)
     expect(props.onImportSub2apiSession).not.toHaveBeenCalled()
-    expect(
+    const importingButton = screen.getByRole("button", {
+      name: "common:status.importing",
+    })
+    expect(importingButton).toBeDisabled()
+    expect(importingButton).toHaveAttribute("aria-busy", "true")
+
+    props.isImportingSub2apiSession = false
+    rerender(<AccountForm {...withSitePolicy(props)} />)
+
+    await user.click(
       screen.getByRole("button", {
-        name: "common:status.importing",
+        name: "accountDialog:form.sub2apiImportRefreshToken",
       }),
-    ).toBeDisabled()
+    )
+    expect(props.onImportSub2apiSession).toHaveBeenCalledTimes(1)
   })
 
   it("updates auto check-in and custom check-in config with the expected fallback defaults", async () => {

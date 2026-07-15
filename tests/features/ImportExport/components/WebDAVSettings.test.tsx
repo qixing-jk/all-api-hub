@@ -209,7 +209,9 @@ vi.mock("~/components/ui", async (importOriginal) => {
       leftIcon,
       rightIcon,
       bleed: _bleed,
-      loading: _loading,
+      loading = false,
+      disabled,
+      "aria-busy": ariaBusy,
       ...props
     }: any) => {
       const scope = useProductAnalyticsScope()
@@ -221,6 +223,8 @@ vi.mock("~/components/ui", async (importOriginal) => {
       return (
         <button
           type="button"
+          disabled={disabled || loading}
+          aria-busy={loading ? true : ariaBusy}
           data-analytics-action={
             resolvedAction
               ? `${resolvedAction.featureId}:${resolvedAction.actionId}:${resolvedAction.surfaceId}:${resolvedAction.entrypoint}`
@@ -1533,7 +1537,7 @@ describe("WebDAVSettings", () => {
     expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
-  it("keeps the rebuild dialog open while a forced rebuild is pending", async () => {
+  it("keeps the rebuild dialog open and exposes processing while a forced rebuild is pending", async () => {
     mockDownloadBackup.mockResolvedValueOnce('{"version":2,"accounts":"')
     mockParseWebdavBackupJson.mockImplementationOnce(() => {
       throw new Error("messages:webdav.invalidBackupJson")
@@ -1559,6 +1563,12 @@ describe("WebDAVSettings", () => {
         name: "importExport:webdav.rebuildDialog.confirm",
       }),
     )
+
+    const processingButton = screen.getByRole("button", {
+      name: "common:status.processing",
+    })
+    expect(processingButton).toBeDisabled()
+    expect(processingButton).toHaveAttribute("aria-busy", "true")
 
     expect(
       screen.getByText("importExport:webdav.rebuildDialog.title"),

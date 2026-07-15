@@ -38,44 +38,27 @@ const {
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
-vi.mock("~/components/ui", () => ({
-  Body: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-  Button: ({
-    children,
-    disabled,
-    onClick,
-    size,
-    variant,
-  }: {
-    children: React.ReactNode
-    disabled?: boolean
-    onClick?: () => void
-    size?: string
-    variant?: string
-  }) => (
-    <button
-      type="button"
-      data-size={size}
-      data-variant={variant}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  ),
-  Card: ({ children }: { children: React.ReactNode }) => (
-    <section>{children}</section>
-  ),
-  CardContent: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  CardHeader: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  Heading3: ({ children }: { children: React.ReactNode }) => (
-    <h3>{children}</h3>
-  ),
-}))
+vi.mock("~/components/ui", async () => {
+  const actual =
+    await vi.importActual<typeof import("~/components/ui")>("~/components/ui")
+
+  return {
+    ...actual,
+    Body: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+    Card: ({ children }: { children: React.ReactNode }) => (
+      <section>{children}</section>
+    ),
+    CardContent: ({ children }: { children: React.ReactNode }) => (
+      <div>{children}</div>
+    ),
+    CardHeader: ({ children }: { children: React.ReactNode }) => (
+      <div>{children}</div>
+    ),
+    Heading3: ({ children }: { children: React.ReactNode }) => (
+      <h3>{children}</h3>
+    ),
+  }
+})
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({
@@ -198,9 +181,11 @@ describe("RedemptionBatchResultToast", () => {
     )
 
     expect(onRetry).toHaveBeenCalledWith("code-failed")
-    expect(
-      screen.getByRole("button", { name: "common:status.retrying" }),
-    ).toBeDisabled()
+    const retryingButton = screen.getByRole("button", {
+      name: "common:status.retrying",
+    })
+    expect(retryingButton).toBeDisabled()
+    expect(retryingButton).toHaveAttribute("aria-busy", "true")
 
     resolveRetry?.({
       code: "code-failed",

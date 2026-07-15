@@ -203,9 +203,8 @@ export default function ResultsTable({
                       loading={isRunningThis}
                       aria-label={t("execution.table.syncChannel")}
                       title={t("execution.table.syncChannel")}
-                    >
-                      {!isRunningThis && <ArrowPathIcon className="h-4 w-4" />}
-                    </Button>
+                      leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                    />
                   </td>
                 </tr>
               )

@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -166,6 +167,84 @@ describe("StatusIndicator", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("shows pending copy while reloading an empty runtime-key list", async () => {
+    render(
+      <StatusIndicator
+        selectedSource={createAccountSource(ACCOUNT as any)}
+        isLoading={false}
+        dataFormatError={false}
+        loadErrorMessage="modelList:status.loadFailed"
+        currentAccount={ACCOUNT as any}
+        loadPricingData={vi.fn()}
+        unsupportedSource={false}
+        accountFallback={{
+          isAvailable: true,
+          isActive: false,
+          statusScope: "account",
+          hasLoadedRuntimeKeys: true,
+          isLoadingRuntimeKeys: true,
+          isLoadingCatalog: false,
+          runtimeKeyLoadErrorMessage: null,
+          catalogLoadErrorMessage: null,
+          runtimeKeys: [],
+          selectedRuntimeKeyId: null,
+          activeRuntimeKeyName: null,
+          loadRuntimeKeys: vi.fn(),
+          setSelectedRuntimeKeyId: vi.fn(),
+          loadCatalog: vi.fn(),
+        }}
+      />,
+    )
+
+    const reloadButton = await screen.findByRole("button", {
+      name: "modelList:status.fallback.loadingKeys",
+    })
+
+    expect(reloadButton).toBeDisabled()
+    expect(reloadButton).toHaveAttribute("aria-busy", "true")
+  })
+
+  it("reloads runtime keys after a key-list failure", async () => {
+    const user = userEvent.setup()
+    const loadRuntimeKeys = vi.fn()
+
+    render(
+      <StatusIndicator
+        selectedSource={createAccountSource(ACCOUNT as any)}
+        isLoading={false}
+        dataFormatError={false}
+        loadErrorMessage="modelList:status.loadFailed"
+        currentAccount={ACCOUNT as any}
+        loadPricingData={vi.fn()}
+        unsupportedSource={false}
+        accountFallback={{
+          isAvailable: true,
+          isActive: false,
+          statusScope: "account",
+          hasLoadedRuntimeKeys: false,
+          isLoadingRuntimeKeys: false,
+          isLoadingCatalog: false,
+          runtimeKeyLoadErrorMessage: "Unable to load runtime keys",
+          catalogLoadErrorMessage: null,
+          runtimeKeys: [],
+          selectedRuntimeKeyId: null,
+          activeRuntimeKeyName: null,
+          loadRuntimeKeys,
+          setSelectedRuntimeKeyId: vi.fn(),
+          loadCatalog: vi.fn(),
+        }}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:status.fallback.reloadKeys",
+      }),
+    )
+
+    expect(loadRuntimeKeys).toHaveBeenCalledOnce()
+  })
+
   it("keeps the fallback key select interactive when exactly one key is available", async () => {
     render(
       <StatusIndicator
@@ -218,6 +297,105 @@ describe("StatusIndicator", () => {
     })
 
     expect(selectTrigger).toBeEnabled()
+  })
+
+  it("updates catalog and runtime-key recovery actions across pending states", async () => {
+    const user = userEvent.setup()
+    const loadCatalog = vi.fn()
+    const loadRuntimeKeys = vi.fn()
+    const runtimeKeys = [
+      buildAccountTokenRuntimeKey(
+        ACCOUNT as any,
+        {
+          id: 7,
+          accountId: ACCOUNT.id,
+          accountName: ACCOUNT.name,
+          key: "sk-example",
+          status: 1,
+          name: "Example key",
+          created_time: 0,
+          accessed_time: 0,
+          expired_time: -1,
+          remain_quota: 0,
+          unlimited_quota: true,
+          used_quota: 0,
+        } as any,
+      ),
+    ]
+    const fallback = {
+      isAvailable: true,
+      isActive: false,
+      statusScope: "account" as const,
+      hasLoadedRuntimeKeys: true,
+      isLoadingRuntimeKeys: false,
+      isLoadingCatalog: false,
+      runtimeKeyLoadErrorMessage: null,
+      catalogLoadErrorMessage: "Unable to load catalog",
+      runtimeKeys,
+      selectedRuntimeKeyId: runtimeKeys[0].id,
+      activeRuntimeKeyName: null,
+      loadRuntimeKeys,
+      setSelectedRuntimeKeyId: vi.fn(),
+      loadCatalog,
+    }
+    const renderIndicator = (accountFallback: typeof fallback) => (
+      <StatusIndicator
+        selectedSource={createAccountSource(ACCOUNT as any)}
+        isLoading={false}
+        dataFormatError={false}
+        loadErrorMessage="modelList:status.loadFailed"
+        currentAccount={ACCOUNT as any}
+        loadPricingData={vi.fn()}
+        unsupportedSource={false}
+        accountFallback={accountFallback}
+      />
+    )
+    const { rerender } = render(renderIndicator(fallback))
+
+    const retryButton = await screen.findByRole("button", {
+      name: "modelList:status.fallback.retryLoadWithKey",
+    })
+    await user.click(retryButton)
+    expect(loadCatalog).toHaveBeenCalledOnce()
+
+    rerender(
+      renderIndicator({
+        ...fallback,
+        isLoadingCatalog: true,
+      }),
+    )
+
+    const loadingCatalogButton = screen.getByRole("button", {
+      name: "modelList:status.loading",
+    })
+    const catalogSibling = screen.getByRole("button", {
+      name: "modelList:status.fallback.reloadKeys",
+    })
+    expect(loadingCatalogButton).toBeDisabled()
+    expect(loadingCatalogButton).toHaveAttribute("aria-busy", "true")
+    expect(catalogSibling).toBeDisabled()
+    expect(catalogSibling).not.toHaveAttribute("aria-busy")
+
+    rerender(
+      renderIndicator({
+        ...fallback,
+        isLoadingRuntimeKeys: true,
+      }),
+    )
+
+    const loadingKeysButton = screen.getByRole("button", {
+      name: "modelList:status.fallback.loadingKeys",
+    })
+    const runtimeKeySibling = screen.getByRole("button", {
+      name: "modelList:status.fallback.retryLoadWithKey",
+    })
+    expect(loadingKeysButton).toBeDisabled()
+    expect(loadingKeysButton).toHaveAttribute("aria-busy", "true")
+    expect(runtimeKeySibling).toBeDisabled()
+    expect(runtimeKeySibling).not.toHaveAttribute("aria-busy")
+
+    await user.click(loadingKeysButton)
+    expect(loadRuntimeKeys).not.toHaveBeenCalled()
   })
 
   it("shows profile-specific load errors without account fallback actions", async () => {

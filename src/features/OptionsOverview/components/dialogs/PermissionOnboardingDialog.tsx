@@ -45,7 +45,7 @@ export function PermissionOnboardingDialog({
   onClose,
   reason,
 }: PermissionOnboardingDialogProps) {
-  const { t } = useTranslation("settings")
+  const { t } = useTranslation(["settings", "common"])
   const [isRequesting, setIsRequesting] = useState(false)
 
   const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0

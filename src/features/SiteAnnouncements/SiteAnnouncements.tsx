@@ -82,7 +82,7 @@ export default function SiteAnnouncementsPage({
   routeParams,
   refreshKey,
 }: SiteAnnouncementsPageProps) {
-  const { t } = useTranslation("siteAnnouncements")
+  const { t } = useTranslation(["siteAnnouncements", "common"])
   const { siteAnnouncementNotifications } = useUserPreferencesContext()
   const [records, setRecords] = useState<SiteAnnouncementRecord[]>([])
   const [status, setStatus] = useState<SiteAnnouncementSiteState[]>([])

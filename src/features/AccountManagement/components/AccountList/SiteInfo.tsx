@@ -26,7 +26,6 @@ import {
   IconButton,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import type {
@@ -505,10 +504,9 @@ export default function SiteInfo({
             aria-label={t("list.site.refreshHealthStatus")}
           >
             <span
-              className={`h-2 w-2 rounded-full ${
-                getStatusIndicatorColor(site.health?.status) ||
-                UI_CONSTANTS.STYLES.STATUS_INDICATOR.UNKNOWN
-              }`}
+              className={`h-2 w-2 rounded-full ${getStatusIndicatorColor(
+                site.health?.status,
+              )}`}
               aria-hidden="true"
             />
           </IconButton>

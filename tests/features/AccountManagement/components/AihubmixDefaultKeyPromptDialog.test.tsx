@@ -79,11 +79,11 @@ describe("AihubmixDefaultKeyPromptDialog", () => {
     })
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", {
-          name: "accountDialog:aihubmixDefaultKeyPrompt.confirm",
-        }),
-      ).toBeEnabled()
+      const confirmButton = screen.getByRole("button", {
+        name: "accountDialog:aihubmixDefaultKeyPrompt.confirm",
+      })
+      expect(confirmButton).toBeEnabled()
+      expect(confirmButton).not.toHaveAttribute("aria-busy")
     })
   })
 })
