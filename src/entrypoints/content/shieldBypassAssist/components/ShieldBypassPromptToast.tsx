@@ -71,11 +71,6 @@ function usePrefixedDocumentTitle(prefix: string) {
     const titleEl = document.querySelector("title")
     let correctionCount = 0
     const observer = new MutationObserver(() => {
-      if (correctionCount >= MAX_TITLE_CORRECTIONS) {
-        observer.disconnect()
-        return
-      }
-
       if (apply()) {
         correctionCount += 1
         if (correctionCount >= MAX_TITLE_CORRECTIONS) {
