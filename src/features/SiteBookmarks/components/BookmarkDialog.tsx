@@ -288,7 +288,7 @@ export default function BookmarkDialog({
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={isWorking}
+              loading={isWorking}
               data-testid={SITE_BOOKMARKS_TEST_IDS.dialogSaveButton}
               analyticsAction={
                 mode === "add"
@@ -296,9 +296,13 @@ export default function BookmarkDialog({
                   : PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark
               }
             >
-              {mode === "add"
-                ? t("bookmark:actions.add")
-                : t("common:actions.save")}
+              {isWorking
+                ? mode === "add"
+                  ? t("common:status.creating")
+                  : t("common:status.saving")
+                : mode === "add"
+                  ? t("bookmark:actions.add")
+                  : t("common:actions.save")}
             </Button>
           </div>
         }

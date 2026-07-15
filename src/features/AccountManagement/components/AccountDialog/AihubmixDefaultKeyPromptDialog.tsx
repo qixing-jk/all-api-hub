@@ -59,7 +59,7 @@ export function AihubmixDefaultKeyPromptDialog({
             onClick={onConfirm}
             variant="warning"
             className="flex-1"
-            disabled={isCreating}
+            loading={isCreating}
           >
             {isCreating
               ? t("accountDialog:aihubmixDefaultKeyPrompt.creating")

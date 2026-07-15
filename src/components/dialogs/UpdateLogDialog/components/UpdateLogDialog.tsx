@@ -110,14 +110,18 @@ export function UpdateLogDialog({
       <Button
         data-testid={UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle}
         variant="outline"
-        disabled={isSavingAutoOpen}
+        loading={isSavingAutoOpen}
         onClick={() => void handleSetAutoOpenEnabled(!autoOpenEnabled)}
         type="button"
         className="h-auto min-h-9 w-full py-2 text-left whitespace-normal sm:w-auto sm:text-center sm:whitespace-nowrap"
       >
-        {autoOpenEnabled
-          ? t("ui:dialog.updateLog.disableAutoOpen")
-          : t("ui:dialog.updateLog.enableAutoOpen")}
+        {isSavingAutoOpen
+          ? autoOpenEnabled
+            ? t("common:status.disabling")
+            : t("common:status.enabling")
+          : autoOpenEnabled
+            ? t("ui:dialog.updateLog.disableAutoOpen")
+            : t("ui:dialog.updateLog.enableAutoOpen")}
       </Button>
 
       <div

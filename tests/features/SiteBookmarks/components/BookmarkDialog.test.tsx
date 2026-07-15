@@ -10,9 +10,23 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { SiteBookmark } from "~/types"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 const loadAccountDataMock = vi.fn()
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
 
 const {
   addBookmarkMock,
@@ -177,6 +191,8 @@ describe("BookmarkDialog", () => {
 
   it("creates a bookmark in add mode", async () => {
     const onClose = vi.fn()
+    const addDeferred = createDeferred<string>()
+    addBookmarkMock.mockReturnValueOnce(addDeferred.promise)
 
     render(
       <BookmarkDialog
@@ -201,6 +217,20 @@ describe("BookmarkDialog", () => {
       await screen.findByRole("button", { name: "bookmark:actions.add" }),
     )
 
+    const creatingButton = screen.getByRole("button", {
+      name: "common:status.creating",
+    })
+    expect(creatingButton).toHaveAttribute("aria-busy", "true")
+    expect(creatingButton).toBeDisabled()
+    const cancelButton = screen.getByRole("button", {
+      name: "common:actions.cancel",
+    })
+    expect(cancelButton).toBeDisabled()
+    expect(cancelButton).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(creatingButton)
+    expect(addBookmarkMock).toHaveBeenCalledTimes(1)
+
     expectBookmarkActionTracked(
       PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementDialog,
@@ -216,15 +246,21 @@ describe("BookmarkDialog", () => {
       )
     })
 
-    expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
-    expectBookmarkActionCompleted(
-      PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
-      PRODUCT_ANALYTICS_RESULTS.Success,
-    )
-    expect(toastSuccessMock).toHaveBeenCalledWith(
-      "messages:toast.success.bookmarkAdded",
-    )
-    expect(onClose).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      addDeferred.resolve("bookmark-1")
+    })
+
+    await waitFor(() => {
+      expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
+      expectBookmarkActionCompleted(
+        PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "messages:toast.success.bookmarkAdded",
+      )
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
   })
 
   it("fills name and url from the current page helper in add mode", async () => {
@@ -415,6 +451,8 @@ describe("BookmarkDialog", () => {
 
   it("updates a bookmark in edit mode", async () => {
     const onClose = vi.fn()
+    const updateDeferred = createDeferred<boolean>()
+    updateBookmarkMock.mockReturnValueOnce(updateDeferred.promise)
     const bookmark: SiteBookmark = {
       id: "b1",
       name: "Old",
@@ -443,6 +481,20 @@ describe("BookmarkDialog", () => {
       await screen.findByRole("button", { name: "common:actions.save" }),
     )
 
+    const savingButton = screen.getByRole("button", {
+      name: "common:status.saving",
+    })
+    expect(savingButton).toHaveAttribute("aria-busy", "true")
+    expect(savingButton).toBeDisabled()
+    const cancelButton = screen.getByRole("button", {
+      name: "common:actions.cancel",
+    })
+    expect(cancelButton).toBeDisabled()
+    expect(cancelButton).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(savingButton)
+    expect(updateBookmarkMock).toHaveBeenCalledTimes(1)
+
     expectBookmarkActionTracked(
       PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementDialog,
@@ -456,15 +508,21 @@ describe("BookmarkDialog", () => {
       )
     })
 
-    expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
-    expectBookmarkActionCompleted(
-      PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark,
-      PRODUCT_ANALYTICS_RESULTS.Success,
-    )
-    expect(toastSuccessMock).toHaveBeenCalledWith(
-      "messages:toast.success.bookmarkUpdated",
-    )
-    expect(onClose).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      updateDeferred.resolve(true)
+    })
+
+    await waitFor(() => {
+      expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
+      expectBookmarkActionCompleted(
+        PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark,
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "messages:toast.success.bookmarkUpdated",
+      )
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
   })
 
   it("tracks create completion failure when bookmark persistence rejects", async () => {

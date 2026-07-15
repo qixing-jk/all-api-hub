@@ -217,7 +217,7 @@ export default function AxonHubSettings() {
                 variant="outline"
                 size="sm"
                 onClick={handleValidateConfig}
-                disabled={isValidating}
+                loading={isValidating}
               >
                 {isValidating
                   ? t("axonHub.validation.validating")

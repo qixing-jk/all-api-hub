@@ -337,7 +337,6 @@ export default function AccountForm({
                       variant="outline"
                       size="sm"
                       onClick={onImportSub2apiSession}
-                      disabled={isImportingSub2apiSession}
                       loading={isImportingSub2apiSession}
                       className="w-full"
                       data-testid={
@@ -407,10 +406,10 @@ export default function AccountForm({
                 variant="outline"
                 size="sm"
                 onClick={onImportCookieAuthSessionCookie}
-                disabled={isImportingCookies}
+                loading={isImportingCookies}
+                leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
                 className="w-full"
               >
-                <ArrowDownTrayIcon className="mr-2 h-4 w-4" />
                 {isImportingCookies
                   ? t("messages.importCookiesLoading")
                   : t("form.importCookieAuthSessionCookie")}

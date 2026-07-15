@@ -246,8 +246,10 @@ export function ClaudeCodeRouterImportDialog(
           <Button variant="ghost" type="button" onClick={onClose}>
             {t("common:actions.cancel")}
           </Button>
-          <Button type="submit" form={formId} disabled={isSubmitting}>
-            {t("common:actions.import")}
+          <Button type="submit" form={formId} loading={isSubmitting}>
+            {isSubmitting
+              ? t("common:status.importing")
+              : t("common:actions.import")}
           </Button>
         </div>
       }

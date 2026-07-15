@@ -412,6 +412,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   data-testid={WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton}
                   onClick={actions.saveProfile}
                   disabled={!view.canSaveProfile}
+                  loading={view.isSavingProfile}
                 >
                   {view.isSavingProfile
                     ? t("webAiApiCheck:modal.actions.saving")

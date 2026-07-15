@@ -1,8 +1,17 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render as rtlRender, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { MouseEvent, ReactNode } from "react"
+import type { MouseEvent, ReactElement, ReactNode } from "react"
 import toast from "react-hot-toast"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { I18nextProvider } from "react-i18next"
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { ChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
@@ -10,7 +19,10 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import enChannelDialog from "~/locales/en/channelDialog.json"
+import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
+import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
   channelFormScenario,
@@ -106,13 +118,6 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) =>
-      options?.error ? `${key}:${String(options.error)}` : key,
-  }),
-}))
-
 vi.mock(
   "~/components/dialogs/ChannelDialog/context/ChannelDialogContext",
   async () => {
@@ -205,15 +210,22 @@ vi.mock("~/components/ui", async () => {
   const Button = ({
     children,
     disabled,
+    loading,
     onClick,
     type = "button",
   }: {
     children: ReactNode
     disabled?: boolean
+    loading?: boolean
     onClick?: (event: MouseEvent<HTMLButtonElement>) => void
     type?: "button" | "submit"
   }) => (
-    <button disabled={disabled} onClick={onClick} type={type}>
+    <button
+      aria-busy={loading ? true : undefined}
+      disabled={disabled || loading}
+      onClick={onClick}
+      type={type}
+    >
       {children}
     </button>
   )
@@ -443,7 +455,35 @@ vi.mock("~/services/managedSites/providers/newApiSession", () => ({
   isNewApiVerifiedSessionActive: vi.fn(() => false),
 }))
 
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>
+    ),
+  })
+}
+
 describe("ChannelDialog behavior", () => {
+  beforeAll(() => {
+    testI18n.addResource(
+      "en",
+      "channelDialog",
+      "messages.loadRealKeyFailed",
+      enChannelDialog.messages.loadRealKeyFailed,
+    )
+    testI18n.addResource(
+      "en",
+      "managedSiteChannels",
+      "alerts.loadError.description",
+      enManagedSiteChannels.alerts.loadError.description,
+    )
+  })
+
+  afterAll(() => {
+    testI18n.removeResourceBundle("en", "channelDialog")
+    testI18n.removeResourceBundle("en", "managedSiteChannels")
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     resetChannelFormScenario()
@@ -490,6 +530,16 @@ describe("ChannelDialog behavior", () => {
         name: "channelDialog:actions.loadingRealKey",
       }),
     ).toBeDisabled()
+    const loadingButton = screen.getByRole("button", {
+      name: "channelDialog:actions.loadingRealKey",
+    })
+    expect(loadingButton).toHaveAttribute("aria-busy", "true")
+    expect(
+      screen.getByRole("button", { name: "modal-close" }),
+    ).not.toHaveAttribute("aria-busy")
+
+    await user.click(loadingButton)
+    expect(onRequestRealKey).toHaveBeenCalledTimes(1)
 
     resolveRequest?.()
 
@@ -660,24 +710,29 @@ describe("ChannelDialog behavior", () => {
 
   it("shows a channel load error with retry for resource-backed edits", async () => {
     const user = userEvent.setup()
+    let resolveRetry: (() => void) | undefined
+    retryResourceEditLoadMock.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveRetry = resolve
+      }),
+    )
     channelFormScenario.isResourceEditReady = false
     channelFormScenario.resourceEditLoadError = new Error("detail unavailable")
+    const resourceEdit = {} as never
 
-    render(
+    const { rerender } = render(
       <ChannelDialog
         isOpen={true}
         onClose={vi.fn()}
         mode={DIALOG_MODES.EDIT}
-        resourceEdit={{} as never}
+        resourceEdit={resourceEdit}
       />,
     )
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       "managedSiteChannels:alerts.loadError.title",
     )
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "managedSiteChannels:alerts.loadError.description:detail unavailable",
-    )
+    expect(screen.getByRole("alert")).toHaveTextContent("detail unavailable")
 
     await user.click(
       screen.getByRole("button", {
@@ -686,6 +741,47 @@ describe("ChannelDialog behavior", () => {
     )
 
     expect(retryResourceEditLoadMock).toHaveBeenCalledTimes(1)
+
+    channelFormScenario.isResourceEditLoading = true
+    channelFormScenario.resourceEditLoadError = null
+    rerender(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        resourceEdit={resourceEdit}
+      />,
+    )
+
+    const retryingButton = screen.getByRole("button", {
+      name: "common:status.retrying",
+    })
+    expect(retryingButton).toHaveAttribute("aria-busy", "true")
+    expect(retryingButton).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "modal-close" }),
+    ).not.toHaveAttribute("aria-busy")
+    expect(
+      screen.getByRole("button", { name: "channelDialog:actions.update" }),
+    ).not.toHaveAttribute("aria-busy")
+
+    await user.click(retryingButton)
+    expect(retryResourceEditLoadMock).toHaveBeenCalledTimes(1)
+
+    resolveRetry?.()
+    channelFormScenario.isResourceEditLoading = false
+    channelFormScenario.isResourceEditReady = true
+    channelFormScenario.resourceEditLoadError = null
+    rerender(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        resourceEdit={resourceEdit}
+      />,
+    )
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
   it("applies inverse, select-all, and clear actions to the selected models", async () => {

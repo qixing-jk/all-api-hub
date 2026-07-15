@@ -180,10 +180,11 @@ export const RedemptionBatchResultToast: React.FC<
                         size="sm"
                         variant="secondary"
                         disabled={retryingCode !== null}
+                        loading={retryingCode === item.code}
                         onClick={() => handleRetry(item.code)}
                       >
                         {retryingCode === item.code
-                          ? t("common:status.loading")
+                          ? t("common:status.retrying")
                           : t("common:actions.retry")}
                       </Button>
                     </div>

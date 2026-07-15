@@ -1,5 +1,5 @@
 import { Cpu, Plus, RefreshCw, Wrench } from "lucide-react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { AccountKeyIcon } from "~/components/icons/productIcons"
@@ -49,7 +49,17 @@ export function Header({
   isManagedSiteStatusRefreshDisabled = false,
 }: HeaderProps) {
   const { t } = useTranslation("keyManagement")
+  const [isManualRefreshLoading, setIsManualRefreshLoading] = useState(false)
   let description: ReactNode = t("description")
+
+  const handleRefresh = async () => {
+    setIsManualRefreshLoading(true)
+    try {
+      await onRefresh()
+    } finally {
+      setIsManualRefreshLoading(false)
+    }
+  }
 
   if (managedSiteStatusHint) {
     description = (
@@ -130,8 +140,13 @@ export function Header({
                     : t("managedSiteStatus.actions.refresh")}
                 </Button>
               ) : null}
-              <Button onClick={onRefresh} disabled={isLoading} size="sm">
-                {isLoading && selectedAccount
+              <Button
+                onClick={() => void handleRefresh()}
+                disabled={!selectedAccount || isLoading}
+                loading={isManualRefreshLoading}
+                size="sm"
+              >
+                {isManualRefreshLoading
                   ? t("common:status.refreshing")
                   : t("refreshTokenList")}
               </Button>

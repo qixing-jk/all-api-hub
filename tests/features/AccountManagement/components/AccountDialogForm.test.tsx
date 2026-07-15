@@ -460,17 +460,20 @@ describe("AccountDialog AccountForm", () => {
         "accountDialog:messages.importCookiesPermissionDenied",
       ),
     ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", {
-        name: "accountDialog:messages.importCookiesLoading",
-      }),
-    ).toBeDisabled()
+    const importButton = screen.getByRole("button", {
+      name: "accountDialog:messages.importCookiesLoading",
+    })
+    expect(importButton).toHaveAttribute("aria-busy", "true")
+    expect(importButton).toBeDisabled()
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "accountDialog:form.cookiePermissionHelpAction",
-      }),
-    )
+    await user.click(importButton)
+    expect(props.onImportCookieAuthSessionCookie).not.toHaveBeenCalled()
+
+    const permissionHelpButton = screen.getByRole("button", {
+      name: "accountDialog:form.cookiePermissionHelpAction",
+    })
+    expect(permissionHelpButton).not.toHaveAttribute("aria-busy")
+    await user.click(permissionHelpButton)
     fireEvent.change(screen.getByDisplayValue("session=abc"), {
       target: { value: "session=abc; Path=/" },
     })

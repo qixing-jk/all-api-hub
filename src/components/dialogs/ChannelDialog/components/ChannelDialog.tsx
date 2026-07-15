@@ -127,6 +127,7 @@ export function ChannelDialog({
   const [canRecoverManagedVerification, setCanRecoverManagedVerification] =
     useState(false)
   const requestIdRef = useRef(0)
+  const resourceEditRetryErrorRef = useRef<Error | null>(null)
   const verification = useNewApiManagedVerification()
   const {
     managedSiteType,
@@ -178,6 +179,9 @@ export function ChannelDialog({
     resourceEdit && !isResourceEditReady,
   )
   const isFormInteractionDisabled = isSaving || isResourceEditUnavailable
+  const visibleResourceEditLoadError =
+    resourceEditLoadError ??
+    (isResourceEditLoading ? resourceEditRetryErrorRef.current : null)
   const shouldShowGenericModelsField = !(
     isAxonHub &&
     mode === DIALOG_MODES.EDIT &&
@@ -219,8 +223,15 @@ export function ChannelDialog({
 
   useEffect(() => {
     requestIdRef.current += 1
+    resourceEditRetryErrorRef.current = null
     setIsLoadingRealKey(false)
-  }, [channel?.id, isOpen, mode])
+  }, [channel?.id, isOpen, mode, resourceEdit])
+
+  useEffect(() => {
+    if (!isResourceEditLoading && !resourceEditLoadError) {
+      resourceEditRetryErrorRef.current = null
+    }
+  }, [isResourceEditLoading, resourceEditLoadError])
 
   useEffect(() => {
     setCurrentAdvisoryWarning(advisoryWarning ?? null)
@@ -440,6 +451,11 @@ export function ChannelDialog({
     })
   }
 
+  const handleRetryResourceEditLoad = () => {
+    resourceEditRetryErrorRef.current = resourceEditLoadError
+    retryResourceEditLoad()
+  }
+
   const header = (
     <div>
       <h3 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
@@ -480,7 +496,7 @@ export function ChannelDialog({
       {!isViewMode && (
         <Button
           onClick={handleSubmit}
-          disabled={!isFormValid || isSaving || isResourceEditUnavailable}
+          disabled={!isFormValid || isResourceEditUnavailable}
           loading={isSaving}
           type="submit"
           data-testid={CHANNEL_DIALOG_TEST_IDS.submitButton}
@@ -536,12 +552,12 @@ export function ChannelDialog({
           </div>
         </Alert>
       ) : null}
-      {resourceEditLoadError ? (
+      {visibleResourceEditLoadError ? (
         <Alert
           variant="warning"
           title={t("managedSiteChannels:alerts.loadError.title")}
           description={t("managedSiteChannels:alerts.loadError.description", {
-            error: resourceEditLoadError.message,
+            error: visibleResourceEditLoadError.message,
           })}
           className="mb-4"
         >
@@ -550,10 +566,12 @@ export function ChannelDialog({
               type="button"
               size="sm"
               variant="outline"
-              onClick={retryResourceEditLoad}
-              disabled={isResourceEditLoading}
+              onClick={handleRetryResourceEditLoad}
+              loading={isResourceEditLoading}
             >
-              {t("common:actions.retry")}
+              {isResourceEditLoading
+                ? t("common:status.retrying")
+                : t("common:actions.retry")}
             </Button>
           </div>
         </Alert>
@@ -662,7 +680,8 @@ export function ChannelDialog({
                 size="sm"
                 variant="outline"
                 onClick={() => void handleLoadRealKey()}
-                disabled={isFormInteractionDisabled || isLoadingRealKey}
+                disabled={isFormInteractionDisabled}
+                loading={isLoadingRealKey}
               >
                 {isLoadingRealKey
                   ? t("channelDialog:actions.loadingRealKey")

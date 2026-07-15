@@ -65,6 +65,7 @@
     "disabled": "已禁用",
     "disabling": "禁用中...",
     "enabled": "已启用",
+    "enabling": "启用中...",
     "error": "错误",
     "exporting": "导出中...",
     "failed": "失败",

@@ -51,6 +51,17 @@ const mockedValidateClaudeCodeHubConfig =
   validateClaudeCodeHubConfig as ReturnType<typeof vi.fn>
 const mockedShowUpdateToast = showUpdateToast as ReturnType<typeof vi.fn>
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+
+  return { promise, resolve, reject }
+}
+
 describe("ClaudeCodeHubSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -210,16 +221,16 @@ describe("ClaudeCodeHubSettings", () => {
     expect(mockedValidateClaudeCodeHubConfig).not.toHaveBeenCalled()
   })
 
-  it("validates and persists trimmed Claude Code Hub config values", async () => {
+  it("exposes only validation as busy, suppresses duplicate clicks, and restores on success", async () => {
     const toast = await import("react-hot-toast")
+    const deferredValidation = createDeferred<{ ok: boolean }>()
     const updateClaudeCodeHubConfig = vi
       .fn()
       .mockResolvedValue({ ok: true, preferences: {} })
 
-    mockedValidateClaudeCodeHubConfig.mockResolvedValue({
-      ok: true,
-      preferences: {},
-    })
+    mockedValidateClaudeCodeHubConfig.mockReturnValue(
+      deferredValidation.promise,
+    )
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 4 },
       claudeCodeHubBaseUrl: "https://cch.example.com",
@@ -266,6 +277,23 @@ describe("ClaudeCodeHubSettings", () => {
         baseUrl: "https://managed-cch.example.com",
         adminToken: "next-admin-token",
       })
+    })
+
+    const validatingButton = screen.getByRole("button", {
+      name: "settings:claudeCodeHub.validation.validating",
+    })
+    expect(validatingButton).toBeDisabled()
+    expect(validatingButton).toHaveAttribute("aria-busy", "true")
+    expect(
+      screen.getByRole("button", { name: "common:actions.reset" }),
+    ).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(validatingButton)
+    expect(mockedValidateClaudeCodeHubConfig).toHaveBeenCalledTimes(1)
+
+    deferredValidation.resolve({ ok: true })
+
+    await waitFor(() => {
       expect(updateClaudeCodeHubConfig).toHaveBeenCalledWith(
         {
           baseUrl: "https://managed-cch.example.com",
@@ -280,6 +308,11 @@ describe("ClaudeCodeHubSettings", () => {
     expect(vi.mocked(toast.default.success)).toHaveBeenCalledWith(
       "settings:claudeCodeHub.validation.success",
     )
+    const restoredButton = screen.getByRole("button", {
+      name: "settings:claudeCodeHub.validation.validate",
+    })
+    expect(restoredButton).toBeEnabled()
+    expect(restoredButton).not.toHaveAttribute("aria-busy")
   })
 
   it("shows a validation failure toast when Claude Code Hub rejects the config", async () => {

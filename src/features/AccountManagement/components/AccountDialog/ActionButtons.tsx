@@ -109,7 +109,7 @@ export default function ActionButtons({
         <Button
           type="button"
           onClick={onAutoDetect}
-          disabled={!url.trim() || isDetecting}
+          disabled={!url.trim()}
           loading={isDetecting}
           bleed
           className="flex-1"
@@ -149,7 +149,7 @@ export default function ActionButtons({
         <Button
           type="button"
           onClick={onAutoDetect}
-          disabled={!url.trim() || isDetecting}
+          disabled={!url.trim()}
           loading={isDetecting}
           bleed
           className="flex-1"
@@ -168,7 +168,7 @@ export default function ActionButtons({
         <Button
           type="button"
           onClick={onAutoConfig}
-          disabled={!isFormValid || isAutoConfiguring || isSaving}
+          disabled={!isFormValid || isSaving}
           loading={isAutoConfiguring}
           bleed
           className="flex-1"
@@ -193,7 +193,7 @@ export default function ActionButtons({
       <Button
         type="submit"
         {...(formId ? { form: formId } : {})}
-        disabled={!isFormValid || isSaving || isAutoConfiguring}
+        disabled={!isFormValid || isAutoConfiguring}
         loading={isSaving}
         bleed
         className="flex-1"

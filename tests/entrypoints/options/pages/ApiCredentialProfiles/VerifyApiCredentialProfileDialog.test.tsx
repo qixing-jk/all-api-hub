@@ -271,6 +271,86 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("marks only the full suite busy and suppresses duplicate suite runs", async () => {
+    const user = userEvent.setup()
+    const deferredProbe = createDeferred<{
+      id: string
+      status: "pass"
+      latencyMs: number
+      summary: string
+    }>()
+    mockRunApiVerificationProbe
+      .mockReturnValueOnce(deferredProbe.promise)
+      .mockImplementation(async (params: { probeId: string }) => ({
+        id: params.probeId,
+        status: "pass",
+        latencyMs: 1,
+        summary: "OK",
+      }))
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "profile-1",
+          name: "Example profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://api.example.invalid",
+          apiKey: "example-api-key",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    const suiteButton = await screen.findByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.run",
+    })
+    await user.click(suiteButton)
+
+    await waitFor(() => {
+      expect(suiteButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.running",
+      )
+    })
+    const runningSuiteButton = suiteButton
+    expect(runningSuiteButton).toBeDisabled()
+    expect(runningSuiteButton).toHaveAttribute("aria-busy", "true")
+
+    for (const probeButton of screen.getAllByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton,
+    )) {
+      expect(probeButton).toBeDisabled()
+      expect(probeButton).not.toHaveAttribute("aria-busy")
+    }
+    expect(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.close",
+      }),
+    ).not.toHaveAttribute("aria-busy")
+
+    await user.click(runningSuiteButton)
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+
+    deferredProbe.resolve({
+      id: "models",
+      status: "pass",
+      latencyMs: 1,
+      summary: "OK",
+    })
+
+    await waitFor(() => {
+      const restoredButton = screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.run",
+      })
+      expect(restoredButton).toBeEnabled()
+      expect(restoredButton).not.toHaveAttribute("aria-busy")
+    })
+  })
+
   it("auto-fetches model ids on open", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
       "ada-1",

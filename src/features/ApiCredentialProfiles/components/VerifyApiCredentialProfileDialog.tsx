@@ -705,7 +705,8 @@ export function VerifyApiCredentialProfileDialog({
         <Button
           variant="success"
           onClick={runAll}
-          disabled={isRunning || isPersisting || isAnyProbeRunning || !profile}
+          disabled={isPersisting || isAnyProbeRunning || !profile}
+          loading={isRunning}
         >
           {isRunning
             ? t("aiApiVerification:verifyDialog.actions.running")
