@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { Loader2, SendToBack } from "lucide-react"
+import { SendToBack } from "lucide-react"
 
 import { Button } from "~/components/ui"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
@@ -89,15 +89,9 @@ export function ManagedSiteTokenBatchExportFooter({
         </Button>
         <Button
           type="button"
-          leftIcon={
-            isRunning || isLoadingPreview ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <SendToBack className="h-4 w-4" />
-            )
-          }
+          leftIcon={<SendToBack className="h-4 w-4" />}
+          loading={isRunning}
           disabled={
-            isRunning ||
             isLoadingPreview ||
             !preview ||
             selectedExecutableCount === 0 ||

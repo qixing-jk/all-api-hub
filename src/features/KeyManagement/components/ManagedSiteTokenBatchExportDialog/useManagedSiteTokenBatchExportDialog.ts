@@ -59,6 +59,15 @@ interface UseManagedSiteTokenBatchExportDialogParams
   t: TFunction
 }
 
+const PREVIEW_LOAD_ORIGINS = {
+  AUTOMATIC: "automatic",
+  MANUAL: "manual",
+} as const
+
+type PreviewLoadOrigin =
+  | (typeof PREVIEW_LOAD_ORIGINS)[keyof typeof PREVIEW_LOAD_ORIGINS]
+  | null
+
 const getBatchExportAnalyticsContext = () => ({
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
@@ -87,6 +96,8 @@ export function useManagedSiteTokenBatchExportDialog({
     useState<ManagedSiteTokenBatchExportPreview | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
+  const [previewLoadOrigin, setPreviewLoadOrigin] =
+    useState<PreviewLoadOrigin>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [executionError, setExecutionError] = useState<string | null>(null)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
@@ -102,6 +113,7 @@ export function useManagedSiteTokenBatchExportDialog({
   const latestItemsRef = useRef(items)
   const openedItemsRef = useRef(items)
   const wasOpenRef = useRef(false)
+  const pendingPreviewLoadOriginRef = useRef<PreviewLoadOrigin>(null)
 
   previewRef.current = preview
   latestItemsRef.current = items
@@ -111,6 +123,7 @@ export function useManagedSiteTokenBatchExportDialog({
       setPreview(null)
       setSelectedIds(new Set())
       setIsLoadingPreview(false)
+      setPreviewLoadOrigin(null)
       setPreviewError(null)
       setExecutionError(null)
       setIsConfirmOpen(false)
@@ -119,6 +132,7 @@ export function useManagedSiteTokenBatchExportDialog({
       setRefreshKey(0)
       setVerifyingItemId(null)
       wasOpenRef.current = false
+      pendingPreviewLoadOriginRef.current = null
       resolvedChannelKeysByItemIdRef.current = {}
       return
     }
@@ -129,8 +143,14 @@ export function useManagedSiteTokenBatchExportDialog({
     }
 
     let cancelled = false
-    setPreview(null)
-    setSelectedIds(new Set())
+    const requestOrigin =
+      pendingPreviewLoadOriginRef.current ?? PREVIEW_LOAD_ORIGINS.AUTOMATIC
+    pendingPreviewLoadOriginRef.current = null
+    setPreviewLoadOrigin(requestOrigin)
+    if (requestOrigin === PREVIEW_LOAD_ORIGINS.AUTOMATIC) {
+      setPreview(null)
+      setSelectedIds(new Set())
+    }
     setPreviewError(null)
     setExecutionError(null)
     setExecutionResult(null)
@@ -157,6 +177,7 @@ export function useManagedSiteTokenBatchExportDialog({
       } finally {
         if (!cancelled) {
           setIsLoadingPreview(false)
+          setPreviewLoadOrigin(null)
         }
       }
     })()
@@ -206,10 +227,28 @@ export function useManagedSiteTokenBatchExportDialog({
   }
 
   const handleRefreshPreview = () => {
-    if (isLoadingPreview || isRunning || verifyingItemId) return
+    if (
+      isLoadingPreview ||
+      pendingPreviewLoadOriginRef.current ||
+      isRunning ||
+      verifyingItemId
+    ) {
+      return
+    }
     if (verification.dialogState.isOpen) return
+    pendingPreviewLoadOriginRef.current = PREVIEW_LOAD_ORIGINS.MANUAL
+    setPreviewLoadOrigin(PREVIEW_LOAD_ORIGINS.MANUAL)
+    setIsLoadingPreview(true)
     setExecutionError(null)
     setRefreshKey((value) => value + 1)
+  }
+
+  const handleRetryPreview = () => {
+    handleRefreshPreview()
+    if (pendingPreviewLoadOriginRef.current === PREVIEW_LOAD_ORIGINS.MANUAL) {
+      setPreviewError(null)
+      setPreview(null)
+    }
   }
 
   const mergeResolvedChannelKeyForItem = (
@@ -280,6 +319,7 @@ export function useManagedSiteTokenBatchExportDialog({
     requestedCandidate: ManagedSiteTokenBatchExportMatchedChannel,
   ) => {
     if (
+      !preview ||
       verifyingItemId ||
       verification.dialogState.isOpen ||
       isLoadingPreview ||
@@ -288,7 +328,7 @@ export function useManagedSiteTokenBatchExportDialog({
       return
     }
 
-    const verificationTargets = getPreviewVerificationTargets(preview!)
+    const verificationTargets = getPreviewVerificationTargets(preview)
     const targets =
       verificationTargets.length > 0
         ? verificationTargets
@@ -500,6 +540,7 @@ export function useManagedSiteTokenBatchExportDialog({
     previewError,
     executionError,
     isLoadingPreview,
+    isManualPreviewRefresh: previewLoadOrigin === PREVIEW_LOAD_ORIGINS.MANUAL,
     isRunning,
     executionResult,
     isConfirmOpen,
@@ -513,6 +554,7 @@ export function useManagedSiteTokenBatchExportDialog({
     actions: {
       close: handleClose,
       refreshPreview: handleRefreshPreview,
+      retryPreview: handleRetryPreview,
       toggleAll: handleToggleAll,
       toggleItem: handleToggleItem,
       changeItemModels: handleItemModelsChange,
