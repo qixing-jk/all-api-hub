@@ -130,7 +130,7 @@ export default function AccountForm({
   onAuthTypeChange,
   onCheckInChange,
 }: AccountFormProps) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "common"])
   const {
     authType,
     siteName,

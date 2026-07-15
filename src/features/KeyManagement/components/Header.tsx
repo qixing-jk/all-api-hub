@@ -48,7 +48,7 @@ export function Header({
   isRepairDisabled,
   isManagedSiteStatusRefreshDisabled = false,
 }: HeaderProps) {
-  const { t } = useTranslation("keyManagement")
+  const { t } = useTranslation(["keyManagement", "common"])
   const [isManualRefreshLoading, setIsManualRefreshLoading] = useState(false)
   let description: ReactNode = t("description")
 

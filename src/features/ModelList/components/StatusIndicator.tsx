@@ -159,16 +159,9 @@ export function StatusIndicator({
               <Button
                 variant="secondary"
                 onClick={accountFallback.loadRuntimeKeys}
-                loading={accountFallback.isLoadingRuntimeKeys}
-                leftIcon={
-                  !accountFallback.isLoadingRuntimeKeys && (
-                    <ArrowPathIcon className="h-4 w-4" />
-                  )
-                }
+                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
               >
-                {accountFallback.isLoadingRuntimeKeys
-                  ? t("status.fallback.loadingKeys")
-                  : t("status.fallback.reloadKeys")}
+                {t("status.fallback.reloadKeys")}
               </Button>
             </div>
           </Alert>
@@ -196,11 +189,7 @@ export function StatusIndicator({
                 variant="secondary"
                 onClick={accountFallback.loadRuntimeKeys}
                 loading={accountFallback.isLoadingRuntimeKeys}
-                leftIcon={
-                  !accountFallback.isLoadingRuntimeKeys && (
-                    <ArrowPathIcon className="h-4 w-4" />
-                  )
-                }
+                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
               >
                 {accountFallback.isLoadingRuntimeKeys
                   ? t("status.fallback.loadingKeys")
@@ -284,11 +273,7 @@ export function StatusIndicator({
                 onClick={accountFallback.loadRuntimeKeys}
                 loading={accountFallback.isLoadingRuntimeKeys}
                 disabled={accountFallback.isLoadingCatalog}
-                leftIcon={
-                  !accountFallback.isLoadingRuntimeKeys && (
-                    <ArrowPathIcon className="h-4 w-4" />
-                  )
-                }
+                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
               >
                 {accountFallback.isLoadingRuntimeKeys
                   ? t("status.fallback.loadingKeys")

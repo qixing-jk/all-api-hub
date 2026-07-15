@@ -882,11 +882,8 @@ export function KiloCodeExportDialog({
         variant="secondary"
         onClick={() => loadTokensForSite(siteId)}
         disabled={isCreating}
-        loading={isLoadingTokens}
       >
-        {isLoadingTokens
-          ? t("common:status.retrying")
-          : t("common:actions.retry")}
+        {t("common:actions.retry")}
       </Button>
     ) : isTokenInventoryLoaded && inventory.tokens.length === 0 ? (
       <Button
@@ -907,11 +904,8 @@ export function KiloCodeExportDialog({
         variant="ghost"
         onClick={() => loadTokensForSite(siteId)}
         disabled={isCreating}
-        loading={isLoadingTokens}
       >
-        {isLoadingTokens
-          ? t("common:status.refreshing")
-          : t("common:actions.refresh")}
+        {t("common:actions.refresh")}
       </Button>
     ) : null
 

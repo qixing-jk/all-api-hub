@@ -389,6 +389,32 @@ describe("options AccountManagement page", () => {
     })
   })
 
+  it("marks only disabled-account refresh busy while that refresh owns the request", async () => {
+    accountDataContextState.current = {
+      ...accountDataContextState.current,
+      displayData: [{ id: "disabled-1", disabled: true }],
+      isRefreshingDisabledAccounts: true,
+    }
+
+    render(<AccountManagement />)
+
+    const disabledRefreshButton = await screen.findByRole("button", {
+      name: "account:refresh.refreshingDisabled",
+    })
+    const allAccountsRefreshButton = screen.getByRole("button", {
+      name: "common:actions.refresh",
+    })
+    expect(disabledRefreshButton).toBeDisabled()
+    expect(disabledRefreshButton).toHaveAttribute("aria-busy", "true")
+    expect(allAccountsRefreshButton).toBeDisabled()
+    expect(allAccountsRefreshButton).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(disabledRefreshButton)
+    fireEvent.click(allAccountsRefreshButton)
+    expect(handleRefreshDisabledAccountsMock).not.toHaveBeenCalled()
+    expect(handleRefreshMock).not.toHaveBeenCalled()
+  })
+
   it("tracks opening all external check-in accounts from the header", async () => {
     accountDataContextState.current = {
       ...accountDataContextState.current,

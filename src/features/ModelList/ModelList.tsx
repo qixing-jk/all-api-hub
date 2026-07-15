@@ -98,6 +98,7 @@ export default function ModelList(props: {
     "modelList",
     "account",
     "apiCredentialProfiles",
+    "common",
   ])
   const [isSourceSelectorOpen, setIsSourceSelectorOpen] = useState(false)
   const sourceSelectorTriggerRef = useRef<HTMLButtonElement>(null)

@@ -1122,10 +1122,10 @@ export default function WebDAVSettings() {
               onClick={handleConfirmRebuildBackup}
               loading={uploading || rebuildPending}
             >
-              {uploading
-                ? t("common:status.uploading")
-                : rebuildPending
-                  ? t("common:status.processing")
+              {rebuildPending
+                ? t("common:status.processing")
+                : uploading
+                  ? t("common:status.uploading")
                   : t("webdav.rebuildDialog.confirm")}
             </Button>
           </div>

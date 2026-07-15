@@ -430,55 +430,67 @@ describe("BalanceDisplay", () => {
     expect(handleRefreshAccount).not.toHaveBeenCalled()
   })
 
-  it("marks only the clicked metric busy and restores every metric after a rejected refresh", async () => {
-    const user = userEvent.setup()
-    const site = buildDisplaySiteData({
-      balance: { USD: 18, CNY: 126 },
-      todayConsumption: { USD: 1, CNY: 7 },
-      todayIncome: { USD: 2, CNY: 14 },
-    })
-    const deferredRefresh = createDeferred<void>()
-    const handleRefreshAccount = vi.fn(() => deferredRefresh.promise)
+  it.each([
+    "account:list.balance.refreshBalance",
+    "account:list.balance.refreshCashflow",
+    "account:list.balance.refreshIncome",
+  ])(
+    "marks only %s busy and restores every metric after a rejected refresh",
+    async (initiatorName) => {
+      const user = userEvent.setup()
+      const site = buildDisplaySiteData({
+        balance: { USD: 18, CNY: 126 },
+        todayConsumption: { USD: 1, CNY: 7 },
+        todayIncome: { USD: 2, CNY: 14 },
+      })
+      const deferredRefresh = createDeferred<void>()
+      const handleRefreshAccount = vi.fn(() => deferredRefresh.promise)
 
-    mockUseAccountActionsContext.mockReturnValue({
-      handleRefreshAccount,
-      refreshingAccountId: null,
-    })
+      mockUseAccountActionsContext.mockReturnValue({
+        handleRefreshAccount,
+        refreshingAccountId: null,
+      })
 
-    render(<BalanceDisplay site={site} />)
+      render(<BalanceDisplay site={site} />)
 
-    const balanceButton = screen.getByRole("button", {
-      name: "account:list.balance.refreshBalance",
-    })
-    const cashflowButton = screen.getByRole("button", {
-      name: "account:list.balance.refreshCashflow",
-    })
-    const incomeButton = screen.getByRole("button", {
-      name: "account:list.balance.refreshIncome",
-    })
+      const balanceButton = screen.getByRole("button", {
+        name: "account:list.balance.refreshBalance",
+      })
+      const cashflowButton = screen.getByRole("button", {
+        name: "account:list.balance.refreshCashflow",
+      })
+      const incomeButton = screen.getByRole("button", {
+        name: "account:list.balance.refreshIncome",
+      })
 
-    await user.click(balanceButton)
+      const buttons = [balanceButton, cashflowButton, incomeButton]
+      const initiator = screen.getByRole("button", { name: initiatorName })
+      const siblings = buttons.filter((button) => button !== initiator)
 
-    expect(balanceButton).toHaveAttribute("aria-busy", "true")
-    expect(balanceButton).toBeDisabled()
-    expect(cashflowButton).toBeDisabled()
-    expect(cashflowButton).not.toHaveAttribute("aria-busy")
-    expect(incomeButton).toBeDisabled()
-    expect(incomeButton).not.toHaveAttribute("aria-busy")
+      await user.click(initiator)
 
-    await user.click(balanceButton)
-    await user.click(cashflowButton)
-    expect(handleRefreshAccount).toHaveBeenCalledTimes(1)
+      expect(initiator).toHaveAttribute("aria-busy", "true")
+      expect(initiator).toBeDisabled()
+      for (const sibling of siblings) {
+        expect(sibling).toBeDisabled()
+        expect(sibling).not.toHaveAttribute("aria-busy")
+      }
 
-    deferredRefresh.reject(new Error("refresh failed"))
+      await user.click(initiator)
+      await user.click(siblings[0])
+      expect(handleRefreshAccount).toHaveBeenCalledTimes(1)
 
-    await waitFor(() => {
-      expect(balanceButton).toBeEnabled()
-    })
-    expect(balanceButton).not.toHaveAttribute("aria-busy")
-    expect(cashflowButton).toBeEnabled()
-    expect(incomeButton).toBeEnabled()
-  })
+      deferredRefresh.reject(new Error("refresh failed"))
+
+      await waitFor(() => {
+        expect(initiator).toBeEnabled()
+      })
+      for (const button of buttons) {
+        expect(button).toBeEnabled()
+        expect(button).not.toHaveAttribute("aria-busy")
+      }
+    },
+  )
 
   it("renders static values on the first paint and hides today cashflow when that preference is disabled", () => {
     const site = buildDisplaySiteData({

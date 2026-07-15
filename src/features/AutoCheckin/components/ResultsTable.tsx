@@ -255,9 +255,6 @@ export default function ResultsTable({
                                 size="sm"
                                 variant="secondary"
                                 loading={retryingAccountId === result.accountId}
-                                disabled={
-                                  retryingAccountId === result.accountId
-                                }
                                 onClick={() => onRetryAccount(result.accountId)}
                                 leftIcon={
                                   <ArrowPathIcon className="h-3.5 w-3.5" />

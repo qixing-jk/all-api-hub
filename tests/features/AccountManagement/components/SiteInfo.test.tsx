@@ -204,6 +204,22 @@ describe("SiteInfo", () => {
     )
   })
 
+  it("renders the neutral health indicator for an unknown health status", () => {
+    render(
+      <SiteInfo
+        site={buildSite({ health: { status: "unexpected-status" } })}
+      />,
+    )
+
+    const healthButton = screen.getByRole("button", {
+      name: "account:list.site.refreshHealthStatus",
+    })
+
+    expect(healthButton.querySelector('[aria-hidden="true"]')).toHaveClass(
+      "bg-gray-400",
+    )
+  })
+
   it("renders a formatted created-time row", () => {
     const createdAt = new Date(2026, 0, 2, 3, 4, 5).getTime()
     const expected = formatLocaleDateTime(
