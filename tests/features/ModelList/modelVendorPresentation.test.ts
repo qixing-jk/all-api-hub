@@ -1,23 +1,41 @@
 import { CpuChipIcon } from "@heroicons/react/24/outline"
 import {
+  Ai2,
   Alibaba,
   Anthropic,
+  Arcee,
+  Aws,
+  BAAI,
   Baichuan,
   Baidu,
   ByteDance,
   Cohere,
+  DeepCogito,
   DeepSeek,
+  EssentialAI,
   Google,
+  Groq,
+  Inception,
+  InternLM,
+  Jina,
+  KiloCode,
+  Kolors,
+  Liquid,
   LongCat,
   Meta,
+  Microsoft,
   Minimax,
   Mistral,
   Moonshot,
   Nvidia,
   OpenAI,
+  OpenCode,
+  OpenRouter,
   Perplexity,
+  SenseNova,
   Stepfun,
   Tencent,
+  Upstage,
   XAI,
   XiaomiMiMo,
   Yi,
@@ -36,24 +54,42 @@ vi.mock("@lobehub/icons", () => {
   const createIcon = () => () => null
 
   return {
+    Ai2: createIcon(),
     Alibaba: createIcon(),
     Anthropic: createIcon(),
+    Arcee: createIcon(),
+    Aws: createIcon(),
+    BAAI: createIcon(),
     Baichuan: createIcon(),
     Baidu: createIcon(),
     ByteDance: createIcon(),
     Cohere: createIcon(),
+    DeepCogito: createIcon(),
     DeepSeek: createIcon(),
+    EssentialAI: createIcon(),
     Google: createIcon(),
+    Groq: createIcon(),
+    Inception: createIcon(),
+    InternLM: createIcon(),
+    Jina: createIcon(),
+    KiloCode: createIcon(),
+    Kolors: createIcon(),
+    Liquid: createIcon(),
     LongCat: createIcon(),
     Meta: createIcon(),
+    Microsoft: createIcon(),
     Minimax: createIcon(),
     Mistral: createIcon(),
     Moonshot: createIcon(),
     Nvidia: createIcon(),
     OpenAI: createIcon(),
+    OpenCode: createIcon(),
+    OpenRouter: createIcon(),
     Perplexity: createIcon(),
     Stepfun: createIcon(),
+    SenseNova: createIcon(),
     Tencent: createIcon(),
+    Upstage: createIcon(),
     XAI: createIcon(),
     XiaomiMiMo: createIcon(),
     Yi: createIcon(),
@@ -98,6 +134,24 @@ describe("getModelVendorPresentation", () => {
     ["meituan", LongCat],
     ["stepfun", Stepfun],
     ["perplexity", Perplexity],
+    ["essential-ai", EssentialAI],
+    ["ai2", Ai2],
+    ["microsoft", Microsoft],
+    ["arcee", Arcee],
+    ["deep-cogito", DeepCogito],
+    ["groq", Groq],
+    ["openrouter", OpenRouter],
+    ["kilo-code", KiloCode],
+    ["jina", Jina],
+    ["liquid", Liquid],
+    ["inception", Inception],
+    ["amazon", Aws],
+    ["baai", BAAI],
+    ["sensetime", SenseNova],
+    ["upstage", Upstage],
+    ["kuaishou", Kolors],
+    ["shanghai-ai-lab", InternLM],
+    ["opencode", OpenCode],
   ] as const satisfies ReadonlyArray<readonly [KnownModelVendorId, unknown]>
 
   it.each(knownVendorPresentations)(
@@ -110,6 +164,31 @@ describe("getModelVendorPresentation", () => {
       expect(presentation.Icon).toBe(Icon)
       expect(presentation.iconClassName).toEqual(expect.any(String))
       expect(presentation.containerClassName).toEqual(expect.any(String))
+    },
+  )
+
+  it.each([
+    "netease-youdao",
+    "nomic",
+    "sarvam",
+    "canopy-labs",
+    "deep-reinforce",
+    "inclusion-ai",
+    "swiss-ai",
+    "sdaia",
+    "prism-ml",
+    "speakleash",
+    "eurollm",
+  ] as const satisfies ReadonlyArray<KnownModelVendorId>)(
+    "uses the generic local presentation for known vendor %s without a local icon",
+    (knownId) => {
+      const presentation = getModelVendorPresentation(
+        resolvedKnownVendor(knownId),
+      )
+      const unknown = getModelVendorPresentation({ state: "unknown" })
+
+      expect(presentation).toBe(unknown)
+      expect(presentation.Icon).toBe(CpuChipIcon)
     },
   )
 

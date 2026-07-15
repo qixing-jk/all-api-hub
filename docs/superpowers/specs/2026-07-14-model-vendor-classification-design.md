@@ -8,6 +8,11 @@ Modernize Model List vendor classification without assuming that displayed
 model names are canonical model IDs or that every account site uses a New API
 pricing response.
 
+For users, this classification means the model's canonical product or brand
+ownership: the identity under which they recognize and select the model. It
+does not mean the API host, routing gateway, uploader, or necessarily the
+legal creator of every base-model component.
+
 The design adds a site-neutral model descriptor and vendor-evidence contract,
 normalizes native backend facts inside adapter capabilities, shares model
 identity matching across metadata consumers, and retains deterministic family
@@ -126,12 +131,24 @@ vocabulary, not a guarantee that every value is safe as a textual classifier.
 The vocabulary includes short and generic values, so the extension uses it
 only as metadata attached to an already resolved record.
 
+The live `models.json` snapshot reviewed on 2026-07-16 contains 255 canonical
+`<lab>/<model>` records across 23 lab prefixes. The official SDK type describes
+the dataset as provider-agnostic model metadata keyed by that canonical ID.
+This supports treating an exact known lab prefix as weak product/brand
+evidence, but the runtime resolver remains driven by its local curated aliases;
+it does not download the snapshot to build prefix policy. Known snapshot
+prefixes map through existing aliases, while unconfigured prefixes such as
+`poolside` and `sakana` remain Unknown.
+
 References:
 
 - schema
   <https://github.com/anomalyco/models.dev/blob/a0bcde206aca955d3169405dd3baa08b044d091a/packages/core/src/schema.ts>
 - family vocabulary
   <https://github.com/anomalyco/models.dev/blob/a0bcde206aca955d3169405dd3baa08b044d091a/packages/core/src/family.ts>
+- live model metadata <https://models.dev/models.json>
+- SDK model types
+  <https://github.com/anomalyco/models.dev/blob/dev/packages/sdk/src/types.ts>
 
 ## Goals
 
@@ -173,8 +190,10 @@ References:
 
 ## Terminology
 
-- **Model vendor**: the organization that publishes the model, such as
-  OpenAI, Anthropic, Google, Meta, or Alibaba.
+- **Model vendor**: the canonical product or brand ownership under which users
+  recognize and select the model, such as OpenAI, Anthropic, Google, Meta, or
+  Alibaba. It is usually the publisher or project brand, not the hosting route
+  and not necessarily every underlying model creator.
 - **Source provider**: a gateway, adapter, or deployment route serving the
   model, such as OpenRouter, Azure, or SiliconFlow.
 - **Model family**: a product family used to recognize related IDs, such as
@@ -308,9 +327,11 @@ The public lookup returns evidence rather than silently selecting a winner. It
 distinguishes exact, normalized-alias, ambiguous, and unmatched outcomes.
 
 Only an exact catalog match may trust a provider-qualified metadata ID. The
-resolver must not treat the first path segment of an arbitrary displayed model
-ID as a publisher; values such as `openrouter/...` or `azure/...` may be
-routing namespaces.
+resolver must not generally treat the first path segment of an arbitrary
+displayed model ID as a publisher; values such as `openrouter/...` or
+`azure/...` may be routing namespaces. An exact curated alias that remains
+eligible for weak evidence may provide a final prefix fallback under the
+strict rules below.
 
 The shared module owns normalization and ambiguity detection only. Consumer
 policy remains explicit:
@@ -348,9 +369,25 @@ For one row it returns a pure vendor candidate containing a stable vendor key,
 display-label candidate, and classification source. It has no React, icon,
 styling, account, site-type, readiness, or transport dependency.
 
-Known providers use curated canonical IDs and labels. Unconfigured Publisher
-evidence or metadata providers receive a deterministic custom identity from
-their normalized display name. Remote icons are not used.
+Known providers use curated canonical IDs and labels. Publisher evidence is
+terminal. Exact known metadata aliases are also terminal, including verified
+official organization aliases that are deliberately strong-only evidence.
+These aliases are accepted for Publisher and metadata resolution but are not
+automatically eligible as deployment, routing, or model-ID prefix evidence.
+
+Unconfigured Publisher evidence or metadata providers receive a deterministic
+custom identity from their normalized display name. Custom metadata remains
+custom even when the displayed model ID embeds a broad base-family name. It may
+be replaced only when one unambiguous curated candidate comes from an explicit
+qualified-family, controlled-product, or attribution policy for that product.
+For example, `utter-project/EuroLLM-*` is EuroLLM, while a custom
+`NousResearch` metadata record for a Hermes-Llama derivative remains
+`NousResearch`. Remote icons are not used.
+
+Strong and weak alias registries validate normalized aliases during module
+initialization. Repeated aliases for the same canonical vendor are permitted;
+a normalized alias shared by different vendors is a deterministic
+configuration error rather than an order-dependent last-write-wins choice.
 
 Vendor keys use distinct namespaces:
 
@@ -398,21 +435,59 @@ The order is:
 
 1. **Adapter publisher evidence**: a validated Publisher fact such as an
    AIHubMix developer.
-2. **Exact metadata identity**: an unambiguous full-ID or exact metadata match.
-3. **Known deployment-category alias**: a deployment label is accepted only
-   when its normalized name maps to a curated publisher. Arbitrary categories
-   remain non-publisher deployment facts and do not create vendor tabs.
-4. **Curated fallback rule**: deterministic rules for unlisted or transformed
+2. **Metadata arbitration**: exact known metadata is terminal. Exact custom
+   metadata remains custom unless one explicit qualified, controlled, or
+   attribution product policy identifies the model as a known product.
+3. **Curated fallback rule**: deterministic rules for unlisted or transformed
    names.
-5. **Recognized routing-provider evidence**: a final weak fallback only when
-   the normalized value itself names a known publisher. Gateway values,
-   numeric values, `custom`, `unknown`, and localized unknown sentinels are
-   ignored.
+4. **Known deployment-category alias**: only after a true curated no-match, a
+   deployment label is accepted when its normalized name maps to a curated
+   publisher. Arbitrary categories remain non-publisher deployment facts and
+   do not create vendor tabs.
+5. **Recognized routing-provider evidence**: only after a true curated
+   no-match, a routing value is accepted when the normalized value itself
+   names a known publisher. Gateway values, numeric values, `custom`,
+   `unknown`, and localized unknown sentinels are ignored.
 6. **Unknown**: no guess is made when evidence is absent or ambiguous.
 
 Rules never depend on object or map iteration order. More specific patterns
 are evaluated before broad patterns; a tie across vendors is ambiguous rather
 than first-match-wins.
+
+Internally, curated resolution distinguishes a single candidate, ambiguity,
+and no-match even though the public convenience resolver flattens ambiguity
+and no-match to Unknown. Weak deployment and routing evidence is considered
+only for no-match. Curated ambiguity is terminal and cannot be converted into
+a vendor by weak evidence.
+
+Inside the curated fallback, product-leading family, bare-family,
+qualified-family, and controlled exact-ID rules run first. Embedded base-family
+tokens are considered only as conflict evidence after a leading, qualified, or
+controlled candidate already exists. They do not create ownership for an
+unknown-leading derivative. For example, Hermes-Llama, OpenHermes-Mistral, and
+Dolphin-Mistral derivatives remain Unknown without metadata, while leading
+Llama, Qwen, Mistral, and DeepSeek product IDs retain their normal ownership.
+
+Only when direct candidates are empty may an exact known vendor or brand alias
+before `/` seed a fallback candidate. The ID must be a well-formed two-segment
+`prefix/model` identity after existing tail routing-decoration removal. Prefix
+matching reuses the curated weak-alias normalization: NFKC, trimming,
+whitespace collapsing, and case folding. It remains exact after normalization;
+it does not collapse punctuation, decode percent escapes, accept empty
+segments, or search nested paths. The seeded candidate then goes through the
+same suffix-family and ambiguity expansion as direct matches. In a derived
+multi-vendor tie, an eligible exact prefix may select its vendor only when that
+vendor is already a natural candidate and no competing vendor exists solely
+as an ambiguity signal. This permits corroborating prefixes such as NVIDIA for
+Nemotron-Llama, Deep Cogito for Cogito-Qwen/Llama/DeepSeek, and DeepSeek for
+R1-Distill-Qwen/Llama. It cannot break combinations such as GPT-Claude.
+
+The model tail remains an opaque display identity and may contain internal or
+segment-leading whitespace, including spaces produced by NFKC normalization.
+Whole-ID trimming removes outer trailing whitespace; otherwise the tail is
+accepted when `tail.trim()` is non-empty. A Unicode replacement character,
+including one produced while repairing an unpaired UTF-16 surrogate, rejects
+the prefix fallback rather than attributing malformed input.
 
 ### 7. Curated Fallback Scope
 
@@ -434,13 +509,46 @@ Patterns such as `/yi/i`, `/o\d+/i`, and unrestricted `sonnet` substring
 matching become boundary-aware. Ollama and Azure are removed from the
 model-vendor taxonomy.
 
+Exact known vendor and brand aliases are also eligible for the prefix fallback
+unless their definition disables weak alias evidence. Brand prefixes such as
+Qwen, Claude, Gemini, Llama, Kimi, GLM, Sonar, and MiMo are valid; the prefix
+does not need to be a legal organization name. Verified official organization
+aliases such as `zai-org`, `CohereLabs`, `Tencent-Hunyuan`, `baichuan-inc`,
+`ByteDance-Seed`, `stepfun-ai`, `deepreinforce-ai`, `inceptionai`, `sarvamai`,
+and `OpenSenseNova` are strong-only unless separately approved as weak
+evidence; recognizing their metadata does not make them deployment, routing,
+or prefix aliases.
+
+Hosting, routing, upload, and virtual-product aliases remain excluded when
+marked ineligible, including OpenRouter, Groq, OpenCode/OpenCodeFree, and Kilo.
+Fireworks, `utter-project`, Azure, generic model hosts, and other unregistered
+prefixes remain ineligible as prefix evidence. Exact platform-owned products
+may still classify through controlled or qualified product rules. A leading
+OpenRouter Llama tail therefore resolves to Meta through the Llama family, not
+through the OpenRouter namespace.
+
+Derived-model policy remains deliberately narrow. Stable explicit
+`DeepSeek-R1-Distill-Llama*` and `DeepSeek-R1-Distill-Qwen*` grammars resolve to
+DeepSeek even under an otherwise unrecognized serving namespace. Qualified or
+controlled rules cover reviewed products such as Deep Cogito and EuroLLM.
+There is no general inference from arbitrary embedded base-model names.
+Fireworks needs no provider-specific special case: its DeepSeek distill IDs
+classify only through the same explicit derived grammar.
+
+Each DeepSeek derived grammar supersedes only its documented base family:
+Qwen supersedes Alibaba and Llama supersedes Meta. A model that also contains a
+different vendor family remains ambiguous unless an eligible exact `deepseek/`
+prefix corroborates the already-present DeepSeek candidate. This prevents a
+Qwen-derived rule from erasing a Llama conflict, and vice versa. The separate
+dated-Qwen grammar retains its existing namespace restrictions.
+
 ## Cross-Site Behavior Matrix
 
 | Source | Readiness route | Adapter evidence | Fallback |
 | --- | --- | --- | --- |
-| New API-family default pricing | Direct pricing | Optional deployment category after adapter join | metadata, known deployment alias, curated rules |
+| New API-family default pricing | Direct pricing | Optional deployment category after adapter join | metadata arbitration, curated rules, then known deployment alias on no-match |
 | Older New API forks | Direct pricing | Usually none | metadata, curated rules |
-| OneHub / DoneHub | Direct pricing override | Weak routing provider | metadata, curated rules, then recognized owner |
+| OneHub / DoneHub | Direct pricing override | Weak routing provider | metadata arbitration, curated rules, then recognized owner on no-match |
 | AIHubMix | Direct pricing | Publisher/developer when provided | metadata, curated rules |
 | Sub2API | Token-scoped runtime catalog | None currently | metadata, curated rules |
 | SharedChat | Token-scoped catalog | None currently | metadata, curated rules |
@@ -531,11 +639,22 @@ using the old provider module.
 - arbitrary deployment-category names remain non-publisher facts and do not
   create custom publisher identities.
 - ambiguous metadata aliases do not produce capability metadata or a vendor.
+- exact known metadata aliases are terminal, while exact custom metadata stays
+  custom unless an explicit qualified, controlled, or attribution product
+  policy supplies one unambiguous known candidate.
 - models.dev family values never match an otherwise unresolved model.
-- ambiguous curated-rule matches do not use iteration order and resolve to
-  Unknown.
-- source-provider namespaces are not promoted to publishers merely because
-  they appear before `/`.
+- curated resolution distinguishes ambiguity from no-match. Ambiguous matches
+  do not use iteration order, resolve to Unknown, and cannot fall through to
+  deployment or routing evidence. Only a true no-match may use those weak
+  fallbacks.
+- embedded base-family tokens do not establish ownership for unknown-leading
+  derivatives; only reviewed derived grammars and candidate-corroborating
+  prefixes may change the result.
+- cross-vendor normalized aliases fail deterministically during registry
+  initialization instead of taking ownership from insertion order.
+- source-provider namespaces are not promoted to model ownership merely
+  because they appear before `/`; only exact curated aliases still eligible
+  for weak evidence may use the strict two-segment fallback.
 - unsupported upstream icon references are never fetched or injected.
 - provider display labels are treated as plain text.
 - existing dated-model and version-equivalence protections remain unchanged
@@ -626,11 +745,28 @@ surface.
 Add table-driven tests for every evidence level and conflict:
 
 - Publisher evidence wins;
-- exact metadata wins over deployment-category and routing evidence;
-- a known deployment-category alias classifies an opaque model when stronger
-  publisher evidence is absent;
+- exact known metadata wins over deployment-category and routing evidence;
+- exact custom metadata remains custom except for explicit qualified,
+  controlled, or attribution product policy;
+- a known deployment-category alias classifies an opaque model only after a
+  curated no-match;
 - an arbitrary deployment category does not create a publisher tab;
 - curated rules classify non-standard names;
+- curated ambiguity remains Unknown even when deployment or routing evidence
+  names a known vendor;
+- exact weak-eligible vendor and brand aliases classify otherwise opaque
+  two-segment IDs and may corroborate only an already-present candidate in an
+  eligible derived-model tie;
+- verified strong-only official aliases resolve Publisher and metadata facts
+  without leaking into prefix, deployment, or routing fallback;
+- actual unknown-leading derivative IDs with embedded Llama, Qwen, Mistral, or
+  DeepSeek tokens remain Unknown, while leading canonical families and the
+  reviewed DeepSeek distill grammar retain their intended ownership;
+- mixed Qwen/Llama DeepSeek derivatives remain ambiguous without exact
+  DeepSeek prefix corroboration and do not override exact custom metadata;
+- prefix suffix conflicts, excluded hosting aliases, unregistered models.dev
+  labs, nested or malformed paths, NFKC/case variants, routing decorations,
+  and punctuation-near-misses retain deterministic behavior;
 - recognized routing evidence is used only as a final weak fallback;
 - gateway, `custom`, unknown, blank, and numeric routing values are ignored;
 - ambiguous signals produce Unknown;
