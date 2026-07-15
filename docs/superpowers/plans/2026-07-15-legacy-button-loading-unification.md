@@ -40,7 +40,7 @@
 - Create: `tests/features/AccountManagement/components/AihubmixDefaultKeyPromptDialog.test.tsx`
 - Test: `tests/features/SiteBookmarks/components/BookmarkDialog.test.tsx`
 
-- [ ] **Step 1: Add failing pending-state assertions**
+- [x] **Step 1: Add failing pending-state assertions**
 
 Use deferred Promises in the existing success tests so the request remains unsettled while assertions run. For each initiating control, assert the exact pending accessible name, `aria-busy="true"`, disabled state, and duplicate-click suppression. All adjacent controls must remain free of `aria-busy`; assert disabled only where the existing workflow already locks that control.
 
@@ -73,7 +73,7 @@ deferred.resolve({ success: true, message: "ok" })
 
 Add equivalent assertions for Channel resource retry and real-key loading, update-log enable/disable, the current redemption code only, API-profile save, cookie import, AIHubMix default-key creation, and bookmark add/edit. For the update-log toggle, assert `common:status.enabling` when currently disabled and `common:status.disabling` when currently enabled.
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 ```powershell
 pnpm exec vitest run tests/components/ClaudeCodeRouterImportDialog.test.tsx tests/components/CliProxyExportDialog.test.tsx tests/components/dialogs/ChannelDialog/ChannelDialog.behavior.test.tsx tests/components/UpdateLogDialog.test.tsx tests/entrypoints/content/redemptionAssist/RedemptionBatchResultToast.test.tsx tests/components/ApiCheckModalHost.test.tsx tests/features/AccountManagement/components/AccountDialogForm.test.tsx tests/features/AccountManagement/components/AihubmixDefaultKeyPromptDialog.test.tsx tests/features/SiteBookmarks/components/BookmarkDialog.test.tsx
@@ -81,7 +81,7 @@ pnpm exec vitest run tests/components/ClaudeCodeRouterImportDialog.test.tsx test
 
 Expected: new accessible-name and `aria-busy` assertions fail because these controls still use `disabled` without the shared loading contract.
 
-- [ ] **Step 3: Add the direct loading props and exact pending branches**
+- [x] **Step 3: Add the direct loading props and exact pending branches**
 
 Apply this mapping; preserve independent prerequisites in `disabled` and remove only the async flag duplicated by `loading`:
 
@@ -127,7 +127,7 @@ const isCurrentRetry = retryingCode === item.code
 
 Add `common.status.enabling` to all six `common.json` files using: `Enabling...`, `Habilitando...`, `有効化中...`, `Đang bật...`, `启用中...`, and `啟用中...`.
 
-- [ ] **Step 4: Run focused tests and i18n extraction**
+- [x] **Step 4: Run focused tests and i18n extraction**
 
 Run the Step 2 command again, then:
 
@@ -137,7 +137,7 @@ pnpm run i18n:extract:ci
 
 Expected: all focused tests pass and extraction reports no locale updates.
 
-- [ ] **Step 5: Commit the isolated direct-dialog migration**
+- [x] **Step 5: Commit the isolated direct-dialog migration**
 
 ```powershell
 git add -- src/components/ClaudeCodeRouterImportDialog.tsx src/components/CliProxyExportDialog.tsx src/components/dialogs/ChannelDialog/components/ChannelDialog.tsx src/components/dialogs/UpdateLogDialog/components/UpdateLogDialog.tsx src/entrypoints/content/redemptionAssist/components/RedemptionBatchResultToast.tsx src/entrypoints/content/webAiApiCheck/components/ApiCheckModal.tsx src/features/AccountManagement/components/AccountDialog/AccountForm.tsx src/features/AccountManagement/components/AccountDialog/AihubmixDefaultKeyPromptDialog.tsx src/features/SiteBookmarks/components/BookmarkDialog.tsx src/locales/en/common.json src/locales/es-419/common.json src/locales/ja/common.json src/locales/vi/common.json src/locales/zh-CN/common.json src/locales/zh-TW/common.json tests/components/ClaudeCodeRouterImportDialog.test.tsx tests/components/CliProxyExportDialog.test.tsx tests/components/dialogs/ChannelDialog/ChannelDialog.behavior.test.tsx tests/components/UpdateLogDialog.test.tsx tests/entrypoints/content/redemptionAssist/RedemptionBatchResultToast.test.tsx tests/components/ApiCheckModalHost.test.tsx tests/features/AccountManagement/components/AccountDialogForm.test.tsx tests/features/AccountManagement/components/AihubmixDefaultKeyPromptDialog.test.tsx tests/features/SiteBookmarks/components/BookmarkDialog.test.tsx
@@ -161,7 +161,7 @@ git commit -m "refactor(ui): migrate direct dialog loading states"
 - Test: `tests/entrypoints/options/pages/ApiCredentialProfiles/VerifyApiCredentialProfileDialog.test.tsx`
 - Create: `tests/features/KeyManagement/components/Header.test.tsx`
 
-- [ ] **Step 1: Write failing direct-action tests**
+- [x] **Step 1: Write failing direct-action tests**
 
 For each validator, hold `handleValidateConfig` in flight and assert the existing `*.validation.validating` label plus `aria-busy`. For usage-history Sync Now, the API-profile verification suite, and token-list refresh, assert that only the initiating control is busy.
 
@@ -175,13 +175,13 @@ expect(
 ).toBeDisabled()
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 pnpm exec vitest run tests/entrypoints/options/AxonHubSettings.test.tsx tests/entrypoints/options/ClaudeCodeHubSettings.test.tsx tests/entrypoints/options/OctopusSettings.test.tsx tests/features/BasicSettings/UsageHistorySyncSettingsSection.test.tsx tests/entrypoints/options/pages/ApiCredentialProfiles/VerifyApiCredentialProfileDialog.test.tsx tests/features/KeyManagement/components/Header.test.tsx
 ```
 
-- [ ] **Step 3: Implement direct loading without changing lifecycle ownership**
+- [x] **Step 3: Implement direct loading without changing lifecycle ownership**
 
 Use the existing dedicated flags:
 
@@ -200,7 +200,7 @@ Use the existing dedicated flags:
 
 Apply the same shape to the other two validators. Use `loading={isSyncingAll}` for Sync Now, `loading={isRunning}` for the API-profile full suite, and `loading={isLoading}` for the Key Management refresh. Preserve all non-async prerequisites and sibling locks. The model-sync channel list uses one flag for automatic and manual loading, so Task 6 adds a manual-origin discriminator before showing button busy state.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 Run the Step 2 command again, then:
 
@@ -232,7 +232,7 @@ git commit -m "refactor(settings): expose direct action loading states"
 - Test: `tests/entrypoints/options/pages/KeyManagement/TokenList.batchExport.test.tsx`
 - Test: `tests/entrypoints/options/pages/KeyManagement/KeyDisplay.identity.test.tsx`
 
-- [ ] **Step 1: Add failing shared-contract assertions**
+- [x] **Step 1: Add failing shared-contract assertions**
 
 Assert that icon-only actions retain their idle accessible name while exposing `aria-busy`, and text actions expose their existing running/verifying label. Confirm the batch Cancel buttons are merely disabled and do not become busy. For account metrics, stale-check-in refresh, and health refresh, assert only the locally clicked surface is busy; sibling data controls and refresh controls locked by an externally started account refresh must not expose `aria-busy`. Reject the account-refresh Promise and verify the initiating control returns to idle, loses `aria-busy`, and re-enables its siblings.
 
@@ -248,13 +248,13 @@ expect(start).toHaveAttribute("aria-busy", "true")
 expect(screen.getByRole("button", { name: "common:actions.cancel" })).not.toHaveAttribute("aria-busy")
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 pnpm exec vitest run tests/entrypoints/popup/HeaderSection.test.tsx tests/features/AccountManagement/components/AccountActionButtons.test.tsx tests/features/AccountManagement/components/BalanceDisplay.test.tsx tests/features/AccountManagement/components/SiteInfo.test.tsx tests/features/ApiCredentialProfiles/components/ApiCredentialProfileListItem.test.tsx tests/features/KeyManagement/components/BatchCliProxyExportDialog.test.tsx tests/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog.test.tsx tests/entrypoints/options/pages/KeyManagement/TokenList.batchExport.test.tsx tests/entrypoints/options/pages/KeyManagement/KeyDisplay.identity.test.tsx
 ```
 
-- [ ] **Step 3: Replace duplicated spinner/disabled/aria wiring**
+- [x] **Step 3: Replace duplicated spinner/disabled/aria wiring**
 
 Use these exact contracts:
 
@@ -321,7 +321,7 @@ and health refresh. Use `IconButton loading` on the initiating control and
 lock them without showing a false spinner. Its async wrapper must also clear the
 local discriminator in `finally` after both success and rejection.
 
-- [ ] **Step 4: Run tests, extraction, and commit**
+- [x] **Step 4: Run tests, extraction, and commit**
 
 Run Step 2, then:
 
@@ -356,7 +356,7 @@ git commit -m "refactor(ui): replace manual button loading indicators"
 - Test: `tests/components/ShareSnapshotCaptionToast.test.tsx`
 - Test: `tests/utils/toastHelpers.test.ts`
 
-- [ ] **Step 1: Write failing wrapper contract tests**
+- [x] **Step 1: Write failing wrapper contract tests**
 
 Instantiate each wrapper directly. Assert pending label fallback, caller-provided pending label, stable icon-only names, forced disabled/`aria-busy` on the actual Radix child, and duplicate-click suppression. For account refresh and both row-sync wrappers, cover local menu initiation separately from externally supplied aggregate busy state: local initiation is busy; external aggregate state is disabled without `aria-busy`.
 
@@ -377,13 +377,13 @@ expect(screen.getByRole("menuitem", { name: "Refreshing account..." })).toHaveAt
 )
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 pnpm exec vitest run tests/features/AccountManagement/components/AccountActionMenuItem.test.tsx tests/features/AccountManagement/components/AccountActionButtons.test.tsx tests/features/BasicSettings/UsageHistorySyncRowActions.test.tsx tests/features/ManagedSiteChannels/components/RowActions.test.tsx tests/entrypoints/options/pages/ManagedSiteChannels/ManagedSiteChannels.test.tsx tests/components/toast/WarningToast.test.tsx tests/components/ShareSnapshotCaptionToast.test.tsx tests/utils/toastHelpers.test.ts
 ```
 
-- [ ] **Step 3: Implement narrow wrapper contracts**
+- [x] **Step 3: Implement narrow wrapper contracts**
 
 Add `loading?: boolean` and `loadingLabel?: string` to `AccountActionMenuItem`; derive `isMenuItemDisabled = disabled || loading`, force `aria-busy` on the real child, and render the shared `Spinner aria-hidden="true"` instead of the icon. In `AccountActionButtons`, add local `isRefreshMenuPending` around `await handleRefreshAccount(site)`. Pass that local state as `loading`, pass aggregate `refreshingAccountId === site.id` only as `disabled`, and use `common:status.refreshing`. A refresh started from a balance, health, or bulk surface must lock this menu item without making it appear to have initiated the action.
 
@@ -435,7 +435,7 @@ export interface WarningToastAction {
 
 Pass `common:status.refreshing` from the account warning flow and `common:status.retrying` from model sync. Convert the snapshot-caption copy control to shared `Button loading={isCopying}` with a required `copyingLabel` prop; keep Close enabled. Add `common.status.copying` to all six locales: `Copying...`, `Copiando...`, `コピー中...`, `Đang sao chép...`, `复制中...`, `複製中...`.
 
-- [ ] **Step 4: Run tests, extraction, and commit**
+- [x] **Step 4: Run tests, extraction, and commit**
 
 Run Step 2, then:
 
@@ -459,7 +459,7 @@ git commit -m "refactor(ui): expose loading through action wrappers"
 - Test: `tests/entrypoints/options/UsageHistorySyncTab.test.tsx`
 - Test: `tests/entrypoints/options/pages/ApiCredentialProfiles/VerifyApiCredentialProfileDialog.test.tsx`
 
-- [ ] **Step 1: Add failing action-discrimination tests**
+- [x] **Step 1: Add failing action-discrimination tests**
 
 For each workflow, keep one Promise pending and assert exactly one initiating control has `aria-busy`. Siblings must be disabled without `aria-busy`; rejection must restore all idle labels.
 
@@ -473,13 +473,13 @@ expect(screen.getByRole("button", { name: "webAiApiCheck:settings.keyCleanup.sav
 )
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 pnpm exec vitest run tests/entrypoints/options/WebAiApiCheckSettings.test.tsx tests/entrypoints/options/RedemptionAssistSettings.test.tsx tests/entrypoints/options/UsageHistorySyncTab.test.tsx tests/entrypoints/options/pages/ApiCredentialProfiles/VerifyApiCredentialProfileDialog.test.tsx
 ```
 
-- [ ] **Step 3: Add state at the real Promise owner**
+- [x] **Step 3: Add state at the real Promise owner**
 
 Use feature-local discriminators rather than replacing the existing aggregate lock:
 
@@ -501,7 +501,7 @@ Narrow `UsageHistorySyncStateTable.onSyncAccounts` to return `Promise<void>`, wr
 
 In API-profile verification, add `activeProbeId` at the dialog lifecycle owner before running a single probe and clear it only after persistence settles. Use `loading={activeProbeId === probe.id}`; the suite button continues using its dedicated `isRunning` state from Task 2.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 Run Step 2, then:
 
@@ -528,7 +528,7 @@ git commit -m "refactor(settings): distinguish active loading actions"
 - Test: `tests/features/ManagedSiteModelSync/ManagedSiteModelSync.test.tsx`
 - Test: `tests/features/AccountManagement/components/TagPicker.test.tsx`
 
-- [ ] **Step 1: Write failing multi-action tests**
+- [x] **Step 1: Write failing multi-action tests**
 
 Cover Run Now and one debug action in Auto Check-in; Run All, Run Selected,
 Retry Failed, manual Run Selected, and manual channel refresh in model sync; and
@@ -548,13 +548,13 @@ expect(screen.getByRole("button", { name: /run selected/i })).not.toHaveAttribut
 )
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 pnpm exec vitest run tests/features/AutoCheckin/components/ActionBar.test.tsx tests/entrypoints/options/AutoCheckinQuickRun.test.tsx tests/features/ManagedSiteModelSync/components.test.tsx tests/features/ManagedSiteModelSync/ManagedSiteModelSync.test.tsx tests/features/AccountManagement/components/TagPicker.test.tsx
 ```
 
-- [ ] **Step 3: Add canonical action constants and lifecycle-owned state**
+- [x] **Step 3: Add canonical action constants and lifecycle-owned state**
 
 Create canonical runtime values instead of duplicating branch strings:
 
@@ -586,7 +586,7 @@ type ActiveTagAction =
 
 Derive `isWorking = activeTagAction !== null`. The Create text button uses `common:status.creating`; only the current rename Save `IconButton` receives loading; the delete confirmation receives `isWorking` only when `kind === "delete"`. Other tag controls remain disabled without busy semantics.
 
-- [ ] **Step 4: Add model-sync pending labels in every locale**
+- [x] **Step 4: Add model-sync pending labels in every locale**
 
 Add these three sibling keys under `execution.actions`:
 
@@ -599,7 +599,7 @@ Add these three sibling keys under `execution.actions`:
 | zh-CN | 全部执行中... | 所选项执行中... | 失败项重试中... |
 | zh-TW | 全部執行中... | 所選項執行中... | 失敗項重試中... |
 
-- [ ] **Step 5: Run tests, extraction, and commit**
+- [x] **Step 5: Run tests, extraction, and commit**
 
 Run Step 2, then:
 
@@ -622,7 +622,7 @@ git commit -m "refactor(ui): distinguish multi-action loading states"
 - Test: `tests/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog.test.tsx`
 - Test: `tests/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog.test.tsx`
 
-- [ ] **Step 1: Add failing phase-specific tests**
+- [x] **Step 1: Add failing phase-specific tests**
 
 Assert that automatic preview loading disables Start without making it busy,
 manual Refresh Preview owns the preview-loading indicator, and the confirmation
@@ -644,13 +644,13 @@ expect(screen.getByRole("button", { name: /preview.*loading/i })).toHaveAttribut
 )
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 pnpm exec vitest run tests/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog.test.tsx tests/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog.test.tsx
 ```
 
-- [ ] **Step 3: Track preview origin and assign loading to the visible owner**
+- [x] **Step 3: Track preview origin and assign loading to the visible owner**
 
 At each workflow owner, add:
 
@@ -673,7 +673,7 @@ disabled and keeps its idle label/icon. This explicitly treats Start as the
 workflow-status continuation after the transient confirmation closes without
 changing dialog behavior.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 Run Step 2, then:
 
@@ -689,7 +689,7 @@ git commit -m "refactor(ui): separate preview and execution loading"
 - Verify: all source, locale, and test files from Tasks 1-7
 - Update checkboxes: `docs/superpowers/plans/2026-07-15-legacy-button-loading-unification.md`
 
-- [ ] **Step 1: Run focused related coverage by implementation batch**
+- [x] **Step 1: Run focused related coverage by implementation batch**
 
 ```powershell
 pnpm exec vitest related --run src/components/ClaudeCodeRouterImportDialog.tsx src/components/CliProxyExportDialog.tsx src/components/dialogs/UpdateLogDialog/components/UpdateLogDialog.tsx src/entrypoints/content/redemptionAssist/components/RedemptionBatchResultToast.tsx src/features/SiteBookmarks/components/BookmarkDialog.tsx
@@ -700,7 +700,17 @@ pnpm exec vitest related --run src/features/AutoCheckin/AutoCheckin.tsx src/feat
 
 Expected: all related suites pass.
 
-- [ ] **Step 2: Run i18n, compile, and structural audits**
+Verification result: the initial related runs exposed branch-introduced stale
+accessible-name assertions in `AccountAndBookmarkPages.test.tsx`,
+`KeyManagementRepairMissingKeys.test.tsx`, and `ModelListPageFlows.test.tsx`.
+The rebuilt stack aligns those assertions with the intentional pending labels.
+A later full-suite run also exposed a scoped translation-binding collision in
+`TaskNotificationSettings.tsx`; aliasing the nested `common` binding preserves
+the settings namespace used by the file-level static key validator. The focused
+regression rerun passed all 59 tests across those four files, and the final
+`pnpm test:ci` coverage run passed.
+
+- [x] **Step 2: Run i18n, compile, and structural audits**
 
 ```powershell
 pnpm run i18n:extract:ci
@@ -712,11 +722,11 @@ rg -n "animate-spin|animate-pulse|<Spinner|<Loader2|aria-busy" src -g "*.tsx"
 
 Expected: every new loading match has the correct pending branch or stable icon-only accessible name; remaining manual spinners are page/status indicators or the registered interruptible managed-channel refresh exception. Remaining account-value `animate-pulse` usage is a data-freshness animation paired with a separate initiating-control busy state, not the only async feedback.
 
-- [ ] **Step 3: Recheck every intentional non-change**
+- [x] **Step 3: Recheck every intentional non-change**
 
 Use the manifest below to confirm that locked, static, and interruptible controls did not gain `loading` or `aria-busy`. Verify in particular Verify API/CLI Stop controls and the managed-channel Cancel Refresh control remain clickable while running.
 
-- [ ] **Step 4: Run repository gates**
+- [x] **Step 4: Run repository gates**
 
 Stage only the final task-scoped files, then:
 
@@ -729,7 +739,7 @@ git status --short
 
 Expected: staged validation, compile, knip, formatting, lint, i18n, and diff checks pass; no unrelated files are staged.
 
-- [ ] **Step 5: Commit any final audit-only corrections**
+- [x] **Step 5: Commit any final audit-only corrections**
 
 If Task 8 changed only plan checkboxes or audit-driven corrections, commit exactly those files:
 
