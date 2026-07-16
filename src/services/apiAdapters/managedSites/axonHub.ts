@@ -13,6 +13,7 @@ import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/
 import {
   createAxonHubChannel,
   deleteAxonHubChannel,
+  getAxonHubChannel,
   updateAxonHubChannel,
   updateAxonHubChannelStatus,
 } from "~/services/apiService/axonHub"
@@ -160,7 +161,7 @@ const toAxonHubResourceSummary = (
       AxonHubChannelTypeNames[
         channel.type as keyof typeof AxonHubChannelTypeNames
       ] ?? String(channel.type),
-    endpointLabel: channel.baseURL,
+    endpointLabel: channel.baseURL ?? "",
     modelCount: models.length,
     modelPreview: models.slice(0, 3),
     secretState: toAxonHubSecretState(channel),
@@ -201,17 +202,7 @@ const findAxonHubChannelByRef = async (
   ref: ManagedUpstreamResourceRef,
 ): Promise<AxonHubChannel> => {
   assertAxonHubResourceRef(config, ref)
-
-  const channels = await listChannels(config)
-  const channel = channels.items
-    .map(rowToAxonHubNativeChannel)
-    .find((item) => item.id === ref.resourceId)
-
-  if (!channel) {
-    throw new Error(`Channel ${ref.resourceId} was not found`)
-  }
-
-  return channel
+  return getAxonHubChannel(config, ref.resourceId)
 }
 
 const prepareAxonHubEditDraft = (
@@ -223,7 +214,7 @@ const prepareAxonHubEditDraft = (
     name: channel.name,
     type: channel.type,
     key: getAxonHubCredentialKey(channel.credentials),
-    base_url: channel.baseURL,
+    base_url: channel.baseURL ?? "",
     models: getAxonHubModelList(channel),
     groups: [],
     priority: 0,

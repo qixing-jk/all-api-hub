@@ -20,6 +20,7 @@ const axonHubProvider = vi.hoisted(() => ({
 
 const axonHubApi = vi.hoisted(() => ({
   axonHubChannelToManagedSite: vi.fn(),
+  getAxonHubChannel: vi.fn(),
   createAxonHubChannel: vi.fn(),
   updateAxonHubChannel: vi.fn(),
   updateAxonHubChannelStatus: vi.fn(),
@@ -340,11 +341,7 @@ describe("AxonHub managed-site channel capability", () => {
       remark: "native remark",
     })
     const updated = { ...native, name: "Axon Updated" }
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { anthropic_gcp: 1 },
-    })
+    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
     axonHubApi.updateAxonHubChannel.mockResolvedValue(updated)
     axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
       buildAxonHubChannelRow(updated),
@@ -359,6 +356,7 @@ describe("AxonHub managed-site channel capability", () => {
       scopeKey: "https://axonhub.example.invalid",
       resourceId: native.id,
     }
+    const listCallsBefore = axonHubProvider.listChannels.mock.calls.length
 
     const detail = await resources.items.getDetail(config, ref)
     const draft = resources.drafts.prepareEditDraft(detail)
@@ -368,6 +366,8 @@ describe("AxonHub managed-site channel capability", () => {
     })
 
     expect(detail.native).toBe(native)
+    expect(axonHubApi.getAxonHubChannel).toHaveBeenCalledWith(config, native.id)
+    expect(axonHubProvider.listChannels).toHaveBeenCalledTimes(listCallsBefore)
     expect(draft).toEqual({
       name: "Axon Native",
       type: "anthropic_gcp",
@@ -427,11 +427,7 @@ describe("AxonHub managed-site channel capability", () => {
     const native = buildAxonHubChannel({
       settings: null,
     })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { openai: 1 },
-    })
+    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
     axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
     axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
       buildAxonHubChannelRow(native),
@@ -468,11 +464,7 @@ describe("AxonHub managed-site channel capability", () => {
         apiKeys: ["sk-primary", "sk-secondary"],
       },
     })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { openai: 1 },
-    })
+    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
     axonHubApi.updateAxonHubChannel.mockResolvedValue({
       ...native,
       name: "Renamed Axon",
@@ -514,11 +506,7 @@ describe("AxonHub managed-site channel capability", () => {
       manualModels: ["native-manual"],
       defaultTestModel: "native-manual",
     })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { openai: 1 },
-    })
+    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
     axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
     axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
       buildAxonHubChannelRow(native),
@@ -557,11 +545,7 @@ describe("AxonHub managed-site channel capability", () => {
       defaultTestModel: null,
       orderingWeight: null,
     })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { openai: 1 },
-    })
+    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
     axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
     axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
       buildAxonHubChannelRow(native),
@@ -697,11 +681,7 @@ describe("AxonHub managed-site channel capability", () => {
       manualModels: [],
       defaultTestModel: null,
     })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { openai: 1 },
-    })
+    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
     axonHubApi.updateAxonHubChannel.mockResolvedValue({
       ...native,
       name: "Renamed Axon",
@@ -747,11 +727,7 @@ describe("AxonHub managed-site channel capability", () => {
     const native = buildAxonHubChannel({
       status: AXON_HUB_CHANNEL_STATUS.ARCHIVED,
     })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { openai: 1 },
-    })
+    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
     axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
     axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
       buildAxonHubChannelRow(native),
@@ -780,11 +756,7 @@ describe("AxonHub managed-site channel capability", () => {
     const native = buildAxonHubChannel({
       status: AXON_HUB_CHANNEL_STATUS.ENABLED,
     })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { openai: 1 },
-    })
+    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
     axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
     axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
       buildAxonHubChannelRow({
@@ -842,11 +814,7 @@ describe("AxonHub managed-site channel capability", () => {
         apiKeys: ["sk-********"],
       },
     })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { openai: 1 },
-    })
+    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
     axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
     axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
       buildAxonHubChannelRow(native),
