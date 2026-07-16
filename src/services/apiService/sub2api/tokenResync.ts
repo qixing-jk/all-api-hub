@@ -4,6 +4,7 @@ import {
   resolveAccountBrowserSession,
   type AccountBrowserSession,
 } from "~/services/accountBrowserSession"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 type Sub2ApiResyncedToken = {
   accessToken: string
@@ -42,6 +43,7 @@ const mapResyncSource = (
  */
 export async function resyncSub2ApiAuthToken(
   baseUrl: string,
+  tempWindowRequestSource?: TempWindowRequestSource,
 ): Promise<Sub2ApiResyncedToken | null> {
   const session = await resolveAccountBrowserSession({
     baseUrl,
@@ -49,6 +51,7 @@ export async function resyncSub2ApiAuthToken(
     useExistingTabs: true,
     useTempWindow: true,
     requestIdPrefix: "sub2api-token-resync",
+    ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
     isUsableSession: hasUsableAccessToken,
   })
 

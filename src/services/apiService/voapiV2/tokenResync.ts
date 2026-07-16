@@ -4,6 +4,7 @@ import {
   resolveAccountBrowserSession,
   type AccountBrowserSession,
 } from "~/services/accountBrowserSession"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 type VoApiV2ResyncedToken = {
   accessToken: string
@@ -51,6 +52,7 @@ const resolveUsername = (session: AccountBrowserSession): string | undefined =>
  */
 export async function resyncVoApiV2AuthToken(
   baseUrl: string,
+  tempWindowRequestSource?: TempWindowRequestSource,
 ): Promise<VoApiV2ResyncedToken | null> {
   const session = await resolveAccountBrowserSession({
     baseUrl,
@@ -58,6 +60,7 @@ export async function resyncVoApiV2AuthToken(
     useExistingTabs: true,
     useTempWindow: true,
     requestIdPrefix: "voapi-v2-token-resync",
+    ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
     isUsableSession: hasUsableDashboardJwt,
   })
 

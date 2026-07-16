@@ -1,6 +1,7 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { Sub2ApiAuthConfig } from "~/types"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 export const ACCOUNT_BROWSER_SESSION_SOURCES = {
   CURRENT_TAB: "current_tab",
@@ -71,6 +72,7 @@ export type ResolveAccountBrowserSessionOptions = {
   }
   useExistingTabs?: boolean
   useTempWindow?: boolean
+  tempWindowRequestSource?: TempWindowRequestSource
   suppressMinimize?: boolean
   requestIdPrefix?: string
   isUsableSession?: AccountBrowserSessionPredicate

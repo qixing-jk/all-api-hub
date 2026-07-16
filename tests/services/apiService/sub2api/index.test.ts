@@ -47,6 +47,7 @@ import type {
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const { mockGetLatestAuth, mockPersistAuthUpdate } = vi.hoisted(() => ({
   mockGetLatestAuth: vi.fn(),
@@ -609,7 +610,7 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(fetchApi).toHaveBeenCalledTimes(1)
   })
 
-  it("re-syncs token and retries once on HTTP 401 (success)", async () => {
+  it("passes temp-window source to token resync and preserves it on the retry", async () => {
     vi.mocked(fetchApi)
       .mockRejectedValueOnce(
         new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
@@ -625,12 +626,20 @@ describe("apiService sub2api refreshAccountData", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
-    const request = createRequest()
+    const request = createRequest({
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
     const result = await refreshAccountData(request)
 
-    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      request.baseUrl,
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     const retryRequest = vi.mocked(fetchApi).mock.calls[1]?.[0] as any
     expect(retryRequest?.auth?.accessToken).toBe("new-jwt")
+    expect(retryRequest?.tempWindowRequestSource).toBe(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
 
     expect(result.success).toBe(true)
     expect(result.data?.quota).toBe(500_000)

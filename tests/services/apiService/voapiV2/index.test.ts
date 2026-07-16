@@ -18,6 +18,7 @@ import {
   updateVoApiV2Token,
 } from "~/services/apiService/voapiV2"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 
 const { mockResyncVoApiV2AuthToken } = vi.hoisted(() => ({
@@ -212,7 +213,7 @@ describe("apiService VoAPI v2", () => {
     })
   })
 
-  it("re-syncs the dashboard JWT from a logged-in browser session after auth expiry", async () => {
+  it("passes temp-window source to dashboard JWT resync after auth expiry", async () => {
     const authorizations: (string | null)[] = []
     mockResyncVoApiV2AuthToken.mockResolvedValueOnce({
       accessToken: "resynced-dashboard-token",
@@ -258,7 +259,12 @@ describe("apiService VoAPI v2", () => {
       ),
     )
 
-    await expect(refreshAccountData(createVoApiV2Request())).resolves.toEqual(
+    await expect(
+      refreshAccountData({
+        ...createVoApiV2Request(),
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    ).resolves.toEqual(
       expect.objectContaining({
         success: true,
         authUpdate: {
@@ -273,6 +279,7 @@ describe("apiService VoAPI v2", () => {
     expect(authorizations).toContain("resynced-dashboard-token")
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
     )
   })
 
@@ -319,6 +326,9 @@ describe("apiService VoAPI v2", () => {
         message: "account:healthStatus.httpError",
       },
     })
+    expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
+      "https://example.invalid",
+    )
   })
 
   it("reports non-auth retry failures after dashboard JWT re-sync", async () => {
