@@ -6,6 +6,7 @@ import {
   getDeviceTypeInfo,
   isEdgeByUA,
   isExtensionBackground,
+  isExtensionOptions,
   isExtensionPopup,
   isExtensionSidePanel,
   isFirefoxByUA,
@@ -220,13 +221,23 @@ describe("browser", () => {
   })
 
   describe("extension page detection", () => {
-    it("detects popup and sidepanel extension URLs from window.location", () => {
+    it("detects popup, options, and sidepanel extension URLs from window.location", () => {
       vi.stubGlobal("window", {
         location: {
           href: "moz-extension://abc/popup.html",
         },
       })
       expect(isExtensionPopup()).toBe(true)
+      expect(isExtensionOptions()).toBe(false)
+      expect(isExtensionSidePanel()).toBe(false)
+
+      vi.stubGlobal("window", {
+        location: {
+          href: "moz-extension://abc/options.html",
+        },
+      })
+      expect(isExtensionPopup()).toBe(false)
+      expect(isExtensionOptions()).toBe(true)
       expect(isExtensionSidePanel()).toBe(false)
 
       vi.stubGlobal("window", {
@@ -235,6 +246,7 @@ describe("browser", () => {
         },
       })
       expect(isExtensionPopup()).toBe(false)
+      expect(isExtensionOptions()).toBe(false)
       expect(isExtensionSidePanel()).toBe(true)
     })
 
@@ -245,6 +257,7 @@ describe("browser", () => {
         },
       })
       expect(isExtensionPopup()).toBe(false)
+      expect(isExtensionOptions()).toBe(false)
       expect(isExtensionSidePanel()).toBe(false)
     })
 
@@ -252,6 +265,7 @@ describe("browser", () => {
       vi.stubGlobal("window", undefined)
 
       expect(isExtensionPopup()).toBe(false)
+      expect(isExtensionOptions()).toBe(false)
       expect(isExtensionSidePanel()).toBe(false)
     })
   })

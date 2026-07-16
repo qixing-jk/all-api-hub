@@ -1,4 +1,5 @@
 import {
+  OPTIONS_PAGE_PATH,
   POPUP_PAGE_PATH,
   SIDEPANEL_PAGE_PATH,
 } from "~/constants/extensionPages"
@@ -89,35 +90,42 @@ export function isExtensionPage(url: URL) {
   return url.protocol.includes("-extension:")
 }
 
-/**
- * Determines if current window is the browser action popup.
- * @returns True when running inside popup.html.
- */
-export function isExtensionPopup() {
+/** Checks whether the current window matches a specific extension page path. */
+function isCurrentExtensionPage(pagePath: string): boolean {
   if (typeof window === "undefined") {
     return false
   }
 
   try {
     const url = new URL(window.location.href)
-    return isExtensionPage(url) && url.pathname.endsWith(`/${POPUP_PAGE_PATH}`)
+    return isExtensionPage(url) && url.pathname.endsWith(`/${pagePath}`)
   } catch {
     return false
   }
 }
+
+/**
+ * Determines if current window is the browser action popup.
+ * @returns True when running inside popup.html.
+ */
+export function isExtensionPopup() {
+  return isCurrentExtensionPage(POPUP_PAGE_PATH)
+}
+
+/**
+ * Determines if the current window is the extension options page.
+ * @returns True when running inside options.html.
+ */
+export function isExtensionOptions() {
+  return isCurrentExtensionPage(OPTIONS_PAGE_PATH)
+}
+
 /**
  * Determines if the current page is loaded inside the extension side panel.
  * @returns True when sidepanel.html is detected in the URL path.
  */
 export function isExtensionSidePanel() {
-  try {
-    const url = new URL(window.location.href)
-    return (
-      isExtensionPage(url) && url.pathname.endsWith(`/${SIDEPANEL_PAGE_PATH}`)
-    )
-  } catch {
-    return false
-  }
+  return isCurrentExtensionPage(SIDEPANEL_PAGE_PATH)
 }
 
 /**

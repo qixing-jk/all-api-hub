@@ -6,6 +6,25 @@ import type {
   TurnstilePreTrigger,
 } from "~/types/turnstile"
 
+export const TEMP_WINDOW_REQUEST_SOURCES = {
+  Popup: "popup",
+  Options: "options",
+  Sidepanel: "sidepanel",
+  Background: "background",
+} as const
+
+export type TempWindowRequestSource =
+  (typeof TEMP_WINDOW_REQUEST_SOURCES)[keyof typeof TEMP_WINDOW_REQUEST_SOURCES]
+
+/** Checks whether an untrusted value is a supported temp-window request source. */
+export function isTempWindowRequestSource(
+  value: unknown,
+): value is TempWindowRequestSource {
+  return Object.values(TEMP_WINDOW_REQUEST_SOURCES).includes(
+    value as TempWindowRequestSource,
+  )
+}
+
 export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
 
 export interface TempWindowFetchParams {
@@ -14,6 +33,7 @@ export interface TempWindowFetchParams {
   fetchOptions?: RequestInit
   requestId?: string
   responseType?: TempWindowResponseType
+  tempWindowRequestSource?: TempWindowRequestSource
   suppressMinimize?: boolean
   /** Account ID for per-request cookie isolation */
   accountId?: string
@@ -76,6 +96,7 @@ export interface TempWindowCheckinPageActionParams {
   originUrl: string
   pageUrl: string
   requestId?: string
+  tempWindowRequestSource?: TempWindowRequestSource
   suppressMinimize?: boolean
   siteType: AccountSiteType
   expectedUserId: string
@@ -114,6 +135,13 @@ export interface TempWindowRenderedTitleResponse {
   error?: string
 }
 
+export interface TempWindowRenderedTitleParams {
+  originUrl: string
+  requestId?: string
+  tempWindowRequestSource?: TempWindowRequestSource
+  suppressMinimize?: boolean
+}
+
 export interface TempWindowFallbackAllowlist {
   statusCodes?: number[]
   codes?: ApiErrorCode[]
@@ -126,6 +154,7 @@ export interface TempWindowFallbackContext {
   fetchOptions: RequestInit
   onlyData: boolean
   responseType: TempWindowResponseType
+  tempWindowRequestSource?: TempWindowRequestSource
   /**
    * Allowlist controlling which `ApiError.statusCode` and/or `ApiError.code` values can trigger temp-window fallback.
    * When provided, this fully overrides the default allowlist: omitted fields default to empty lists.
