@@ -2165,6 +2165,121 @@ describe("AxonHub API service", () => {
     expect(result._axonHubData.id).toBe("channel_opaque_id")
   })
 
+  it("sanitizes legacy managed-site rows to the compatibility allowlist", () => {
+    const result = axonHubChannelToManagedSite(
+      buildNativeChannelDetail("sensitive-detail", {
+        credentials: {
+          apiKey: "legacy-primary-key",
+          apiKeys: ["primary-key", "secondary-key"],
+          gcp: {
+            region: "example-region",
+            projectID: "example-project",
+            jsonData: "gcp-json-sentinel",
+          },
+          oauth: {
+            accessToken: "oauth-access-sentinel",
+            refreshToken: "oauth-refresh-sentinel",
+          },
+        },
+        settings: {
+          extraModelPrefix: "prefix-",
+          modelMappings: [
+            {
+              from: "model-alpha",
+              to: "model-upstream",
+              leaked: "mapping-extra-sentinel",
+            },
+          ],
+          transformOptions: {
+            forceArrayInstructions: true,
+            forceArrayInputs: false,
+            replaceDeveloperRoleWithSystem: true,
+            reasoningEffortMapping: [
+              {
+                from: "high",
+                to: "medium",
+                leaked: "reasoning-extra-sentinel",
+              },
+            ],
+            leaked: "transform-extra-sentinel",
+          },
+          proxy: { password: "proxy-password-sentinel" },
+          headerOverrideOperations: [{ value: "header-override-sentinel" }],
+          bodyOverrideOperations: [{ value: "body-override-sentinel" }],
+          rateLimit: {
+            rpm: 10,
+            tpm: 20,
+            maxConcurrent: 2,
+            queueSize: 3,
+            queueTimeoutMs: 4,
+            leaked: "rate-limit-extra-sentinel",
+          },
+          retryableStatusCodes: [429],
+          retryableErrorPatterns: [
+            {
+              pattern: "temporary",
+              regex: false,
+              leaked: "retry-extra-sentinel",
+            },
+          ],
+          providerQuota: {
+            opencodeGo: { authCookie: "provider-cookie-sentinel" },
+          },
+        },
+        disabledAPIKeys: [
+          {
+            key: "disabled-key-sentinel",
+            disabledAt: "2026-07-17T00:00:00Z",
+            errorCode: 401,
+          },
+        ],
+      }) as AxonHubChannel,
+    )
+
+    expect(result.key).toBe("primary-key")
+    expect(result._axonHubData.credentials).toEqual({
+      apiKeys: ["primary-key"],
+    })
+    expect(result._axonHubData.settings).toMatchObject({
+      modelMappings: [{ from: "model-alpha", to: "model-upstream" }],
+      transformOptions: {
+        forceArrayInstructions: true,
+        forceArrayInputs: false,
+        replaceDeveloperRoleWithSystem: true,
+        reasoningEffortMapping: [{ from: "high", to: "medium" }],
+      },
+      rateLimit: {
+        rpm: 10,
+        tpm: 20,
+        maxConcurrent: 2,
+        queueSize: 3,
+        queueTimeoutMs: 4,
+      },
+      retryableErrorPatterns: [{ pattern: "temporary", regex: false }],
+    })
+
+    const serialized = JSON.stringify(result)
+    for (const sentinel of [
+      "legacy-primary-key",
+      "secondary-key",
+      "gcp-json-sentinel",
+      "oauth-access-sentinel",
+      "oauth-refresh-sentinel",
+      "proxy-password-sentinel",
+      "header-override-sentinel",
+      "body-override-sentinel",
+      "provider-cookie-sentinel",
+      "disabled-key-sentinel",
+      "mapping-extra-sentinel",
+      "reasoning-extra-sentinel",
+      "transform-extra-sentinel",
+      "rate-limit-extra-sentinel",
+      "retry-extra-sentinel",
+    ]) {
+      expect(serialized).not.toContain(sentinel)
+    }
+  })
+
   it("falls back to zero when AxonHub timestamps are malformed", () => {
     const result = axonHubChannelToManagedSite({
       id: "bad-date-id",
@@ -2298,6 +2413,7 @@ describe("AxonHub API service", () => {
     const secondId = "gid://axonhub/Channel/two"
     let listPageHits = 0
     const detailIds: unknown[] = []
+    const detailQueries: string[] = []
     const listQueries: string[] = []
 
     server.use(
@@ -2308,6 +2424,7 @@ describe("AxonHub API service", () => {
           variables?: { input?: { after?: string | null } }
         }
         if (body.query?.includes("query GetAxonHubChannel")) {
+          detailQueries.push(body.query)
           const id = (body.variables as { id?: unknown } | undefined)?.id
           detailIds.push(id)
           const isFirst = id === firstId
@@ -2409,6 +2526,25 @@ describe("AxonHub API service", () => {
       expect(query).not.toContain("credentials")
       expect(query).not.toContain("settings")
     }
+    for (const query of detailQueries) {
+      for (const sensitiveSelection of [
+        "jsonData",
+        "oauth",
+        "accessToken",
+        "refreshToken",
+        "proxy",
+        "password",
+        "providerQuota",
+        "authCookie",
+        "headerOverrideOperations",
+        "bodyOverrideOperations",
+        "disabledAPIKeys",
+      ]) {
+        expect(query).not.toContain(sensitiveSelection)
+      }
+    }
+    expect(JSON.stringify(result.items)).not.toContain("proxy-password")
+    expect(JSON.stringify(result.items)).not.toContain("cookie-example")
     expect(result.total).toBe(2)
     expect(result.items).toHaveLength(2)
     expect(result.items[0]).toEqual(
@@ -2435,6 +2571,194 @@ describe("AxonHub API service", () => {
       openai: 1,
       anthropic: 1,
     })
+  })
+
+  it("bounds legacy detail hydration while preserving list order", async () => {
+    const ids = Array.from({ length: 8 }, (_, index) => `bounded-${index}`)
+    let active = 0
+    let maxActive = 0
+    let started = 0
+    let releaseDetails: (() => void) | undefined
+    const detailGate = new Promise<void>((resolve) => {
+      releaseDetails = resolve
+    })
+
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({ token: "bounded-token" })),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as {
+          query?: string
+          variables?: { id?: string }
+        }
+        if (body.query?.includes("query GetAxonHubChannel")) {
+          const id = body.variables?.id ?? "missing"
+          started += 1
+          active += 1
+          maxActive = Math.max(maxActive, active)
+          await detailGate
+          active -= 1
+          return HttpResponse.json({
+            data: {
+              node: buildNativeChannelDetail(id, { name: id }),
+            },
+          })
+        }
+
+        return HttpResponse.json({
+          data: {
+            queryChannels: {
+              edges: ids.map((id) => ({
+                node: {
+                  id,
+                  type: "openai",
+                  baseURL: null,
+                  name: id,
+                  status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                  tags: [],
+                  supportedModels: [],
+                },
+              })),
+              pageInfo: { hasNextPage: false, endCursor: null },
+              totalCount: ids.length,
+            },
+          },
+        })
+      }),
+    )
+
+    const pending = listChannels({ ...config, email: "bounded@example.com" })
+    await vi.waitFor(() => expect(started).toBeGreaterThanOrEqual(4))
+    const startedBeforeRelease = started
+    releaseDetails?.()
+    const result = await pending
+
+    expect(startedBeforeRelease).toBe(4)
+    expect(maxActive).toBe(4)
+    expect(result.items.map((item) => item.name)).toEqual(ids)
+  })
+
+  it("stops scheduling legacy detail hydration after the first failure", async () => {
+    const ids = Array.from({ length: 8 }, (_, index) => `failure-${index}`)
+    let started = 0
+    let releaseDetails: (() => void) | undefined
+    const detailGate = new Promise<void>((resolve) => {
+      releaseDetails = resolve
+    })
+
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({ token: "failure-token" })),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as {
+          query?: string
+          variables?: { id?: string }
+        }
+        if (body.query?.includes("query GetAxonHubChannel")) {
+          const id = body.variables?.id ?? "missing"
+          started += 1
+          if (id === ids[0]) {
+            return HttpResponse.json(
+              { errors: [{ message: "detail failed" }] },
+              { status: 400 },
+            )
+          }
+          await detailGate
+          return HttpResponse.json({
+            data: { node: buildNativeChannelDetail(id, { name: id }) },
+          })
+        }
+
+        return HttpResponse.json({
+          data: {
+            queryChannels: {
+              edges: ids.map((id) => ({
+                node: {
+                  id,
+                  type: "openai",
+                  baseURL: null,
+                  name: id,
+                  status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                  tags: [],
+                  supportedModels: [],
+                },
+              })),
+              pageInfo: { hasNextPage: false, endCursor: null },
+              totalCount: ids.length,
+            },
+          },
+        })
+      }),
+    )
+
+    const outcome = listChannels({
+      ...config,
+      email: "failure@example.com",
+    }).catch((error) => error)
+    await vi.waitFor(() => expect(started).toBeGreaterThanOrEqual(4))
+    releaseDetails?.()
+    const error = await outcome
+
+    expect(error).toMatchObject({ kind: "upstream-rejected" })
+    expect(started).toBe(4)
+  })
+
+  it("stops scheduling legacy detail hydration after cancellation", async () => {
+    const ids = Array.from({ length: 8 }, (_, index) => `abort-${index}`)
+    const controller = new AbortController()
+    let started = 0
+    let releaseDetails: (() => void) | undefined
+    const detailGate = new Promise<void>((resolve) => {
+      releaseDetails = resolve
+    })
+
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({ token: "abort-token" })),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as {
+          query?: string
+          variables?: { id?: string }
+        }
+        if (body.query?.includes("query GetAxonHubChannel")) {
+          const id = body.variables?.id ?? "missing"
+          started += 1
+          await detailGate
+          return HttpResponse.json({
+            data: { node: buildNativeChannelDetail(id, { name: id }) },
+          })
+        }
+
+        return HttpResponse.json({
+          data: {
+            queryChannels: {
+              edges: ids.map((id) => ({
+                node: {
+                  id,
+                  type: "openai",
+                  baseURL: null,
+                  name: id,
+                  status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                  tags: [],
+                  supportedModels: [],
+                },
+              })),
+              pageInfo: { hasNextPage: false, endCursor: null },
+              totalCount: ids.length,
+            },
+          },
+        })
+      }),
+    )
+
+    const outcome = listChannels(
+      { ...config, email: "abort-hydration@example.com" },
+      { signal: controller.signal },
+    ).catch((error) => error)
+    await vi.waitFor(() => expect(started).toBe(4))
+    controller.abort()
+    releaseDetails?.()
+    const error = await outcome
+
+    expect(error).toMatchObject({ kind: "aborted" })
+    expect(started).toBe(4)
   })
 
   it("fails fast when AxonHub pagination repeats a cursor", async () => {

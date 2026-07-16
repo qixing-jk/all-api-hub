@@ -162,6 +162,64 @@ const AXON_HUB_CHANNEL_DETAIL_SELECTION = `
   }
 `
 
+// The legacy table still needs the primary API key and model mappings, but it
+// must not retain unrelated provider credentials or secret-bearing settings.
+const AXON_HUB_LEGACY_CHANNEL_SELECTION = `
+  __typename
+  id
+  createdAt
+  updatedAt
+  type
+  baseURL
+  name
+  status
+  credentials {
+    apiKey
+    apiKeys
+  }
+  supportedModels
+  manualModels
+  tags
+  defaultTestModel
+  settings {
+    extraModelPrefix
+    modelMappings {
+      from
+      to
+    }
+    autoTrimedModelPrefixes
+    hideOriginalModels
+    hideMappedModels
+    lowercaseModelId
+    transformOptions {
+      forceArrayInstructions
+      forceArrayInputs
+      replaceDeveloperRoleWithSystem
+      reasoningEffortMapping {
+        from
+        to
+      }
+    }
+    passThroughUserAgent
+    passThroughBody
+    rateLimit {
+      rpm
+      tpm
+      maxConcurrent
+      queueSize
+      queueTimeoutMs
+    }
+    retryableStatusCodes
+    retryableErrorPatterns {
+      pattern
+      regex
+    }
+  }
+  orderingWeight
+  errorMessage
+  remark
+`
+
 const QUERY_CHANNELS = `
   query QueryChannels($input: QueryChannelInput!) {
     queryChannels(input: $input) {
@@ -203,6 +261,16 @@ const GET_AXON_HUB_CHANNEL = `
     node(id: $id) {
       ... on Channel {
         ${AXON_HUB_CHANNEL_DETAIL_SELECTION}
+      }
+    }
+  }
+`
+
+const GET_AXON_HUB_LEGACY_CHANNEL = `
+  query GetAxonHubChannel($id: ID!) {
+    node(id: $id) {
+      ... on Channel {
+        ${AXON_HUB_LEGACY_CHANNEL_SELECTION}
       }
     }
   }
@@ -296,6 +364,7 @@ const safeChannelListCache = new Map<
 const numericIdToGraphqlId = new Map<number, string>()
 const CHANNEL_LIST_CACHE_TTL_MS = 15_000
 const MAX_LIST_CHANNEL_PAGES = 100
+const LEGACY_CHANNEL_DETAIL_CONCURRENCY = 4
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
 
@@ -652,6 +721,138 @@ const isAuthoritativeAxonHubChannel = (
   isOutputNullableString(value.remark) &&
   isOutputEndpoints(value.endpoints) &&
   isOutputDisabledApiKeys(value.disabledAPIKeys)
+
+const isLegacyOutputCredentials = (value: unknown) =>
+  value === null ||
+  (isRecord(value) &&
+    isOutputNullableString(value.apiKey) &&
+    isOutputNullableStringArray(value.apiKeys))
+
+const isLegacyOutputSettings = (value: unknown) =>
+  value === null ||
+  (isRecord(value) &&
+    isOutputNullableString(value.extraModelPrefix) &&
+    isOutputModelMappings(value.modelMappings) &&
+    isOutputNullableStringArray(value.autoTrimedModelPrefixes) &&
+    isOutputNullableBoolean(value.hideOriginalModels) &&
+    isOutputNullableBoolean(value.hideMappedModels) &&
+    isOutputNullableBoolean(value.lowercaseModelId) &&
+    isOutputTransformOptions(value.transformOptions) &&
+    isOutputNullableBoolean(value.passThroughUserAgent) &&
+    isOutputNullableBoolean(value.passThroughBody) &&
+    isOutputRateLimit(value.rateLimit) &&
+    isOutputRetryableStatusCodes(value.retryableStatusCodes) &&
+    isOutputRetryableErrorPatterns(value.retryableErrorPatterns))
+
+const isLegacyAxonHubChannel = (
+  value: unknown,
+): value is AxonHubChannel & { __typename: "Channel" } =>
+  isRecord(value) &&
+  value.__typename === "Channel" &&
+  isNonEmptyString(value.id) &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string" &&
+  typeof value.type === "string" &&
+  isOutputNullableString(value.baseURL) &&
+  typeof value.name === "string" &&
+  typeof value.status === "string" &&
+  isLegacyOutputCredentials(value.credentials) &&
+  isOutputStringArray(value.supportedModels) &&
+  isOutputNullableStringArray(value.manualModels) &&
+  isOutputNullableStringArray(value.tags) &&
+  typeof value.defaultTestModel === "string" &&
+  isLegacyOutputSettings(value.settings) &&
+  typeof value.orderingWeight === "number" &&
+  Number.isInteger(value.orderingWeight) &&
+  isOutputNullableString(value.errorMessage) &&
+  isOutputNullableString(value.remark)
+
+const sanitizeLegacyAxonHubChannel = (
+  value: AxonHubChannel,
+): AxonHubChannel => {
+  const primaryApiKey =
+    value.credentials?.apiKeys
+      ?.map((key) => key.trim())
+      .find((key) => key.length > 0) ?? value.credentials?.apiKey?.trim()
+  const settings = value.settings
+
+  return {
+    id: value.id,
+    type: value.type,
+    baseURL: value.baseURL,
+    name: value.name,
+    status: value.status,
+    credentials: primaryApiKey ? { apiKeys: [primaryApiKey] } : null,
+    supportedModels: value.supportedModels ? [...value.supportedModels] : null,
+    manualModels: value.manualModels ? [...value.manualModels] : null,
+    tags: value.tags ? [...value.tags] : null,
+    defaultTestModel: value.defaultTestModel ?? null,
+    settings:
+      settings == null
+        ? null
+        : {
+            extraModelPrefix: settings.extraModelPrefix ?? null,
+            modelMappings:
+              settings.modelMappings?.map(({ from, to }) => ({ from, to })) ??
+              null,
+            autoTrimedModelPrefixes:
+              settings.autoTrimedModelPrefixes == null
+                ? null
+                : [...settings.autoTrimedModelPrefixes],
+            hideOriginalModels: settings.hideOriginalModels ?? null,
+            hideMappedModels: settings.hideMappedModels ?? null,
+            lowercaseModelId: settings.lowercaseModelId ?? null,
+            transformOptions:
+              settings.transformOptions == null
+                ? null
+                : {
+                    forceArrayInstructions:
+                      settings.transformOptions.forceArrayInstructions ?? null,
+                    forceArrayInputs:
+                      settings.transformOptions.forceArrayInputs ?? null,
+                    replaceDeveloperRoleWithSystem:
+                      settings.transformOptions
+                        .replaceDeveloperRoleWithSystem ?? null,
+                    reasoningEffortMapping:
+                      settings.transformOptions.reasoningEffortMapping?.map(
+                        ({ from, to }) => ({ from, to }),
+                      ) ?? null,
+                  },
+            passThroughUserAgent: settings.passThroughUserAgent ?? null,
+            passThroughBody: settings.passThroughBody ?? null,
+            rateLimit:
+              settings.rateLimit == null
+                ? null
+                : {
+                    rpm: settings.rateLimit.rpm ?? null,
+                    tpm: settings.rateLimit.tpm ?? null,
+                    maxConcurrent: settings.rateLimit.maxConcurrent ?? null,
+                    queueSize: settings.rateLimit.queueSize ?? null,
+                    queueTimeoutMs: settings.rateLimit.queueTimeoutMs ?? null,
+                  },
+            retryableStatusCodes:
+              settings.retryableStatusCodes == null
+                ? null
+                : [...settings.retryableStatusCodes],
+            retryableErrorPatterns:
+              settings.retryableErrorPatterns?.map(({ pattern, regex }) => ({
+                pattern,
+                regex: regex ?? null,
+              })) ?? null,
+          },
+    createdAt: value.createdAt ?? null,
+    updatedAt: value.updatedAt ?? null,
+    orderingWeight: value.orderingWeight ?? null,
+    errorMessage: value.errorMessage ?? null,
+    remark: value.remark ?? null,
+  }
+}
+
+const toLegacyAxonHubChannel = (value: unknown): AxonHubChannel | null => {
+  if (!isLegacyAxonHubChannel(value)) return null
+
+  return sanitizeLegacyAxonHubChannel(value)
+}
 
 const toSafeAxonHubChannelSummary = (value: unknown): AxonHubChannel | null => {
   if (!isAxonHubChannelCore(value)) return null
@@ -1013,7 +1214,10 @@ export async function graphqlRequest<T>(
 /**
  * Convert an AxonHub GraphQL channel into the managed-site channel row shape.
  */
-export function axonHubChannelToManagedSite(channel: AxonHubChannel) {
+export function axonHubChannelToManagedSite(
+  authoritativeChannel: AxonHubChannel,
+) {
+  const channel = sanitizeLegacyAxonHubChannel(authoritativeChannel)
   const models = normalizeList([
     ...(channel.supportedModels ?? []),
     ...(channel.manualModels ?? []),
@@ -1203,6 +1407,76 @@ export async function getAxonHubChannel(
   return data.node
 }
 
+const getLegacyAxonHubChannel = async (
+  config: AxonHubConfig,
+  id: string,
+  options?: Pick<RequestInit, "signal">,
+): Promise<AxonHubChannel> => {
+  const data = await graphqlRequest<unknown>(
+    config,
+    GET_AXON_HUB_LEGACY_CHANNEL,
+    { id },
+    options,
+  )
+
+  if (!isRecord(data) || !("node" in data)) {
+    throw new AxonHubRequestError("protocol", "not-dispatched")
+  }
+  if (data.node === null) {
+    throw new AxonHubRequestError("not-found", "not-dispatched")
+  }
+
+  const channel = toLegacyAxonHubChannel(data.node)
+  if (!channel || channel.id !== id) {
+    throw new AxonHubRequestError("protocol", "not-dispatched")
+  }
+  return channel
+}
+
+const hydrateLegacyAxonHubChannels = async (
+  config: AxonHubConfig,
+  channels: readonly AxonHubChannel[],
+  options?: Pick<RequestInit, "signal">,
+): Promise<ManagedSiteChannelListData["items"]> => {
+  if (channels.length === 0) return []
+
+  const items = new Array<ManagedSiteChannelListData["items"][number]>(
+    channels.length,
+  )
+  let nextIndex = 0
+  let stopped = false
+
+  const worker = async () => {
+    while (!stopped) {
+      throwIfAborted(options?.signal)
+      const index = nextIndex
+      if (index >= channels.length) return
+      nextIndex += 1
+
+      try {
+        const channel = channels[index]
+        if (!channel) return
+        items[index] = axonHubChannelToManagedSite(
+          await getLegacyAxonHubChannel(config, channel.id, options),
+        )
+      } catch (error) {
+        stopped = true
+        throw error
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from(
+      {
+        length: Math.min(LEGACY_CHANNEL_DETAIL_CONCURRENCY, channels.length),
+      },
+      worker,
+    ),
+  )
+  return items
+}
+
 const listSafeAxonHubChannels = async (
   config: AxonHubConfig,
   options?: Pick<RequestInit, "signal">,
@@ -1269,12 +1543,10 @@ export async function listChannels(
   options?: Pick<RequestInit, "signal">,
 ): Promise<ManagedSiteChannelListData> {
   const safeChannels = await listSafeAxonHubChannels(config, options)
-  const items = await Promise.all(
-    safeChannels.items.map(async (channel) =>
-      axonHubChannelToManagedSite(
-        await getAxonHubChannel(config, channel.id, options),
-      ),
-    ),
+  const items = await hydrateLegacyAxonHubChannels(
+    config,
+    safeChannels.items,
+    options,
   )
 
   return {

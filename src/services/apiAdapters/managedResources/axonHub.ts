@@ -240,6 +240,7 @@ const mutationFailure = <T>(
     failure.dispatch === "after" &&
     (failure.code === "unavailable" ||
       failure.code === "aborted" ||
+      failure.code === "upstream_rejected" ||
       failure.code === "unexpected")
   return acknowledgementMayBeLost
     ? { certainty: "possibly-applied" }
@@ -650,12 +651,7 @@ const validateValues = (
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
     })
   }
-  if (context.create && !baseURL) {
-    issues.push({
-      fieldId: "baseURL",
-      code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
-    })
-  } else if (baseURL && !isHttpUrl(baseURL)) {
+  if (baseURL && !isHttpUrl(baseURL)) {
     issues.push({
       fieldId: "baseURL",
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
@@ -774,7 +770,6 @@ const createFieldDescriptors = (
     {
       fieldId: "baseURL",
       type: MANAGED_RESOURCE_FIELD_TYPES.Text,
-      required: !detail,
     },
     {
       fieldId: "status",
@@ -872,6 +867,7 @@ const editInitialValues = (
 const buildCreateCommand = (
   values: EditableResourceProjection,
 ): AxonHubCreateCommand => {
+  const baseURL = readString(values, "baseURL")
   const secret = readSecretIntent(values)
   const credential = secret.kind === "replace" ? secret.value.trim() : ""
   const extraModelPrefix = readString(values, "extraModelPrefix")
@@ -883,7 +879,7 @@ const buildCreateCommand = (
     input: {
       type: readString(values, "type"),
       name: readString(values, "name"),
-      baseURL: readString(values, "baseURL"),
+      ...(baseURL ? { baseURL } : {}),
       credentials: { apiKeys: [credential] },
       supportedModels: normalizeList(readList(values, "supportedModels")),
       manualModels: normalizeList(readList(values, "manualModels")),

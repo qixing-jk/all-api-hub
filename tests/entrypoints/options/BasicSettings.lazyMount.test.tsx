@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import BasicSettings from "~/features/BasicSettings/BasicSettings"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -337,6 +338,21 @@ describe("BasicSettings tab mounting", () => {
 
     expect(
       await screen.findByTestId("checkin-redeem-tab-content"),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
+  })
+
+  it("routes the AxonHub settings anchor to the managed-site tab", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/?anchor=${SETTINGS_ANCHORS.AXON_HUB}#basic`,
+    )
+
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
+
+    expect(
+      await screen.findByTestId("managed-site-tab-content"),
     ).toBeInTheDocument()
     expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
   })

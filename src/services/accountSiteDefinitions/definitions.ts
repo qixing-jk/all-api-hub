@@ -1,3 +1,4 @@
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES,
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
@@ -401,7 +402,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
       ],
       settingsTarget: {
         ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
-        anchor: "axonhub",
+        anchor: SETTINGS_ANCHORS.AXON_HUB,
       },
     },
   },

@@ -1,3 +1,4 @@
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
@@ -10,7 +11,7 @@ export const managedSiteAxonHubSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:axonhub",
     "managedSite",
-    "axonhub",
+    SETTINGS_ANCHORS.AXON_HUB,
     "settings:axonHub.title",
     345,
     {

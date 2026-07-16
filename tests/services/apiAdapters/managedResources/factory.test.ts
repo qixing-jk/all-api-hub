@@ -343,6 +343,21 @@ describe("defineNativeResourceKind", () => {
     expect(definition.get).not.toHaveBeenCalled()
   })
 
+  it("maps failures safely when a native failure mapper throws", async () => {
+    const { registration } = createHarness({
+      openConfig: vi.fn(async () => {
+        throw new Error("native details")
+      }),
+      mapFailure: vi.fn(() => {
+        throw new Error("mapper details")
+      }),
+    })
+
+    const error = await captureManagedError(registration.open())
+
+    expect(error.failure.code).toBe(MANAGED_RESOURCE_FAILURE_CODES.Unexpected)
+  })
+
   it("rejects get details whose native identity differs from the requested ref", async () => {
     const { definition, registration } = createHarness({
       get: vi.fn(async () => OTHER_DETAIL),

@@ -286,7 +286,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       ],
       [
         "upstream-rejected",
-        "dispatched",
+        "not-dispatched",
         MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
       ],
       ["not-found", "dispatched", MANAGED_RESOURCE_FAILURE_CODES.NotFound],
@@ -540,6 +540,7 @@ describe("AxonHub native managed-resource Adapter", () => {
         buildListChannel({ id: "archived", status: "archived" }),
         buildListChannel({ id: "disabled", status: "disabled" }),
         buildListChannel({ id: "auto", status: "auto-disabled" }),
+        buildListChannel({ id: "future", status: "future-status" }),
       ],
     })
     const workspace = await openWorkspace()
@@ -549,6 +550,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       "archived",
       "disabled",
       "auto-disabled",
+      "unknown",
     ])
   })
 
@@ -693,6 +695,23 @@ describe("AxonHub native managed-resource Adapter", () => {
     }
 
     expect(editor.validate(validBase)).toEqual({ valid: true })
+    expect(
+      editor.validate({
+        ...validBase,
+        name: "",
+        type: "",
+        baseURL: "not-a-url",
+        key: { kind: "clear" },
+      }),
+    ).toEqual({
+      valid: false,
+      issues: expect.arrayContaining([
+        { fieldId: "name", code: "required" },
+        { fieldId: "type", code: "required" },
+        { fieldId: "baseURL", code: "invalid_value" },
+        { fieldId: "key", code: "required" },
+      ]),
+    })
     expect(editor.validate({ ...validBase, orderingWeight: 1.5 })).toEqual({
       valid: false,
       issues: expect.arrayContaining([
@@ -761,6 +780,35 @@ describe("AxonHub native managed-resource Adapter", () => {
     ).toEqual({ valid: true })
   })
 
+  it("keeps baseURL optional for native creation", async () => {
+    const created = buildDetailChannel({
+      id: "created-without-base-url",
+      baseURL: null,
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+    })
+    mocks.createChannel.mockResolvedValue(created)
+    const workspace = await openWorkspace()
+    const editor = await workspace.openCreateEditor()
+    const values: EditableResourceProjection = {
+      ...editor.initialValues,
+      name: "Created channel",
+      baseURL: "   ",
+      key: { kind: "replace", value: "replacement-secret" },
+      supportedModels: ["model-a"],
+      defaultTestModel: "model-a",
+    }
+
+    expect(
+      editor.fields.find((field) => field.fieldId === "baseURL"),
+    ).not.toMatchObject({ required: true })
+    expect(editor.validate(values)).toEqual({ valid: true })
+
+    await editor.submit(values)
+
+    expect(mocks.createChannel).toHaveBeenCalledOnce()
+    expect(mocks.createChannel.mock.calls[0]?.[1]).not.toHaveProperty("baseURL")
+  })
+
   it("maps create plus failed status follow-up to mutation_state_uncertain without replay", async () => {
     const created = buildDetailChannel({
       id: "created-id",
@@ -812,6 +860,54 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(mocks.updateChannel).toHaveBeenCalledOnce()
   })
 
+  it("treats a generic dispatched GraphQL rejection as possibly applied", async () => {
+    const detail = buildDetailChannel()
+    mocks.getChannel.mockResolvedValue(detail)
+    mocks.updateChannel.mockRejectedValue(
+      new mocks.RequestError("upstream-rejected", "dispatched"),
+    )
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(detail))
+
+    await expectFailureCode(
+      editor.submit({ ...editor.initialValues, name: "Uncertain rename" }),
+      MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+    )
+    await expectFailureCode(
+      editor.submit({ ...editor.initialValues, name: "Uncertain rename" }),
+      MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+    )
+    expect(mocks.updateChannel).toHaveBeenCalledOnce()
+  })
+
+  it("normalizes native delete outcomes without unsafe replay", async () => {
+    const workspace = await openWorkspace()
+    const ref = refFor()
+
+    mocks.deleteChannel.mockResolvedValueOnce(true)
+    await expect(workspace.delete(ref)).resolves.toBeUndefined()
+
+    mocks.deleteChannel.mockResolvedValueOnce(false)
+    await expectFailureCode(
+      workspace.delete(ref),
+      MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
+    )
+
+    mocks.deleteChannel.mockRejectedValueOnce(
+      new mocks.RequestError("not-found", "dispatched"),
+    )
+    await expect(workspace.delete(ref)).resolves.toBeUndefined()
+
+    mocks.deleteChannel.mockRejectedValueOnce(
+      new mocks.RequestError("unavailable", "dispatched"),
+    )
+    await expectFailureCode(
+      workspace.delete(ref),
+      MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+    )
+    expect(mocks.deleteChannel).toHaveBeenCalledTimes(4)
+  })
+
   it("registers AxonHub separately from legacy SiteTypeCapabilities", () => {
     const registration = getManagedResourceRegistration(
       SITE_TYPES.AXON_HUB,
@@ -826,6 +922,12 @@ describe("AxonHub native managed-resource Adapter", () => {
     })
     expect(capabilities.managedSites).not.toHaveProperty("nativeResources")
     expect(capabilities.managedSites).not.toHaveProperty("resourceRegistration")
+    expect(
+      getManagedResourceRegistration(
+        SITE_TYPES.NEW_API,
+        MANAGED_RESOURCE_KINDS.Channel,
+      ),
+    ).toBeNull()
   })
 
   it("does not treat registration presence as native rollout mode", () => {

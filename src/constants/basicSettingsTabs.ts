@@ -63,6 +63,7 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     "new-api-model-sync": "managedSite",
     [SETTINGS_ANCHORS.MANAGED_SITE_MODEL_SYNC]: "managedSite",
     [SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR]: "managedSite",
+    [SETTINGS_ANCHORS.AXON_HUB]: "managedSite",
     "cli-proxy": "cliProxy",
     "claude-code-router": "claudeCodeRouter",
     "dangerous-zone": "general",

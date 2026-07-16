@@ -10,8 +10,8 @@
 
 ## Required inputs and execution order
 
-Implement this plan only after both preceding plans are merged or present in
-the working tree:
+Implement this plan only after both preceding plans are merged or committed at
+the current `HEAD`:
 
 1. `docs/superpowers/plans/2026-07-16-managed-site-resource-native-substrate.md`
 2. `docs/superpowers/plans/2026-07-16-axonhub-canonical-migration-capability.md`
@@ -26,10 +26,27 @@ Before editing, run:
 ```powershell
 git status --short
 git log -3 --oneline
+$stagedPaths = @(git diff --cached --name-only)
+if ($stagedPaths.Count -gt 0) {
+  throw "Commit or otherwise reconcile pre-existing staged work before PR3"
+}
+$pr3BaseSha = git rev-parse HEAD
+if (-not $pr3BaseSha) { throw "PR3 base SHA is required" }
 ```
 
 Expected: understand and preserve all pre-existing index and worktree state.
 Confirm that the native registry and canonical migration entry points compile.
+If either prerequisite exists only as uncommitted work, stop and commit it in
+its owning slice before recording `$pr3BaseSha`; the base SHA must identify the
+immutable prerequisite tip, not merely a worktree that happens to contain it.
+Retain the recorded full `$pr3BaseSha` in the execution handoff and restore that
+exact value when resuming in another shell; do not rediscover it by commit
+subject.
+
+The empty-index check is a commit-safety invariant, not permission to unstage
+user work. Re-run `git diff --cached --quiet` immediately before every task's
+`git add`; if it reports staged content, stop and reconcile ownership instead
+of committing it with the task.
 
 ## Scope controls
 
@@ -127,10 +144,13 @@ introduced by PR 1. The AxonHub assertion is:
 
 ```ts
 expect(openSettingsTab).toHaveBeenCalledWith("managedSite", {
-  anchor: "axonhub",
+  anchor: SETTINGS_ANCHORS.AXON_HUB,
   preserveHistory: true,
 })
 ```
+
+Import `SETTINGS_ANCHORS` from the shared settings-anchor constants; do not
+duplicate the AxonHub anchor literal in the test or implementation.
 
 - [ ] **Step 3: Run both tests and verify they fail**
 
@@ -264,9 +284,11 @@ Expected: FAIL because both hooks are missing.
 
 Own only Workspace opening, query/cursor, rows, selection, abort generations,
 and load/retry/refresh state. Preserve current route precedence by normalizing
-`routeParams.channelId?.trim() ?? routeParams.search?.trim()` exactly once when
-either parameter changes. Treat that term as Workspace resource-wide search,
-which the Axon Adapter matches against opaque id and safe display facts. A user
+`routeParams.channelId?.trim() || routeParams.search?.trim() || undefined`
+exactly once when either parameter changes. Add a controller regression test
+that proves a whitespace-only `channelId` falls back to a valid search term.
+Treat that term as Workspace resource-wide search, which the Axon Adapter
+matches against opaque id and safe display facts. A user
 search updates the existing options hash with `navigateWithinOptionsPage`,
 sets only `search`, and thereby clears `channelId`. If search is unsupported,
 omit the control and query rather than locally filtering a loaded page.
@@ -460,12 +482,18 @@ Add behavior tests for:
 - `refreshes instead of replaying after an uncertain mutation`
 - `does not expose resource ids scope keys credentials or native detail`
 - `records only controlled analytics dimensions`
+- `reuses the existing action ids surfaces and Options entrypoint`
+- `starts and completes each analytics action exactly once`
 - `maps every ResourceFailure code to controlled copy without Error messages`
 - `treats aborted and superseded operations as silent cancellation`
 - `retains editor values for upstream_rejected but closes uncertain and not-found sessions`
 
 The page test should inspect analytics payloads and prove that names, URLs,
 models, tags, ids, refs, field values, and error messages are absent.
+For every retained action, assert the expected action id, toolbar or row-action
+surface, and Options entrypoint. Assert one `startProductAnalyticsAction` call
+and one returned tracker `complete` call for each terminal path, including
+failures and mixed migration outcomes.
 Cover `configuration_required`, `invalid_configuration`,
 `authentication_failed`, `permission_denied`, `validation_failed`, `not_found`,
 `mutation_state_uncertain`, `unavailable`, `upstream_rejected`, `aborted`, and
@@ -555,15 +583,31 @@ Reuse these existing analytics identifiers rather than adding new events:
   migration, open single/selected/filtered migration, and migrate managed-site
   channels.
 
-Completion payloads may include controlled site type, result, item count, and
-failure category only. They must omit all resource data and user-entered data.
-The button/row-action analytics integration emits the single start event. The
-page creates and passes the action context; the controller's terminal outcome
+The completion `result` argument must be a `ProductAnalyticsResult`. Its exact
+optional payload allowlist is `managedSiteType`, `itemCount`, `selectedCount`,
+`successCount`, `failureCount`, `errorCategory`, `failureReason`,
+`sourceManagedSiteType`, `targetManagedSiteType`, `readyCount`, `blockedCount`,
+`warningCount`, and `failureStage` only. The source/target site types and
+ready/blocked/warning counts are migration-only controlled dimensions retained
+from the legacy migration flow; `failureStage` is included only for a
+controlled migration failure.
+`durationMs` remains infrastructure-generated by `startProductAnalyticsAction`
+and is intentionally outside this caller-owned insights allowlist. Preserve it
+by completing through the returned action tracker instead of calling the raw
+completion event helper; do not derive or supply duration from resource data.
+`errorCategory` must be a `ProductAnalyticsErrorCategory`; `failureReason` must
+be a `ProductAnalyticsFailureReason` selected from
+`PRODUCT_ANALYTICS_FAILURE_REASONS`; `sourceManagedSiteType` and
+`targetManagedSiteType` must be `ProductAnalyticsManagedSiteType` values; and
+`failureStage` must be a `ProductAnalyticsFailureStage`. None may contain a raw
+error, backend message, resource value, or user-entered value. The
+button/row-action analytics integration emits the single start event. The page
+creates and passes the action context; the controller's terminal outcome
 callback completes it exactly once. Do not start or complete again inside both
-page and controller. Allow only `managedSiteType`, `itemCount`, `selectedCount`,
-`successCount`, `failureCount`, `errorCategory`, and `failureReason` controlled
-dimensions. Map uncertain mutation to the existing controlled failed/partial
-result category without resource data.
+page and controller. Map an uncertain single mutation to controlled `Failure`
+and `Unknown` values. Use the controlled `PartialSuccess` failure reason only
+when aggregate counts prove a mixed outcome. Tests must assert this exact key
+set and enum membership and must reject resource data or user-entered data.
 
 - [ ] **Step 7: Run related UI tests**
 
@@ -709,29 +753,37 @@ the canonical preview/execute entry points.
 Inspect the entire PR3 range, not only the last uncommitted slice:
 
 ```powershell
-$baseSha = git log -1 --format=%H --grep="^refactor(axonhub): route migration through native capabilities$"
-git diff --check $baseSha
-git diff --stat $baseSha
-git diff --name-status $baseSha
+git cat-file -e "$pr3BaseSha^{commit}"
+git diff --check $pr3BaseSha
+git diff --stat $pr3BaseSha
+git diff --name-status $pr3BaseSha
 ```
 
-Expected: `$baseSha` is non-empty and the diff contains only files named by
+Expected: `$pr3BaseSha` resolves to the exact prerequisite tip recorded before
+Task 1 and the diff contains only files named by
 this plan.
 
 If cleanup would exceed this touched surface, record it as follow-up rather
 than expanding the cutover.
 
-- [ ] **Step 7: Stage only task files and run the commit gate**
+- [ ] **Step 7: Stage only the remaining Task 6 files and run the commit gate**
+
+Tasks 1 through 4 must already be committed by their own explicit commit steps,
+and Task 5 deliberately leaves its two E2E files for this final static-cutover
+commit. Confirm the index is empty before staging; if an earlier task file is
+still uncommitted, stop and complete that task's commit instead of silently
+folding it into the cutover commit.
 
 ```powershell
 git status --short
 git diff --check
-git add src/features/ManagedSiteResources src/entrypoints/options/pages/ManagedSiteChannels/index.tsx src/components/ManagedSiteConfigRequiredState.tsx src/services/accountSiteDefinitions/definitions.ts src/locales/zh-CN/managedSiteResources.json src/locales/zh-TW/managedSiteResources.json src/locales/en/managedSiteResources.json src/locales/ja/managedSiteResources.json src/locales/es-419/managedSiteResources.json src/locales/vi/managedSiteResources.json tests/features/ManagedSiteResources tests/test-utils/managedResourceWorkspace.ts tests/components/ManagedSiteConfigRequiredState.test.tsx tests/services/accountSiteDefinitions/registry.test.ts e2e/managedSiteAxonHubNative.spec.ts e2e/scenarios/managedSiteChannels.ts
+git add src/services/accountSiteDefinitions/definitions.ts tests/services/accountSiteDefinitions/registry.test.ts e2e/managedSiteAxonHubNative.spec.ts e2e/scenarios/managedSiteChannels.ts
 pnpm run validate:staged
 ```
 
-Expected: PASS. Inspect `git diff --cached --stat` and
-`git diff --cached --check`; unrelated files must not be staged.
+Expected: PASS. These are the complete four files owned by the Task 6 commit.
+Inspect `git diff --cached --stat` and `git diff --cached --check`; unrelated
+files and files owned by prior task commits must not be staged.
 
 - [ ] **Step 8: Commit the static cutover**
 
@@ -744,9 +796,9 @@ git commit -m "feat(axonhub): switch channels to native workspace"
 ```powershell
 git status --short
 git log -1 --oneline
-$baseSha = git log -1 --format=%H --grep="^refactor(axonhub): route migration through native capabilities$"
-git diff --check "$baseSha..HEAD"
-git diff --stat "$baseSha..HEAD"
+git cat-file -e "$pr3BaseSha^{commit}"
+git diff --check "$pr3BaseSha..HEAD"
+git diff --stat "$pr3BaseSha..HEAD"
 ```
 
 Expected: the task-scoped work is committed and unrelated user state, if any,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   getAccountSiteApiRouter,
   ACCOUNT_SITE_TYPE_VALUES as LEGACY_ACCOUNT_SITE_TYPE_VALUES,
@@ -291,7 +292,10 @@ describe("account site definition registry", () => {
     ).toMatchObject({
       mode: "legacy-channel",
       primaryKind: "channel",
-      settingsTarget: { tabId: "managedSite", anchor: "axonhub" },
+      settingsTarget: {
+        tabId: "managedSite",
+        anchor: SETTINGS_ANCHORS.AXON_HUB,
+      },
       actions: ["create", "delete-selected", "migrate"],
     })
   })
@@ -306,7 +310,10 @@ describe("account site definition registry", () => {
     expect(
       getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource
         ?.settingsTarget,
-    ).toEqual({ tabId: "managedSite", anchor: "axonhub" })
+    ).toEqual({
+      tabId: "managedSite",
+      anchor: SETTINGS_ANCHORS.AXON_HUB,
+    })
     expect(
       getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource
         ?.detailFieldIds[0],
