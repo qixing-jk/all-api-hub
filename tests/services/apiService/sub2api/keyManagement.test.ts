@@ -778,6 +778,7 @@ describe("apiService sub2api key management service", () => {
     expect(tokens).toHaveLength(1)
     expect(resyncSub2ApiAuthTokenMock).toHaveBeenCalledWith(
       "https://sub2.example.com",
+      undefined,
     )
     expect(persistAuthUpdateMock).toHaveBeenCalledWith("acc-1", {
       accessToken: "resynced-jwt",
