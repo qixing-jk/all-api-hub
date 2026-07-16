@@ -113,6 +113,7 @@ import {
   type SiteAccount,
 } from "~/types"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { deepOverride } from "~/utils"
 import { isExtensionPopup } from "~/utils/browser"
 import {
@@ -122,6 +123,7 @@ import {
   onTabUpdated,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showUpdateToast, showWarningToast } from "~/utils/core/toastHelpers"
@@ -198,10 +200,11 @@ const logger = createLogger("AccountDialogHook")
  */
 function schedulePostSaveAccountRefresh(
   accountId: string,
+  tempWindowRequestSource: TempWindowRequestSource,
   onPostSaveAccountRefresh?: (accountIds: string[]) => Promise<void>,
 ) {
   void accountStorage
-    .refreshAccount(accountId, true)
+    .refreshAccount(accountId, true, { tempWindowRequestSource })
     .then(async (result) => {
       if (!result?.refreshed) {
         return
@@ -1542,6 +1545,7 @@ export function useAccountDialog({
       return
     }
 
+    const tempWindowRequestSource = getCurrentTempWindowRequestSource()
     setIsImportingSub2apiSession(true)
     try {
       const baseUrl = url.trim()
@@ -1563,6 +1567,7 @@ export function useAccountDialog({
         ...(currentTab ? { currentTab } : {}),
         useExistingTabs: true,
         useTempWindow: true,
+        tempWindowRequestSource,
         requestIdPrefix: "account-dialog-sub2api-import",
         isUsableSession: hasUsableSub2apiRefreshToken,
         onError: (error, context) => {
@@ -1880,6 +1885,7 @@ export function useAccountDialog({
     skipSub2ApiKeyPrompt?: boolean
     skipAutoProvisionKeyOnAccountAdd?: boolean
   }) => {
+    const tempWindowRequestSource = getCurrentTempWindowRequestSource()
     const analyticsAction = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
       actionId:
@@ -1975,7 +1981,11 @@ export function useAccountDialog({
           : null
 
       if (savedAccountId) {
-        schedulePostSaveAccountRefresh(savedAccountId, onPostSaveAccountRefresh)
+        schedulePostSaveAccountRefresh(
+          savedAccountId,
+          tempWindowRequestSource,
+          onPostSaveAccountRefresh,
+        )
       }
 
       const feedbackMessage =
@@ -2011,9 +2021,12 @@ export function useAccountDialog({
                   )
 
                   try {
+                    const tempWindowRequestSource =
+                      getCurrentTempWindowRequestSource()
                     const refreshResult = await accountStorage.refreshAccount(
                       warningAccountId,
                       true,
+                      { tempWindowRequestSource },
                     )
 
                     if (!refreshResult?.refreshed) {

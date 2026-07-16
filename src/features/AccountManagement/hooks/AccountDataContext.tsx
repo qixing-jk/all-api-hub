@@ -66,6 +66,7 @@ import {
   onTabRemoved,
   onTabUpdated,
 } from "~/utils/browser/browserApi"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -706,9 +707,12 @@ export const AccountDataProvider = ({
 
   const handleRefresh = useCallback(
     async (force: boolean = false) => {
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       setIsRefreshing(true)
       try {
-        const refreshResult = await accountStorage.refreshAllAccounts(force)
+        const refreshResult = await accountStorage.refreshAllAccounts(force, {
+          tempWindowRequestSource,
+        })
         await loadAccountData()
         if (refreshResult.latestSyncTime > 0) {
           setLastUpdateTime(new Date(refreshResult.latestSyncTime))
@@ -727,10 +731,13 @@ export const AccountDataProvider = ({
 
   const handleRefreshDisabledAccounts = useCallback(
     async (force: boolean = false) => {
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       setIsRefreshingDisabledAccounts(true)
       try {
-        const refreshResult =
-          await accountStorage.refreshDisabledAccounts(force)
+        const refreshResult = await accountStorage.refreshDisabledAccounts(
+          force,
+          { tempWindowRequestSource },
+        )
         await loadAccountData()
         if (refreshResult.latestSyncTime > 0) {
           setLastUpdateTime(new Date(refreshResult.latestSyncTime))

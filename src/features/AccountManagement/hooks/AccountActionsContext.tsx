@@ -26,6 +26,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { DisplaySiteData } from "~/types"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -91,6 +92,7 @@ export const AccountActionsProvider = ({
       if (refreshingAccountId) return
       if (account.disabled === true) return
 
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       setRefreshingAccountId(account.id)
       const tracker = startProductAnalyticsAction({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -102,7 +104,9 @@ export const AccountActionsProvider = ({
       let analyticsCompleted = false
 
       const refreshPromise = async () => {
-        const result = await accountStorage.refreshAccount(account.id, force)
+        const result = await accountStorage.refreshAccount(account.id, force, {
+          tempWindowRequestSource,
+        })
         if (result) {
           await loadAccountData()
           return result

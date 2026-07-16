@@ -1,9 +1,12 @@
+import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_KEYS,
@@ -19,6 +22,8 @@ import {
   type SiteAccount,
   type SiteBookmark,
 } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { server } from "~~/tests/msw/server"
 
 const storageData = new Map<string, any>()
 
@@ -41,6 +46,7 @@ const {
   markAccountDisabledInStatusMock,
   markAccountsDisabledInStatusMock,
   pruneStatusForAccountIdsMock,
+  mockResolveAccountBrowserSession,
 } = vi.hoisted(() => ({
   mockFetchSupportCheckIn: vi.fn(),
   mockGetAccountSiteType: vi.fn(),
@@ -49,6 +55,7 @@ const {
   markAccountDisabledInStatusMock: vi.fn(),
   markAccountsDisabledInStatusMock: vi.fn(),
   pruneStatusForAccountIdsMock: vi.fn(),
+  mockResolveAccountBrowserSession: vi.fn(),
 }))
 
 vi.mock("@plasmohq/storage", () => {
@@ -77,6 +84,15 @@ vi.mock("@plasmohq/storage", () => {
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: mockgetSiteTypeCapabilities,
 }))
+
+vi.mock("~/services/accountBrowserSession", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/accountBrowserSession")>()
+  return {
+    ...actual,
+    resolveAccountBrowserSession: mockResolveAccountBrowserSession,
+  }
+})
 
 vi.mock("~/services/siteDetection/detectSiteType", () => ({
   getAccountSiteType: mockGetAccountSiteType,
@@ -176,6 +192,8 @@ describe("accountStorage core behaviors", () => {
     mockGetAccountSiteType.mockReset()
     mockgetSiteTypeCapabilities.mockReset()
     mockRefreshAccountData.mockReset()
+    mockResolveAccountBrowserSession.mockReset()
+    mockResolveAccountBrowserSession.mockResolvedValue(null)
     markAccountDisabledInStatusMock.mockReset()
     markAccountsDisabledInStatusMock.mockReset()
     pruneStatusForAccountIdsMock.mockReset()
@@ -926,16 +944,21 @@ describe("accountStorage core behaviors", () => {
       .mockRejectedValueOnce(new Error("refresh exploded"))
 
     try {
-      const result = await accountStorage.refreshAllAccounts()
+      const result = await accountStorage.refreshAllAccounts(false, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
 
       expect(refreshAccountSpy).toHaveBeenNthCalledWith(1, "refresh-1", false, {
         includeTodayCashflow: false,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
       expect(refreshAccountSpy).toHaveBeenNthCalledWith(2, "refresh-2", false, {
         includeTodayCashflow: false,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
       expect(refreshAccountSpy).toHaveBeenNthCalledWith(3, "refresh-3", false, {
         includeTodayCashflow: false,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
       expect(result).toEqual({
         success: 2,
@@ -946,6 +969,84 @@ describe("accountStorage core behaviors", () => {
     } finally {
       refreshAccountSpy.mockRestore()
     }
+  })
+
+  it("carries a popup bulk-refresh source through VoAPI resync to the browser-session seam", async () => {
+    seedStorage([
+      createAccount({
+        id: "voapi-refresh",
+        site_type: SITE_TYPES.VO_API_V2,
+        site_url: "https://example.invalid",
+        account_info: {
+          id: "7",
+          username: "owner",
+          access_token: "expired-dashboard-token",
+          quota: 1_000_000,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+        },
+      }),
+    ])
+    mockgetSiteTypeCapabilities.mockReturnValue({
+      siteType: SITE_TYPES.VO_API_V2,
+      account: {
+        refresh: {
+          refreshAccount: refreshVoApiV2AccountData,
+        },
+      },
+    })
+    mockResolveAccountBrowserSession.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      siteType: SITE_TYPES.VO_API_V2,
+      siteTypeHint: SITE_TYPES.VO_API_V2,
+      userId: "8",
+      user: { username: "resynced-owner" },
+      accessToken: "resynced-dashboard-token",
+    })
+    server.use(
+      http.get("https://example.invalid/api/user/info", ({ request }) => {
+        if (
+          request.headers.get("authorization") === "expired-dashboard-token"
+        ) {
+          return HttpResponse.json({ code: 2, data: null, msg: "Auth expire" })
+        }
+        return HttpResponse.json({
+          code: 0,
+          data: {
+            id: 8,
+            username: "resynced-owner",
+            basicBalance: "2",
+            bindBalance: "0",
+          },
+        })
+      }),
+      http.get("https://example.invalid/api/dash/statistics", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { d: { requests: 1, usedBasicBalance: "0" } },
+        }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { todaySigned: false },
+        }),
+      ),
+    )
+
+    await accountStorage.refreshAllAccounts(true, {
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
+
+    expect(mockResolveAccountBrowserSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://example.invalid",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    )
   })
 
   it("refreshDisabledAccounts only probes disabled accounts and summarizes restored results", async () => {
@@ -972,18 +1073,22 @@ describe("accountStorage core behaviors", () => {
       } as any)
 
     try {
-      const result = await accountStorage.refreshDisabledAccounts(true)
+      const result = await accountStorage.refreshDisabledAccounts(true, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
 
       expect(refreshAccountSpy).toHaveBeenCalledTimes(2)
       expect(refreshAccountSpy).toHaveBeenNthCalledWith(1, "disabled-a", true, {
         includeTodayCashflow: true,
         allowDisabled: true,
         reEnableOnSuccess: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
       expect(refreshAccountSpy).toHaveBeenNthCalledWith(2, "disabled-c", true, {
         includeTodayCashflow: true,
         allowDisabled: true,
         reEnableOnSuccess: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
       expect(result).toEqual({
         processedCount: 2,
@@ -2008,6 +2113,33 @@ describe("accountStorage core behaviors", () => {
     expect(mockRefreshAccountData).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://pathful.example.com",
+      }),
+    )
+  })
+
+  it("refreshAccount preserves the temp window source across support detection and data refresh", async () => {
+    const account = createAccount({
+      id: "temp-window",
+      site_url: "https://refresh.example.invalid/dashboard",
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: { enableDetection: true },
+    })
+    seedStorage([account])
+
+    await accountStorage.refreshAccount("temp-window", true, {
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
+
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "temp-window",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    )
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "temp-window",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       }),
     )
   })

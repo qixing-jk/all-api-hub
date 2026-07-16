@@ -7,18 +7,21 @@ import { useAccountDialog } from "~/features/AccountManagement/components/Accoun
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AuthTypeEnum } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
   mockOpenWithAccount,
   mockOpenDefaultTokenQuickCreateDialogForAccount,
   mockResolveAccountBrowserSession,
+  mockGetCurrentTempWindowRequestSource,
   mockToastError,
   mockToastSuccess,
 } = vi.hoisted(() => ({
   mockOpenWithAccount: vi.fn(),
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
   mockResolveAccountBrowserSession: vi.fn(),
+  mockGetCurrentTempWindowRequestSource: vi.fn(),
   mockToastError: vi.fn(),
   mockToastSuccess: vi.fn(),
 }))
@@ -68,10 +71,25 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+vi.mock("~/utils/browser/tempWindowRequestSource", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/utils/browser/tempWindowRequestSource")
+    >()
+
+  return {
+    ...actual,
+    getCurrentTempWindowRequestSource: mockGetCurrentTempWindowRequestSource,
+  }
+})
+
 describe("useAccountDialog Sub2API constraints", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     mockResolveAccountBrowserSession.mockResolvedValue(null)
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
     await accountStorage.clearAllData()
     ;(globalThis.browser.tabs.sendMessage as any) = vi.fn()
   })
@@ -297,6 +315,41 @@ describe("useAccountDialog Sub2API constraints", () => {
     expect(result.current.state.userId).toBe("42")
     expect(result.current.state.username).toBe("tab-user")
     expect(mockToastSuccess).toHaveBeenCalled()
+  })
+
+  it("passes the initiating Popup source to the Sub2API browser-session import", async () => {
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportSub2apiSession()
+    })
+
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
+    expect(mockResolveAccountBrowserSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    )
   })
 
   it("passes the current private tab context to the Sub2API browser-session import", async () => {

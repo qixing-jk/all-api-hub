@@ -33,6 +33,7 @@ import {
   type SiteBookmark,
 } from "~/types"
 import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
 import { getErrorMessage } from "~/utils/core/error"
@@ -79,7 +80,13 @@ type RefreshAccountOptions = {
   balanceHistoryCaptureSource?: DailyBalanceHistoryCaptureSource
   allowDisabled?: boolean
   reEnableOnSuccess?: boolean
+  tempWindowRequestSource?: TempWindowRequestSource
 }
+
+type RefreshAccountsOptions = Pick<
+  RefreshAccountOptions,
+  "tempWindowRequestSource"
+>
 
 type UpdateAccountOptions = {
   userTimestampMode: AccountUpdateUserTimestampMode
@@ -1084,6 +1091,7 @@ class AccountStorageService {
       }
       const accountRefresh = getSiteTypeCapabilities(account.site_type).account
         ?.refresh
+      const tempWindowRequestSource = options?.tempWindowRequestSource
 
       // Refresh check-in support status together with account refresh.
       const currentCheckIn = account.checkIn
@@ -1096,6 +1104,7 @@ class AccountStorageService {
             accountId: account.id,
             cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
             auth,
+            ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
           })
 
           if (typeof support === "boolean") {
@@ -1125,6 +1134,7 @@ class AccountStorageService {
             exchangeRate: account.exchange_rate,
             auth,
             includeTodayCashflow,
+            ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
           })
         : createMissingAccountRefreshResult(account.site_type)
 
@@ -1313,10 +1323,14 @@ class AccountStorageService {
   /**
    * Refresh all accounts concurrently; summarizes results.
    */
-  async refreshAllAccounts(force: boolean = false) {
+  async refreshAllAccounts(
+    force: boolean = false,
+    options?: RefreshAccountsOptions,
+  ) {
     const accounts = await this.getEnabledAccounts()
     const includeTodayCashflow =
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
+    const tempWindowRequestSource = options?.tempWindowRequestSource
     let successCount = 0
     let failedCount = 0
     let refreshedCount = 0
@@ -1325,7 +1339,10 @@ class AccountStorageService {
     // 使用 Promise.allSettled 来并发刷新，避免单个失败影响其他账号
     const results = await Promise.allSettled(
       accounts.map((account) =>
-        this.refreshAccount(account.id, force, { includeTodayCashflow }),
+        this.refreshAccount(account.id, force, {
+          includeTodayCashflow,
+          ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+        }),
       ),
     )
 
@@ -1361,12 +1378,16 @@ class AccountStorageService {
    * Re-probe disabled accounts and automatically re-enable the ones whose
    * account data can be refreshed successfully.
    */
-  async refreshDisabledAccounts(force: boolean = false) {
+  async refreshDisabledAccounts(
+    force: boolean = false,
+    options?: RefreshAccountsOptions,
+  ) {
     const accounts = (await this.getAllAccounts()).filter((account) =>
       AccountStorageService.isAccountDisabled(account),
     )
     const includeTodayCashflow =
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
+    const tempWindowRequestSource = options?.tempWindowRequestSource
     let processedCount = 0
     let failedCount = 0
     let reEnabledCount = 0
@@ -1378,6 +1399,7 @@ class AccountStorageService {
           includeTodayCashflow,
           allowDisabled: true,
           reEnableOnSuccess: true,
+          ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
         }),
       ),
     )
