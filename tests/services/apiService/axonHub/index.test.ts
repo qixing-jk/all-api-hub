@@ -326,6 +326,7 @@ describe("AxonHub API service", () => {
 
   it("accepts a complete pinned authoritative channel output", async () => {
     const id = "complete-pinned-output"
+    const settings = buildPinnedChannelSettings()
     const completeChannel = buildNativeChannelDetail(id, {
       policies: { stream: null },
       credentials: {
@@ -345,7 +346,19 @@ describe("AxonHub API service", () => {
           scopes: [],
         },
       },
-      settings: buildPinnedChannelSettings(),
+      settings: {
+        ...settings,
+        headerOverrideOperations: [
+          {
+            ...settings.headerOverrideOperations[0],
+            match: { path: "$.model", eq: "model-alpha" },
+          },
+        ],
+        transformOptions: {
+          ...settings.transformOptions,
+          reasoningEffortMapping: [{ from: "high", to: "medium" }],
+        },
+      },
       endpoints: [
         {
           apiFormat: "openai",
@@ -378,9 +391,15 @@ describe("AxonHub API service", () => {
       id,
       settings: {
         headerOverrideOperations: [
-          expect.objectContaining({ value: '{"enabled":true}' }),
+          expect.objectContaining({
+            value: '{"enabled":true}',
+            match: { path: "$.model", eq: "model-alpha" },
+          }),
         ],
         bodyOverrideOperations: [],
+        transformOptions: expect.objectContaining({
+          reasoningEffortMapping: [{ from: "high", to: "medium" }],
+        }),
       },
     })
   })
@@ -637,7 +656,8 @@ describe("AxonHub API service", () => {
   })
 
   it("rejects malformed native pages instead of silently truncating them", async () => {
-    const malformedConnections = [
+    const malformedConnections: unknown[] = [
+      null,
       {
         edges: [{ node: "not-a-channel" }],
         pageInfo: { hasNextPage: false, endCursor: null },
@@ -676,6 +696,16 @@ describe("AxonHub API service", () => {
         pageInfo: { hasNextPage: false, endCursor: null },
         totalCount: 1,
       },
+      {
+        edges: ["not-an-edge"],
+        pageInfo: { hasNextPage: false, endCursor: null },
+        totalCount: 1,
+      },
+      {
+        edges: [{ node: nativeNullBaseUrlChannel, cursor: 42 }],
+        pageInfo: { hasNextPage: false, endCursor: null },
+        totalCount: 1,
+      },
     ]
     let responseIndex = 0
 
@@ -701,6 +731,78 @@ describe("AxonHub API service", () => {
         message: "protocol",
       })
     }
+  })
+
+  it("distinguishes missing and absent native detail results", async () => {
+    const responses = [{}, { node: null }]
+    let responseIndex = 0
+
+    useAxonHubGraphqlRoutes({
+      token: "missing-detail-token",
+      routes: [
+        {
+          matches: matchesGraphqlOperation("query GetAxonHubChannel"),
+          respond: () =>
+            HttpResponse.json({ data: responses[responseIndex++] }),
+        },
+      ],
+    })
+
+    await expect(
+      getAxonHubChannel(config, "missing-detail-field"),
+    ).rejects.toMatchObject({
+      kind: "protocol",
+      dispatch: "not-dispatched",
+    })
+    await expect(
+      getAxonHubChannel(config, "absent-detail-node"),
+    ).rejects.toMatchObject({
+      kind: "not-found",
+      dispatch: "not-dispatched",
+    })
+  })
+
+  it("accepts optional summary numbers and an omitted total count", async () => {
+    useAxonHubGraphqlRoutes({
+      token: "optional-summary-token",
+      routes: [
+        {
+          matches: matchesGraphqlOperation("query ListAxonHubChannelPage"),
+          respond: () =>
+            HttpResponse.json({
+              data: {
+                queryChannels: {
+                  edges: [
+                    {
+                      node: {
+                        ...nativeNullBaseUrlChannel,
+                        id: "summary-null-ordering",
+                        orderingWeight: null,
+                      },
+                    },
+                    {
+                      node: {
+                        ...nativeNullBaseUrlChannel,
+                        id: "summary-finite-ordering",
+                        orderingWeight: 1.5,
+                      },
+                    },
+                  ],
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                },
+              },
+            }),
+        },
+      ],
+    })
+
+    const page = await listAxonHubChannelPage(config, { limit: 10 })
+
+    expect(page.items.map((item) => item.id)).toEqual([
+      "summary-null-ordering",
+      "summary-finite-ordering",
+    ])
+    expect(page).not.toHaveProperty("total")
   })
 
   it("sends verified update and clear fields unchanged", async () => {
@@ -1308,6 +1410,101 @@ describe("AxonHub API service", () => {
       kind: "upstream-rejected",
       dispatch: "not-dispatched",
       message: "upstream-rejected",
+    })
+  })
+
+  it("classifies GraphQL not-found and message-only permission failures", async () => {
+    const responses = [
+      HttpResponse.json({ errors: [{ message: "missing" }] }, { status: 404 }),
+      HttpResponse.json({ errors: [{ message: "permission denied" }] }),
+    ]
+    let responseIndex = 0
+
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "classification-token" }),
+      ),
+      http.post(GRAPHQL_URL, () => responses[responseIndex++]),
+    )
+
+    await expect(
+      graphqlRequest(
+        { ...config, email: "not-found-classification@example.com" },
+        "query MissingChannel",
+        undefined,
+        { retryAuth: false },
+      ),
+    ).rejects.toMatchObject({
+      kind: "not-found",
+      dispatch: "not-dispatched",
+    })
+    await expect(
+      graphqlRequest(
+        { ...config, email: "permission-classification@example.com" },
+        "query ForbiddenChannel",
+        undefined,
+        { retryAuth: false },
+      ),
+    ).rejects.toMatchObject({
+      kind: "permission",
+      dispatch: "not-dispatched",
+    })
+  })
+
+  it("classifies non-JSON GraphQL rejection and success responses safely", async () => {
+    const responses = [
+      HttpResponse.text("bad request", { status: 400 }),
+      HttpResponse.text("not JSON", { status: 200 }),
+    ]
+    let responseIndex = 0
+
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "non-json-classification-token" }),
+      ),
+      http.post(GRAPHQL_URL, () => responses[responseIndex++]),
+    )
+
+    await expect(
+      graphqlRequest(
+        { ...config, email: "non-json-rejection@example.com" },
+        "query RejectedNonJson",
+        undefined,
+        { retryAuth: false },
+      ),
+    ).rejects.toMatchObject({
+      kind: "upstream-rejected",
+      dispatch: "not-dispatched",
+    })
+    await expect(
+      graphqlRequest(
+        { ...config, email: "non-json-success@example.com" },
+        "query SuccessfulNonJson",
+        undefined,
+        { retryAuth: false },
+      ),
+    ).rejects.toMatchObject({
+      kind: "protocol",
+      dispatch: "not-dispatched",
+    })
+  })
+
+  it("rejects a GraphQL envelope whose data is explicitly null", async () => {
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "null-data-token" }),
+      ),
+      http.post(GRAPHQL_URL, () => HttpResponse.json({ data: null })),
+    )
+
+    await expect(
+      graphqlRequest(
+        { ...config, email: "null-data@example.com" },
+        "query NullData",
+      ),
+    ).rejects.toMatchObject({
+      kind: "protocol",
+      dispatch: "not-dispatched",
     })
   })
 
@@ -2571,6 +2768,53 @@ describe("AxonHub API service", () => {
       openai: 1,
       anthropic: 1,
     })
+  })
+
+  it("rejects missing, absent, malformed, and retargeted legacy details", async () => {
+    const requestedId = "legacy-detail-id"
+    const detailResponses = [
+      {},
+      { node: null },
+      { node: { __typename: "Channel", id: requestedId } },
+      {
+        node: buildNativeChannelDetail("different-legacy-detail-id"),
+      },
+    ]
+    let detailIndex = 0
+
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "invalid-legacy-detail-token" }),
+      ),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as { query?: string }
+        if (body.query?.includes("query GetAxonHubChannel")) {
+          return HttpResponse.json({ data: detailResponses[detailIndex++] })
+        }
+
+        return HttpResponse.json({
+          data: {
+            queryChannels: {
+              edges: [{ node: nativeNullBaseUrlChannel }],
+              pageInfo: { hasNextPage: false, endCursor: null },
+              totalCount: 1,
+            },
+          },
+        })
+      }),
+    )
+
+    for (const [index] of detailResponses.entries()) {
+      await expect(
+        listChannels({
+          ...config,
+          email: `invalid-legacy-detail-${index}@example.com`,
+        }),
+      ).rejects.toMatchObject({
+        kind: index === 1 ? "not-found" : "protocol",
+        dispatch: "not-dispatched",
+      })
+    }
   })
 
   it("bounds legacy detail hydration while preserving list order", async () => {
