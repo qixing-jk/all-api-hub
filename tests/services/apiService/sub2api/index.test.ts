@@ -965,7 +965,10 @@ describe("apiService sub2api refreshAccountData", () => {
     const tokens = await fetchAccountTokens(request)
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      request.baseUrl,
+      undefined,
+    )
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
     ).toBe("resynced-jwt")
@@ -1067,7 +1070,10 @@ describe("apiService sub2api refreshAccountData", () => {
     const result = await refreshAccountData(request)
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      request.baseUrl,
+      undefined,
+    )
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
     ).toBe("resynced-jwt")
@@ -1107,7 +1113,10 @@ describe("apiService sub2api refreshAccountData", () => {
     const result = await refreshAccountData(request)
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      request.baseUrl,
+      undefined,
+    )
     expect(fetchApi).toHaveBeenCalledTimes(1)
     expect(result.success).toBe(false)
     expect(result.healthStatus.status).toBe(SiteHealthStatus.Warning)
@@ -1407,6 +1416,7 @@ describe("apiService sub2api exported operations", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       "https://sub2.example.com",
+      undefined,
     )
     expect((vi.mocked(fetchApi).mock.calls[0]?.[0] as any)?.auth).toMatchObject(
       {
@@ -1515,6 +1525,7 @@ describe("apiService sub2api exported operations", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       "https://sub2.example.com",
+      undefined,
     )
     expect(fetchApi).toHaveBeenCalledTimes(2)
     expect(
@@ -1554,6 +1565,7 @@ describe("apiService sub2api exported operations", () => {
 
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       "https://sub2.example.com",
+      undefined,
     )
   })
 
@@ -1575,6 +1587,7 @@ describe("apiService sub2api exported operations", () => {
 
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       "https://sub2.example.com",
+      undefined,
     )
   })
 
