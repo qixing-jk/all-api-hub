@@ -42,57 +42,19 @@ vi.mock("@heroicons/react/24/outline", async (importOriginal) => {
   return { ...actual, CpuChipIcon }
 })
 
-vi.mock("@lobehub/icons", () => {
-  const createIcon = (name: string) =>
-    function PublisherIcon(props: React.SVGProps<SVGSVGElement>) {
-      return <svg role="img" data-publisher-icon={name} {...props} />
-    }
-
-  return Object.fromEntries(
-    [
-      "Ai2",
-      "Alibaba",
-      "Anthropic",
-      "Arcee",
-      "Aws",
-      "BAAI",
-      "Baichuan",
-      "Baidu",
-      "ByteDance",
-      "Cohere",
-      "DeepCogito",
-      "DeepSeek",
-      "EssentialAI",
-      "Google",
-      "Groq",
-      "Inception",
-      "InternLM",
-      "Jina",
-      "KiloCode",
-      "Kolors",
-      "Liquid",
-      "LongCat",
-      "Meta",
-      "Microsoft",
-      "Minimax",
-      "Mistral",
-      "Moonshot",
-      "Nvidia",
-      "OpenAI",
-      "OpenCode",
-      "OpenRouter",
-      "Perplexity",
-      "SenseNova",
-      "Stepfun",
-      "Tencent",
-      "Upstage",
-      "XAI",
-      "XiaomiMiMo",
-      "Yi",
-      "Zhipu",
-    ].map((name) => [name, createIcon(name)]),
-  )
-})
+vi.mock("@lobehub/icons/es/Anthropic/components/Mono", () => ({
+  default: ({
+    size,
+    ...props
+  }: React.SVGProps<SVGSVGElement> & { size?: string | number }) => (
+    <svg
+      role="img"
+      data-publisher-icon="Anthropic-mono"
+      data-size={size}
+      {...props}
+    />
+  ),
+}))
 
 vi.mock("~/services/models/utils/modelPricing", async (importOriginal) => {
   const actual =
@@ -174,10 +136,20 @@ describe("ModelItemHeader", () => {
       />,
     )
 
-    expect(screen.getByRole("heading", { name: "gpt-4o-mini" })).toBeVisible()
+    const heading = screen.getByRole("heading", { name: "gpt-4o-mini" })
+    expect(heading).toBeVisible()
     const decorativeIcon = screen.getByRole("img", { hidden: true })
-    expect(decorativeIcon).toHaveAttribute("data-publisher-icon", "Anthropic")
+    expect(decorativeIcon).toHaveAttribute(
+      "data-publisher-icon",
+      "Anthropic-mono",
+    )
+    expect(decorativeIcon).toHaveAttribute("data-size", "16")
     expect(decorativeIcon).toHaveAttribute("aria-hidden", "true")
+    const badgeSurface = decorativeIcon.closest(
+      '[data-slot="model-vendor-badge"]',
+    )
+    expect(badgeSurface).toHaveClass("rounded-full")
+    expect(badgeSurface?.parentElement).toBe(heading.parentElement)
     expect(screen.queryAllByRole("img")).toHaveLength(0)
   })
 

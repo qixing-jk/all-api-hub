@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next"
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
 import { Badge, BadgeAdornment, IconButton } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { getModelVendorPresentation } from "~/features/ModelList/modelVendorPresentation"
+import { ModelVendorMark } from "~/features/ModelList/components/ModelVendorMark"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import type { ResolvedModelVendor } from "~/services/models/modelMetadata/types"
 import { getBillingModeText } from "~/services/models/utils/modelPricing"
@@ -60,7 +60,6 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   trailingContent,
 }) => {
   const { t } = useTranslation(["modelList", "aiApiVerification"])
-  const presentation = getModelVendorPresentation(resolvedVendor)
 
   const getBillingVariant = (quotaType: number) => {
     if (quotaType === 2) return "default"
@@ -71,14 +70,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
     <div className="min-w-0 flex-1 space-y-1.5">
       <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
         <div className="flex min-w-0 flex-[1_1_10rem] items-center gap-2 sm:gap-3">
-          <div
-            className={`shrink-0 rounded-lg p-1.5 ${presentation.containerClassName}`}
-          >
-            <presentation.Icon
-              aria-hidden={true}
-              className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${presentation.iconClassName}`}
-            />
-          </div>
+          <ModelVendorMark vendor={resolvedVendor} variant="badge" />
 
           <h3
             className={`min-w-0 flex-1 truncate text-sm font-semibold sm:text-base md:text-lg ${

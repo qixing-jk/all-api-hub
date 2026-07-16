@@ -17,7 +17,13 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
@@ -38,57 +44,43 @@ vi.mock("@heroicons/react/24/outline", async (importOriginal) => {
   return { ...actual, CpuChipIcon }
 })
 
-vi.mock("@lobehub/icons", () => {
+vi.mock("lucide-react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("lucide-react")>()
   const createIcon = (name: string) =>
-    function PublisherIcon(props: React.SVGProps<SVGSVGElement>) {
-      return <svg role="img" data-publisher-icon={name} {...props} />
+    function FilterIcon(props: React.SVGProps<SVGSVGElement>) {
+      return <svg role="img" data-filter-icon={name} {...props} />
     }
 
-  return Object.fromEntries(
-    [
-      "Ai2",
-      "Alibaba",
-      "Anthropic",
-      "Arcee",
-      "Aws",
-      "BAAI",
-      "Baichuan",
-      "Baidu",
-      "ByteDance",
-      "Cohere",
-      "DeepCogito",
-      "DeepSeek",
-      "EssentialAI",
-      "Google",
-      "Groq",
-      "Inception",
-      "InternLM",
-      "Jina",
-      "KiloCode",
-      "Kolors",
-      "Liquid",
-      "LongCat",
-      "Meta",
-      "Microsoft",
-      "Minimax",
-      "Mistral",
-      "Moonshot",
-      "Nvidia",
-      "OpenAI",
-      "OpenCode",
-      "OpenRouter",
-      "Perplexity",
-      "SenseNova",
-      "Stepfun",
-      "Tencent",
-      "Upstage",
-      "XAI",
-      "XiaomiMiMo",
-      "Yi",
-      "Zhipu",
-    ].map((name) => [name, createIcon(name)]),
-  )
+  return {
+    ...actual,
+    CircleHelp: createIcon("unknown-vendor"),
+    LayoutGrid: createIcon("all-vendors"),
+  }
 })
+
+vi.mock("@lobehub/icons/es/Google/components/Color", () => ({
+  default: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="Google-color" {...props} />
+  ),
+}))
+
+vi.mock("@lobehub/icons/es/Google/components/Mono", () => ({
+  default: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="Google-mono" {...props} />
+  ),
+}))
+
+vi.mock("@lobehub/icons/es/OpenAI/components/Mono", () => ({
+  default: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="OpenAI-mono" {...props} />
+  ),
+}))
+
+vi.mock("@lobehub/icons/es/Anthropic/components/Mono", () => ({
+  default: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="Anthropic-mono" {...props} />
+  ),
+}))
 
 type CountedVendor = ModelVendorCatalogEntry & { count: number }
 
@@ -114,6 +106,13 @@ const VENDOR_CATALOG: CountedVendor[] = [
     count: 1,
   },
 ]
+const GOOGLE_VENDOR: CountedVendor = {
+  kind: "known",
+  key: "known:google",
+  knownId: "google",
+  label: "Google",
+  count: 1,
+}
 const TABLIST_CLIENT_WIDTH_PX = 100
 const TABLIST_SCROLL_WIDTH_PX = 300
 const BASE_FILTERED_MODELS_COUNT = 10
@@ -291,7 +290,10 @@ describe("ProviderTabs scroll arrows", () => {
 
 describe("ProviderTabs selection", () => {
   it("renders namespaced dynamic vendor labels, counts, and the effective selection", async () => {
+    const vendorCatalog = [GOOGLE_VENDOR, ...VENDOR_CATALOG]
+
     renderProviderTabs({
+      vendorCatalog,
       effectiveSelectedVendor: "custom:example%20lab",
       allVendorsFilteredCount: 4,
     })
@@ -312,19 +314,38 @@ describe("ProviderTabs selection", () => {
     const orderedTabs = screen.getAllByRole("tab")
     expect(orderedTabs).toEqual([
       allProvidersTab,
+      screen.getByRole("tab", { name: /Google \(1\)/ }),
       screen.getByRole("tab", { name: /OpenAI \(2\)/ }),
       screen.getByRole("tab", { name: /Anthropic \(1\)/ }),
       customVendorTab,
     ])
 
     const decorativeIcons = screen.getAllByRole("img", { hidden: true })
-    expect(decorativeIcons).toHaveLength(4)
-    expect(decorativeIcons.map((icon) => icon.dataset.publisherIcon)).toEqual([
-      "generic",
-      "OpenAI",
-      "Anthropic",
-      "generic",
-    ])
+    expect(decorativeIcons).toHaveLength(5)
+    expect(
+      within(allProvidersTab).getByRole("img", { hidden: true }),
+    ).toHaveAttribute("data-filter-icon", "all-vendors")
+    expect(
+      within(screen.getByRole("tab", { name: /Google \(1\)/ })).getByRole(
+        "img",
+        { hidden: true },
+      ),
+    ).toHaveAttribute("data-publisher-icon", "Google-color")
+    expect(
+      within(screen.getByRole("tab", { name: /OpenAI \(2\)/ })).getByRole(
+        "img",
+        { hidden: true },
+      ),
+    ).toHaveAttribute("data-publisher-icon", "OpenAI-mono")
+    expect(
+      within(screen.getByRole("tab", { name: /Anthropic \(1\)/ })).getByRole(
+        "img",
+        { hidden: true },
+      ),
+    ).toHaveAttribute("data-publisher-icon", "Anthropic-mono")
+    expect(
+      within(customVendorTab).getByRole("img", { hidden: true }),
+    ).toHaveAttribute("data-publisher-icon", "generic")
     for (const icon of decorativeIcons) {
       expect(icon).toHaveAttribute("aria-hidden", "true")
     }
@@ -332,7 +353,7 @@ describe("ProviderTabs selection", () => {
     expect(screen.queryByText(/https?:\/\//)).not.toBeInTheDocument()
   })
 
-  it("renders the unclassified tab after every vendor with generic presentation and explanatory copy", async () => {
+  it("renders the unclassified tab after every vendor with a distinct unknown presentation and explanatory copy", async () => {
     renderProviderTabs({
       effectiveSelectedVendor: MODEL_VENDOR_FILTER_VALUES.Unclassified,
       allVendorsFilteredCount: 6,
@@ -349,11 +370,15 @@ describe("ProviderTabs selection", () => {
     )
     expect(screen.getAllByRole("tab").at(-1)).toBe(unclassifiedTab)
 
-    const decorativeIcons = screen.getAllByRole("img", { hidden: true })
-    expect(decorativeIcons.at(-1)).toHaveAttribute(
-      "data-publisher-icon",
-      "generic",
-    )
+    const allProvidersTab = screen.getByRole("tab", {
+      name: /allProviders.*\(6\)/,
+    })
+    expect(
+      within(allProvidersTab).getByRole("img", { hidden: true }),
+    ).toHaveAttribute("data-filter-icon", "all-vendors")
+    expect(
+      within(unclassifiedTab).getByRole("img", { hidden: true }),
+    ).toHaveAttribute("data-filter-icon", "unknown-vendor")
   })
 
   it("reuses provider-filter analytics with the unclassified result count", async () => {

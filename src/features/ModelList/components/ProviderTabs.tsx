@@ -1,11 +1,10 @@
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react"
 import { useLayoutEffect, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
-import { getModelVendorPresentation } from "~/features/ModelList/modelVendorPresentation"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import type { ModelVendorCatalogEntry } from "~/services/models/modelMetadata/types"
 import {
@@ -22,6 +21,8 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
+
+import { ModelVendorMark } from "./ModelVendorMark"
 
 type CountedModelVendorCatalogEntry = ModelVendorCatalogEntry & {
   count: number
@@ -66,10 +67,6 @@ function ProviderTabList({
   } = useHorizontalScrollControls<HTMLDivElement>({
     enableWheelScroll: true,
   })
-  const allVendorsPresentation = getModelVendorPresentation({
-    state: "unknown",
-  })
-
   useLayoutEffect(() => {
     updateScrollState()
     const rafId = window.requestAnimationFrame(() => {
@@ -102,36 +99,29 @@ function ProviderTabList({
           className={providerTabClassName}
         >
           <div className="flex items-center justify-center space-x-2">
-            <allVendorsPresentation.Icon
+            <LayoutGrid
               aria-hidden={true}
-              className={`h-4 w-4 ${allVendorsPresentation.iconClassName}`}
+              className={`h-4 w-4 ${COLORS.text.secondary}`}
             />
             <span>
               {t("allProviders")} ({allVendorsFilteredCount})
             </span>
           </div>
         </TabsTrigger>
-        {vendorCatalog.map((vendor) => {
-          const presentation = getModelVendorPresentation(vendor)
-
-          return (
-            <TabsTrigger
-              key={vendor.key}
-              value={vendor.key}
-              className={providerTabClassName}
-            >
-              <div className="flex items-center justify-center space-x-2">
-                <presentation.Icon
-                  aria-hidden={true}
-                  className={`h-4 w-4 ${presentation.iconClassName}`}
-                />
-                <span>
-                  {vendor.label} ({vendor.count})
-                </span>
-              </div>
-            </TabsTrigger>
-          )
-        })}
+        {vendorCatalog.map((vendor) => (
+          <TabsTrigger
+            key={vendor.key}
+            value={vendor.key}
+            className={providerTabClassName}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <ModelVendorMark vendor={vendor} variant="compact" />
+              <span>
+                {vendor.label} ({vendor.count})
+              </span>
+            </div>
+          </TabsTrigger>
+        ))}
         {unclassifiedVendorCount > 0 && (
           <TabsTrigger
             value={MODEL_VENDOR_FILTER_VALUES.Unclassified}
@@ -139,9 +129,9 @@ function ProviderTabList({
             title={t("providerTabs.unclassifiedDescription")}
           >
             <div className="flex items-center justify-center space-x-2">
-              <allVendorsPresentation.Icon
-                aria-hidden={true}
-                className={`h-4 w-4 ${allVendorsPresentation.iconClassName}`}
+              <ModelVendorMark
+                vendor={{ state: "unknown" }}
+                variant="compact"
               />
               <span>
                 {t("providerTabs.unclassified")} ({unclassifiedVendorCount})
