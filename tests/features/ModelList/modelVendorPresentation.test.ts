@@ -8,6 +8,7 @@ import {
   Cohere,
   DeepSeek,
   Google,
+  LongCat,
   Meta,
   Minimax,
   Mistral,
@@ -18,6 +19,7 @@ import {
   Stepfun,
   Tencent,
   XAI,
+  XiaomiMiMo,
   Yi,
   Zhipu,
 } from "@lobehub/icons"
@@ -42,6 +44,7 @@ vi.mock("@lobehub/icons", () => {
     Cohere: createIcon(),
     DeepSeek: createIcon(),
     Google: createIcon(),
+    LongCat: createIcon(),
     Meta: createIcon(),
     Minimax: createIcon(),
     Mistral: createIcon(),
@@ -52,6 +55,7 @@ vi.mock("@lobehub/icons", () => {
     Stepfun: createIcon(),
     Tencent: createIcon(),
     XAI: createIcon(),
+    XiaomiMiMo: createIcon(),
     Yi: createIcon(),
     Zhipu: createIcon(),
   }
@@ -90,7 +94,8 @@ describe("getModelVendorPresentation", () => {
     ["01-ai", Yi],
     ["bytedance", ByteDance],
     ["nvidia", Nvidia],
-    ["xiaomi", CpuChipIcon],
+    ["xiaomi", XiaomiMiMo],
+    ["meituan", LongCat],
     ["stepfun", Stepfun],
     ["perplexity", Perplexity],
   ] as const satisfies ReadonlyArray<readonly [KnownModelVendorId, unknown]>

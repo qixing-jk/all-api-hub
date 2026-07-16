@@ -8,6 +8,7 @@ import {
   Cohere,
   DeepSeek,
   Google,
+  LongCat,
   Meta,
   Minimax,
   Mistral,
@@ -18,6 +19,7 @@ import {
   Stepfun,
   Tencent,
   XAI,
+  XiaomiMiMo,
   Yi,
   Zhipu,
 } from "@lobehub/icons"
@@ -138,7 +140,16 @@ const KNOWN_VENDOR_PRESENTATION = {
     iconClassName: "text-green-600 dark:text-green-400",
     containerClassName: "bg-green-50 dark:bg-green-900/20",
   },
-  xiaomi: GENERIC_VENDOR_PRESENTATION,
+  xiaomi: {
+    Icon: XiaomiMiMo,
+    iconClassName: COLORS.text.primary,
+    containerClassName: COLORS.background.secondary,
+  },
+  meituan: {
+    Icon: LongCat,
+    iconClassName: COLORS.text.primary,
+    containerClassName: COLORS.background.secondary,
+  },
   stepfun: {
     Icon: Stepfun,
     iconClassName: "text-blue-600 dark:text-blue-300",

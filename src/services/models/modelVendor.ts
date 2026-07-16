@@ -30,6 +30,8 @@ const KNOWN_MODEL_VENDORS = {
     label: "OpenAI",
     aliases: ["openai"],
     modelPatterns: [
+      // https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json registers this exact first-party review slug.
+      /^codex-auto-review$/iu,
       /(?:^|[^\p{L}\p{N}])(?:gpt(?:[-_.]?\d+(?:[a-z])?(?=$|[-_.])|[-_.]oss(?=$|[-_.]))|chatgpt(?:[-_.]|$)|dall[-_. ]?e(?:[-_.]|$)|whisper(?:[-_.]|$)|(?:text[-_.])?embeddings?(?:[-_.]|$)|image(?:[-_.]\d|[-_.]|$)|audio(?:[-_.]|$)|o(?:1|3|4)(?:[-_.]|$))/iu,
     ],
   },
@@ -55,7 +57,10 @@ const KNOWN_MODEL_VENDORS = {
   alibaba: {
     label: "Alibaba",
     aliases: ["alibaba", "alibaba-cn", "qwen", "tongyi", "tongyi qianwen"],
-    modelPatterns: [/(?:^|[^\p{L}\p{N}])(?:qwen|tongyi)(?:[-_.]|$)/iu],
+    // https://github.com/QwenLM/qwen-code-docs documents numeric releases such as qwen3.5-flash as Alibaba Cloud Bailian models.
+    modelPatterns: [
+      /(?:^|[^\p{L}\p{N}])(?:qwen(?=\d|[-_.]|$)|tongyi(?=[-_.]|$))/iu,
+    ],
   },
   xai: {
     label: "xAI",
@@ -129,6 +134,12 @@ const KNOWN_MODEL_VENDORS = {
     label: "Xiaomi",
     aliases: ["xiaomi", "mimo"],
     modelPatterns: [/(?:^|[^\p{L}\p{N}])mimo(?:[-_.]|$)/iu],
+  },
+  meituan: {
+    label: "Meituan",
+    // https://huggingface.co/meituan-longcat/LongCat-Flash-Lite identifies the model as a Meituan LongCat release.
+    aliases: ["meituan", "meituan-longcat", "longcat"],
+    modelPatterns: [/(?:^|[^\p{L}\p{N}])longcat(?:[-_.]|$)/iu],
   },
   stepfun: {
     label: "StepFun",

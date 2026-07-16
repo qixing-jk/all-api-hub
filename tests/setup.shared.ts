@@ -51,6 +51,7 @@ vi.mock("@lobehub/icons", () => {
     Gemini: createCompoundedIcon(),
     Google: createCompoundedIcon(),
     Grok: createCompoundedIcon(),
+    LongCat: createCompoundedIcon(),
     Meta: createCompoundedIcon(),
     Minimax: createCompoundedIcon(),
     Mistral: createCompoundedIcon(),
@@ -64,6 +65,7 @@ vi.mock("@lobehub/icons", () => {
     Stepfun: createCompoundedIcon(),
     Tencent: createCompoundedIcon(),
     XAI: createCompoundedIcon(),
+    XiaomiMiMo: createCompoundedIcon(),
     Yi: createCompoundedIcon(),
     Zhipu: createCompoundedIcon(),
   }

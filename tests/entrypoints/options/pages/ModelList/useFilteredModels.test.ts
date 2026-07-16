@@ -441,6 +441,52 @@ describe("useFilteredModels", () => {
     ])
   })
 
+  it("classifies reported fallback model ids and filters them by the aligned vendor", async () => {
+    const account = createDisplayAccount({ id: "account-curated-vendors" })
+    const pricingData = createPricingResponse([
+      "codex-auto-review",
+      "LongCat-Flash-Lite",
+      "alibaba/qwen3.5-flash",
+    ])
+    const selectedSource = createAccountSource(account)
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData,
+      selectedSource,
+      modelMetadata: [],
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(3))
+
+    for (const [modelId, key, label] of [
+      ["codex-auto-review", "known:openai", "OpenAI"],
+      ["LongCat-Flash-Lite", "known:meituan", "Meituan"],
+      ["alibaba/qwen3.5-flash", "known:alibaba", "Alibaba"],
+    ] as const) {
+      expect(
+        result.current.baseFilteredModels.find(
+          (item) => item.model.model_name === modelId,
+        )?.resolvedVendor,
+      ).toMatchObject({ state: "resolved", key, label })
+      expect(result.current.vendorCatalog).toContainEqual(
+        expect.objectContaining({ key, label, count: 1 }),
+      )
+    }
+    expect(result.current.vendorCatalog).toHaveLength(3)
+
+    rerender({
+      pricingData,
+      selectedSource,
+      selectedProvider: "known:meituan",
+      modelMetadata: [],
+    })
+
+    expect(result.current.effectiveSelectedVendor).toBe("known:meituan")
+    expect(result.current.filteredModels).toHaveLength(1)
+    expect(result.current.filteredModels[0]?.model.model_name).toBe(
+      "LongCat-Flash-Lite",
+    )
+  })
+
   it("resolves vendors for catalog-only rows without requiring pricing", async () => {
     const account = createDisplayAccount({ id: "account-catalog-vendors" })
     const { result } = renderUseFilteredModels({

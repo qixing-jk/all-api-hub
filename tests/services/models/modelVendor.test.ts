@@ -122,6 +122,32 @@ describe("resolveModelVendorCandidate", () => {
     })
   })
 
+  it("maps the models.dev meituan provider to the curated Meituan identity", () => {
+    expect(
+      resolveModelVendorCandidate(
+        { id: "meituan/longcat-2.0" },
+        {
+          state: "resolved",
+          match: "exact",
+          metadata: {
+            id: "meituan/longcat-2.0",
+            name: "LongCat-2.0",
+            provider_id: "meituan",
+            family: "longcat",
+          },
+        },
+      ),
+    ).toEqual({
+      state: "candidate",
+      kind: "known",
+      key: "known:meituan",
+      knownId: "meituan",
+      labelCandidate: "Meituan",
+      source: "metadata",
+      identityMatch: "exact",
+    })
+  })
+
   it("ignores ambiguous metadata and falls through each lower precedence level", () => {
     expect(
       resolveModelVendorCandidate(
@@ -223,13 +249,16 @@ describe("resolveModelVendorCandidate", () => {
     }
   })
 
-  it("does not treat an arbitrary namespace prefix as publisher evidence", () => {
-    expect(
-      resolveModelVendorCandidate(
-        { id: "ExamplePublisher/unrecognized-model" },
-        unmatchedLookup,
-      ),
-    ).toEqual({ state: "unknown" })
+  it("does not treat namespace prefixes as publisher evidence", () => {
+    for (const id of [
+      "ExamplePublisher/unrecognized-model",
+      "alibaba/unrecognized-model",
+      "meituan/unrecognized-model",
+    ]) {
+      expect(resolveModelVendorCandidate({ id }, unmatchedLookup)).toEqual({
+        state: "unknown",
+      })
+    }
   })
 })
 
@@ -295,6 +324,7 @@ describe("known vendor aliases and curated model families", () => {
     ["text-embedding-3-small", "openai"],
     ["image-1", "openai"],
     ["audio-preview", "openai"],
+    ["codex-auto-review", "openai"],
     ["claude-3-5-sonnet", "anthropic"],
     ["haiku-3", "anthropic"],
     ["opus-4", "anthropic"],
@@ -303,6 +333,8 @@ describe("known vendor aliases and curated model families", () => {
     ["deepmind-model", "google"],
     ["llama-3.3", "meta"],
     ["qwen-max", "alibaba"],
+    ["alibaba/qwen3.5-flash", "alibaba"],
+    ["qwen2.5-coder", "alibaba"],
     ["tongyi-qianwen", "alibaba"],
     ["grok-3", "xai"],
     ["deepseek-r1", "deepseek"],
@@ -318,6 +350,7 @@ describe("known vendor aliases and curated model families", () => {
     ["doubao-pro", "bytedance"],
     ["nemotron-ultra", "nvidia"],
     ["mimo-v2", "xiaomi"],
+    ["LongCat-Flash-Lite", "meituan"],
     ["step-2-16k", "stepfun"],
     ["sonar-pro", "perplexity"],
   ] as const)("recognizes curated family %s as %s", (modelId, knownId) => {
@@ -338,6 +371,9 @@ describe("known vendor aliases and curated model families", () => {
     "vendor/gpt-neox-20b",
     "gpt-j-6b",
     "vendor/gpt4all",
+    "codex-runtime-model",
+    "qwenfoo",
+    "longcatapult",
     "模型yi-large",
     "songsonnetfragment",
   ])("does not match family fragments in %s", (modelId) => {
