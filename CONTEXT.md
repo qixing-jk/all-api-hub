@@ -36,6 +36,18 @@ _Avoid_: dedicated override, alias, fallback
 A normalized product-owned shape consumed by features after upstream backend payloads have been adapted.
 _Avoid_: upstream response, New API response
 
+**Managed Upstream Resource**:
+An upstream-native administrative resource managed through a Managed Site Type, such as a channel, provider, or outbound route.
+_Avoid_: managed site channel
+
+**Resource Display Facts**:
+A safe product-selected projection of a managed upstream resource for read-only display.
+_Avoid_: raw upstream payload, full native detail
+
+**Editable Resource Projection**:
+A product-selected subset of managed upstream resource fields that users can edit without exposing the complete upstream schema.
+_Avoid_: generated upstream form, full-field editor
+
 **Account Runtime Key**:
 A product canonical model for a key that can be used for account-scoped runtime
 requests such as verification, model probing, export, or CLI configuration,
@@ -54,6 +66,12 @@ _Avoid_: API token, token row
 - A **Product Canonical Model** may retain historical New API field names when
   those fields are now the product contract. Its owner is determined by product
   semantics, not by the upstream backend that originally shaped it.
+- A **Managed Upstream Resource** retains its upstream-native semantics while
+  exposing only **Resource Display Facts** and an explicit **Editable Resource
+  Projection** to product features.
+- An **Editable Resource Projection** may expand as user needs are verified, but
+  it does not imply that every field of a **Managed Upstream Resource** is
+  editable.
 - An **Account Runtime Key** is not necessarily an API token resource. API token
   CRUD, token metadata, and service-credential rotation remain source-specific
   behavior behind the account runtime key source.
@@ -62,6 +80,9 @@ _Avoid_: API token, token row
 
 > **Dev:** "Can we treat AIHubMix as a managed site because it supports accounts?"
 > **Domain expert:** "No. It is an **Account-Only Site Type** unless managed-site provider support is explicitly verified."
+>
+> **Dev:** "Does native editing mean rendering every upstream field?"
+> **Domain expert:** "No. The Adapter preserves the **Managed Upstream Resource**, while the product exposes only its **Editable Resource Projection**."
 
 ## Flagged ambiguities
 
