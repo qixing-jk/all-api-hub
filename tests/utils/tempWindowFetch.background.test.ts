@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
   tempWindowFetch,
   tempWindowGetRenderedTitle,
@@ -64,6 +65,7 @@ describe("tempWindowFetch helpers (background context)", () => {
       expect.objectContaining({
         originUrl: "https://example.com",
         fetchUrl: "https://example.com/api/test",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
         suppressMinimize: false,
       }),
       expect.any(Function),
@@ -119,6 +121,7 @@ describe("tempWindowFetch helpers (background context)", () => {
         originUrl: "https://example.com",
         pageUrl: "https://example.com/checkin",
         fetchUrl: "https://example.com/api/checkin",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
         suppressMinimize: false,
       }),
       expect.any(Function),
@@ -162,6 +165,13 @@ describe("tempWindowFetch helpers (background context)", () => {
     })
 
     expect(handleTempWindowCheckinPageActionMock).toHaveBeenCalledTimes(1)
+    expect(handleTempWindowCheckinPageActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        suppressMinimize: false,
+      }),
+      expect.any(Function),
+    )
     expect(response).toMatchObject({
       success: true,
       reason: "clicked",
@@ -218,6 +228,7 @@ describe("tempWindowFetch helpers (background context)", () => {
       expect.objectContaining({
         action: RuntimeActionIds.TempWindowGetRenderedTitle,
         originUrl: "https://example.com",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
         suppressMinimize: false,
       }),
       expect.any(Function),

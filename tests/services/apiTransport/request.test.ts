@@ -7,6 +7,7 @@ import {
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
   COOKIE_AUTH_HEADER_NAME,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
@@ -50,6 +51,10 @@ const { mockSendTabMessageWithRetry, mockSendRuntimeMessage } = vi.hoisted(
     mockSendRuntimeMessage: vi.fn(),
   }),
 )
+
+const { mockIsProtectionBypassFirefoxEnv } = vi.hoisted(() => ({
+  mockIsProtectionBypassFirefoxEnv: vi.fn(() => true),
+}))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
@@ -101,11 +106,12 @@ vi.mock("~/services/apiTransport/siteRequestLimiter", () => ({
 }))
 
 vi.mock("~/utils/browser/protectionBypass", () => ({
-  isProtectionBypassFirefoxEnv: vi.fn(() => true),
+  isProtectionBypassFirefoxEnv: mockIsProtectionBypassFirefoxEnv,
 }))
 
 vi.mock("~/utils/browser/index", () => ({
   isExtensionBackground: vi.fn(() => false),
+  isExtensionOptions: vi.fn(() => false),
   isExtensionPopup: vi.fn(() => false),
   isExtensionSidePanel: vi.fn(() => false),
 }))
@@ -194,6 +200,8 @@ describe("apiTransport request helpers", () => {
     mockSendTabMessageWithRetry.mockReset()
     mockSendRuntimeMessage.mockReset()
     mockSendRuntimeMessage.mockResolvedValue({ success: true })
+    mockIsProtectionBypassFirefoxEnv.mockReset()
+    mockIsProtectionBypassFirefoxEnv.mockReturnValue(true)
   })
 
   afterEach(() => {
@@ -846,7 +854,8 @@ describe("apiTransport request helpers", () => {
     expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
   })
 
-  it("fetchApiData skips normal fetch for incognito current-tab fallback and uses the temp context", async () => {
+  it("fetchApiData preserves the popup temp window source through fallback context", async () => {
+    mockIsProtectionBypassFirefoxEnv.mockReturnValue(false)
     mockGetPreferences.mockResolvedValueOnce({
       tempWindowFallback: {
         enabled: true,
@@ -893,6 +902,7 @@ describe("apiTransport request helpers", () => {
             cookie: "session=abc123",
             userId: "123",
           },
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
@@ -911,6 +921,8 @@ describe("apiTransport request helpers", () => {
         action: RuntimeActionIds.TempWindowFetch,
         originUrl: BASE_URL,
         fetchUrl: API_URL,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        suppressMinimize: true,
         useIncognito: true,
         cookieStoreId: "1-incognito",
       }),

@@ -12,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { AuthTypeEnum } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
   AUTH_MODE,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
@@ -1538,6 +1539,72 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(2100)
     expect(removeTabMock).toHaveBeenCalledTimes(1)
     expect(removeTabMock).toHaveBeenCalledWith(511)
+  })
+
+  it("keeps popup-source temp windows visible for direct pool callers", async () => {
+    tempContextMode = "window"
+    createWindowMock.mockResolvedValueOnce({ id: 620 })
+    tabsQueryMock.mockResolvedValueOnce([{ id: 621 }])
+
+    const { handleTempWindowGetRenderedTitle } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const request = handleTempWindowGetRenderedTitle(
+      {
+        originUrl: "https://example.invalid/rendered-title",
+        requestId: "req-popup-source-title",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+      vi.fn(),
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect((globalThis as any).browser.windows.update).not.toHaveBeenCalledWith(
+      620,
+      { state: "minimized" },
+    )
+  })
+
+  it("minimizes background-source windows only when creating the pooled context", async () => {
+    tempContextMode = "window"
+    createWindowMock.mockResolvedValueOnce({ id: 622 })
+    tabsQueryMock.mockResolvedValueOnce([{ id: 623 }])
+
+    const { handleTempWindowGetRenderedTitle } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstRequest = handleTempWindowGetRenderedTitle(
+      {
+        originUrl: "https://example.invalid/rendered-title/first",
+        requestId: "req-background-source-title",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      },
+      vi.fn(),
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    await firstRequest
+
+    const secondRequest = handleTempWindowGetRenderedTitle(
+      {
+        originUrl: "https://example.invalid/rendered-title/second",
+        requestId: "req-reused-popup-source-title",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+      vi.fn(),
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    await secondRequest
+
+    expect(createWindowMock).toHaveBeenCalledTimes(1)
+    expect((globalThis as any).browser.windows.update).toHaveBeenCalledTimes(1)
+    expect((globalThis as any).browser.windows.update).toHaveBeenCalledWith(
+      622,
+      { state: "minimized" },
+    )
   })
 
   it("keeps rendered-title fetches working when popup window minimization fails", async () => {

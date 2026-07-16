@@ -149,6 +149,10 @@ describe("tempWindowPool open/close handlers", () => {
         url: "https://example.com/composite",
       }),
     )
+    expect((globalThis as any).browser.windows.update).not.toHaveBeenCalledWith(
+      901,
+      { state: "minimized" },
+    )
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       windowId: 901,

@@ -42,6 +42,7 @@ import type {
   TempWindowFetch,
   TempWindowFetchParams,
   TempWindowPageAccountIdentity,
+  TempWindowRenderedTitleParams,
   TempWindowTurnstileFetch,
   TempWindowTurnstileFetchParams,
   TempWindowTurnstileMeta,
@@ -85,6 +86,7 @@ import {
 } from "~/utils/browser/firefoxTempWindowDownloadBlocker"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
+import { resolveTempWindowRequestPolicy } from "~/utils/browser/tempWindowRequestSource"
 import { resolveAuthTypeEnum } from "~/utils/core/authType"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -379,10 +381,19 @@ async function navigateTempContextToPage(
  * 在临时上下文中渲染页面并读取真实的 document.title。
  */
 export async function handleTempWindowGetRenderedTitle(
-  request: any,
+  request: TempWindowRenderedTitleParams,
   sendResponse: (response?: any) => void,
 ) {
-  const { originUrl, requestId, suppressMinimize } = request
+  const { originUrl, requestId } = request
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: request.tempWindowRequestSource,
+    suppressMinimize: request.suppressMinimize,
+  })
+  if (policy.blockedReason) {
+    sendResponse({ success: false, error: policy.blockedReason })
+    return
+  }
+  const { suppressMinimize } = policy
   const tempRequestId = requestId || `temp-title-${Date.now()}`
 
   logTempWindow("tempWindowGetRenderedTitleStart", {
@@ -1186,7 +1197,16 @@ export async function handleAutoDetectSite(
   request: any,
   sendResponse: (response?: any) => void,
 ) {
-  const { url, requestId, useIncognito, suppressMinimize } = request
+  const { url, requestId, useIncognito } = request
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: request.tempWindowRequestSource,
+    suppressMinimize: request.suppressMinimize,
+  })
+  if (policy.blockedReason) {
+    sendResponse({ success: false, error: policy.blockedReason })
+    return
+  }
+  const { suppressMinimize } = policy
 
   try {
     if (useIncognito) {
@@ -1246,13 +1266,21 @@ export async function handleTempWindowFetch(
     fetchOptions,
     responseType = "json",
     requestId,
-    suppressMinimize,
     accountId,
     authType,
     cookieAuthSessionCookie,
     useIncognito,
     cookieStoreId,
   } = request
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: request.tempWindowRequestSource,
+    suppressMinimize: request.suppressMinimize,
+  })
+  if (policy.blockedReason) {
+    sendResponse({ success: false, error: policy.blockedReason })
+    return
+  }
+  const { suppressMinimize } = policy
 
   if (!originUrl || !fetchUrl) {
     const error = t("messages:background.invalidFetchRequest")
@@ -1440,15 +1468,21 @@ export async function handleTempWindowCheckinPageAction(
   request: TempWindowCheckinPageActionParams,
   sendResponse: (response?: TempWindowCheckinPageAction) => void,
 ) {
-  const {
-    originUrl,
-    pageUrl,
-    requestId,
-    suppressMinimize,
-    siteType,
-    expectedUserId,
-    trigger,
-  } = request
+  const { originUrl, pageUrl, requestId, siteType, expectedUserId, trigger } =
+    request
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: request.tempWindowRequestSource,
+    suppressMinimize: request.suppressMinimize,
+  })
+  if (policy.blockedReason) {
+    sendResponse({
+      success: false,
+      reason: "trigger_failed",
+      error: policy.blockedReason,
+    })
+    return
+  }
+  const { suppressMinimize } = policy
 
   if (
     !originUrl ||
@@ -1593,7 +1627,6 @@ export async function handleTempWindowTurnstileFetch(
     fetchOptions,
     responseType = "json",
     requestId,
-    suppressMinimize,
     accountId,
     authType,
     cookieAuthSessionCookie,
@@ -1602,6 +1635,19 @@ export async function handleTempWindowTurnstileFetch(
     turnstileParamName,
     turnstilePreTrigger,
   } = request
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: request.tempWindowRequestSource,
+    suppressMinimize: request.suppressMinimize,
+  })
+  if (policy.blockedReason) {
+    sendResponse({
+      success: false,
+      error: policy.blockedReason,
+      turnstile: { status: "error", hasTurnstile: false },
+    })
+    return
+  }
+  const { suppressMinimize } = policy
 
   const turnstile: TempWindowTurnstileMeta = {
     status: "error",

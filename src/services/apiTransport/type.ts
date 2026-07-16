@@ -1,6 +1,7 @@
 import { AuthTypeEnum } from "~/types"
 import type {
   TempWindowFallbackAllowlist,
+  TempWindowRequestSource,
   TempWindowResponseType,
 } from "~/types/tempWindowFetch"
 
@@ -95,6 +96,8 @@ export interface ApiTransportRequest {
   abortSignal?: AbortSignal
   cookieAuthSessionCookie?: string
   fetchContext?: ApiTransportFetchContext
+  /** Originating extension surface for temporary-window presentation policy. */
+  tempWindowRequestSource?: TempWindowRequestSource
   /** Skip the generic per-site limiter when the caller already applies a narrower limiter. */
   bypassSiteRequestLimit?: boolean
 }
