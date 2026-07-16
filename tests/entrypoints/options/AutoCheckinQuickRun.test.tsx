@@ -368,6 +368,55 @@ describe("AutoCheckin quick run", () => {
     )
   })
 
+  it.each([
+    {
+      actionName: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+      expectedRequest: {
+        dryRun: true,
+        debug: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+    },
+    {
+      actionName: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+      expectedRequest: {
+        requestId: expect.any(String),
+        debug: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+    },
+  ])(
+    "passes the popup source through $actionName",
+    async ({ actionName, expectedRequest }) => {
+      const user = userEvent.setup()
+
+      sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+        if (type === AutoCheckinMessageTypes.GetStatus) {
+          return { success: true, data: { perAccount: {} } }
+        }
+        if (type === AutoCheckinMessageTypes.PretriggerDailyOnUiOpen) {
+          return { success: true, eligible: true, started: false }
+        }
+        return { success: true }
+      })
+
+      render(<AutoCheckin routeParams={{}} />)
+
+      await user.click(
+        await screen.findByRole("button", {
+          name: actionName,
+        }),
+      )
+
+      await waitFor(() => {
+        expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
+          AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
+          expectedRequest,
+        )
+      })
+    },
+  )
+
   it("keeps run now busy through rejection cleanup and permits retry", async () => {
     const user = userEvent.setup()
     const firstAttempt = createDeferred<{ success: boolean }>()

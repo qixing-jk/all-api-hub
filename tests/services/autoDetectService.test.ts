@@ -670,6 +670,58 @@ describe("autoDetectSmart", () => {
     })
   })
 
+  it.each([
+    ["missing", undefined],
+    ["blank", "   "],
+  ])(
+    "uses API fallback for a successful background result with a %s user id and preserves Popup source",
+    async (_label, userId) => {
+      mockGetCurrentTempWindowRequestSource
+        .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Popup)
+        .mockReturnValue(TEMP_WINDOW_REQUEST_SOURCES.Background)
+      mockGetActiveOrAllTabs.mockResolvedValue([
+        {
+          id: 3,
+          active: true,
+          url: "https://other.example.invalid/statistics",
+        },
+      ])
+      mockSendRuntimeMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId,
+          user: { username: "background-user-without-id" },
+        },
+      })
+      mockFetchUserInfo.mockResolvedValueOnce({
+        id: 31,
+        username: "api-fallback-user",
+      })
+
+      const result = await autoDetectSmart("https://example.invalid")
+
+      expect(result).toMatchObject({
+        success: true,
+        data: {
+          userId: "31",
+          user: {
+            id: 31,
+            username: "api-fallback-user",
+          },
+          siteType: SITE_TYPES.NEW_API,
+        },
+      })
+      expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
+      expect(mockFetchUserInfo).toHaveBeenCalledWith({
+        baseUrl: "https://example.invalid",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+        },
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
+    },
+  )
+
   it("uses current-tab detection for AIHubMix when the active tab is the API origin", async () => {
     mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.AIHUBMIX)
     mockGetActiveOrAllTabs.mockResolvedValue([

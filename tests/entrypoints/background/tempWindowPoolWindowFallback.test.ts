@@ -272,6 +272,99 @@ describe("tempWindowPool window fallback", () => {
     vi.restoreAllMocks()
   })
 
+  it("blocks Firefox popup-source requests at every direct handler boundary without opening a context", async () => {
+    isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
+
+    const {
+      handleAutoDetectSite,
+      handleTempWindowCheckinPageAction,
+      handleTempWindowFetch,
+      handleTempWindowGetRenderedTitle,
+      handleTempWindowTurnstileFetch,
+    } = await import("~/entrypoints/background/tempWindowPool")
+
+    const renderedTitleResponse = vi.fn()
+    await handleTempWindowGetRenderedTitle(
+      {
+        originUrl: "https://example.invalid/rendered-title",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+      renderedTitleResponse,
+    )
+
+    const autoDetectResponse = vi.fn()
+    await handleAutoDetectSite(
+      {
+        url: "https://example.invalid/account",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+      autoDetectResponse,
+    )
+
+    const fetchResponse = vi.fn()
+    await handleTempWindowFetch(
+      {
+        originUrl: "https://example.invalid",
+        fetchUrl: "https://example.invalid/api/user/self",
+        fetchOptions: { method: "GET" },
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+      fetchResponse,
+    )
+
+    const pageActionResponse = vi.fn()
+    await handleTempWindowCheckinPageAction(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/console/personal",
+        expectedUserId: "example-user",
+        siteType: "new-api",
+        trigger: { kind: "checkinButton" },
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+      pageActionResponse,
+    )
+
+    const turnstileResponse = vi.fn()
+    await handleTempWindowTurnstileFetch(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/checkin",
+        fetchUrl: "https://example.invalid/api/checkin",
+        fetchOptions: { method: "POST" },
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+      turnstileResponse,
+    )
+
+    expect(renderedTitleResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "firefox_popup_unsupported",
+    })
+    expect(autoDetectResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "firefox_popup_unsupported",
+    })
+    expect(fetchResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "firefox_popup_unsupported",
+    })
+    expect(pageActionResponse).toHaveBeenCalledWith({
+      success: false,
+      reason: "trigger_failed",
+      error: "firefox_popup_unsupported",
+    })
+    expect(turnstileResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "firefox_popup_unsupported",
+      turnstile: { status: "error", hasTurnstile: false },
+    })
+    expect(createWindowMock).not.toHaveBeenCalled()
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(tabsQueryMock).not.toHaveBeenCalled()
+    expect(sendMessageMock).not.toHaveBeenCalled()
+  })
+
   it("rolls back popup temp-context creation to a plain tab", async () => {
     tempContextMode = "window"
     createWindowMock.mockRejectedValueOnce(
