@@ -124,6 +124,15 @@ function cloneDefinition(
   return {
     ...definition,
     scopes: [...definition.scopes],
+    managedResource: definition.managedResource
+      ? {
+          ...definition.managedResource,
+          tableFieldIds: [...definition.managedResource.tableFieldIds],
+          detailFieldIds: [...definition.managedResource.detailFieldIds],
+          actions: [...definition.managedResource.actions],
+          settingsTarget: { ...definition.managedResource.settingsTarget },
+        }
+      : undefined,
     onboarding: cloneOnboarding(definition.onboarding),
     productProfile: cloneProductProfile(definition.productProfile),
     readiness: cloneReadiness(definition.readiness),

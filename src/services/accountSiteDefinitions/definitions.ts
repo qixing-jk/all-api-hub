@@ -15,7 +15,11 @@ import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_DEFINITION_SCOPES,
   ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES,
+  MANAGED_RESOURCE_KINDS,
+  MANAGED_RESOURCE_MODES,
+  MANAGED_RESOURCE_PRODUCT_ACTIONS,
   type AccountSiteDefinition,
+  type ManagedResourceProductPolicy,
 } from "./contracts"
 import {
   AIHUBMIX_API_ORIGIN,
@@ -52,6 +56,17 @@ const ACCOUNT_AND_MANAGED_SCOPES = [
   ACCOUNT_SITE_DEFINITION_SCOPES.Account,
   ACCOUNT_SITE_DEFINITION_SCOPES.Managed,
 ] as const
+
+const LEGACY_MANAGED_CHANNEL_POLICY = {
+  mode: MANAGED_RESOURCE_MODES.LegacyChannel,
+  primaryKind: MANAGED_RESOURCE_KINDS.Channel,
+  titleKey: "managedSiteChannels:title",
+  itemLabelKey: "managedSiteChannels:table.columns.name",
+  tableFieldIds: [],
+  detailFieldIds: [],
+  actions: [],
+  settingsTarget: { tabId: "managedSite" },
+} as const satisfies ManagedResourceProductPolicy
 
 const directPricingReadiness = {
   modelList: {
@@ -120,6 +135,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.NEW_API,
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
     onboarding: {
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.NEW_API)],
@@ -346,16 +362,54 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.OCTOPUS,
     scopes: MANAGED_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
   },
   {
     siteType: SITE_TYPES.AXON_HUB,
     scopes: MANAGED_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      tableFieldIds: [
+        "name",
+        "type",
+        "baseURL",
+        "status",
+        "supportedModels",
+        "tags",
+      ],
+      detailFieldIds: [
+        "name",
+        "type",
+        "baseURL",
+        "status",
+        "key",
+        "supportedModels",
+        "manualModels",
+        "defaultTestModel",
+        "autoSyncSupportedModels",
+        "autoSyncModelPattern",
+        "tags",
+        "orderingWeight",
+        "remark",
+        "extraModelPrefix",
+      ],
+      actions: [
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
+      ],
+      settingsTarget: {
+        ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
+        anchor: "axonhub",
+      },
+    },
   },
   {
     siteType: SITE_TYPES.CLAUDE_CODE_HUB,
     scopes: MANAGED_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
   },
 ] as const satisfies readonly AccountSiteDefinition[]
 
@@ -364,6 +418,7 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     siteType: SITE_TYPES.VELOERA,
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
     onboarding: {
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.VELOERA)],
@@ -382,6 +437,7 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     siteType: SITE_TYPES.DONE_HUB,
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.DONE_HUB)] },
       routes: {

@@ -273,6 +273,60 @@ describe("account site definition registry", () => {
     }
   })
 
+  it("gives every managed site an explicit managed-resource policy", () => {
+    for (const siteType of MANAGED_SITE_TYPES) {
+      expect(getAccountSiteDefinition(siteType)?.managedResource).toMatchObject(
+        {
+          mode: "legacy-channel",
+          primaryKind: "channel",
+          settingsTarget: { tabId: "managedSite" },
+        },
+      )
+    }
+  })
+
+  it("keeps AxonHub on the legacy channel path until UI cutover", () => {
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource,
+    ).toMatchObject({
+      mode: "legacy-channel",
+      primaryKind: "channel",
+      settingsTarget: { tabId: "managedSite", anchor: "axonhub" },
+      actions: ["create", "delete-selected", "migrate"],
+    })
+  })
+
+  it("returns defensive managed-resource policy copies", () => {
+    const first = getAccountSiteDefinition(SITE_TYPES.AXON_HUB)!
+    const mutableDetailFields = first.managedResource!
+      .detailFieldIds as string[]
+    first.managedResource!.settingsTarget.anchor = "changed"
+    mutableDetailFields[0] = "changed"
+
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource
+        ?.settingsTarget,
+    ).toEqual({ tabId: "managedSite", anchor: "axonhub" })
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource
+        ?.detailFieldIds[0],
+    ).toBe("name")
+  })
+
+  it("keeps managed-resource field and action policy values unique", () => {
+    for (const siteType of MANAGED_SITE_TYPES) {
+      const policy = getAccountSiteDefinition(siteType)?.managedResource
+
+      expect(new Set(policy?.tableFieldIds).size).toBe(
+        policy?.tableFieldIds.length,
+      )
+      expect(new Set(policy?.detailFieldIds).size).toBe(
+        policy?.detailFieldIds.length,
+      )
+      expect(new Set(policy?.actions).size).toBe(policy?.actions.length)
+    }
+  })
+
   it("projects representative adapter families", () => {
     expect(getAccountSiteDefinition(SITE_TYPES.NEW_API)?.adapterFamily).toBe(
       ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
