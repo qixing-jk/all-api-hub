@@ -13,6 +13,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 function createDeferred<T>() {
@@ -32,12 +33,18 @@ const {
   trackProductAnalyticsActionStartedMock,
   sendAutoCheckinMessageMock,
   pushWithinOptionsPageMock,
+  getCurrentTempWindowRequestSourceMock,
 } = vi.hoisted(() => ({
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
   sendAutoCheckinMessageMock: vi.fn(),
   pushWithinOptionsPageMock: vi.fn(),
+  getCurrentTempWindowRequestSourceMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
+  getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -98,6 +105,9 @@ afterEach(() => {
 
 describe("AutoCheckin quick run", () => {
   beforeEach(() => {
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
@@ -220,7 +230,7 @@ describe("AutoCheckin quick run", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("auto-triggers runNow when routeParams.runNow is present", async () => {
+  it("captures the popup source when routeParams.runNow triggers a run", async () => {
     const navigation = await import("~/utils/navigation")
     const navigateWithinOptionsPageSpy = vi
       .spyOn(navigation, "navigateWithinOptionsPage")
@@ -263,8 +273,16 @@ describe("AutoCheckin quick run", () => {
     )
     expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
       AutoCheckinMessageTypes.RunNow,
-      {},
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
     )
+    expect(getCurrentTempWindowRequestSourceMock).toHaveBeenCalledTimes(1)
+    expect(
+      sendAutoCheckinMessageMock.mock.calls.filter(
+        ([type]) => type === AutoCheckinMessageTypes.RunNow,
+      ),
+    ).toHaveLength(1)
     expect(navigateWithinOptionsPageSpy).toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,

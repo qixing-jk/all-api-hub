@@ -13,7 +13,10 @@ import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
-import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/index"
+import type {
+  AutoCheckinProvider,
+  AutoCheckinProviderContext,
+} from "~/services/checkin/autoCheckin/providers/index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
@@ -28,6 +31,7 @@ import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type {
   TempWindowCheckinPageAction,
+  TempWindowRequestSource,
   TempWindowTurnstileFetch,
 } from "~/types/tempWindowFetch"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
@@ -36,6 +40,7 @@ import {
   tempWindowTriggerCheckinPageAction,
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
+import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { joinUrl } from "~/utils/core/url"
 
@@ -257,6 +262,7 @@ function resolveStandardCheckinResult(params: {
  */
 async function fetchCheckedInTodayStatus(
   account: SiteAccount,
+  tempWindowRequestSource: TempWindowRequestSource,
 ): Promise<boolean | undefined> {
   const currentMonth = new Date()
     .toISOString()
@@ -273,6 +279,7 @@ async function fetchCheckedInTodayStatus(
           userId: account.account_info.id,
           accessToken: account.account_info.access_token,
         },
+        tempWindowRequestSource,
       },
       {
         endpoint: `${ENDPOINT}?month=${currentMonth}`,
@@ -297,12 +304,16 @@ async function fetchCheckedInTodayStatus(
  */
 async function pollCheckedInTodayStatus(
   account: SiteAccount,
+  tempWindowRequestSource: TempWindowRequestSource,
 ): Promise<boolean | undefined> {
   const deadline = Date.now() + NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS
   let lastStatus: boolean | undefined
 
   while (Date.now() <= deadline) {
-    lastStatus = await fetchCheckedInTodayStatus(account)
+    lastStatus = await fetchCheckedInTodayStatus(
+      account,
+      tempWindowRequestSource,
+    )
     if (lastStatus === true) return true
 
     const remainingMs = deadline - Date.now()
@@ -366,6 +377,7 @@ function getTurnstileAssistedFetchOptions(account: SiteAccount): RequestInit {
 function buildTurnstileAssistedParams(
   account: SiteAccount,
   checkInUrl: string,
+  tempWindowRequestSource: TempWindowRequestSource,
 ) {
   const fetchUrl = joinUrl(account.site_url, ENDPOINT)
 
@@ -380,6 +392,7 @@ function buildTurnstileAssistedParams(
     cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
     turnstileTimeoutMs: TURNSTILE_ASSIST_TIMEOUT_MS,
     turnstilePreTrigger: resolveTurnstilePreTrigger(account),
+    tempWindowRequestSource,
   } as const
 }
 
@@ -483,6 +496,7 @@ function resolveNativePageFailureResult(params: {
 async function resolveNativePageCheckinResult(params: {
   account: SiteAccount
   responseMessage: string
+  tempWindowRequestSource: TempWindowRequestSource
 }): Promise<CheckinResult> {
   const checkInUrl = await resolveCheckInUrl(params.account)
   const expectedUserId = normalizeAccountIdentity(
@@ -509,6 +523,7 @@ async function resolveNativePageCheckinResult(params: {
       siteType: params.account.site_type,
       expectedUserId,
       trigger: resolveTurnstilePreTrigger(params.account),
+      tempWindowRequestSource: params.tempWindowRequestSource,
     })
   } catch (error: unknown) {
     const errorMessage = getProviderErrorMessage(error)
@@ -527,7 +542,10 @@ async function resolveNativePageCheckinResult(params: {
     })
   }
 
-  const checkedInToday = await pollCheckedInTodayStatus(params.account)
+  const checkedInToday = await pollCheckedInTodayStatus(
+    params.account,
+    params.tempWindowRequestSource,
+  )
   if (checkedInToday === true) {
     return {
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
@@ -605,11 +623,13 @@ async function runPreferredTurnstileAssistedAttempt(params: {
 async function resolveTurnstileAssistedCheckinResult(params: {
   account: SiteAccount
   responseMessage: string
+  tempWindowRequestSource: TempWindowRequestSource
 }): Promise<CheckinResult> {
   const checkInUrl = await resolveCheckInUrl(params.account)
   const assistedParams = buildTurnstileAssistedParams(
     params.account,
     checkInUrl,
+    params.tempWindowRequestSource,
   )
 
   const initialAttempt = await runPreferredTurnstileAssistedAttempt({
@@ -629,7 +649,10 @@ async function resolveTurnstileAssistedCheckinResult(params: {
 
   if (!assisted.success) {
     if (assisted.turnstile?.status !== "token_obtained") {
-      const checkedInToday = await fetchCheckedInTodayStatus(params.account)
+      const checkedInToday = await fetchCheckedInTodayStatus(
+        params.account,
+        params.tempWindowRequestSource,
+      )
       if (checkedInToday === true) {
         return {
           status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
@@ -737,7 +760,10 @@ async function resolveTurnstileAssistedCheckinResult(params: {
     assisted.turnstile?.status &&
     assisted.turnstile.status !== "token_obtained"
   ) {
-    const checkedInToday = await fetchCheckedInTodayStatus(params.account)
+    const checkedInToday = await fetchCheckedInTodayStatus(
+      params.account,
+      params.tempWindowRequestSource,
+    )
     if (checkedInToday === true) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
@@ -771,6 +797,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
  */
 async function performCheckin(
   account: SiteAccount,
+  tempWindowRequestSource: TempWindowRequestSource,
 ): Promise<NewApiCheckInResponse> {
   const { site_url, account_info } = account
 
@@ -784,6 +811,7 @@ async function performCheckin(
         userId: account_info.id,
         accessToken: account_info.access_token,
       },
+      tempWindowRequestSource,
     },
     {
       endpoint: ENDPOINT,
@@ -812,9 +840,18 @@ function getProviderErrorMessage(error: unknown): string {
 /**
  * Provider entry: execute check-in directly and normalize the response.
  */
-async function checkinNewApi(account: SiteAccount): Promise<CheckinResult> {
+async function checkinNewApi(
+  account: SiteAccount,
+  context?: AutoCheckinProviderContext,
+): Promise<CheckinResult> {
+  const tempWindowRequestSource = normalizeTempWindowRequestSource(
+    context?.tempWindowRequestSource,
+  )
   try {
-    const checkinResponse = await performCheckin(account)
+    const checkinResponse = await performCheckin(
+      account,
+      tempWindowRequestSource,
+    )
     const responseMessage = normalizeCheckinMessage(checkinResponse.message)
 
     const standardResult = resolveStandardCheckinResult({
@@ -833,6 +870,7 @@ async function checkinNewApi(account: SiteAccount): Promise<CheckinResult> {
       return await resolveTurnstileAssistedCheckinResult({
         account,
         responseMessage,
+        tempWindowRequestSource,
       })
     }
 
@@ -845,6 +883,7 @@ async function checkinNewApi(account: SiteAccount): Promise<CheckinResult> {
       return await resolveNativePageCheckinResult({
         account,
         responseMessage,
+        tempWindowRequestSource,
       })
     }
 
@@ -868,6 +907,7 @@ async function checkinNewApi(account: SiteAccount): Promise<CheckinResult> {
       return await resolveNativePageCheckinResult({
         account,
         responseMessage: errorMessage,
+        tempWindowRequestSource,
       })
     }
 

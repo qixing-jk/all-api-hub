@@ -26,6 +26,7 @@ import {
   MANAGED_UPSTREAM_RESOURCE_STATUSES,
   type ManagedUpstreamResourceSummary,
 } from "~/types/managedUpstreamResource"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
 
@@ -69,6 +70,7 @@ const {
   resolveProductAnalyticsErrorCategoryFromErrorMock,
   resolveDisplayAccountRuntimeKeySecretMock,
   resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+  getCurrentTempWindowRequestSourceMock,
 } = vi.hoisted(() => ({
   mockHandleSetAccountDisabled: vi.fn(),
   mockHandleRefreshAccount: vi.fn(),
@@ -116,6 +118,11 @@ const {
   resolveProductAnalyticsErrorCategoryFromErrorMock: vi.fn(),
   resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
   resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
+  getCurrentTempWindowRequestSourceMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
+  getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -272,6 +279,9 @@ vi.mock(
 
 describe("AccountActionButtons", () => {
   beforeEach(() => {
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     Object.defineProperty(window.navigator, "clipboard", {
       configurable: true,
       value: {
@@ -1232,7 +1242,7 @@ describe("AccountActionButtons", () => {
     })
   })
 
-  it("sends a targeted autoCheckin:runNow payload when Quick check-in is clicked", async () => {
+  it("captures the popup source for a targeted Quick check-in request", async () => {
     toastLoadingMock.mockReturnValue("toast-quick-checkin")
     sendRuntimeMessageMock
       .mockResolvedValueOnce({ success: true })
@@ -1277,13 +1287,14 @@ describe("AccountActionButtons", () => {
       "autoCheckin:messages.loading.running",
     )
     await waitFor(() => {
-      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(
-        1,
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.RunNow,
-        { accountIds: ["acc-5"] },
+        {
+          accountIds: ["acc-5"],
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        },
       )
-      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(
-        2,
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.GetStatus,
         undefined,
       )
@@ -1308,6 +1319,17 @@ describe("AccountActionButtons", () => {
         },
       )
     })
+    expect(getCurrentTempWindowRequestSourceMock).toHaveBeenCalledTimes(1)
+    expect(
+      sendRuntimeMessageMock.mock.calls.filter(
+        ([type]) => type === AutoCheckinMessageTypes.RunNow,
+      ),
+    ).toHaveLength(1)
+    expect(
+      sendRuntimeMessageMock.mock.calls.filter(
+        ([type]) => type === AutoCheckinMessageTypes.GetStatus,
+      ),
+    ).toHaveLength(1)
   })
 
   it("shows a failure toast when quick check-in finishes without a per-account result", async () => {

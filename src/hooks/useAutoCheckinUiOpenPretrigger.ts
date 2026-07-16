@@ -25,6 +25,7 @@ import type {
 } from "~/types/autoCheckin"
 import { AUTO_CHECKIN_RUN_RESULT } from "~/types/autoCheckin"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
@@ -134,10 +135,12 @@ export function useAutoCheckinUiOpenPretrigger(): {
 
     void (async () => {
       try {
+        const tempWindowRequestSource = getCurrentTempWindowRequestSource()
         const response = await sendAutoCheckinMessage(
           AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
           {
             requestId,
+            tempWindowRequestSource,
           },
         )
 

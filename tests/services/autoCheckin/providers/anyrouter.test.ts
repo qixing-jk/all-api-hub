@@ -6,6 +6,7 @@ import {
   type AnyrouterCheckInParams,
 } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
@@ -63,7 +64,7 @@ describe("anyrouterProvider", () => {
   })
 
   describe("checkIn", () => {
-    it("returns success on successful check-in (message includes 签到成功)", async () => {
+    it("propagates the popup source on a successful check-in", async () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
@@ -75,10 +76,13 @@ describe("anyrouterProvider", () => {
         message: "签到成功，获得 $25 额度",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await anyrouterProvider.checkIn(mockAccount, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
       expect(result.status).toBe("success")
       expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
     })
 
@@ -112,6 +116,7 @@ describe("anyrouterProvider", () => {
         baseUrl: "https://anyrouter.top",
         accountId: "stored-account-id",
         cookieAuthSessionCookie: "session=stored-cookie",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
         auth: {
           authType: AuthTypeEnum.Cookie,
           userId: 12345,

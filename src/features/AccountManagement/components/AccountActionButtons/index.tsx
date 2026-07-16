@@ -83,6 +83,7 @@ import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapsh
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showWarningToast } from "~/utils/core/toastHelpers"
@@ -704,10 +705,12 @@ export default function AccountActionButtons({
     try {
       toastId = toast.loading(t("autoCheckin:messages.loading.running"))
 
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       const response = await sendAutoCheckinMessage(
         AutoCheckinMessageTypes.RunNow,
         {
           accountIds: [site.id],
+          tempWindowRequestSource,
         },
       )
 

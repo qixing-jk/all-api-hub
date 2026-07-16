@@ -14,6 +14,7 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -42,13 +43,19 @@ export async function fetchCheckInStatus(
       return undefined
     }
 
-    const checkInData = await anyrouterProvider.checkIn({
-      site_url: request.baseUrl,
-      id: request.accountId,
-      cookieAuthSessionCookie:
-        request.cookieAuthSessionCookie ?? request.auth.cookie,
-      account_info: { id: numericUserId },
-    })
+    const tempWindowRequestSource = normalizeTempWindowRequestSource(
+      request.tempWindowRequestSource,
+    )
+    const checkInData = await anyrouterProvider.checkIn(
+      {
+        site_url: request.baseUrl,
+        id: request.accountId,
+        cookieAuthSessionCookie:
+          request.cookieAuthSessionCookie ?? request.auth.cookie,
+        account_info: { id: numericUserId },
+      },
+      { tempWindowRequestSource },
+    )
     return checkInData.status !== CHECKIN_RESULT_STATUS.ALREADY_CHECKED
   } catch (error) {
     logger.warn("获取签到状态失败", error)

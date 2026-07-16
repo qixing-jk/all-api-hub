@@ -50,6 +50,7 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -322,9 +323,10 @@ export default function AutoCheckin(props: {
       setIsRunning(true)
       toast.loading(t("messages.loading.running"))
 
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       const response = await sendAutoCheckinMessage(
         AutoCheckinMessageTypes.RunNow,
-        {},
+        { tempWindowRequestSource },
       )
 
       toast.dismiss()
@@ -474,11 +476,13 @@ export default function AutoCheckin(props: {
       )
       toast.loading(t("messages.loading.evaluatingUiOpenPretrigger"))
 
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       const response = await sendAutoCheckinMessage(
         AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
         {
           dryRun: true,
           debug: true,
+          tempWindowRequestSource,
         },
       )
 
@@ -538,11 +542,13 @@ export default function AutoCheckin(props: {
         }
       })
 
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       const response = await sendAutoCheckinMessage(
         AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
         {
           requestId,
           debug: true,
+          tempWindowRequestSource,
         },
       )
 
@@ -724,10 +730,12 @@ export default function AutoCheckin(props: {
 
     try {
       setRetryingAccountId(accountId)
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       const response = await sendAutoCheckinMessage(
         AutoCheckinMessageTypes.RetryAccount,
         {
           accountId,
+          tempWindowRequestSource,
         },
       )
 

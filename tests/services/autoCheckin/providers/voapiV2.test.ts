@@ -9,12 +9,41 @@ import {
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 
-const { mockResyncVoApiV2AuthToken, mockUpdateAccount } = vi.hoisted(() => ({
+const {
+  mockResyncVoApiV2AuthToken,
+  mockUpdateAccount,
+  mockSubmitVoApiV2CheckIn,
+  mockFetchVoApiV2CheckInStats,
+} = vi.hoisted(() => ({
   mockResyncVoApiV2AuthToken: vi.fn(),
   mockUpdateAccount: vi.fn(),
+  mockSubmitVoApiV2CheckIn: vi.fn(),
+  mockFetchVoApiV2CheckInStats: vi.fn(),
 }))
+
+vi.mock("~/services/apiService/voapiV2", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiService/voapiV2")>()
+
+  return {
+    ...actual,
+    submitVoApiV2CheckIn: (
+      ...args: Parameters<typeof actual.submitVoApiV2CheckIn>
+    ) => {
+      mockSubmitVoApiV2CheckIn(...args)
+      return actual.submitVoApiV2CheckIn(...args)
+    },
+    fetchVoApiV2CheckInStats: (
+      ...args: Parameters<typeof actual.fetchVoApiV2CheckInStats>
+    ) => {
+      mockFetchVoApiV2CheckInStats(...args)
+      return actual.fetchVoApiV2CheckInStats(...args)
+    },
+  }
+})
 
 vi.mock("~/services/apiService/voapiV2/tokenResync", () => ({
   resyncVoApiV2AuthToken: mockResyncVoApiV2AuthToken,
@@ -52,7 +81,7 @@ describe("voApiV2Provider", () => {
     )
   })
 
-  it("checks in through the VoAPI v2 API and confirms stats", async () => {
+  it("propagates the popup source through VoAPI v2 check-in and stats requests", async () => {
     server.use(
       http.post("https://example.invalid/api/check_in", ({ request }) => {
         expect(request.headers.get("authorization")).toBe("jwt-dashboard")
@@ -66,9 +95,21 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
-      status: CHECKIN_RESULT_STATUS.SUCCESS,
-    })
+    await expect(
+      voApiV2Provider.checkIn(account, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
+    expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    )
+    expect(mockFetchVoApiV2CheckInStats).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    )
   })
 
   it("treats repeated same-day sign-in as already checked", async () => {
@@ -84,6 +125,11 @@ describe("voApiV2Provider", () => {
     await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
     })
+    expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      }),
+    )
   })
 
   it("does not run without the saved dashboard JWT", () => {
@@ -153,6 +199,7 @@ describe("voApiV2Provider", () => {
     })
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
     )
   })
 
@@ -205,9 +252,11 @@ describe("voApiV2Provider", () => {
       }),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
-      status: CHECKIN_RESULT_STATUS.SUCCESS,
-    })
+    await expect(
+      voApiV2Provider.checkIn(account, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
 
     expect(postAuthorizations).toEqual([
       "jwt-dashboard",
@@ -216,6 +265,18 @@ describe("voApiV2Provider", () => {
     expect(statsAuthorizations).toEqual(["resynced-dashboard-token"])
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
+    expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledTimes(2)
+    for (const [request] of mockSubmitVoApiV2CheckIn.mock.calls) {
+      expect(request).toMatchObject({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
+    }
+    expect(mockFetchVoApiV2CheckInStats).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
     )
     expect(mockUpdateAccount).toHaveBeenCalledWith(
       "account-1",

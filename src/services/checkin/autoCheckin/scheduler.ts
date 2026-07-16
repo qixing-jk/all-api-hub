@@ -59,6 +59,10 @@ import {
   TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
 import {
+  TEMP_WINDOW_REQUEST_SOURCES,
+  type TempWindowRequestSource,
+} from "~/types/tempWindowFetch"
+import {
   clearAlarm,
   createAlarm,
   getAlarm,
@@ -67,6 +71,7 @@ import {
   onAlarm,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
+import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { isDevelopmentMode, isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -175,6 +180,7 @@ class AutoCheckinScheduler {
   private async refreshAccountsAfterSuccessfulCheckins(params: {
     accountIds: string[]
     force?: boolean
+    tempWindowRequestSource?: TempWindowRequestSource
   }): Promise<void> {
     try {
       const uniqueAccountIds = Array.from(new Set(params.accountIds)).filter(
@@ -196,7 +202,11 @@ class AutoCheckinScheduler {
         items: uniqueAccountIds,
         batchSize: AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE,
         processItem: async (accountId) => {
-          const result = await accountStorage.refreshAccount(accountId, force)
+          const result = params.tempWindowRequestSource
+            ? await accountStorage.refreshAccount(accountId, force, {
+                tempWindowRequestSource: params.tempWindowRequestSource,
+              })
+            : await accountStorage.refreshAccount(accountId, force)
           if (result?.refreshed === true) return "refreshed"
           if (result == null) return "failed"
           return "unchanged"
@@ -936,6 +946,7 @@ class AutoCheckinScheduler {
   private async runAccountCheckin(
     account: SiteAccount,
     accountName: string,
+    tempWindowRequestSource: TempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Background,
   ): Promise<{
     result: CheckinAccountResult
     successful: boolean
@@ -974,7 +985,9 @@ class AutoCheckinScheduler {
         }
       }
 
-      const providerResult = await provider.checkIn(account)
+      const providerResult = await provider.checkIn(account, {
+        tempWindowRequestSource,
+      })
       const result = buildResult(providerResult.status, {
         messageKey: providerResult.messageKey,
         messageParams: providerResult.messageParams,
@@ -1063,6 +1076,7 @@ class AutoCheckinScheduler {
   private async runAccountCheckinsInBatches(params: {
     accounts: SiteAccount[]
     accountDisplayNameById: Map<string, string>
+    tempWindowRequestSource: TempWindowRequestSource
   }): Promise<
     Array<{
       result: CheckinAccountResult
@@ -1089,6 +1103,7 @@ class AutoCheckinScheduler {
         this.runAccountCheckin(
           account,
           params.accountDisplayNameById.get(account.id) ?? account.id,
+          params.tempWindowRequestSource,
         ),
     })
   }
@@ -1111,7 +1126,10 @@ class AutoCheckinScheduler {
           if (alarm.name === AutoCheckinScheduler.DAILY_ALARM_NAME) {
             // Await to keep the MV3 service worker alive for the full daily run.
             try {
-              await this.handleDailyAlarm(alarm)
+              await this.handleDailyAlarm(
+                alarm,
+                TEMP_WINDOW_REQUEST_SOURCES.Background,
+              )
             } catch (error) {
               logger.error("Daily alarm execution failed", error)
             }
@@ -1508,7 +1526,10 @@ class AutoCheckinScheduler {
    * - the next daily run for the next day window
    * - any required retry alarm (without overriding the daily schedule)
    */
-  private async handleDailyAlarm(alarm: browser.alarms.Alarm) {
+  private async handleDailyAlarm(
+    alarm: browser.alarms.Alarm,
+    tempWindowRequestSource: TempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Background,
+  ) {
     const now = new Date()
     const today = this.getLocalDay(now)
 
@@ -1537,7 +1558,10 @@ class AutoCheckinScheduler {
 
       logger.info("Daily alarm triggered; starting check-in execution")
       try {
-        await this.runCheckins({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+        await this.runCheckins({
+          runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
+          tempWindowRequestSource,
+        })
       } catch (error) {
         logger.error("Error during daily check-in execution", error)
       } finally {
@@ -1566,6 +1590,7 @@ class AutoCheckinScheduler {
    */
   async pretriggerDailyOnUiOpen(params?: {
     requestId?: string
+    tempWindowRequestSource?: TempWindowRequestSource
     /**
      * When true, evaluates eligibility but does not execute the daily run.
      * Intended for UI diagnostics so users can understand why a pre-trigger did
@@ -1729,10 +1754,13 @@ class AutoCheckinScheduler {
       }
     }
 
-    await this.handleDailyAlarm({
-      name: AutoCheckinScheduler.DAILY_ALARM_NAME,
-      scheduledTime: dailyAlarm.scheduledTime,
-    } as browser.alarms.Alarm)
+    await this.handleDailyAlarm(
+      {
+        name: AutoCheckinScheduler.DAILY_ALARM_NAME,
+        scheduledTime: dailyAlarm.scheduledTime,
+      } as browser.alarms.Alarm,
+      params?.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
 
     const updatedStatus = await autoCheckinStorage.getStatus()
     const summary =
@@ -1795,10 +1823,13 @@ class AutoCheckinScheduler {
    * `chrome.alarms` without waiting for the scheduled time.
    */
   async debugTriggerDailyAlarmNow(): Promise<void> {
-    await this.handleDailyAlarm({
-      name: AutoCheckinScheduler.DAILY_ALARM_NAME,
-      scheduledTime: Date.now(),
-    } as browser.alarms.Alarm)
+    await this.handleDailyAlarm(
+      {
+        name: AutoCheckinScheduler.DAILY_ALARM_NAME,
+        scheduledTime: Date.now(),
+      } as browser.alarms.Alarm,
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
   }
 
   /**
@@ -1881,11 +1912,14 @@ class AutoCheckinScheduler {
   async runCheckins(options?: {
     runType?: AutoCheckinRunType
     targetAccountIds?: string[]
+    tempWindowRequestSource?: TempWindowRequestSource
   }): Promise<void> {
     // Default to manual runs for UI-triggered or debug entry points.
     const runType = options?.runType ?? AUTO_CHECKIN_RUN_TYPE.MANUAL
     const isDailyRun = runType === AUTO_CHECKIN_RUN_TYPE.DAILY
     const targetAccountIds = options?.targetAccountIds
+    const tempWindowRequestSource =
+      options?.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Background
     const targetAccountIdSet =
       !isDailyRun &&
       Array.isArray(targetAccountIds) &&
@@ -2123,6 +2157,7 @@ class AutoCheckinScheduler {
       const checkinOutcomes = await this.runAccountCheckinsInBatches({
         accounts: runnableAccounts,
         accountDisplayNameById,
+        tempWindowRequestSource,
       })
 
       for (const outcome of checkinOutcomes) {
@@ -2239,6 +2274,7 @@ class AutoCheckinScheduler {
       await this.refreshAccountsAfterSuccessfulCheckins({
         accountIds: accountIdsToRefresh,
         force: true,
+        tempWindowRequestSource,
       })
 
       if (notifyUiOnCompletion) {
@@ -2337,7 +2373,9 @@ class AutoCheckinScheduler {
    * - Each automatic retry increments the count.
    * - Retries stop once `attempts >= retryStrategy.maxAttemptsPerDay`.
    */
-  private async runRetryCheckins(): Promise<void> {
+  private async runRetryCheckins(
+    tempWindowRequestSource: TempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Background,
+  ): Promise<void> {
     const startTime = Date.now()
     const now = new Date()
     const today = this.getLocalDay(now)
@@ -2432,6 +2470,7 @@ class AutoCheckinScheduler {
       const outcome = await this.runAccountCheckin(
         account,
         accountDisplayNameById.get(account.id) ?? account.id,
+        tempWindowRequestSource,
       )
       // Persist that we've attempted one more time for this account today, regardless of outcome.
       attemptsByAccount[accountId] = attempts + 1
@@ -2497,6 +2536,7 @@ class AutoCheckinScheduler {
     await this.refreshAccountsAfterSuccessfulCheckins({
       accountIds: accountIdsToRefresh,
       force: true,
+      tempWindowRequestSource,
     })
 
     if (notifyUiOnCompletion) {
@@ -2601,7 +2641,10 @@ class AutoCheckinScheduler {
    * If this account is currently in today's retry queue, a successful manual retry removes it
    * from the pending list (and may clear the retry alarm if nothing else remains).
    */
-  async retryAccount(accountId: string) {
+  async retryAccount(
+    accountId: string,
+    tempWindowRequestSource: TempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Background,
+  ) {
     const today = this.getLocalDay()
     const allAccounts = await accountStorage.getAllAccounts()
     const account = allAccounts.find((item) => item.id === accountId)
@@ -2627,6 +2670,7 @@ class AutoCheckinScheduler {
             await this.runAccountCheckin(
               account,
               accountDisplayNameById.get(account.id) ?? account.id,
+              tempWindowRequestSource,
             )
           ).result
 
@@ -2770,11 +2814,15 @@ export async function runAutoCheckinNow(data: AutoCheckinRunNowRequest = {}) {
   if (!targetIdsResult.success) {
     return { success: false as const, error: targetIdsResult.error }
   }
+  const tempWindowRequestSource = normalizeTempWindowRequestSource(
+    data.tempWindowRequestSource,
+  )
 
   try {
     await autoCheckinScheduler.runCheckins({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: targetIdsResult.targetAccountIds,
+      tempWindowRequestSource,
     })
     return { success: true as const }
   } catch (e) {
@@ -2863,10 +2911,14 @@ export async function scheduleAutoCheckinDailyAlarmForToday(
 export async function pretriggerAutoCheckinDailyOnUiOpen(
   data: AutoCheckinPretriggerDailyOnUiOpenRequest = {},
 ) {
+  const tempWindowRequestSource = normalizeTempWindowRequestSource(
+    data.tempWindowRequestSource,
+  )
   const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
     requestId: data.requestId,
     dryRun: data.dryRun,
     debug: data.debug,
+    tempWindowRequestSource,
   })
   return { success: true as const, ...result }
 }
@@ -2874,11 +2926,17 @@ export async function pretriggerAutoCheckinDailyOnUiOpen(
 /**
  * Retry auto check-in for one failed account.
  */
-export async function retryAutoCheckinAccount(accountId?: string) {
+export async function retryAutoCheckinAccount(
+  accountId?: string,
+  tempWindowRequestSource?: unknown,
+) {
   if (!accountId) {
     return { success: false as const, error: "Missing accountId" }
   }
-  await autoCheckinScheduler.retryAccount(accountId)
+  await autoCheckinScheduler.retryAccount(
+    accountId,
+    normalizeTempWindowRequestSource(tempWindowRequestSource),
+  )
   return { success: true as const }
 }
 
@@ -2996,7 +3054,10 @@ export function setupAutoCheckinMessagingListeners() {
       AutoCheckinMessageTypes.RetryAccount,
       async ({ data }) => {
         try {
-          return await retryAutoCheckinAccount(data.accountId)
+          return await retryAutoCheckinAccount(
+            data.accountId,
+            data.tempWindowRequestSource,
+          )
         } catch (error) {
           return toAutoCheckinFailure(error)
         }

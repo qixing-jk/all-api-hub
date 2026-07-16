@@ -19,6 +19,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { AUTO_CHECKIN_RUN_RESULT } from "~/types/autoCheckin"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { openAutoCheckinPage, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -26,10 +27,16 @@ const {
   trackProductAnalyticsActionCompletedMock,
   trackProductAnalyticsActionStartedMock,
   trackProductAnalyticsEventMock,
+  getCurrentTempWindowRequestSourceMock,
 } = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
   trackProductAnalyticsEventMock: vi.fn(),
+  getCurrentTempWindowRequestSourceMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
+  getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -91,10 +98,13 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
 describe("AutoCheckinUiOpenPretrigger", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     window.history.replaceState(null, "", "/")
   })
 
-  it("shows a started toast and a completion dialog with a View details button", async () => {
+  it("captures the popup source for the pretrigger request before showing completion", async () => {
     const toast = (await import("react-hot-toast")).default
 
     /**
@@ -149,9 +159,18 @@ describe("AutoCheckinUiOpenPretrigger", () => {
     await waitFor(() => {
       expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
-        expect.objectContaining({ requestId: expect.any(String) }),
+        expect.objectContaining({
+          requestId: expect.any(String),
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        }),
       )
     })
+    expect(getCurrentTempWindowRequestSourceMock).toHaveBeenCalledTimes(1)
+    expect(
+      sendRuntimeMessageSpy.mock.calls.filter(
+        ([type]) => type === AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
+      ),
+    ).toHaveLength(1)
     expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,

@@ -13,10 +13,11 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { openSettingsTab } from "~/utils/navigation"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
-const { toast } = vi.hoisted(() => ({
+const { toast, getCurrentTempWindowRequestSourceMock } = vi.hoisted(() => ({
   toast: {
     loading: vi.fn(),
     dismiss: vi.fn(),
@@ -49,6 +50,7 @@ const { toast } = vi.hoisted(() => ({
       },
     ),
   },
+  getCurrentTempWindowRequestSourceMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -113,6 +115,17 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
   }
 })
 
+vi.mock("~/utils/browser/tempWindowRequestSource", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/utils/browser/tempWindowRequestSource")
+    >()
+  return {
+    ...actual,
+    getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
+  }
+})
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.clearAllMocks()
@@ -120,6 +133,9 @@ afterEach(() => {
 
 describe("AutoCheckin account actions", () => {
   beforeEach(() => {
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
@@ -157,6 +173,9 @@ describe("AutoCheckin account actions", () => {
   })
 
   it("retries a failed account, reloads status, and hides row actions after success", async () => {
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
 
@@ -204,9 +223,13 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.RetryAccount,
-        { accountId: "alpha" },
+        {
+          accountId: "alpha",
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        },
       )
     })
+    expect(getCurrentTempWindowRequestSourceMock).toHaveBeenCalledTimes(1)
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith(
         "autoCheckin:messages.success.retryCompleted",
@@ -268,7 +291,10 @@ describe("AutoCheckin account actions", () => {
         }
 
         if (message === AutoCheckinMessageTypes.RetryAccount) {
-          expect(data).toEqual({ accountId: "alpha" })
+          expect(data).toEqual({
+            accountId: "alpha",
+            tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          })
           return await new Promise<{ success: boolean; error?: string }>(
             (resolve) => {
               resolveRetry = resolve
@@ -292,7 +318,10 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.RetryAccount,
-        { accountId: "alpha" },
+        {
+          accountId: "alpha",
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        },
       )
     })
 

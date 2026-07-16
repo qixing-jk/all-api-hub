@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+
 type RuntimeMessageHandler = (input?: { data?: unknown }) => Promise<unknown>
 type OnMessageMock = ReturnType<
   typeof vi.fn<(type: string, handler: RuntimeMessageHandler) => () => void>
@@ -1006,6 +1008,7 @@ describe("typed runtime messaging setup", () => {
     expect(runCheckins).toHaveBeenCalledWith({
       runType: "manual",
       targetAccountIds: ["a", "b"],
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
     })
     expect(scheduleNextRun).toHaveBeenCalledWith({ preserveExisting: true })
     expect(debugScheduleDailyAlarmForToday).toHaveBeenCalledWith({
@@ -1015,7 +1018,12 @@ describe("typed runtime messaging setup", () => {
       requestId: "request-1",
       dryRun: true,
       debug: undefined,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
     })
+    expect(retryAccount).toHaveBeenCalledWith(
+      "account-1",
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
     expect(getAccountDisplayData).toHaveBeenCalledWith("account-1", {
       includeDisabled: true,
     })
