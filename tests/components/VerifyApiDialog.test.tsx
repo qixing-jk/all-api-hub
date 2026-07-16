@@ -222,7 +222,15 @@ describe("VerifyApiDialog", () => {
         />,
       )
 
-      expect(await screen.findByText(expectedApiTypeLabel)).toBeVisible()
+      const apiTypeLabel = await screen.findByText(
+        "aiApiVerification:verifyDialog.meta.apiType",
+      )
+      const apiTypeField = apiTypeLabel.parentElement
+
+      expect(apiTypeField).not.toBeNull()
+      expect(within(apiTypeField!).getByRole("combobox")).toHaveTextContent(
+        expectedApiTypeLabel,
+      )
     },
   )
 

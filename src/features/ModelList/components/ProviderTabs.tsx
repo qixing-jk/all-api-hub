@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next"
 import { Button } from "~/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import type { CountedModelVendorCatalogEntry } from "~/features/ModelList/hooks/useFilteredModels"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
-import type { ModelVendorCatalogEntry } from "~/services/models/modelMetadata/types"
 import {
   MODEL_VENDOR_FILTER_VALUES,
   type ModelVendorFilterValue,
@@ -24,10 +24,6 @@ import {
 
 import { ModelVendorMark } from "./ModelVendorMark"
 
-type CountedModelVendorCatalogEntry = ModelVendorCatalogEntry & {
-  count: number
-}
-
 interface ProviderTabsProps {
   vendorCatalog: CountedModelVendorCatalogEntry[]
   effectiveSelectedVendor: ModelVendorFilterValue
@@ -42,6 +38,26 @@ interface ProviderTabListProps {
   selectedIndex: number
   allVendorsFilteredCount: number
   unclassifiedVendorCount: number
+}
+
+/** Resolves the privacy-safe result count recorded for a provider filter. */
+export function getProviderFilterAnalyticsResultCount(
+  selectedVendor: ModelVendorFilterValue,
+  vendorCatalog: CountedModelVendorCatalogEntry[],
+  allVendorsFilteredCount: number,
+  unclassifiedVendorCount: number,
+): number {
+  if (selectedVendor === MODEL_VENDOR_FILTER_VALUES.All) {
+    return allVendorsFilteredCount
+  }
+
+  if (selectedVendor === MODEL_VENDOR_FILTER_VALUES.Unclassified) {
+    return unclassifiedVendorCount
+  }
+
+  return (
+    vendorCatalog.find((vendor) => vendor.key === selectedVendor)?.count ?? 0
+  )
 }
 
 const providerTabClassName = `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} data-[state=active]:dark:bg-dark-bg-secondary data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow data-[state=active]:dark:text-blue-400 dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900`
@@ -203,13 +219,12 @@ export function ProviderTabs({
             targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
             mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
             filterCount: newProvider === MODEL_VENDOR_FILTER_VALUES.All ? 0 : 1,
-            resultCount:
-              newProvider === MODEL_VENDOR_FILTER_VALUES.All
-                ? allVendorsFilteredCount
-                : newProvider === MODEL_VENDOR_FILTER_VALUES.Unclassified
-                  ? unclassifiedVendorCount
-                  : vendorCatalog.find((vendor) => vendor.key === newProvider)
-                      ?.count ?? 0,
+            resultCount: getProviderFilterAnalyticsResultCount(
+              newProvider,
+              vendorCatalog,
+              allVendorsFilteredCount,
+              unclassifiedVendorCount,
+            ),
           },
         })
       }}

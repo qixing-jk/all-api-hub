@@ -1639,6 +1639,11 @@ describe("apiService AIHubMix", () => {
               model_id: "catalog-with-string-developer-id",
               developer_id: "opaque-only",
             },
+            {
+              model_id: "catalog-with-invalid-developer-id",
+              developer_name: "Valid Developer",
+              developer_id: { invalid: true },
+            },
           ],
         }),
       ),
@@ -1651,6 +1656,7 @@ describe("apiService AIHubMix", () => {
             { model: "catalog-with-owner" },
             { model: "catalog-with-developer-id" },
             { model: "catalog-with-string-developer-id" },
+            { model: "catalog-with-invalid-developer-id" },
           ],
         }),
       ),
@@ -1687,11 +1693,20 @@ describe("apiService AIHubMix", () => {
           model_name: "catalog-with-string-developer-id",
           owner_by: "opaque-only",
         },
+        {
+          model_name: "catalog-with-invalid-developer-id",
+          owner_by: "Valid Developer",
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+            name: "Valid Developer",
+          },
+        },
       ],
     })
     expect(result.data[1].vendorEvidence).not.toHaveProperty("externalId")
     expect(result.data[2]).not.toHaveProperty("vendorEvidence")
     expect(result.data[3]).not.toHaveProperty("vendorEvidence")
+    expect(result.data[4].vendorEvidence).not.toHaveProperty("externalId")
   })
 
   it("normalizes nested catalog string model values", async () => {

@@ -1944,6 +1944,24 @@ describe("known vendor aliases and curated model families", () => {
 describe("custom vendor keys and deterministic aggregation", () => {
   const malformedVendorName = "Acme\ud800 Labs"
 
+  it("preserves valid surrogate pairs when normalizing custom vendor names", () => {
+    const vendorName = "Acme 😀 Labs"
+
+    expect(normalizeCustomVendorName(vendorName)).toBe("acme 😀 labs")
+    expect(buildCustomVendorKey(normalizeCustomVendorName(vendorName))).toBe(
+      "custom:acme%20%F0%9F%98%80%20labs",
+    )
+  })
+
+  it("replaces isolated low surrogates when normalizing custom vendor names", () => {
+    const vendorName = "Acme\udc00 Labs"
+
+    expect(normalizeCustomVendorName(vendorName)).toBe("acme� labs")
+    expect(buildCustomVendorKey(normalizeCustomVendorName(vendorName))).toBe(
+      "custom:acme%EF%BF%BD%20labs",
+    )
+  })
+
   it("repairs malformed Unicode in publisher evidence before building a custom key", () => {
     const candidate = resolveModelVendorCandidate(
       {

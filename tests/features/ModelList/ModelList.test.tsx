@@ -10,6 +10,7 @@ import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { mockUseModelListData, openKeysPageMock, replaceWithinOptionsPageMock } =
@@ -153,8 +154,10 @@ vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
 
 vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
   ModelDisplay: ({
+    models,
     onVerifyModel,
   }: {
+    models?: Array<{ model: { model_name: string } }>
     onVerifyModel?: (...args: any[]) => void
   }) => (
     <button
@@ -162,6 +165,9 @@ vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
       onClick={() => onVerifyModel?.(ACCOUNT_SOURCE, "gpt-test", ["vip"])}
     >
       open-api-verification
+      {models?.map(({ model }) => (
+        <span key={model.model_name}>{model.model_name}</span>
+      ))}
     </button>
   ),
 }))
@@ -295,6 +301,8 @@ function createModelListData() {
     setSelectedBillingMode: vi.fn(),
     selectedGroups: ["vip"],
     setSelectedGroups: vi.fn(),
+    selectedVerificationResults: ["pass", "fail", "unverified"],
+    setSelectedVerificationResults: vi.fn(),
     allAccountsExcludedGroupsByAccountId: {},
     setAllAccountsExcludedGroupsByAccountId: vi.fn(),
     showRealPrice: false,
@@ -328,6 +336,7 @@ function createModelListData() {
     isFallbackCatalogActive: false,
     isAihubmixCatalogFallbackActive: false,
     filteredModels: [],
+    unclassifiedVendorCount: 0,
     accountSummaryCountsByAccountId: new Map(),
     allVendorsFilteredCount: 1,
     getFilteredResultCount: vi.fn(() => 1),
@@ -414,6 +423,24 @@ describe("ModelList", () => {
         screen.getByTestId(MODEL_LIST_TEST_IDS.titleActions),
       ).queryByTestId(MODEL_LIST_TEST_IDS.openSelectedAccountKeysButton),
     ).not.toBeInTheDocument()
+  })
+
+  it("renders unclassified model content in the effective unclassified tab panel", () => {
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      effectiveSelectedVendor: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+      unclassifiedVendorCount: 1,
+      filteredModels: [
+        {
+          model: { model_name: "unclassified-model" },
+          source: ACCOUNT_SOURCE,
+        },
+      ],
+    })
+
+    render(<ModelList />)
+
+    expect(screen.getByText("unclassified-model")).toBeInTheDocument()
   })
 
   it("opens the model key dialog from an incompatible API verification token state", async () => {

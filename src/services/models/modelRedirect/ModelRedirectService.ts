@@ -862,17 +862,6 @@ export class ModelRedirectService {
 
       // Map the standard model to the first available candidate
       if (availableCandidate) {
-        const standardKey = toModelTokenKey(extractActualModel(standardModel))
-        const candidateKey = toModelTokenKey(
-          extractActualModel(availableCandidate),
-        )
-
-        // Guardrail: never generate downgrade/upgrade mappings across versions.
-        // If the token signatures differ, treat as incompatible and leave unmapped.
-        if (!standardKey || !candidateKey || standardKey !== candidateKey) {
-          continue
-        }
-
         mapping[standardModel] = availableCandidate
         usedActualModels.add(availableCandidate)
       }

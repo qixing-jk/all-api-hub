@@ -280,10 +280,18 @@ function normalizeMetadataPayload(data: any): ModelMetadata[] {
   const modelsPayload = data.models || data
 
   if (Array.isArray(modelsPayload)) {
-    return modelsPayload.flatMap((item) => {
+    const models = modelsPayload.flatMap((item) => {
       const metadata = normalizeModelMetadataItem(item)
       return metadata ? [metadata] : []
     })
+
+    if (models.length === 0) {
+      throw new Error(
+        "Invalid metadata format: models array should contain valid objects",
+      )
+    }
+
+    return models
   }
 
   if (isPlainRecord(modelsPayload)) {

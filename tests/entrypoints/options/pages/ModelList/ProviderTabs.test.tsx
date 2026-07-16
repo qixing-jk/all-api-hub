@@ -2,7 +2,10 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TabsContent } from "~/components/ui"
-import { ProviderTabs } from "~/features/ModelList/components/ProviderTabs"
+import {
+  getProviderFilterAnalyticsResultCount,
+  ProviderTabs,
+} from "~/features/ModelList/components/ProviderTabs"
 import type { ModelVendorCatalogEntry } from "~/services/models/modelMetadata/types"
 import {
   MODEL_VENDOR_FILTER_VALUES,
@@ -289,6 +292,17 @@ describe("ProviderTabs scroll arrows", () => {
 })
 
 describe("ProviderTabs selection", () => {
+  it("reports zero analytics results for a stale vendor absent from the catalog", () => {
+    expect(
+      getProviderFilterAnalyticsResultCount(
+        "custom:missing-vendor",
+        VENDOR_CATALOG,
+        BASE_FILTERED_MODELS_COUNT,
+        0,
+      ),
+    ).toBe(0)
+  })
+
   it("renders namespaced dynamic vendor labels, counts, and the effective selection", async () => {
     const vendorCatalog = [GOOGLE_VENDOR, ...VENDOR_CATALOG]
 

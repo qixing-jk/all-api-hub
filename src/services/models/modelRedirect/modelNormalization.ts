@@ -8,12 +8,6 @@ import { removeDateSuffix } from "~/services/models/utils/modelName"
 export function extractCoreModelIdentity(modelName: string): string {
   let coreIdentity = modelName
 
-  // 处理特殊前缀（如 BigModel/GLM-4.5 → GLM-4.5）
-  const specialPrefix = "BigModel/"
-  if (coreIdentity.startsWith(specialPrefix)) {
-    coreIdentity = coreIdentity.slice(specialPrefix.length)
-  }
-
   // 提取真实模型名，提取最后一个/到结尾的内容
   const lastSlashIndex = coreIdentity.lastIndexOf("/")
   if (lastSlashIndex !== -1) {

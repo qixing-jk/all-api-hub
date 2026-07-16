@@ -227,8 +227,8 @@
     "title": "Profile-backed model catalog"
   },
   "providerTabs": {
-    "scrollLeft": "Scroll provider tabs left",
-    "scrollRight": "Scroll provider tabs right",
+    "scrollLeft": "Scroll vendor tabs left",
+    "scrollRight": "Scroll vendor tabs right",
     "unclassified": "Unclassified",
     "unclassifiedDescription": "The vendor could not be identified; this does not mean the model is unavailable."
   },

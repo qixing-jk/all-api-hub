@@ -234,8 +234,8 @@
     "title": "Catálogo de modelos respaldado por perfil"
   },
   "providerTabs": {
-    "scrollLeft": "Desplazar pestañas de proveedor a la izquierda",
-    "scrollRight": "Desplazar pestañas de proveedor a la derecha",
+    "scrollLeft": "Desplazar pestañas de fabricante a la izquierda",
+    "scrollRight": "Desplazar pestañas de fabricante a la derecha",
     "unclassified": "Sin clasificar",
     "unclassifiedDescription": "No se pudo identificar el proveedor; esto no significa que el modelo no esté disponible."
   },

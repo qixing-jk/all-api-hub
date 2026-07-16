@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MODEL_METADATA_REFRESH_INTERVAL } from "~/services/models/modelMetadata/constants"
+
 describe("ModelMetadataService", () => {
   const loadService = async () => {
     const { modelMetadataService } = await import(
@@ -227,6 +229,82 @@ describe("ModelMetadataService", () => {
       vendorName: "OpenAI",
     })
   })
+
+  it.each([
+    ["an empty array", []],
+    ["an array with no usable rows", [null, "invalid", { name: "No id" }]],
+  ])("uses bundled fallback metadata for %s", async (_label, models) => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ models }),
+    })
+
+    const modelMetadataService = await loadService()
+    await modelMetadataService.initialize()
+
+    expect(modelMetadataService.getCacheInfo().modelCount).toBeGreaterThan(0)
+    expect(modelMetadataService.findStandardModelName("gpt-4o")).toEqual({
+      standardName: "gpt-4o",
+      vendorName: "OpenAI",
+    })
+  })
+
+  it.each([
+    ["an empty array", []],
+    ["an array with no usable rows", [null, "invalid", { name: "No id" }]],
+  ])(
+    "preserves the cache and retries after %s",
+    async (_label, invalidModels) => {
+      let now = 1_000
+      const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => now)
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            models: [{ id: "cached-model", providerId: "cached-provider" }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ models: invalidModels }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            models: [
+              { id: "refreshed-model", providerId: "refreshed-provider" },
+            ],
+          }),
+        })
+
+      try {
+        const modelMetadataService = await loadService()
+        await modelMetadataService.initialize()
+        const cachedMetadata = modelMetadataService.getAllMetadata()
+        const cachedInfo = modelMetadataService.getCacheInfo()
+
+        now += MODEL_METADATA_REFRESH_INTERVAL + 1
+        await modelMetadataService.refreshMetadata()
+
+        expect(modelMetadataService.getAllMetadata()).toEqual(cachedMetadata)
+        expect(modelMetadataService.getCacheInfo()).toEqual(cachedInfo)
+
+        await modelMetadataService.initialize()
+
+        expect(global.fetch).toHaveBeenCalledTimes(3)
+        expect(modelMetadataService.getAllMetadata()).toEqual([
+          {
+            id: "refreshed-model",
+            name: "refreshed-model",
+            provider_id: "refreshed-provider",
+          },
+        ])
+      } finally {
+        dateNowSpy.mockRestore()
+      }
+    },
+  )
 
   it("supports bare-array payloads and capitalizes unknown providers for exact matches", async () => {
     global.fetch = vi.fn().mockResolvedValue({

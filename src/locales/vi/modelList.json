@@ -221,8 +221,8 @@
     "title": "Thư mục mô hình thông tin xác thực API"
   },
   "providerTabs": {
-    "scrollLeft": "Cuộn thẻ nhà cung cấp sang trái",
-    "scrollRight": "Cuộn thẻ nhà cung cấp sang phải",
+    "scrollLeft": "Cuộn thẻ hãng sang trái",
+    "scrollRight": "Cuộn thẻ hãng sang phải",
     "unclassified": "Chưa phân loại",
     "unclassifiedDescription": "Không thể xác định nhà cung cấp; điều này không có nghĩa là mô hình không khả dụng."
   },

@@ -95,7 +95,7 @@ type CandidateRawModelItem = Omit<RawModelItem, "resolvedVendor"> & {
   vendorCandidate: ModelVendorCandidate
 }
 
-type CountedModelVendorCatalogEntry = ModelVendorCatalogEntry & {
+export type CountedModelVendorCatalogEntry = ModelVendorCatalogEntry & {
   count: number
 }
 

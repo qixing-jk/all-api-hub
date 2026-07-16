@@ -51,6 +51,36 @@ describe("normalizeModelDescriptors", () => {
     ])
   })
 
+  it("retains later valid evidence when the first duplicate has none", () => {
+    expect(
+      normalizeModelDescriptors([
+        { id: "model-a" },
+        { id: "model-a", vendorEvidence: publisher("Example Lab") },
+      ]),
+    ).toEqual([
+      {
+        id: "model-a",
+        vendorEvidence: publisher("Example Lab"),
+      },
+    ])
+  })
+
+  it("omits blank external ids after trimming", () => {
+    expect(
+      normalizeModelDescriptors([
+        {
+          id: "model-a",
+          vendorEvidence: publisher("Example Lab", "   "),
+        },
+      ]),
+    ).toEqual([
+      {
+        id: "model-a",
+        vendorEvidence: publisher("Example Lab"),
+      },
+    ])
+  })
+
   it("discards invalid evidence", () => {
     expect(
       normalizeModelDescriptors([

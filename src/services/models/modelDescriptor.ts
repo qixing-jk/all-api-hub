@@ -55,12 +55,12 @@ function normalizeVendorEvidence(
     return undefined
   }
 
+  const externalId = value.externalId?.trim()
+
   return {
     kind: value.kind,
     name,
-    ...(value.externalId === undefined
-      ? {}
-      : { externalId: value.externalId.trim() }),
+    ...(externalId ? { externalId } : {}),
   }
 }
 

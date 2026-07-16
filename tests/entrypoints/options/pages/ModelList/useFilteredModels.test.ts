@@ -106,6 +106,29 @@ function renderUseFilteredModels(
 }
 
 describe("useFilteredModels", () => {
+  it("returns no rows or vendor catalog without pricing and a selected source", async () => {
+    const { result } = renderUseFilteredModels()
+
+    await waitFor(() => expect(result.current.filteredModels).toEqual([]))
+
+    expect(result.current.baseFilteredModels).toEqual([])
+    expect(result.current.vendorCatalog).toEqual([])
+    expect(result.current.unclassifiedVendorCount).toBe(0)
+  })
+
+  it("does not reuse single-source pricing for an all-accounts source without contexts", async () => {
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(["gpt-4o-mini"]),
+      pricingContexts: [],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toEqual([]))
+
+    expect(result.current.vendorCatalog).toEqual([])
+    expect(result.current.allVendorsFilteredCount).toBe(0)
+  })
+
   it("preserves profile-backed items when an account filter is active", async () => {
     const profileSource = createProfileSource({
       id: "profile-1",
