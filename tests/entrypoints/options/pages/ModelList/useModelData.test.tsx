@@ -1290,7 +1290,7 @@ describe("useModelData all-accounts loading", () => {
       userId: "71",
     })
 
-    const { rerender } = renderHook(
+    const { result, rerender } = renderHook(
       () =>
         useModelData({
           selectedSource: createAccountSource(account),
@@ -1315,10 +1315,74 @@ describe("useModelData all-accounts loading", () => {
       requestedAuthMode: AuthTypeEnum.AccessToken,
       cacheHit: false,
     })
+    expect(result.current.hasAuthoritativePricingData).toBe(true)
 
     rerender()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledTimes(1)
+  })
+
+  it("marks retained direct pricing as non-authoritative after a failed refetch", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const retainedPricing = {
+      data: [
+        {
+          model_name: "retained-model",
+          quota_type: 0,
+          model_ratio: 1,
+          model_price: 1,
+          completion_ratio: 1,
+          enable_groups: ["vip"],
+          supported_endpoint_types: [],
+        },
+      ],
+      group_ratio: { vip: 1 },
+      success: true,
+      usable_group: { vip: true },
+    }
+    const fetchPricing = vi
+      .fn()
+      .mockResolvedValueOnce(retainedPricing)
+      .mockRejectedValue(new Error("refresh failed"))
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(fetchPricing),
+    )
+    mockFetchDisplayAccountTokens.mockResolvedValue([])
+
+    const account = createDisplayAccount({
+      id: "retained-direct-pricing",
+      baseUrl: "https://retained-direct.example.invalid",
+      userId: "retained-user",
+    })
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(result.current.hasAuthoritativePricingData).toBe(true)
+    })
+
+    await act(async () => {
+      await result.current.loadPricingData()
+    })
+
+    await waitFor(
+      () => {
+        expect(result.current.loadErrorMessage).toBe(
+          "modelList:status.loadFailed",
+        )
+      },
+      { timeout: 3000 },
+    )
+    expect(result.current.pricingData).toEqual(retainedPricing)
+    expect(result.current.hasAuthoritativePricingData).toBe(false)
   })
 
   it("tracks single-account invalid-format load as validation failure", async () => {
@@ -1845,6 +1909,8 @@ describe("useModelData all-accounts loading", () => {
       await result.current.accountFallback?.loadCatalog()
     })
 
+    expect(result.current.hasAuthoritativePricingData).toBe(true)
+
     expectLastModelDataAnalyticsCompletion({
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
@@ -1856,6 +1922,11 @@ describe("useModelData all-accounts loading", () => {
     await act(async () => {
       await result.current.accountFallback?.loadCatalog()
     })
+
+    expect(result.current.pricingData?.data[0]?.model_name).toBe(
+      "fallback-model",
+    )
+    expect(result.current.hasAuthoritativePricingData).toBe(false)
 
     expectLastModelDataAnalyticsCompletion({
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
@@ -3045,6 +3116,8 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(() =>
       expect(result.current.pricingData?.data).toHaveLength(2),
     )
+
+    expect(result.current.hasAuthoritativePricingData).toBe(true)
 
     expect(
       result.current.pricingData?.data.map((item) => item.model_name),

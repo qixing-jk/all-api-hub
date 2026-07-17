@@ -10,6 +10,10 @@ import {
   isAihubmixModelListPricing,
 } from "../aihubmixModelList"
 import {
+  repairAllAccountGroupExclusions,
+  repairSelectedGroups,
+} from "../groupSelectionState"
+import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   deriveModelListSourceCapabilities,
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
@@ -70,6 +74,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     setSelectedSourceValue,
     selectedBillingMode,
     selectedGroups,
+    setSelectedGroups,
     allAccountsExcludedGroupsByAccountId,
     setAllAccountsExcludedGroupsByAccountId,
     searchTerm,
@@ -308,6 +313,65 @@ export function useModelListData(routeParams?: Record<string, string>) {
     showRealPrice,
     accountFilterAccountIds: allAccountsFilterAccountIds,
   })
+
+  useEffect(() => {
+    if (modelData.isLoading) return
+    if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) return
+    if (!modelData.pricingData) return
+    if (!modelData.hasAuthoritativePricingData) return
+    if (!filteredData.isGroupAccessAuthoritative) return
+
+    setSelectedGroups((current) =>
+      repairSelectedGroups(current, filteredData.availableGroups),
+    )
+  }, [
+    filteredData.availableGroups,
+    filteredData.isGroupAccessAuthoritative,
+    modelData.isLoading,
+    modelData.hasAuthoritativePricingData,
+    modelData.pricingData,
+    selectedSource?.kind,
+    selectedSource?.value,
+    setSelectedGroups,
+  ])
+
+  useEffect(() => {
+    if (modelData.isLoading) return
+    if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
+      return
+    }
+
+    const safelySettledAccountIds = new Set(
+      modelData.accountQueryStates
+        .filter(
+          (queryState) =>
+            !queryState.isLoading &&
+            queryState.hasData &&
+            !queryState.hasError &&
+            filteredData.authoritativeGroupAccessByAccountId[
+              queryState.account.id
+            ] === true,
+        )
+        .map((queryState) => queryState.account.id),
+    )
+    if (safelySettledAccountIds.size === 0) return
+
+    setAllAccountsExcludedGroupsByAccountId((current) =>
+      repairAllAccountGroupExclusions({
+        current,
+        availableByAccountId: filteredData.availableAccountGroupsByAccountId,
+        settledAccountIds: safelySettledAccountIds,
+      }),
+    )
+  }, [
+    filteredData.availableAccountGroupsByAccountId,
+    filteredData.authoritativeGroupAccessByAccountId,
+    modelData.accountQueryStates,
+    modelData.isLoading,
+    selectedSource?.kind,
+    selectedSource?.value,
+    setAllAccountsExcludedGroupsByAccountId,
+  ])
 
   return {
     accounts,

@@ -66,6 +66,20 @@ const ACCOUNT: DisplaySiteData = {
   checkIn: { enableDetection: false },
 }
 
+const SECOND_ACCOUNT: DisplaySiteData = {
+  ...ACCOUNT,
+  id: "acc-2",
+  name: "Second Example Account",
+  baseUrl: "https://second.example.invalid",
+}
+
+const SETTLED_PRICING_DATA = {
+  data: [],
+  group_ratio: {},
+  success: true,
+  usable_group: {},
+}
+
 const PROFILE = {
   id: "profile-1",
   name: "Reusable Key",
@@ -96,6 +110,7 @@ describe("useModelListData", () => {
       pricingData: null,
       pricingContexts: [],
       isLoading: false,
+      hasAuthoritativePricingData: false,
       dataFormatError: false,
       accountQueryStates: [],
       loadPricingData: vi.fn(),
@@ -106,7 +121,12 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: false,
+      authoritativeGroupAccessByAccountId: {},
+      singleSourceGroupRatios: {},
       availableGroups: [],
+      availableAccountGroupsByAccountId: {},
+      availableAccountGroupOptionsByAccountId: {},
     })
     mockModelMetadataService.initialize.mockResolvedValue(undefined)
     mockModelMetadataService.getAllMetadata.mockReturnValue([])
@@ -950,6 +970,590 @@ describe("useModelListData", () => {
 
     await waitFor(() => {
       expect(result.current.allAccountsExcludedGroupsByAccountId).toEqual({})
+    })
+  })
+
+  it("repairs a single-account group selection only after pricing settles", async () => {
+    mockUseModelData.mockReturnValue({
+      pricingData: SETTLED_PRICING_DATA,
+      pricingContexts: [],
+      isLoading: true,
+      hasAuthoritativePricingData: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: true,
+      authoritativeGroupAccessByAccountId: {},
+      singleSourceGroupRatios: {},
+      availableGroups: ["default"],
+      availableAccountGroupsByAccountId: {},
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    const { result, rerender } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
+      result.current.setSelectedGroups(["vip"])
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
+    })
+    expect(result.current.selectedGroups).toEqual(["vip"])
+
+    mockUseModelData.mockReturnValue({
+      pricingData: SETTLED_PRICING_DATA,
+      pricingContexts: [],
+      isLoading: false,
+      hasAuthoritativePricingData: true,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    rerender()
+
+    await waitFor(() => {
+      expect(result.current.selectedGroups).toEqual([])
+    })
+  })
+
+  it("preserves a single-account selection when loaded group access is unknown", async () => {
+    mockUseModelData.mockReturnValue({
+      pricingData: {
+        ...SETTLED_PRICING_DATA,
+        model_list_source: {
+          kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          supportsPricing: false,
+        },
+      },
+      pricingContexts: [],
+      isLoading: false,
+      hasAuthoritativePricingData: true,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: false,
+      authoritativeGroupAccessByAccountId: {},
+      singleSourceGroupRatios: {},
+      availableGroups: [],
+      availableAccountGroupsByAccountId: {},
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
+      result.current.setSelectedGroups(["vip"])
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
+    })
+    expect(result.current.selectedGroups).toEqual(["vip"])
+  })
+
+  it("preserves a single-account group selection after a failed refetch retains pricing", async () => {
+    mockUseModelData.mockReturnValue({
+      pricingData: SETTLED_PRICING_DATA,
+      pricingContexts: [],
+      isLoading: false,
+      hasAuthoritativePricingData: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: "modelList:status.loadFailed",
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: false,
+      authoritativeGroupAccessByAccountId: {},
+      singleSourceGroupRatios: {},
+      availableGroups: ["default"],
+      availableAccountGroupsByAccountId: {},
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
+      result.current.setSelectedGroups(["vip"])
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.value).toBe(
+        toAccountSourceValue(ACCOUNT.id),
+      )
+    })
+    expect(result.current.selectedGroups).toEqual(["vip"])
+  })
+
+  it("repairs all-account exclusions only after the account query settles", async () => {
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [],
+      isLoading: true,
+      dataFormatError: false,
+      accountQueryStates: [
+        {
+          account: ACCOUNT,
+          isLoading: true,
+          hasData: false,
+          hasError: false,
+        },
+      ],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: false,
+      authoritativeGroupAccessByAccountId: { "acc-1": true },
+      singleSourceGroupRatios: {},
+      availableGroups: [],
+      availableAccountGroupsByAccountId: { "acc-1": ["default"] },
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    const { result, rerender } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+    })
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
+    })
+    act(() => {
+      result.current.setAllAccountsExcludedGroupsByAccountId({
+        "acc-1": ["default", "vip"],
+      })
+    })
+    expect(result.current.allAccountsExcludedGroupsByAccountId).toEqual({
+      "acc-1": ["default", "vip"],
+    })
+
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [{ account: ACCOUNT, pricing: SETTLED_PRICING_DATA }],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [
+        {
+          account: ACCOUNT,
+          isLoading: false,
+          hasData: true,
+          hasError: false,
+        },
+      ],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    rerender()
+
+    await waitFor(() => {
+      expect(result.current.allAccountsExcludedGroupsByAccountId).toEqual({
+        "acc-1": ["default"],
+      })
+    })
+  })
+
+  it("repairs only settled accounts with authoritative group access", async () => {
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [ACCOUNT, SECOND_ACCOUNT],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [
+        { account: ACCOUNT, pricing: SETTLED_PRICING_DATA },
+        { account: SECOND_ACCOUNT, pricing: SETTLED_PRICING_DATA },
+      ],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [
+        {
+          account: ACCOUNT,
+          isLoading: false,
+          hasData: true,
+          hasError: false,
+        },
+        {
+          account: SECOND_ACCOUNT,
+          isLoading: false,
+          hasData: true,
+          hasError: false,
+        },
+      ],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: false,
+      authoritativeGroupAccessByAccountId: {
+        "acc-1": false,
+        "acc-2": true,
+      },
+      singleSourceGroupRatios: {},
+      availableGroups: [],
+      availableAccountGroupsByAccountId: {
+        "acc-1": [],
+        "acc-2": ["default"],
+      },
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+      result.current.setAllAccountsExcludedGroupsByAccountId({
+        "acc-1": ["vip"],
+        "acc-2": ["default", "vip"],
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
+    })
+    await waitFor(() => {
+      expect(result.current.allAccountsExcludedGroupsByAccountId).toEqual({
+        "acc-1": ["vip"],
+        "acc-2": ["default"],
+      })
+    })
+  })
+
+  it("preserves failed account exclusions while repairing settled accounts", async () => {
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [ACCOUNT, SECOND_ACCOUNT],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [],
+      isLoading: true,
+      dataFormatError: false,
+      accountQueryStates: [
+        {
+          account: ACCOUNT,
+          isLoading: true,
+          hasData: false,
+          hasError: false,
+        },
+        {
+          account: SECOND_ACCOUNT,
+          isLoading: true,
+          hasData: false,
+          hasError: false,
+        },
+      ],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: false,
+      authoritativeGroupAccessByAccountId: { "acc-1": true },
+      singleSourceGroupRatios: {},
+      availableGroups: [],
+      availableAccountGroupsByAccountId: { "acc-1": ["default"] },
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    const { result, rerender } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+    })
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
+    })
+    act(() => {
+      result.current.setAllAccountsExcludedGroupsByAccountId({
+        "acc-1": ["default", "vip"],
+        "acc-2": ["vip"],
+      })
+    })
+
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [{ account: ACCOUNT, pricing: SETTLED_PRICING_DATA }],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [
+        {
+          account: ACCOUNT,
+          isLoading: false,
+          hasData: true,
+          hasError: false,
+        },
+        {
+          account: SECOND_ACCOUNT,
+          isLoading: false,
+          hasData: false,
+          hasError: true,
+        },
+      ],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    rerender()
+
+    await waitFor(() => {
+      expect(result.current.allAccountsExcludedGroupsByAccountId).toEqual({
+        "acc-1": ["default"],
+        "acc-2": ["vip"],
+      })
+    })
+  })
+
+  it("preserves partially failed account exclusions even when pricing exists", async () => {
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [ACCOUNT, SECOND_ACCOUNT],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [],
+      isLoading: true,
+      dataFormatError: false,
+      accountQueryStates: [
+        {
+          account: ACCOUNT,
+          isLoading: true,
+          hasData: false,
+          hasError: false,
+        },
+        {
+          account: SECOND_ACCOUNT,
+          isLoading: true,
+          hasData: false,
+          hasError: false,
+        },
+      ],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: false,
+      authoritativeGroupAccessByAccountId: {
+        "acc-1": true,
+        "acc-2": true,
+      },
+      singleSourceGroupRatios: {},
+      availableGroups: [],
+      availableAccountGroupsByAccountId: {
+        "acc-1": ["default"],
+        "acc-2": ["default"],
+      },
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    const { result, rerender } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+    })
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
+    })
+    act(() => {
+      result.current.setAllAccountsExcludedGroupsByAccountId({
+        "acc-1": ["default", "vip"],
+        "acc-2": ["vip"],
+      })
+    })
+
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [
+        { account: ACCOUNT, pricing: SETTLED_PRICING_DATA },
+        { account: SECOND_ACCOUNT, pricing: SETTLED_PRICING_DATA },
+      ],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [
+        {
+          account: ACCOUNT,
+          isLoading: false,
+          hasData: true,
+          hasError: false,
+        },
+        {
+          account: SECOND_ACCOUNT,
+          isLoading: false,
+          hasData: true,
+          hasError: true,
+        },
+      ],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    rerender()
+
+    await waitFor(() => {
+      expect(result.current.allAccountsExcludedGroupsByAccountId).toEqual({
+        "acc-1": ["default"],
+        "acc-2": ["vip"],
+      })
+    })
+  })
+
+  it("does not repair group state with prior-source groups while the next source loads", async () => {
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [ACCOUNT, SECOND_ACCOUNT],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: SETTLED_PRICING_DATA,
+      pricingContexts: [],
+      isLoading: false,
+      hasAuthoritativePricingData: true,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: true,
+      authoritativeGroupAccessByAccountId: {},
+      singleSourceGroupRatios: {},
+      availableGroups: ["vip"],
+      availableAccountGroupsByAccountId: {},
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
+    })
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
+    })
+    act(() => {
+      result.current.setSelectedGroups(["vip"])
+    })
+
+    mockUseModelData.mockReturnValue({
+      pricingData: SETTLED_PRICING_DATA,
+      pricingContexts: [],
+      isLoading: true,
+      hasAuthoritativePricingData: false,
+      dataFormatError: false,
+      accountQueryStates: [
+        {
+          account: ACCOUNT,
+          isLoading: true,
+          hasData: false,
+          hasError: false,
+        },
+      ],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: false,
+      authoritativeGroupAccessByAccountId: { "acc-1": true },
+      singleSourceGroupRatios: {},
+      availableGroups: ["default"],
+      availableAccountGroupsByAccountId: { "acc-1": ["default"] },
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    act(() => {
+      result.current.setSelectedSourceValue(
+        toAccountSourceValue(SECOND_ACCOUNT.id),
+      )
+    })
+    await waitFor(() => {
+      expect(result.current.selectedSource?.value).toBe(
+        toAccountSourceValue(SECOND_ACCOUNT.id),
+      )
+    })
+    expect(result.current.selectedSource?.kind).toBe(
+      MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+    )
+    if (
+      result.current.selectedSource?.kind !==
+      MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+    ) {
+      throw new Error("Expected second account source to be selected")
+    }
+    expect(result.current.selectedSource.account.id).toBe(SECOND_ACCOUNT.id)
+    expect(result.current.selectedGroups).toEqual(["vip"])
+
+    act(() => {
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+      result.current.setAllAccountsExcludedGroupsByAccountId({
+        "acc-1": ["vip"],
+      })
+    })
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
+    })
+
+    expect(result.current.selectedGroups).toEqual(["vip"])
+    expect(result.current.allAccountsExcludedGroupsByAccountId).toEqual({
+      "acc-1": ["vip"],
     })
   })
 
