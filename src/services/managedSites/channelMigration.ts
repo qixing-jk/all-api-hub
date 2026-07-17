@@ -89,21 +89,18 @@ const migrationBlockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
 const migrationFailures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
 const migrationUncertaintyWarning =
   "Target creation may have succeeded. Verify the target before retrying."
+const migrationBlockingFallbacks = {
+  [migrationBlockers.SOURCE_KEY_MISSING]:
+    "The source credential is unavailable. Verify source access and try again.",
+  [migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED]:
+    "The source credential could not be resolved. Verify source access and try again.",
+  [migrationBlockers.TARGET_DRAFT_PREPARATION_FAILED]:
+    "The target channel could not be prepared. Review channel models and target configuration, then retry.",
+} satisfies Record<ManagedSiteChannelMigrationBlockedReasonCode, string>
 
 const getMigrationBlockingFallback = (
   reasonCode: ManagedSiteChannelMigrationBlockedReasonCode,
-): string => {
-  if (reasonCode === migrationBlockers.SOURCE_KEY_MISSING) {
-    return "The source credential is unavailable. Verify source access and try again."
-  }
-  if (reasonCode === migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED) {
-    return "The source credential could not be resolved. Verify source access and try again."
-  }
-  if (reasonCode === migrationBlockers.TARGET_DRAFT_PREPARATION_FAILED) {
-    return "The target channel could not be prepared. Review channel models and target configuration, then retry."
-  }
-  return "This channel cannot be migrated right now. Verify source access and try again."
-}
+): string => migrationBlockingFallbacks[reasonCode]
 
 const normalizeResourceScopeKey = (baseUrl: string): string => {
   const trimmed = baseUrl.trim()
