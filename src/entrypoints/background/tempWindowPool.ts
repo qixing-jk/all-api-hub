@@ -95,6 +95,8 @@ import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 import { appendQueryParam } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
 
+import { tempPageTaskScheduler } from "./tempPageTaskScheduler"
+
 /**
  * Unified logger scoped to background temp-window lifecycle and fetch helpers.
  */
@@ -380,7 +382,7 @@ async function navigateTempContextToPage(
 /**
  * 在临时上下文中渲染页面并读取真实的 document.title。
  */
-export async function handleTempWindowGetRenderedTitle(
+async function executeTempWindowGetRenderedTitle(
   request: TempWindowRenderedTitleParams,
   sendResponse: (response?: any) => void,
 ) {
@@ -434,6 +436,16 @@ export async function handleTempWindowGetRenderedTitle(
   }
 }
 
+/** Queues rendered-title work through the shared temp-page scheduler. */
+export async function handleTempWindowGetRenderedTitle(
+  request: TempWindowRenderedTitleParams,
+  sendResponse: (response?: any) => void,
+) {
+  await runTempPageHandler(request.originUrl, {}, () =>
+    executeTempWindowGetRenderedTitle(request, sendResponse),
+  )
+}
+
 /**
  * Log temporary window events through the unified logger.
  */
@@ -443,6 +455,16 @@ function logTempWindow(event: string, details?: Record<string, unknown>) {
   } catch {
     // ignore logging errors
   }
+}
+
+/** Runs one complete temp-page handler operation under its origin key. */
+async function runTempPageHandler(
+  url: string,
+  options: { incognito?: boolean },
+  task: () => Promise<void>,
+): Promise<void> {
+  const originKey = buildTempContextOriginKey(normalizeOrigin(url), options)
+  await tempPageTaskScheduler.run(originKey, task)
 }
 
 type TempContextSharedFields = {
@@ -1193,7 +1215,7 @@ export async function handleCloseTempWindow(
 /**
  * 自动检测站点类型与用户信息，通过临时上下文访问目标站点。
  */
-export async function handleAutoDetectSite(
+async function executeAutoDetectSite(
   request: any,
   sendResponse: (response?: any) => void,
 ) {
@@ -1253,10 +1275,22 @@ export async function handleAutoDetectSite(
   }
 }
 
+/** Queues site auto-detection through the shared temp-page scheduler. */
+export async function handleAutoDetectSite(
+  request: any,
+  sendResponse: (response?: any) => void,
+) {
+  await runTempPageHandler(
+    request.url,
+    { incognito: Boolean(request.useIncognito) },
+    () => executeAutoDetectSite(request, sendResponse),
+  )
+}
+
 /**
  * 在临时上下文中执行跨域 fetch 请求，用于绕过需要真实浏览器环境的接口访问。
  */
-export async function handleTempWindowFetch(
+async function executeTempWindowFetch(
   request: TempWindowFetchParams,
   sendResponse: (response?: any) => void,
 ) {
@@ -1414,6 +1448,18 @@ export async function handleTempWindowFetch(
   }
 }
 
+/** Queues a temp-page fetch through the shared temp-page scheduler. */
+export async function handleTempWindowFetch(
+  request: TempWindowFetchParams,
+  sendResponse: (response?: any) => void,
+) {
+  await runTempPageHandler(
+    request.originUrl,
+    { incognito: Boolean(request.useIncognito) },
+    () => executeTempWindowFetch(request, sendResponse),
+  )
+}
+
 /**
  * Resolves the logged-in account identity from a temporary page tab.
  */
@@ -1464,7 +1510,7 @@ async function resolveTempPageAccountIdentity(params: {
 /**
  * Opens a temporary page context and triggers the native check-in page action after identity verification.
  */
-export async function handleTempWindowCheckinPageAction(
+async function executeTempWindowCheckinPageAction(
   request: TempWindowCheckinPageActionParams,
   sendResponse: (response?: TempWindowCheckinPageAction) => void,
 ) {
@@ -1608,6 +1654,16 @@ export async function handleTempWindowCheckinPageAction(
   }
 }
 
+/** Queues a native check-in page action through the shared scheduler. */
+export async function handleTempWindowCheckinPageAction(
+  request: TempWindowCheckinPageActionParams,
+  sendResponse: (response?: TempWindowCheckinPageAction) => void,
+) {
+  await runTempPageHandler(request.pageUrl || request.originUrl, {}, () =>
+    executeTempWindowCheckinPageAction(request, sendResponse),
+  )
+}
+
 /**
  * Executes a Turnstile-assisted temp-context fetch.
  *
@@ -1615,7 +1671,7 @@ export async function handleTempWindowCheckinPageAction(
  * waits for protection guards to clear, waits for a Turnstile token in the
  * content script, then replays the target request in the same tab.
  */
-export async function handleTempWindowTurnstileFetch(
+async function executeTempWindowTurnstileFetch(
   request: TempWindowTurnstileFetchParams,
   sendResponse: (response?: any) => void,
 ) {
@@ -1853,6 +1909,18 @@ export async function handleTempWindowTurnstileFetch(
   }
 }
 
+/** Queues a Turnstile-assisted fetch through the shared scheduler. */
+export async function handleTempWindowTurnstileFetch(
+  request: TempWindowTurnstileFetchParams,
+  sendResponse: (response?: any) => void,
+) {
+  await runTempPageHandler(
+    request.pageUrl || request.originUrl,
+    { incognito: Boolean(request.useIncognito) },
+    () => executeTempWindowTurnstileFetch(request, sendResponse),
+  )
+}
+
 /**
  * 通过临时浏览上下文中的标签页获取站点用户信息
  * @param url 页面地址（含 origin），用于确定要获取或创建的临时上下文
@@ -2063,104 +2131,119 @@ async function releaseTempContext(
   requestId: string,
   options: { forceClose?: boolean; reason?: string } = {},
 ) {
+  if (options.forceClose) {
+    await executeTempContextRelease(requestId, options)
+    return
+  }
+
   logTempWindow("releaseTempContextScheduled", {
     requestId,
-    forceClose: Boolean(options.forceClose),
+    forceClose: false,
     reason: options.reason ?? null,
   })
   // 延迟释放，提高并发时的复用率
-  setTimeout(async () => {
-    const context = tempRequestContextMap.get(requestId)
-    tempRequestContextMap.delete(requestId)
+  setTimeout(() => {
+    void executeTempContextRelease(requestId, options).catch((error) => {
+      logger.error("Delayed temp context release failed", error)
+    })
+  }, 2000)
+}
 
-    if (!context) {
-      logTempWindow("releaseTempContextNoContext", {
+/** Executes the shared release operation after its timing policy is chosen. */
+async function executeTempContextRelease(
+  requestId: string,
+  options: { forceClose?: boolean; reason?: string },
+): Promise<void> {
+  const context = tempRequestContextMap.get(requestId)
+  tempRequestContextMap.delete(requestId)
+
+  if (!context) {
+    logTempWindow("releaseTempContextNoContext", {
+      requestId,
+      forceClose: Boolean(options.forceClose),
+      reason: options.reason ?? null,
+    })
+    return
+  }
+
+  await withOriginLock(context.origin, async () => {
+    context.activeRequestIds.delete(requestId)
+
+    if (!isTrackedContext(context)) {
+      logTempWindow("releaseTempContextAlreadyDestroyed", {
         requestId,
-        forceClose: Boolean(options.forceClose),
+        origin: context.origin,
+        contextId: context.id,
+        tabId: context.tabId,
+        type: context.type,
         reason: options.reason ?? null,
       })
       return
     }
 
-    await withOriginLock(context.origin, async () => {
-      context.activeRequestIds.delete(requestId)
-
-      if (!isTrackedContext(context)) {
-        logTempWindow("releaseTempContextAlreadyDestroyed", {
-          requestId,
-          origin: context.origin,
-          contextId: context.id,
-          tabId: context.tabId,
-          type: context.type,
-          reason: options.reason ?? null,
+    if (options.forceClose) {
+      logTempWindow("releaseTempContextForceClose", {
+        requestId,
+        origin: context.origin,
+        contextId: context.id,
+        tabId: context.tabId,
+        type: context.type,
+        reason: options.reason ?? null,
+      })
+      destroyingOrigins.add(context.origin)
+      try {
+        await destroyContext(context, {
+          reason: options.reason ?? "forceClose",
         })
-        return
+      } finally {
+        destroyingOrigins.delete(context.origin)
       }
+      return
+    }
 
-      if (options.forceClose) {
-        logTempWindow("releaseTempContextForceClose", {
-          requestId,
-          origin: context.origin,
-          contextId: context.id,
-          tabId: context.tabId,
-          type: context.type,
-          reason: options.reason ?? null,
-        })
-        destroyingOrigins.add(context.origin)
-        try {
-          await destroyContext(context, {
-            reason: options.reason ?? "forceClose",
-          })
-        } finally {
-          destroyingOrigins.delete(context.origin)
-        }
-        return
+    if (hasActiveRequests(context)) {
+      logTempWindow("releaseTempContextStillInUse", {
+        requestId,
+        origin: context.origin,
+        contextId: context.id,
+        tabId: context.tabId,
+        type: context.type,
+        reason: options.reason ?? null,
+        activeRequestCount: context.activeRequestIds.size,
+      })
+      return
+    }
+
+    context.lastUsed = Date.now()
+
+    const pool = tempContextsByOrigin.get(context.origin)
+    if (pool && pool.every(isContextIdle)) {
+      logTempWindow("releaseTempContextDestroyOriginPool", {
+        requestId,
+        origin: context.origin,
+        poolSize: pool.length,
+      })
+      // Mark this origin as destroying while we tear down the pool. Any
+      // concurrent acquire attempts for this origin will be rejected by
+      // acquireTempContext until destruction finishes.
+      destroyingOrigins.add(context.origin)
+      try {
+        await destroyOriginPool(context.origin, pool, "originPoolIdle")
+      } finally {
+        destroyingOrigins.delete(context.origin)
       }
-
-      if (hasActiveRequests(context)) {
-        logTempWindow("releaseTempContextStillInUse", {
-          requestId,
-          origin: context.origin,
-          contextId: context.id,
-          tabId: context.tabId,
-          type: context.type,
-          reason: options.reason ?? null,
-          activeRequestCount: context.activeRequestIds.size,
-        })
-        return
-      }
-
-      context.lastUsed = Date.now()
-
-      const pool = tempContextsByOrigin.get(context.origin)
-      if (pool && pool.every(isContextIdle)) {
-        logTempWindow("releaseTempContextDestroyOriginPool", {
-          requestId,
-          origin: context.origin,
-          poolSize: pool.length,
-        })
-        // Mark this origin as destroying while we tear down the pool. Any
-        // concurrent acquire attempts for this origin will be rejected by
-        // acquireTempContext until destruction finishes.
-        destroyingOrigins.add(context.origin)
-        try {
-          await destroyOriginPool(context.origin, pool, "originPoolIdle")
-        } finally {
-          destroyingOrigins.delete(context.origin)
-        }
-      } else {
-        logTempWindow("releaseTempContextScheduleIdleCleanup", {
-          requestId,
-          origin: context.origin,
-          contextId: context.id,
-          tabId: context.tabId,
-          type: context.type,
-          idleTimeoutMs: TEMP_CONTEXT_IDLE_TIMEOUT,
-        })
-        scheduleContextCleanup(context)
-      }
-    })
-  }, 2000)
+    } else {
+      logTempWindow("releaseTempContextScheduleIdleCleanup", {
+        requestId,
+        origin: context.origin,
+        contextId: context.id,
+        tabId: context.tabId,
+        type: context.type,
+        idleTimeoutMs: TEMP_CONTEXT_IDLE_TIMEOUT,
+      })
+      scheduleContextCleanup(context)
+    }
+  })
 }
 
 /**

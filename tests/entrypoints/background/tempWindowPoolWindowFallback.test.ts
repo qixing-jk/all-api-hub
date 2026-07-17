@@ -2425,19 +2425,21 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
-  it("defers same-origin cleanup while a reused temp tab is still busy", async () => {
+  it("serializes complete operations that reuse a same-origin temp tab", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 608 })
 
-    const secondFetchDeferred = createDeferred<{
-      success: boolean
-      data: {
+    const fetchDeferreds = Array.from({ length: 2 }, () =>
+      createDeferred<{
         success: boolean
-        message: string
-        data: string
-      }
-    }>()
-    let fetchAttempt = 0
+        data: {
+          success: boolean
+          message: string
+          data: string
+        }
+      }>(),
+    )
+    let fetchAttempts = 0
     sendMessageMock.mockImplementation(
       async (_tabId: number, message: { action: string }) => {
         switch (message.action) {
@@ -2459,19 +2461,7 @@ describe("tempWindowPool window fallback", () => {
               },
             }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
-            fetchAttempt += 1
-            if (fetchAttempt === 1) {
-              return {
-                success: true,
-                data: {
-                  success: true,
-                  message: "",
-                  data: "first-result",
-                },
-              }
-            }
-
-            return secondFetchDeferred.promise
+            return fetchDeferreds[fetchAttempts++].promise
           default:
             throw new Error(`Unexpected action: ${message.action}`)
         }
@@ -2485,39 +2475,44 @@ describe("tempWindowPool window fallback", () => {
     const firstResponse = vi.fn()
     const firstRequest = handleTempWindowFetch(
       {
-        originUrl: "https://example.com/one",
-        fetchUrl: "https://example.com/api/one",
+        originUrl: "https://example.invalid/one",
+        fetchUrl: "https://example.invalid/api/one",
         fetchOptions: { method: "GET" },
         requestId: "req-overlap-1",
       },
       firstResponse,
     )
     await vi.advanceTimersByTimeAsync(500)
-    await firstRequest
 
     const secondResponse = vi.fn()
     const secondRequest = handleTempWindowFetch(
       {
-        originUrl: "https://example.com/two",
-        fetchUrl: "https://example.com/api/two",
+        originUrl: "https://example.invalid/two",
+        fetchUrl: "https://example.invalid/api/two",
         fetchOptions: { method: "GET" },
         requestId: "req-overlap-2",
       },
       secondResponse,
     )
-    await vi.advanceTimersByTimeAsync(1000)
+    await vi.advanceTimersByTimeAsync(500)
 
-    expect(createTabMock).toHaveBeenCalledTimes(1)
-    expect(fetchAttempt).toBe(2)
+    expect(fetchAttempts).toBe(1)
     expect(secondResponse).not.toHaveBeenCalled()
 
-    await vi.advanceTimersByTimeAsync(1500)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
+    fetchDeferreds[0].resolve({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "first-result",
+      },
+    })
+    await firstRequest
+    await vi.advanceTimersByTimeAsync(500)
 
-    await vi.advanceTimersByTimeAsync(5000)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
+    expect(fetchAttempts).toBe(2)
 
-    secondFetchDeferred.resolve({
+    fetchDeferreds[1].resolve({
       success: true,
       data: {
         success: true,
@@ -2527,34 +2522,16 @@ describe("tempWindowPool window fallback", () => {
     })
     await secondRequest
 
-    await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabMock).toHaveBeenCalledTimes(1)
-    expect(removeTabMock).toHaveBeenCalledWith(608)
-    expect(secondResponse).toHaveBeenCalledWith({
-      success: true,
-      data: {
-        success: true,
-        message: "",
-        data: "second-result",
-      },
-    })
+    expect(createTabMock).toHaveBeenCalledTimes(1)
   })
 
-  it("force-closing one shared temp tab clears the other request mapping and requires a fresh context next time", async () => {
+  it("recreates a context for queued same-origin work after force close", async () => {
     tempContextMode = "tab"
     createTabMock
       .mockResolvedValueOnce({ id: 650 })
       .mockResolvedValueOnce({ id: 651 })
 
     const firstFetchDeferred = createDeferred<{
-      success: boolean
-      data: {
-        success: boolean
-        message: string
-        data: string
-      }
-    }>()
-    const secondFetchDeferred = createDeferred<{
       success: boolean
       data: {
         success: boolean
@@ -2577,22 +2554,14 @@ describe("tempWindowPool window fallback", () => {
               return firstFetchDeferred.promise
             }
 
-            if (fetchAttempt === 2) {
-              return secondFetchDeferred.promise
-            }
-
-            if (fetchAttempt === 3) {
-              return {
+            return {
+              success: true,
+              data: {
                 success: true,
-                data: {
-                  success: true,
-                  message: "",
-                  data: `result-${fetchAttempt}`,
-                },
-              }
+                message: "",
+                data: "recovered-result",
+              },
             }
-
-            return secondFetchDeferred.promise
           default:
             throw new Error(`Unexpected action: ${message.action}`)
         }
@@ -2606,8 +2575,8 @@ describe("tempWindowPool window fallback", () => {
     const firstResponse = vi.fn()
     const firstRequest = handleTempWindowFetch(
       {
-        originUrl: "https://example.com/force-close-one",
-        fetchUrl: "https://example.com/api/force-close-one",
+        originUrl: "https://example.invalid/force-close-one",
+        fetchUrl: "https://example.invalid/api/force-close-one",
         fetchOptions: { method: "GET" },
         requestId: "req-force-close-1",
       },
@@ -2618,8 +2587,8 @@ describe("tempWindowPool window fallback", () => {
     const secondResponse = vi.fn()
     const secondRequest = handleTempWindowFetch(
       {
-        originUrl: "https://example.com/force-close-two",
-        fetchUrl: "https://example.com/api/force-close-two",
+        originUrl: "https://example.invalid/force-close-two",
+        fetchUrl: "https://example.invalid/api/force-close-two",
         fetchOptions: { method: "GET" },
         requestId: "req-force-close-2",
       },
@@ -2628,6 +2597,7 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(500)
 
     expect(createTabMock).toHaveBeenCalledTimes(1)
+    expect(fetchAttempt).toBe(1)
     expect(secondResponse).not.toHaveBeenCalled()
 
     const closeResponse = vi.fn()
@@ -2638,65 +2608,211 @@ describe("tempWindowPool window fallback", () => {
 
     expect(closeResponse).toHaveBeenCalledWith({ success: true })
 
-    await vi.advanceTimersByTimeAsync(2000)
     expect(removeTabMock).toHaveBeenCalledTimes(1)
     expect(removeTabMock).toHaveBeenCalledWith(650)
 
-    const otherCloseResponse = vi.fn()
-    await handleCloseTempWindow(
-      { requestId: "req-force-close-2" },
-      otherCloseResponse,
-    )
-
-    expect(otherCloseResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "messages:background.windowNotFound",
-    })
-
-    firstFetchDeferred.reject(new Error("shared temp tab was force-closed"))
-    secondFetchDeferred.reject(new Error("shared temp tab was force-closed"))
-    await Promise.all([firstRequest, secondRequest])
+    firstFetchDeferred.reject(new Error("active temp tab was force-closed"))
+    await firstRequest
+    await vi.advanceTimersByTimeAsync(500)
+    await secondRequest
 
     expect(firstResponse).toHaveBeenCalledWith({
       success: false,
-      error: "shared temp tab was force-closed",
+      error: "active temp tab was force-closed",
       code: undefined,
     })
     expect(secondResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "shared temp tab was force-closed",
-      code: undefined,
-    })
-
-    await vi.advanceTimersByTimeAsync(2000)
-    expect(removeTabMock).toHaveBeenCalledTimes(1)
-
-    const thirdResponse = vi.fn()
-    const thirdRequest = handleTempWindowFetch(
-      {
-        originUrl: "https://example.com/force-close-three",
-        fetchUrl: "https://example.com/api/force-close-three",
-        fetchOptions: { method: "GET" },
-        requestId: "req-force-close-3",
-      },
-      thirdResponse,
-    )
-    await vi.advanceTimersByTimeAsync(500)
-    await thirdRequest
-
-    expect(createTabMock).toHaveBeenCalledTimes(2)
-    expect(createTabMock).toHaveBeenLastCalledWith("about:blank", false)
-    expect(tabsUpdateMock).toHaveBeenCalledWith(651, {
-      url: "https://example.com/force-close-three",
-    })
-    expect(thirdResponse).toHaveBeenCalledWith({
       success: true,
       data: {
         success: true,
         message: "",
-        data: "result-3",
+        data: "recovered-result",
       },
     })
+    expect(createTabMock).toHaveBeenCalledTimes(2)
+    expect(fetchAttempt).toBe(2)
+  })
+
+  it("recreates a fresh context before refilling queued same-origin work after a natural handler error", async () => {
+    tempContextMode = "tab"
+    createTabMock
+      .mockResolvedValueOnce({ id: 660 })
+      .mockResolvedValueOnce({ id: 661 })
+
+    const fetchDeferreds = Array.from({ length: 2 }, () =>
+      createDeferred<{
+        success: boolean
+        data: {
+          success: boolean
+          message: string
+          data: string
+        }
+      }>(),
+    )
+    let fetchAttempts = 0
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentPerformTempWindowFetch:
+            return fetchDeferreds[fetchAttempts++].promise
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstResponse = vi.fn()
+    const firstRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.invalid/natural-error-one",
+        fetchUrl: "https://example.invalid/api/natural-error-one",
+        fetchOptions: { method: "GET" },
+        requestId: "req-natural-error-1",
+      },
+      firstResponse,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+
+    const secondResponse = vi.fn()
+    const secondRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.invalid/natural-error-two",
+        fetchUrl: "https://example.invalid/api/natural-error-two",
+        fetchOptions: { method: "GET" },
+        requestId: "req-natural-error-2",
+      },
+      secondResponse,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(fetchAttempts).toBe(1)
+
+    fetchDeferreds[0].reject(new Error("natural temp fetch failed"))
+    await firstRequest
+    await vi.advanceTimersByTimeAsync(500)
+
+    const fetchTabIds = sendMessageMock.mock.calls
+      .filter(
+        ([, message]) =>
+          message.action === RuntimeActionIds.ContentPerformTempWindowFetch,
+      )
+      .map(([tabId]) => tabId)
+    expect(fetchTabIds).toEqual([660, 661])
+    expect(createTabMock).toHaveBeenCalledTimes(2)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledWith(660)
+
+    await vi.advanceTimersByTimeAsync(2000)
+
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).not.toHaveBeenCalledWith(661)
+    expect(secondResponse).not.toHaveBeenCalled()
+
+    fetchDeferreds[1].resolve({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "recovered-after-natural-error",
+      },
+    })
+    await secondRequest
+
+    expect(firstResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "natural temp fetch failed",
+      code: undefined,
+    })
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "recovered-after-natural-error",
+      },
+    })
+  })
+
+  it("limits active temp-page handlers to three and continuously refills capacity", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockImplementation(async () => ({
+      id: 700 + createTabMock.mock.calls.length,
+    }))
+
+    const fetchDeferreds = Array.from({ length: 4 }, () =>
+      createDeferred<{
+        success: boolean
+        data: {
+          success: boolean
+          message: string
+          data: string
+        }
+      }>(),
+    )
+    let fetchAttempts = 0
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentPerformTempWindowFetch:
+            return fetchDeferreds[fetchAttempts++].promise
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const requests = Array.from({ length: 4 }, (_, index) => {
+      const siteNumber = index + 1
+      return handleTempWindowFetch(
+        {
+          originUrl: `https://site-${siteNumber}.example.invalid`,
+          fetchUrl: `https://site-${siteNumber}.example.invalid/api/data`,
+          fetchOptions: { method: "GET" },
+          requestId: `req-global-limit-${siteNumber}`,
+        },
+        vi.fn(),
+      )
+    })
+
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(fetchAttempts).toBe(3)
+
+    fetchDeferreds[0].resolve({
+      success: true,
+      data: { success: true, message: "", data: "result-1" },
+    })
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(fetchAttempts).toBe(4)
+
+    fetchDeferreds.slice(1).forEach((deferred, index) => {
+      deferred.resolve({
+        success: true,
+        data: {
+          success: true,
+          message: "",
+          data: `result-${index + 2}`,
+        },
+      })
+    })
+    await Promise.all(requests)
   })
 
   it("drops a stale pooled context and creates a fresh tab for the next same-origin fetch", async () => {
