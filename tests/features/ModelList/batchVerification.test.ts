@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   createBatchVerifyModelItems,
   MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
@@ -8,33 +9,109 @@ import {
   resolveBatchVerifyApiType,
 } from "~/features/ModelList/batchVerification"
 import {
+  MODEL_GROUP_ACCESS_STATES,
+  type ActiveModelGroupContext,
+  type ModelGroupContext,
+} from "~/features/ModelList/groupContext"
+import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
+import {
+  createAccountSource,
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
-  MODEL_MANAGEMENT_SOURCE_KINDS,
 } from "~/features/ModelList/modelManagementSources"
+import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+
+const createAccountFixture = (id = "account-1"): DisplaySiteData => ({
+  id,
+  name: "Example Account",
+  username: "example-user",
+  balance: { USD: 0, CNY: 0 },
+  todayConsumption: { USD: 0, CNY: 0 },
+  todayIncome: { USD: 0, CNY: 0 },
+  todayTokens: { upload: 0, download: 0 },
+  health: { status: SiteHealthStatus.Healthy },
+  siteType: SITE_TYPES.NEW_API,
+  baseUrl: "https://account.example.invalid",
+  token: "example-token",
+  userId: "example-user-id",
+  authType: AuthTypeEnum.AccessToken,
+  checkIn: { enableDetection: false },
+})
+
+const DEFAULT_ACCOUNT_SOURCE = createAccountSource(createAccountFixture())
+
+type CalculatedModelItemOverrides = Partial<
+  Omit<CalculatedModelItem, "model" | "groupContext" | "activeGroupContext">
+> & {
+  model?: Partial<ModelPricing>
+  groupContext?: Partial<ModelGroupContext>
+  activeGroupContext?: Partial<ActiveModelGroupContext>
+}
+
+const createCalculatedModelItem = (
+  overrides: CalculatedModelItemOverrides = {},
+): CalculatedModelItem => {
+  const {
+    model: modelOverrides,
+    groupContext: groupContextOverrides,
+    activeGroupContext: activeGroupContextOverrides,
+    ...itemOverrides
+  } = overrides
+  const model: ModelPricing = {
+    model_name: "gpt-4o",
+    quota_type: 0,
+    model_ratio: 1,
+    model_price: 0,
+    completion_ratio: 1,
+    enable_groups: [DEFAULT_MODEL_GROUP],
+    supported_endpoint_types: ["chat"],
+    ...modelOverrides,
+  }
+  const groupContext: ModelGroupContext = {
+    accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+    supportedGroups: [DEFAULT_MODEL_GROUP],
+    usableGroups: [DEFAULT_MODEL_GROUP],
+    priceableGroups: [DEFAULT_MODEL_GROUP],
+    ...groupContextOverrides,
+  }
+  const actionGroups = overrides.effectiveGroup
+    ? [overrides.effectiveGroup]
+    : [...groupContext.usableGroups]
+
+  return {
+    model,
+    calculatedPrice: {
+      priceAvailability: "available",
+      inputUSD: 1,
+      outputUSD: 2,
+      inputCNY: 7,
+      outputCNY: 14,
+    },
+    source: DEFAULT_ACCOUNT_SOURCE,
+    groupRatios: { [DEFAULT_MODEL_GROUP]: 1 },
+    groupContext,
+    activeGroupContext: {
+      activeUsableGroups: [...groupContext.usableGroups],
+      activePriceableGroups: [...groupContext.priceableGroups],
+      actionGroups,
+      ...activeGroupContextOverrides,
+    },
+    resolvedVendor: { state: "unknown" },
+    ...itemOverrides,
+  }
+}
 
 describe("model list batch verification helpers", () => {
   it("deduplicates model items by model-list row key", () => {
-    const source = {
-      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
-      account: { id: "acc-1" },
-    } as any
-
     const result = createBatchVerifyModelItems([
-      {
-        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
-        source,
-      },
-      {
-        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
-        source,
-      },
-      {
-        model: { model_name: "claude-3-5-sonnet", enable_groups: ["vip"] },
-        source,
-      },
-    ] as any)
+      createCalculatedModelItem(),
+      createCalculatedModelItem(),
+      createCalculatedModelItem({
+        model: { model_name: "claude-3-5-sonnet" },
+      }),
+    ])
 
     expect(result).toHaveLength(2)
     expect(result.map((item) => item.modelId)).toEqual([
@@ -44,29 +121,24 @@ describe("model list batch verification helpers", () => {
   })
 
   it("keeps matching model names from different accounts as separate items", () => {
-    const firstAccountSource = {
-      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
-      account: { id: "acc-1" },
-    } as any
-    const secondAccountSource = {
-      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
-      account: { id: "acc-2" },
-    } as any
+    const firstAccountSource = createAccountSource(
+      createAccountFixture("acc-1"),
+    )
+    const secondAccountSource = createAccountSource(
+      createAccountFixture("acc-2"),
+    )
 
     const result = createBatchVerifyModelItems([
-      {
-        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
+      createCalculatedModelItem({
         source: firstAccountSource,
-      },
-      {
-        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
+      }),
+      createCalculatedModelItem({
         source: secondAccountSource,
-      },
-      {
-        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
+      }),
+      createCalculatedModelItem({
         source: firstAccountSource,
-      },
-    ] as any)
+      }),
+    ])
 
     expect(result).toHaveLength(2)
     expect(result.map((item) => item.key)).toEqual([
@@ -76,39 +148,34 @@ describe("model list batch verification helpers", () => {
   })
 
   it("keeps same-account token rows separate for batch verification", () => {
-    const source = {
-      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
-      account: { id: "batch-sub2api-account" },
-      capabilities: { supportsBatchCredentialVerification: true },
-    } as any
-    const model = { model_name: "shared-model", enable_groups: ["default"] }
+    const source = createAccountSource(
+      createAccountFixture("batch-sub2api-account"),
+    )
 
     const result = createBatchVerifyModelItems([
-      {
-        model,
+      createCalculatedModelItem({
+        model: { model_name: "shared-model" },
         source,
         sourceIdentity: {
-          kind: "account-token",
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
           id: "batch-sub2api-account:token:51",
           tokenId: 51,
           tokenName: "Default key",
         },
-        groupRatios: { default: 1 },
         effectiveGroup: "default",
-      },
-      {
-        model,
+      }),
+      createCalculatedModelItem({
+        model: { model_name: "shared-model" },
         source,
         sourceIdentity: {
-          kind: "account-token",
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
           id: "batch-sub2api-account:token:52",
           tokenId: 52,
           tokenName: "Second key",
         },
-        groupRatios: { default: 1 },
         effectiveGroup: "default",
-      },
-    ] as any)
+      }),
+    ])
 
     expect(result.map((item) => item.key)).toEqual([
       "account:batch-sub2api-account:token:51:shared-model",
@@ -211,38 +278,86 @@ describe("model list batch verification helpers", () => {
     ).toBeNull()
   })
 
-  it("keeps missing model group metadata unrestricted", () => {
-    const source = {
-      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
-      account: { id: "acc-1" },
-    } as any
-
+  it("uses the row's usable action groups instead of raw supported groups", () => {
     const [item] = createBatchVerifyModelItems([
-      {
-        model: { model_name: "gpt-4o" },
-        source,
-      },
-    ] as any)
+      createCalculatedModelItem({
+        model: {
+          enable_groups: [DEFAULT_MODEL_GROUP, "vip"],
+        },
+        groupContext: {
+          supportedGroups: [DEFAULT_MODEL_GROUP, "vip"],
+          usableGroups: [DEFAULT_MODEL_GROUP],
+          priceableGroups: [DEFAULT_MODEL_GROUP],
+        },
+        activeGroupContext: {
+          activeUsableGroups: [DEFAULT_MODEL_GROUP],
+          activePriceableGroups: [DEFAULT_MODEL_GROUP],
+          actionGroups: [DEFAULT_MODEL_GROUP],
+        },
+      }),
+    ])
+
+    expect(item.enableGroups).toEqual([DEFAULT_MODEL_GROUP])
+  })
+
+  it("preserves an empty action scope when group access is unknown", () => {
+    const [item] = createBatchVerifyModelItems([
+      createCalculatedModelItem({
+        groupContext: {
+          accessState: MODEL_GROUP_ACCESS_STATES.UNKNOWN,
+          usableGroups: [],
+          priceableGroups: [],
+        },
+        activeGroupContext: {
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        },
+      }),
+    ])
+
+    expect(item.enableGroups).toEqual([])
+  })
+
+  it("keeps verification unrestricted when groups are not applicable", () => {
+    const [item] = createBatchVerifyModelItems([
+      createCalculatedModelItem({
+        groupContext: {
+          accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+          supportedGroups: [],
+          usableGroups: [],
+          priceableGroups: [],
+        },
+        activeGroupContext: {
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        },
+      }),
+    ])
 
     expect(item.enableGroups).toBeNull()
   })
 
   it("narrows verification group metadata and token selection to the row's effective group", () => {
-    const source = {
-      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
-      account: { id: "acc-1" },
-    } as any
-
     const [item] = createBatchVerifyModelItems([
-      {
+      createCalculatedModelItem({
         model: {
-          model_name: "gpt-4o",
           enable_groups: [DEFAULT_MODEL_GROUP, "vip"],
         },
+        groupContext: {
+          supportedGroups: [DEFAULT_MODEL_GROUP, "vip"],
+          usableGroups: [DEFAULT_MODEL_GROUP, "vip"],
+          priceableGroups: [DEFAULT_MODEL_GROUP, "vip"],
+        },
+        activeGroupContext: {
+          activeUsableGroups: [DEFAULT_MODEL_GROUP, "vip"],
+          activePriceableGroups: [DEFAULT_MODEL_GROUP, "vip"],
+          actionGroups: ["vip"],
+        },
         effectiveGroup: "vip",
-        source,
-      },
-    ] as any)
+      }),
+    ])
 
     expect(item.enableGroups).toEqual(["vip"])
     expect(
@@ -271,31 +386,26 @@ describe("model list batch verification helpers", () => {
   })
 
   it("omits rows whose source cannot provide verification credentials", () => {
-    const supportedSource = {
-      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
-      account: { id: "supported-account" },
-      capabilities: {
-        supportsBatchCredentialVerification: true,
-      },
-    } as any
+    const supportedSource = createAccountSource(
+      createAccountFixture("supported-account"),
+    )
     const unsupportedSource = {
-      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
-      account: { id: "aihubmix-account" },
+      ...createAccountSource(createAccountFixture("unsupported-account")),
       capabilities: {
+        ...supportedSource.capabilities,
         supportsBatchCredentialVerification: false,
       },
-    } as any
+    }
 
     const result = createBatchVerifyModelItems([
-      {
-        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
+      createCalculatedModelItem({
         source: supportedSource,
-      },
-      {
-        model: { model_name: "gpt-aihubmix", enable_groups: [] },
+      }),
+      createCalculatedModelItem({
+        model: { model_name: "gpt-unavailable" },
         source: unsupportedSource,
-      },
-    ] as any)
+      }),
+    ])
 
     expect(result.map((item) => item.key)).toEqual([
       "account:supported-account:gpt-4o",

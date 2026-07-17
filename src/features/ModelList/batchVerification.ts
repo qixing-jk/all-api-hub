@@ -1,3 +1,4 @@
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import {
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
   type ModelListSourceIdentity,
@@ -49,7 +50,7 @@ export function createBatchVerifyModelItems(
 
   for (const item of models) {
     if (
-      item.source.capabilities?.supportsBatchCredentialVerification === false
+      item.source.capabilities.supportsBatchCredentialVerification === false
     ) {
       continue
     }
@@ -64,11 +65,11 @@ export function createBatchVerifyModelItems(
     items.push({
       key,
       modelId,
-      enableGroups: item.effectiveGroup
-        ? [item.effectiveGroup]
-        : Array.isArray(item.model.enable_groups)
-          ? item.model.enable_groups
-          : null,
+      enableGroups:
+        item.groupContext.accessState ===
+        MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
+          ? null
+          : item.activeGroupContext.actionGroups,
       source: item.source,
       sourceIdentity: item.sourceIdentity,
     })
@@ -93,6 +94,17 @@ export function resolveBatchVerifyApiType(
   return API_TYPES.OPENAI_COMPATIBLE
 }
 
+/** Returns whether a token is compatible with the batch row's model/group scope. */
+function isBatchVerifyTokenCompatible(
+  token: ApiToken,
+  item: Pick<BatchVerifyModelItem, "modelId" | "enableGroups">,
+) {
+  return isTokenCompatibleWithModel(token, {
+    id: item.modelId,
+    enableGroups: item.enableGroups,
+  })
+}
+
 /**
  * Pick the deterministic token used to verify a model for an account source.
  */
@@ -103,12 +115,6 @@ export function pickBatchVerifyCompatibleToken(
     "modelId" | "enableGroups" | "sourceIdentity"
   >,
 ): ApiToken | null {
-  const isCompatible = (token: ApiToken) =>
-    isTokenCompatibleWithModel(token, {
-      id: item.modelId,
-      enableGroups: item.enableGroups,
-    })
-
   if (
     item.sourceIdentity?.kind === MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN
   ) {
@@ -116,10 +122,12 @@ export function pickBatchVerifyCompatibleToken(
     const token = tokens.find(
       (candidate) => candidate.id === sourceIdentity.tokenId,
     )
-    return token && isCompatible(token) ? token : null
+    return token && isBatchVerifyTokenCompatible(token, item) ? token : null
   }
 
-  return tokens.find((token) => isCompatible(token)) ?? null
+  return (
+    tokens.find((token) => isBatchVerifyTokenCompatible(token, item)) ?? null
+  )
 }
 
 /**
@@ -135,10 +143,7 @@ export function pickBatchVerifyCompatibleRuntimeKey(
 ): AccountRuntimeKey | null {
   const isCompatible = (runtimeKey: AccountRuntimeKey) => {
     if (isAccountTokenRuntimeKey(runtimeKey)) {
-      return isTokenCompatibleWithModel(runtimeKey.token, {
-        id: item.modelId,
-        enableGroups: item.enableGroups,
-      })
+      return isBatchVerifyTokenCompatible(runtimeKey.token, item)
     }
 
     return hasUsableAccountRuntimeKeySecret(runtimeKey)
