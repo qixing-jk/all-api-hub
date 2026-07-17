@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
 import {
+  MODEL_GROUP_ACCESS_STATES,
+  type ActiveModelGroupContext,
+  type ModelGroupContext,
+} from "~/features/ModelList/groupContext"
+import {
   createAccountSource,
   createProfileSource,
   toAihubmixCatalogFallbackCapabilities,
@@ -23,6 +28,19 @@ import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const mockCreateTab = vi.hoisted(() => vi.fn())
+
+const NOT_APPLICABLE_GROUP_CONTEXT: ModelGroupContext = {
+  accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+  supportedGroups: [],
+  usableGroups: [],
+  priceableGroups: [],
+}
+
+const EMPTY_ACTIVE_GROUP_CONTEXT: ActiveModelGroupContext = {
+  activeUsableGroups: [],
+  activePriceableGroups: [],
+  actionGroups: [],
+}
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
@@ -94,8 +112,8 @@ describe("ModelItem profile actions", () => {
         showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{}}
-        selectedGroups={[]}
-        availableGroups={[]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         source={profileSource}
         onVerifyModel={onVerifyModel}
         onVerifyCliSupport={onVerifyCliSupport}
@@ -208,8 +226,8 @@ describe("ModelItem profile actions", () => {
         showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{}}
-        selectedGroups={[]}
-        availableGroups={[]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         source={profileSource}
         verificationSummary={verificationSummary}
         onVerifyModel={() => {}}
@@ -263,8 +281,8 @@ describe("ModelItem profile actions", () => {
         showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{}}
-        selectedGroups={[]}
-        availableGroups={[]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         source={profileSource}
         onVerifyModel={() => {}}
         onVerifyCliSupport={() => {}}
@@ -321,8 +339,8 @@ describe("ModelItem profile actions", () => {
         showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{}}
-        selectedGroups={[]}
-        availableGroups={[]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         source={profileSource}
       />,
     )
@@ -393,8 +411,8 @@ describe("ModelItem profile actions", () => {
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"
-        selectedGroups={["default"]}
-        availableGroups={["default"]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         source={accountSource}
       />,
     )
@@ -453,8 +471,8 @@ describe("ModelItem profile actions", () => {
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"
-        selectedGroups={["default"]}
-        availableGroups={["default"]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         source={accountSource}
         onFilterAccount={onFilterAccount}
       />,
@@ -513,8 +531,8 @@ describe("ModelItem profile actions", () => {
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"
-        selectedGroups={["default"]}
-        availableGroups={["default"]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         source={accountSource}
         displayCapabilities={toCatalogOnlyCapabilities(
           accountSource.capabilities,
@@ -534,7 +552,7 @@ describe("ModelItem profile actions", () => {
     expect(screen.queryByText("modelList:ratio")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:unavailable")).not.toBeInTheDocument()
     expect(
-      screen.queryByText(/modelList:availableGroups/),
+      screen.queryByText(/modelList:(currentUsableGroups|siteSupportedGroups)/),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
@@ -587,8 +605,8 @@ describe("ModelItem profile actions", () => {
         showRatioColumn={true}
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
-        selectedGroups={["default"]}
-        availableGroups={["default"]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         source={accountSource}
       />,
     )
@@ -661,8 +679,8 @@ describe("ModelItem profile actions", () => {
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"
-        selectedGroups={["default"]}
-        availableGroups={["default"]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         source={catalogFallbackSource}
         displayCapabilities={catalogFallbackSource.capabilities}
         onVerifyModel={() => {}}
@@ -730,8 +748,8 @@ describe("ModelItem profile actions", () => {
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"
-        selectedGroups={["default"]}
-        availableGroups={["default"]}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
         showsOptimalGroup={true}
         source={accountSource}
         isLowestPrice={true}

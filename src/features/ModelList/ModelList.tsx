@@ -153,6 +153,7 @@ export default function ModelList(props: {
     getFilteredModels,
     getFilteredResultCount,
     availableGroups,
+    singleSourceGroupRatios,
     availableAccountGroupsByAccountId,
     availableAccountGroupOptionsByAccountId,
     supportsModelCapabilityFilter,
@@ -211,7 +212,6 @@ export default function ModelList(props: {
 
   const isAllAccountsScope =
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-  const displaySelectedGroups = isAllAccountsScope ? [] : selectedGroups
   const modelDisplayGroupSelectionScope = isAllAccountsScope
     ? MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
     : MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE
@@ -275,7 +275,7 @@ export default function ModelList(props: {
   const modelVerificationTargets = useMemo(() => {
     return filteredModels.reduce<ApiVerificationHistoryTarget[]>(
       (acc, item) => {
-        const source = item.source as ModelManagementItemSource
+        const source = item.source
         const modelId = item.model.model_name?.trim()
         if (!modelId) return acc
 
@@ -485,9 +485,7 @@ export default function ModelList(props: {
       showRealPrice={showRealPrice}
       showRatioColumn={showRatioColumn}
       showEndpointTypes={showEndpointTypes}
-      selectedGroups={displaySelectedGroups}
       handleGroupClick={handleGroupClick}
-      availableGroups={availableGroups}
       groupSelectionScope={modelDisplayGroupSelectionScope}
       isGroupSelectionInteractive={isModelGroupSelectionInteractive}
       displayCapabilities={sourceCapabilities}
@@ -736,7 +734,7 @@ export default function ModelList(props: {
             selectedGroups={selectedGroups}
             setSelectedGroups={setSelectedGroups}
             availableGroups={availableGroups}
-            pricingData={pricingData}
+            singleSourceGroupRatios={singleSourceGroupRatios}
             showRealPrice={showRealPrice}
             setShowRealPrice={setShowRealPrice}
             showRatioColumn={showRatioColumn}

@@ -42,7 +42,6 @@
   "allBillingModes": "すべての課金方式",
   "allGroups": "すべてのグループ",
   "allProviders": "すべてのプロバイダー",
-  "availableGroups": "利用可能なグループ",
   "batchVerify": {
     "actions": {
       "open": "一括テスト",
@@ -103,6 +102,7 @@
     "tooltip": "現在の絞り込みをクリアし、すべてのアカウントに切り替えて、同一モデルの最安値を優先して並べます。"
   },
   "copyAllNames": "すべてのモデル名をコピー",
+  "currentUsableGroups": "現在のアカウントで利用可能なグループ",
   "description": "利用可能な AI モデルを確認・管理します",
   "detailedPricing": "詳細料金",
   "displayOptions": "表示オプション:",
@@ -115,7 +115,9 @@
     "description": "このカタログは現在アカウントキーのフォールバック経由で読み込まれているため、モデル検出と検証のみ利用できます。[データを更新] を押すと直接のアカウント経路を再試行します。",
     "title": "アカウントキーフォールバックのカタログ"
   },
+  "groupRatio": "グループ倍率:",
   "groupRatioTooltip": "グループ {{group}} の倍率: {{ratio}}x",
+  "groupRatioUnavailable": "グループ倍率を取得できません",
   "groupSelectionHint": "未選択なら全グループ対象です。価格ソートは選択済みグループ範囲内の最安値を使います",
   "input": "入力:",
   "input1MTokens": "入力（100 万トークン）",
@@ -201,9 +203,11 @@
     },
     "selectionHint": "複数の能力を選択すると、モデルは選択したすべての能力を満たす必要があります。"
   },
+  "modelRatio": "モデル倍率:",
   "noMatchingModels": "一致するモデルが見つかりません",
   "noSourcesDescription": "モデル一覧を表示するには、先にサイトアカウントまたは API 認証情報を追加してください。",
   "noSourcesTitle": "利用できるデータソースがありません",
+  "noUsableGroupsForModel": "このモデルに利用できるグループが現在のアカウントにありません。",
   "optimalGroup": "最安グループ: {{group}}",
   "optimalGroupLowestPriceWithinAccountFilters": "現在のアカウントグループ絞り込み内での最適グループ: {{group}}。さらに同じ課金方式内で最安です",
   "optimalGroupLowestPriceWithinBillingMode": "選択中のグループ内での最適グループ: {{group}}。さらに同じ課金方式内で最安です",
@@ -226,7 +230,6 @@
     "unclassified": "未分類",
     "unclassifiedDescription": "ベンダーを特定できませんでしたが、モデルが利用できないという意味ではありません。"
   },
-  "ratio": "倍率:",
   "realAmount": "実際のチャージ額",
   "refreshData": "データを更新",
   "runtimeKeyFallbackSourceNotice": {
@@ -239,6 +242,7 @@
   "selectSourceToContinue": "上のデータソースを選択してから、モデル一覧を表示してください。",
   "showing_other": "{{count}} モデルを表示中",
   "showRatio": "倍率を表示",
+  "siteSupportedGroups": "サイトが対応するグループ",
   "sortBy": "並び順",
   "sortOptions": {
     "default": "デフォルト順",
@@ -295,6 +299,7 @@
   "totalModels_other": "合計 {{count}} モデル",
   "unavailable": "利用不可",
   "unavailablePriceReasons": {
+    "groupRatioUnavailable": "利用可能なグループの倍率を取得できないため、価格を表示できません。",
     "keyGroupUnknown": "このキーの Sub2API グループを解決できないため、料金は利用できません。",
     "modelListOnly": "このキーではモデルを利用できますが、料金は利用できません。",
     "officialPriceMissing": "このモデルは料金表にありません。",

@@ -44,7 +44,6 @@
   "allBillingModes": "All Billing Modes",
   "allGroups": "All Groups",
   "allProviders": "All Providers",
-  "availableGroups": "Available Groups",
   "batchVerify": {
     "actions": {
       "open": "Batch test",
@@ -109,6 +108,7 @@
     "tooltip": "Clear current filters, switch to all accounts, and sort each model by the lowest price."
   },
   "copyAllNames": "Copy All Model Names",
+  "currentUsableGroups": "Current usable groups",
   "description": "View and manage available AI models",
   "detailedPricing": "Detailed Pricing",
   "displayOptions": "Display Options:",
@@ -121,7 +121,9 @@
     "description": "This catalog is currently loaded through an account-key fallback, so it only supports model discovery and verification. Refresh Data will retry the direct account route.",
     "title": "Account-key fallback catalog"
   },
+  "groupRatio": "Group ratio:",
   "groupRatioTooltip": "Group {{group}} ratio: {{ratio}}x",
+  "groupRatioUnavailable": "Group multiplier unavailable",
   "groupSelectionHint": "Leave this empty to compare across all groups; price sorting uses the best price within the selected group set",
   "input": "Input:",
   "input1MTokens": "Input (1M tokens)",
@@ -207,9 +209,11 @@
     },
     "selectionHint": "When multiple capabilities are selected, models must match all selected capabilities."
   },
+  "modelRatio": "Model ratio:",
   "noMatchingModels": "No matching models found",
   "noSourcesDescription": "Add a site account or API credential before viewing the model list.",
   "noSourcesTitle": "No model sources yet",
+  "noUsableGroupsForModel": "This account currently has no usable group for this model.",
   "optimalGroup": "Best Group: {{group}}",
   "optimalGroupLowestPriceWithinAccountFilters": "Best group within the current account-group filter: {{group}}. This row is also the lowest price within the same billing mode.",
   "optimalGroupLowestPriceWithinBillingMode": "Best group within the selected groups: {{group}}. This row is also the lowest price within the same billing mode.",
@@ -232,7 +236,6 @@
     "unclassified": "Unclassified",
     "unclassifiedDescription": "The vendor could not be identified; this does not mean the model is unavailable."
   },
-  "ratio": "Ratio:",
   "realAmount": "Real Recharge Amount",
   "refreshData": "Refresh Data",
   "runtimeKeyFallbackSourceNotice": {
@@ -246,6 +249,7 @@
   "showing_one": "Showing {{count}} model",
   "showing_other": "Showing {{count}} models",
   "showRatio": "Show Ratio",
+  "siteSupportedGroups": "Site-supported groups",
   "sortBy": "Sort By",
   "sortOptions": {
     "default": "Default Order",
@@ -303,6 +307,7 @@
   "totalModels_other": "Total {{count}} models",
   "unavailable": "Unavailable",
   "unavailablePriceReasons": {
+    "groupRatioUnavailable": "Prices are unavailable because this usable group has no multiplier.",
     "keyGroupUnknown": "Prices are unavailable because this key's Sub2API group could not be resolved.",
     "modelListOnly": "Models are available for this key. Prices are unavailable.",
     "officialPriceMissing": "This model is not in the price table.",

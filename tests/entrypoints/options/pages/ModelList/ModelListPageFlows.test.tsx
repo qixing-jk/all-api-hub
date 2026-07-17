@@ -4,10 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Tabs } from "~/components/ui"
 import ModelList from "~/entrypoints/options/pages/ModelList"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
+import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
 import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
+  MODEL_LIST_GROUP_SEMANTICS,
   toAihubmixCatalogFallbackCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
@@ -84,6 +87,46 @@ const PROFILE = {
 const ACCOUNT_SOURCE = createAccountSource(ACCOUNT)
 const ALL_ACCOUNTS_SOURCE = createAllAccountsSource()
 const PROFILE_SOURCE = createProfileSource(PROFILE)
+
+type ModelItemFixture = {
+  model: { enable_groups?: string[] }
+  source: Pick<CalculatedModelItem["source"], "groupSemantics">
+  effectiveGroup?: string
+}
+
+function withGroupContexts<T extends ModelItemFixture>(
+  fixture: T,
+): T & Pick<CalculatedModelItem, "groupContext" | "activeGroupContext"> {
+  const isGroupAware =
+    fixture.source.groupSemantics !== MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE
+  const supportedGroups =
+    fixture.model.enable_groups ?? (isGroupAware ? ["default"] : [])
+  const usableGroups = isGroupAware ? supportedGroups : []
+  const activeUsableGroups = isGroupAware ? usableGroups : []
+  const activePriceableGroups = isGroupAware ? usableGroups : []
+  const actionGroups =
+    fixture.effectiveGroup &&
+    activeUsableGroups.includes(fixture.effectiveGroup)
+      ? [fixture.effectiveGroup]
+      : activeUsableGroups
+
+  return {
+    ...fixture,
+    groupContext: {
+      accessState: isGroupAware
+        ? MODEL_GROUP_ACCESS_STATES.KNOWN
+        : MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+      supportedGroups,
+      usableGroups,
+      priceableGroups: usableGroups,
+    },
+    activeGroupContext: {
+      activeUsableGroups,
+      activePriceableGroups,
+      actionGroups,
+    },
+  }
+}
 
 vi.mock("~/features/ModelList/components/AccountSelector", () => ({
   AccountSelector: (props: any) => {
@@ -346,6 +389,8 @@ function buildState(overrides: Record<string, any> = {}) {
     setAllAccountsFilterAccountIds: mockSetAllAccountsFilterAccountIds,
     ...overrides,
   }
+  state.filteredModels = state.filteredModels.map(withGroupContexts)
+  state.baseFilteredModels = state.baseFilteredModels.map(withGroupContexts)
   state.getFilteredModels ??= vi.fn(() => state.filteredModels)
 
   return state

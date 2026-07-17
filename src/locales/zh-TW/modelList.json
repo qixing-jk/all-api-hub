@@ -42,7 +42,6 @@
   "allBillingModes": "所有計費方式",
   "allGroups": "所有分組",
   "allProviders": "所有廠商",
-  "availableGroups": "可用分組",
   "batchVerify": {
     "actions": {
       "open": "批量測試",
@@ -103,6 +102,7 @@
     "tooltip": "清空目前篩選，切換到所有帳號，並按同模型最低價優先排序。"
   },
   "copyAllNames": "複製所有模型名稱",
+  "currentUsableGroups": "當前帳號可用分組",
   "description": "檢視和管理可用的AI模型",
   "detailedPricing": "詳細定價",
   "displayOptions": "顯示選項:",
@@ -115,7 +115,9 @@
     "description": "目前模型目錄是透過帳號金鑰回退載入，僅支援模型發現與驗證。點擊重新整理資料會重新嘗試帳號介面。",
     "title": "帳號金鑰回退目錄"
   },
+  "groupRatio": "分組倍率：",
   "groupRatioTooltip": "{{group}} 分組倍率: {{ratio}}x",
+  "groupRatioUnavailable": "分組倍率不可用",
   "groupSelectionHint": "留空表示所有分組；價格排序會在已選分組範圍內自動取最優價",
   "input": "輸入:",
   "input1MTokens": "輸入(1M tokens)",
@@ -201,9 +203,11 @@
     },
     "selectionHint": "選擇多個能力時，模型需要同時符合所有條件。"
   },
+  "modelRatio": "模型倍率：",
   "noMatchingModels": "沒有找到匹配的模型",
   "noSourcesDescription": "請先新增站點帳號或 API 憑據，然後查看模型列表。",
   "noSourcesTitle": "暫無可用資料來源",
+  "noUsableGroupsForModel": "當前帳號沒有可用於此模型的分組。",
   "optimalGroup": "最優組: {{group}}",
   "optimalGroupLowestPriceWithinAccountFilters": "已在目前帳號分組篩選範圍內自動選擇最優組: {{group}}；且在相同計費模式下價格最低",
   "optimalGroupLowestPriceWithinBillingMode": "已在目前篩選分組範圍內自動選擇最優組: {{group}}；且在相同計費模式下價格最低",
@@ -226,7 +230,6 @@
     "unclassified": "未分類",
     "unclassifiedDescription": "無法識別模型供應商；這不表示該模型無法使用。"
   },
-  "ratio": "倍率:",
   "realAmount": "真實充值金額",
   "refreshData": "重新整理資料",
   "runtimeKeyFallbackSourceNotice": {
@@ -239,6 +242,7 @@
   "selectSourceToContinue": "請先在上方選擇一個資料來源，然後查看模型列表。",
   "showing_other": "顯示 {{count}} 個模型",
   "showRatio": "顯示倍率",
+  "siteSupportedGroups": "站點支援的分組",
   "sortBy": "排序方式",
   "sortOptions": {
     "default": "預設順序",
@@ -295,6 +299,7 @@
   "totalModels_other": "總計 {{count}} 個模型",
   "unavailable": "不可用",
   "unavailablePriceReasons": {
+    "groupRatioUnavailable": "價格不可用，因為目前可用分組沒有分組倍率。",
     "keyGroupUnknown": "價格不可用，因為無法解析此金鑰的 Sub2API 分組。",
     "modelListOnly": "此金鑰可使用這些模型，但價格不可用。",
     "officialPriceMissing": "此模型不在價格表中。",

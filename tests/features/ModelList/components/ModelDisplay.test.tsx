@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import { ModelDisplay } from "~/features/ModelList/components/ModelDisplay"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
@@ -102,8 +103,6 @@ vi.mock("~/features/ModelList/components/ModelItem", () => ({
         data-model-id={props.model.model_name}
         data-exchange-rate={String(props.exchangeRate)}
         data-effective-group={props.effectiveGroup ?? ""}
-        data-selected-groups={props.selectedGroups.join(",")}
-        data-all-groups={String(props.isAllGroupsMode)}
         data-summary-status={props.verificationSummary?.status ?? "none"}
         data-source-kind={props.source.kind}
         data-expanded={String(props.isExpanded ?? false)}
@@ -221,6 +220,19 @@ const createCalculatedModel = (
     calculatedPrice,
     source: overrides.source ?? ACCOUNT_SOURCE,
     groupRatios: { default: 1, vip: 2 },
+    groupContext: {
+      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+      supportedGroups: ["default", "vip"],
+      usableGroups: ["default", "vip"],
+      priceableGroups: ["default", "vip"],
+    },
+    activeGroupContext: {
+      activeUsableGroups: ["default", "vip"],
+      activePriceableGroups: ["default", "vip"],
+      actionGroups: overrides.effectiveGroup
+        ? [overrides.effectiveGroup]
+        : ["default", "vip"],
+    },
     effectiveGroup: overrides.effectiveGroup,
     resolvedVendor: overrides.resolvedVendor ?? { state: "unknown" },
   }
@@ -265,9 +277,7 @@ describe("ModelDisplay", () => {
         showRealPrice={false}
         showRatioColumn={false}
         showEndpointTypes={false}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={[]}
       />,
     )
 
@@ -283,9 +293,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={["default"]}
       />,
     )
 
@@ -307,9 +315,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={["default"]}
       />,
     )
 
@@ -338,9 +344,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={["default"]}
       />,
     )
 
@@ -372,9 +376,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={["default"]}
       />,
     )
 
@@ -430,9 +432,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={handleGroupClick}
-        availableGroups={["default", "vip"]}
         displayCapabilities={{ canVerify: true } as any}
       />,
     )
@@ -444,9 +444,20 @@ describe("ModelDisplay", () => {
     expect(accountItem).toHaveAttribute("data-source-kind", "account")
     expect(accountItem).toHaveAttribute("data-exchange-rate", "8")
     expect(accountItem).toHaveAttribute("data-effective-group", "vip")
-    expect(accountItem).toHaveAttribute("data-selected-groups", "")
-    expect(accountItem).toHaveAttribute("data-all-groups", "true")
     expect(accountItem).toHaveAttribute("data-summary-status", "success")
+
+    const firstRowProps = modelItemSpy.mock.calls[0]?.[0]
+    expect(firstRowProps.groupContext).toEqual({
+      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+      supportedGroups: ["default", "vip"],
+      usableGroups: ["default", "vip"],
+      priceableGroups: ["default", "vip"],
+    })
+    expect(firstRowProps.activeGroupContext).toEqual({
+      activeUsableGroups: ["default", "vip"],
+      activePriceableGroups: ["default", "vip"],
+      actionGroups: ["vip"],
+    })
 
     expect(defaultRateItem).toHaveAttribute(
       "data-exchange-rate",
@@ -503,9 +514,7 @@ describe("ModelDisplay", () => {
         showRealPrice={false}
         showRatioColumn={false}
         showEndpointTypes={false}
-        selectedGroups={["vip"]}
         handleGroupClick={vi.fn()}
-        availableGroups={["vip"]}
       />,
     )
 
@@ -516,10 +525,6 @@ describe("ModelDisplay", () => {
     expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(
       "data-effective-group",
       "vip",
-    )
-    expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(
-      "data-all-groups",
-      "false",
     )
     expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(
       "data-summary-status",
@@ -565,9 +570,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={["default", "vip"]}
       />,
     )
 
@@ -585,9 +588,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={["default", "vip"]}
       />,
     )
 
@@ -640,9 +641,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={["default", "vip"]}
       />,
     )
 
@@ -660,9 +659,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={["default", "vip"]}
       />,
     )
 
@@ -673,9 +670,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroups={[]}
         handleGroupClick={vi.fn()}
-        availableGroups={["default", "vip"]}
       />,
     )
 

@@ -239,7 +239,7 @@ function renderControlPanel(
     selectedGroups: ["vip"],
     setSelectedGroups: vi.fn(),
     availableGroups: ["vip"],
-    pricingData: { group_ratio: { vip: 1 } },
+    singleSourceGroupRatios: { vip: 1 },
     showRealPrice: false,
     setShowRealPrice: vi.fn(),
     showRatioColumn: false,
@@ -574,6 +574,26 @@ describe("ControlPanel", () => {
         result: PRODUCT_ANALYTICS_RESULTS.Success,
       }),
     )
+  })
+
+  it("shows normalized and zero group ratios without inventing a missing multiplier", async () => {
+    const user = userEvent.setup()
+    const props = renderControlPanel({
+      selectedGroups: ["default"],
+      availableGroups: ["default", "vip", "free"],
+      singleSourceGroupRatios: { default: 1, free: 0 },
+    })
+
+    expect(screen.getByRole("checkbox", { name: "default (1x)" })).toBeChecked()
+    const vipGroup = screen.getByRole("checkbox", { name: "vip" })
+    expect(screen.getByRole("checkbox", { name: "free (0x)" })).toBeVisible()
+    expect(
+      screen.queryByRole("checkbox", { name: "vip (1x)" }),
+    ).not.toBeInTheDocument()
+
+    await user.click(vipGroup)
+
+    expect(props.setSelectedGroups).toHaveBeenCalledWith(["default", "vip"])
   })
 
   it("keeps the search field usable when all top filters are visible", () => {

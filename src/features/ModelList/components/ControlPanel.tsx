@@ -27,10 +27,7 @@ import {
   MODEL_LIST_BILLING_MODES,
   type ModelListBillingMode,
 } from "~/features/ModelList/billingModes"
-import {
-  formatGroupLabel,
-  resolveGroupRatio,
-} from "~/features/ModelList/groupLabels"
+import { formatGroupLabelFromRatios } from "~/features/ModelList/groupLabels"
 import {
   MODEL_CAPABILITY_FILTER_LABEL_TRANSLATORS,
   MODEL_CAPABILITY_FILTER_VALUES,
@@ -88,7 +85,7 @@ interface ControlPanelProps {
   selectedGroups: string[]
   setSelectedGroups: (groups: string[]) => void
   availableGroups: string[]
-  pricingData: any
+  singleSourceGroupRatios: Record<string, number>
   showRealPrice: boolean
   setShowRealPrice: (show: boolean) => void
   showRatioColumn: boolean
@@ -130,7 +127,7 @@ interface ControlPanelProps {
  * @param props.selectedGroups Active candidate group filter set.
  * @param props.setSelectedGroups Setter for candidate group filter set.
  * @param props.availableGroups Available group options.
- * @param props.pricingData Pricing data used to show ratios.
+ * @param props.singleSourceGroupRatios Normalized ratios used in group labels.
  * @param props.showRealPrice Whether to display real price values.
  * @param props.setShowRealPrice Setter for real price toggle.
  * @param props.showRatioColumn Whether to show ratio column.
@@ -163,7 +160,7 @@ export function ControlPanel({
   selectedGroups,
   setSelectedGroups,
   availableGroups,
-  pricingData,
+  singleSourceGroupRatios,
   showRealPrice,
   setShowRealPrice,
   showRatioColumn,
@@ -205,10 +202,7 @@ export function ControlPanel({
     modelCapabilityMetadataCoverage?.unmatched ?? 0
   const groupOptions = availableGroups.map((group) => ({
     value: group,
-    label: formatGroupLabel(
-      group,
-      resolveGroupRatio(group, pricingData?.group_ratio ?? {}),
-    ),
+    label: formatGroupLabelFromRatios(group, singleSourceGroupRatios),
   }))
   const sortOptions = [
     {

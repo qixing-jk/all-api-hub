@@ -257,7 +257,7 @@ describe("Model item pricing and description", () => {
       )
 
       expect(screen.getByText("USD:1.25/M")).toBeInTheDocument()
-      expect(screen.getByText("ratio")).toBeInTheDocument()
+      expect(screen.getByText("modelRatio")).toBeInTheDocument()
       expect(screen.getByText("3.5x")).toHaveClass("text-gray-500")
     })
 
@@ -298,7 +298,7 @@ describe("Model item pricing and description", () => {
 
       expect(screen.getByText("perCall")).toBeInTheDocument()
       expect(screen.getByText("USD:6")).toBeInTheDocument()
-      expect(screen.queryByText("ratio")).toBeNull()
+      expect(screen.queryByText("modelRatio")).not.toBeInTheDocument()
     })
 
     it("renders explicit zero per-call prices instead of treating them as missing", () => {
@@ -319,7 +319,7 @@ describe("Model item pricing and description", () => {
 
       expect(screen.getByText("perCall")).toBeInTheDocument()
       expect(screen.getByText("USD:0")).toBeInTheDocument()
-      expect(screen.queryByText("ratio")).toBeNull()
+      expect(screen.queryByText("modelRatio")).not.toBeInTheDocument()
     })
 
     it("renders the optimal-group indicator beside ratio metadata and uses title-only explanation for the lowest price", () => {
@@ -341,7 +341,7 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.getByText("ratio")).toBeInTheDocument()
+      expect(screen.getByText("modelRatio")).toBeInTheDocument()
       expect(screen.getByText("optimalGroup:vip (2x)")).toBeInTheDocument()
       expect(screen.getByText("optimalGroup:vip (2x)")).toHaveAttribute(
         "title",
@@ -373,7 +373,7 @@ describe("Model item pricing and description", () => {
         "title",
         "optimalGroupWithinSelectedGroups:vip (2x)",
       )
-      expect(screen.queryByText("ratio")).toBeNull()
+      expect(screen.queryByText("modelRatio")).not.toBeInTheDocument()
     })
 
     it("uses account-filter copy for all-accounts lowest-price metadata", () => {
@@ -500,6 +500,32 @@ describe("Model item pricing and description", () => {
       expect(formatPriceCompactMock).not.toHaveBeenCalled()
     })
 
+    it("uses no-usable-group copy without claiming a multiplier is missing", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel()}
+          calculatedPrice={createCalculatedPrice({
+            priceAvailability: "unavailable",
+            unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+          })}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={true}
+          isAvailableForUser={false}
+          groupRatios={{}}
+        />,
+      )
+
+      expect(screen.getByText("noUsableGroupsForModel")).toBeInTheDocument()
+      expect(
+        screen.queryByText("unavailablePriceReasons.groupRatioUnavailable"),
+      ).not.toBeInTheDocument()
+      expect(formatPriceCompactMock).not.toHaveBeenCalled()
+    })
+
     it("labels estimated Sub2API prices with short source text", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 
@@ -576,9 +602,44 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.getByText("ratio")).toBeInTheDocument()
+      expect(screen.getByText("groupRatio")).toBeInTheDocument()
       expect(screen.getByText("2x")).toBeInTheDocument()
       expect(screen.queryByText("0x")).toBeNull()
+    })
+
+    it("explains an unavailable estimated group multiplier without rendering an undefined ratio", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({
+            model_ratio: 0,
+            completion_ratio: 0,
+            token_price_usd_per_million: {
+              input: 0.25,
+              output: 1,
+            },
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE,
+              precision: MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+            },
+          })}
+          calculatedPrice={createCalculatedPrice()}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={true}
+          isAvailableForUser={true}
+          effectiveGroup="vip"
+          groupRatios={{}}
+        />,
+      )
+
+      expect(
+        screen.getByText("unavailablePriceReasons.groupRatioUnavailable"),
+      ).toBeInTheDocument()
+      expect(screen.queryByText("groupRatio")).not.toBeInTheDocument()
+      expect(screen.queryByText("undefinedx")).not.toBeInTheDocument()
     })
 
     it("uses account-filter copy for all-accounts auto-picked groups", () => {

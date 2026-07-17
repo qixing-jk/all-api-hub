@@ -9,8 +9,12 @@ import { useTranslation } from "react-i18next"
 import Tooltip from "~/components/Tooltip"
 import { Badge } from "~/components/ui"
 import {
+  MODEL_GROUP_ACCESS_STATES,
+  type ModelGroupContext,
+} from "~/features/ModelList/groupContext"
+import {
   formatGroupLabel,
-  resolveGroupRatio,
+  resolveKnownGroupRatio,
 } from "~/features/ModelList/groupLabels"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import {
@@ -31,6 +35,7 @@ interface ModelItemDetailsProps {
   calculatedPrice: CalculatedPrice
   showEndpointTypes: boolean
   groupRatios: Record<string, number>
+  groupContext: ModelGroupContext
   effectiveGroup?: string
   showGroupDetails: boolean
   showPricingDetails: boolean
@@ -42,14 +47,22 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
   calculatedPrice,
   showEndpointTypes,
   groupRatios,
+  groupContext,
   effectiveGroup,
   showGroupDetails,
   showPricingDetails,
   onGroupClick,
 }) => {
   const { t } = useTranslation("modelList")
+  const hasGroupSemantics =
+    groupContext.accessState !== MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
+  const shouldShowGroupDetails = showGroupDetails && hasGroupSemantics
+  const usableGroupSet = new Set(groupContext.usableGroups)
+  const supportedOnlyGroups = groupContext.supportedGroups.filter(
+    (group) => !usableGroupSet.has(group),
+  )
 
-  if (!showGroupDetails && !showEndpointTypes && !showPricingDetails) {
+  if (!shouldShowGroupDetails && !showEndpointTypes && !showPricingDetails) {
     return null
   }
 
@@ -62,57 +75,89 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
     <>
       <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
         {/* 可用分组 */}
-        {showGroupDetails && (
+        {shouldShowGroupDetails && groupContext.usableGroups.length > 0 && (
           <div>
             <div className="mb-2 flex items-center space-x-2">
               <TagIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
               <span className="dark:text-dark-text-secondary font-medium text-gray-700">
-                {t("availableGroups")}
+                {t("currentUsableGroups")}
               </span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {model.enable_groups.map((group, index) => {
+              {groupContext.usableGroups.map((group) => {
                 const isCurrentGroup = group === effectiveGroup
-                const isClickable = onGroupClick && !isCurrentGroup
-                const groupRatio = resolveGroupRatio(group, groupRatios)
-                const groupLabel = formatGroupLabel(group, groupRatio)
+                const isClickable = Boolean(onGroupClick) && !isCurrentGroup
+                const groupRatio = resolveKnownGroupRatio(group, groupRatios)
+                const groupLabel =
+                  groupRatio === undefined
+                    ? group
+                    : formatGroupLabel(group, groupRatio)
+                const switchGroupLabel = isClickable
+                  ? t("clickSwitchGroup", { group: groupLabel })
+                  : undefined
                 const groupTooltipText = [
-                  t("groupRatioTooltip", {
-                    group,
-                    ratio: groupRatio,
-                  }),
-                  isClickable
-                    ? t("clickSwitchGroup", { group: groupLabel })
-                    : null,
+                  groupRatio === undefined
+                    ? t("groupRatioUnavailable")
+                    : t("groupRatioTooltip", {
+                        group,
+                        ratio: groupRatio,
+                      }),
+                  switchGroupLabel,
                 ]
                   .filter(Boolean)
                   .join("\n")
 
                 return (
                   <Tooltip
-                    key={index}
+                    key={group}
                     content={groupTooltipText}
+                    anchorAsChild={isClickable}
                     className="whitespace-pre-line"
-                    wrapperClassName="inline-flex justify-start"
+                    wrapperClassName={
+                      isClickable ? undefined : "inline-flex justify-start"
+                    }
                   >
-                    <Badge
-                      variant={isCurrentGroup ? "default" : "secondary"}
-                      size="sm"
-                      onClick={
-                        isClickable ? () => onGroupClick(group) : undefined
-                      }
-                      className={
-                        isClickable
-                          ? "cursor-pointer transition-opacity hover:opacity-80"
-                          : ""
-                      }
-                    >
-                      {isCurrentGroup && <TagIcon className="h-3 w-3" />}
-                      {groupLabel}
-                    </Badge>
+                    {isClickable ? (
+                      <Badge asChild variant="secondary" size="sm">
+                        <button
+                          type="button"
+                          onClick={() => onGroupClick?.(group)}
+                          aria-label={switchGroupLabel}
+                          className="cursor-pointer transition-opacity hover:opacity-80"
+                        >
+                          {groupLabel}
+                        </button>
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant={isCurrentGroup ? "default" : "secondary"}
+                        size="sm"
+                      >
+                        {isCurrentGroup && <TagIcon className="h-3 w-3" />}
+                        {groupLabel}
+                      </Badge>
+                    )}
                   </Tooltip>
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {shouldShowGroupDetails && supportedOnlyGroups.length > 0 && (
+          <div>
+            <div className="mb-2 flex items-center space-x-2">
+              <TagIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+              <span className="dark:text-dark-text-secondary font-medium text-gray-700">
+                {t("siteSupportedGroups")}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {supportedOnlyGroups.map((group) => (
+                <Badge key={group} variant="secondary" size="sm">
+                  {group}
+                </Badge>
+              ))}
             </div>
           </div>
         )}

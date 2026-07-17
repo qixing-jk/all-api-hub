@@ -5,7 +5,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
-import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import { createAccountTokenModelListSourceIdentity } from "~/features/ModelList/modelManagementSources"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
@@ -213,8 +213,17 @@ function createDefaultProps() {
     showRatioColumn: false,
     showEndpointTypes: false,
     groupRatios: {},
-    selectedGroups: [],
-    availableGroups: [],
+    groupContext: {
+      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+      supportedGroups: ["vip"],
+      usableGroups: ["vip"],
+      priceableGroups: [],
+    },
+    activeGroupContext: {
+      activeUsableGroups: ["vip"],
+      activePriceableGroups: [],
+      actionGroups: ["vip"],
+    },
     source: {
       kind: "account",
       account: {
@@ -262,30 +271,53 @@ describe("ModelItem", () => {
     ).toHaveTextContent("Anthropic")
   })
 
-  it("falls back to the default group label when an unavailable model has no selected or effective group", () => {
-    render(<ModelItem {...createDefaultProps()} />)
+  it("shows local no-usable guidance for known-empty group access", () => {
+    const props = createDefaultProps()
 
-    expect(
-      screen.getByText("clickSwitchGroup:default (1x)"),
-    ).toBeInTheDocument()
-    expect(screen.getByText("availableGroups: vip (1x)")).toBeInTheDocument()
-  })
-
-  it("does not mark rows as unavailable in all-accounts scope when account-level filtering already resolved eligibility", () => {
     render(
       <ModelItem
-        {...createDefaultProps()}
-        groupSelectionScope={MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS}
-        isGroupSelectionInteractive={false}
+        {...props}
+        model={{ ...props.model, enable_groups: ["vip", "default"] }}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: ["vip", "default"],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
       />,
     )
 
-    expect(
-      screen.queryByText("clickSwitchGroup:default (1x)"),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByText("availableGroups: vip (1x)"),
-    ).not.toBeInTheDocument()
+    expect(screen.getByText("noUsableGroupsForModel")).toBeInTheDocument()
+    expect(screen.queryByText(/^clickSwitchGroup:/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^availableGroups:/)).not.toBeInTheDocument()
+  })
+
+  it("preserves unknown catalog rows without showing no-usable guidance", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.UNKNOWN,
+          supportedGroups: ["vip"],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+      />,
+    )
+
+    expect(screen.queryByText("noUsableGroupsForModel")).not.toBeInTheDocument()
   })
 
   it("renders token-scoped account labels from source identity", () => {
@@ -315,23 +347,31 @@ describe("ModelItem", () => {
         {...props}
         model={{
           ...props.model,
-          enable_groups: ["default", "vip", "private"],
+          enable_groups: ["vip", "default"],
         }}
         groupRatios={{
           default: 1,
-          vip: 2,
-          private: 3,
         }}
-        selectedGroups={[]}
-        availableGroups={["default", "vip", "private"]}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: ["vip", "default"],
+          usableGroups: ["default"],
+          priceableGroups: ["default"],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: ["default"],
+          activePriceableGroups: ["default"],
+          actionGroups: ["default"],
+        }}
       />,
     )
 
-    const groupSummary = screen.getByText("default (1x)+2")
+    const groupSummary = screen.getByText("default (1x)")
     expect(groupSummary).toHaveAttribute(
       "title",
-      "availableGroups: default (1x), vip (2x), private (3x)",
+      "currentUsableGroups: default (1x)",
     )
+    expect(screen.queryByText("vip (1x)")).not.toBeInTheDocument()
     expect(screen.queryByText("available")).not.toBeInTheDocument()
   })
 
@@ -437,7 +477,7 @@ describe("ModelItem", () => {
     )
   })
 
-  it("omits empty model group context from account verification actions", async () => {
+  it("passes an exact empty restriction for known-empty account actions", async () => {
     const user = userEvent.setup()
     const onOpenModelKeyDialog = vi.fn()
     const onVerifyModel = vi.fn()
@@ -468,8 +508,17 @@ describe("ModelItem", () => {
           supportsBatchCredentialVerification: true,
           supportsCliVerification: false,
         }}
-        selectedGroups={[]}
-        availableGroups={[]}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: [],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
         onOpenModelKeyDialog={onOpenModelKeyDialog}
         onVerifyModel={onVerifyModel}
       />,
@@ -481,13 +530,90 @@ describe("ModelItem", () => {
     expect(onOpenModelKeyDialog).toHaveBeenCalledWith(
       props.source.account,
       props.model.model_name,
-      undefined,
+      [],
     )
     expect(onVerifyModel).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "account" }),
       props.model.model_name,
+      [],
+    )
+  })
+
+  it("passes no group restriction for not-applicable profile verification", async () => {
+    const user = userEvent.setup()
+    const onVerifyModel = vi.fn()
+    const props = createDefaultProps()
+    const profileSource = {
+      kind: "profile",
+      profile: {
+        id: "profile-1",
+        name: "Example profile",
+        baseUrl: "https://profile.example.invalid",
+      },
+      capabilities: {
+        ...props.source.capabilities,
+        supportsGroupFiltering: false,
+        supportsCredentialVerification: true,
+      },
+    } as any
+
+    render(
+      <ModelItem
+        {...props}
+        source={profileSource}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+          supportedGroups: ["vip"],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+        onVerifyModel={onVerifyModel}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "verify-api" }))
+
+    expect(onVerifyModel).toHaveBeenCalledWith(
+      profileSource,
+      props.model.model_name,
       undefined,
     )
+    expect(screen.queryByTestId("expand-button")).not.toBeInTheDocument()
+  })
+
+  it("keeps account actions disabled when source capabilities disallow them", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+          supportedGroups: [],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+        onOpenModelKeyDialog={vi.fn()}
+        onVerifyModel={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "key" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "verify-api" }),
+    ).not.toBeInTheDocument()
   })
 
   it("uses internal expansion state when expansion props are omitted", async () => {

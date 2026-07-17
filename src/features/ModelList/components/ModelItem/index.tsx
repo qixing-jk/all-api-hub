@@ -6,6 +6,11 @@ import { useTranslation } from "react-i18next"
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
 import {
+  MODEL_GROUP_ACCESS_STATES,
+  type ActiveModelGroupContext,
+  type ModelGroupContext,
+} from "~/features/ModelList/groupContext"
+import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
   type ModelListGroupSelectionScope,
 } from "~/features/ModelList/groupSelectionScopes"
@@ -20,7 +25,6 @@ import {
   isModelPriceUnavailable,
   type ModelPricing,
 } from "~/services/modelList/pricingModel"
-import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type {
   ModelMetadata,
   ResolvedModelVendor,
@@ -58,11 +62,10 @@ interface ModelItemProps {
   showRatioColumn: boolean
   showEndpointTypes: boolean
   groupRatios: Record<string, number>
+  groupContext: ModelGroupContext
+  activeGroupContext: ActiveModelGroupContext
   effectiveGroup?: string
-  selectedGroups: string[]
   onGroupClick?: (group: string) => void
-  availableGroups?: string[]
-  isAllGroupsMode?: boolean
   showsOptimalGroup?: boolean
   groupSelectionScope?: ModelListGroupSelectionScope
   isGroupSelectionInteractive?: boolean
@@ -107,10 +110,10 @@ export default function ModelItem(props: ModelItemProps) {
     showRatioColumn,
     showEndpointTypes,
     groupRatios,
+    groupContext,
+    activeGroupContext,
     effectiveGroup,
-    selectedGroups,
     onGroupClick,
-    availableGroups = [],
     showsOptimalGroup = false,
     groupSelectionScope = MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE,
     isGroupSelectionInteractive = true,
@@ -232,46 +235,46 @@ export default function ModelItem(props: ModelItemProps) {
   const showPricing =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
     effectiveCapabilities.supportsPricing
+  const hasGroupSemantics =
+    groupContext.accessState !== MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
   const showGroupDetails =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
-    effectiveCapabilities.supportsGroupFiltering
+    effectiveCapabilities.supportsGroupFiltering &&
+    hasGroupSemantics
   const canExpand =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && showGroupDetails
 
-  const activeGroups =
-    selectedGroups.length > 0 ? selectedGroups : availableGroups
   const hasRuntimeDiscoveredPricingGap =
     isModelPriceUnavailable(model) ||
     calculatedPrice.priceAvailability === "unavailable"
-  const isAvailableForUser =
-    hasRuntimeDiscoveredPricingGap ||
-    groupSelectionScope === MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
+  const hasKnownNoUsableGroup =
+    groupContext.accessState === MODEL_GROUP_ACCESS_STATES.KNOWN &&
+    groupContext.usableGroups.length === 0
+  const isAvailableForUser = hasKnownNoUsableGroup
+    ? false
+    : hasRuntimeDiscoveredPricingGap ||
+        groupContext.accessState === MODEL_GROUP_ACCESS_STATES.UNKNOWN
       ? true
       : showGroupDetails
-        ? activeGroups.some((group) => model.enable_groups.includes(group))
+        ? activeGroupContext.activeUsableGroups.length > 0
         : true
-  const groupLabels = model.enable_groups.map((group) =>
+  const usableGroupLabels = groupContext.usableGroups.map((group) =>
     formatGroupLabelFromRatios(group, groupRatios),
   )
   const groupSummary =
-    showGroupDetails && groupLabels.length > 0
+    showGroupDetails && usableGroupLabels.length > 0
       ? {
-          label:
-            groupLabels.length === 1
-              ? groupLabels[0]
-              : formatGroupLabelFromRatios(model.enable_groups[0], groupRatios),
-          ...(groupLabels.length > 1
-            ? { overflowCount: groupLabels.length - 1 }
+          label: usableGroupLabels[0],
+          ...(usableGroupLabels.length > 1
+            ? { overflowCount: usableGroupLabels.length - 1 }
             : {}),
-          title: `${t("availableGroups")}: ${groupLabels.join(", ")}`,
+          title: `${t("currentUsableGroups")}: ${usableGroupLabels.join(", ")}`,
         }
       : undefined
 
-  const modelActionEnableGroups = effectiveGroup
-    ? [effectiveGroup]
-    : model.enable_groups.length > 0
-      ? model.enable_groups
-      : undefined
+  const modelActionEnableGroups = hasGroupSemantics
+    ? activeGroupContext.actionGroups
+    : undefined
 
   const sourceBadge = sourceLabel.label ? (
     handleFilterAccount ? (
@@ -448,6 +451,7 @@ export default function ModelItem(props: ModelItemProps) {
                 calculatedPrice={calculatedPrice}
                 showEndpointTypes={showEndpointTypes}
                 groupRatios={groupRatios}
+                groupContext={groupContext}
                 effectiveGroup={effectiveGroup}
                 showGroupDetails={showGroupDetails}
                 showPricingDetails={showPricing}
@@ -460,25 +464,26 @@ export default function ModelItem(props: ModelItemProps) {
 
         {!isAvailableForUser && showGroupDetails && (
           <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
-            <div className="mb-2 flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300">
+            <div className="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300">
               <Badge variant="warning" size="sm">
                 {t("unavailable")}
               </Badge>
               <span>
-                {t("clickSwitchGroup", {
-                  group: formatGroupLabelFromRatios(
-                    effectiveGroup || selectedGroups[0] || DEFAULT_MODEL_GROUP,
-                    groupRatios,
-                  ),
-                })}
+                {hasKnownNoUsableGroup
+                  ? t("noUsableGroupsForModel")
+                  : t("clickSwitchGroup", {
+                      group: formatGroupLabelFromRatios(
+                        groupContext.usableGroups[0],
+                        groupRatios,
+                      ),
+                    })}
               </span>
             </div>
-            <div className="text-sm text-yellow-600 dark:text-yellow-400">
-              {t("availableGroups")}:{" "}
-              {model.enable_groups
-                .map((group) => formatGroupLabelFromRatios(group, groupRatios))
-                .join(", ")}
-            </div>
+            {!hasKnownNoUsableGroup && usableGroupLabels.length > 0 && (
+              <div className="mt-2 text-sm text-yellow-600 dark:text-yellow-400">
+                {t("currentUsableGroups")}: {usableGroupLabels.join(", ")}
+              </div>
+            )}
           </div>
         )}
       </CardContent>

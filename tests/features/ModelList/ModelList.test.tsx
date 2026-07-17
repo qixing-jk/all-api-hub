@@ -4,6 +4,12 @@ import type { ReactElement, ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  MODEL_GROUP_ACCESS_STATES,
+  type ActiveModelGroupContext,
+  type ModelGroupContext,
+} from "~/features/ModelList/groupContext"
+import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
 import ModelList from "~/features/ModelList/ModelList"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
@@ -279,6 +285,29 @@ const PROFILE = {
   updatedAt: 1,
 } as any
 
+function withKnownGroupContexts<T extends object>(
+  fixture: T,
+  groups = ["default"],
+): T & Pick<CalculatedModelItem, "groupContext" | "activeGroupContext"> {
+  const { effectiveGroup } = fixture as { effectiveGroup?: string }
+  const groupContext: ModelGroupContext = {
+    accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+    supportedGroups: groups,
+    usableGroups: groups,
+    priceableGroups: groups,
+  }
+  const activeGroupContext: ActiveModelGroupContext = {
+    activeUsableGroups: groups,
+    activePriceableGroups: groups,
+    actionGroups:
+      effectiveGroup && groups.includes(effectiveGroup)
+        ? [effectiveGroup]
+        : groups,
+  }
+
+  return { ...fixture, groupContext, activeGroupContext }
+}
+
 function createModelListData() {
   return {
     accounts: [ACCOUNT],
@@ -431,10 +460,10 @@ describe("ModelList", () => {
       effectiveSelectedVendor: MODEL_VENDOR_FILTER_VALUES.Unclassified,
       unclassifiedVendorCount: 1,
       filteredModels: [
-        {
+        withKnownGroupContexts({
           model: { model_name: "unclassified-model" },
           source: ACCOUNT_SOURCE,
-        },
+        }),
       ],
     })
 
@@ -482,20 +511,21 @@ describe("ModelList", () => {
       const matchingModelName =
         filters?.searchTerm === "target" ? "gpt-target" : "gpt-other"
       return [
-        {
-          model: {
-            model_name: matchingModelName,
-            quota_type: 0,
-            model_ratio: 1,
-            model_price: 0,
-            completion_ratio: 1,
-            enable_groups: ["vip"],
-            supported_endpoint_types: [],
+        withKnownGroupContexts(
+          {
+            model: {
+              model_name: matchingModelName,
+              quota_type: 0,
+              model_ratio: 1,
+              model_price: 0,
+              completion_ratio: 1,
+              enable_groups: ["vip"],
+              supported_endpoint_types: [],
+            },
+            source: ACCOUNT_SOURCE,
           },
-          source: ACCOUNT_SOURCE,
-          calculatedPrice: {},
-          groupRatios: {},
-        },
+          ["vip"],
+        ),
       ]
     })
 

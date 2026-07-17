@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Badge } from "~/components/ui"
 import {
   formatGroupLabelFromRatios,
-  resolveGroupRatio,
+  resolveKnownGroupRatio,
 } from "~/features/ModelList/groupLabels"
 import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
@@ -61,6 +61,10 @@ export function getUnavailablePriceReasonText(
       return t("unavailablePriceReasons.modelListOnly")
     case MODEL_UNAVAILABLE_PRICE_REASONS.KEY_GROUP_UNKNOWN:
       return t("unavailablePriceReasons.keyGroupUnknown")
+    case MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP:
+      return t("noUsableGroupsForModel")
+    case MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE:
+      return t("unavailablePriceReasons.groupRatioUnavailable")
     case MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING:
       return t("unavailablePriceReasons.officialPriceMissing")
     case MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE:
@@ -151,7 +155,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     return null
   }
 
-  const unavailableReason = resolveUnavailablePriceReason(
+  const sourceUnavailableReason = resolveUnavailablePriceReason(
     model,
     calculatedPrice,
   )
@@ -163,8 +167,18 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
   const displayRatio =
     estimatedPriceUsesDirectTokenPrice && effectiveGroup
-      ? resolveGroupRatio(effectiveGroup, groupRatios)
+      ? resolveKnownGroupRatio(effectiveGroup, groupRatios)
       : model.model_ratio
+  const unavailableReason =
+    sourceUnavailableReason ??
+    (estimatedPriceUsesDirectTokenPrice &&
+    effectiveGroup &&
+    displayRatio === undefined
+      ? MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE
+      : undefined)
+  const ratioLabel = estimatedPriceUsesDirectTokenPrice
+    ? t("groupRatio")
+    : t("modelRatio")
   const effectiveGroupLabel = effectiveGroup
     ? formatGroupLabelFromRatios(effectiveGroup, groupRatios)
     : undefined
@@ -263,7 +277,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
               {showRatioColumn && (
                 <>
                   <span className="dark:text-dark-text-tertiary text-xs whitespace-nowrap text-gray-500 sm:text-sm">
-                    {t("ratio")}
+                    {ratioLabel}
                   </span>
                   <span
                     className={`text-xs font-medium sm:text-sm ${
