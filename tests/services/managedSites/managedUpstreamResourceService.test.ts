@@ -380,7 +380,7 @@ describe("managed upstream resource service", () => {
     )
   })
 
-  it("enables channel migration resource slices for migrated managed sites by default", () => {
+  it("keeps AxonHub migration off the old feature gate without changing other site slices", () => {
     const resources = buildResourcesCapability()
     getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
       siteType,
@@ -391,30 +391,40 @@ describe("managed upstream resource service", () => {
         resources,
       },
     }))
-    const migratedSiteTypes = [
+    const legacyMigratedSiteTypes = [
       SITE_TYPES.NEW_API,
       SITE_TYPES.VELOERA,
       SITE_TYPES.DONE_HUB,
       SITE_TYPES.OCTOPUS,
-      SITE_TYPES.AXON_HUB,
       SITE_TYPES.CLAUDE_CODE_HUB,
     ]
 
     expect(
-      migratedSiteTypes.map((siteType) =>
+      legacyMigratedSiteTypes.map((siteType) =>
         resolveManagedUpstreamResourceFeatureCapabilities(
           siteType,
           MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
         ),
       ),
     ).toEqual(
-      migratedSiteTypes.map((siteType) => ({
+      legacyMigratedSiteTypes.map((siteType) => ({
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
         capabilities: resources,
       })),
     )
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilities(
+        SITE_TYPES.AXON_HUB,
+        MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
+      ),
+    ).toEqual({
+      supported: false,
+      siteType: SITE_TYPES.AXON_HUB,
+      feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
+      reason: "feature-slice-disabled",
+    })
   })
 
   it("enables channel filter resource config slices for channel-shaped migrated sites by default", () => {

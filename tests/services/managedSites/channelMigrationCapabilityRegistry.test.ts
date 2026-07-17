@@ -23,10 +23,19 @@ describe("managed site migration capability registry", () => {
     expect(resolveManagedSiteMigrationCapability(SITE_TYPES.NEW_API)).toBeNull()
   })
 
-  it("returns null for AxonHub without falling back to the legacy feature gate", () => {
+  it("resolves AxonHub without falling back to the legacy feature gate", () => {
     expect(
       resolveManagedSiteMigrationCapability(SITE_TYPES.AXON_HUB),
-    ).toBeNull()
+    ).toMatchObject({
+      source: {
+        prepare: expect.any(Function),
+        resolveCredential: expect.any(Function),
+      },
+      target: {
+        prepare: expect.any(Function),
+        create: expect.any(Function),
+      },
+    })
     expect(
       resolveManagedUpstreamResourceFeatureCapabilitiesMock,
     ).not.toHaveBeenCalled()

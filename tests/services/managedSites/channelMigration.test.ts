@@ -4,6 +4,8 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
+import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import {
   executeManagedSiteMigrationCore,
   prepareManagedSiteMigrationPreviewCore,
@@ -12,6 +14,8 @@ import {
   collectLegacyMigrationLossSignals,
   resolveAxonHubMigrationResourceRefFromLegacyRow,
   toCanonicalMigrationSelectionFromLegacyAxonRow,
+  toCanonicalMigrationSourceFromLegacyChannel,
+  toCanonicalTargetPreparationFromLegacyDraft,
 } from "~/services/managedSites/channelMigrationLegacyFacade"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import {
@@ -21,11 +25,14 @@ import {
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
+  MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES,
 } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
+  ManagedSiteMigrationExecutionAbortedError,
   type ManagedSiteMigrationCanonicalPreview,
+  type ManagedSiteMigrationExecutionAbortDetails,
   type ManagedSiteMigrationSelection,
   type ManagedSiteMigrationSource,
   type ManagedSiteMigrationTargetPreparation,
@@ -185,6 +192,78 @@ const buildCanonicalPreview = (
   totalCount: selections.length,
   readyCount: selections.length,
   blockedCount: 0,
+})
+
+const captureMigrationExecutionAbort = async (
+  execution: Promise<unknown>,
+): Promise<ManagedSiteMigrationExecutionAbortedError> => {
+  try {
+    await execution
+  } catch (error) {
+    expect(error).toBeInstanceOf(ManagedSiteMigrationExecutionAbortedError)
+    return error as ManagedSiteMigrationExecutionAbortedError
+  }
+  throw new Error("Expected migration execution to abort")
+}
+
+const expectMigrationAbortInvariants = (
+  error: ManagedSiteMigrationExecutionAbortedError,
+) => {
+  const details: ManagedSiteMigrationExecutionAbortDetails = error.details
+  const { partialResult, remainingSelections } = details
+  expect(partialResult.items.length + remainingSelections.length).toBe(
+    partialResult.totalSelected,
+  )
+  expect(
+    partialResult.createdCount +
+      partialResult.failedCount +
+      partialResult.skippedCount +
+      partialResult.uncertainCount,
+  ).toBe(partialResult.items.length)
+  const serializedDetails = JSON.stringify(details)
+  expect(serializedDetails).not.toContain("execution-key")
+  expect(serializedDetails).not.toContain('"credential"')
+  expect(serializedDetails).not.toContain('"projection"')
+}
+
+const buildAxonMigrationSource = (
+  overrides: Partial<ManagedSiteMigrationSource> = {},
+): ManagedSiteMigrationSource => ({
+  ...buildMigrationSource(),
+  sourceSiteType: SITE_TYPES.AXON_HUB,
+  resourceType: ChannelType.Anthropic,
+  baseUrl: "https://native-source.example.invalid",
+  models: ["model-native"],
+  groups: [],
+  priority: 0,
+  weight: 7,
+  ...overrides,
+})
+
+const buildAxonTargetPreparation = (
+  source: ManagedSiteMigrationSource,
+): ManagedSiteMigrationTargetPreparation => ({
+  projection: {
+    name: "",
+    type:
+      source.resourceType === ChannelType.Anthropic
+        ? AXON_HUB_CHANNEL_TYPE.ANTHROPIC
+        : AXON_HUB_CHANNEL_TYPE.OPENAI,
+    baseUrl: source.baseUrl,
+    models: [...source.models],
+    groups: ["default"],
+    priority: 0,
+    weight: source.weight,
+    status: source.status === "enabled" ? 1 : 2,
+  },
+  adjustments: {
+    remappedType: true,
+    normalizedBaseUrl: false,
+    forcedDefaultGroup: source.groups.join(",") !== "default",
+    ignoredPriority: source.priority !== 0,
+    ignoredWeight: false,
+    simplifiedStatus: source.status === "other",
+  },
 })
 
 describe("channelMigration", () => {
@@ -408,6 +487,57 @@ describe("channelMigration", () => {
         draft: null,
       },
     ])
+  })
+
+  it("preserves native ref precedence and fallback identity for non-Axon legacy rows", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const existingRef = {
+      siteType: SITE_TYPES.DONE_HUB,
+      kind: "channel" as const,
+      scopeKey: "https://native-scope.example.invalid",
+      resourceId: "native-resource",
+    }
+    const prepare = vi.fn(async () => ({
+      status: "blocked" as const,
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.DONE_HUB
+        ? { source: { prepare, resolveCredential: vi.fn() } }
+        : null,
+    )
+
+    await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.DONE_HUB,
+      targetSiteType: SITE_TYPES.VELOERA,
+      channels: [
+        {
+          ...buildManagedSiteChannel({ id: 704, name: "Native ref" }),
+          resourceRef: existingRef,
+        } as ManagedSiteChannel & { resourceRef: typeof existingRef },
+        buildManagedSiteChannel({ id: 705, name: "Fallback ref" }),
+      ],
+    })
+
+    expect(prepare).toHaveBeenNthCalledWith(1, {
+      selectionId: "704",
+      displayName: "Native ref",
+      ref: existingRef,
+    })
+    expect(prepare).toHaveBeenNthCalledWith(2, {
+      selectionId: "705",
+      displayName: "Fallback ref",
+      ref: {
+        siteType: SITE_TYPES.DONE_HUB,
+        kind: "channel",
+        scopeKey: "https://donehub.example.com",
+        resourceId: "705",
+      },
+    })
   })
 
   it("preserves AutoDisabled status through generic legacy target creation", async () => {
@@ -648,41 +778,294 @@ describe("channelMigration", () => {
     },
   )
 
-  it.each(["credential", "create"] as const)(
-    "rethrows canonical execution cancellation from %s and stops later rows",
-    async (stage) => {
-      const selections = [
-        buildMigrationSelection("first"),
-        buildMigrationSelection("second"),
-      ]
-      const abortError = Object.assign(new Error("Execution cancelled"), {
-        code: "ABORT_ERR",
-      })
-      const resolvedSelections: string[] = []
-      let createCount = 0
+  it("stops preview workers from claiming later rows after one mapper aborts", async () => {
+    const selections = Array.from({ length: 12 }, (_, index) =>
+      buildMigrationSelection(`preview-${index}`),
+    )
+    const abortError = Object.assign(new Error("Preview cancelled"), {
+      name: "AbortError",
+    })
+    const startedSelections: string[] = []
+    let releaseInitialBatch!: () => void
+    const initialBatchStarted = new Promise<void>((resolve) => {
+      releaseInitialBatch = resolve
+    })
+    let releaseInFlight!: () => void
+    const inFlightCanFinish = new Promise<void>((resolve) => {
+      releaseInFlight = resolve
+    })
+    let finishedInitialCount = 0
+    let resolveInitialFinished!: () => void
+    const initialInFlightFinished = new Promise<void>((resolve) => {
+      resolveInitialFinished = resolve
+    })
 
-      const executionPromise = executeManagedSiteMigrationCore({
+    const previewPromise = prepareManagedSiteMigrationPreviewCore({
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      selections,
+      sourceFailureReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+      targetFailureReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+      prepareSource: async (selection) => {
+        startedSelections.push(selection.selectionId)
+        if (startedSelections.length === 5) releaseInitialBatch()
+        await initialBatchStarted
+        if (selection.selectionId === "preview-0") throw abortError
+        await inFlightCanFinish
+        if (Number(selection.selectionId.split("-")[1]) < 5) {
+          finishedInitialCount += 1
+          if (finishedInitialCount === 4) resolveInitialFinished()
+        }
+        return {
+          status: "blocked",
+          reasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+        }
+      },
+      prepareTarget: async () => buildMigrationTarget(),
+      getReadyWarningCodes: () => [],
+    })
+
+    await expect(previewPromise).rejects.toBe(abortError)
+    expect(startedSelections).toHaveLength(5)
+
+    releaseInFlight()
+    await initialInFlightFinished
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(startedSelections).toHaveLength(5)
+  })
+
+  it("reports all selections remaining when execution is aborted before the first row", async () => {
+    const selections = [
+      buildMigrationSelection("first"),
+      buildMigrationSelection("second"),
+    ]
+    const controller = new AbortController()
+    const cause = new Error("Cancelled before execution")
+    controller.abort(cause)
+    const resolveCredential = vi.fn()
+    const create = vi.fn()
+
+    const error = await captureMigrationExecutionAbort(
+      executeManagedSiteMigrationCore({
         preview: buildCanonicalPreview(selections),
         targetAvailable: true,
-        signal: new AbortController().signal,
+        signal: controller.signal,
         sourceFailureReasonCode:
           MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
-        resolveCredential: async (selection) => {
-          resolvedSelections.push(selection.selectionId)
-          if (stage === "credential") throw abortError
-          return { status: "ready", credential: "execution-key" }
-        },
-        create: async () => {
-          createCount += 1
-          throw abortError
-        },
-      })
+        resolveCredential,
+        create,
+      }),
+    )
 
-      await expect(executionPromise).rejects.toBe(abortError)
-      expect(resolvedSelections).toEqual(["first"])
-      expect(createCount).toBe(stage === "create" ? 1 : 0)
-    },
-  )
+    expect(error.cause).toBe(cause)
+    expect(error.details).toEqual({
+      partialResult: {
+        totalSelected: 2,
+        attemptedCount: 0,
+        createdCount: 0,
+        failedCount: 0,
+        skippedCount: 0,
+        uncertainCount: 0,
+        items: [],
+      },
+      remainingSelections: selections,
+    })
+    expect(resolveCredential).not.toHaveBeenCalled()
+    expect(create).not.toHaveBeenCalled()
+    expectMigrationAbortInvariants(error)
+  })
+
+  it("retains a created result when cancellation arrives with the create response", async () => {
+    const selections = [
+      buildMigrationSelection("created"),
+      buildMigrationSelection("remaining"),
+    ]
+    const controller = new AbortController()
+    const resolveCredential = vi.fn(async () => ({
+      status: "ready" as const,
+      credential: "execution-key",
+    }))
+    const create = vi.fn(async () => {
+      controller.abort(new Error("Cancelled after create"))
+      return { status: "created" as const }
+    })
+
+    const error = await captureMigrationExecutionAbort(
+      executeManagedSiteMigrationCore({
+        preview: buildCanonicalPreview(selections),
+        targetAvailable: true,
+        signal: controller.signal,
+        sourceFailureReasonCode:
+          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+        resolveCredential,
+        create,
+      }),
+    )
+
+    expect(error.details.partialResult).toEqual({
+      totalSelected: 2,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      skippedCount: 0,
+      uncertainCount: 0,
+      items: [
+        {
+          selectionId: "created",
+          displayName: "Selection created",
+          status: "created",
+        },
+      ],
+    })
+    expect(error.details.remainingSelections).toEqual([selections[1]])
+    expect(resolveCredential).toHaveBeenCalledOnce()
+    expect(create).toHaveBeenCalledOnce()
+    expectMigrationAbortInvariants(error)
+  })
+
+  it("retains an uncertain result when cancellation arrives with the create response", async () => {
+    const selections = [
+      buildMigrationSelection("uncertain"),
+      buildMigrationSelection("remaining"),
+    ]
+    const controller = new AbortController()
+    const resolveCredential = vi.fn(async () => ({
+      status: "ready" as const,
+      credential: "execution-key",
+    }))
+    const create = vi.fn(async () => {
+      controller.abort(new Error("Cancelled after uncertain create"))
+      return { status: "uncertain" as const }
+    })
+
+    const error = await captureMigrationExecutionAbort(
+      executeManagedSiteMigrationCore({
+        preview: buildCanonicalPreview(selections),
+        targetAvailable: true,
+        signal: controller.signal,
+        sourceFailureReasonCode:
+          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+        resolveCredential,
+        create,
+      }),
+    )
+
+    expect(error.details.partialResult).toMatchObject({
+      totalSelected: 2,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      uncertainCount: 1,
+      items: [
+        {
+          selectionId: "uncertain",
+          status: "uncertain",
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+        },
+      ],
+    })
+    expect(error.details.remainingSelections).toEqual([selections[1]])
+    expect(resolveCredential).toHaveBeenCalledOnce()
+    expect(create).toHaveBeenCalledOnce()
+    expectMigrationAbortInvariants(error)
+  })
+
+  it("classifies uncertain create errors before honoring cancellation", async () => {
+    const selections = [
+      buildMigrationSelection("uncertain-error"),
+      buildMigrationSelection("remaining"),
+    ]
+    const controller = new AbortController()
+    const mutationError = new Error("Mutation state is uncertain")
+    const create = vi.fn(async () => {
+      controller.abort(new Error("Cancelled during uncertain create"))
+      throw mutationError
+    })
+
+    const error = await captureMigrationExecutionAbort(
+      executeManagedSiteMigrationCore({
+        preview: buildCanonicalPreview(selections),
+        targetAvailable: true,
+        signal: controller.signal,
+        sourceFailureReasonCode:
+          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+        resolveCredential: async () => ({
+          status: "ready",
+          credential: "execution-key",
+        }),
+        create,
+        isMutationStateUncertain: (error) => error === mutationError,
+      }),
+    )
+
+    expect(error.details.partialResult).toMatchObject({
+      attemptedCount: 1,
+      uncertainCount: 1,
+      items: [
+        {
+          selectionId: "uncertain-error",
+          status: "uncertain",
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+        },
+      ],
+    })
+    expect(error.details.remainingSelections).toEqual([selections[1]])
+    expect(create).toHaveBeenCalledOnce()
+    expectMigrationAbortInvariants(error)
+  })
+
+  it("retains earlier outcomes when cancellation occurs during a later credential resolution", async () => {
+    const selections = [
+      buildMigrationSelection("created"),
+      buildMigrationSelection("credential-aborted"),
+      buildMigrationSelection("remaining"),
+    ]
+    const controller = new AbortController()
+    const cause = new Error("Credential resolution cancelled")
+    const resolveCredential = vi.fn(async (selection) => {
+      if (selection.selectionId === "credential-aborted") {
+        controller.abort(cause)
+        throw cause
+      }
+      return { status: "ready" as const, credential: "execution-key" }
+    })
+    const create = vi.fn(async () => ({ status: "created" as const }))
+
+    const error = await captureMigrationExecutionAbort(
+      executeManagedSiteMigrationCore({
+        preview: buildCanonicalPreview(selections),
+        targetAvailable: true,
+        signal: controller.signal,
+        sourceFailureReasonCode:
+          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+        resolveCredential,
+        create,
+      }),
+    )
+
+    expect(error.cause).toBe(cause)
+    expect(error.details.partialResult).toMatchObject({
+      totalSelected: 3,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      skippedCount: 0,
+      uncertainCount: 0,
+      items: [{ selectionId: "created", status: "created" }],
+    })
+    expect(error.details.remainingSelections).toEqual(selections.slice(1))
+    expect(resolveCredential).toHaveBeenCalledTimes(2)
+    expect(create).toHaveBeenCalledOnce()
+    expectMigrationAbortInvariants(error)
+  })
 
   it("accounts for every canonical execution outcome and continues after non-abort failures", async () => {
     const selections = [
@@ -1490,6 +1873,26 @@ describe("channelMigration", () => {
     )
   })
 
+  it("projects legacy Vertex AI channels to AxonHub Gemini compatibility", async () => {
+    const channel = buildManagedSiteChannel({
+      id: 22_601,
+      type: ChannelType.VertexAi,
+    })
+    const source = toCanonicalMigrationSourceFromLegacyChannel({
+      sourceSiteType: SITE_TYPES.NEW_API,
+      channel,
+    })
+
+    const target = await toCanonicalTargetPreparationFromLegacyDraft({
+      source,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      displayName: channel.name,
+      selectionId: String(channel.id),
+    })
+
+    expect(target.projection.type).toBe(AXON_HUB_CHANNEL_TYPE.GEMINI)
+  })
+
   it("lets feature-gated target resources prepare the migration preview draft", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"
@@ -1854,6 +2257,35 @@ describe("channelMigration", () => {
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
       ]),
+    )
+  })
+
+  it("maps legacy Vertex AI channels to Claude Code Hub Gemini providers", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        claudeCodeHub: {
+          baseUrl: "https://cch.example.com",
+          adminToken: "cch-token",
+        },
+      }),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_711,
+          type: ChannelType.VertexAi,
+          key: "source-key",
+        }),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft?.type).toBe(
+      CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
     )
   })
 
@@ -2980,6 +3412,664 @@ describe("channelMigration", () => {
         skipped: false,
         error: "Create exploded",
       },
+    ])
+  })
+
+  it("prepares an Axon target through the named capability and keeps the displayed legacy draft equivalent", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const prepare = vi.fn(async (source: ManagedSiteMigrationSource) =>
+      buildAxonTargetPreparation(source),
+    )
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB ? { target: { prepare } } : null,
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 301,
+          name: "Native target",
+          type: ChannelType.Anthropic,
+          key: "source-key",
+          base_url: "https://source.example.invalid",
+          models: "model-a,model-b",
+          weight: 7,
+        }),
+      ],
+    })
+
+    expect(prepare).toHaveBeenCalledOnce()
+    expect(preview.items[0]).toMatchObject({
+      channelId: 301,
+      status: "ready",
+      draft: {
+        name: "Native target",
+        type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+        base_url: "https://source.example.invalid",
+        models: ["model-a", "model-b"],
+        groups: ["default"],
+        priority: 0,
+        weight: 7,
+        status: 1,
+      },
+    })
+    expect(
+      mockResolveManagedUpstreamResourceFeatureCapabilities,
+    ).not.toHaveBeenCalledWith(
+      SITE_TYPES.AXON_HUB,
+      MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
+    )
+  })
+
+  it("resolves an Axon credential only at execution and creates exactly once without legacy payload builders", async () => {
+    const {
+      executeManagedSiteChannelMigration,
+      prepareManagedSiteChannelMigrationPreview,
+    } = await import("~/services/managedSites/channelMigration")
+    const source = buildAxonMigrationSource()
+    const sourcePrepare = vi.fn(async () => ({
+      status: "ready" as const,
+      source,
+    }))
+    const resolveCredential = vi.fn(async () => ({
+      status: "ready" as const,
+      credential: "execution-only-key",
+    }))
+    const targetPrepare = vi.fn(async () => buildAxonTargetPreparation(source))
+    const create = vi.fn(async () => ({ status: "created" as const }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            source: { prepare: sourcePrepare, resolveCredential },
+            target: { prepare: targetPrepare, create },
+          }
+        : null,
+    )
+    const channel = {
+      ...buildManagedSiteChannel({ id: 302, name: "Native round trip" }),
+      _axonHubData: { id: "native-302" },
+    } as ManagedSiteChannel
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [channel],
+    })
+    expect(resolveCredential).not.toHaveBeenCalled()
+
+    const result = await executeManagedSiteChannelMigration({ preview })
+
+    expect(resolveCredential).toHaveBeenCalledOnce()
+    expect(create).toHaveBeenCalledOnce()
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ credential: "execution-only-key" }),
+    )
+    expect(mockAxonHubBuildChannelPayload).not.toHaveBeenCalled()
+    expect(mockAxonHubCreateChannel).not.toHaveBeenCalled()
+    expect(result.createdCount).toBe(1)
+  })
+
+  it("prepares an Axon source from its native string ref without old secret hydration", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const prepare = vi.fn(async () => ({
+      status: "ready" as const,
+      source: buildAxonMigrationSource(),
+    }))
+    const resolveCredential = vi.fn()
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? { source: { prepare, resolveCredential } }
+        : null,
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      channels: [
+        {
+          ...buildManagedSiteChannel({ id: 303, key: "sk-********" }),
+          _axonHubData: { id: "native-string-303" },
+        } as ManagedSiteChannel,
+      ],
+    })
+
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectionId: "303",
+        ref: expect.objectContaining({ resourceId: "native-string-303" }),
+      }),
+    )
+    expect(resolveCredential).not.toHaveBeenCalled()
+    expect(preview.readyCount).toBe(1)
+  })
+
+  it("maps permission-hidden Axon credentials to the existing blocked row", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const prepare = vi.fn(async () => ({
+      status: "blocked" as const,
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? { source: { prepare, resolveCredential: vi.fn() } }
+        : null,
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      channels: [buildManagedSiteChannel({ id: 304 })],
+    })
+
+    expect(preview.items[0]).toMatchObject({
+      status: "blocked",
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+  })
+
+  it("preserves Axon source projection when targeting a legacy site", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const source = buildAxonMigrationSource({
+      resourceType: ChannelType.OpenRouter,
+      baseUrl: "https://native.example.invalid",
+      models: ["model-one", "model-two"],
+      weight: 9,
+      status: "disabled",
+    })
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            source: {
+              prepare: vi.fn(async () => ({
+                status: "ready" as const,
+                source,
+              })),
+              resolveCredential: vi.fn(),
+            },
+          }
+        : null,
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      channels: [
+        buildManagedSiteChannel({ id: 305, name: "Projected native" }),
+      ],
+    })
+
+    expect(preview.items[0].draft).toMatchObject({
+      name: "Projected native",
+      type: ChannelType.OpenRouter,
+      base_url: "https://native.example.invalid",
+      models: ["model-one", "model-two"],
+      weight: 9,
+      status: 2,
+    })
+    expect(preview.items[0].canonicalPreparation?.source).toEqual(source)
+  })
+
+  it("executes an Axon native selection into a legacy target with one just-in-time credential resolution and one create", async () => {
+    const {
+      executeManagedSiteChannelMigration,
+      prepareManagedSiteChannelMigrationPreview,
+    } = await import("~/services/managedSites/channelMigration")
+    const source = buildAxonMigrationSource()
+    const resolveCredential = vi.fn(async () => ({
+      status: "ready" as const,
+      credential: "jit-native-key",
+    }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            source: {
+              prepare: vi.fn(async () => ({
+                status: "ready" as const,
+                source,
+              })),
+              resolveCredential,
+            },
+          }
+        : null,
+    )
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      channels: [buildManagedSiteChannel({ id: 306 })],
+    })
+
+    expect(resolveCredential).not.toHaveBeenCalled()
+    const result = await executeManagedSiteChannelMigration({ preview })
+
+    expect(resolveCredential).toHaveBeenCalledOnce()
+    expect(mockDoneHubCreateChannel).toHaveBeenCalledOnce()
+    expect(mockDoneHubBuildChannelPayload).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "jit-native-key" }),
+    )
+    expect(result.createdCount).toBe(1)
+  })
+
+  it.each([
+    {
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+      expectedError:
+        "The source credential is unavailable. Verify source access and try again.",
+    },
+    {
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+      expectedError:
+        "The source credential could not be resolved. Verify source access and try again.",
+    },
+  ])(
+    "explains a just-in-time $reasonCode blocker without creating the ready preview row",
+    async ({ reasonCode, expectedError }) => {
+      const {
+        executeManagedSiteChannelMigration,
+        prepareManagedSiteChannelMigrationPreview,
+      } = await import("~/services/managedSites/channelMigration")
+      const source = buildAxonMigrationSource()
+      const resolveCredential = vi.fn(async () => ({
+        status: "blocked" as const,
+        reasonCode,
+      }))
+      mockResolveManagedSiteMigrationCapability.mockImplementation(
+        (siteType) =>
+          siteType === SITE_TYPES.AXON_HUB
+            ? {
+                source: {
+                  prepare: vi.fn(async () => ({
+                    status: "ready" as const,
+                    source,
+                  })),
+                  resolveCredential,
+                },
+              }
+            : null,
+      )
+      const preview = await prepareManagedSiteChannelMigrationPreview({
+        preferences: buildPreferences(),
+        sourceSiteType: SITE_TYPES.AXON_HUB,
+        targetSiteType: SITE_TYPES.DONE_HUB,
+        channels: [buildManagedSiteChannel({ id: 306_1 })],
+      })
+
+      expect(preview.items[0].status).toBe("ready")
+      const result = await executeManagedSiteChannelMigration({ preview })
+
+      expect(resolveCredential).toHaveBeenCalledOnce()
+      expect(mockDoneHubBuildChannelPayload).not.toHaveBeenCalled()
+      expect(mockDoneHubCreateChannel).not.toHaveBeenCalled()
+      expect(result).toMatchObject({
+        totalSelected: 1,
+        attemptedCount: 0,
+        createdCount: 0,
+        failedCount: 0,
+        skippedCount: 1,
+        items: [
+          {
+            channelId: 306_1,
+            success: false,
+            skipped: true,
+            blockingReasonCode: reasonCode,
+            error: expectedError,
+          },
+        ],
+      })
+    },
+  )
+
+  it("blocks only the row whose named target preparation fails", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const prepare = vi.fn(async (source: ManagedSiteMigrationSource) => {
+      if (source.baseUrl.includes("blocked")) throw new Error("blocked target")
+      return buildAxonTargetPreparation(source)
+    })
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB ? { target: { prepare } } : null,
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 307,
+          base_url: "https://blocked.example.invalid",
+        }),
+        buildManagedSiteChannel({
+          id: 308,
+          base_url: "https://ready.example.invalid",
+        }),
+      ],
+    })
+
+    expect(preview.items.map((item) => item.status)).toEqual([
+      "blocked",
+      "ready",
+    ])
+    expect(preview.items[0].blockingReasonCode).toBe(
+      MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+    )
+  })
+
+  it("continues after one named target create failure", async () => {
+    const {
+      executeManagedSiteChannelMigration,
+      prepareManagedSiteChannelMigrationPreview,
+    } = await import("~/services/managedSites/channelMigration")
+    const create = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: "failed",
+        failureCode:
+          MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+      })
+      .mockResolvedValueOnce({ status: "created" })
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            target: {
+              prepare: vi.fn(async (source) =>
+                buildAxonTargetPreparation(source),
+              ),
+              create,
+            },
+          }
+        : null,
+    )
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({ id: 309, key: "key-one" }),
+        buildManagedSiteChannel({ id: 310, key: "key-two" }),
+      ],
+    })
+
+    const result = await executeManagedSiteChannelMigration({ preview })
+
+    expect(create).toHaveBeenCalledTimes(2)
+    expect(result).toMatchObject({
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+    })
+    expect(result.items.map((item) => item.success)).toEqual([false, true])
+  })
+
+  it("preserves string selection identity and order across native preparation", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const prepare = vi.fn(async (selection: ManagedSiteMigrationSelection) => ({
+      status: "ready" as const,
+      source: buildAxonMigrationSource({ baseUrl: selection.ref.resourceId }),
+    }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? { source: { prepare, resolveCredential: vi.fn() } }
+        : null,
+    )
+    const channels = ["native-z", "native-a", "native-m"].map(
+      (resourceId, index) =>
+        ({
+          ...buildManagedSiteChannel({ id: 311 + index, name: resourceId }),
+          _axonHubData: { id: resourceId },
+        }) as ManagedSiteChannel,
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      channels,
+    })
+
+    expect(
+      prepare.mock.calls.map(([selection]) => selection.ref.resourceId),
+    ).toEqual(["native-z", "native-a", "native-m"])
+    expect(preview.items.map((item) => item.channelId)).toEqual([311, 312, 313])
+    expect(
+      preview.items.map(
+        (item) => item.canonicalPreparation?.selection.ref.resourceId,
+      ),
+    ).toEqual(["native-z", "native-a", "native-m"])
+  })
+
+  it("maps uncertain target creation to an explicit non-replayable result", async () => {
+    const { executeManagedSiteMigration, prepareManagedSiteMigrationPreview } =
+      await import("~/services/managedSites/channelMigration")
+    const source = buildAxonMigrationSource()
+    const create = vi.fn(async () => ({ status: "uncertain" as const }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            source: {
+              prepare: vi.fn(async () => ({
+                status: "ready" as const,
+                source,
+              })),
+              resolveCredential: vi.fn(async () => ({
+                status: "ready" as const,
+                credential: "ephemeral-key",
+              })),
+            },
+            target: {
+              prepare: vi.fn(async () => buildAxonTargetPreparation(source)),
+              create,
+            },
+          }
+        : null,
+    )
+    const preview = await prepareManagedSiteMigrationPreview({
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      selections: [
+        {
+          ...buildMigrationSelection("native-selection"),
+          ref: {
+            ...buildMigrationSelection("native-selection").ref,
+            siteType: SITE_TYPES.AXON_HUB,
+            resourceId: "native-selection",
+          },
+        },
+      ],
+    })
+    expect(preview.items[0]).toMatchObject({
+      status: "ready",
+      target: { projection: { name: "Selection native-selection" } },
+    })
+
+    const result = await executeManagedSiteMigration({ preview })
+
+    expect(create).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 0,
+      uncertainCount: 1,
+      items: [
+        {
+          status: "uncertain",
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+        },
+      ],
+    })
+  })
+
+  it("stops canonical Axon creation after an actual native abort and retains secret-free progress", async () => {
+    const { executeManagedSiteMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const selections = [
+      buildMigrationSelection("native-aborted"),
+      buildMigrationSelection("must-not-create"),
+    ]
+    const preview = {
+      ...buildCanonicalPreview(selections),
+      targetSiteType: SITE_TYPES.AXON_HUB,
+    }
+    const resolveCredential = vi.fn(async () => ({
+      status: "ready" as const,
+      credential: "execution-key",
+    }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.NEW_API
+        ? {
+            source: {
+              prepare: vi.fn(),
+              resolveCredential,
+            },
+          }
+        : siteType === SITE_TYPES.AXON_HUB
+          ? { target: axonHubManagedSiteMigrationCapability.target }
+          : null,
+    )
+    const nativeAbort = new axonHubNativeResources.AxonHubNativeError({
+      code: "aborted",
+      dispatch: "before",
+    })
+    const openSpy = vi
+      .spyOn(axonHubNativeResources, "openAxonHubNativeResourceOperations")
+      .mockRejectedValue(nativeAbort)
+
+    try {
+      const error = await captureMigrationExecutionAbort(
+        executeManagedSiteMigration({ preview }),
+      )
+
+      expect(error.cause).toMatchObject({ name: "AbortError" })
+      expect((error.cause as Error).cause).toBe(nativeAbort)
+      expect(error.details.partialResult).toEqual({
+        totalSelected: 2,
+        attemptedCount: 1,
+        createdCount: 0,
+        failedCount: 0,
+        skippedCount: 0,
+        uncertainCount: 0,
+        items: [],
+      })
+      expect(error.details.remainingSelections).toEqual(selections)
+      expect(resolveCredential).toHaveBeenCalledOnce()
+      expect(openSpy).toHaveBeenCalledOnce()
+      expectMigrationAbortInvariants(error)
+    } finally {
+      openSpy.mockRestore()
+    }
+  })
+
+  it("keeps canonical preview and result objects free of credentials and commands", async () => {
+    const { executeManagedSiteMigration, prepareManagedSiteMigrationPreview } =
+      await import("~/services/managedSites/channelMigration")
+    const source = buildAxonMigrationSource()
+    const secret = "execution-secret-placeholder"
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            source: {
+              prepare: vi.fn(async () => ({
+                status: "ready" as const,
+                source,
+              })),
+              resolveCredential: vi.fn(async () => ({
+                status: "ready" as const,
+                credential: secret,
+              })),
+            },
+            target: {
+              prepare: vi.fn(async () => buildAxonTargetPreparation(source)),
+              create: vi.fn(async () => ({ status: "created" as const })),
+            },
+          }
+        : null,
+    )
+    const selection = {
+      ...buildMigrationSelection("safe"),
+      ref: {
+        ...buildMigrationSelection("safe").ref,
+        siteType: SITE_TYPES.AXON_HUB,
+      },
+    }
+
+    const preview = await prepareManagedSiteMigrationPreview({
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      selections: [selection],
+    })
+    const result = await executeManagedSiteMigration({ preview })
+
+    expect(JSON.stringify(preview)).not.toContain(secret)
+    expect(JSON.stringify(preview)).not.toContain("credential")
+    expect(JSON.stringify(result)).not.toContain(secret)
+    expect(JSON.stringify(result)).not.toContain("command")
+  })
+
+  it("returns the existing create-only no-dedupe and no-rollback general warnings", async () => {
+    const { prepareManagedSiteMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const source = buildAxonMigrationSource()
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            source: {
+              prepare: vi.fn(async () => ({
+                status: "ready" as const,
+                source,
+              })),
+              resolveCredential: vi.fn(),
+            },
+            target: {
+              prepare: vi.fn(async () => buildAxonTargetPreparation(source)),
+              create: vi.fn(),
+            },
+          }
+        : null,
+    )
+
+    const preview = await prepareManagedSiteMigrationPreview({
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      selections: [
+        {
+          ...buildMigrationSelection("warnings"),
+          ref: {
+            ...buildMigrationSelection("warnings").ref,
+            siteType: SITE_TYPES.AXON_HUB,
+          },
+        },
+      ],
+    })
+
+    expect(preview.generalWarningCodes).toEqual([
+      MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.CREATE_ONLY,
+      MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.NO_DEDUPE_OR_SYNC,
+      MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.NO_ROLLBACK,
     ])
   })
 })

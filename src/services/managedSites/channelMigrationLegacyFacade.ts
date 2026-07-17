@@ -100,6 +100,7 @@ const SHARED_TO_AXON_HUB_CHANNEL_TYPE: Partial<Record<ChannelType, string>> = {
   [ChannelType.Anthropic]: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
   [ChannelType.OpenRouter]: AXON_HUB_CHANNEL_TYPE.OPENROUTER,
   [ChannelType.Gemini]: AXON_HUB_CHANNEL_TYPE.GEMINI,
+  [ChannelType.VertexAi]: AXON_HUB_CHANNEL_TYPE.GEMINI,
   [ChannelType.SiliconFlow]: AXON_HUB_CHANNEL_TYPE.SILICONFLOW,
   [ChannelType.DeepSeek]: AXON_HUB_CHANNEL_TYPE.DEEPSEEK,
   [ChannelType.VolcEngine]: AXON_HUB_CHANNEL_TYPE.VOLCENGINE,
@@ -112,6 +113,7 @@ const SHARED_TO_CLAUDE_CODE_HUB_PROVIDER_TYPE: Partial<
 > = {
   [ChannelType.Anthropic]: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
   [ChannelType.Gemini]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
+  [ChannelType.VertexAi]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
 }
 
 const getLegacyTargetType = (
@@ -262,7 +264,7 @@ export function resolveAxonHubMigrationResourceRefFromLegacyRow(
 }
 
 /** Separates legacy numeric row identity from native resource identity. */
-export function toCanonicalMigrationSelectionFromLegacyRow(params: {
+function toCanonicalMigrationSelectionFromLegacyRow(params: {
   sourceSiteType: ManagedSiteType
   channel: LegacyChannelWithResourceIdentity
   scopeKey?: string

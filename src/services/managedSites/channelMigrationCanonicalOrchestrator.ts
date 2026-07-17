@@ -6,6 +6,7 @@ import {
 } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
+  ManagedSiteMigrationExecutionAbortedError,
   type ManagedSiteMigrationCanonicalExecutionResult,
   type ManagedSiteMigrationCanonicalPreview,
   type ManagedSiteMigrationCanonicalPreviewItem,
@@ -44,11 +45,17 @@ const mapWithConcurrency = async <TItem, TResult>(
 ): Promise<TResult[]> => {
   const results = new Array<TResult>(items.length)
   let nextIndex = 0
+  let stopped = false
   await Promise.all(
     Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-      while (nextIndex < items.length) {
+      while (!stopped && nextIndex < items.length) {
         const index = nextIndex++
-        results[index] = await mapper(items[index])
+        try {
+          results[index] = await mapper(items[index])
+        } catch (error) {
+          stopped = true
+          throw error
+        }
       }
     }),
   )
@@ -161,7 +168,6 @@ type ExecuteManagedSiteMigrationCoreParams = {
 export async function executeManagedSiteMigrationCore(
   params: ExecuteManagedSiteMigrationCoreParams,
 ): Promise<ManagedSiteMigrationCanonicalExecutionResult> {
-  throwIfCancelled(params.signal)
   type ExecutionItem =
     ManagedSiteMigrationCanonicalExecutionResult["items"][number]
   type ExecutionOutcome =
@@ -189,9 +195,41 @@ export async function executeManagedSiteMigrationCore(
       ...outcome,
     })
   let attemptedCount = 0
+  const count = (status: ExecutionItem["status"]) =>
+    items.filter((item) => item.status === status).length
+  const buildResultSnapshot =
+    (): ManagedSiteMigrationCanonicalExecutionResult => ({
+      totalSelected: params.preview.totalCount,
+      attemptedCount,
+      createdCount: count("created"),
+      failedCount: count("failed"),
+      skippedCount: count("skipped"),
+      uncertainCount: count("uncertain"),
+      items: [...items],
+    })
+  const throwIfExecutionCancelled = (
+    remainingStartIndex: number,
+    error?: unknown,
+  ): void => {
+    const cancelled =
+      params.signal?.aborted || (error !== undefined && isAbortError(error))
+    if (!cancelled) return
 
-  for (const item of params.preview.items) {
-    throwIfCancelled(params.signal)
+    const cause = params.signal?.aborted ? params.signal.reason ?? error : error
+    throw new ManagedSiteMigrationExecutionAbortedError(
+      {
+        partialResult: buildResultSnapshot(),
+        remainingSelections: params.preview.items
+          .slice(remainingStartIndex)
+          .map((item) => item.selection),
+      },
+      cause === undefined ? undefined : { cause },
+    )
+  }
+
+  for (let index = 0; index < params.preview.items.length; index += 1) {
+    throwIfExecutionCancelled(index)
+    const item = params.preview.items[index]
     if (item.status === "blocked") {
       append(item, {
         status: "skipped",
@@ -209,11 +247,10 @@ export async function executeManagedSiteMigrationCore(
 
     let credentialResolution: ManagedSiteMigrationCredentialResolution
     try {
-      throwIfCancelled(params.signal)
       credentialResolution = await params.resolveCredential(item.selection)
-      throwIfCancelled(params.signal)
+      throwIfExecutionCancelled(index)
     } catch (error) {
-      throwIfCancelled(params.signal, error)
+      throwIfExecutionCancelled(index, error)
       credentialResolution = {
         status: "blocked",
         reasonCode: params.sourceFailureReasonCode,
@@ -227,54 +264,48 @@ export async function executeManagedSiteMigrationCore(
       continue
     }
 
+    throwIfExecutionCancelled(index)
     attemptedCount += 1
+    let createResult: ManagedSiteMigrationCreateResult
     try {
-      throwIfCancelled(params.signal)
-      const createResult = await params.create({
+      createResult = await params.create({
         source: item.source,
         targetSiteType: params.preview.targetSiteType,
         projection: item.target.projection,
         credential: credentialResolution.credential,
       })
-      throwIfCancelled(params.signal)
-      if (createResult.status === "created") {
-        append(item, { status: "created" })
-      } else if (createResult.status === "failed") {
-        append(item, {
-          status: "failed",
-          failureCode: createResult.failureCode,
-        })
-      } else {
-        append(item, {
-          status: "uncertain",
-          failureCode: migrationFailures.MutationStateUncertain,
-        })
-      }
     } catch (error) {
-      throwIfCancelled(params.signal, error)
       const uncertain = params.isMutationStateUncertain?.(error) ?? false
       if (uncertain) {
         append(item, {
           status: "uncertain",
           failureCode: migrationFailures.MutationStateUncertain,
         })
-      } else {
-        append(item, {
-          status: "failed",
-          failureCode: migrationFailures.Unexpected,
-        })
+        throwIfExecutionCancelled(index + 1, error)
+        continue
       }
+      throwIfExecutionCancelled(index, error)
+      append(item, {
+        status: "failed",
+        failureCode: migrationFailures.Unexpected,
+      })
+      continue
     }
+
+    if (createResult.status === "created") {
+      append(item, { status: "created" })
+    } else if (createResult.status === "failed") {
+      append(item, {
+        status: "failed",
+        failureCode: createResult.failureCode,
+      })
+    } else {
+      append(item, {
+        status: "uncertain",
+        failureCode: migrationFailures.MutationStateUncertain,
+      })
+    }
+    throwIfExecutionCancelled(index + 1)
   }
-  const count = (status: ExecutionItem["status"]) =>
-    items.filter((item) => item.status === status).length
-  return {
-    totalSelected: params.preview.totalCount,
-    attemptedCount,
-    createdCount: count("created"),
-    failedCount: count("failed"),
-    skippedCount: count("skipped"),
-    uncertainCount: count("uncertain"),
-    items,
-  }
+  return buildResultSnapshot()
 }

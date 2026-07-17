@@ -176,6 +176,34 @@ export type ManagedSiteMigrationCanonicalExecutionResult = {
   items: readonly ManagedSiteMigrationCanonicalExecutionItem[]
 }
 
+/**
+ * Secret-free progress captured when canonical execution is cancelled.
+ *
+ * Invariants:
+ * - `partialResult.items.length + remainingSelections.length === partialResult.totalSelected`
+ * - The created, failed, skipped, and uncertain counts sum to `partialResult.items.length`.
+ *
+ * Credentials and execution commands must never be retained here.
+ */
+export type ManagedSiteMigrationExecutionAbortDetails = {
+  partialResult: ManagedSiteMigrationCanonicalExecutionResult
+  remainingSelections: readonly ManagedSiteMigrationSelection[]
+}
+
+/** Reports cancellation without discarding confirmed, secret-free progress. */
+export class ManagedSiteMigrationExecutionAbortedError extends Error {
+  readonly details: ManagedSiteMigrationExecutionAbortDetails
+
+  constructor(
+    details: ManagedSiteMigrationExecutionAbortDetails,
+    options?: ErrorOptions,
+  ) {
+    super("Managed-site migration execution was cancelled.", options)
+    this.name = "ManagedSiteMigrationExecutionAbortedError"
+    this.details = details
+  }
+}
+
 export type ManagedSiteMigrationCapability = {
   source?: {
     prepare(

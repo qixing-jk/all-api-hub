@@ -142,10 +142,6 @@ const defaultManagedUpstreamResourceMigrationGates =
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
       },
       {
-        siteType: SITE_TYPES.AXON_HUB,
-        feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
-      },
-      {
         siteType: SITE_TYPES.CLAUDE_CODE_HUB,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
       },

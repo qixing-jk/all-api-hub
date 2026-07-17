@@ -4,6 +4,7 @@ import {
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
 } from "~/constants/axonHub"
+import { ChannelType } from "~/constants/managedSite"
 import { isManagedSiteType, SITE_TYPES } from "~/constants/siteType"
 import {
   MANAGED_RESOURCE_KINDS,
@@ -24,9 +25,16 @@ import {
   type AxonHubNativeFailure,
   type AxonHubNativeResourceOperations,
 } from "~/services/apiAdapters/managedResources/axonHub"
+import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
+import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { AxonHubChannel } from "~/types/axonHub"
+import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
+import {
+  MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
+  type ManagedSiteMigrationSource,
+} from "~/types/managedSiteMigrationCapability"
 
 const mocks = vi.hoisted(() => {
   class RequestError extends Error {
@@ -159,6 +167,26 @@ const refFor = (channel = buildDetailChannel()): ManagedResourceRef => ({
   resourceId: channel.id,
 })
 
+const buildMigrationSource = (
+  overrides: Partial<ManagedSiteMigrationSource> = {},
+): ManagedSiteMigrationSource => ({
+  sourceSiteType: SITE_TYPES.NEW_API,
+  resourceType: ChannelType.OpenAI,
+  baseUrl: "https://source.example.invalid",
+  models: ["model-one"],
+  groups: ["default"],
+  priority: 0,
+  weight: 0,
+  status: "disabled",
+  lossSignals: {
+    hasModelMapping: false,
+    hasStatusCodeMapping: false,
+    hasAdvancedSettings: false,
+    hasMultiKeyState: false,
+  },
+  ...overrides,
+})
+
 const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
   const error = await promise.catch((failure) => failure)
   expect(error).toBeInstanceOf(ManagedResourceError)
@@ -166,6 +194,17 @@ const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
 }
 
 const openWorkspace = () => axonHubManagedResourceRegistration.open()
+
+const buildMigrationCreateCommand = async (source = buildMigrationSource()) => {
+  const preparation =
+    await axonHubManagedSiteMigrationCapability.target!.prepare(source)
+  return {
+    source,
+    targetSiteType: SITE_TYPES.AXON_HUB,
+    projection: { ...preparation.projection, name: "Migration target" },
+    credential: "sk-migration-placeholder",
+  }
+}
 
 describe("AxonHub native managed-resource Adapter", () => {
   beforeEach(() => {
@@ -1102,5 +1141,445 @@ describe("AxonHub native managed-resource Adapter", () => {
         )
       }),
     ).toBe(true)
+  })
+
+  it("maps native Axon detail to a secret-free canonical migration source", async () => {
+    mocks.getChannel.mockResolvedValue(
+      buildDetailChannel({
+        type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+        status: AXON_HUB_CHANNEL_STATUS.ARCHIVED,
+        baseURL: " https://native.example.invalid/v1 ",
+        credentials: {
+          apiKeys: ["sk-preview-placeholder", "sk-second-placeholder"],
+        },
+        supportedModels: ["supported-model", "shared-model"],
+        manualModels: ["manual-model", "shared-model"],
+        orderingWeight: 11,
+        settings: {
+          modelMappings: [{ from: "alias-model", to: "supported-model" }],
+          proxy: { type: "http", url: "https://proxy.example.invalid" },
+        },
+      }),
+    )
+
+    const result = await axonHubManagedSiteMigrationCapability.source!.prepare({
+      selectionId: "legacy-401",
+      displayName: "Native source",
+      ref: refFor(),
+    })
+
+    expect(result).toEqual({
+      status: "ready",
+      source: {
+        sourceSiteType: SITE_TYPES.AXON_HUB,
+        resourceType: ChannelType.Anthropic,
+        baseUrl: "https://native.example.invalid/v1",
+        models: ["supported-model", "shared-model", "manual-model"],
+        groups: [],
+        priority: 0,
+        weight: 11,
+        status: "other",
+        lossSignals: {
+          hasModelMapping: true,
+          hasStatusCodeMapping: false,
+          hasAdvancedSettings: true,
+          hasMultiKeyState: true,
+        },
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain("sk-preview-placeholder")
+    expect(JSON.stringify(result)).not.toContain("credentials")
+  })
+
+  it("reloads native detail and returns a usable regular key only during execution", async () => {
+    mocks.getChannel
+      .mockResolvedValueOnce(
+        buildDetailChannel({
+          credentials: { apiKeys: ["sk-preview-placeholder"] },
+        }),
+      )
+      .mockResolvedValueOnce(
+        buildDetailChannel({
+          credentials: { apiKeys: ["sk-execution-placeholder"] },
+        }),
+      )
+    const selection = {
+      selectionId: "native-credential",
+      displayName: "Native credential",
+      ref: refFor(),
+    }
+
+    const preview =
+      await axonHubManagedSiteMigrationCapability.source!.prepare(selection)
+    const resolution =
+      await axonHubManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+      )
+
+    expect(preview.status).toBe("ready")
+    expect(resolution).toEqual({
+      status: "ready",
+      credential: "sk-execution-placeholder",
+    })
+    expect(mocks.getChannel).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    {
+      label: "permission-hidden",
+      credentials: null,
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    },
+    {
+      label: "masked",
+      credentials: { apiKeys: ["sk-********"] },
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    },
+    {
+      label: "unavailable",
+      credentials: { apiKeys: [] },
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    },
+  ])(
+    "maps $label native credentials to a controlled blocker",
+    async ({ credentials, reasonCode }) => {
+      mocks.getChannel.mockResolvedValue(buildDetailChannel({ credentials }))
+      const selection = {
+        selectionId: "blocked-native",
+        displayName: "Blocked native",
+        ref: refFor(),
+      }
+
+      await expect(
+        axonHubManagedSiteMigrationCapability.source!.prepare(selection),
+      ).resolves.toEqual({ status: "blocked", reasonCode })
+      await expect(
+        axonHubManagedSiteMigrationCapability.source!.resolveCredential(
+          selection,
+        ),
+      ).resolves.toEqual({ status: "blocked", reasonCode })
+    },
+  )
+
+  it("projects canonical targets and creates one direct native Axon input with signal propagation", async () => {
+    const controller = new AbortController()
+    const source = {
+      sourceSiteType: SITE_TYPES.NEW_API,
+      resourceType: ChannelType.Gemini,
+      baseUrl: "https://source.example.invalid/v1",
+      models: ["model-one", "model-two"],
+      groups: ["paid"],
+      priority: 8,
+      weight: 13,
+      status: "enabled" as const,
+      lossSignals: {
+        hasModelMapping: false,
+        hasStatusCodeMapping: false,
+        hasAdvancedSettings: false,
+        hasMultiKeyState: false,
+      },
+    }
+    const preparation =
+      await axonHubManagedSiteMigrationCapability.target!.prepare(source, {
+        signal: controller.signal,
+      })
+
+    expect(preparation).toEqual({
+      projection: {
+        name: "",
+        type: AXON_HUB_CHANNEL_TYPE.GEMINI,
+        baseUrl: "https://source.example.invalid/v1",
+        models: ["model-one", "model-two"],
+        groups: ["default"],
+        priority: 0,
+        weight: 13,
+        status: 1,
+      },
+      adjustments: {
+        remappedType: true,
+        normalizedBaseUrl: false,
+        forcedDefaultGroup: true,
+        ignoredPriority: true,
+        ignoredWeight: false,
+        simplifiedStatus: false,
+      },
+    })
+
+    const result = await axonHubManagedSiteMigrationCapability.target!.create(
+      {
+        source,
+        targetSiteType: SITE_TYPES.AXON_HUB,
+        projection: { ...preparation.projection, name: "Native target" },
+        credential: "sk-create-placeholder",
+      },
+      { signal: controller.signal },
+    )
+
+    expect(result).toEqual({ status: "created" })
+    expect(mocks.createChannel).toHaveBeenCalledOnce()
+    expect(mocks.createChannel).toHaveBeenCalledWith(
+      config,
+      {
+        type: AXON_HUB_CHANNEL_TYPE.GEMINI,
+        name: "Native target",
+        baseURL: "https://source.example.invalid/v1",
+        credentials: { apiKeys: ["sk-create-placeholder"] },
+        supportedModels: ["model-one", "model-two"],
+        manualModels: ["model-one", "model-two"],
+        defaultTestModel: "model-one",
+        settings: {},
+        orderingWeight: 13,
+      },
+      { signal: controller.signal },
+    )
+    expect(mocks.updateStatus).toHaveBeenCalledWith(
+      config,
+      "opaque-channel-1",
+      AXON_HUB_CHANNEL_STATUS.ENABLED,
+      { signal: controller.signal },
+    )
+  })
+
+  it("maps canonical Vertex AI targets to AxonHub Gemini during prepare and create", async () => {
+    const source = buildMigrationSource({
+      resourceType: ChannelType.VertexAi,
+      baseUrl: "https://vertex.example.invalid",
+    })
+    const command = await buildMigrationCreateCommand(source)
+
+    expect(command.projection.type).toBe(AXON_HUB_CHANNEL_TYPE.GEMINI)
+
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create(command),
+    ).resolves.toEqual({ status: "created" })
+    expect(mocks.createChannel).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({ type: AXON_HUB_CHANNEL_TYPE.GEMINI }),
+      undefined,
+    )
+  })
+
+  it("omits an empty optional baseURL from native migration creation", async () => {
+    const command = await buildMigrationCreateCommand(
+      buildMigrationSource({ baseUrl: "   " }),
+    )
+
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create(command),
+    ).resolves.toEqual({ status: "created" })
+
+    expect(mocks.createChannel).toHaveBeenCalledOnce()
+    expect(mocks.createChannel.mock.calls[0][1]).not.toHaveProperty("baseURL")
+  })
+
+  it.each([
+    {
+      code: "configuration_required",
+      arrange: () => mocks.resolveRuntimeConfig.mockReturnValue(null),
+    },
+    {
+      code: "authentication_failed",
+      arrange: () =>
+        mocks.signIn.mockRejectedValue(
+          new mocks.RequestError("authentication", "not-dispatched"),
+        ),
+    },
+    {
+      code: "unavailable",
+      arrange: () =>
+        mocks.signIn.mockRejectedValue(
+          new mocks.RequestError("unavailable", "not-dispatched"),
+        ),
+    },
+  ])(
+    "maps controlled native open failure $code to target unavailable",
+    async ({ arrange }) => {
+      arrange()
+      const command = await buildMigrationCreateCommand()
+
+      await expect(
+        axonHubManagedSiteMigrationCapability.target!.create(command),
+      ).resolves.toEqual({
+        status: "failed",
+        failureCode:
+          MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetUnavailable,
+      })
+      expect(mocks.createChannel).not.toHaveBeenCalled()
+    },
+  )
+
+  it("normalizes a controlled native abort while opening the target", async () => {
+    mocks.signIn.mockRejectedValue(
+      new mocks.RequestError("aborted", "not-dispatched"),
+    )
+    const command = await buildMigrationCreateCommand()
+
+    const error = await axonHubManagedSiteMigrationCapability
+      .target!.create(command)
+      .catch((failure) => failure)
+
+    expect(error).toMatchObject({ name: "AbortError" })
+    expect(error.cause).toBeInstanceOf(AxonHubNativeError)
+    expect((error.cause as AxonHubNativeError).failure).toEqual({
+      code: "aborted",
+      dispatch: "before",
+    })
+    expect(mocks.createChannel).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { method: "prepare" as const, stage: "open" as const },
+    { method: "prepare" as const, stage: "get" as const },
+    { method: "resolveCredential" as const, stage: "open" as const },
+    { method: "resolveCredential" as const, stage: "get" as const },
+  ])(
+    "normalizes native aborts from source $method $stage boundaries",
+    async ({ method, stage }) => {
+      const nativeAbort = new mocks.RequestError("aborted", "not-dispatched")
+      if (stage === "open") mocks.signIn.mockRejectedValue(nativeAbort)
+      else mocks.getChannel.mockRejectedValue(nativeAbort)
+      const selection = {
+        selectionId: `${method}-${stage}-abort`,
+        displayName: "Aborted source",
+        ref: refFor(),
+      }
+
+      const error = await axonHubManagedSiteMigrationCapability
+        .source![method](selection)
+        .catch((failure) => failure)
+
+      expect(error).toMatchObject({ name: "AbortError" })
+      expect(error.cause).toBeInstanceOf(AxonHubNativeError)
+      expect((error.cause as AxonHubNativeError).failure).toEqual({
+        code: "aborted",
+        dispatch: "before",
+      })
+    },
+  )
+
+  it("rethrows non-native target open errors without normalization", async () => {
+    const nonNativeError = new Error("Non-native open failure")
+    const openSpy = vi
+      .spyOn(axonHubNativeResources, "openAxonHubNativeResourceOperations")
+      .mockRejectedValueOnce(nonNativeError)
+
+    try {
+      await expect(
+        axonHubManagedSiteMigrationCapability.target!.create(
+          await buildMigrationCreateCommand(),
+        ),
+      ).rejects.toBe(nonNativeError)
+    } finally {
+      openSpy.mockRestore()
+    }
+  })
+
+  it.each([
+    AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS,
+    AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP,
+    "future-structured-type",
+  ])(
+    "blocks non-regular native type %s even when apiKeys look usable",
+    async (type) => {
+      mocks.getChannel.mockResolvedValue(
+        buildDetailChannel({
+          type,
+          credentials: { apiKeys: ["sk-apparently-usable-placeholder"] },
+        }),
+      )
+      const selection = {
+        selectionId: `non-regular-${type}`,
+        displayName: "Non-regular native",
+        ref: refFor(),
+      }
+      const expected = {
+        status: "blocked",
+        reasonCode:
+          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+      }
+
+      await expect(
+        axonHubManagedSiteMigrationCapability.source!.prepare(selection),
+      ).resolves.toEqual(expected)
+      await expect(
+        axonHubManagedSiteMigrationCapability.source!.resolveCredential(
+          selection,
+        ),
+      ).resolves.toEqual(expected)
+    },
+  )
+
+  it("maps confirmed native rejection and uncertain mutation states without replay", async () => {
+    const preparation =
+      await axonHubManagedSiteMigrationCapability.target!.prepare({
+        sourceSiteType: SITE_TYPES.NEW_API,
+        resourceType: ChannelType.OpenAI,
+        baseUrl: "https://source.example.invalid",
+        models: ["model-one"],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: "disabled",
+        lossSignals: {
+          hasModelMapping: false,
+          hasStatusCodeMapping: false,
+          hasAdvancedSettings: false,
+          hasMultiKeyState: false,
+        },
+      })
+    const command = {
+      source: {
+        sourceSiteType: SITE_TYPES.NEW_API,
+        resourceType: ChannelType.OpenAI,
+        baseUrl: "https://source.example.invalid",
+        models: ["model-one"],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: "disabled" as const,
+        lossSignals: {
+          hasModelMapping: false,
+          hasStatusCodeMapping: false,
+          hasAdvancedSettings: false,
+          hasMultiKeyState: false,
+        },
+      },
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      projection: { ...preparation.projection, name: "Outcome target" },
+      credential: "sk-outcome-placeholder",
+    }
+
+    mocks.createChannel.mockRejectedValueOnce(
+      new mocks.RequestError("upstream-rejected", "not-dispatched"),
+    )
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create(command),
+    ).resolves.toEqual({
+      status: "failed",
+      failureCode:
+        MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+    })
+
+    mocks.createChannel.mockRejectedValueOnce(
+      new mocks.RequestError("unavailable", "dispatched"),
+    )
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create(command),
+    ).resolves.toEqual({ status: "uncertain" })
+
+    mocks.createChannel.mockResolvedValueOnce(
+      buildDetailChannel({ status: AXON_HUB_CHANNEL_STATUS.DISABLED }),
+    )
+    mocks.updateStatus.mockRejectedValueOnce(new Error("status lost"))
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create({
+        ...command,
+        projection: { ...command.projection, status: 1 },
+      }),
+    ).resolves.toEqual({ status: "uncertain" })
+    expect(mocks.createChannel).toHaveBeenCalledTimes(3)
   })
 })

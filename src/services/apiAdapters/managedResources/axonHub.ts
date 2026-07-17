@@ -147,6 +147,10 @@ const REGULAR_AXON_HUB_CHANNEL_TYPE_SET = new Set<string>(
   REGULAR_AXON_HUB_CHANNEL_TYPES,
 )
 
+/** Returns whether AxonHub represents this channel with regular API-key credentials. */
+export const isRegularAxonHubChannelType = (type: string): boolean =>
+  REGULAR_AXON_HUB_CHANNEL_TYPE_SET.has(type)
+
 // Resource-wide search is client-side, so cap both upstream work and retained
 // input at conservative levels well above normal managed-site inventories.
 const AXON_HUB_SEARCH_PAGE_LIMIT = 100

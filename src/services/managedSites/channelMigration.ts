@@ -1,7 +1,9 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
+  type ManagedResourceRef,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
@@ -11,7 +13,7 @@ import {
 } from "~/services/managedSites/channelMigrationCanonicalOrchestrator"
 import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
 import {
-  toCanonicalMigrationSelectionFromLegacyRow,
+  toCanonicalMigrationSelectionFromLegacyAxonRow,
   toCanonicalMigrationSourceFromLegacyChannel,
   toCanonicalTargetPreparationFromLegacyDraft,
   toLegacyChannelFormDataProjection,
@@ -80,6 +82,18 @@ type ChannelMigrationResourceCapabilities = ManagedUpstreamResourcesCapability<
 const migrationBlockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
 const migrationFailures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
 
+const getMigrationBlockingFallback = (
+  reasonCode: ManagedSiteChannelMigrationBlockedReasonCode,
+): string => {
+  if (reasonCode === migrationBlockers.SOURCE_KEY_MISSING) {
+    return "The source credential is unavailable. Verify source access and try again."
+  }
+  if (reasonCode === migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED) {
+    return "The source credential could not be resolved. Verify source access and try again."
+  }
+  return "This channel cannot be migrated right now. Verify source access and try again."
+}
+
 const normalizeResourceScopeKey = (baseUrl: string): string => {
   const trimmed = baseUrl.trim()
 
@@ -87,6 +101,31 @@ const normalizeResourceScopeKey = (baseUrl: string): string => {
     return new URL(trimmed).origin
   } catch {
     return trimmed.replace(/\/+$/, "")
+  }
+}
+
+type LegacyChannelWithNativeResourceRef = ManagedSiteChannel & {
+  resourceRef?: ManagedResourceRef
+}
+
+const toCanonicalMigrationSelectionFromLegacyChannel = (params: {
+  sourceSiteType: ManagedSiteType
+  channel: LegacyChannelWithNativeResourceRef
+  scopeKey?: string
+}): ManagedSiteMigrationSelection => {
+  if (params.sourceSiteType === SITE_TYPES.AXON_HUB) {
+    return toCanonicalMigrationSelectionFromLegacyAxonRow(params)
+  }
+
+  return {
+    selectionId: String(params.channel.id),
+    displayName: params.channel.name,
+    ref: params.channel.resourceRef ?? {
+      siteType: params.sourceSiteType,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      scopeKey: params.scopeKey ?? "",
+      resourceId: String(params.channel.id),
+    },
   }
 }
 
@@ -351,6 +390,21 @@ const buildLegacyTargetPreparationFromCanonicalSource = async (params: {
   })
 }
 
+const withSelectionDisplayName = (
+  selection: ManagedSiteMigrationSelection,
+  target: ManagedSiteMigrationTargetPreparation,
+): ManagedSiteMigrationTargetPreparation =>
+  target.projection.name.trim()
+    ? target
+    : {
+        ...target,
+        projection: {
+          ...target.projection,
+          name:
+            selection.displayName.trim() || `Channel #${selection.selectionId}`,
+        },
+      }
+
 /** Builds a secret-free migration preview from canonical resource selections. */
 export async function prepareManagedSiteMigrationPreview(params: {
   sourceSiteType: ManagedSiteType
@@ -385,7 +439,9 @@ export async function prepareManagedSiteMigrationPreview(params: {
           }),
     prepareTarget: (selection, source) =>
       targetCapability
-        ? targetCapability.prepare(source, params.options)
+        ? targetCapability
+            .prepare(source, params.options)
+            .then((target) => withSelectionDisplayName(selection, target))
         : buildLegacyTargetPreparationFromCanonicalSource({
             selection,
             source,
@@ -461,6 +517,12 @@ export async function executeManagedSiteMigration(params: {
 export async function prepareManagedSiteChannelMigrationPreview(
   params: PrepareManagedSiteChannelMigrationPreviewParams,
 ): Promise<ManagedSiteChannelMigrationPreview> {
+  const sourceCapability = resolveManagedSiteMigrationCapability(
+    params.sourceSiteType,
+  )?.source
+  const targetCapability = resolveManagedSiteMigrationCapability(
+    params.targetSiteType,
+  )?.target
   const sourceScopeKey = normalizeResourceScopeKey(
     resolveManagedSiteRuntimeConfigForType(
       params.preferences,
@@ -468,7 +530,7 @@ export async function prepareManagedSiteChannelMigrationPreview(
     )?.config.baseUrl ?? "",
   )
   const selections = params.channels.map((channel) =>
-    toCanonicalMigrationSelectionFromLegacyRow({
+    toCanonicalMigrationSelectionFromLegacyChannel({
       sourceSiteType: params.sourceSiteType,
       channel,
       scopeKey: sourceScopeKey,
@@ -504,6 +566,9 @@ export async function prepareManagedSiteChannelMigrationPreview(
       }),
     getBlockedWarningCodes: getWarnings,
     prepareSource: async (selection) => {
+      if (sourceCapability) {
+        return await sourceCapability.prepare(selection)
+      }
       const channel = getChannel(selection)
       const resolution = await resolveSourceChannelKey({
         preferences: params.preferences,
@@ -536,11 +601,25 @@ export async function prepareManagedSiteChannelMigrationPreview(
     },
     prepareTarget: async (selection, source) => {
       try {
+        if (targetCapability) {
+          const target = await targetCapability.prepare(source)
+          const preparedTarget = withSelectionDisplayName(selection, target)
+          const { key: _credential, ...draft } =
+            toLegacyChannelFormDataProjection({
+              source,
+              target: preparedTarget,
+              credential: "",
+            })
+          preparedDrafts.set(selection.selectionId, draft)
+          return preparedTarget
+        }
         return await buildLegacyTargetPreparationFromCanonicalSource({
           selection,
           source,
           targetSiteType: params.targetSiteType,
-          legacyStatus: getChannel(selection).status,
+          legacyStatus: sourceCapability
+            ? undefined
+            : getChannel(selection).status,
           onPreparedPreviewDraft: (draft) =>
             preparedDrafts.set(selection.selectionId, draft),
         })
@@ -571,7 +650,7 @@ export async function prepareManagedSiteChannelMigrationPreview(
         sourceChannel: channel,
         draft: {
           ...preparedDrafts.get(item.selection.selectionId)!,
-          key: credentials.get(item.selection.selectionId)!,
+          key: credentials.get(item.selection.selectionId) ?? "",
         },
         status: "ready",
         warningCodes: [...item.warningCodes],
@@ -597,12 +676,18 @@ export async function executeManagedSiteChannelMigration(
   params: ExecuteManagedSiteChannelMigrationParams,
 ): Promise<ManagedSiteChannelMigrationExecutionResult> {
   const { preview } = params
+  const sourceCapability = resolveManagedSiteMigrationCapability(
+    preview.sourceSiteType,
+  )?.source
+  const targetCapability = resolveManagedSiteMigrationCapability(
+    preview.targetSiteType,
+  )?.target
   const canonicalItems = await Promise.all(
     preview.items.map(
       async (item): Promise<ManagedSiteMigrationCanonicalPreviewItem> => {
         const selection =
           item.canonicalPreparation?.selection ??
-          toCanonicalMigrationSelectionFromLegacyRow({
+          toCanonicalMigrationSelectionFromLegacyChannel({
             sourceSiteType: preview.sourceSiteType,
             channel: item.sourceChannel,
           })
@@ -668,12 +753,12 @@ export async function executeManagedSiteChannelMigration(
         : [],
     ),
   )
-  const targetService: ManagedSiteService = getManagedSiteServiceForType(
-    preview.targetSiteType,
-  )
-  const targetConfig = await targetService.getConfig()
+  const targetService: ManagedSiteService | null = targetCapability
+    ? null
+    : getManagedSiteServiceForType(preview.targetSiteType)
+  const targetConfig = targetService ? await targetService.getConfig() : null
   const errors = new Map<string, string>()
-  if (!targetConfig) {
+  if (!targetCapability && !targetConfig) {
     canonicalItems
       .filter((item) => item.status === "ready")
       .forEach((item) =>
@@ -685,17 +770,36 @@ export async function executeManagedSiteChannelMigration(
   }
   const canonicalResult = await executeManagedSiteMigrationCore({
     preview: canonicalPreview,
-    targetAvailable: Boolean(targetConfig),
+    targetAvailable: Boolean(targetCapability || targetConfig),
     sourceFailureReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
     isMutationStateUncertain: isUncertainMigrationError,
-    resolveCredential: async (selection) => ({
-      status: "ready",
-      credential:
-        legacyItemsBySelectionId.get(selection.selectionId)?.draft?.key ?? "",
-    }),
+    resolveCredential: (selection) =>
+      sourceCapability
+        ? sourceCapability.resolveCredential(selection)
+        : Promise.resolve({
+            status: "ready",
+            credential:
+              legacyItemsBySelectionId.get(selection.selectionId)?.draft?.key ??
+              "",
+          }),
     create: async (command) => {
       const targetItem = readyItemsBySource.get(command.source)!
       try {
+        if (targetCapability) {
+          const result = await targetCapability.create(command)
+          if (result.status === "failed") {
+            errors.set(
+              targetItem.canonical.selection.selectionId,
+              "Target channel creation failed.",
+            )
+          } else if (result.status === "uncertain") {
+            errors.set(
+              targetItem.canonical.selection.selectionId,
+              "Target creation may have succeeded. Verify the target before retrying.",
+            )
+          }
+          return result
+        }
         const executionDraft = toLegacyChannelFormDataProjection({
           source: command.source,
           target: targetItem.canonical.target,
@@ -703,7 +807,7 @@ export async function executeManagedSiteChannelMigration(
         })
         const response = await createTargetChannelForMigration({
           targetSiteType: preview.targetSiteType,
-          targetService,
+          targetService: targetService!,
           targetConfig: targetConfig!,
           draft: {
             ...executionDraft,
@@ -753,7 +857,8 @@ export async function executeManagedSiteChannelMigration(
             : legacyItem.blockingReasonCode,
         error:
           result.status === "skipped"
-            ? legacyItem.blockingMessage
+            ? legacyItem.blockingMessage?.trim() ||
+              getMigrationBlockingFallback(result.blockingReasonCode)
             : errors.get(result.selectionId) ?? "Unknown error",
       }
     })
