@@ -68,7 +68,8 @@ export default defineConfig({
       browser_specific_settings: {
         gecko: {
           id: "{bc73541a-133d-4b50-b261-36ea20df0d24}",
-          strict_min_version: "58.0",
+          // Firefox 104 covers the current Vite baseline and p-queue 9 runtime APIs.
+          strict_min_version: "104.0",
         },
         gecko_android: {
           strict_min_version: "120.0",
