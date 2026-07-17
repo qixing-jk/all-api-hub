@@ -57,15 +57,15 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
   const hasGroupSemantics =
     groupContext.accessState !== MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
   const shouldShowGroupDetails = showGroupDetails && hasGroupSemantics
-  const usableGroupSet = new Set(groupContext.usableGroups)
-  const supportedOnlyGroups = groupContext.supportedGroups.filter(
-    (group) => !usableGroupSet.has(group),
-  )
 
   if (!shouldShowGroupDetails && !showEndpointTypes && !showPricingDetails) {
     return null
   }
 
+  const usableGroupSet = new Set(groupContext.usableGroups)
+  const supportedOnlyGroups = groupContext.supportedGroups.filter(
+    (group) => !usableGroupSet.has(group),
+  )
   const unavailableReason = resolveUnavailablePriceReason(
     model,
     calculatedPrice,
