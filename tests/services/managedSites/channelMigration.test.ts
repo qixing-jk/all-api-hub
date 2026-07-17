@@ -4,6 +4,10 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
 import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import {
@@ -138,7 +142,9 @@ const buildMigrationSelection = (
   },
 })
 
-const buildMigrationSource = (): ManagedSiteMigrationSource => ({
+const buildMigrationSource = (
+  overrides: Partial<ManagedSiteMigrationSource> = {},
+): ManagedSiteMigrationSource => ({
   sourceSiteType: SITE_TYPES.NEW_API,
   resourceType: ChannelType.OpenAI,
   baseUrl: "https://source.example.invalid",
@@ -153,6 +159,7 @@ const buildMigrationSource = (): ManagedSiteMigrationSource => ({
     hasAdvancedSettings: false,
     hasMultiKeyState: false,
   },
+  ...overrides,
 })
 
 const buildMigrationTarget = (): ManagedSiteMigrationTargetPreparation => ({
@@ -634,6 +641,80 @@ describe("channelMigration", () => {
     })
   })
 
+  it("bridges canonical sources into legacy target creation outcomes", async () => {
+    const { executeManagedSiteMigration, prepareManagedSiteMigrationPreview } =
+      await import("~/services/managedSites/channelMigration")
+    const selections = ["created", "rejected"].map(buildMigrationSelection)
+    const prepare = vi.fn(async (selection: ManagedSiteMigrationSelection) => ({
+      status: "ready" as const,
+      source: buildMigrationSource({ baseUrl: selection.ref.resourceId }),
+    }))
+    const resolveCredential = vi.fn(
+      async (selection: ManagedSiteMigrationSelection) => ({
+        status: "ready" as const,
+        credential: `credential-${selection.selectionId}`,
+      }),
+    )
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.NEW_API
+        ? { source: { prepare, resolveCredential } }
+        : null,
+    )
+    mockDoneHubCreateChannel
+      .mockResolvedValueOnce({ success: true, message: "ok" })
+      .mockResolvedValueOnce({ success: false, message: "rejected" })
+
+    const preview = await prepareManagedSiteMigrationPreview({
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      selections,
+    })
+    const result = await executeManagedSiteMigration({ preview })
+
+    expect(preview.items.map((item) => item.status)).toEqual(["ready", "ready"])
+    expect(result).toMatchObject({
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      items: [
+        { selectionId: "created", status: "created" },
+        {
+          selectionId: "rejected",
+          status: "failed",
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+        },
+      ],
+    })
+  })
+
+  it("fails closed when a ready canonical preview loses its source capability", async () => {
+    const { executeManagedSiteMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const result = await executeManagedSiteMigration({
+      preview: buildCanonicalPreview([
+        buildMigrationSelection("missing-source-capability"),
+      ]),
+    })
+
+    expect(result).toMatchObject({
+      attemptedCount: 0,
+      createdCount: 0,
+      skippedCount: 1,
+      items: [
+        {
+          selectionId: "missing-source-capability",
+          status: "skipped",
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+        },
+      ],
+    })
+    expect(mockDoneHubCreateChannel).not.toHaveBeenCalled()
+  })
+
   it("keeps legacy channel credentials out of the canonical source model", async () => {
     const { toCanonicalMigrationSourceFromLegacyChannel } = await import(
       "~/services/managedSites/channelMigrationLegacyFacade"
@@ -647,6 +728,21 @@ describe("channelMigration", () => {
     expect(source).toMatchObject({ sourceSiteType: SITE_TYPES.NEW_API })
     expect(source).not.toHaveProperty("credential")
     expect(source).not.toHaveProperty("key")
+  })
+
+  it("normalizes unknown Claude Code Hub providers and disabled legacy status", () => {
+    const source = toCanonicalMigrationSourceFromLegacyChannel({
+      sourceSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      channel: buildManagedSiteChannel({
+        type: "future-provider",
+        status: 2,
+      }),
+    })
+
+    expect(source).toMatchObject({
+      resourceType: ChannelType.OpenAI,
+      status: "disabled",
+    })
   })
 
   it("collects controlled legacy migration loss facts without exposing credentials", () => {
@@ -745,6 +841,33 @@ describe("channelMigration", () => {
         resourceId: "native-83",
       },
     })
+  })
+
+  it("rejects a pre-aborted preview before adapter work starts", async () => {
+    const selection = buildMigrationSelection("pre-aborted-preview")
+    const cancellation = new Error("Preview cancelled before start")
+    const controller = new AbortController()
+    controller.abort(cancellation)
+    const prepareSource = vi.fn()
+    const prepareTarget = vi.fn()
+
+    await expect(
+      prepareManagedSiteMigrationPreviewCore({
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.DONE_HUB,
+        selections: [selection],
+        signal: controller.signal,
+        sourceFailureReasonCode:
+          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+        targetFailureReasonCode:
+          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+        prepareSource,
+        prepareTarget,
+        getReadyWarningCodes: () => [],
+      }),
+    ).rejects.toBe(cancellation)
+    expect(prepareSource).not.toHaveBeenCalled()
+    expect(prepareTarget).not.toHaveBeenCalled()
   })
 
   it.each(["source", "target"] as const)(
@@ -3302,6 +3425,48 @@ describe("channelMigration", () => {
     ])
   })
 
+  it("uses neutral fallback guidance for a blocked target-preparation row", async () => {
+    const { executeManagedSiteChannelMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const result = await executeManagedSiteChannelMigration({
+      preview: {
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.DONE_HUB,
+        generalWarningCodes: [],
+        totalCount: 1,
+        readyCount: 0,
+        blockedCount: 1,
+        items: [
+          {
+            channelId: 43,
+            channelName: "Blocked target preparation",
+            sourceChannel: buildManagedSiteChannel({ id: 43 }),
+            draft: null,
+            status: "blocked",
+            warningCodes: [],
+            blockingReasonCode:
+              MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+          },
+        ],
+      },
+    })
+
+    expect(result.items).toEqual([
+      {
+        channelId: 43,
+        channelName: "Blocked target preparation",
+        success: false,
+        skipped: true,
+        blockingReasonCode:
+          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+        error:
+          "This channel cannot be migrated right now. Verify source access and try again.",
+      },
+    ])
+  })
+
   it("uses a local fallback message when target creation fails without an error message", async () => {
     const { executeManagedSiteChannelMigration } = await import(
       "~/services/managedSites/channelMigration"
@@ -3821,6 +3986,50 @@ describe("channelMigration", () => {
     expect(result.items.map((item) => item.success)).toEqual([false, true])
   })
 
+  it("reports named-target uncertainty with verify-before-retry guidance", async () => {
+    const {
+      executeManagedSiteChannelMigration,
+      prepareManagedSiteChannelMigrationPreview,
+    } = await import("~/services/managedSites/channelMigration")
+    const create = vi.fn(async () => ({ status: "uncertain" as const }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            target: {
+              prepare: vi.fn(async (source) =>
+                buildAxonTargetPreparation(source),
+              ),
+              create,
+            },
+          }
+        : null,
+    )
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [buildManagedSiteChannel({ id: 311, key: "source-key" })],
+    })
+
+    const result = await executeManagedSiteChannelMigration({ preview })
+
+    expect(result).toMatchObject({
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          channelId: 311,
+          success: false,
+          skipped: false,
+          error:
+            "Target creation may have succeeded. Verify the target before retrying.",
+        },
+      ],
+    })
+  })
+
   it("preserves string selection identity and order across native preparation", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"
@@ -3914,6 +4123,57 @@ describe("channelMigration", () => {
       uncertainCount: 1,
       items: [
         {
+          status: "uncertain",
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+        },
+      ],
+    })
+  })
+
+  it("classifies managed-resource mutation errors as uncertain", async () => {
+    const { executeManagedSiteMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const mutationError = new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+    })
+    const create = vi.fn(async () => {
+      throw mutationError
+    })
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) => {
+      if (siteType === SITE_TYPES.NEW_API) {
+        return {
+          source: {
+            prepare: vi.fn(),
+            resolveCredential: vi.fn(async () => ({
+              status: "ready" as const,
+              credential: "ephemeral-key",
+            })),
+          },
+        }
+      }
+      if (siteType === SITE_TYPES.DONE_HUB) {
+        return { target: { prepare: vi.fn(), create } }
+      }
+      return null
+    })
+
+    const result = await executeManagedSiteMigration({
+      preview: buildCanonicalPreview([
+        buildMigrationSelection("uncertain-mutation-error"),
+      ]),
+    })
+
+    expect(create).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 0,
+      uncertainCount: 1,
+      items: [
+        {
+          selectionId: "uncertain-mutation-error",
           status: "uncertain",
           failureCode:
             MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,

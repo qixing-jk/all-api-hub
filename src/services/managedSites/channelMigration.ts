@@ -67,11 +67,17 @@ interface ExecuteManagedSiteChannelMigrationParams {
   preview: ManagedSiteChannelMigrationPreview
 }
 
-interface SourceKeyResolutionResult {
-  key: string | null
-  blockingReasonCode?: ManagedSiteChannelMigrationBlockedReasonCode
-  blockingMessage?: string
-}
+type SourceKeyResolutionResult =
+  | {
+      key: string
+      blockingReasonCode?: never
+      blockingMessage?: never
+    }
+  | {
+      key: null
+      blockingReasonCode: ManagedSiteChannelMigrationBlockedReasonCode
+      blockingMessage?: string
+    }
 
 type ChannelMigrationResourceCapabilities = ManagedUpstreamResourcesCapability<
   ManagedSiteRuntimeConfigValue,
@@ -576,7 +582,7 @@ export async function prepareManagedSiteChannelMigrationPreview(
         channel,
         resolveNewApiSourceKey: params.resolveNewApiSourceKey,
       })
-      if (!resolution.key) {
+      if (resolution.key === null) {
         if (resolution.blockingMessage) {
           blockingMessages.set(
             selection.selectionId,
@@ -585,9 +591,7 @@ export async function prepareManagedSiteChannelMigrationPreview(
         }
         return {
           status: "blocked",
-          reasonCode:
-            resolution.blockingReasonCode ??
-            migrationBlockers.SOURCE_KEY_MISSING,
+          reasonCode: resolution.blockingReasonCode,
         }
       }
       credentials.set(selection.selectionId, resolution.key)
@@ -778,9 +782,8 @@ export async function executeManagedSiteChannelMigration(
         ? sourceCapability.resolveCredential(selection)
         : Promise.resolve({
             status: "ready",
-            credential:
-              legacyItemsBySelectionId.get(selection.selectionId)?.draft?.key ??
-              "",
+            credential: legacyItemsBySelectionId.get(selection.selectionId)!
+              .draft!.key,
           }),
     create: async (command) => {
       const targetItem = readyItemsBySource.get(command.source)!

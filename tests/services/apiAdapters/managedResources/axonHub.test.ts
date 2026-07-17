@@ -1191,6 +1191,40 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(JSON.stringify(result)).not.toContain("credentials")
   })
 
+  it("maps a plain disabled native detail without advanced migration loss", async () => {
+    mocks.getChannel.mockResolvedValue(
+      buildDetailChannel({
+        status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+        settings: null,
+        policies: null,
+        endpoints: [],
+        tags: [],
+        autoSyncSupportedModels: false,
+        autoSyncModelPattern: null,
+        remark: null,
+      }),
+    )
+
+    const result = await axonHubManagedSiteMigrationCapability.source!.prepare({
+      selectionId: "plain-disabled",
+      displayName: "Plain disabled source",
+      ref: refFor(),
+    })
+
+    expect(result).toMatchObject({
+      status: "ready",
+      source: {
+        status: "disabled",
+        lossSignals: {
+          hasModelMapping: false,
+          hasStatusCodeMapping: false,
+          hasAdvancedSettings: false,
+          hasMultiKeyState: false,
+        },
+      },
+    })
+  })
+
   it("reloads native detail and returns a usable regular key only during execution", async () => {
     mocks.getChannel
       .mockResolvedValueOnce(
@@ -1581,5 +1615,22 @@ describe("AxonHub native managed-resource Adapter", () => {
       }),
     ).resolves.toEqual({ status: "uncertain" })
     expect(mocks.createChannel).toHaveBeenCalledTimes(3)
+  })
+
+  it("maps an unclassified confirmed native failure to unexpected", async () => {
+    mocks.createChannel.mockRejectedValue(
+      new mocks.RequestError("protocol", "not-dispatched"),
+    )
+
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create(
+        await buildMigrationCreateCommand(),
+      ),
+    ).resolves.toEqual({
+      status: "failed",
+      failureCode: MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.Unexpected,
+    })
+    expect(mocks.createChannel).toHaveBeenCalledOnce()
+    expect(mocks.updateStatus).not.toHaveBeenCalled()
   })
 })
