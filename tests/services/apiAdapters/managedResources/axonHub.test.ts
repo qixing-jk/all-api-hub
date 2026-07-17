@@ -1377,6 +1377,25 @@ describe("AxonHub native managed-resource Adapter", () => {
     )
   })
 
+  it("rejects target preparation when canonical models normalize to empty", async () => {
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.prepare(
+        buildMigrationSource({ models: ["", "   "] }),
+      ),
+    ).rejects.toThrow("at least one model")
+  })
+
+  it("normalizes non-empty canonical models during target preparation", async () => {
+    const preparation =
+      await axonHubManagedSiteMigrationCapability.target!.prepare(
+        buildMigrationSource({
+          models: [" model-one ", "model-one", "", "model-two"],
+        }),
+      )
+
+    expect(preparation.projection.models).toEqual(["model-one", "model-two"])
+  })
+
   it("maps canonical Vertex AI targets to AxonHub Gemini during prepare and create", async () => {
     const source = buildMigrationSource({
       resourceType: ChannelType.VertexAi,
@@ -1462,6 +1481,25 @@ describe("AxonHub native managed-resource Adapter", () => {
       dispatch: "before",
     })
     expect(mocks.createChannel).not.toHaveBeenCalled()
+  })
+
+  it("propagates a pre-dispatch native create abort without replay or status mutation", async () => {
+    mocks.createChannel.mockRejectedValue(
+      new mocks.RequestError("aborted", "not-dispatched"),
+    )
+
+    const error = await axonHubManagedSiteMigrationCapability
+      .target!.create(await buildMigrationCreateCommand())
+      .catch((failure) => failure)
+
+    expect(error).toMatchObject({ name: "AbortError" })
+    expect(error.cause).toBeInstanceOf(AxonHubNativeError)
+    expect((error.cause as AxonHubNativeError).failure).toEqual({
+      code: "aborted",
+      dispatch: "before",
+    })
+    expect(mocks.createChannel).toHaveBeenCalledOnce()
+    expect(mocks.updateStatus).not.toHaveBeenCalled()
   })
 
   it.each([

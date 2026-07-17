@@ -772,6 +772,69 @@ describe("channelMigration", () => {
     expect(lossSignals).not.toHaveProperty("credential")
   })
 
+  it.each([
+    ["param_override", { temperature: 0.2 }],
+    ["header_override", { "x-provider": "example" }],
+    ["param_override", 1],
+  ] as const)(
+    "classifies a meaningful %s as advanced-setting loss",
+    (field, value) => {
+      const lossSignals = collectLegacyMigrationLossSignals(
+        buildManagedSiteChannel({ [field]: value }),
+      )
+
+      expect(lossSignals.hasAdvancedSettings).toBe(true)
+    },
+  )
+
+  it.each([
+    ["null", "param_override", null],
+    ["undefined", "param_override", undefined],
+    ["blank string", "param_override", "  "],
+    ["empty array", "param_override", []],
+    ["empty object", "param_override", {}],
+    ["null", "header_override", null],
+    ["undefined", "header_override", undefined],
+    ["blank string", "header_override", "  "],
+    ["empty array", "header_override", []],
+    ["empty object", "header_override", {}],
+  ] as const)("ignores %s for %s", (_kind, field, value) => {
+    const lossSignals = collectLegacyMigrationLossSignals(
+      buildManagedSiteChannel({ [field]: value }),
+    )
+
+    expect(lossSignals.hasAdvancedSettings).toBe(false)
+  })
+
+  it.each([
+    ["param_override", { temperature: 0.2 }],
+    ["header_override", { "x-provider": "example" }],
+  ] as const)(
+    "warns when legacy migration drops a meaningful %s",
+    async (field, value) => {
+      const { prepareManagedSiteChannelMigrationPreview } = await import(
+        "~/services/managedSites/channelMigration"
+      )
+
+      const preview = await prepareManagedSiteChannelMigrationPreview({
+        preferences: buildPreferences(),
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.DONE_HUB,
+        channels: [
+          buildManagedSiteChannel({
+            id: field === "param_override" ? 706 : 707,
+            key: "source-key",
+            [field]: value,
+          }),
+        ],
+      })
+
+      expect(preview.items[0].warningCodes).toContain(
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_ADVANCED_SETTINGS,
+      )
+    },
+  )
+
   it("resolves AxonHub migration refs from explicit, existing, and native fallback identities", () => {
     const providedRef = {
       siteType: SITE_TYPES.AXON_HUB,
@@ -1479,7 +1542,7 @@ describe("channelMigration", () => {
       ],
       resolveNewApiSourceKey: vi
         .fn()
-        .mockRejectedValue(new Error("Verification required")),
+        .mockRejectedValue(new Error("  Verification required  ")),
     })
 
     expect(preview.readyCount).toBe(0)
@@ -3425,33 +3488,47 @@ describe("channelMigration", () => {
     ])
   })
 
-  it("uses neutral fallback guidance for a blocked target-preparation row", async () => {
-    const { executeManagedSiteChannelMigration } = await import(
-      "~/services/managedSites/channelMigration"
+  it("uses target-specific fallback guidance when target preparation returns blank detail", async () => {
+    const {
+      executeManagedSiteChannelMigration,
+      prepareManagedSiteChannelMigrationPreview,
+    } = await import("~/services/managedSites/channelMigration")
+    const create = vi.fn()
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            target: {
+              prepare: vi.fn(async () => {
+                throw new Error("   ")
+              }),
+              create,
+            },
+          }
+        : null,
     )
 
-    const result = await executeManagedSiteChannelMigration({
-      preview: {
-        sourceSiteType: SITE_TYPES.NEW_API,
-        targetSiteType: SITE_TYPES.DONE_HUB,
-        generalWarningCodes: [],
-        totalCount: 1,
-        readyCount: 0,
-        blockedCount: 1,
-        items: [
-          {
-            channelId: 43,
-            channelName: "Blocked target preparation",
-            sourceChannel: buildManagedSiteChannel({ id: 43 }),
-            draft: null,
-            status: "blocked",
-            warningCodes: [],
-            blockingReasonCode:
-              MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
-          },
-        ],
-      },
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 43,
+          key: "source-key",
+          name: "Blocked target preparation",
+        }),
+      ],
     })
+    const result = await executeManagedSiteChannelMigration({ preview })
+
+    expect(preview.items[0]).toMatchObject({
+      status: "blocked",
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+      blockingMessage:
+        "The target channel could not be prepared. Review channel models and target configuration, then retry.",
+    })
+    expect(create).not.toHaveBeenCalled()
 
     expect(result.items).toEqual([
       {
@@ -3462,7 +3539,7 @@ describe("channelMigration", () => {
         blockingReasonCode:
           MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
         error:
-          "This channel cannot be migrated right now. Verify source access and try again.",
+          "The target channel could not be prepared. Review channel models and target configuration, then retry.",
       },
     ])
   })
@@ -3530,7 +3607,7 @@ describe("channelMigration", () => {
       "~/services/managedSites/channelMigration"
     )
 
-    mockDoneHubCreateChannel.mockRejectedValue(new Error("Create exploded"))
+    mockDoneHubCreateChannel.mockRejectedValue(new Error("  Create exploded  "))
 
     const result = await executeManagedSiteChannelMigration({
       preview: {
@@ -3743,6 +3820,41 @@ describe("channelMigration", () => {
       status: "blocked",
       blockingReasonCode:
         MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+  })
+
+  it("adds local guidance to native blocked preview rows without text", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            source: {
+              prepare: vi.fn(async () => ({
+                status: "blocked" as const,
+                reasonCode:
+                  MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+              })),
+              resolveCredential: vi.fn(),
+            },
+          }
+        : null,
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      channels: [buildManagedSiteChannel({ id: 304_1 })],
+    })
+
+    expect(preview.items[0]).toMatchObject({
+      status: "blocked",
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+      blockingMessage:
+        "The source credential is unavailable. Verify source access and try again.",
     })
   })
 
@@ -4021,6 +4133,55 @@ describe("channelMigration", () => {
       items: [
         {
           channelId: 311,
+          success: false,
+          skipped: false,
+          error:
+            "Target creation may have succeeded. Verify the target before retrying.",
+        },
+      ],
+    })
+  })
+
+  it("reports thrown target uncertainty with verify-before-retry guidance", async () => {
+    const {
+      executeManagedSiteChannelMigration,
+      prepareManagedSiteChannelMigrationPreview,
+    } = await import("~/services/managedSites/channelMigration")
+    const create = vi.fn(async () => {
+      throw new ManagedResourceError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      })
+    })
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.AXON_HUB
+        ? {
+            target: {
+              prepare: vi.fn(async (source) =>
+                buildAxonTargetPreparation(source),
+              ),
+              create,
+            },
+          }
+        : null,
+    )
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
+      channels: [buildManagedSiteChannel({ id: 311_1, key: "source-key" })],
+    })
+
+    const result = await executeManagedSiteChannelMigration({ preview })
+
+    expect(create).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          channelId: 311_1,
           success: false,
           skipped: false,
           error:

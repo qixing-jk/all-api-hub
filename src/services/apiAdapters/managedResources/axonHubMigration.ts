@@ -1,8 +1,5 @@
-import {
-  AXON_HUB_CHANNEL_STATUS,
-  AXON_HUB_CHANNEL_TYPE,
-} from "~/constants/axonHub"
-import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
@@ -11,6 +8,10 @@ import {
   openAxonHubNativeResourceOperations,
   type AxonHubNativeFailure,
 } from "~/services/apiAdapters/managedResources/axonHub"
+import {
+  mapAxonHubChannelTypeToChannelType,
+  mapChannelTypeToAxonHubChannelType,
+} from "~/services/apiAdapters/managedResources/axonHubChannelType"
 import type { AxonHubChannel, AxonHubCreateChannelInput } from "~/types/axonHub"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
@@ -23,45 +24,6 @@ import { normalizeList } from "~/utils/core/string"
 
 const blockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
 const failures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
-
-const AXON_HUB_TO_CHANNEL_TYPE: Readonly<Partial<Record<string, ChannelType>>> =
-  {
-    [AXON_HUB_CHANNEL_TYPE.OPENAI]: ChannelType.OpenAI,
-    [AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES]: ChannelType.OpenAI,
-    [AXON_HUB_CHANNEL_TYPE.ANTHROPIC]: ChannelType.Anthropic,
-    [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS]: ChannelType.Anthropic,
-    [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP]: ChannelType.Anthropic,
-    [AXON_HUB_CHANNEL_TYPE.CLAUDECODE]: ChannelType.Anthropic,
-    [AXON_HUB_CHANNEL_TYPE.GEMINI_OPENAI]: ChannelType.Gemini,
-    [AXON_HUB_CHANNEL_TYPE.GEMINI]: ChannelType.Gemini,
-    [AXON_HUB_CHANNEL_TYPE.GEMINI_VERTEX]: ChannelType.Gemini,
-    [AXON_HUB_CHANNEL_TYPE.DEEPSEEK]: ChannelType.DeepSeek,
-    [AXON_HUB_CHANNEL_TYPE.DEEPSEEK_ANTHROPIC]: ChannelType.DeepSeek,
-    [AXON_HUB_CHANNEL_TYPE.OPENROUTER]: ChannelType.OpenRouter,
-    [AXON_HUB_CHANNEL_TYPE.XAI]: ChannelType.Xai,
-    [AXON_HUB_CHANNEL_TYPE.SILICONFLOW]: ChannelType.SiliconFlow,
-    [AXON_HUB_CHANNEL_TYPE.VOLCENGINE]: ChannelType.VolcEngine,
-    [AXON_HUB_CHANNEL_TYPE.OLLAMA]: ChannelType.Ollama,
-    [AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT]: ChannelType.OpenAI,
-    [AXON_HUB_CHANNEL_TYPE.NANOGPT]: ChannelType.OpenAI,
-  }
-
-const CHANNEL_TYPE_TO_AXON_HUB: Readonly<Partial<Record<ChannelType, string>>> =
-  {
-    [ChannelType.OpenAI]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-    [ChannelType.Anthropic]: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
-    [ChannelType.OpenRouter]: AXON_HUB_CHANNEL_TYPE.OPENROUTER,
-    [ChannelType.Gemini]: AXON_HUB_CHANNEL_TYPE.GEMINI,
-    [ChannelType.VertexAi]: AXON_HUB_CHANNEL_TYPE.GEMINI,
-    [ChannelType.SiliconFlow]: AXON_HUB_CHANNEL_TYPE.SILICONFLOW,
-    [ChannelType.DeepSeek]: AXON_HUB_CHANNEL_TYPE.DEEPSEEK,
-    [ChannelType.VolcEngine]: AXON_HUB_CHANNEL_TYPE.VOLCENGINE,
-    [ChannelType.Xai]: AXON_HUB_CHANNEL_TYPE.XAI,
-    [ChannelType.Ollama]: AXON_HUB_CHANNEL_TYPE.OLLAMA,
-  }
-
-const toAxonHubChannelType = (type: ChannelType): string =>
-  CHANNEL_TYPE_TO_AXON_HUB[type] ?? AXON_HUB_CHANNEL_TYPE.OPENAI
 
 const getCredentialCandidates = (channel: AxonHubChannel): string[] =>
   [
@@ -108,8 +70,7 @@ const toCanonicalSource = (
   channel: AxonHubChannel,
 ): ManagedSiteMigrationSource => ({
   sourceSiteType: SITE_TYPES.AXON_HUB,
-  resourceType:
-    AXON_HUB_TO_CHANNEL_TYPE[String(channel.type)] ?? ChannelType.OpenAI,
+  resourceType: mapAxonHubChannelTypeToChannelType(String(channel.type)),
   baseUrl: channel.baseURL?.trim() ?? "",
   models: normalizeList([
     ...(channel.supportedModels ?? []),
@@ -213,7 +174,11 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
     },
     target: {
       prepare: async (source) => {
-        const type = toAxonHubChannelType(source.resourceType)
+        const models = normalizeList(source.models)
+        if (models.length === 0) {
+          throw new Error("AxonHub migration requires at least one model.")
+        }
+        const type = mapChannelTypeToAxonHubChannelType(source.resourceType)
         const groups = [...DEFAULT_CHANNEL_FIELDS.groups]
         const priority = DEFAULT_CHANNEL_FIELDS.priority
         return {
@@ -221,7 +186,7 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             name: "",
             type,
             baseUrl: source.baseUrl,
-            models: [...source.models],
+            models,
             groups,
             priority,
             weight: source.weight,
@@ -245,7 +210,7 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           type:
             typeof command.projection.type === "string"
               ? command.projection.type
-              : toAxonHubChannelType(command.source.resourceType),
+              : mapChannelTypeToAxonHubChannelType(command.source.resourceType),
           name: command.projection.name.trim(),
           ...(baseURL ? { baseURL } : {}),
           credentials: { apiKeys: [command.credential.trim()] },
@@ -280,6 +245,14 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
         )
         if (result.certainty === "applied") return { status: "created" }
         if (result.certainty === "not-applied") {
+          if (
+            result.failure.code === "aborted" &&
+            result.failure.dispatch === "before"
+          ) {
+            throw normalizeAxonHubNativeAbort(
+              new AxonHubNativeError(result.failure),
+            )
+          }
           return {
             status: "failed",
             failureCode: toConfirmedFailureCode(result.failure),

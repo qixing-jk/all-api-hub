@@ -87,6 +87,8 @@ type ChannelMigrationResourceCapabilities = ManagedUpstreamResourcesCapability<
 
 const migrationBlockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
 const migrationFailures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
+const migrationUncertaintyWarning =
+  "Target creation may have succeeded. Verify the target before retrying."
 
 const getMigrationBlockingFallback = (
   reasonCode: ManagedSiteChannelMigrationBlockedReasonCode,
@@ -96,6 +98,9 @@ const getMigrationBlockingFallback = (
   }
   if (reasonCode === migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED) {
     return "The source credential could not be resolved. Verify source access and try again."
+  }
+  if (reasonCode === migrationBlockers.TARGET_DRAFT_PREPARATION_FAILED) {
+    return "The target channel could not be prepared. Review channel models and target configuration, then retry."
   }
   return "This channel cannot be migrated right now. Verify source access and try again."
 }
@@ -645,7 +650,9 @@ export async function prepareManagedSiteChannelMigrationPreview(
           status: "blocked",
           warningCodes: [...item.warningCodes],
           blockingReasonCode: item.blockingReasonCode,
-          blockingMessage: blockingMessages.get(item.selection.selectionId),
+          blockingMessage:
+            blockingMessages.get(item.selection.selectionId)?.trim() ||
+            getMigrationBlockingFallback(item.blockingReasonCode),
         }
       }
       return {
@@ -795,11 +802,6 @@ export async function executeManagedSiteChannelMigration(
               targetItem.canonical.selection.selectionId,
               "Target channel creation failed.",
             )
-          } else if (result.status === "uncertain") {
-            errors.set(
-              targetItem.canonical.selection.selectionId,
-              "Target creation may have succeeded. Verify the target before retrying.",
-            )
           }
           return result
         }
@@ -862,7 +864,9 @@ export async function executeManagedSiteChannelMigration(
           result.status === "skipped"
             ? legacyItem.blockingMessage?.trim() ||
               getMigrationBlockingFallback(result.blockingReasonCode)
-            : errors.get(result.selectionId) ?? "Unknown error",
+            : result.status === "uncertain"
+              ? migrationUncertaintyWarning
+              : errors.get(result.selectionId)?.trim() || "Unknown error",
       }
     })
   return {

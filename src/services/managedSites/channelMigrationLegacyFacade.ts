@@ -1,9 +1,12 @@
-import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  mapAxonHubChannelTypeToChannelType,
+  mapChannelTypeToAxonHubChannelType,
+} from "~/services/apiAdapters/managedResources/axonHubChannelType"
 import {
   buildOctopusBaseUrl,
   mapChannelTypeToOctopusOutboundType,
@@ -27,8 +30,13 @@ import { normalizeList } from "~/utils/core/string"
 const parseDelimitedValues = (value: string | null | undefined) =>
   normalizeList(value?.split(",") ?? [])
 
-const hasMeaningfulValue = (value: string | null | undefined) =>
-  Boolean(value?.trim())
+const hasMeaningfulValue = (value: unknown) => {
+  if (value == null) return false
+  if (typeof value === "string") return Boolean(value.trim())
+  if (Array.isArray(value)) return value.length > 0
+  if (typeof value === "object") return Object.keys(value).length > 0
+  return true
+}
 
 const hasMultiKeyState = (channel: ManagedSiteChannel) =>
   Boolean(
@@ -47,27 +55,6 @@ const areStringArraysEqual = (
 
 type LegacyMigrationPreviewDraft = Omit<ChannelFormData, "key">
 
-const AXON_HUB_TO_SHARED_CHANNEL_TYPE: Partial<Record<string, ChannelType>> = {
-  [AXON_HUB_CHANNEL_TYPE.OPENAI]: ChannelType.OpenAI,
-  [AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES]: ChannelType.OpenAI,
-  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC]: ChannelType.Anthropic,
-  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS]: ChannelType.Anthropic,
-  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP]: ChannelType.Anthropic,
-  [AXON_HUB_CHANNEL_TYPE.CLAUDECODE]: ChannelType.Anthropic,
-  [AXON_HUB_CHANNEL_TYPE.GEMINI_OPENAI]: ChannelType.Gemini,
-  [AXON_HUB_CHANNEL_TYPE.GEMINI]: ChannelType.Gemini,
-  [AXON_HUB_CHANNEL_TYPE.GEMINI_VERTEX]: ChannelType.Gemini,
-  [AXON_HUB_CHANNEL_TYPE.DEEPSEEK]: ChannelType.DeepSeek,
-  [AXON_HUB_CHANNEL_TYPE.DEEPSEEK_ANTHROPIC]: ChannelType.DeepSeek,
-  [AXON_HUB_CHANNEL_TYPE.OPENROUTER]: ChannelType.OpenRouter,
-  [AXON_HUB_CHANNEL_TYPE.XAI]: ChannelType.Xai,
-  [AXON_HUB_CHANNEL_TYPE.SILICONFLOW]: ChannelType.SiliconFlow,
-  [AXON_HUB_CHANNEL_TYPE.VOLCENGINE]: ChannelType.VolcEngine,
-  [AXON_HUB_CHANNEL_TYPE.OLLAMA]: ChannelType.Ollama,
-  [AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT]: ChannelType.OpenAI,
-  [AXON_HUB_CHANNEL_TYPE.NANOGPT]: ChannelType.OpenAI,
-}
-
 const CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE: Partial<
   Record<string, ChannelType>
 > = {
@@ -85,7 +72,7 @@ const getSharedChannelType = (
     typeof channel.type === "number"
       ? channel.type
       : sourceSiteType === SITE_TYPES.AXON_HUB
-        ? AXON_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ?? ChannelType.OpenAI
+        ? mapAxonHubChannelTypeToChannelType(channel.type)
         : sourceSiteType === SITE_TYPES.CLAUDE_CODE_HUB
           ? CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ??
             ChannelType.OpenAI
@@ -93,19 +80,6 @@ const getSharedChannelType = (
   return sourceSiteType === SITE_TYPES.OCTOPUS
     ? mapOctopusOutboundTypeToChannelType(channelType)
     : (channelType as ChannelType)
-}
-
-const SHARED_TO_AXON_HUB_CHANNEL_TYPE: Partial<Record<ChannelType, string>> = {
-  [ChannelType.OpenAI]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.Anthropic]: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
-  [ChannelType.OpenRouter]: AXON_HUB_CHANNEL_TYPE.OPENROUTER,
-  [ChannelType.Gemini]: AXON_HUB_CHANNEL_TYPE.GEMINI,
-  [ChannelType.VertexAi]: AXON_HUB_CHANNEL_TYPE.GEMINI,
-  [ChannelType.SiliconFlow]: AXON_HUB_CHANNEL_TYPE.SILICONFLOW,
-  [ChannelType.DeepSeek]: AXON_HUB_CHANNEL_TYPE.DEEPSEEK,
-  [ChannelType.VolcEngine]: AXON_HUB_CHANNEL_TYPE.VOLCENGINE,
-  [ChannelType.Xai]: AXON_HUB_CHANNEL_TYPE.XAI,
-  [ChannelType.Ollama]: AXON_HUB_CHANNEL_TYPE.OLLAMA,
 }
 
 const SHARED_TO_CLAUDE_CODE_HUB_PROVIDER_TYPE: Partial<
@@ -124,10 +98,7 @@ const getLegacyTargetType = (
     return mapChannelTypeToOctopusOutboundType(resourceType)
   }
   if (targetSiteType === SITE_TYPES.AXON_HUB) {
-    return (
-      SHARED_TO_AXON_HUB_CHANNEL_TYPE[resourceType] ??
-      AXON_HUB_CHANNEL_TYPE.OPENAI
-    )
+    return mapChannelTypeToAxonHubChannelType(resourceType)
   }
   if (targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     return (
@@ -191,7 +162,10 @@ const getLegacyMigrationLossSignals = (
   hasModelMapping: hasMeaningfulValue(channel.model_mapping),
   hasStatusCodeMapping: hasMeaningfulValue(channel.status_code_mapping),
   hasAdvancedSettings:
-    hasMeaningfulValue(channel.setting) || hasMeaningfulValue(channel.settings),
+    hasMeaningfulValue(channel.setting) ||
+    hasMeaningfulValue(channel.settings) ||
+    hasMeaningfulValue(channel.param_override) ||
+    hasMeaningfulValue(channel.header_override),
   hasMultiKeyState: hasMultiKeyState(channel),
 })
 
