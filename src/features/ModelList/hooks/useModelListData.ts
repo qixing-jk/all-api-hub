@@ -336,7 +336,6 @@ export function useModelListData(routeParams?: Record<string, string>) {
   ])
 
   useEffect(() => {
-    if (modelData.isLoading) return
     if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
       return
     }
@@ -367,7 +366,6 @@ export function useModelListData(routeParams?: Record<string, string>) {
     filteredData.availableAccountGroupsByAccountId,
     filteredData.authoritativeGroupAccessByAccountId,
     modelData.accountQueryStates,
-    modelData.isLoading,
     selectedSource?.kind,
     selectedSource?.value,
     setAllAccountsExcludedGroupsByAccountId,

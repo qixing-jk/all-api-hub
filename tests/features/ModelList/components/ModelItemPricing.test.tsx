@@ -607,6 +607,32 @@ describe("Model item pricing and description", () => {
       expect(screen.queryByText("0x")).toBeNull()
     })
 
+    it("does not label an estimated model ratio as a group ratio without an effective group", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({
+            model_ratio: 0,
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE,
+              precision: MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+            },
+          })}
+          calculatedPrice={createCalculatedPrice()}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={true}
+          isAvailableForUser={true}
+          groupRatios={{ default: 1 }}
+        />,
+      )
+
+      expect(screen.getByText("modelRatio")).toBeInTheDocument()
+      expect(screen.queryByText("groupRatio")).not.toBeInTheDocument()
+    })
+
     it("explains an unavailable estimated group multiplier without rendering an undefined ratio", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 

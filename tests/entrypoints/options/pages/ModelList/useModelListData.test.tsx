@@ -1259,6 +1259,67 @@ describe("useModelListData", () => {
     })
   })
 
+  it("repairs settled account exclusions while another account is loading", async () => {
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [ACCOUNT, SECOND_ACCOUNT],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [{ account: ACCOUNT, pricing: SETTLED_PRICING_DATA }],
+      isLoading: true,
+      dataFormatError: false,
+      accountQueryStates: [
+        {
+          account: ACCOUNT,
+          isLoading: false,
+          hasData: true,
+          hasError: false,
+        },
+        {
+          account: SECOND_ACCOUNT,
+          isLoading: true,
+          hasData: false,
+          hasError: false,
+        },
+      ],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+    mockUseFilteredModels.mockReturnValue({
+      filteredModels: [],
+      baseFilteredModels: [],
+      getProviderFilteredCount: vi.fn(() => 0),
+      isGroupAccessAuthoritative: false,
+      authoritativeGroupAccessByAccountId: {
+        "acc-1": true,
+      },
+      singleSourceGroupRatios: {},
+      availableGroups: [],
+      availableAccountGroupsByAccountId: {
+        "acc-1": ["default"],
+      },
+      availableAccountGroupOptionsByAccountId: {},
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+      result.current.setAllAccountsExcludedGroupsByAccountId({
+        "acc-1": ["default", "vip"],
+        "acc-2": ["vip"],
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.allAccountsExcludedGroupsByAccountId).toEqual({
+        "acc-1": ["default"],
+        "acc-2": ["vip"],
+      })
+    })
+  })
+
   it("preserves failed account exclusions while repairing settled accounts", async () => {
     mockUseAccountData.mockReturnValue({
       enabledDisplayData: [ACCOUNT, SECOND_ACCOUNT],

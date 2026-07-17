@@ -48,6 +48,7 @@ import type {
 } from "~/services/models/modelMetadata/types"
 import {
   aggregateModelVendors,
+  compareCodePoints,
   MODEL_VENDOR_FILTER_VALUES,
   resolveModelVendorCandidate,
   type ModelVendorFilterValue,
@@ -576,7 +577,7 @@ function resolveBestCalculatedItem(
 
     if (
       priceComparison === 0 &&
-      group.localeCompare(bestResult.effectiveGroup ?? "") < 0
+      compareCodePoints(group, bestResult.effectiveGroup ?? "") < 0
     ) {
       bestResult = candidateItem
       bestKey = candidateKey

@@ -29,7 +29,10 @@ import type {
   ModelMetadata,
   ResolvedModelVendor,
 } from "~/services/models/modelMetadata/types"
-import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
+import {
+  isTokenBillingType,
+  type CalculatedPrice,
+} from "~/services/models/utils/modelPricing"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -242,7 +245,12 @@ export default function ModelItem(props: ModelItemProps) {
     effectiveCapabilities.supportsGroupFiltering &&
     hasGroupSemantics
   const canExpand =
-    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && showGroupDetails
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+    (showGroupDetails ||
+      (showEndpointTypes &&
+        (effectiveCapabilities.supportsPricing ||
+          effectiveCapabilities.supportsGroupFiltering)) ||
+      (showPricing && isTokenBillingType(model.quota_type)))
 
   const hasRuntimeDiscoveredPricingGap =
     isModelPriceUnavailable(model) ||
@@ -443,7 +451,8 @@ export default function ModelItem(props: ModelItemProps) {
           />
         </div>
 
-        {isExpanded &&
+        {canExpand &&
+          isExpanded &&
           source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && (
             <div className="border-t pt-4 dark:border-gray-700">
               <ModelItemDetails

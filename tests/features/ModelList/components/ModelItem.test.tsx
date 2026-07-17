@@ -375,6 +375,33 @@ describe("ModelItem", () => {
     expect(screen.queryByText("available")).not.toBeInTheDocument()
   })
 
+  it("summarizes additional usable groups in the row header", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        groupRatios={{ default: 1, vip: 2 }}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: ["default", "vip"],
+          usableGroups: ["default", "vip"],
+          priceableGroups: ["default", "vip"],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: ["default", "vip"],
+          activePriceableGroups: ["default", "vip"],
+          actionGroups: ["default", "vip"],
+        }}
+      />,
+    )
+
+    expect(screen.getByText("default (1x)+1")).toHaveAttribute(
+      "title",
+      "currentUsableGroups: default (1x), vip (2x)",
+    )
+  })
+
   it("suppresses the ratio column when either the row or display capabilities do not support ratios", () => {
     const props = createDefaultProps()
 
@@ -616,6 +643,83 @@ describe("ModelItem", () => {
     ).not.toBeInTheDocument()
   })
 
+  it.each([
+    {
+      name: "endpoint details",
+      props: {
+        showEndpointTypes: true,
+        displayCapabilities: {
+          supportsPricing: false,
+          supportsRatioDisplay: true,
+          supportsGroupFiltering: true,
+          supportsAccountSummary: true,
+          supportsTokenCompatibility: true,
+          supportsCredentialVerification: true,
+          supportsBatchCredentialVerification: true,
+          supportsCliVerification: true,
+        },
+      },
+    },
+    {
+      name: "detailed token pricing",
+      props: {},
+    },
+  ])(
+    "allows not-applicable account rows to expand for $name",
+    async ({ props }) => {
+      const user = userEvent.setup()
+
+      render(
+        <ModelItem
+          {...createDefaultProps()}
+          {...props}
+          groupContext={{
+            accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+            supportedGroups: [],
+            usableGroups: [],
+            priceableGroups: [],
+          }}
+          activeGroupContext={{
+            activeUsableGroups: [],
+            activePriceableGroups: [],
+            actionGroups: [],
+          }}
+        />,
+      )
+
+      await user.click(screen.getByTestId("expand-button"))
+
+      expect(screen.getByTestId("model-details")).toBeInTheDocument()
+    },
+  )
+
+  it("guides unavailable active selections to a usable group", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        groupRatios={{ vip: 2 }}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: ["vip"],
+          usableGroups: ["vip"],
+          priceableGroups: ["vip"],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+      />,
+    )
+
+    expect(screen.getByText("clickSwitchGroup:vip (2x)")).toBeInTheDocument()
+    expect(
+      screen.getByText("currentUsableGroups", { exact: false }),
+    ).toHaveTextContent("currentUsableGroups: vip (2x)")
+  })
+
   it("uses internal expansion state when expansion props are omitted", async () => {
     const user = userEvent.setup()
 
@@ -643,6 +747,46 @@ describe("ModelItem", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       }),
     )
+  })
+
+  it("hides orphaned details when an expanded row becomes catalog-only", async () => {
+    const user = userEvent.setup()
+    const props = createDefaultProps()
+    const catalogOnlyDisplayCapabilities = {
+      ...props.source.capabilities,
+      supportsPricing: false,
+      supportsRatioDisplay: false,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+    }
+    const { rerender } = render(
+      <ModelItem {...props} showEndpointTypes={true} />,
+    )
+
+    await user.click(screen.getByTestId("expand-button"))
+    expect(screen.getByTestId("model-details")).toBeInTheDocument()
+
+    rerender(
+      <ModelItem
+        {...props}
+        showEndpointTypes={true}
+        displayCapabilities={catalogOnlyDisplayCapabilities}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+          supportedGroups: [],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+      />,
+    )
+
+    expect(screen.queryByTestId("expand-button")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("model-details")).not.toBeInTheDocument()
   })
 
   it("keeps source controls in the header trailing area", async () => {

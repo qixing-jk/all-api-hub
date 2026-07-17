@@ -3,18 +3,30 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { ModelDisplay } from "~/features/ModelList/components/ModelDisplay"
-import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
+import {
+  MODEL_GROUP_ACCESS_STATES,
+  resolveActiveModelGroupContext,
+  resolveModelGroupContext,
+} from "~/features/ModelList/groupContext"
 import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
+import {
+  createAccountSource,
+  createProfileSource,
+} from "~/features/ModelList/modelManagementSources"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createAccountModelVerificationHistoryTarget,
   createProfileModelVerificationHistoryTarget,
   serializeVerificationHistoryTarget,
   type ApiVerificationHistoryTarget,
 } from "~/services/verification/verificationResultHistory"
+import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 const { mockTotalListHeightChanged, modelItemSpy } = vi.hoisted(() => ({
   mockTotalListHeightChanged: {
@@ -151,25 +163,37 @@ vi.mock("~/features/ModelList/components/ModelItem", () => ({
   },
 }))
 
-const ACCOUNT_SOURCE = {
-  kind: "account",
-  account: {
-    id: "account-1",
-    name: "Account One",
-    balance: {
-      USD: 10,
-      CNY: 80,
-    },
-  },
-} as any
+const ACCOUNT_FIXTURE: DisplaySiteData = {
+  id: "account-1",
+  name: "Account One",
+  username: "example-user",
+  balance: { USD: 10, CNY: 80 },
+  todayConsumption: { USD: 0, CNY: 0 },
+  todayIncome: { USD: 0, CNY: 0 },
+  todayTokens: { upload: 0, download: 0 },
+  health: { status: SiteHealthStatus.Healthy },
+  siteType: SITE_TYPES.NEW_API,
+  baseUrl: "https://account.example.invalid",
+  token: "example-token",
+  userId: "example-user-id",
+  authType: AuthTypeEnum.AccessToken,
+  checkIn: { enableDetection: false },
+}
 
-const PROFILE_SOURCE = {
-  kind: "profile",
-  profile: {
-    id: "profile-1",
-    name: "Reusable Profile",
-  },
-} as any
+const PROFILE_FIXTURE: ApiCredentialProfile = {
+  id: "profile-1",
+  name: "Reusable Profile",
+  apiType: API_TYPES.OPENAI_COMPATIBLE,
+  baseUrl: "https://profile.example.invalid",
+  apiKey: "example-key",
+  tagIds: [],
+  notes: "",
+  createdAt: 1,
+  updatedAt: 1,
+}
+
+const ACCOUNT_SOURCE = createAccountSource(ACCOUNT_FIXTURE)
+const PROFILE_SOURCE = createProfileSource(PROFILE_FIXTURE)
 
 type CalculatedModelOverrides = {
   model?: Partial<ModelPricing>
@@ -215,24 +239,39 @@ const createCalculatedModel = (
     ...(overrides.calculatedPrice ?? {}),
   }
 
+  const source = overrides.source ?? ACCOUNT_SOURCE
+  const groupRatios = Object.fromEntries(
+    model.enable_groups.map((group, index) => [group, index + 1]),
+  )
+  const groupContext = resolveModelGroupContext({
+    groupSemantics: source.groupSemantics,
+    model,
+    usableGroup: Object.fromEntries(
+      model.enable_groups.map((group) => [group, true]),
+    ),
+    groupRatios,
+  })
+  const activeGroupContext = resolveActiveModelGroupContext({
+    context: groupContext,
+    effectiveGroup: overrides.effectiveGroup,
+  })
+
+  if (
+    overrides.effectiveGroup &&
+    !activeGroupContext.actionGroups.includes(overrides.effectiveGroup)
+  ) {
+    throw new Error(
+      `Effective group is not actionable for this fixture: ${overrides.effectiveGroup}`,
+    )
+  }
+
   return {
     model,
     calculatedPrice,
-    source: overrides.source ?? ACCOUNT_SOURCE,
-    groupRatios: { default: 1, vip: 2 },
-    groupContext: {
-      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
-      supportedGroups: ["default", "vip"],
-      usableGroups: ["default", "vip"],
-      priceableGroups: ["default", "vip"],
-    },
-    activeGroupContext: {
-      activeUsableGroups: ["default", "vip"],
-      activePriceableGroups: ["default", "vip"],
-      actionGroups: overrides.effectiveGroup
-        ? [overrides.effectiveGroup]
-        : ["default", "vip"],
-    },
+    source,
+    groupRatios,
+    groupContext,
+    activeGroupContext,
     effectiveGroup: overrides.effectiveGroup,
     resolvedVendor: overrides.resolvedVendor ?? { state: "unknown" },
   }
@@ -486,7 +525,7 @@ describe("ModelDisplay", () => {
     expect(handleGroupClick).not.toHaveBeenCalled()
   })
 
-  it("uses profile verification summaries and preserves non-all group selection for profile-backed items", () => {
+  it("uses profile verification summaries without inventing group selection for profile-backed items", () => {
     const profileSummaryTarget = requireHistoryTarget(
       createProfileModelVerificationHistoryTarget(
         "profile-1",
@@ -504,7 +543,6 @@ describe("ModelDisplay", () => {
               model_name: "claude-3-5-sonnet",
               enable_groups: ["vip"],
             },
-            effectiveGroup: "vip",
             source: PROFILE_SOURCE,
           }),
         ]}
@@ -524,7 +562,7 @@ describe("ModelDisplay", () => {
     )
     expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(
       "data-effective-group",
-      "vip",
+      "",
     )
     expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(
       "data-summary-status",

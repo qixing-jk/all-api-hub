@@ -49,6 +49,20 @@ interface PriceMetaBadgeViewModel {
   variant: "success" | "secondary"
 }
 
+interface PriceAvailabilityContext {
+  effectiveGroup?: string
+  groupRatios: Record<string, number>
+}
+
+/** Returns whether direct token prices still depend on an estimated group rate. */
+function usesEstimatedDirectTokenPrice(model: ModelPricing): boolean {
+  return (
+    model.price_metadata?.source ===
+      MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE &&
+    model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+  )
+}
+
 /**
  * Maps unavailable-price metadata to local model-list copy.
  */
@@ -79,21 +93,34 @@ export function getUnavailablePriceReasonText(
 export function resolveUnavailablePriceReason(
   model: ModelPricing,
   calculatedPrice: CalculatedPrice,
+  context?: PriceAvailabilityContext,
 ): ModelUnavailablePriceReason | undefined {
-  if (
-    !isModelPriceUnavailable(model) &&
-    calculatedPrice.priceAvailability !== "unavailable"
-  ) {
-    return undefined
-  }
-
-  return (
+  const sourceUnavailableReason =
     model.price_metadata?.unavailable_reason ??
     (calculatedPrice.priceAvailability === "unavailable"
       ? calculatedPrice.unavailableReason
-      : undefined) ??
-    MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE
-  )
+      : undefined)
+
+  if (
+    isModelPriceUnavailable(model) ||
+    calculatedPrice.priceAvailability === "unavailable"
+  ) {
+    return (
+      sourceUnavailableReason ??
+      MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE
+    )
+  }
+
+  if (
+    context?.effectiveGroup &&
+    usesEstimatedDirectTokenPrice(model) &&
+    resolveKnownGroupRatio(context.effectiveGroup, context.groupRatios) ===
+      undefined
+  ) {
+    return MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE
+  }
+
+  return undefined
 }
 
 /**
@@ -155,28 +182,22 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     return null
   }
 
-  const sourceUnavailableReason = resolveUnavailablePriceReason(
+  const unavailableReason = resolveUnavailablePriceReason(
     model,
     calculatedPrice,
+    { effectiveGroup, groupRatios },
   )
   const tokenBillingType = isTokenBillingType(model.quota_type)
   const perCallPrice = calculatedPrice.perCallPrice
   const estimatedPriceUsesDirectTokenPrice =
-    model.price_metadata?.source ===
-      MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE &&
-    model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+    usesEstimatedDirectTokenPrice(model)
+  const showsEffectiveGroupRatio =
+    estimatedPriceUsesDirectTokenPrice && Boolean(effectiveGroup)
   const displayRatio =
-    estimatedPriceUsesDirectTokenPrice && effectiveGroup
+    showsEffectiveGroupRatio && effectiveGroup
       ? resolveKnownGroupRatio(effectiveGroup, groupRatios)
       : model.model_ratio
-  const unavailableReason =
-    sourceUnavailableReason ??
-    (estimatedPriceUsesDirectTokenPrice &&
-    effectiveGroup &&
-    displayRatio === undefined
-      ? MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE
-      : undefined)
-  const ratioLabel = estimatedPriceUsesDirectTokenPrice
+  const ratioLabel = showsEffectiveGroupRatio
     ? t("groupRatio")
     : t("modelRatio")
   const effectiveGroupLabel = effectiveGroup

@@ -1228,6 +1228,53 @@ describe("useFilteredModels", () => {
     expect(result.current.baseFilteredModels).toHaveLength(1)
   })
 
+  it("keeps authoritative known-empty all-account rows unavailable", async () => {
+    const account = createDisplayAccount({
+      id: "account-missing-all-groups",
+      balance: { USD: 0, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "ungrouped-model",
+                model_ratio: 1,
+                completion_ratio: 1,
+                enable_groups: [],
+              },
+            ],
+            {
+              group_ratio: {},
+              usable_group: {},
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      showRealPrice: true,
+    })
+
+    await waitFor(() => {
+      expect(result.current.filteredModels).toHaveLength(1)
+    })
+
+    expect(result.current.filteredModels[0]).toMatchObject({
+      calculatedPrice: {
+        priceAvailability: "unavailable",
+        unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+      },
+      effectiveGroup: undefined,
+      groupContext: {
+        accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+        usableGroups: [],
+      },
+    })
+  })
+
   it("keeps account contexts usable when all-accounts pricing metadata omits group ratios", async () => {
     const account = createDisplayAccount({
       id: "account-context-missing-group-ratio",
@@ -1774,6 +1821,37 @@ describe("useFilteredModels", () => {
         ),
       ).toEqual(["alpha row", "beta row"])
     })
+  })
+
+  it("uses code-point order when equal-price groups tie", async () => {
+    const account = createDisplayAccount({
+      id: "account-equal-group-price",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "shared-model",
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["a", "B"],
+          },
+        ],
+        {
+          group_ratio: { a: 1, B: 1 },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      showRealPrice: true,
+    })
+
+    await waitFor(() => {
+      expect(result.current.filteredModels).toHaveLength(1)
+    })
+
+    expect(result.current.filteredModels[0]?.effectiveGroup).toBe("B")
   })
 
   it("falls back to model-name ordering when prices and groups tie", async () => {

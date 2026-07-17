@@ -330,4 +330,27 @@ describe("ModelItemDetails", () => {
     ).toBeInTheDocument()
     expect(screen.queryByText(/^USD:/)).not.toBeInTheDocument()
   })
+
+  it("hides calculated details when an estimated price lacks the effective group ratio", () => {
+    renderDetails({
+      model: {
+        ...baseProps.model,
+        quota_type: 0,
+        price_metadata: {
+          source: MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE,
+          precision: MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+        },
+      },
+      effectiveGroup: "vip",
+      groupRatios: {},
+      showGroupDetails: false,
+      showPricingDetails: true,
+    })
+
+    expect(
+      screen.getByText("unavailablePriceReasons.groupRatioUnavailable"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/^USD:/)).not.toBeInTheDocument()
+    expect(formatPriceMock).not.toHaveBeenCalled()
+  })
 })

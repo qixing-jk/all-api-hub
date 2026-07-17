@@ -961,7 +961,7 @@ export function resolveModelVendorCandidate(
 }
 
 /** Compares labels by direct code-point order without locale variation. */
-function compareCodePoints(left: string, right: string): number {
+export function compareCodePoints(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0
 }
 

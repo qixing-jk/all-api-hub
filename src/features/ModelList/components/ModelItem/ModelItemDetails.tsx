@@ -69,6 +69,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
   const unavailableReason = resolveUnavailablePriceReason(
     model,
     calculatedPrice,
+    { effectiveGroup, groupRatios },
   )
 
   return (
