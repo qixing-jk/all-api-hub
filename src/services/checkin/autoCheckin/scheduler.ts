@@ -166,16 +166,13 @@ type PostCheckinRefreshOutcome = "refreshed" | "unchanged" | "failed"
  * - A separate *retry* alarm retries only the accounts that failed in today's normal run.
  */
 class AutoCheckinScheduler {
-  private static readonly CHECKIN_EXECUTION_BATCH_SIZE = 3
-  private static readonly CHECKIN_EXECUTION_BATCH_DELAY_MS = 250
-
   /**
    * Post-checkin account refresh to ensure balances/quotas reflect the effect of a successful check-in.
    *
    * Notes:
    * - This MUST NOT invoke provider `checkIn` again; it uses the existing account refresh pipeline.
    * - Best-effort: failures are swallowed so check-in completion semantics are unchanged.
-   * - Uses a small concurrency limit to avoid spiking network load when many accounts were checked in.
+   * - API/page resources are limited by their owning lower layers.
    */
   private async refreshAccountsAfterSuccessfulCheckins(params: {
     accountIds: string[]
@@ -195,24 +192,24 @@ class AutoCheckinScheduler {
       let failedCount = 0
 
       const force = params.force ?? true
-      const results = await this.processInBatches<
-        string,
-        PostCheckinRefreshOutcome
-      >({
-        items: uniqueAccountIds,
-        batchSize: AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE,
-        processItem: async (accountId) => {
-          const result = params.tempWindowRequestSource
-            ? await accountStorage.refreshAccount(accountId, force, {
-                tempWindowRequestSource: params.tempWindowRequestSource,
-              })
-            : await accountStorage.refreshAccount(accountId, force)
-          if (result?.refreshed === true) return "refreshed"
-          if (result == null) return "failed"
-          return "unchanged"
-        },
-        onItemError: () => "failed",
-      })
+      const results = await Promise.all(
+        uniqueAccountIds.map(
+          async (accountId): Promise<PostCheckinRefreshOutcome> => {
+            try {
+              const result = params.tempWindowRequestSource
+                ? await accountStorage.refreshAccount(accountId, force, {
+                    tempWindowRequestSource: params.tempWindowRequestSource,
+                  })
+                : await accountStorage.refreshAccount(accountId, force)
+              if (result?.refreshed === true) return "refreshed"
+              if (result == null) return "failed"
+              return "unchanged"
+            } catch {
+              return "failed"
+            }
+          },
+        ),
+      )
 
       for (const result of results) {
         if (result === "refreshed") {
@@ -1031,49 +1028,7 @@ class AutoCheckinScheduler {
     }
   }
 
-  private async processInBatches<TItem, TResult>(params: {
-    items: TItem[]
-    batchSize: number
-    processItem: (item: TItem) => Promise<TResult>
-    onItemError?: (error: unknown, item: TItem) => TResult | Promise<TResult>
-    delayBetweenBatchesMs?: number
-  }): Promise<TResult[]> {
-    const outcomes: TResult[] = []
-    const batchSize = Math.max(1, Math.floor(params.batchSize))
-    const delayBetweenBatchesMs = Math.max(0, params.delayBetweenBatchesMs ?? 0)
-
-    for (let index = 0; index < params.items.length; index += batchSize) {
-      const batch = params.items.slice(index, index + batchSize)
-      const batchOutcomes = await Promise.all(
-        batch.map(async (item) => {
-          try {
-            return await params.processItem(item)
-          } catch (error) {
-            if (!params.onItemError) {
-              throw error
-            }
-            return params.onItemError(error, item)
-          }
-        }),
-      )
-      outcomes.push(...batchOutcomes)
-
-      const hasMoreBatches = index + batchSize < params.items.length
-      if (hasMoreBatches && delayBetweenBatchesMs > 0) {
-        await this.delay(delayBetweenBatchesMs)
-      }
-    }
-
-    return outcomes
-  }
-
-  private async delay(ms: number): Promise<void> {
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, ms)
-    })
-  }
-
-  private async runAccountCheckinsInBatches(params: {
+  private async runAccountCheckins(params: {
     accounts: SiteAccount[]
     accountDisplayNameById: Map<string, string>
     tempWindowRequestSource: TempWindowRequestSource
@@ -1083,29 +1038,30 @@ class AutoCheckinScheduler {
       successful: boolean
     }>
   > {
-    return this.processInBatches({
-      items: params.accounts,
-      batchSize: AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_SIZE,
-      delayBetweenBatchesMs:
-        AutoCheckinScheduler.CHECKIN_EXECUTION_BATCH_DELAY_MS,
-      onItemError: (error, account) => ({
-        result: {
-          accountId: account.id,
-          accountName:
-            params.accountDisplayNameById.get(account.id) ?? account.id,
-          status: CHECKIN_RESULT_STATUS.FAILED,
-          rawMessage: getErrorMessage(error),
-          timestamp: Date.now(),
-        },
-        successful: false,
+    return Promise.all(
+      params.accounts.map(async (account) => {
+        const accountName =
+          params.accountDisplayNameById.get(account.id) ?? account.id
+        try {
+          return await this.runAccountCheckin(
+            account,
+            accountName,
+            params.tempWindowRequestSource,
+          )
+        } catch (error) {
+          return {
+            result: {
+              accountId: account.id,
+              accountName,
+              status: CHECKIN_RESULT_STATUS.FAILED,
+              rawMessage: getErrorMessage(error),
+              timestamp: Date.now(),
+            },
+            successful: false,
+          }
+        }
       }),
-      processItem: (account) =>
-        this.runAccountCheckin(
-          account,
-          params.accountDisplayNameById.get(account.id) ?? account.id,
-          params.tempWindowRequestSource,
-        ),
-    })
+    )
   }
 
   /**
@@ -2150,11 +2106,11 @@ class AutoCheckinScheduler {
         return
       }
 
-      // Execute check-ins in small batches because some providers open pages.
+      // API/page resources are limited by their owning lower layers.
       let successCount = 0
       let failedCount = 0
 
-      const checkinOutcomes = await this.runAccountCheckinsInBatches({
+      const checkinOutcomes = await this.runAccountCheckins({
         accounts: runnableAccounts,
         accountDisplayNameById,
         tempWindowRequestSource,

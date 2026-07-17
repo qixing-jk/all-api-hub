@@ -173,6 +173,17 @@ const mockedProductAnalytics = {
     trackProductAnalyticsEvent as unknown as ReturnType<typeof vi.fn>,
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, resolve, reject }
+}
+
 let storedStatus: any = null
 let alarmStore: Record<string, any> = {}
 
@@ -1089,11 +1100,12 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     vi.useRealTimers()
   })
 
-  it("limits concurrent account check-ins during daily runs", async () => {
+  it("dispatches every eligible account without a scheduler batch barrier", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
 
     mockedUserPreferences.getPreferences.mockResolvedValue({
+      ...(DEFAULT_PREFERENCES as any),
       autoCheckin: {
         ...(DEFAULT_PREFERENCES as any).autoCheckin,
         globalEnabled: true,
@@ -1116,22 +1128,16 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     }))
     mockedAccountStorage.getAllAccounts.mockResolvedValue(accounts)
 
-    const resolvers: Array<() => void> = []
-    let inFlight = 0
-    let maxInFlight = 0
+    const deferredCheckins: Array<
+      ReturnType<typeof createDeferred<{ status: "success" }>>
+    > = []
     const provider = {
       canCheckIn: vi.fn(() => true),
-      checkIn: vi.fn(
-        () =>
-          new Promise<{ status: "success" }>((resolve) => {
-            inFlight += 1
-            maxInFlight = Math.max(maxInFlight, inFlight)
-            resolvers.push(() => {
-              inFlight -= 1
-              resolve({ status: "success" })
-            })
-          }),
-      ),
+      checkIn: vi.fn(() => {
+        const deferred = createDeferred<{ status: "success" }>()
+        deferredCheckins.push(deferred)
+        return deferred.promise
+      }),
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
@@ -1139,35 +1145,26 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
     })
 
-    await vi.waitFor(() => {
-      expect(provider.checkIn).toHaveBeenCalledTimes(3)
-    })
-    expect(maxInFlight).toBeLessThanOrEqual(3)
+    try {
+      await vi.waitFor(() => {
+        expect(provider.checkIn).toHaveBeenCalledTimes(5)
+      })
+      deferredCheckins.forEach((deferred) => {
+        deferred.resolve({ status: "success" })
+      })
+      await runPromise
 
-    resolvers.splice(0).forEach((resolve) => resolve())
-    await vi.advanceTimersByTimeAsync(0)
-    expect(provider.checkIn).toHaveBeenCalledTimes(3)
-
-    await vi.advanceTimersByTimeAsync(250)
-    expect(provider.checkIn).toHaveBeenCalledTimes(5)
-    expect(maxInFlight).toBeLessThanOrEqual(3)
-
-    resolvers.splice(0).forEach((resolve) => resolve())
-    await runPromise
-
-    expect(storedStatus.summary).toMatchObject({
-      executed: 5,
-      successCount: 5,
-      failedCount: 0,
-    })
-
-    vi.useRealTimers()
+      expect(storedStatus.summary).toMatchObject({
+        executed: 5,
+        successCount: 5,
+        failedCount: 0,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
-  it("continues later check-in batches when one account task rejects unexpectedly", async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
-
+  it("isolates an unexpected account rejection without aborting the run", async () => {
     mockedUserPreferences.getPreferences.mockResolvedValue({
       autoCheckin: {
         ...(DEFAULT_PREFERENCES as any).autoCheckin,
@@ -1216,11 +1213,9 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         }
       })
 
-    const runPromise = autoCheckinScheduler.runCheckins({
+    await autoCheckinScheduler.runCheckins({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
     })
-    await vi.advanceTimersByTimeAsync(250)
-    await runPromise
 
     expect(runAccountCheckinSpy).toHaveBeenCalledTimes(4)
     expect(storedStatus.lastRunResult).toBe("partial")
@@ -1235,7 +1230,6 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     })
 
     runAccountCheckinSpy.mockRestore()
-    vi.useRealTimers()
   })
 
   it("does not create a retry queue when daily failures already reached the max-attempts boundary", async () => {
@@ -5356,21 +5350,31 @@ describe("autoCheckinScheduler private helpers", () => {
     vi.clearAllMocks()
   })
 
-  it("preserves a temp window source through post-checkin refresh batches", async () => {
-    mockedAccountStorage.refreshAccount
-      .mockResolvedValueOnce({ refreshed: true })
-      .mockResolvedValueOnce(null)
-      .mockRejectedValueOnce(new Error("refresh failed"))
+  it("dispatches post-checkin refreshes concurrently with best-effort isolation", async () => {
+    type ObservableRefreshResult = Pick<
+      NonNullable<Awaited<ReturnType<typeof accountStorage.refreshAccount>>>,
+      "refreshed"
+    > | null
+    const deferredRefreshes = Array.from({ length: 4 }, () =>
+      createDeferred<ObservableRefreshResult>(),
+    )
+    let refreshIndex = 0
+    mockedAccountStorage.refreshAccount.mockImplementation(
+      () => deferredRefreshes[refreshIndex++].promise,
+    )
 
-    await expect(
-      (autoCheckinScheduler as any).refreshAccountsAfterSuccessfulCheckins({
-        accountIds: ["a", "a", " ", "b", "c"],
-        force: false,
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      }),
-    ).resolves.toBeUndefined()
+    const refreshPromise = (
+      autoCheckinScheduler as any
+    ).refreshAccountsAfterSuccessfulCheckins({
+      accountIds: ["a", "a", " ", "b", "c", "d"],
+      force: false,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
 
-    expect(mockedAccountStorage.refreshAccount).toHaveBeenCalledTimes(3)
+    await vi.waitFor(() => {
+      expect(mockedAccountStorage.refreshAccount).toHaveBeenCalledTimes(4)
+    })
+
     expect(mockedAccountStorage.refreshAccount).toHaveBeenNthCalledWith(
       1,
       "a",
@@ -5395,6 +5399,21 @@ describe("autoCheckinScheduler private helpers", () => {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       },
     )
+    expect(mockedAccountStorage.refreshAccount).toHaveBeenNthCalledWith(
+      4,
+      "d",
+      false,
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+    )
+
+    deferredRefreshes[0].resolve({ refreshed: true })
+    deferredRefreshes[1].resolve(null)
+    deferredRefreshes[2].reject(new Error("refresh failed"))
+    deferredRefreshes[3].resolve({ refreshed: false })
+
+    await expect(refreshPromise).resolves.toBeUndefined()
   })
 
   it("defaults post-checkin refreshes to force=true when no force flag is provided", async () => {
@@ -5422,18 +5441,6 @@ describe("autoCheckinScheduler private helpers", () => {
     ).resolves.toBeUndefined()
 
     expect(mockedAccountStorage.refreshAccount).not.toHaveBeenCalled()
-  })
-
-  it("propagates batch item failures when no item fallback is provided", async () => {
-    await expect(
-      (autoCheckinScheduler as any).processInBatches({
-        items: ["account-1"],
-        batchSize: 3,
-        processItem: async () => {
-          throw new Error("batch item failed")
-        },
-      }),
-    ).rejects.toThrow("batch item failed")
   })
 
   it("parses time strings and rejects invalid hour or minute values", () => {
@@ -5781,7 +5788,7 @@ describe("autoCheckinScheduler private helpers", () => {
     expect(throwingProvider.checkIn).toHaveBeenCalledTimes(1)
   })
 
-  it("retains one normalized source across account batches", async () => {
+  it("retains one normalized source across account dispatch", async () => {
     const accounts = [
       { id: "source-a", site_name: "Source A" },
       { id: "source-b", site_name: "Source B" },
@@ -5791,7 +5798,7 @@ describe("autoCheckinScheduler private helpers", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider as any)
 
-    await (autoCheckinScheduler as any).runAccountCheckinsInBatches({
+    await (autoCheckinScheduler as any).runAccountCheckins({
       accounts,
       accountDisplayNameById: new Map([
         ["source-a", "Source A"],
