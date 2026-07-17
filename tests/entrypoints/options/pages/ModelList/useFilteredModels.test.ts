@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import {
   getModelCapabilityBadges,
@@ -10,6 +11,7 @@ import {
   MODEL_CAPABILITY_FILTER_VALUES,
 } from "~/features/ModelList/modelCapabilityFilters"
 import {
+  createAccountRuntimeKeyModelListSourceIdentity,
   createAccountSource,
   createAccountTokenModelListSourceIdentity,
   createAllAccountsSource,
@@ -68,17 +70,24 @@ const createPricingModel = (
 const createPricingResponse = (
   models: Array<string | Partial<PricingResponse["data"][number]>>,
   overrides: Partial<PricingResponse> = {},
-): PricingResponse => ({
-  data: models.map((model) =>
-    typeof model === "string"
-      ? createPricingModel({ model_name: model })
-      : createPricingModel(model),
-  ),
-  group_ratio: {},
-  success: true,
-  usable_group: {},
-  ...overrides,
-})
+): PricingResponse => {
+  const groupRatio = overrides.group_ratio ?? { default: 1 }
+  const usableGroup =
+    overrides.usable_group ??
+    Object.fromEntries(Object.keys(groupRatio).map((group) => [group, group]))
+
+  return {
+    data: models.map((model) =>
+      typeof model === "string"
+        ? createPricingModel({ model_name: model })
+        : createPricingModel(model),
+    ),
+    group_ratio: groupRatio,
+    success: true,
+    usable_group: usableGroup,
+    ...overrides,
+  }
+}
 
 function renderUseFilteredModels(
   initialOverrides: Partial<Parameters<typeof useFilteredModels>[0]> = {},
@@ -152,6 +161,19 @@ describe("useFilteredModels", () => {
 
     expect(result.current.filteredModels).toHaveLength(1)
     expect(result.current.filteredModels[0]?.source.kind).toBe("profile")
+    expect(result.current.filteredModels[0]).toMatchObject({
+      groupContext: {
+        accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+        usableGroups: [],
+        priceableGroups: [],
+      },
+      activeGroupContext: {
+        activeUsableGroups: [],
+        activePriceableGroups: [],
+        actionGroups: [],
+      },
+      effectiveGroup: undefined,
+    })
   })
 
   it("ignores stale account filters outside the all-accounts source", async () => {
@@ -308,15 +330,14 @@ describe("useFilteredModels", () => {
         ],
         {
           group_ratio: { vip: 2, "": 5 },
+          usable_group: { vip: "vip" },
         },
       ),
       selectedSource: source,
       selectedGroups: ["vip"],
     })
 
-    await waitFor(() =>
-      expect(result.current.availableGroups).toEqual(["vip", "default"]),
-    )
+    await waitFor(() => expect(result.current.availableGroups).toEqual(["vip"]))
 
     expect(result.current.baseFilteredModels).toHaveLength(1)
     expect(result.current.filteredModels).toHaveLength(1)
@@ -641,13 +662,19 @@ describe("useFilteredModels", () => {
       pricingContexts: [
         {
           account: accountA,
-          pricing: createPricingResponse([
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "account-a-model",
+                vendorEvidence: publisher("Account A Lab"),
+                enable_groups: ["vip"],
+              },
+            ],
             {
-              model_name: "account-a-model",
-              vendorEvidence: publisher("Account A Lab"),
-              enable_groups: ["vip"],
+              group_ratio: { vip: 1 },
+              usable_group: { vip: "vip" },
             },
-          ]),
+          ),
         },
         {
           account: accountB,
@@ -1152,7 +1179,7 @@ describe("useFilteredModels", () => {
     ])
   })
 
-  it("returns no groups or models when single-account pricing metadata omits group ratios", async () => {
+  it("keeps authoritative known-empty single-account rows unavailable", async () => {
     const account = createDisplayAccount({
       id: "account-missing-group-ratio",
       balance: { USD: 0, CNY: 70 },
@@ -1169,7 +1196,8 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          group_ratio: undefined as any,
+          group_ratio: {},
+          usable_group: {},
         },
       ),
       selectedSource: createAccountSource(account),
@@ -1180,8 +1208,24 @@ describe("useFilteredModels", () => {
       expect(result.current.availableGroups).toEqual([])
     })
 
-    expect(result.current.filteredModels).toEqual([])
-    expect(result.current.baseFilteredModels).toEqual([])
+    expect(result.current.filteredModels).toHaveLength(1)
+    expect(result.current.filteredModels[0]).toMatchObject({
+      calculatedPrice: {
+        priceAvailability: "unavailable",
+        unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+      },
+      groupContext: {
+        accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+        usableGroups: [],
+        priceableGroups: [],
+      },
+      activeGroupContext: {
+        activeUsableGroups: [],
+        activePriceableGroups: [],
+        actionGroups: [],
+      },
+    })
+    expect(result.current.baseFilteredModels).toHaveLength(1)
   })
 
   it("keeps account contexts usable when all-accounts pricing metadata omits group ratios", async () => {
@@ -1224,7 +1268,7 @@ describe("useFilteredModels", () => {
       "account-context-missing-group-ratio": ["default"],
     })
     expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
-      "account-context-missing-group-ratio": [{ name: "default", ratio: 1 }],
+      "account-context-missing-group-ratio": [{ name: "default" }],
     })
   })
 
@@ -1313,6 +1357,14 @@ describe("useFilteredModels", () => {
       },
     )
     expect(result.current.filteredModels[0]?.effectiveGroup).toBeUndefined()
+    expect(result.current.filteredModels[0]?.groupContext.accessState).toBe(
+      MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+    )
+    expect(result.current.filteredModels[0]?.activeGroupContext).toEqual({
+      activeUsableGroups: [],
+      activePriceableGroups: [],
+      actionGroups: [],
+    })
   })
 
   it("downgrades only AIHubMix catalog fallback rows in all-accounts mode", async () => {
@@ -3069,6 +3121,597 @@ describe("useFilteredModels", () => {
       expect(
         result.current.filteredModels.map((item) => item.model.model_name),
       ).toEqual(["example-runtime-token-model", "example-runtime-call-model"])
+    })
+  })
+
+  it("derives single-account row groups from viewer-usable groups", async () => {
+    const account = createDisplayAccount({ id: "account-viewer-groups" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [{ model_name: "shared-model", enable_groups: ["vip", "default"] }],
+        {
+          group_ratio: { default: 1 },
+          usable_group: { default: "default" },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    const row = result.current.filteredModels[0]
+    expect(result.current.availableGroups).toEqual(["default"])
+    expect(row.groupContext).toEqual({
+      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+      supportedGroups: ["vip", "default"],
+      usableGroups: ["default"],
+      priceableGroups: ["default"],
+    })
+    expect(row.activeGroupContext).toEqual({
+      activeUsableGroups: ["default"],
+      activePriceableGroups: ["default"],
+      actionGroups: ["default"],
+    })
+    expect(row.effectiveGroup).toBe("default")
+  })
+
+  it("keeps a selected usable group visible when its ratio is unavailable", async () => {
+    const account = createDisplayAccount({ id: "account-unpriced-vip" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "shared-model",
+            model_ratio: 1,
+            enable_groups: ["default", "vip"],
+          },
+        ],
+        {
+          group_ratio: { default: 1 },
+          usable_group: { default: "default", vip: "vip" },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      selectedGroups: ["vip"],
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    const row = result.current.filteredModels[0]
+    expect(row.calculatedPrice).toEqual({
+      priceAvailability: "unavailable",
+      unavailableReason:
+        MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE,
+    })
+    expect(row.effectiveGroup).toBeUndefined()
+    expect(row.activeGroupContext).toEqual({
+      activeUsableGroups: ["vip"],
+      activePriceableGroups: [],
+      actionGroups: ["vip"],
+    })
+  })
+
+  it("keeps known-empty direct account rows visible without group options", async () => {
+    const account = createDisplayAccount({ id: "account-known-empty" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [{ model_name: "shared-model", enable_groups: ["default"] }],
+        { group_ratio: {}, usable_group: {} },
+      ),
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    const row = result.current.filteredModels[0]
+    expect(result.current.availableGroups).toEqual([])
+    expect(row.groupContext.accessState).toBe(MODEL_GROUP_ACCESS_STATES.KNOWN)
+    expect(row.activeGroupContext.activeUsableGroups).toEqual([])
+    expect(row.calculatedPrice).toEqual({
+      priceAvailability: "unavailable",
+      unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+    })
+  })
+
+  it("omits globally supported-only groups from all-account controls", async () => {
+    const account = createDisplayAccount({ id: "account-supported-only" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                enable_groups: ["default", "vip"],
+              },
+            ],
+            {
+              group_ratio: { default: 1 },
+              usable_group: { default: "default" },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.availableAccountGroupsByAccountId).toEqual({
+      "account-supported-only": ["default"],
+    })
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-supported-only": [{ name: "default", ratio: 1 }],
+    })
+  })
+
+  it("keeps group pricing isolated across account rows", async () => {
+    const accountA = createDisplayAccount({ id: "account-isolated-a" })
+    const accountB = createDisplayAccount({ id: "account-isolated-b" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: accountA,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                model_ratio: 1,
+                enable_groups: ["default", "vip"],
+              },
+            ],
+            {
+              group_ratio: { default: 1, vip: 0.1 },
+              usable_group: { default: "default" },
+            },
+          ),
+        },
+        {
+          account: accountB,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                model_ratio: 1,
+                enable_groups: ["team"],
+              },
+            ],
+            {
+              group_ratio: { team: 0.5 },
+              usable_group: { team: "team" },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(
+      result.current.filteredModels.map((row) => ({
+        accountId:
+          row.source.kind === "account" ? row.source.account.id : "profile",
+        effectiveGroup: row.effectiveGroup,
+        supportedGroups: row.groupContext.supportedGroups,
+        usableGroups: row.groupContext.usableGroups,
+        isLowestPrice: row.isLowestPrice,
+      })),
+    ).toEqual([
+      {
+        accountId: "account-isolated-b",
+        effectiveGroup: "team",
+        supportedGroups: ["team"],
+        usableGroups: ["team"],
+        isLowestPrice: true,
+      },
+      {
+        accountId: "account-isolated-a",
+        effectiveGroup: "default",
+        supportedGroups: ["default", "vip"],
+        usableGroups: ["default"],
+        isLowestPrice: false,
+      },
+    ])
+  })
+
+  it("normalizes group keys once for row pricing and account options", async () => {
+    const account = createDisplayAccount({ id: "account-normalized-group" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                model_ratio: 1,
+                enable_groups: ["vip"],
+              },
+            ],
+            {
+              group_ratio: { " vip ": 0.5 },
+              usable_group: { " vip ": true },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    const row = result.current.filteredModels[0]
+    expect(row.groupRatios).toEqual({ vip: 0.5 })
+    expect(row.groupContext.priceableGroups).toEqual(["vip"])
+    expect(row.effectiveGroup).toBe("vip")
+    expect(row.calculatedPrice).toMatchObject({
+      priceAvailability: "available",
+      inputUSD: 1,
+    })
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-normalized-group": [{ name: "vip", ratio: 0.5 }],
+    })
+  })
+
+  it("exposes normalized single-source ratios for group filter labels", async () => {
+    const account = createDisplayAccount({ id: "account-normalized-filter" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "shared-model",
+            enable_groups: [" vip "],
+          },
+        ],
+        {
+          group_ratio: { " vip ": 0.5 },
+          usable_group: { " vip ": true },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => {
+      expect(result.current.availableGroups).toEqual(["vip"])
+    })
+    expect(result.current.singleSourceGroupRatios).toEqual({ vip: 0.5 })
+    expect(result.current.filteredModels[0]?.groupRatios).toEqual({ vip: 0.5 })
+  })
+
+  it("projects production-shape account context facts without losing source identity", async () => {
+    const account = createDisplayAccount({ id: "account-production-shape" })
+    const pricing = createPricingResponse(
+      [{ model_name: "shared-model", enable_groups: [" vip "] }],
+      {
+        group_ratio: { " vip ": 0.5 },
+        usable_group: { " vip ": true },
+      },
+    )
+    const sourceIdentity = createAccountRuntimeKeyModelListSourceIdentity({
+      accountId: account.id,
+      runtimeKeyId: "runtime-key-17",
+      runtimeKeyName: "Example runtime key",
+    })
+    const { result } = renderUseFilteredModels({
+      pricingData: pricing,
+      pricingContexts: [{ account, pricing, sourceIdentity }],
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.filteredModels[0]).toMatchObject({
+      sourceIdentity,
+      groupRatios: { vip: 0.5 },
+      effectiveGroup: "vip",
+    })
+    expect(result.current.isGroupAccessAuthoritative).toBe(true)
+    expect(result.current.singleSourceGroupRatios).toEqual({ vip: 0.5 })
+    expect(result.current.availableGroups).toEqual(["vip"])
+  })
+
+  it("projects only matching account contexts and treats multiple matches conservatively", async () => {
+    const account = createDisplayAccount({ id: "account-selected-context" })
+    const otherAccount = createDisplayAccount({ id: "account-other-context" })
+    const selectedPricing = createPricingResponse(
+      [{ model_name: "selected-model", enable_groups: ["vip"] }],
+      { group_ratio: { vip: 0.5 }, usable_group: { vip: true } },
+    )
+    const otherPricing = createPricingResponse(
+      [{ model_name: "other-model", enable_groups: ["team"] }],
+      {
+        group_ratio: {},
+        usable_group: {},
+        model_list_source: {
+          kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          supportsPricing: false,
+        },
+      },
+    )
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData: selectedPricing,
+      pricingContexts: [
+        { account: otherAccount, pricing: otherPricing },
+        { account, pricing: selectedPricing },
+      ],
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => {
+      expect(result.current.isGroupAccessAuthoritative).toBe(true)
+    })
+    expect(result.current.singleSourceGroupRatios).toEqual({ vip: 0.5 })
+
+    rerender({
+      pricingData: selectedPricing,
+      pricingContexts: [
+        { account, pricing: selectedPricing },
+        {
+          account,
+          pricing: createPricingResponse(
+            [{ model_name: "unknown-model", enable_groups: ["vip"] }],
+            {
+              group_ratio: { team: 0.8 },
+              usable_group: {},
+              model_list_source: {
+                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+                supportsPricing: false,
+              },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => {
+      expect(result.current.isGroupAccessAuthoritative).toBe(false)
+    })
+    expect(result.current.singleSourceGroupRatios).toEqual({})
+  })
+
+  it("omits an account group ratio when source-scoped rows disagree", async () => {
+    const account = createDisplayAccount({ id: "account-ratio-conflict" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 1,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "priced-vip", enable_groups: ["vip"] }],
+            {
+              group_ratio: { vip: 0.5 },
+              usable_group: { vip: "vip" },
+            },
+          ),
+        },
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 2,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "unpriced-vip", enable_groups: ["vip"] }],
+            { group_ratio: {}, usable_group: { vip: "vip" } },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-ratio-conflict": [{ name: "vip" }],
+    })
+  })
+
+  it("omits an account group ratio when finite source ratios conflict", async () => {
+    const account = createDisplayAccount({
+      id: "account-finite-ratio-conflict",
+    })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 3,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "vip-half", enable_groups: ["vip"] }],
+            {
+              group_ratio: { vip: 0.5 },
+              usable_group: { vip: "vip" },
+            },
+          ),
+        },
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 4,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "vip-four-fifths", enable_groups: ["vip"] }],
+            {
+              group_ratio: { vip: 0.8 },
+              usable_group: { vip: "vip" },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-finite-ratio-conflict": [{ name: "vip" }],
+    })
+  })
+
+  it.each([
+    {
+      name: "known viewer groups",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-known" }),
+      ),
+      pricing: createPricingResponse(
+        [{ model_name: "known-model", enable_groups: ["vip"] }],
+        { group_ratio: { vip: 1 }, usable_group: { vip: "vip" } },
+      ),
+      expected: true,
+    },
+    {
+      name: "compatible priced fallback groups",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-compatible" }),
+      ),
+      pricing: createPricingResponse(
+        [{ model_name: "compatible-model", enable_groups: ["vip"] }],
+        { group_ratio: { vip: 1 }, usable_group: {} },
+      ),
+      expected: true,
+    },
+    {
+      name: "unknown catalog groups",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-unknown" }),
+      ),
+      pricing: createPricingResponse(
+        [{ model_name: "unknown-model", enable_groups: ["vip"] }],
+        {
+          group_ratio: {},
+          usable_group: {},
+          model_list_source: {
+            kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+            supportsPricing: false,
+          },
+        },
+      ),
+      expected: false,
+    },
+    {
+      name: "not-applicable profile groups",
+      source: createProfileSource({
+        id: "authority-profile",
+        name: "Authority profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://profile.example.invalid/v1",
+        apiKey: "example-key",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      }),
+      pricing: createPricingResponse(
+        [{ model_name: "profile-model", enable_groups: ["vip"] }],
+        {
+          group_ratio: {},
+          usable_group: {},
+          model_list_source: {
+            kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+            supportsPricing: false,
+          },
+        },
+      ),
+      expected: true,
+    },
+    {
+      name: "empty direct response",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-empty-direct" }),
+      ),
+      pricing: createPricingResponse([], {
+        group_ratio: {},
+        usable_group: {},
+      }),
+      expected: true,
+    },
+    {
+      name: "empty unsupported catalog response",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-empty-catalog" }),
+      ),
+      pricing: createPricingResponse([], {
+        group_ratio: {},
+        usable_group: {},
+        model_list_source: {
+          kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          supportsPricing: false,
+        },
+      }),
+      expected: false,
+    },
+  ])("reports group-access authority for $name", async (testCase) => {
+    const { result } = renderUseFilteredModels({
+      pricingData: testCase.pricing,
+      selectedSource: testCase.source,
+    })
+
+    await waitFor(() => {
+      expect(result.current.isGroupAccessAuthoritative).toBe(testCase.expected)
+    })
+  })
+
+  it("requires every pricing context for an account to have authoritative group access", async () => {
+    const mixedAccount = createDisplayAccount({ id: "authority-mixed" })
+    const knownAccount = createDisplayAccount({ id: "authority-known-only" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: mixedAccount,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: mixedAccount.id,
+            tokenId: 1,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "known-context", enable_groups: ["vip"] }],
+            { group_ratio: { vip: 1 }, usable_group: { vip: "vip" } },
+          ),
+        },
+        {
+          account: mixedAccount,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: mixedAccount.id,
+            tokenId: 2,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "unknown-context", enable_groups: ["vip"] }],
+            {
+              group_ratio: {},
+              usable_group: {},
+              model_list_source: {
+                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+                supportsPricing: false,
+              },
+            },
+          ),
+        },
+        {
+          account: knownAccount,
+          pricing: createPricingResponse(
+            [{ model_name: "known-only-context", enable_groups: ["vip"] }],
+            { group_ratio: { vip: 1 }, usable_group: { vip: "vip" } },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => {
+      expect(result.current.authoritativeGroupAccessByAccountId).toEqual({
+        "authority-mixed": false,
+        "authority-known-only": true,
+      })
     })
   })
 })

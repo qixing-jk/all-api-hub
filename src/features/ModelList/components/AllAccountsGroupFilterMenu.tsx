@@ -261,7 +261,10 @@ export function AllAccountsGroupFilterMenu({
                     <CompactMultiSelect
                       options={groupOptions.map((group) => ({
                         value: group.name,
-                        label: formatGroupLabel(group.name, group.ratio),
+                        label:
+                          group.ratio === undefined
+                            ? group.name
+                            : formatGroupLabel(group.name, group.ratio),
                       }))}
                       selected={selectedGroups}
                       onChange={(values) =>

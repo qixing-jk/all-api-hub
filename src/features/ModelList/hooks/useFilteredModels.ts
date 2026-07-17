@@ -1,7 +1,16 @@
 import { useCallback, useMemo } from "react"
 
-import { UI_CONSTANTS } from "~/constants/ui"
+import { resolveAccountExchangeRate } from "~/features/ModelList/accountExchangeRate"
 import { applyAihubmixModelListCapabilities } from "~/features/ModelList/aihubmixModelList"
+import {
+  MODEL_GROUP_ACCESS_STATES,
+  normalizeGroupRatios,
+  resolveActiveModelGroupContext,
+  resolveModelGroupContext,
+  type ActiveModelGroupContext,
+  type ModelGroupContext,
+} from "~/features/ModelList/groupContext"
+import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
 import {
   createModelMetadataIndex,
   hasFilterableModelCapabilityMetadata,
@@ -12,8 +21,11 @@ import {
 import {
   createAccountSource,
   deriveModelListSourceCapabilities,
+  MODEL_LIST_GROUP_SEMANTICS,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelListSourceIdentity,
+  type ModelManagementAccountSource,
+  type ModelManagementItemSource,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
@@ -23,6 +35,7 @@ import {
 } from "~/features/ModelList/sortModes"
 import {
   isModelPriceUnavailable,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
@@ -78,14 +91,10 @@ interface ComparablePriceKey {
 
 interface RawModelItem {
   model: PricingResponse["data"][number]
-  source:
-    | ReturnType<typeof createAccountSource>
-    | Extract<
-        NonNullable<ModelManagementSource>,
-        { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
-      >
+  source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity
   groupRatios: Record<string, number>
+  groupContext: ModelGroupContext
   exchangeRate: number
   modelMetadata?: ModelMetadata
   resolvedVendor: ResolvedModelVendor
@@ -101,20 +110,17 @@ export type CountedModelVendorCatalogEntry = ModelVendorCatalogEntry & {
 
 export interface AccountGroupOption {
   name: string
-  ratio: number
+  ratio?: number
 }
 
 export type CalculatedModelItem = {
   model: PricingResponse["data"][number]
   calculatedPrice: ReturnType<typeof calculateModelPrice>
-  source:
-    | ReturnType<typeof createAccountSource>
-    | Extract<
-        NonNullable<ModelManagementSource>,
-        { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
-      >
+  source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity
   groupRatios: Record<string, number>
+  groupContext: ModelGroupContext
+  activeGroupContext: ActiveModelGroupContext
   effectiveGroup?: string
   modelMetadata?: ModelMetadata
   resolvedVendor: ResolvedModelVendor
@@ -221,14 +227,58 @@ function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value)
 }
 
+/** Creates an account group option without inventing an unknown ratio. */
+function toAccountGroupOption(
+  name: string,
+  ratio: number | undefined,
+): AccountGroupOption {
+  return { name, ...(isFiniteNumber(ratio) ? { ratio } : {}) }
+}
+
+/** Compares normalized ratio maps without relying on object identity. */
+function haveEqualGroupRatios(
+  left: Readonly<Record<string, number>>,
+  right: Readonly<Record<string, number>>,
+) {
+  const leftEntries = Object.entries(left)
+  return (
+    leftEntries.length === Object.keys(right).length &&
+    leftEntries.every(([group, ratio]) => right[group] === ratio)
+  )
+}
+
+/** Resolves whether one adapted pricing response can safely repair group state. */
+function isPricingGroupAccessAuthoritative(params: {
+  groupSemantics: ModelManagementSource["groupSemantics"]
+  pricing: PricingResponse
+  groupContexts: readonly ModelGroupContext[]
+}) {
+  if (params.groupSemantics === MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE) {
+    return true
+  }
+
+  if (
+    params.groupContexts.some(
+      (context) => context.accessState === MODEL_GROUP_ACCESS_STATES.UNKNOWN,
+    )
+  ) {
+    return false
+  }
+
+  if (params.groupContexts.length === 0) {
+    return params.pricing.model_list_source?.supportsPricing !== false
+  }
+
+  return true
+}
+
 /** Resolves the exchange rate for account-backed prices. */
 function getSourceExchangeRate(item: Pick<CalculatedModelItem, "source">) {
   if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
     return 1
   }
 
-  const { USD = 0, CNY = 0 } = item.source.account.balance ?? {}
-  return USD > 0 ? CNY / USD : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+  return resolveAccountExchangeRate(item.source.account)
 }
 
 /** Builds a normalized price key used for comparisons and sorting. */
@@ -349,12 +399,7 @@ function hasComparablePriceValue(priceKey: ComparablePriceKey) {
 
 /** Resolves the row identity used for source-scoped model-list comparisons. */
 function getModelListSourceIdentityKey(params: {
-  source:
-    | ReturnType<typeof createAccountSource>
-    | Extract<
-        NonNullable<ModelManagementSource>,
-        { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
-      >
+  source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity
 }) {
   return (
@@ -394,38 +439,6 @@ function getSourceSortLabel(item: CalculatedModelItem) {
     : item.source.profile.name
 }
 
-/** Adds non-empty model groups to the shared available-group set. */
-function addAvailableGroups(
-  target: Set<string>,
-  model: PricingResponse["data"][number],
-) {
-  model.enable_groups.forEach((group) => {
-    if (group) {
-      target.add(group)
-    }
-  })
-}
-
-/** Builds an ordered, deduplicated group list from a set of strings. */
-function toUniqueGroups(groups: Iterable<string>) {
-  return Array.from(new Set(Array.from(groups).filter(Boolean)))
-}
-
-/** Resolves which groups should be evaluated for a raw model item. */
-function resolveCandidateGroups(
-  rawItem: RawModelItem,
-  groupCandidates: string[],
-  supportsGroupFiltering: boolean,
-) {
-  if (!supportsGroupFiltering) {
-    return [DEFAULT_MODEL_GROUP]
-  }
-
-  return rawItem.model.enable_groups.filter((group) =>
-    groupCandidates.includes(group),
-  )
-}
-
 /** Maps quota type values onto the model-list billing modes. */
 function getModelBillingMode(quotaType: number): PricingBillingMode {
   return isTokenBillingType(quotaType)
@@ -450,48 +463,102 @@ function supportsPricingDerivedBehavior(
 /** Picks the best priced calculated item across candidate groups. */
 function resolveBestCalculatedItem(
   rawItem: RawModelItem,
-  groupCandidates: string[],
-  supportsGroupFiltering: boolean,
+  groupCandidates: string[] | undefined,
   showRealPrice: boolean,
 ): CalculatedModelItem | null {
-  const candidateGroups = resolveCandidateGroups(
-    rawItem,
-    groupCandidates,
-    supportsGroupFiltering,
-  )
+  const activeGroupContext = resolveActiveModelGroupContext({
+    context: rawItem.groupContext,
+    candidateGroups: groupCandidates,
+  })
+  const createCalculatedItem = (params: {
+    calculatedPrice: ReturnType<typeof calculateModelPrice>
+    activeGroupContext: ActiveModelGroupContext
+    effectiveGroup?: string
+    hasAutoSelectedGroup?: boolean
+  }): CalculatedModelItem => ({
+    model: rawItem.model,
+    calculatedPrice: params.calculatedPrice,
+    source: rawItem.source,
+    sourceIdentity: rawItem.sourceIdentity,
+    groupRatios: rawItem.groupRatios,
+    groupContext: rawItem.groupContext,
+    activeGroupContext: params.activeGroupContext,
+    effectiveGroup: params.effectiveGroup,
+    modelMetadata: rawItem.modelMetadata,
+    resolvedVendor: rawItem.resolvedVendor,
+    hasAutoSelectedGroup: params.hasAutoSelectedGroup,
+  })
 
   if (
-    supportsGroupFiltering &&
-    candidateGroups.length === 0 &&
-    supportsPricingDerivedBehavior(rawItem)
+    rawItem.groupContext.accessState ===
+    MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
+  ) {
+    return createCalculatedItem({
+      calculatedPrice: calculateModelPrice(
+        rawItem.model,
+        rawItem.groupRatios,
+        rawItem.exchangeRate,
+        DEFAULT_MODEL_GROUP,
+      ),
+      activeGroupContext,
+    })
+  }
+
+  if (isModelPriceUnavailable(rawItem.model)) {
+    return createCalculatedItem({
+      calculatedPrice: calculateModelPrice(
+        rawItem.model,
+        rawItem.groupRatios,
+        rawItem.exchangeRate,
+        DEFAULT_MODEL_GROUP,
+      ),
+      activeGroupContext,
+    })
+  }
+
+  if (
+    groupCandidates !== undefined &&
+    activeGroupContext.activeUsableGroups.length === 0
   ) {
     return null
   }
 
-  const groupsToEvaluate =
-    candidateGroups.length > 0 ? candidateGroups : [DEFAULT_MODEL_GROUP]
+  if (activeGroupContext.activePriceableGroups.length === 0) {
+    const unavailableReason =
+      rawItem.groupContext.accessState === MODEL_GROUP_ACCESS_STATES.KNOWN &&
+      rawItem.groupContext.usableGroups.length === 0
+        ? MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP
+        : MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE
+
+    return createCalculatedItem({
+      calculatedPrice: {
+        priceAvailability: "unavailable",
+        unavailableReason,
+      },
+      activeGroupContext,
+    })
+  }
 
   let bestResult: CalculatedModelItem | null = null
   let bestKey: ComparablePriceKey | null = null
 
-  groupsToEvaluate.forEach((group) => {
+  activeGroupContext.activePriceableGroups.forEach((group) => {
     const calculatedPrice = calculateModelPrice(
       rawItem.model,
       rawItem.groupRatios,
       rawItem.exchangeRate,
       group,
     )
-    const candidateItem: CalculatedModelItem = {
-      model: rawItem.model,
+    const candidateItem = createCalculatedItem({
       calculatedPrice,
-      source: rawItem.source,
-      sourceIdentity: rawItem.sourceIdentity,
-      groupRatios: rawItem.groupRatios,
-      effectiveGroup: supportsGroupFiltering ? group : undefined,
-      modelMetadata: rawItem.modelMetadata,
-      resolvedVendor: rawItem.resolvedVendor,
-      hasAutoSelectedGroup: groupsToEvaluate.length > 1,
-    }
+      effectiveGroup: group,
+      activeGroupContext: resolveActiveModelGroupContext({
+        context: rawItem.groupContext,
+        candidateGroups: groupCandidates,
+        effectiveGroup: group,
+      }),
+      hasAutoSelectedGroup: activeGroupContext.activePriceableGroups.length > 1,
+    })
     const candidateKey = getComparablePriceKey(candidateItem, showRealPrice)
 
     if (!bestResult || !bestKey) {
@@ -500,14 +567,15 @@ function resolveBestCalculatedItem(
       return
     }
 
-    if (comparePriceKeys(candidateKey, bestKey, 1) < 0) {
+    const priceComparison = comparePriceKeys(candidateKey, bestKey, 1)
+    if (priceComparison < 0) {
       bestResult = candidateItem
       bestKey = candidateKey
       return
     }
 
     if (
-      comparePriceKeys(candidateKey, bestKey, 1) === 0 &&
+      priceComparison === 0 &&
       group.localeCompare(bestResult.effectiveGroup ?? "") < 0
     ) {
       bestResult = candidateItem
@@ -521,25 +589,14 @@ function resolveBestCalculatedItem(
 /** Maps raw priced rows into calculated display rows for the current filters. */
 function resolveCalculatedModels(params: {
   rawItems: RawModelItem[]
-  getGroupCandidates: (item: RawModelItem) => string[]
-  getSupportsGroupFiltering: (item: RawModelItem) => boolean
+  getGroupCandidates: (item: RawModelItem) => string[] | undefined
   showRealPrice: boolean
 }) {
-  const {
-    rawItems,
-    getGroupCandidates,
-    getSupportsGroupFiltering,
-    showRealPrice,
-  } = params
+  const { rawItems, getGroupCandidates, showRealPrice } = params
 
   return rawItems
     .map((item) =>
-      resolveBestCalculatedItem(
-        item,
-        getGroupCandidates(item),
-        getSupportsGroupFiltering(item),
-        showRealPrice,
-      ),
+      resolveBestCalculatedItem(item, getGroupCandidates(item), showRealPrice),
     )
     .filter((item): item is CalculatedModelItem => item !== null)
 }
@@ -595,7 +652,47 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     [modelMetadata],
   )
 
-  const rawModelItems = useMemo<RawModelItem[]>(() => {
+  const rawModelState = useMemo(() => {
+    let isGroupAccessAuthoritative = false
+    let singleSourceGroupRatios: Record<string, number> = {}
+    let matchingSingleAccountContextCount = 0
+    const groupAccessAuthorityByAccountId = new Map<string, boolean>()
+    const recordAccountGroupAccessAuthority = (
+      accountId: string,
+      isAuthoritative: boolean,
+    ) => {
+      const previous = groupAccessAuthorityByAccountId.get(accountId)
+      groupAccessAuthorityByAccountId.set(
+        accountId,
+        previous === undefined ? isAuthoritative : previous && isAuthoritative,
+      )
+    }
+    const projectSingleAccountContextFacts = (params: {
+      accountId: string
+      isAuthoritative: boolean
+      groupRatios: Record<string, number>
+    }) => {
+      if (
+        selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
+        selectedSource.account.id !== params.accountId
+      ) {
+        return
+      }
+
+      if (matchingSingleAccountContextCount === 0) {
+        isGroupAccessAuthoritative = params.isAuthoritative
+        singleSourceGroupRatios = params.groupRatios
+      } else {
+        isGroupAccessAuthoritative &&= params.isAuthoritative
+        if (
+          !haveEqualGroupRatios(singleSourceGroupRatios, params.groupRatios)
+        ) {
+          singleSourceGroupRatios = {}
+        }
+      }
+      matchingSingleAccountContextCount += 1
+    }
+
     const attachVendorCandidate = (
       item: Omit<RawModelItem, "resolvedVendor" | "modelMetadata">,
     ): CandidateRawModelItem => {
@@ -617,19 +714,51 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         ),
       }
     }
+    const createPricingSourceItems = (params: {
+      pricing: PricingResponse
+      source: RawModelItem["source"]
+      sourceIdentity?: ModelListSourceIdentity
+      usableGroup: PricingResponse["usable_group"]
+      exchangeRate: number
+    }) => {
+      const groupRatios = normalizeGroupRatios(params.pricing.group_ratio ?? {})
+      const sourceItems = params.pricing.data.map((model) => {
+        const groupContext = resolveModelGroupContext({
+          groupSemantics: params.source.groupSemantics,
+          model,
+          usableGroup: params.usableGroup,
+          groupRatios,
+          modelListSource: params.pricing.model_list_source,
+        })
+
+        return attachVendorCandidate({
+          model,
+          source: params.source,
+          sourceIdentity: params.sourceIdentity,
+          groupRatios,
+          groupContext,
+          exchangeRate: params.exchangeRate,
+        })
+      })
+
+      return { groupRatios, sourceItems }
+    }
 
     const candidateItems = (() => {
       if (pricingContexts && pricingContexts.length > 0) {
         return pricingContexts.flatMap(
           ({ account, pricing, sourceIdentity }) => {
             if (!pricing || !Array.isArray(pricing.data)) {
+              recordAccountGroupAccessAuthority(account.id, false)
+              projectSingleAccountContextFacts({
+                accountId: account.id,
+                isAuthoritative: false,
+                groupRatios: {},
+              })
               return []
             }
 
-            const exchangeRate =
-              account.balance?.USD > 0
-                ? account.balance.CNY / account.balance.USD
-                : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+            const exchangeRate = resolveAccountExchangeRate(account)
 
             const accountSource = createAccountSource(account)
             const allAccountsRowSource = {
@@ -649,16 +778,26 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
               },
               pricing,
             )
+            const { groupRatios, sourceItems } = createPricingSourceItems({
+              pricing,
+              source,
+              sourceIdentity,
+              usableGroup: pricing.usable_group ?? {},
+              exchangeRate,
+            })
+            const isAuthoritative = isPricingGroupAccessAuthoritative({
+              groupSemantics: source.groupSemantics,
+              pricing,
+              groupContexts: sourceItems.map((item) => item.groupContext),
+            })
+            recordAccountGroupAccessAuthority(account.id, isAuthoritative)
+            projectSingleAccountContextFacts({
+              accountId: account.id,
+              isAuthoritative,
+              groupRatios,
+            })
 
-            return pricing.data.map((model) =>
-              attachVendorCandidate({
-                model,
-                source,
-                sourceIdentity,
-                groupRatios: pricing.group_ratio ?? {},
-                exchangeRate,
-              }),
-            )
+            return sourceItems
           },
         )
       }
@@ -668,25 +807,26 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       }
 
       if (selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
-        return pricingData.data.map((model) =>
-          attachVendorCandidate({
-            model,
-            source: selectedSource,
-            groupRatios: {},
-            exchangeRate: 1,
-          }),
-        )
+        const { groupRatios, sourceItems } = createPricingSourceItems({
+          pricing: pricingData,
+          source: selectedSource,
+          usableGroup: {},
+          exchangeRate: 1,
+        })
+        singleSourceGroupRatios = groupRatios
+        isGroupAccessAuthoritative = isPricingGroupAccessAuthoritative({
+          groupSemantics: selectedSource.groupSemantics,
+          pricing: pricingData,
+          groupContexts: sourceItems.map((item) => item.groupContext),
+        })
+        return sourceItems
       }
 
       if (selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
         return []
       }
 
-      const exchangeRate =
-        selectedSource.account.balance?.USD > 0
-          ? selectedSource.account.balance.CNY /
-            selectedSource.account.balance.USD
-          : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+      const exchangeRate = resolveAccountExchangeRate(selectedSource.account)
 
       const source = applyAihubmixModelListCapabilities(
         {
@@ -698,28 +838,45 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         },
         pricingData,
       )
-
-      return pricingData.data.map((model) =>
-        attachVendorCandidate({
-          model,
-          source,
-          groupRatios: pricingData.group_ratio ?? {},
-          exchangeRate,
-        }),
-      )
+      const { groupRatios, sourceItems } = createPricingSourceItems({
+        pricing: pricingData,
+        source,
+        usableGroup: pricingData.usable_group ?? {},
+        exchangeRate,
+      })
+      singleSourceGroupRatios = groupRatios
+      isGroupAccessAuthoritative = isPricingGroupAccessAuthoritative({
+        groupSemantics: source.groupSemantics,
+        pricing: pricingData,
+        groupContexts: sourceItems.map((item) => item.groupContext),
+      })
+      return sourceItems
     })()
 
     const { resolved } = aggregateModelVendors(
       candidateItems.map((item) => item.vendorCandidate),
     )
 
-    return candidateItems.map(
-      ({ vendorCandidate: _candidate, ...item }, index) => ({
-        ...item,
-        resolvedVendor: resolved[index],
-      }),
-    )
+    return {
+      rawModelItems: candidateItems.map(
+        ({ vendorCandidate: _candidate, ...item }, index) => ({
+          ...item,
+          resolvedVendor: resolved[index],
+        }),
+      ),
+      isGroupAccessAuthoritative,
+      singleSourceGroupRatios,
+      authoritativeGroupAccessByAccountId: Object.fromEntries(
+        groupAccessAuthorityByAccountId,
+      ) as Record<string, boolean>,
+    }
   }, [modelMetadataIndex, pricingContexts, pricingData, selectedSource])
+  const {
+    rawModelItems,
+    isGroupAccessAuthoritative,
+    singleSourceGroupRatios,
+    authoritativeGroupAccessByAccountId,
+  } = rawModelState
 
   const availableGroups = useMemo(() => {
     if (
@@ -732,12 +889,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     const groupSet = new Set<string>()
 
     rawModelItems.forEach((item) => {
-      Object.keys(item.groupRatios).forEach((key) => {
-        if (key) {
-          groupSet.add(key)
-        }
-      })
-      addAvailableGroups(groupSet, item.model)
+      item.groupContext.usableGroups.forEach((group) => groupSet.add(group))
     })
 
     return Array.from(groupSet)
@@ -765,15 +917,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       const sourceId = getRawItemSourceIdentityKey(item)
       const sourceGroups = groupsBySourceId.get(sourceId) ?? new Set<string>()
 
-      const pricedGroups = Object.keys(item.groupRatios)
-      pricedGroups.forEach((group) => {
-        if (group) {
-          sourceGroups.add(group)
-        }
-      })
-      if (pricedGroups.length === 0) {
-        addAvailableGroups(sourceGroups, item.model)
-      }
+      item.groupContext.usableGroups.forEach((group) => sourceGroups.add(group))
 
       groupsBySourceId.set(sourceId, sourceGroups)
     })
@@ -781,7 +925,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     return Object.fromEntries(
       Array.from(groupsBySourceId.entries()).map(([sourceId, groups]) => [
         sourceId,
-        toUniqueGroups(groups),
+        normalizeGroupNames(groups),
       ]),
     ) as Record<string, string[]>
   }, [
@@ -809,12 +953,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       const accountGroups =
         groupsByAccountId.get(accountId) ?? new Set<string>()
 
-      Object.keys(item.groupRatios).forEach((group) => {
-        if (group) {
-          accountGroups.add(group)
-        }
-      })
-      addAvailableGroups(accountGroups, item.model)
+      item.groupContext.usableGroups.forEach((group) =>
+        accountGroups.add(group),
+      )
 
       groupsByAccountId.set(accountId, accountGroups)
     })
@@ -822,7 +963,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     return Object.fromEntries(
       Array.from(groupsByAccountId.entries()).map(([accountId, groups]) => [
         accountId,
-        toUniqueGroups(groups),
+        normalizeGroupNames(groups),
       ]),
     ) as Record<string, string[]>
   }, [
@@ -839,7 +980,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       return {}
     }
 
-    const ratiosByAccountId = new Map<string, Map<string, number>>()
+    const ratiosByAccountId = new Map<string, Map<string, number | undefined>>()
 
     rawModelItems.forEach((item) => {
       if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
@@ -847,18 +988,23 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       }
 
       const accountId = item.source.account.id
-      const ratioMap =
-        ratiosByAccountId.get(accountId) ?? new Map<string, number>()
+      const ratioMap = ratiosByAccountId.get(accountId) ?? new Map()
 
-      Object.entries(item.groupRatios).forEach(([group, ratio]) => {
-        if (group) {
-          ratioMap.set(group, ratio || 1)
+      item.groupContext.usableGroups.forEach((group) => {
+        const ratio = item.groupRatios[group]
+        const finiteRatio = isFiniteNumber(ratio) ? ratio : undefined
+        if (!ratioMap.has(group)) {
+          ratioMap.set(group, finiteRatio)
+          return
         }
-      })
 
-      item.model.enable_groups.forEach((group) => {
-        if (group && !ratioMap.has(group)) {
-          ratioMap.set(group, 1)
+        const existingRatio = ratioMap.get(group)
+        if (
+          existingRatio === undefined ||
+          finiteRatio === undefined ||
+          existingRatio !== finiteRatio
+        ) {
+          ratioMap.set(group, undefined)
         }
       })
 
@@ -869,10 +1015,12 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       Object.entries(availableAccountGroupsByAccountId).map(
         ([accountId, groups]) => [
           accountId,
-          groups.map((group) => ({
-            name: group,
-            ratio: ratiosByAccountId.get(accountId)?.get(group) ?? 1,
-          })),
+          groups.map((group) =>
+            toAccountGroupOption(
+              group,
+              ratiosByAccountId.get(accountId)?.get(group),
+            ),
+          ),
         ],
       ),
     ) as Record<string, AccountGroupOption[]>
@@ -897,7 +1045,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         const sourceId = getRawItemSourceIdentityKey(item)
         const groups = availableGroupsBySourceId[sourceId] ?? []
         const excludedGroups = new Set(
-          toUniqueGroups(
+          normalizeGroupNames(
             allAccountsExcludedGroupsByAccountId[item.source.account.id] ?? [],
           ),
         )
@@ -914,47 +1062,23 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     selectedSource?.kind,
   ])
 
-  const getSingleSourceGroupCandidates = useCallback(
-    (groups: string[] = selectedGroups) => {
-      if (!selectedSource?.capabilities.supportsGroupFiltering) {
-        return [DEFAULT_MODEL_GROUP]
-      }
-
-      if (selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
-        return []
-      }
-
-      const uniqueSelectedGroups = Array.from(new Set(groups.filter(Boolean)))
-
-      if (uniqueSelectedGroups.length > 0) {
-        return uniqueSelectedGroups
-      }
-
-      return availableGroups.length > 0
-        ? availableGroups
-        : [DEFAULT_MODEL_GROUP]
-    },
-    [
-      availableGroups,
-      selectedGroups,
-      selectedSource?.capabilities.supportsGroupFiltering,
-      selectedSource?.kind,
-    ],
-  )
-
   const getGroupCandidatesForRawItem = useCallback(
-    (item: RawModelItem, groups: string[] = selectedGroups) => {
-      if (
-        !selectedSource?.capabilities.supportsGroupFiltering ||
-        !item.source.capabilities.supportsGroupFiltering
-      ) {
-        return [DEFAULT_MODEL_GROUP]
+    (
+      item: RawModelItem,
+      groups: string[] = selectedGroups,
+    ): string[] | undefined => {
+      if (!item.source.capabilities.supportsGroupFiltering) {
+        return undefined
       }
 
       if (
-        selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
+        selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
         item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       ) {
+        if (item.groupContext.usableGroups.length === 0) {
+          return undefined
+        }
+
         return (
           includedAllAccountsGroupsBySourceId[
             getRawItemSourceIdentityKey(item)
@@ -962,20 +1086,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         )
       }
 
-      return getSingleSourceGroupCandidates(groups)
+      const selected = normalizeGroupNames(groups)
+      return selected.length > 0 ? selected : undefined
     },
-    [
-      getSingleSourceGroupCandidates,
-      includedAllAccountsGroupsBySourceId,
-      selectedGroups,
-      selectedSource?.capabilities.supportsGroupFiltering,
-      selectedSource?.kind,
-    ],
-  )
-
-  const getEffectiveGroupCandidatesForRawItem = useCallback(
-    (item: RawModelItem) => getGroupCandidatesForRawItem(item),
-    [getGroupCandidatesForRawItem],
+    [includedAllAccountsGroupsBySourceId, selectedGroups, selectedSource?.kind],
   )
 
   const getBaseFilteredRawModels = useCallback(
@@ -998,26 +1112,26 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         )
       }
 
-      const supportsGroupFiltering =
-        selectedSource?.capabilities.supportsGroupFiltering ?? false
+      filtered = filtered.filter((item) => {
+        if (!supportsPricingDerivedBehavior(item)) {
+          return true
+        }
 
-      if (supportsGroupFiltering) {
-        filtered = filtered.filter((item) => {
-          if (!supportsPricingDerivedBehavior(item)) {
-            return true
-          }
+        const candidates = getGroupCandidatesForRawItem(
+          item,
+          nextSelectedGroups,
+        )
+        if (candidates === undefined) {
+          return true
+        }
 
-          const itemSupportsGroupFiltering =
-            item.source.capabilities.supportsGroupFiltering
-          return (
-            resolveCandidateGroups(
-              item,
-              getGroupCandidatesForRawItem(item, nextSelectedGroups),
-              itemSupportsGroupFiltering,
-            ).length > 0
-          )
-        })
-      }
+        return (
+          resolveActiveModelGroupContext({
+            context: item.groupContext,
+            candidateGroups: candidates,
+          }).activeUsableGroups.length > 0
+        )
+      })
 
       if (nextSelectedBillingMode !== MODEL_LIST_BILLING_MODES.ALL) {
         filtered = filtered.filter(
@@ -1049,7 +1163,6 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       selectedBillingMode,
       selectedModelCapabilities,
       selectedGroups,
-      selectedSource?.capabilities.supportsGroupFiltering,
       supportsModelCapabilityFilter,
     ],
   )
@@ -1095,9 +1208,6 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
             item,
             overrides.selectedGroups ?? selectedGroups,
           ),
-        getSupportsGroupFiltering: (item) =>
-          (selectedSource?.capabilities.supportsGroupFiltering ?? false) &&
-          item.source.capabilities.supportsGroupFiltering,
         showRealPrice,
       })
 
@@ -1114,7 +1224,6 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       getGroupCandidatesForRawItem,
       selectedGroups,
       selectedProvider,
-      selectedSource?.capabilities.supportsGroupFiltering,
       showRealPrice,
     ],
   )
@@ -1149,7 +1258,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     // In all-accounts mode rawModelItems are built only from pricingContexts,
     // so the filtered summary rows are account-backed by construction.
     const accountSummaryItems = baseFilteredRawModels as Array<
-      RawModelItem & { source: ReturnType<typeof createAccountSource> }
+      RawModelItem & { source: ModelManagementAccountSource }
     >
     const countMap = new Map<string, number>()
 
@@ -1169,18 +1278,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     () =>
       resolveCalculatedModels({
         rawItems: accountFilteredBaseRawModels,
-        getGroupCandidates: getEffectiveGroupCandidatesForRawItem,
-        getSupportsGroupFiltering: (item) =>
-          (selectedSource?.capabilities.supportsGroupFiltering ?? false) &&
-          item.source.capabilities.supportsGroupFiltering,
+        getGroupCandidates: getGroupCandidatesForRawItem,
         showRealPrice,
       }),
-    [
-      accountFilteredBaseRawModels,
-      getEffectiveGroupCandidatesForRawItem,
-      selectedSource?.capabilities.supportsGroupFiltering,
-      showRealPrice,
-    ],
+    [accountFilteredBaseRawModels, getGroupCandidatesForRawItem, showRealPrice],
   )
 
   const vendorCatalog = useMemo(
@@ -1394,6 +1495,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     getFilteredModels,
     getFilteredResultCount,
     modelCapabilityMetadataCoverage,
+    isGroupAccessAuthoritative,
+    singleSourceGroupRatios,
+    authoritativeGroupAccessByAccountId,
     availableGroups,
     availableAccountGroupsByAccountId,
     availableAccountGroupOptionsByAccountId,
