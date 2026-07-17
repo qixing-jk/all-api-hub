@@ -99,7 +99,7 @@ describe("OneHub data transformers", () => {
       const input = {}
       const userGroupMap = {
         group1: { id: 1, symbol: "G1", name: "Group 1", ratio: 2 },
-        group2: { id: 2, symbol: "G2", name: "Group 2", ratio: 0 as any },
+        group2: { id: 2, symbol: "G2", name: "Group 2", ratio: 0 },
         group3: { id: 3, symbol: "G3", name: "Group 3" } as any,
       }
 
@@ -107,7 +107,7 @@ describe("OneHub data transformers", () => {
 
       expect(result.group_ratio).toEqual({
         group1: 2,
-        group2: 1,
+        group2: 0,
         group3: 1,
       })
       expect(result.usable_group).toEqual({
@@ -116,6 +116,25 @@ describe("OneHub data transformers", () => {
         group3: "Group 3",
       })
     })
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+      "uses the default group ratio for non-finite value %s",
+      (ratio) => {
+        const result = transformModelPricing(
+          {},
+          {
+            invalid: {
+              id: 1,
+              symbol: "invalid",
+              name: "Invalid group",
+              ratio,
+            },
+          },
+        )
+
+        expect(result.group_ratio).toEqual({ invalid: 1 })
+      },
+    )
   })
 
   describe("transformUserGroup", () => {

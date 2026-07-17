@@ -58,12 +58,11 @@ export function transformModelPricing(
   )
 
   const group_ratio: Record<string, number> = {}
-  for (const [key, group] of Object.entries(userGroupMap)) {
-    group_ratio[key] = group.ratio || 1
-  }
-
   const usable_group: Record<string, string> = {}
   for (const [key, group] of Object.entries(userGroupMap)) {
+    const ratio = group.ratio
+    group_ratio[key] =
+      typeof ratio === "number" && Number.isFinite(ratio) ? ratio : 1
     usable_group[key] = group.name
   }
 

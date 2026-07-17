@@ -106,7 +106,12 @@ export const calculateModelPrice = (
   }
 
   // 获取用户分组的倍率，默认为1
-  const groupMultiplier = groupRatio[userGroup] || 1
+  const configuredGroupMultiplier = groupRatio[userGroup]
+  const groupMultiplier =
+    typeof configuredGroupMultiplier === "number" &&
+    Number.isFinite(configuredGroupMultiplier)
+      ? configuredGroupMultiplier
+      : 1
 
   if (isTokenBillingType(model.quota_type)) {
     // 按 New API/One API 兼容倍率计费；倍率基准来自 1M tokens / 500,000 quota-per-USD。

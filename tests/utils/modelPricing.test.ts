@@ -39,6 +39,53 @@ describe("modelPricing utils", () => {
     const baseGroupRatio = { default: 1, vip: 2, premium: 3 }
     const exchangeRate = 7.0
 
+    it("preserves an explicit zero group multiplier", () => {
+      const result = calculateModelPrice(
+        {
+          model_name: "example-model",
+          quota_type: 0,
+          model_ratio: 2,
+          completion_ratio: 3,
+          model_price: 0,
+          enable_groups: ["free"],
+          supported_endpoint_types: [],
+        },
+        { free: 0 },
+        7,
+        "free",
+      )
+
+      expect(result.inputUSD).toBe(0)
+      expect(result.outputUSD).toBe(0)
+      expect(result.inputCNY).toBe(0)
+      expect(result.outputCNY).toBe(0)
+    })
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+      "uses the default multiplier for non-finite configured value %s",
+      (configuredGroupMultiplier) => {
+        const result = calculateModelPrice(
+          {
+            model_name: "example-model",
+            quota_type: 0,
+            model_ratio: 2,
+            completion_ratio: 3,
+            model_price: 0,
+            enable_groups: ["free"],
+            supported_endpoint_types: [],
+          },
+          { free: configuredGroupMultiplier },
+          7,
+          "free",
+        )
+
+        expect(result.inputUSD).toBe(4)
+        expect(result.outputUSD).toBe(12)
+        expect(result.inputCNY).toBe(28)
+        expect(result.outputCNY).toBe(84)
+      },
+    )
+
     describe("Token-based billing (quota_type = 0)", () => {
       const tokenModel: ModelPricing = {
         model_name: "gpt-4",
