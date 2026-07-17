@@ -58,6 +58,8 @@ export type ModelPricePrecisionKind =
 
 export const MODEL_UNAVAILABLE_PRICE_REASONS = {
   MODEL_LIST_ONLY: "model-list-only",
+  NO_USABLE_GROUP: "no-usable-group",
+  GROUP_RATIO_UNAVAILABLE: "group-ratio-unavailable",
   KEY_GROUP_UNKNOWN: "key-group-unknown",
   OFFICIAL_PRICE_MISSING: "official-price-missing",
   PRICING_SOURCE_UNAVAILABLE: "pricing-source-unavailable",
@@ -96,6 +98,6 @@ export interface PricingResponse {
   data: ModelPricing[]
   group_ratio: Record<string, number>
   success: boolean
-  usable_group: Record<string, string>
+  usable_group: Record<string, unknown>
   model_list_source?: ModelListSourceInfo
 }

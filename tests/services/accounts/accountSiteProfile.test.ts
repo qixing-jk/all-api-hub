@@ -11,6 +11,7 @@ import {
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
+  ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
@@ -65,6 +66,9 @@ describe("accountSiteProfile", () => {
     expect(profile.modelList.statusScope).toBe(
       ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
     )
+    expect(profile.modelList.groupSemantics).toBe(
+      ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+    )
   })
 
   it("resolves Sub2API saved-account product rules", () => {
@@ -94,6 +98,9 @@ describe("accountSiteProfile", () => {
     expect(profile.modelList.statusScope).toBe(
       ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
     )
+    expect(profile.modelList.groupSemantics).toBe(
+      ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+    )
   })
 
   it("resolves VoAPI v2 saved-account product rules", () => {
@@ -113,6 +120,9 @@ describe("accountSiteProfile", () => {
     )
     expect(profile.modelList.tokenScopedCatalogFallback).toBe(
       ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
+    )
+    expect(profile.modelList.groupSemantics).toBe(
+      ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
     )
   })
 
@@ -180,6 +190,15 @@ describe("accountSiteProfile", () => {
     expect(profile.modelList.displayCapabilitiesSource).toBe(
       ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
     )
+    expect(profile.modelList.groupSemantics).toBe(
+      ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+    )
+  })
+
+  it("marks SharedChat model-list groups as not applicable", () => {
+    expect(
+      getAccountSiteModelListProfile(SITE_TYPES.SHAREDCHAT).groupSemantics,
+    ).toBe(ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE)
   })
 
   it("resolves token creation and form policy helpers", () => {
