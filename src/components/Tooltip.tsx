@@ -90,6 +90,7 @@ export default function Tooltip({
         />
       ) : (
         <ReactTooltip
+          id={descriptionId}
           anchorId={anchorId}
           place={position}
           delayShow={delay}

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
@@ -48,6 +48,42 @@ describe("Tooltip", () => {
     expect(anchor).toHaveAccessibleDescription(
       "Existing description Tooltip description",
     )
+  })
+
+  it("keeps a rich-content child as the focusable anchor and opens its tooltip", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <Tooltip
+        content={
+          <div>
+            <strong>VIP multiplier details</strong>{" "}
+            <a href="https://example.invalid/groups">Learn about groups</a>
+          </div>
+        }
+        anchorAsChild
+      >
+        <button type="button">Inspect VIP multiplier</button>
+      </Tooltip>,
+    )
+
+    const anchor = screen.getByRole("button", {
+      name: "Inspect VIP multiplier",
+    })
+    expect(anchor.id).toMatch(/^tooltip-/)
+    expect(anchor.parentElement).not.toHaveAttribute("id", anchor.id)
+
+    await user.tab()
+    expect(anchor).toHaveFocus()
+
+    const tooltip = await screen.findByRole("tooltip")
+    expect(anchor).toHaveAccessibleDescription(
+      "VIP multiplier details Learn about groups",
+    )
+    expect(within(tooltip).getByText("VIP multiplier details")).toBeVisible()
+    expect(
+      within(tooltip).getByRole("link", { name: "Learn about groups" }),
+    ).toBeVisible()
   })
 
   it("retains wrapper anchoring by default without adding a tab stop", () => {
