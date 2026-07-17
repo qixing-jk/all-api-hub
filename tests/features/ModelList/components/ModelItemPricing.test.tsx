@@ -500,6 +500,36 @@ describe("Model item pricing and description", () => {
       expect(formatPriceCompactMock).not.toHaveBeenCalled()
     })
 
+    it("uses generic unavailable copy when pricing has no specific reason", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.NONE,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+            },
+          })}
+          calculatedPrice={createCalculatedPrice({
+            priceAvailability: "unavailable",
+            unavailableReason: undefined,
+          })}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={true}
+          isAvailableForUser={true}
+          groupRatios={{}}
+        />,
+      )
+
+      expect(
+        screen.getByText("unavailablePriceReasons.pricingSourceUnavailable"),
+      ).toBeInTheDocument()
+      expect(formatPriceCompactMock).not.toHaveBeenCalled()
+    })
+
     it("uses no-usable-group copy without claiming a multiplier is missing", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 
