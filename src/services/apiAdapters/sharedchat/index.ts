@@ -1,4 +1,4 @@
-import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 
 import { sharedChatAccountCompletion } from "./accountCompletion"
@@ -9,6 +9,7 @@ import { sharedChatServiceCredential } from "./serviceCredential"
 
 export const sharedChatCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.SHAREDCHAT,
+  family: ACCOUNT_SITE_ADAPTER_FAMILIES.SharedChat,
   account: {
     completion: sharedChatAccountCompletion,
     data: sharedChatAccountData,

@@ -46,7 +46,12 @@ import type {
 } from "~/services/apiService/sub2api/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+  AuthTypeEnum,
+  SiteHealthStatus,
+} from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const { mockGetLatestAuth, mockPersistAuthUpdate } = vi.hoisted(() => ({
@@ -310,9 +315,79 @@ describe("apiService sub2api parsing", () => {
       today_prompt_tokens: 12,
       today_completion_tokens: 8,
       today_requests_count: 2,
+      todayStatsAvailability: {
+        consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+      },
     })
     await expect(fetchTodayIncome(request as any)).resolves.toEqual({
       today_income: 0,
+      todayStatsAvailability: {
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      },
+    })
+  })
+
+  it("returns independent income availability snapshots", async () => {
+    const request = {
+      baseUrl: "https://sub2api.example.invalid",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "account-token",
+      },
+    } as ApiServiceAccountRequest
+    const first = await fetchTodayIncome(request)
+    first.todayStatsAvailability!.income.status =
+      ACCOUNT_TODAY_METRIC_STATUSES.Complete
+
+    const second = await fetchTodayIncome(request)
+
+    expect(second.todayStatsAvailability!.income).toEqual({
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+    })
+    expect(second.todayStatsAvailability!.income).not.toBe(
+      first.todayStatsAvailability!.income,
+    )
+  })
+
+  it("validates Sub2API today fields independently", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        total_requests: "invalid",
+        total_input_tokens: "12",
+        total_output_tokens: undefined,
+        total_actual_cost: "0.25",
+      },
+    } as any)
+
+    await expect(
+      fetchTodayUsage({
+        baseUrl: "https://sub2.example.invalid",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+      } as any),
+    ).resolves.toMatchObject({
+      today_quota_consumption: 125000,
+      today_prompt_tokens: 12,
+      today_completion_tokens: 0,
+      today_requests_count: 0,
+      todayStatsAvailability: {
+        consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        requests: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+        },
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+        },
+      },
     })
   })
 
@@ -606,8 +681,64 @@ describe("apiService sub2api refreshAccountData", () => {
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
       today_requests_count: 0,
+      todayStatsAvailability: {
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+        requests: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      },
     })
     expect(fetchApi).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps healthy balance data when the today usage request fails", async () => {
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+      .mockRejectedValueOnce(new Error("usage unavailable"))
+
+    const result = await refreshAccountData(createRequest())
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        quota: 1_000_000,
+        today_quota_consumption: 0,
+        todayStatsAvailability: {
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+          },
+          requests: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+          },
+          tokens: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+          },
+          income: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+        },
+      },
+    })
   })
 
   it("passes temp-window source to token resync and preserves it on the retry", async () => {

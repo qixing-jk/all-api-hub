@@ -5,7 +5,9 @@ import type {
   ApiServiceAccountRequest,
   RefreshAccountResult,
   TodayIncomeData,
+  TodayIncomeDataWithAvailability,
   TodayUsageData,
+  TodayUsageDataWithAvailability,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
@@ -40,7 +42,14 @@ import {
   normalizeModelDescriptors,
   type ModelVendorEvidence,
 } from "~/services/models/modelDescriptor"
-import { AuthTypeEnum, SiteHealthStatus, type ApiToken } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type AccountTodayStatsAvailability,
+  type ApiToken,
+} from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
@@ -67,6 +76,26 @@ const EMPTY_TODAY_USAGE: TodayUsageData = {
 const EMPTY_TODAY_INCOME: TodayIncomeData = {
   today_income: 0,
 }
+
+const createAIHubMixTodayStatsAvailability =
+  (): AccountTodayStatsAvailability => ({
+    consumption: {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+    },
+    requests: {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+    },
+    tokens: {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+    },
+    income: {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+    },
+  })
 
 type AIHubMixUserInfo = {
   username: string
@@ -622,8 +651,13 @@ export async function fetchAccountQuota(
  */
 export async function fetchTodayUsage(
   _request: ApiServiceRequest,
-): Promise<TodayUsageData> {
-  return { ...EMPTY_TODAY_USAGE }
+): Promise<TodayUsageDataWithAvailability> {
+  const { consumption, requests, tokens } =
+    createAIHubMixTodayStatsAvailability()
+  return {
+    ...EMPTY_TODAY_USAGE,
+    todayStatsAvailability: { consumption, requests, tokens },
+  }
 }
 
 /**
@@ -631,8 +665,13 @@ export async function fetchTodayUsage(
  */
 export async function fetchTodayIncome(
   _request: ApiServiceRequest,
-): Promise<TodayIncomeData> {
-  return { ...EMPTY_TODAY_INCOME }
+): Promise<TodayIncomeDataWithAvailability> {
+  return {
+    ...EMPTY_TODAY_INCOME,
+    todayStatsAvailability: {
+      income: createAIHubMixTodayStatsAvailability().income,
+    },
+  }
 }
 
 /**
@@ -648,11 +687,15 @@ export async function fetchAccountData(
 
   return {
     quota: toFiniteNumber(userInfo.quota),
-    today_quota_consumption: toFiniteNumber(userInfo.used_quota),
+    // AIHubMix client/API docs expose `used_quota` as cumulative account usage,
+    // not a today total, so it must not populate today consumption.
+    // Reference: https://docs.aihubmix.com/en/api/Cli
+    today_quota_consumption: 0,
     today_prompt_tokens: 0,
     today_completion_tokens: 0,
     today_requests_count: 0,
     today_income: 0,
+    todayStatsAvailability: createAIHubMixTodayStatsAvailability(),
     checkIn: {
       ...(request.checkIn ?? { enableDetection: false }),
       enableDetection: false,

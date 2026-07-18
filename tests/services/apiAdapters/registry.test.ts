@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
+  ACCOUNT_SITE_TYPES,
   SITE_TYPES,
   type SiteType,
 } from "~/constants/siteType"
@@ -117,6 +118,17 @@ const expectManagedSiteCapabilities = (
 }
 
 describe("apiAdapters registry", () => {
+  it("registers both AccountData producer paths for every account site type", () => {
+    for (const siteType of ACCOUNT_SITE_TYPES) {
+      const capabilities = getSiteTypeCapabilities(siteType)
+
+      expect(capabilities.account?.data?.fetchData).toBeTypeOf("function")
+      expect(capabilities.account?.refresh?.refreshAccount).toBeTypeOf(
+        "function",
+      )
+    }
+  })
+
   it("routes account sites through the definition adapter-family projection", () => {
     const capabilities = getSiteTypeCapabilities(SITE_TYPES.V_API)
 
@@ -127,6 +139,14 @@ describe("apiAdapters registry", () => {
       siteType: SITE_TYPES.V_API,
       family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     })
+  })
+
+  it("exposes the definition adapter family for every account site type", () => {
+    for (const siteType of ACCOUNT_SITE_TYPES) {
+      expect(getSiteTypeCapabilities(siteType).family).toBe(
+        getAccountSiteDefinition(siteType)?.adapterFamily,
+      )
+    }
   })
 
   it("returns grouped New API family capabilities for compatible account sites", () => {
@@ -216,6 +236,7 @@ describe("apiAdapters registry", () => {
 
     expect(capabilities).toMatchObject({
       siteType: SITE_TYPES.AIHUBMIX,
+      family: ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
     })
     expectAccountDataCapability(capabilities)
     expectAccountBootstrapCapability(capabilities)
@@ -236,8 +257,8 @@ describe("apiAdapters registry", () => {
 
     expect(capabilities).toMatchObject({
       siteType: SITE_TYPES.SHAREDCHAT,
+      family: ACCOUNT_SITE_ADAPTER_FAMILIES.SharedChat,
     })
-    expect(capabilities.family).toBeUndefined()
     expectAccountDataCapability(capabilities)
     expect(capabilities.account?.refresh).toEqual({
       refreshAccount: expect.any(Function),

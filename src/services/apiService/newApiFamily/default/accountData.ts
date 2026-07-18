@@ -2,14 +2,19 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import type {
   AccountData,
   ApiServiceAccountRequest,
-  TodayIncomeData,
+  TodayIncomeDataWithAvailability,
   TodayUsageData,
+  TodayUsageDataWithAvailability,
 } from "~/services/accounts/accountDataModel"
 import type { NewApiCheckInStatus } from "~/services/apiService/newApiFamily/checkInDto"
 import {
+  aggregateIncomeData,
   aggregateUsageData,
-  extractAmount,
   getTodayTimestampRange,
+  type AggregatedIncomeData,
+  type AggregatedUsageData,
+  type MetricAggregationCoverage,
+  type TodayTimestampRange,
 } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -17,12 +22,15 @@ import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type {
-  LogItem,
-  LogResponseData,
   LogStatResponseData,
   TodayLogQueryConfig,
 } from "~/services/history/usageHistory/usageLogModel"
-import type { CheckInConfig } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+  type AccountTodayMetricAvailability,
+  type CheckInConfig,
+} from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("NewApiFamilyAccountData")
@@ -51,6 +59,77 @@ const DEFAULT_TODAY_LOG_QUERY_CONFIG: Required<
 
 interface AccountDataImplementation {
   fetchAccountData: (request: ApiServiceAccountRequest) => Promise<AccountData>
+}
+
+interface PaginatedCollectionResult<T> {
+  value: T
+  successfulSourceCount: number
+  failedSourceCount: number
+  invalidSourceCount: number
+  contributedPageCount: number
+  pageLimitReached: boolean
+}
+
+const completeAvailability = (): AccountTodayMetricAvailability => ({
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+})
+
+const unavailableAvailability = (
+  reason: AccountTodayMetricAvailability["reason"],
+): AccountTodayMetricAvailability => ({
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+  reason,
+})
+
+const partialAvailability = (
+  reason: AccountTodayMetricAvailability["reason"],
+): AccountTodayMetricAvailability => ({
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+  reason,
+})
+
+const classifyPaginatedCollection = <T>(
+  result: PaginatedCollectionResult<T>,
+): AccountTodayMetricAvailability => {
+  if (result.pageLimitReached) {
+    return partialAvailability(ACCOUNT_TODAY_METRIC_REASONS.PageLimit)
+  }
+
+  if (result.invalidSourceCount > 0) {
+    return result.successfulSourceCount > 0 || result.contributedPageCount > 0
+      ? partialAvailability(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial)
+      : unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload)
+  }
+
+  if (result.failedSourceCount > 0) {
+    return result.successfulSourceCount > 0 || result.contributedPageCount > 0
+      ? partialAvailability(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial)
+      : unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.RequestFailed)
+  }
+
+  return completeAvailability()
+}
+
+interface MetricCollectionCoverage extends MetricAggregationCoverage {
+  completeSourceCount: number
+}
+
+const classifyMetricCollection = <T>(
+  result: PaginatedCollectionResult<T>,
+  coverage: MetricCollectionCoverage,
+): AccountTodayMetricAvailability => {
+  const collectionAvailability = classifyPaginatedCollection(result)
+  if (coverage.invalidCount === 0) return collectionAvailability
+
+  const hasValidCoverage =
+    coverage.validCount > 0 || coverage.completeSourceCount > 0
+  if (!hasValidCoverage) {
+    return unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload)
+  }
+
+  return collectionAvailability.status === ACCOUNT_TODAY_METRIC_STATUSES.Partial
+    ? collectionAvailability
+    : partialAvailability(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial)
 }
 
 /**
@@ -113,6 +192,7 @@ const resolveTodayLogQueryConfig = (
 /**
  * Build a normalized "today logs" query string for compatible backends.
  * @param logType Log category to request.
+ * @param timestampRange Frozen day boundary shared by the account snapshot.
  * @param params Optional pagination overrides.
  * @param params.page Page number override.
  * @param params.pageSize Page size override.
@@ -120,13 +200,14 @@ const resolveTodayLogQueryConfig = (
  */
 const buildTodayLogQueryParams = (
   logType: LogType,
+  timestampRange: TodayTimestampRange,
   params?: {
     page?: number
     pageSize?: number
   },
   config?: TodayLogQueryConfig,
 ) => {
-  const { start: startTimestamp, end: endTimestamp } = getTodayTimestampRange()
+  const { start: startTimestamp, end: endTimestamp } = timestampRange
   const resolvedConfig = resolveTodayLogQueryConfig(config)
 
   const searchParams = new URLSearchParams({
@@ -161,45 +242,70 @@ const buildTodayLogQueryParams = (
  * @param logTypes Log categories to fetch.
  * @param dataAggregator Reducer to merge items into accumulator.
  * @param initialValue Initial accumulator value.
+ * @param timestampRange Frozen day boundary shared by the account snapshot.
  * @param errorHandler Optional handler per log type error.
  * @param queryConfig Optional override for non-standard log pagination APIs.
- * @returns Aggregated value after pagination.
+ * @returns Aggregated value plus source, page, failure, invalid-payload, and page-limit metadata.
  */
 const fetchPaginatedLogs = async <T>(
   request: ApiServiceRequest,
   logTypes: LogType[],
-  dataAggregator: (accumulator: T, items: LogResponseData["items"]) => T,
+  dataAggregator: (
+    accumulator: T,
+    items: readonly unknown[],
+    logType: LogType,
+  ) => T,
   initialValue: T,
+  timestampRange: TodayTimestampRange,
   errorHandler?: (error: unknown, logType: LogType) => void,
   queryConfig?: TodayLogQueryConfig,
-): Promise<T> => {
+): Promise<PaginatedCollectionResult<T>> => {
   let aggregatedData = initialValue
-  let maxPageReached = false
+  let successfulSourceCount = 0
+  let failedSourceCount = 0
+  let invalidSourceCount = 0
+  let contributedPageCount = 0
+  let pageLimitReached = false
   const resolvedQueryConfig = resolveTodayLogQueryConfig(queryConfig)
 
   const normalizeLogResponse = (
-    payload: LogResponseData | LogItem[],
-  ): {
-    items: LogItem[]
-    total: number | null
-  } => {
+    payload: unknown,
+  ):
+    | {
+        valid: true
+        items: unknown[]
+        total: number | null
+      }
+    | { valid: false } => {
     if (Array.isArray(payload)) {
       return {
+        valid: true,
         items: payload,
         total: null,
       }
     }
 
-    const payloadRecord = payload as unknown as Record<string, unknown>
+    if (payload === null || typeof payload !== "object") {
+      return { valid: false }
+    }
+
+    const payloadRecord = payload as Record<string, unknown>
     const itemsValue = payloadRecord[resolvedQueryConfig.itemsField]
     const totalValue = payloadRecord[resolvedQueryConfig.totalField]
 
+    if (
+      !Array.isArray(itemsValue) ||
+      typeof totalValue !== "number" ||
+      !Number.isFinite(totalValue) ||
+      totalValue < 0
+    ) {
+      return { valid: false }
+    }
+
     return {
-      items: Array.isArray(itemsValue) ? (itemsValue as LogItem[]) : [],
-      total:
-        typeof totalValue === "number" && Number.isFinite(totalValue)
-          ? totalValue
-          : null,
+      valid: true,
+      items: itemsValue,
+      total: totalValue,
     }
   }
 
@@ -209,6 +315,7 @@ const fetchPaginatedLogs = async <T>(
       while (currentPage <= REQUEST_CONFIG.MAX_PAGES) {
         const params = buildTodayLogQueryParams(
           logType,
+          timestampRange,
           {
             page: currentPage,
             pageSize: REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
@@ -216,16 +323,25 @@ const fetchPaginatedLogs = async <T>(
           resolvedQueryConfig,
         )
 
-        const logData = await fetchApiData<LogResponseData | LogItem[]>(
-          request,
-          {
-            endpoint: `${resolvedQueryConfig.endpoint}?${params.toString()}`,
-          },
-        )
+        const logData = await fetchApiData<unknown>(request, {
+          endpoint: `${resolvedQueryConfig.endpoint}?${params.toString()}`,
+        })
 
         const normalizedLogData = normalizeLogResponse(logData)
+        if (!normalizedLogData.valid) {
+          invalidSourceCount += 1
+          logger.warn("日志响应结构无效", {
+            logType,
+            page: currentPage,
+            itemsField: resolvedQueryConfig.itemsField,
+            totalField: resolvedQueryConfig.totalField,
+          })
+          break
+        }
+
         const items = normalizedLogData.items
-        aggregatedData = dataAggregator(aggregatedData, items)
+        contributedPageCount += 1
+        aggregatedData = dataAggregator(aggregatedData, items, logType)
 
         const totalPages =
           normalizedLogData.total === null
@@ -234,15 +350,18 @@ const fetchPaginatedLogs = async <T>(
                 normalizedLogData.total / REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
               )
         if (currentPage >= totalPages) {
+          successfulSourceCount += 1
           break
         }
-        currentPage++
-      }
-
-      if (currentPage > REQUEST_CONFIG.MAX_PAGES) {
-        maxPageReached = true
+        if (currentPage === REQUEST_CONFIG.MAX_PAGES) {
+          pageLimitReached = true
+          successfulSourceCount += 1
+          break
+        }
+        currentPage += 1
       }
     } catch (error) {
+      failedSourceCount += 1
       if (errorHandler) {
         errorHandler(error, logType)
       } else {
@@ -251,62 +370,103 @@ const fetchPaginatedLogs = async <T>(
     }
   }
 
-  if (maxPageReached) {
+  if (pageLimitReached) {
     logger.warn("达到最大分页限制，数据可能不完整", {
       maxPages: REQUEST_CONFIG.MAX_PAGES,
     })
   }
 
-  return aggregatedData
+  return {
+    value: aggregatedData,
+    successfulSourceCount,
+    failedSourceCount,
+    invalidSourceCount,
+    contributedPageCount,
+    pageLimitReached,
+  }
 }
 
 /**
  * Build "today consume logs" query params using the optional backend override.
+ * @param timestampRange Frozen day boundary shared by the account snapshot.
  * @param params Optional pagination overrides.
  * @param params.page Page number override.
  * @param params.pageSize Page size override.
  * @param queryConfig Optional endpoint/query customization for backend variants.
  */
 const buildTodayConsumeLogParams = (
+  timestampRange: TodayTimestampRange,
   params?: {
     page?: number
     pageSize?: number
   },
   queryConfig?: TodayLogQueryConfig,
-) => buildTodayLogQueryParams(LogType.Consume, params, queryConfig)
+) =>
+  buildTodayLogQueryParams(LogType.Consume, timestampRange, params, queryConfig)
 
 /**
  * Legacy full aggregation path for today's usage metrics.
  * @param request ApiServiceAccountRequest.
+ * @param timestampRange Frozen day boundary shared by the account snapshot.
  * @param queryConfig Optional override for non-standard log pagination APIs.
  * @returns Fully aggregated quota, token, and request totals.
  */
 const fetchTodayUsageFromLogs = async (
   request: ApiServiceAccountRequest,
+  timestampRange: TodayTimestampRange,
   queryConfig?: TodayLogQueryConfig,
-): Promise<TodayUsageData> => {
+): Promise<TodayUsageDataWithAvailability> => {
   const usageAggregator = (
-    accumulator: TodayUsageData,
-    items: LogResponseData["items"],
-  ) => {
-    const pageData = aggregateUsageData(items)
-    accumulator.today_quota_consumption += pageData.today_quota_consumption
-    accumulator.today_prompt_tokens += pageData.today_prompt_tokens
-    accumulator.today_completion_tokens += pageData.today_completion_tokens
-    accumulator.today_requests_count += items?.length || 0
-    return accumulator
-  }
+    accumulator: AggregatedUsageData,
+    items: readonly unknown[],
+  ) => aggregateUsageData(items, accumulator)
 
-  return await fetchPaginatedLogs(
+  const result = await fetchPaginatedLogs(
     request,
     [LogType.Consume],
     usageAggregator,
-    {
-      ...EMPTY_TODAY_USAGE,
-    },
+    aggregateUsageData([]),
+    timestampRange,
     undefined,
     queryConfig,
   )
+
+  const consumptionCoverage = result.value.coverage.consumption
+  const requestCoverage = result.value.coverage.rows
+  const tokenCoverage = {
+    validCount:
+      result.value.coverage.promptTokens.validCount +
+      result.value.coverage.completionTokens.validCount,
+    invalidCount:
+      result.value.coverage.promptTokens.invalidCount +
+      result.value.coverage.completionTokens.invalidCount,
+  }
+  return {
+    today_quota_consumption: result.value.today_quota_consumption,
+    today_prompt_tokens: result.value.today_prompt_tokens,
+    today_completion_tokens: result.value.today_completion_tokens,
+    // This is validated consume-log row count, not a stronger backend request-total contract.
+    today_requests_count: requestCoverage.validCount,
+    todayStatsAvailability: {
+      consumption: classifyMetricCollection(result, {
+        ...consumptionCoverage,
+        completeSourceCount:
+          consumptionCoverage.invalidCount === 0
+            ? result.successfulSourceCount
+            : 0,
+      }),
+      requests: classifyMetricCollection(result, {
+        ...requestCoverage,
+        completeSourceCount:
+          requestCoverage.invalidCount === 0 ? result.successfulSourceCount : 0,
+      }),
+      tokens: classifyMetricCollection(result, {
+        ...tokenCoverage,
+        completeSourceCount:
+          tokenCoverage.invalidCount === 0 ? result.successfulSourceCount : 0,
+      }),
+    },
+  }
 }
 
 /**
@@ -316,25 +476,39 @@ const fetchTodayUsageFromLogs = async (
  * remain zero on this path because supported backends do not expose equivalent
  * lightweight day-total stat endpoints across variants.
  * @param request ApiServiceAccountRequest.
+ * @param timestampRange Frozen day boundary shared by the account snapshot.
  * @param queryConfig Optional override for non-standard log pagination APIs.
  * @returns Fast today-usage snapshot.
  */
 const fetchTodayUsageFast = async (
   request: ApiServiceAccountRequest,
+  timestampRange: TodayTimestampRange,
   queryConfig?: TodayLogQueryConfig,
-): Promise<TodayUsageData> => {
+): Promise<TodayUsageDataWithAvailability> => {
   const resolvedQueryConfig = resolveTodayLogQueryConfig(queryConfig)
-  const statParams = buildTodayConsumeLogParams(undefined, resolvedQueryConfig)
+  const statParams = buildTodayConsumeLogParams(
+    timestampRange,
+    undefined,
+    resolvedQueryConfig,
+  )
   const statData = await fetchApiData<LogStatResponseData>(request, {
     endpoint: `/api/log/self/stat?${statParams.toString()}`,
   })
 
+  if (typeof statData?.quota !== "number" || !Number.isFinite(statData.quota)) {
+    throw new Error("Today usage stat quota is missing or non-finite")
+  }
+
   return {
     ...EMPTY_TODAY_USAGE,
-    today_quota_consumption:
-      typeof statData?.quota === "number" && Number.isFinite(statData.quota)
-        ? statData.quota
-        : 0,
+    today_quota_consumption: statData.quota,
+    todayStatsAvailability: {
+      consumption: completeAvailability(),
+      requests: unavailableAvailability(
+        ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+      ),
+      tokens: unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
   }
 }
 
@@ -354,16 +528,27 @@ const fetchTodayUsageFast = async (
 export async function fetchTodayUsage(
   request: ApiServiceAccountRequest,
   queryConfig?: TodayLogQueryConfig,
-): Promise<TodayUsageData> {
+  timestampRange: TodayTimestampRange = getTodayTimestampRange(),
+): Promise<TodayUsageDataWithAvailability> {
   if (request.includeTodayCashflow === false) {
-    return { ...EMPTY_TODAY_USAGE }
+    const notCollected = unavailableAvailability(
+      ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+    )
+    return {
+      ...EMPTY_TODAY_USAGE,
+      todayStatsAvailability: {
+        consumption: notCollected,
+        requests: notCollected,
+        tokens: notCollected,
+      },
+    }
   }
 
   try {
-    return await fetchTodayUsageFast(request, queryConfig)
+    return await fetchTodayUsageFast(request, timestampRange, queryConfig)
   } catch (error) {
     logger.warn("今日消费快路径失败，回退到日志聚合", error)
-    return await fetchTodayUsageFromLogs(request, queryConfig)
+    return await fetchTodayUsageFromLogs(request, timestampRange, queryConfig)
   }
 }
 
@@ -376,9 +561,17 @@ export async function fetchTodayUsage(
 export async function fetchTodayIncome(
   request: ApiServiceAccountRequest,
   queryConfig?: TodayLogQueryConfig,
-): Promise<TodayIncomeData> {
+  timestampRange: TodayTimestampRange = getTodayTimestampRange(),
+): Promise<TodayIncomeDataWithAvailability> {
   if (request.includeTodayCashflow === false) {
-    return { today_income: 0 }
+    return {
+      today_income: 0,
+      todayStatsAvailability: {
+        income: unavailableAvailability(
+          ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        ),
+      },
+    }
   }
 
   const exchangeRate =
@@ -386,28 +579,40 @@ export async function fetchTodayIncome(
     Number.isFinite(request.exchangeRate)
       ? request.exchangeRate
       : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+  const incomeCoverageBySource = new Map<LogType, MetricAggregationCoverage>()
   const incomeAggregator = (
-    accumulator: number,
-    items: LogResponseData["items"],
+    accumulator: AggregatedIncomeData,
+    items: readonly unknown[],
+    logType: LogType,
   ) => {
-    return (
-      accumulator +
-      (items?.reduce(
-        (sum, item) =>
-          sum +
-          (item.quota ||
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR *
-              (extractAmount(item.content, exchangeRate)?.amount ?? 0)),
-        0,
-      ) || 0)
+    const next = aggregateIncomeData(
+      items,
+      exchangeRate,
+      UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      accumulator,
     )
+    const sourceCoverage = incomeCoverageBySource.get(logType) ?? {
+      validCount: 0,
+      invalidCount: 0,
+    }
+    sourceCoverage.validCount +=
+      next.coverage.validCount - accumulator.coverage.validCount
+    sourceCoverage.invalidCount +=
+      next.coverage.invalidCount - accumulator.coverage.invalidCount
+    incomeCoverageBySource.set(logType, sourceCoverage)
+    return next
   }
 
-  const totalIncome = await fetchPaginatedLogs(
+  const result = await fetchPaginatedLogs(
     request,
     [LogType.Topup, LogType.System],
     incomeAggregator,
-    0,
+    aggregateIncomeData(
+      [],
+      exchangeRate,
+      UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+    ),
+    timestampRange,
     (error, logType) => {
       const typeName = logType === LogType.Topup ? "充值" : "签到"
       logger.warn("获取记录失败", { typeName, error })
@@ -415,7 +620,17 @@ export async function fetchTodayIncome(
     queryConfig,
   )
 
-  return { today_income: totalIncome }
+  return {
+    today_income: result.value.today_income,
+    todayStatsAvailability: {
+      income: classifyMetricCollection(result, {
+        ...result.value.coverage,
+        completeSourceCount: [...incomeCoverageBySource.values()].filter(
+          ({ invalidCount }) => invalidCount === 0,
+        ).length,
+      }),
+    },
+  }
 }
 
 export const resolveCheckInSiteStatus = (
@@ -447,10 +662,15 @@ export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   const resolvedCheckIn: CheckInConfig = request.checkIn
+  const timestampRange = getTodayTimestampRange()
 
   const quotaPromise = fetchAccountQuota(request)
-  const todayUsagePromise = fetchTodayUsage(request)
-  const todayIncomePromise = fetchTodayIncome(request)
+  const todayUsagePromise = fetchTodayUsage(request, undefined, timestampRange)
+  const todayIncomePromise = fetchTodayIncome(
+    request,
+    undefined,
+    timestampRange,
+  )
   const checkInPromise = resolvedCheckIn?.enableDetection
     ? fetchCheckInStatus(request)
     : Promise.resolve<boolean | undefined>(undefined)
@@ -466,6 +686,10 @@ export async function fetchAccountData(
     quota,
     ...todayUsage,
     ...todayIncome,
+    todayStatsAvailability: {
+      ...todayUsage.todayStatsAvailability,
+      ...todayIncome.todayStatsAvailability,
+    },
     checkIn: {
       ...resolvedCheckIn,
       siteStatus: resolveCheckInSiteStatus(resolvedCheckIn, canCheckIn),

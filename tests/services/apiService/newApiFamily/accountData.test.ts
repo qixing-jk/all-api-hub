@@ -9,16 +9,23 @@ import {
   fetchTodayUsage,
   resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
+import { fetchTodayUsage as fetchDoneHubTodayUsage } from "~/services/apiService/newApiFamily/variants/doneHub"
 import { ApiError } from "~/services/apiTransport/errors"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
-import { AuthTypeEnum } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+  AuthTypeEnum,
+} from "~/types"
 
 const {
+  mockAggregateIncomeData,
   mockAggregateUsageData,
   mockExtractAmount,
   mockFetchApiData,
   mockGetTodayTimestampRange,
 } = vi.hoisted(() => ({
+  mockAggregateIncomeData: vi.fn(),
   mockAggregateUsageData: vi.fn(),
   mockExtractAmount: vi.fn(),
   mockFetchApiData: vi.fn(),
@@ -54,6 +61,7 @@ vi.mock("~/services/apiTransport/request", () => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountDataUtils", () => ({
+  aggregateIncomeData: mockAggregateIncomeData,
   aggregateUsageData: mockAggregateUsageData,
   extractAmount: mockExtractAmount,
   getTodayTimestampRange: mockGetTodayTimestampRange,
@@ -85,8 +93,19 @@ const baseRequest = {
   },
 }
 
+const complete = { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete } as const
+const unavailable = (reason: string) => ({
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+  reason,
+})
+const partial = (reason: string) => ({
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+  reason,
+})
+
 describe("newApiFamily accountData", () => {
   beforeEach(() => {
+    mockAggregateIncomeData.mockReset()
     mockAggregateUsageData.mockReset()
     mockExtractAmount.mockReset()
     mockFetchApiData.mockReset()
@@ -101,21 +120,67 @@ describe("newApiFamily accountData", () => {
       start: 111,
       end: 222,
     })
-    mockAggregateUsageData.mockImplementation((items: any[]) => ({
-      today_quota_consumption: items.reduce(
-        (sum, item) => sum + (item.quota ?? 0),
-        0,
-      ),
-      today_prompt_tokens: items.reduce(
-        (sum, item) => sum + (item.prompt_tokens ?? 0),
-        0,
-      ),
-      today_completion_tokens: items.reduce(
-        (sum, item) => sum + (item.completion_tokens ?? 0),
-        0,
-      ),
-      today_requests_count: items.length,
-    }))
+    mockAggregateUsageData.mockImplementation((items: any[], initial?: any) => {
+      const result = structuredClone(
+        initial ?? {
+          today_quota_consumption: 0,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          coverage: {
+            rows: { validCount: 0, invalidCount: 0 },
+            consumption: { validCount: 0, invalidCount: 0 },
+            promptTokens: { validCount: 0, invalidCount: 0 },
+            completionTokens: { validCount: 0, invalidCount: 0 },
+          },
+        },
+      )
+      for (const item of items) {
+        result.coverage.rows.validCount += 1
+        for (const [field, total, coverage] of [
+          ["quota", "today_quota_consumption", "consumption"],
+          ["prompt_tokens", "today_prompt_tokens", "promptTokens"],
+          ["completion_tokens", "today_completion_tokens", "completionTokens"],
+        ]) {
+          const value = item[field]
+          if (typeof value === "number" && Number.isFinite(value)) {
+            result[total] += value
+            result.coverage[coverage].validCount += 1
+          } else {
+            result.coverage[coverage].invalidCount += 1
+          }
+        }
+      }
+      return result
+    })
+    mockAggregateIncomeData.mockImplementation(
+      (
+        items: any[],
+        exchangeRate: number,
+        conversionFactor: number,
+        initial?: any,
+      ) => {
+        const result = structuredClone(
+          initial ?? {
+            today_income: 0,
+            coverage: { validCount: 0, invalidCount: 0 },
+          },
+        )
+        for (const item of items) {
+          const value = Object.hasOwn(item, "quota")
+            ? item.quota
+            : conversionFactor *
+              (mockExtractAmount(item.content, exchangeRate)?.amount ??
+                Number.NaN)
+          if (typeof value === "number" && Number.isFinite(value)) {
+            result.today_income += value
+            result.coverage.validCount += 1
+          } else {
+            result.coverage.invalidCount += 1
+          }
+        }
+        return result
+      },
+    )
     mockExtractAmount.mockReturnValue({ amount: 0 })
   })
 
@@ -163,6 +228,11 @@ describe("newApiFamily accountData", () => {
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
       today_requests_count: 0,
+      todayStatsAvailability: {
+        consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+        requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+        tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+      },
     })
     expect(mockFetchApiData).not.toHaveBeenCalled()
   })
@@ -177,6 +247,11 @@ describe("newApiFamily accountData", () => {
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
       today_requests_count: 0,
+      todayStatsAvailability: {
+        consumption: complete,
+        requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+        tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      },
     })
 
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
@@ -194,16 +269,60 @@ describe("newApiFamily accountData", () => {
     })
   })
 
-  it("fetchTodayUsage treats non-numeric stat quota as zero", async () => {
-    mockFetchApiData.mockResolvedValueOnce({
-      quota: "not-a-number",
-    })
+  it.each([undefined, Number.NaN, Number.POSITIVE_INFINITY])(
+    "fetchTodayUsage falls back when stat quota is not finite (%s)",
+    async (quota) => {
+      mockFetchApiData
+        .mockResolvedValueOnce({ quota })
+        .mockResolvedValueOnce({ items: [], total: 0 })
 
-    await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
+      await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
+        today_quota_consumption: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_requests_count: 0,
+        todayStatsAvailability: {
+          consumption: complete,
+          requests: complete,
+          tokens: complete,
+        },
+      })
+    },
+  )
+
+  it("classifies a full-log failure before any covered page as unavailable", async () => {
+    mockFetchApiData
+      .mockRejectedValueOnce(new Error("stat unavailable"))
+      .mockRejectedValueOnce(new Error("logs unavailable"))
+
+    await expect(fetchTodayUsage(baseRequest)).resolves.toMatchObject({
       today_quota_consumption: 0,
-      today_prompt_tokens: 0,
-      today_completion_tokens: 0,
       today_requests_count: 0,
+      todayStatsAvailability: {
+        consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.RequestFailed),
+        requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.RequestFailed),
+        tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.RequestFailed),
+      },
+    })
+  })
+
+  it("classifies a full-log failure after a covered page as partial", async () => {
+    mockFetchApiData
+      .mockRejectedValueOnce(new Error("stat unavailable"))
+      .mockResolvedValueOnce({
+        items: [{ quota: 10, prompt_tokens: 2, completion_tokens: 3 }],
+        total: 3,
+      })
+      .mockRejectedValueOnce(new Error("page unavailable"))
+
+    await expect(fetchTodayUsage(baseRequest)).resolves.toMatchObject({
+      today_quota_consumption: 10,
+      today_requests_count: 1,
+      todayStatsAvailability: {
+        consumption: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+        requests: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+        tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+      },
     })
   })
 
@@ -222,7 +341,7 @@ describe("newApiFamily accountData", () => {
         totalField: "total_count",
         includeGroupParam: false,
       }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       today_quota_consumption: 60,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
@@ -255,11 +374,16 @@ describe("newApiFamily accountData", () => {
         total: 99,
       })
 
-    await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
+    await expect(fetchTodayUsage(baseRequest)).resolves.toMatchObject({
       today_quota_consumption: 30,
       today_prompt_tokens: 6,
       today_completion_tokens: 8,
       today_requests_count: 2,
+      todayStatsAvailability: {
+        consumption: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
+        requests: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
+        tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
+      },
     })
 
     expect(mockLoggerWarn).toHaveBeenCalledWith(
@@ -274,21 +398,94 @@ describe("newApiFamily accountData", () => {
     )
   })
 
-  it("fetchTodayUsage treats invalid log totals as a single page", async () => {
-    mockFetchApiData
-      .mockRejectedValueOnce(new Error("stat unavailable"))
-      .mockResolvedValueOnce({
-        items: [{ quota: 10, prompt_tokens: 2, completion_tokens: 3 }],
-        total: Number.NaN,
+  it.each([
+    ["missing items", { total: 0 }],
+    ["null items", { items: null, total: 0 }],
+    ["non-array items", { items: "not-an-array", total: 0 }],
+    ["missing total", { items: [] }],
+    ["null total", { items: [], total: null }],
+    ["non-numeric total", { items: [], total: "0" }],
+    ["NaN total", { items: [], total: Number.NaN }],
+    ["infinite total", { items: [], total: Number.POSITIVE_INFINITY }],
+    ["negative total", { items: [], total: -1 }],
+  ])(
+    "fetchTodayUsage rejects a default log payload with %s",
+    async (_label, payload) => {
+      mockFetchApiData.mockImplementation(async (_request, { endpoint }) => {
+        if (endpoint.startsWith("/api/log/self/stat?")) {
+          throw new Error("stat unavailable")
+        }
+        return payload
       })
 
-    await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
+      await expect(fetchTodayUsage(baseRequest)).resolves.toMatchObject({
+        today_quota_consumption: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_requests_count: 0,
+        todayStatsAvailability: {
+          consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload),
+          requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload),
+          tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload),
+        },
+      })
+    },
+  )
+
+  it.each([
+    ["malformed data", { data: null, total_count: 0 }],
+    ["malformed total_count", { data: [], total_count: "0" }],
+  ])(
+    "fetchTodayUsage rejects a DoneHub log payload with %s",
+    async (_label, payload) => {
+      mockFetchApiData.mockImplementation(async (_request, { endpoint }) => {
+        if (endpoint.startsWith("/api/log/self/stat?")) {
+          throw new Error("stat unavailable")
+        }
+        return payload
+      })
+
+      await expect(fetchDoneHubTodayUsage(baseRequest)).resolves.toMatchObject({
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        todayStatsAvailability: {
+          consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload),
+          requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload),
+          tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload),
+        },
+      })
+    },
+  )
+
+  it("classifies malformed pagination after a covered page as partial", async () => {
+    mockFetchApiData.mockImplementation(async (_request, { endpoint }) => {
+      if (endpoint.startsWith("/api/log/self/stat?")) {
+        throw new Error("stat unavailable")
+      }
+
+      const page = new URL(
+        endpoint,
+        "https://example.invalid",
+      ).searchParams.get("p")
+      return page === "1"
+        ? {
+            items: [{ quota: 10, prompt_tokens: 2, completion_tokens: 3 }],
+            total: 3,
+          }
+        : { items: null, total: 3 }
+    })
+
+    await expect(fetchTodayUsage(baseRequest)).resolves.toMatchObject({
       today_quota_consumption: 10,
       today_prompt_tokens: 2,
       today_completion_tokens: 3,
       today_requests_count: 1,
+      todayStatsAvailability: {
+        consumption: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+        requests: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+        tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+      },
     })
-    expect(mockFetchApiData).toHaveBeenCalledTimes(2)
   })
 
   it("fetchTodayUsage aggregates legacy array log responses with extra query params", async () => {
@@ -304,7 +501,7 @@ describe("newApiFamily accountData", () => {
           source: "admin",
         },
       }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       today_quota_consumption: 10,
       today_prompt_tokens: 2,
       today_completion_tokens: 3,
@@ -332,7 +529,96 @@ describe("newApiFamily accountData", () => {
         ...baseRequest,
         includeTodayCashflow: false,
       }),
-    ).resolves.toEqual({ today_income: 0 })
+    ).resolves.toEqual({
+      today_income: 0,
+      todayStatsAvailability: {
+        income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+      },
+    })
+  })
+
+  it("classifies income as partial when exactly one source is covered", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({ items: [], total: 0 })
+      .mockRejectedValueOnce(new Error("system logs unavailable"))
+
+    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+      today_income: 0,
+      todayStatsAvailability: {
+        income: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+      },
+    })
+  })
+
+  it("classifies one covered income source plus one malformed source as partial", async () => {
+    mockFetchApiData.mockImplementation(async (_request, { endpoint }) => {
+      const logType = new URL(
+        endpoint,
+        "https://example.invalid",
+      ).searchParams.get("type")
+      return logType === String(LogType.Topup)
+        ? { items: [{ quota: 10 }], total: 1 }
+        : { items: null, total: 0 }
+    })
+
+    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+      today_income: 10,
+      todayStatsAvailability: {
+        income: partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
+      },
+    })
+  })
+
+  it("classifies income as unavailable when neither source is covered", async () => {
+    mockFetchApiData
+      .mockRejectedValueOnce(new Error("topup logs unavailable"))
+      .mockRejectedValueOnce(new Error("system logs unavailable"))
+
+    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+      today_income: 0,
+      todayStatsAvailability: {
+        income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.RequestFailed),
+      },
+    })
+  })
+
+  it("freezes one timestamp range for the whole account snapshot", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-17T23:59:59.900"))
+    mockFetchApiData.mockImplementation(async (_request, { endpoint }) => {
+      if (endpoint === "/api/user/self") return { quota: 1 }
+      if (endpoint.startsWith("/api/log/self/stat?")) {
+        vi.setSystemTime(new Date("2026-07-18T00:00:00.100"))
+        throw new Error("stat unavailable")
+      }
+      if (endpoint.startsWith("/api/log/self?")) {
+        const params = new URL(endpoint, "https://example.invalid").searchParams
+        const isConsume = params.get("type") === String(LogType.Consume)
+        const page = Number(params.get("p"))
+        return {
+          items: [],
+          total: isConsume && page === 1 ? 3 : 0,
+        }
+      }
+      throw new Error(`Unexpected endpoint: ${endpoint}`)
+    })
+
+    await fetchAccountData({
+      ...baseRequest,
+      checkIn: { enableDetection: false },
+    })
+
+    expect(mockGetTodayTimestampRange).toHaveBeenCalledTimes(1)
+    const todayEndpoints = mockFetchApiData.mock.calls
+      .map(([, options]) => options.endpoint as string)
+      .filter((endpoint) => endpoint.includes("start_timestamp"))
+    expect(todayEndpoints).toHaveLength(5)
+    expect(todayEndpoints.every((endpoint) => endpoint.includes("111"))).toBe(
+      true,
+    )
+    expect(todayEndpoints.every((endpoint) => endpoint.includes("222"))).toBe(
+      true,
+    )
   })
 
   it("fetchTodayIncome uses the request exchange rate and parses quota fallbacks", async () => {
@@ -352,7 +638,10 @@ describe("newApiFamily accountData", () => {
         ...baseRequest,
         exchangeRate: 9,
       }),
-    ).resolves.toEqual({ today_income: 375 })
+    ).resolves.toMatchObject({
+      today_income: 375,
+      todayStatsAvailability: { income: complete },
+    })
 
     expect(mockExtractAmount).toHaveBeenCalledWith("recharge 3 USD", 9)
   })
@@ -369,7 +658,7 @@ describe("newApiFamily accountData", () => {
         total: 0,
       })
 
-    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+    await expect(fetchTodayIncome(baseRequest)).resolves.toMatchObject({
       today_income: 200,
     })
     expect(mockExtractAmount).toHaveBeenCalledWith("recharge 2 USD", 7)
@@ -387,7 +676,7 @@ describe("newApiFamily accountData", () => {
         total: 0,
       })
 
-    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+    await expect(fetchTodayIncome(baseRequest)).resolves.toMatchObject({
       today_income: 0,
     })
   })
@@ -413,7 +702,7 @@ describe("newApiFamily accountData", () => {
         totalField: "total_count",
         includeGroupParam: false,
       }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       today_income: 50,
     })
 

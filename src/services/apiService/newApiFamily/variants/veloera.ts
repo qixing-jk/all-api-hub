@@ -10,6 +10,7 @@ import {
   fetchTodayUsage,
   resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
+import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -55,10 +56,15 @@ export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   const resolvedCheckIn: CheckInConfig = request.checkIn
+  const timestampRange = getTodayTimestampRange()
 
   const quotaPromise = fetchAccountQuota(request)
-  const todayUsagePromise = fetchTodayUsage(request)
-  const todayIncomePromise = fetchTodayIncome(request)
+  const todayUsagePromise = fetchTodayUsage(request, undefined, timestampRange)
+  const todayIncomePromise = fetchTodayIncome(
+    request,
+    undefined,
+    timestampRange,
+  )
   const checkInPromise = resolvedCheckIn?.enableDetection
     ? fetchCheckInStatus(request)
     : Promise.resolve<boolean | undefined>(undefined)
@@ -74,6 +80,10 @@ export async function fetchAccountData(
     quota,
     ...todayUsage,
     ...todayIncome,
+    todayStatsAvailability: {
+      ...todayUsage.todayStatsAvailability,
+      ...todayIncome.todayStatsAvailability,
+    },
     checkIn: {
       ...resolvedCheckIn,
       siteStatus: resolveCheckInSiteStatus(resolvedCheckIn, canCheckIn),

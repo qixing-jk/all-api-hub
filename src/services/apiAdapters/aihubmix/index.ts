@@ -1,4 +1,4 @@
-import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { aihubmixAccountBootstrap } from "./accountBootstrap"
@@ -11,6 +11,7 @@ import { aihubmixTokenProvisioning } from "./tokenProvisioning"
 
 export const aihubmixCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.AIHUBMIX,
+  family: ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
   account: {
     data: aihubmixAccountData,
     bootstrap: aihubmixAccountBootstrap,

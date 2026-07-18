@@ -9,6 +9,11 @@ import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+  type AccountTodayMetricAvailability,
+} from "~/types"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -235,17 +240,62 @@ export async function fetchAccountData(
   const subscription = codex.subscriptions
   const currentUsage = codex.currentUsage
   const remainingAmount = toFiniteNumber(subscription?.remainingAmount)
-  const totalRequests = toFiniteNumber(currentUsage?.totalRequests)
-  const totalTokens = toFiniteNumber(currentUsage?.totalTokens)
-  const totalCost = toFiniteNumber(currentUsage?.totalCost)
+  const parsedTotalRequests = toOptionalFiniteNumber(
+    currentUsage?.totalRequests,
+  )
+  const parsedTotalTokens = toOptionalFiniteNumber(currentUsage?.totalTokens)
+  const parsedTotalCost = toOptionalFiniteNumber(currentUsage?.totalCost)
+  const totalRequests = parsedTotalRequests ?? 0
+  const totalTokens = parsedTotalTokens ?? 0
+  const totalCost = parsedTotalCost ?? 0
+  const invalidPayload: AccountTodayMetricAvailability = {
+    status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+    reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+  }
+  const complete: AccountTodayMetricAvailability = {
+    status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+  }
+  const notCollected: AccountTodayMetricAvailability = {
+    status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+    reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+  }
+  const shouldCollectToday = request.includeTodayCashflow !== false
+
+  // The production dashboard labels currentUsage as “24-Hour Statistics”. Keep
+  // its richer boundary explicit because it is a rolling window, not calendar today.
+  const todayStatsAvailability = {
+    consumption: shouldCollectToday
+      ? parsedTotalCost === undefined
+        ? invalidPayload
+        : complete
+      : notCollected,
+    requests: shouldCollectToday
+      ? parsedTotalRequests === undefined
+        ? invalidPayload
+        : complete
+      : notCollected,
+    tokens: shouldCollectToday
+      ? parsedTotalTokens === undefined
+        ? invalidPayload
+        : {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+          }
+      : notCollected,
+    income: {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+    },
+  } satisfies NonNullable<AccountData["todayStatsAvailability"]>
 
   return {
     quota: amountToQuota(remainingAmount),
-    today_quota_consumption: amountToQuota(totalCost),
+    today_quota_consumption: shouldCollectToday ? amountToQuota(totalCost) : 0,
     today_prompt_tokens: 0,
-    today_completion_tokens: totalTokens,
-    today_requests_count: totalRequests,
+    today_completion_tokens: shouldCollectToday ? totalTokens : 0,
+    today_requests_count: shouldCollectToday ? totalRequests : 0,
     today_income: 0,
+    todayStatsAvailability,
     usage: {
       scope: "rolling_window",
       totalRequests,

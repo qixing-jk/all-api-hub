@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  aggregateIncomeData,
   aggregateUsageData,
   extractAmount,
   getTodayTimestampRange,
@@ -64,15 +65,69 @@ describe("New API family account data utilities", () => {
     })
 
     it("should return consistent results when called multiple times", () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date("2026-07-17T12:34:56"))
       const result1 = getTodayTimestampRange()
       const result2 = getTodayTimestampRange()
 
       expect(result1.start).toBe(result2.start)
       expect(result1.end).toBe(result2.end)
+      expect(new Date(result1.start * 1000).getDate()).toBe(17)
+      expect(new Date(result1.end * 1000).getDate()).toBe(17)
     })
   })
 
   describe("aggregateUsageData", () => {
+    it("fails closed for malformed rows and non-finite metric fields", () => {
+      const result = aggregateUsageData([
+        null,
+        "not-a-row",
+        {
+          quota: Number.NaN,
+          prompt_tokens: Number.POSITIVE_INFINITY,
+          completion_tokens: "3",
+        },
+        { quota: 10, prompt_tokens: 2, completion_tokens: 4 },
+      ])
+
+      expect(result).toMatchObject({
+        today_quota_consumption: 10,
+        today_prompt_tokens: 2,
+        today_completion_tokens: 4,
+        coverage: {
+          rows: { validCount: 2, invalidCount: 2 },
+          consumption: { validCount: 1, invalidCount: 3 },
+          promptTokens: { validCount: 1, invalidCount: 3 },
+          completionTokens: { validCount: 1, invalidCount: 3 },
+        },
+      })
+      expect(Number.isFinite(result.today_quota_consumption)).toBe(true)
+      expect(Number.isFinite(result.today_prompt_tokens)).toBe(true)
+      expect(Number.isFinite(result.today_completion_tokens)).toBe(true)
+    })
+
+    it("does not let finite rows overflow aggregate totals", () => {
+      const result = aggregateUsageData([
+        {
+          quota: Number.MAX_VALUE,
+          prompt_tokens: Number.MAX_VALUE,
+          completion_tokens: Number.MAX_VALUE,
+        },
+        {
+          quota: Number.MAX_VALUE,
+          prompt_tokens: Number.MAX_VALUE,
+          completion_tokens: Number.MAX_VALUE,
+        },
+      ])
+
+      expect(Number.isFinite(result.today_quota_consumption)).toBe(true)
+      expect(Number.isFinite(result.today_prompt_tokens)).toBe(true)
+      expect(Number.isFinite(result.today_completion_tokens)).toBe(true)
+      expect(result.coverage.consumption.invalidCount).toBe(1)
+      expect(result.coverage.promptTokens.invalidCount).toBe(1)
+      expect(result.coverage.completionTokens.invalidCount).toBe(1)
+    })
+
     it("should aggregate empty array", () => {
       const result = aggregateUsageData([])
 
@@ -80,6 +135,12 @@ describe("New API family account data utilities", () => {
         today_quota_consumption: 0,
         today_prompt_tokens: 0,
         today_completion_tokens: 0,
+        coverage: {
+          rows: { validCount: 0, invalidCount: 0 },
+          consumption: { validCount: 0, invalidCount: 0 },
+          promptTokens: { validCount: 0, invalidCount: 0 },
+          completionTokens: { validCount: 0, invalidCount: 0 },
+        },
       })
     })
 
@@ -124,6 +185,10 @@ describe("New API family account data utilities", () => {
       expect(result.today_quota_consumption).toBe(100)
       expect(result.today_prompt_tokens).toBe(90)
       expect(result.today_completion_tokens).toBe(50)
+      expect(result.coverage.consumption).toEqual({
+        validCount: 1,
+        invalidCount: 1,
+      })
     })
 
     it("should handle missing token fields", () => {
@@ -138,6 +203,14 @@ describe("New API family account data utilities", () => {
       expect(result.today_quota_consumption).toBe(450)
       expect(result.today_prompt_tokens).toBe(50)
       expect(result.today_completion_tokens).toBe(40)
+      expect(result.coverage.promptTokens).toEqual({
+        validCount: 1,
+        invalidCount: 2,
+      })
+      expect(result.coverage.completionTokens).toEqual({
+        validCount: 1,
+        invalidCount: 2,
+      })
     })
 
     it("should handle zero values", () => {
@@ -164,6 +237,46 @@ describe("New API family account data utilities", () => {
       expect(result.today_quota_consumption).toBe(3000000)
       expect(result.today_prompt_tokens).toBe(1500000)
       expect(result.today_completion_tokens).toBe(900000)
+    })
+  })
+
+  describe("aggregateIncomeData", () => {
+    it("keeps an explicit zero quota instead of falling back to content", () => {
+      const result = aggregateIncomeData([{ quota: 0, content: "$100" }], 7)
+
+      expect(result.today_income).toBe(0)
+      expect(result.coverage).toEqual({ validCount: 1, invalidCount: 0 })
+    })
+
+    it("uses content only when quota is absent", () => {
+      const result = aggregateIncomeData([{ content: "$2" }], 7)
+
+      expect(result.today_income).toBe(200)
+      expect(result.coverage).toEqual({ validCount: 1, invalidCount: 0 })
+    })
+
+    it.each([
+      ["string", "5"],
+      ["null", null],
+      ["undefined", undefined],
+      ["NaN", Number.NaN],
+      ["infinity", Number.POSITIVE_INFINITY],
+    ])("rejects a %s quota without using content", (_label, quota) => {
+      const result = aggregateIncomeData([{ quota, content: "$2" }], 7)
+
+      expect(result.today_income).toBe(0)
+      expect(result.coverage).toEqual({ validCount: 0, invalidCount: 1 })
+    })
+
+    it("does not let finite income rows overflow the total", () => {
+      const result = aggregateIncomeData(
+        [{ quota: Number.MAX_VALUE }, { quota: Number.MAX_VALUE }],
+        7,
+      )
+
+      expect(Number.isFinite(result.today_income)).toBe(true)
+      expect(result.today_income).toBe(Number.MAX_VALUE)
+      expect(result.coverage).toEqual({ validCount: 1, invalidCount: 1 })
     })
   })
 

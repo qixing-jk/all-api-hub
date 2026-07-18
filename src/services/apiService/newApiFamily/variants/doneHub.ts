@@ -11,6 +11,10 @@ import {
   fetchTodayUsage as fetchTodayUsageFromNewApiFamily,
   resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
+import {
+  getTodayTimestampRange,
+  type TodayTimestampRange,
+} from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import type { TodayLogQueryConfig } from "~/services/history/usageHistory/usageLogModel"
 import { CheckInConfig, SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -34,20 +38,28 @@ const DONE_HUB_TODAY_LOG_QUERY_CONFIG: TodayLogQueryConfig = {
 /**
  * Fetch DoneHub today's usage through New API-family today-log helpers.
  */
-export async function fetchTodayUsage(request: ApiServiceAccountRequest) {
+export async function fetchTodayUsage(
+  request: ApiServiceAccountRequest,
+  timestampRange: TodayTimestampRange = getTodayTimestampRange(),
+) {
   return await fetchTodayUsageFromNewApiFamily(
     request,
     DONE_HUB_TODAY_LOG_QUERY_CONFIG,
+    timestampRange,
   )
 }
 
 /**
  * Fetch DoneHub today's income through New API-family today-log helpers.
  */
-export async function fetchTodayIncome(request: ApiServiceAccountRequest) {
+export async function fetchTodayIncome(
+  request: ApiServiceAccountRequest,
+  timestampRange: TodayTimestampRange = getTodayTimestampRange(),
+) {
   return await fetchTodayIncomeFromNewApiFamily(
     request,
     DONE_HUB_TODAY_LOG_QUERY_CONFIG,
+    timestampRange,
   )
 }
 
@@ -58,10 +70,11 @@ export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   const resolvedCheckIn: CheckInConfig = request.checkIn
+  const timestampRange = getTodayTimestampRange()
 
   const quotaPromise = fetchAccountQuota(request)
-  const todayUsagePromise = fetchTodayUsage(request)
-  const todayIncomePromise = fetchTodayIncome(request)
+  const todayUsagePromise = fetchTodayUsage(request, timestampRange)
+  const todayIncomePromise = fetchTodayIncome(request, timestampRange)
   const checkInPromise = resolvedCheckIn?.enableDetection
     ? fetchCheckInStatus(request)
     : Promise.resolve<boolean | undefined>(undefined)
@@ -77,6 +90,10 @@ export async function fetchAccountData(
     quota,
     ...todayUsage,
     ...todayIncome,
+    todayStatsAvailability: {
+      ...todayUsage.todayStatsAvailability,
+      ...todayIncome.todayStatsAvailability,
+    },
     checkIn: {
       ...resolvedCheckIn,
       siteStatus: resolveCheckInSiteStatus(resolvedCheckIn, canCheckIn),

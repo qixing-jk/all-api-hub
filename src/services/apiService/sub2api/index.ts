@@ -8,8 +8,9 @@ import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
-  TodayIncomeData,
+  TodayIncomeDataWithAvailability,
   TodayUsageData,
+  TodayUsageDataWithAvailability,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
@@ -29,8 +30,11 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
   AuthTypeEnum,
   SiteHealthStatus,
+  type AccountTodayMetricReason,
   type ApiToken,
   type CheckInConfig,
 } from "~/types"
@@ -762,14 +766,42 @@ type Sub2ApiCurrentUser = {
   quota: number
 }
 
+const createZeroTodayUsage = (
+  reason: AccountTodayMetricReason,
+): TodayUsageDataWithAvailability => {
+  const availability = {
+    status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+    reason,
+  } as const
+
+  return {
+    ...ZERO_TODAY_USAGE_DATA,
+    todayStatsAvailability: {
+      consumption: availability,
+      requests: availability,
+      tokens: availability,
+    },
+  }
+}
+
+const createSub2ApiIncomeAvailability = () =>
+  ({
+    status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+    reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+  }) as const
+
 const createAccountData = (
   currentUser: Sub2ApiCurrentUser,
   checkIn: CheckInConfig,
-  todayUsage: TodayUsageData = ZERO_TODAY_USAGE_DATA,
+  todayUsage: TodayUsageDataWithAvailability,
 ): AccountData => ({
   quota: currentUser.quota,
   ...todayUsage,
   today_income: 0,
+  todayStatsAvailability: {
+    ...todayUsage.todayStatsAvailability,
+    income: createSub2ApiIncomeAvailability(),
+  },
   checkIn,
 })
 
@@ -798,7 +830,7 @@ const createHealthyHealthStatus = () => ({
 const createRefreshSuccessResult = (
   currentUser: Sub2ApiCurrentUser,
   checkIn: CheckInConfig,
-  todayUsage: TodayUsageData,
+  todayUsage: TodayUsageDataWithAvailability,
   authUpdate?: RefreshAccountResult["authUpdate"],
 ): RefreshAccountResult => ({
   success: true,
@@ -815,10 +847,12 @@ const fetchCurrentUserAndTodayUsage = async (
   request: ApiServiceAccountRequest,
 ): Promise<{
   currentUser: Sub2ApiCurrentUser
-  todayUsage: TodayUsageData
+  todayUsage: TodayUsageDataWithAvailability
 }> => {
   const currentUser = await fetchCurrentUser(request)
-  let todayUsage = ZERO_TODAY_USAGE_DATA
+  let todayUsage = createZeroTodayUsage(
+    ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+  )
 
   try {
     todayUsage = await fetchTodayUsage(request)
@@ -1106,13 +1140,13 @@ const createSub2ApiUsageStatsEndpoint = (): string =>
  *
  * Source: https://github.com/Wei-Shaw/sub2api
  * User routes register authenticated `GET /api/v1/usage/stats`; `period=today`
- * maps the response to the extension's existing today-usage account fields.
+ * is the server-configured current day and maps to the extension's today fields.
  */
 export async function fetchTodayUsage(
   request: ApiServiceAccountRequest,
-): Promise<TodayUsageData> {
+): Promise<TodayUsageDataWithAvailability> {
   if (request.includeTodayCashflow === false) {
-    return ZERO_TODAY_USAGE_DATA
+    return createZeroTodayUsage(ACCOUNT_TODAY_METRIC_REASONS.NotCollected)
   }
 
   const endpoint = createSub2ApiUsageStatsEndpoint()
@@ -1133,8 +1167,11 @@ export async function fetchTodayUsage(
  */
 export async function fetchTodayIncome(
   _request: ApiServiceRequest,
-): Promise<TodayIncomeData> {
-  return { today_income: 0 }
+): Promise<TodayIncomeDataWithAvailability> {
+  return {
+    today_income: 0,
+    todayStatsAvailability: { income: createSub2ApiIncomeAvailability() },
+  }
 }
 
 /**

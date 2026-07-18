@@ -41,7 +41,7 @@ export type VoApiV2UserInfo = {
 
 export type VoApiV2DashboardStatistics = {
   d?: {
-    requests?: number
+    requests?: number | string
     usedBasicBalance?: string | number
     usedBindBalance?: string | number
     errors?: number

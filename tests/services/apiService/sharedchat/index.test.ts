@@ -10,7 +10,11 @@ import {
   rotateCodexServiceCredential,
 } from "~/services/apiService/sharedchat"
 import { ApiError } from "~/services/apiTransport/errors"
-import { AuthTypeEnum } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+  AuthTypeEnum,
+} from "~/types"
 import { sharedChatCodexQuotaSample } from "~~/tests/fixtures/sharedchat/codexQuota.sample"
 import { server } from "~~/tests/msw/server"
 
@@ -78,6 +82,18 @@ describe("apiService SharedChat", () => {
       today_quota_consumption:
         1.23 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
       today_income: 0,
+      todayStatsAvailability: {
+        consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      },
       usage: {
         scope: "rolling_window",
         totalRequests: 10,
@@ -121,6 +137,88 @@ describe("apiService SharedChat", () => {
         enableDetection: false,
         siteStatus: {
           isCheckedInToday: undefined,
+        },
+      },
+    })
+  })
+
+  it("classifies missing and non-finite rolling usage fields as invalid", async () => {
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json({
+          ...sharedChatCodexQuotaSample,
+          data: {
+            codex: {
+              ...sharedChatCodexQuotaSample.data.codex,
+              currentUsage: {
+                totalRequests: undefined,
+                totalTokens: Number.POSITIVE_INFINITY,
+                totalCost: "not-a-number",
+              },
+            },
+          },
+        }),
+      ),
+    )
+
+    await expect(fetchAccountData(accountRequest)).resolves.toMatchObject({
+      today_requests_count: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      usage: {
+        scope: "rolling_window",
+        totalRequests: 0,
+        totalTokens: 0,
+        totalCost: 0,
+      },
+      todayStatsAvailability: {
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+        },
+        requests: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+        },
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+        },
+      },
+    })
+  })
+
+  it("retains rolling usage but skips compatibility today fields when disabled", async () => {
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json(sharedChatCodexQuotaSample),
+      ),
+    )
+
+    await expect(
+      fetchAccountData({ ...accountRequest, includeTodayCashflow: false }),
+    ).resolves.toMatchObject({
+      today_requests_count: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      usage: {
+        scope: "rolling_window",
+        totalRequests: 10,
+        totalTokens: 12345,
+        totalCost: 1.23,
+      },
+      todayStatsAvailability: {
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+        requests: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
         },
       },
     })

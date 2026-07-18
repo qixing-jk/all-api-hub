@@ -14,7 +14,14 @@ import {
   API_AUTH_TOKEN_MODES,
   type ApiServiceRequest,
 } from "~/services/apiTransport/type"
-import { SiteHealthStatus, type ApiToken, type CheckInConfig } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+  SiteHealthStatus,
+  type AccountTodayMetricAvailability,
+  type ApiToken,
+  type CheckInConfig,
+} from "~/types"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -72,14 +79,39 @@ async function fetchVoApiV2Data<TData>(
 }
 
 const buildTodayStatisticsEndpoint = () => {
-  const start = new Date()
+  const frozenNow = new Date()
+  const start = new Date(frozenNow.getTime())
   start.setHours(0, 0, 0, 0)
 
-  const end = new Date()
+  const end = new Date(frozenNow.getTime())
   end.setHours(23, 59, 59, 999)
 
   return `${VOAPI_V2_ENDPOINTS.DashboardStatistics}?t=h&s=${start.getTime()}&e=${end.getTime()}`
 }
+
+const toOptionalFiniteNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value !== "string" || !value.trim()) return undefined
+
+  const parsed = Number(value.trim())
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+const completeAvailability = (): AccountTodayMetricAvailability => ({
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+})
+
+const unavailableAvailability = (
+  reason: AccountTodayMetricAvailability["reason"],
+): AccountTodayMetricAvailability => ({
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+  reason,
+})
+
+const partialAvailability = (): AccountTodayMetricAvailability => ({
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+  reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+})
 
 const toFiniteInteger = (value: unknown, fallback = 0): number => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -323,19 +355,23 @@ export async function fetchVoApiV2AccountData(
 ): Promise<AccountData> {
   const resolvedCheckIn = request.checkIn ?? { enableDetection: false }
   const userInfoPromise = fetchVoApiV2UserInfo(request)
+  // VoAPI v2 dashboard statistics accept one millisecond date range and return
+  // requests plus separate basic/bound usage. Source: https://github.com/VoAPI/VoAPI
   const statsPromise =
     request.includeTodayCashflow !== false
       ? fetchVoApiV2Data<VoApiV2DashboardStatistics>(
           request,
           buildTodayStatisticsEndpoint(),
           { cache: "no-store" },
-        ).catch(() => null)
-      : Promise.resolve<VoApiV2DashboardStatistics | null>(null)
+        )
+          .then((data) => ({ kind: "success" as const, data }))
+          .catch(() => ({ kind: "failed" as const }))
+      : Promise.resolve({ kind: "skipped" as const })
   const checkedInTodayPromise = resolvedCheckIn.enableDetection
     ? fetchVoApiV2CheckedInToday(request)
     : Promise.resolve<boolean | undefined>(undefined)
 
-  const [userInfo, stats, isCheckedInToday] = await Promise.all([
+  const [userInfo, statsResult, isCheckedInToday] = await Promise.all([
     userInfoPromise,
     statsPromise,
     checkedInTodayPromise,
@@ -343,17 +379,57 @@ export async function fetchVoApiV2AccountData(
 
   const quota =
     amountToQuota(userInfo.basicBalance) + amountToQuota(userInfo.bindBalance)
-  const todayUsage =
-    amountToQuota(stats?.d?.usedBasicBalance) +
-    amountToQuota(stats?.d?.usedBindBalance)
+  const stats = statsResult.kind === "success" ? statsResult.data : undefined
+  const usedBasicBalance = toOptionalFiniteNumber(stats?.d?.usedBasicBalance)
+  const usedBindBalance = toOptionalFiniteNumber(stats?.d?.usedBindBalance)
+  const requests = toOptionalFiniteNumber(stats?.d?.requests)
+  const validConsumptionSourceCount =
+    Number(usedBasicBalance !== undefined) +
+    Number(usedBindBalance !== undefined)
+  const requestFailure = unavailableAvailability(
+    ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+  )
+  const invalidPayload = unavailableAvailability(
+    ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+  )
+  const notCollected = unavailableAvailability(
+    ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+  )
+  const todayStatsAvailability =
+    statsResult.kind === "skipped"
+      ? {
+          consumption: notCollected,
+          requests: notCollected,
+        }
+      : statsResult.kind === "failed"
+        ? {
+            consumption: requestFailure,
+            requests: requestFailure,
+          }
+        : {
+            consumption:
+              validConsumptionSourceCount === 2
+                ? completeAvailability()
+                : validConsumptionSourceCount === 1
+                  ? partialAvailability()
+                  : invalidPayload,
+            requests:
+              requests === undefined ? invalidPayload : completeAvailability(),
+          }
 
   return {
     quota,
-    today_quota_consumption: todayUsage,
-    today_requests_count: Number(stats?.d?.requests ?? 0),
+    today_quota_consumption:
+      amountToQuota(usedBasicBalance) + amountToQuota(usedBindBalance),
+    today_requests_count: Math.max(0, Math.trunc(requests ?? 0)),
     today_prompt_tokens: 0,
     today_completion_tokens: 0,
     today_income: 0,
+    todayStatsAvailability: {
+      ...todayStatsAvailability,
+      tokens: unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
     checkIn: {
       ...resolvedCheckIn,
       siteStatus: resolveVoApiV2CheckInSiteStatus(

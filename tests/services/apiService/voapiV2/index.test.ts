@@ -17,7 +17,12 @@ import {
   submitVoApiV2CheckIn,
   updateVoApiV2Token,
 } from "~/services/apiService/voapiV2"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+  AuthTypeEnum,
+  SiteHealthStatus,
+} from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 
@@ -109,6 +114,18 @@ describe("apiService VoAPI v2", () => {
     expect(data.quota).toBe(2500000)
     expect(data.today_quota_consumption).toBe(375000)
     expect(data.today_requests_count).toBe(9)
+    expect(data.todayStatsAvailability).toEqual({
+      consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+      requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+      tokens: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+      },
+      income: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+      },
+    })
     expect(data.checkIn.siteStatus).toMatchObject({
       isCheckedInToday: true,
       lastDetectedAt: 1_700_000_000_000,
@@ -144,7 +161,137 @@ describe("apiService VoAPI v2", () => {
     expect(data.quota).toBe(1000000)
     expect(data.today_quota_consumption).toBe(0)
     expect(statsCalled).toBe(false)
+    expect(data.todayStatsAvailability).toMatchObject({
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+      },
+      requests: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+      },
+      tokens: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+      },
+      income: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+      },
+    })
     expect(data.checkIn.siteStatus?.isCheckedInToday).toBe(false)
+  })
+
+  it("validates VoAPI v2 requests and consumption sources independently", async () => {
+    server.use(
+      http.get("https://example.invalid/api/user/info", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { id: 7, basicBalance: "2", bindBalance: "0" },
+        }),
+      ),
+      http.get("https://example.invalid/api/dash/statistics", ({ request }) => {
+        const url = new URL(request.url)
+        const start = new Date(Number(url.searchParams.get("s")))
+        const end = new Date(Number(url.searchParams.get("e")))
+        expect(start.toDateString()).toBe(end.toDateString())
+        return HttpResponse.json({
+          code: 0,
+          data: {
+            d: {
+              requests: "9",
+              usedBasicBalance: "0.5",
+              usedBindBalance: "invalid",
+            },
+          },
+        })
+      }),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: { todaySigned: false } }),
+      ),
+    )
+
+    const data = await fetchVoApiV2AccountData(createVoApiV2Request())
+
+    expect(data.today_quota_consumption).toBe(250000)
+    expect(data.today_requests_count).toBe(9)
+    expect(data.todayStatsAvailability).toMatchObject({
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+      },
+      requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+    })
+  })
+
+  it("classifies VoAPI v2 statistics with no valid sources as invalid", async () => {
+    server.use(
+      http.get("https://example.invalid/api/user/info", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { id: 7, basicBalance: "2", bindBalance: "0" },
+        }),
+      ),
+      http.get("https://example.invalid/api/dash/statistics", () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            d: {
+              requests: undefined,
+              usedBasicBalance: "invalid",
+              usedBindBalance: undefined,
+            },
+          },
+        }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: { todaySigned: false } }),
+      ),
+    )
+
+    const data = await fetchVoApiV2AccountData(createVoApiV2Request())
+
+    expect(data.todayStatsAvailability).toMatchObject({
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+      },
+      requests: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+      },
+    })
+  })
+
+  it("classifies failed VoAPI v2 statistics without failing healthy balance", async () => {
+    server.use(
+      http.get("https://example.invalid/api/user/info", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { id: 7, basicBalance: "2", bindBalance: "0" },
+        }),
+      ),
+      http.get("https://example.invalid/api/dash/statistics", () =>
+        HttpResponse.json({ code: 1, msg: "statistics unavailable" }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: { todaySigned: false } }),
+      ),
+    )
+
+    const data = await fetchVoApiV2AccountData(createVoApiV2Request())
+
+    expect(data.quota).toBe(1000000)
+    expect(data.todayStatsAvailability).toMatchObject({
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+      },
+      requests: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+      },
+    })
   })
 
   it("preserves existing check-in status when VoAPI v2 status detection fails", async () => {

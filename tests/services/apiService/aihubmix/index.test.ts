@@ -33,7 +33,11 @@ import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { resolveModelVendorCandidate } from "~/services/models/modelVendor"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
-import { AuthTypeEnum } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+  AuthTypeEnum,
+} from "~/types"
 import { server } from "~~/tests/msw/server"
 
 const baseRequest = {
@@ -90,10 +94,57 @@ describe("apiService AIHubMix", () => {
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
       today_requests_count: 0,
+      todayStatsAvailability: {
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        },
+        requests: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        },
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      },
     })
     await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
       today_income: 0,
+      todayStatsAvailability: {
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      },
     })
+  })
+
+  it("returns independent availability snapshots", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: { username: "example-user", quota: 100 },
+        }),
+      ),
+    )
+
+    const first = await fetchAccountData(baseAccountRequest)
+    first.todayStatsAvailability!.consumption.status =
+      ACCOUNT_TODAY_METRIC_STATUSES.Complete
+
+    const second = await fetchAccountData(baseAccountRequest)
+
+    expect(second.todayStatsAvailability!.consumption).toEqual({
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+    })
+    expect(second.todayStatsAvailability).not.toBe(first.todayStatsAvailability)
+    expect(second.todayStatsAvailability!.consumption).not.toBe(
+      first.todayStatsAvailability!.consumption,
+    )
   })
 
   it("normalizes invalid numbers, empty access tokens, and direct data bodies", async () => {
@@ -664,7 +715,7 @@ describe("apiService AIHubMix", () => {
     ])
   })
 
-  it("parses account quota and used quota from /api/user/self", async () => {
+  it("keeps cumulative used quota out of today statistics", async () => {
     server.use(
       http.get("https://aihubmix.com/api/user/self", () =>
         HttpResponse.json({
@@ -692,11 +743,29 @@ describe("apiService AIHubMix", () => {
 
     expect(accountData).toMatchObject({
       quota: 900000,
-      today_quota_consumption: 12345,
+      today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
       today_requests_count: 0,
       today_income: 0,
+      todayStatsAvailability: {
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        },
+        requests: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        },
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      },
       checkIn: {
         enableDetection: false,
       },
@@ -768,7 +837,7 @@ describe("apiService AIHubMix", () => {
         success: true,
         data: {
           quota: 500000,
-          today_quota_consumption: 1000,
+          today_quota_consumption: 0,
         },
         healthStatus: {
           status: "healthy",

@@ -932,6 +932,7 @@ describe("apiService doneHub channel APIs", () => {
         siteStatus: {},
       },
     }
+    const timestampRange = { start: 1_700_000_000, end: 1_700_086_399 }
 
     mockFetchTodayUsage.mockResolvedValueOnce({
       today_quota_consumption: 60,
@@ -940,7 +941,9 @@ describe("apiService doneHub channel APIs", () => {
       today_requests_count: 3,
     })
 
-    await expect(fetchTodayUsage(request as any)).resolves.toEqual({
+    await expect(
+      fetchTodayUsage(request as any, timestampRange),
+    ).resolves.toEqual({
       today_quota_consumption: 60,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
@@ -958,6 +961,7 @@ describe("apiService doneHub channel APIs", () => {
         totalField: "total_count",
         includeGroupParam: false,
       }),
+      timestampRange,
     )
   })
 
@@ -974,12 +978,13 @@ describe("apiService doneHub channel APIs", () => {
         siteStatus: {},
       },
     }
+    const timestampRange = { start: 1_700_000_000, end: 1_700_086_399 }
 
     mockFetchTodayIncome.mockResolvedValueOnce({ today_income: 42 })
 
-    await expect(fetchTodayIncome(request as any)).resolves.toEqual({
-      today_income: 42,
-    })
+    await expect(
+      fetchTodayIncome(request as any, timestampRange),
+    ).resolves.toEqual({ today_income: 42 })
 
     expect(mockFetchTodayIncome).toHaveBeenCalledWith(
       request,
@@ -992,6 +997,7 @@ describe("apiService doneHub channel APIs", () => {
         totalField: "total_count",
         includeGroupParam: false,
       }),
+      timestampRange,
     )
   })
 
