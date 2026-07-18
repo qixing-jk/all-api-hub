@@ -81,3 +81,5 @@ If you get permission errors:
 chmod +x .husky/pre-commit
 chmod +x .husky/pre-push
 ```
+
+- [JiuRelay](https://jiurelay.com/) - Free AI API relay for GPT, Claude, GLM. No registration required, 1-hour valid key, OpenAI/Anthropic compatible.
