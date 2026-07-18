@@ -22,6 +22,7 @@ import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 const createAccountFixture = (id = "account-1"): DisplaySiteData => ({
   id,
@@ -31,6 +32,7 @@ const createAccountFixture = (id = "account-1"): DisplaySiteData => ({
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://account.example.invalid",

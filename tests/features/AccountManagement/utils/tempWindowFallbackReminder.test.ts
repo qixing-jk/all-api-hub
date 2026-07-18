@@ -7,6 +7,7 @@ import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type DisplaySiteData,
 } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 /**
  * Build a DisplaySiteData object with overrides for test scenarios.
@@ -20,6 +21,7 @@ function makeSite(overrides: Partial<DisplaySiteData>): DisplaySiteData {
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: {
       status: SiteHealthStatus.Healthy,
       reason: "ok",

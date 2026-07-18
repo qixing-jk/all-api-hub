@@ -27,6 +27,7 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 const { mockTotalListHeightChanged, modelItemSpy } = vi.hoisted(() => ({
   mockTotalListHeightChanged: {
@@ -171,6 +172,7 @@ const ACCOUNT_FIXTURE: DisplaySiteData = {
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://account.example.invalid",

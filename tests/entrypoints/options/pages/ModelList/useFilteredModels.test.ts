@@ -32,6 +32,7 @@ import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const createDisplayAccount = (
@@ -44,6 +45,7 @@ const createDisplayAccount = (
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",

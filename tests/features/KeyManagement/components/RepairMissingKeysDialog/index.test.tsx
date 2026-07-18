@@ -12,6 +12,7 @@ import {
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const mockHandleStartAudit = vi.fn()
@@ -69,6 +70,7 @@ function buildAccount(): DisplaySiteData {
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://one.example.invalid",

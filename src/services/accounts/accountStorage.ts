@@ -5,6 +5,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import type { RefreshAccountResult } from "~/services/accounts/accountDataModel"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
+  getAccountSiteProductProfile,
   isAccountSiteProfileUrl,
   normalizeAccountSiteProfileUrlForOriginKey,
   normalizeAccountSiteSupplementalAuth,
@@ -26,6 +27,7 @@ import {
   SiteHealthStatus,
   type AccountStats,
   type AccountStorageConfig,
+  type AccountTodayStatsAvailability,
   type DeletedEntryKind,
   type DeletedEntryRecord,
   type DisplaySiteData,
@@ -54,6 +56,11 @@ import {
   normalizeSiteAccount,
 } from "./accountDefaults"
 import {
+  collectAccountMetricContributors,
+  createEmptyAccountStats,
+  normalizeAccountTodayStatsAvailability,
+} from "./accountTodayStats"
+import {
   migrateAccountConfig,
   migrateAccountsConfig,
   needsConfigMigration,
@@ -63,6 +70,16 @@ import {
 export { ACCOUNT_STORAGE_KEYS }
 
 const logger = createLogger("AccountStorage")
+
+export const resolveAccountTodayStatsAvailability = (
+  account: Pick<SiteAccount, "site_type" | "account_info">,
+): AccountTodayStatsAvailability => {
+  const profile = getAccountSiteProductProfile(account.site_type)
+  return normalizeAccountTodayStatsAvailability(
+    account.account_info.todayStatsAvailability,
+    profile.metrics.legacyTodayStatsAvailability,
+  )
+}
 
 const createMissingAccountRefreshResult = (
   siteType: string,
@@ -1197,6 +1214,7 @@ class AccountStorageService {
           today_quota_consumption: result.data.today_quota_consumption,
           today_requests_count: result.data.today_requests_count,
           today_income: result.data.today_income,
+          todayStatsAvailability: result.data.todayStatsAvailability,
           usage: result.data.usage,
           subscription: result.data.subscription,
           recentUsageRecords: result.data.recentUsageRecords,
@@ -1440,44 +1458,72 @@ class AccountStorageService {
   async getAccountStats(): Promise<AccountStats> {
     try {
       const accounts = await this.getEnabledAccounts()
-
-      return accounts.reduce(
-        (stats, account) => ({
-          total_quota: stats.total_quota + account.account_info.quota,
-          today_total_consumption:
-            stats.today_total_consumption +
-            account.account_info.today_quota_consumption,
-          today_total_requests:
-            stats.today_total_requests +
-            account.account_info.today_requests_count,
-          today_total_prompt_tokens:
-            stats.today_total_prompt_tokens +
-            account.account_info.today_prompt_tokens,
-          today_total_completion_tokens:
-            stats.today_total_completion_tokens +
-            account.account_info.today_completion_tokens,
-          today_total_income:
-            stats.today_total_income + (account.account_info.today_income || 0),
-        }),
-        {
-          total_quota: 0,
-          today_total_consumption: 0,
-          today_total_requests: 0,
-          today_total_prompt_tokens: 0,
-          today_total_completion_tokens: 0,
-          today_total_income: 0,
-        },
+      const incomeAccounts = accounts.filter(
+        (account) => account.excludeFromTodayIncome !== true,
       )
+      const availabilityById = new Map(
+        accounts.map((account) => [
+          account.id,
+          resolveAccountTodayStatsAvailability(account),
+        ]),
+      )
+      const collect = (
+        eligibleAccounts: SiteAccount[],
+        metric: keyof AccountTodayStatsAvailability,
+        getValue: (account: SiteAccount) => number,
+      ) =>
+        collectAccountMetricContributors(
+          eligibleAccounts,
+          getValue,
+          (account) => availabilityById.get(account.id)![metric],
+        )
+
+      const consumption = collect(
+        accounts,
+        "consumption",
+        (account) => account.account_info.today_quota_consumption,
+      )
+      const requests = collect(
+        accounts,
+        "requests",
+        (account) => account.account_info.today_requests_count,
+      )
+      const promptTokens = collect(
+        accounts,
+        "tokens",
+        (account) => account.account_info.today_prompt_tokens,
+      )
+      const completionTokens = collect(
+        accounts,
+        "tokens",
+        (account) => account.account_info.today_completion_tokens,
+      )
+      const income = collect(
+        incomeAccounts,
+        "income",
+        (account) => account.account_info.today_income,
+      )
+
+      return {
+        total_quota: accounts.reduce(
+          (sum, account) => sum + account.account_info.quota,
+          0,
+        ),
+        today_total_consumption: consumption.value,
+        today_total_requests: requests.value,
+        today_total_prompt_tokens: promptTokens.value,
+        today_total_completion_tokens: completionTokens.value,
+        today_total_income: income.value,
+        todayStatsCoverage: {
+          consumption: consumption.coverage,
+          requests: requests.coverage,
+          tokens: promptTokens.coverage,
+          income: income.coverage,
+        },
+      }
     } catch (error) {
       logger.error("计算统计信息失败", error)
-      return {
-        total_quota: 0,
-        today_total_consumption: 0,
-        today_total_requests: 0,
-        today_total_prompt_tokens: 0,
-        today_total_completion_tokens: 0,
-        today_total_income: 0,
-      }
+      return createEmptyAccountStats()
     }
   }
 
@@ -1562,6 +1608,8 @@ class AccountStorageService {
           upload: normalized.account_info.today_prompt_tokens,
           download: normalized.account_info.today_completion_tokens,
         },
+        todayStatsAvailability:
+          resolveAccountTodayStatsAvailability(normalized),
         usage: normalized.account_info.usage,
         subscription: normalized.account_info.subscription,
         recentUsageRecords: normalized.account_info.recentUsageRecords,

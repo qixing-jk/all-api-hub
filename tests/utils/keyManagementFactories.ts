@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 export const createAccount = (overrides: Partial<any>) => ({
   id: "account",
@@ -9,6 +10,7 @@ export const createAccount = (overrides: Partial<any>) => ({
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://example.com/v1",

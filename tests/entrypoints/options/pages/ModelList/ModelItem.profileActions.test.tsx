@@ -25,6 +25,7 @@ import {
   createVerificationHistorySummary,
 } from "~/services/verification/verificationResultHistory"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const mockCreateTab = vi.hoisted(() => vi.fn())
@@ -378,6 +379,7 @@ describe("ModelItem profile actions", () => {
       todayConsumption: { USD: 0, CNY: 0 },
       todayIncome: { USD: 0, CNY: 0 },
       todayTokens: { upload: 0, download: 0 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability(),
       health: { status: SiteHealthStatus.Healthy },
       siteType: "new-api",
       baseUrl: "https://example.com",
@@ -438,6 +440,7 @@ describe("ModelItem profile actions", () => {
       todayConsumption: { USD: 0, CNY: 0 },
       todayIncome: { USD: 0, CNY: 0 },
       todayTokens: { upload: 0, download: 0 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability(),
       health: { status: SiteHealthStatus.Healthy },
       siteType: "new-api",
       baseUrl: "https://example.com",
@@ -498,6 +501,7 @@ describe("ModelItem profile actions", () => {
       todayConsumption: { USD: 0, CNY: 0 },
       todayIncome: { USD: 0, CNY: 0 },
       todayTokens: { upload: 0, download: 0 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability(),
       health: { status: SiteHealthStatus.Healthy },
       siteType: "new-api",
       baseUrl: "https://example.com",
@@ -570,6 +574,7 @@ describe("ModelItem profile actions", () => {
       todayConsumption: { USD: 0, CNY: 0 },
       todayIncome: { USD: 0, CNY: 0 },
       todayTokens: { upload: 0, download: 0 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability(),
       health: { status: SiteHealthStatus.Healthy },
       siteType: "new-api",
       baseUrl: "https://example.com",
@@ -640,6 +645,7 @@ describe("ModelItem profile actions", () => {
       todayConsumption: { USD: 0, CNY: 0 },
       todayIncome: { USD: 0, CNY: 0 },
       todayTokens: { upload: 0, download: 0 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability(),
       health: { status: SiteHealthStatus.Healthy },
       siteType: "AIHubMix",
       baseUrl: "https://aihubmix.com",
@@ -715,6 +721,7 @@ describe("ModelItem profile actions", () => {
       todayConsumption: { USD: 0, CNY: 0 },
       todayIncome: { USD: 0, CNY: 0 },
       todayTokens: { upload: 0, download: 0 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability(),
       health: { status: SiteHealthStatus.Healthy },
       siteType: "new-api",
       baseUrl: "https://example.com",

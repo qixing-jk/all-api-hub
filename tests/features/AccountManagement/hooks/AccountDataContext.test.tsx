@@ -15,9 +15,11 @@ import {
   useAccountDataContext,
 } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
+import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { SearchResult } from "~/services/search/accountSearch"
 import type { DisplaySiteData } from "~/types"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { SortingCriteriaType } from "~/types/sorting"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -373,15 +375,19 @@ beforeEach(() => {
 })
 
 function createEmptyStats() {
-  return {
-    total_quota: 0,
-    today_total_consumption: 0,
-    today_total_requests: 0,
-    today_total_prompt_tokens: 0,
-    today_total_completion_tokens: 0,
-    today_total_income: 0,
-  }
+  return createEmptyAccountStats()
 }
+
+describe("AccountDataContext initial statistics", () => {
+  it("starts with unavailable empty statistics coverage", async () => {
+    mockGetAllAccounts.mockReturnValue(new Promise(() => undefined))
+    const getContext = await renderAccountDataProvider()
+
+    expect(getContext().stats.todayStatsCoverage.consumption.status).toBe(
+      ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+    )
+  })
+})
 
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void

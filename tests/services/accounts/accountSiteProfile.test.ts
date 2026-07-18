@@ -35,8 +35,25 @@ import {
 } from "~/services/accounts/accountSiteProfile"
 import * as accountSiteProfileApi from "~/services/accounts/accountSiteProfile"
 import { AuthTypeEnum } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 
 describe("accountSiteProfile", () => {
+  it("returns independent deferred and legacy metric policies", () => {
+    const profile = getAccountSiteProductProfile(SITE_TYPES.NEW_API)
+
+    expect(profile.metrics.deferredTodayStatsAvailability).toEqual(
+      profile.metrics.legacyTodayStatsAvailability,
+    )
+    expect(profile.metrics.deferredTodayStatsAvailability).not.toBe(
+      profile.metrics.legacyTodayStatsAvailability,
+    )
+    expect(profile.metrics.deferredTodayStatsAvailability.consumption).not.toBe(
+      profile.metrics.legacyTodayStatsAvailability.consumption,
+    )
+  })
   it("resolves a default compatible profile for New API", () => {
     const profile = getAccountSiteProductProfile(SITE_TYPES.NEW_API)
 
@@ -193,6 +210,24 @@ describe("accountSiteProfile", () => {
     expect(profile.modelList.groupSemantics).toBe(
       ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
     )
+    expect(profile.metrics.legacyTodayStatsAvailability).toEqual({
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+      },
+      requests: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+      },
+      tokens: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+      },
+      income: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+      },
+    })
   })
 
   it("marks SharedChat model-list groups as not applicable", () => {
@@ -451,6 +486,8 @@ describe("accountSiteProfile", () => {
 
     const mutableAuthTypes = first.auth.allowedAuthTypes as AuthTypeEnum[]
     mutableAuthTypes.push(AuthTypeEnum.Cookie)
+    first.metrics.legacyTodayStatsAvailability.consumption.reason =
+      ACCOUNT_TODAY_METRIC_REASONS.NotCollected
 
     const second = getAccountSiteProductProfile(SITE_TYPES.AIHUBMIX)
     expect(second.urls.recognizedHostnames).toEqual([
@@ -459,6 +496,9 @@ describe("accountSiteProfile", () => {
       "console.aihubmix.com",
     ])
     expect(second.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
+    expect(second.metrics.legacyTodayStatsAvailability.consumption.reason).toBe(
+      ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+    )
   })
 
   it("keeps mutable profile table internals out of the public barrel", () => {

@@ -16,6 +16,7 @@ import {
 } from "~/services/accounts/accountOperations"
 import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
   createDisplayAccountApiContext,
@@ -169,6 +170,7 @@ export function useChannelDialog() {
       todayConsumption: { USD: 0, CNY: 0 },
       todayIncome: { USD: 0, CNY: 0 },
       todayTokens: { upload: 0, download: 0 },
+      todayStatsAvailability: createUnsupportedTodayStatsAvailability(),
       health: { status: SiteHealthStatus.Healthy },
       siteType: SITE_TYPES.UNKNOWN,
       baseUrl: options.baseUrl,

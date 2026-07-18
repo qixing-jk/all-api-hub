@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountData } from "~/hooks/useAccountData"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const { mockGetAllAccounts, mockGetAccountStats, mockConvertToDisplayData } =
   vi.hoisted(() => ({
@@ -28,37 +31,26 @@ afterEach(() => {
 const createDisplayAccount = (
   overrides: Partial<DisplaySiteData>,
 ): DisplaySiteData => ({
-  id: "account",
-  name: "Account",
-  username: "user",
-  balance: { USD: 0, CNY: 0 },
-  todayConsumption: { USD: 0, CNY: 0 },
-  todayIncome: { USD: 0, CNY: 0 },
-  todayTokens: { upload: 0, download: 0 },
-  health: { status: SiteHealthStatus.Healthy },
-  siteType: SITE_TYPES.UNKNOWN,
-  baseUrl: "https://example.com",
-  token: "token",
-  userId: "1",
-  authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
-  ...overrides,
+  ...buildDisplaySiteData({ siteType: SITE_TYPES.UNKNOWN, ...overrides }),
 })
 
 describe("useAccountData enabled slices", () => {
+  it("starts with unavailable empty statistics coverage", () => {
+    mockGetAllAccounts.mockReturnValue(new Promise(() => undefined))
+
+    const { result } = renderHook(() => useAccountData())
+
+    expect(result.current.stats.todayStatsCoverage.consumption.status).toBe(
+      ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+    )
+  })
+
   it("provides enabledAccounts and enabledDisplayData excluding disabled entries", async () => {
     mockGetAllAccounts.mockResolvedValue([
       { id: "enabled", last_sync_time: 0 },
       { id: "disabled", last_sync_time: 0, disabled: true },
     ])
-    mockGetAccountStats.mockResolvedValue({
-      total_quota: 0,
-      today_total_consumption: 0,
-      today_total_requests: 0,
-      today_total_prompt_tokens: 0,
-      today_total_completion_tokens: 0,
-      today_total_income: 0,
-    })
+    mockGetAccountStats.mockResolvedValue(buildAccountStats())
 
     const enabledDisplay = createDisplayAccount({
       id: "enabled",

@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { RedemptionAccountSelectToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionAccountSelectToast"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const makeAccount = (
@@ -23,6 +24,7 @@ const makeAccount = (
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     siteType: SITE_TYPES.UNKNOWN,
     baseUrl: "https://example.com",

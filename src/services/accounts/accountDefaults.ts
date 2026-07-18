@@ -1,6 +1,7 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { coerceAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import {
   ACCOUNT_USAGE_SUMMARY_SCOPES,
@@ -302,6 +303,10 @@ function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
     today_quota_consumption: coerceNumber(merged.today_quota_consumption, 0),
     today_requests_count: coerceNumber(merged.today_requests_count, 0),
     today_income: coerceNumber(merged.today_income, 0),
+    todayStatsAvailability:
+      raw?.todayStatsAvailability === undefined
+        ? undefined
+        : normalizeAccountTodayStatsAvailability(raw.todayStatsAvailability),
     usage: normalizeAccountUsageSummary(merged.usage),
     subscription: normalizeAccountSubscriptionSummary(merged.subscription),
     recentUsageRecords: normalizeAccountUsageRecords(merged.recentUsageRecords),
@@ -446,6 +451,7 @@ export type AccountUpdateUserTimestampMode =
  * Uses deterministic deep-merge semantics (via `deepOverride`):
  * - nested objects merge
  * - arrays replace (no concatenation)
+ * - explicitly supplied today-stat availability replaces the prior value
  *
  * Also preserves explicit cleanup semantics where an update sets `health.code`
  * to `undefined` to delete the property from storage.
@@ -464,6 +470,18 @@ export function applySiteAccountUpdates(params: {
       ? {}
       : { user_updated_at: params.now }),
   } as DeepPartial<SiteAccount>)
+
+  if (
+    params.updates.account_info &&
+    Object.prototype.hasOwnProperty.call(
+      params.updates.account_info,
+      "todayStatsAvailability",
+    )
+  ) {
+    merged.account_info.todayStatsAvailability = params.updates.account_info
+      .todayStatsAvailability as AccountInfo["todayStatsAvailability"]
+  }
+
   const result = normalizeSiteAccount(merged)
 
   if (

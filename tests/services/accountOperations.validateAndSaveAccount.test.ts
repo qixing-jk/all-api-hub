@@ -12,6 +12,14 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
+import {
+  buildCompleteTodayStatsAvailability,
+  buildTodayStatsAvailabilityReplacementCases,
+} from "~~/tests/test-utils/accountTodayStats"
 
 const {
   fetchAccountDataMock,
@@ -71,6 +79,60 @@ const flushMicrotasks = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
 }
 
+const availabilityReplacementCases =
+  buildTodayStatsAvailabilityReplacementCases()
+
+const addAccountWithOldTodayAvailability = () =>
+  accountStorage.addAccount({
+    site_name: "Old Example",
+    site_url: "https://old.example.invalid",
+    site_type: SITE_TYPES.NEW_API,
+    health: { status: SiteHealthStatus.Healthy },
+    authType: AuthTypeEnum.AccessToken,
+    disabled: false,
+    excludeFromTotalBalance: false,
+    excludeFromTodayIncome: false,
+    exchange_rate: 7,
+    notes: "",
+    tagIds: [],
+    checkIn: CHECK_IN_DISABLED,
+    account_info: {
+      id: "previous-id",
+      access_token: "old-token",
+      username: "old-user",
+      quota: 42,
+      today_prompt_tokens: 1,
+      today_completion_tokens: 2,
+      today_quota_consumption: 3,
+      today_requests_count: 4,
+      today_income: 5,
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+        },
+      }),
+    },
+    last_sync_time: 123,
+  })
+
+const updateAccountFromRemote = (accountId: string) =>
+  validateAndUpdateAccount(
+    accountId,
+    "https://api.example.invalid",
+    "Example",
+    "user",
+    "token",
+    "1",
+    "7.0",
+    "",
+    [],
+    CHECK_IN_DISABLED,
+    SITE_TYPES.NEW_API,
+    AuthTypeEnum.AccessToken,
+    "",
+  )
+
 describe("accountOperations validateAndSaveAccount", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -92,6 +154,49 @@ describe("accountOperations validateAndSaveAccount", () => {
     })
   })
 
+  it.each(availabilityReplacementCases)(
+    "replaces old today availability after a successful update with $label",
+    async ({ availability, expected }) => {
+      const accountId = await addAccountWithOldTodayAvailability()
+      fetchAccountDataMock.mockResolvedValueOnce({
+        quota: 100,
+        today_prompt_tokens: 10,
+        today_completion_tokens: 20,
+        today_quota_consumption: 30,
+        today_requests_count: 40,
+        today_income: 50,
+        todayStatsAvailability: availability,
+        checkIn: CHECK_IN_DISABLED,
+      })
+
+      const result = await updateAccountFromRemote(accountId)
+
+      expect(result.success).toBe(true)
+      expect(
+        (await accountStorage.getAccountById(accountId))?.account_info
+          .todayStatsAvailability,
+      ).toEqual(expected)
+    },
+  )
+
+  it("preserves old today availability when an update refresh fails", async () => {
+    const accountId = await addAccountWithOldTodayAvailability()
+    const previous = (await accountStorage.getAccountById(accountId))
+      ?.account_info.todayStatsAvailability
+    fetchAccountDataMock.mockRejectedValueOnce(new Error("refresh failed"))
+
+    const result = await updateAccountFromRemote(accountId)
+
+    expect(result).toMatchObject({
+      success: true,
+      feedbackLevel: "warning",
+    })
+    expect(
+      (await accountStorage.getAccountById(accountId))?.account_info
+        .todayStatsAvailability,
+    ).toEqual(previous)
+  })
+
   it("persists normalized cookie auth, tag ids, and refreshed metrics on success", async () => {
     fetchAccountDataMock.mockResolvedValueOnce({
       quota: 321,
@@ -100,6 +205,12 @@ describe("accountOperations validateAndSaveAccount", () => {
       today_quota_consumption: 33,
       today_requests_count: 44,
       today_income: 55,
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+        },
+      }),
       checkIn: CHECK_IN_DISABLED,
     })
 
@@ -135,6 +246,12 @@ describe("accountOperations validateAndSaveAccount", () => {
         id: "42",
         username: "cookie-user",
         quota: 321,
+        todayStatsAvailability: {
+          income: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+          },
+        },
       },
     })
     expect(fetchAccountDataMock).toHaveBeenCalledWith({
@@ -307,6 +424,12 @@ describe("accountOperations validateAndSaveAccount", () => {
         username: "",
         access_token: "access-123",
         quota: 0,
+        todayStatsAvailability: {
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+          },
+        },
       },
     })
   })
@@ -376,6 +499,12 @@ describe("accountOperations validateAndSaveAccount", () => {
         today_quota_consumption: 3,
         today_requests_count: 4,
         today_income: 5,
+        todayStatsAvailability: buildCompleteTodayStatsAvailability({
+          income: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+          },
+        }),
       },
       last_sync_time: 123,
     })
@@ -416,6 +545,12 @@ describe("accountOperations validateAndSaveAccount", () => {
         username: "tester",
         access_token: "token",
         quota: 42,
+        todayStatsAvailability: {
+          income: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+          },
+        },
       },
     })
   })
@@ -459,6 +594,12 @@ describe("accountOperations validateAndSaveAccount", () => {
         username: "user",
         access_token: "",
         quota: 0,
+        todayStatsAvailability: {
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+          },
+        },
       },
     })
   })

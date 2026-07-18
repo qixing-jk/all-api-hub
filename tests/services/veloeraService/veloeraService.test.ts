@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import type { CreateChannelPayload, UpdateChannelPayload } from "~/types/newApi"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 // ============================================================================
 // MOCKS
@@ -89,6 +90,7 @@ function createMockDisplaySiteData(
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: "healthy" as any },
     last_sync_time: Date.now(),
     siteType: SITE_TYPES.VELOERA,

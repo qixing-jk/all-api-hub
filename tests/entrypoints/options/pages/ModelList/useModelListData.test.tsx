@@ -13,6 +13,7 @@ import {
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 const mockUseAccountData = vi.fn()
 const mockUseApiCredentialProfiles = vi.fn()
@@ -57,6 +58,7 @@ const ACCOUNT: DisplaySiteData = {
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType: "new-api",
   baseUrl: "https://example.com",

@@ -12,6 +12,7 @@ import {
 } from "~/services/preferences/userPreferences"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import { SiteHealthStatus } from "~/types"
+import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/services/accounts/accountStorage", () => ({
@@ -79,14 +80,14 @@ const displayAccount = {
   health: { status: SiteHealthStatus.Healthy },
 } as any
 
-const accountStats = {
+const accountStats = buildAccountStats({
   total_quota: 0,
   today_total_consumption: 0,
   today_total_requests: 1,
   today_total_prompt_tokens: 2,
   today_total_completion_tokens: 3,
   today_total_income: 0,
-}
+})
 
 const usageStore = {
   schemaVersion: 1 as const,

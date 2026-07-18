@@ -1,3 +1,5 @@
+import type { AccountTodayStatsAvailability } from "~/types"
+
 import {
   ACCOUNT_SITE_DEFINITION_SCOPES,
   type AccountSiteDefinition,
@@ -25,6 +27,20 @@ function cloneRegExp(pattern: RegExp): RegExp {
  */
 function cloneArray<Item>(items: readonly Item[] | undefined) {
   return items ? [...items] : undefined
+}
+
+/** Clones an optional today-stat availability profile defensively. */
+function cloneTodayStatsAvailability(
+  availability: AccountTodayStatsAvailability | undefined,
+): AccountTodayStatsAvailability | undefined {
+  if (!availability) return undefined
+
+  return {
+    consumption: { ...availability.consumption },
+    requests: { ...availability.requests },
+    tokens: { ...availability.tokens },
+    income: { ...availability.income },
+  }
 }
 
 /**
@@ -84,6 +100,16 @@ function cloneProductProfile(
       : undefined,
     modelList: productProfile.modelList
       ? { ...productProfile.modelList }
+      : undefined,
+    metrics: productProfile.metrics
+      ? {
+          deferredTodayStatsAvailability: cloneTodayStatsAvailability(
+            productProfile.metrics.deferredTodayStatsAvailability,
+          ),
+          legacyTodayStatsAvailability: cloneTodayStatsAvailability(
+            productProfile.metrics.legacyTodayStatsAvailability,
+          ),
+        }
       : undefined,
     supplementalAuth: productProfile.supplementalAuth
       ? { ...productProfile.supplementalAuth }

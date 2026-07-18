@@ -17,6 +17,7 @@ import {
   SortingCriteriaType,
   type SortingPriorityConfig,
 } from "~/types/sorting"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("createDynamicSortComparator", () => {
@@ -32,6 +33,7 @@ describe("createDynamicSortComparator", () => {
     todayConsumption: { USD: 10, CNY: 70 },
     todayIncome: { USD: 5, CNY: 35 },
     todayTokens: { upload: 0, download: 0 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     siteType: SITE_TYPES.UNKNOWN,
     baseUrl: "https://test.com",

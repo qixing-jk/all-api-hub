@@ -28,6 +28,7 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import {
   expectKiloCodeSettingsSizeGuidance,
   expectKiloCodeUsageGuidance,
@@ -158,6 +159,7 @@ const createDisplayAccount = (
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",

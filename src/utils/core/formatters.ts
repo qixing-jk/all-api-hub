@@ -2,9 +2,10 @@ import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
 
 import { CURRENCY_SYMBOLS, UI_CONSTANTS } from "~/constants/ui"
+import { collectAccountMetricContributors } from "~/services/accounts/accountTodayStats"
 import type {
-  AccountStats,
   ApiToken,
+  CurrencyMetricTotal,
   CurrencyType,
   DisplaySiteData,
   SortOrder,
@@ -151,25 +152,13 @@ export const formatFullTime = (date: Date | undefined): string => {
  * 计算总消耗
  */
 export const calculateTotalConsumption = (
-  stats: AccountStats,
-  accounts: any[],
-) => {
-  const usdAmount =
-    stats.today_total_consumption / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-  const cnyAmount = accounts.reduce(
-    (sum, acc) =>
-      sum +
-      (acc.account_info.today_quota_consumption /
-        UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-        acc.exchange_rate,
-    0,
+  sites: DisplaySiteData[],
+): CurrencyMetricTotal =>
+  collectCurrencyMetric(
+    sites.filter((site) => !site.disabled),
+    "consumption",
+    (site) => site.todayConsumption,
   )
-
-  return {
-    USD: usdAmount,
-    CNY: cnyAmount,
-  }
-}
 
 /**
  * 计算总余额
@@ -200,20 +189,7 @@ export const calculateTotalBalanceForSites = (sites: DisplaySiteData[]) =>
  * @param sites Display-ready site collection containing `todayConsumption`.
  */
 export const calculateTotalConsumptionForSites = (sites: DisplaySiteData[]) => {
-  const enabledSites = sites.filter((site) => !site.disabled)
-  const usd = enabledSites.reduce(
-    (sum, site) => sum + site.todayConsumption.USD,
-    0,
-  )
-  const cny = enabledSites.reduce(
-    (sum, site) => sum + site.todayConsumption.CNY,
-    0,
-  )
-
-  return {
-    USD: usd,
-    CNY: cny,
-  }
+  return calculateTotalConsumption(sites)
 }
 
 /**
@@ -223,16 +199,40 @@ export const calculateTotalConsumptionForSites = (sites: DisplaySiteData[]) => {
  * - disabled accounts ({@link DisplaySiteData.disabled})
  * - enabled but explicitly excluded accounts ({@link DisplaySiteData.excludeFromTodayIncome})
  */
-export const calculateTotalIncomeForSites = (sites: DisplaySiteData[]) => {
+export const calculateTotalIncomeForSites = (
+  sites: DisplaySiteData[],
+): CurrencyMetricTotal => {
   const enabledSites = sites.filter(
     (site) => !site.disabled && site.excludeFromTodayIncome !== true,
   )
-  const usd = enabledSites.reduce((sum, site) => sum + site.todayIncome.USD, 0)
-  const cny = enabledSites.reduce((sum, site) => sum + site.todayIncome.CNY, 0)
+  return collectCurrencyMetric(
+    enabledSites,
+    "income",
+    (site) => site.todayIncome,
+  )
+}
+
+const collectCurrencyMetric = (
+  sites: DisplaySiteData[],
+  metric: "consumption" | "income",
+  getAmount: (site: DisplaySiteData) => { USD: number; CNY: number },
+): CurrencyMetricTotal => {
+  const getAvailability = (site: DisplaySiteData) =>
+    site.todayStatsAvailability[metric]
+  const usd = collectAccountMetricContributors(
+    sites,
+    (site) => getAmount(site).USD,
+    getAvailability,
+  )
+  const cny = collectAccountMetricContributors(
+    sites,
+    (site) => getAmount(site).CNY,
+    getAvailability,
+  )
 
   return {
-    USD: usd,
-    CNY: cny,
+    amount: { USD: usd.value, CNY: cny.value },
+    coverage: usd.coverage,
   }
 }
 

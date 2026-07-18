@@ -30,7 +30,12 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockToastLoading, mockToastDismiss, mockToastError } = vi.hoisted(
@@ -107,6 +112,7 @@ const buildDisplaySiteData = (
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://upstream.example.com",
@@ -2052,6 +2058,12 @@ describe("useChannelDialog", () => {
           id: "api-credential-profile:Saved credential",
           name: "Saved credential",
           baseUrl: "https://upstream.example.com",
+          todayStatsAvailability: {
+            consumption: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+            },
+          },
         })
         expect(token).toMatchObject({
           name: "Saved credential",

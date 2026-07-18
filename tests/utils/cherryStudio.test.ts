@@ -7,6 +7,7 @@ import {
   type ApiToken,
   type DisplaySiteData,
 } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -26,6 +27,7 @@ const mockAccount: DisplaySiteData = {
   todayConsumption: { USD: 1, CNY: 7 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 100, download: 200 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   checkIn: { enableDetection: false },
   health: { status: SiteHealthStatus.Healthy },
   last_sync_time: Date.now(),

@@ -6,6 +6,11 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import type { AccountSiteType } from "~/constants/siteType"
+import type {
+  AccountMetricCoverage,
+  AccountTodayStatsAvailability,
+  AccountTodayStatsCoverage,
+} from "~/types/accountTodayStats"
 import type { AuthTypeEnum } from "~/types/auth"
 import { TempWindowHealthStatusCode } from "~/types/tempWindow"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
@@ -45,6 +50,7 @@ export interface AccountInfo {
   today_quota_consumption: number // 今日消耗 quota
   today_requests_count: number // 今日请求次数
   today_income: number // 今日收入 (recharge + check-in)
+  todayStatsAvailability?: AccountTodayStatsAvailability
   usage?: AccountUsageSummary
   subscription?: AccountSubscriptionSummary
   recentUsageRecords?: AccountUsageRecord[]
@@ -437,6 +443,7 @@ export interface AccountStats {
   today_total_prompt_tokens: number
   today_total_completion_tokens: number
   today_total_income: number // 今日总收入 (所有账号汇总)
+  todayStatsCoverage: AccountTodayStatsCoverage
 }
 
 // API 响应相关类型
@@ -466,6 +473,11 @@ export type CurrencyType = (typeof CURRENCY_TYPES)[number]
 
 export type CurrencyAmount = { USD: number; CNY: number }
 
+export type CurrencyMetricTotal = {
+  amount: CurrencyAmount
+  coverage: AccountMetricCoverage
+}
+
 export type CurrencyAmountMap = { [id: string]: CurrencyAmount }
 
 export type TokenUsage = { upload: number; download: number }
@@ -486,6 +498,7 @@ export interface DisplaySiteData {
   todayIncome: CurrencyAmount
   estimatedTodayIncome?: CurrencyAmount | null
   todayTokens: TokenUsage
+  todayStatsAvailability: AccountTodayStatsAvailability
   usage?: AccountUsageSummary
   subscription?: AccountSubscriptionSummary
   recentUsageRecords?: AccountUsageRecord[]
@@ -598,6 +611,7 @@ export const DASHBOARD_TAB_TYPES = [
 export type DashboardTabType = (typeof DASHBOARD_TAB_TYPES)[number]
 
 export { AuthTypeEnum } from "~/types/auth"
+export * from "~/types/accountTodayStats"
 export type { AccountToken } from "~/types/accountToken"
 export type { TempWindowHealthStatusCode } from "~/types/tempWindow"
 export { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types/tempWindow"

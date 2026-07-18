@@ -49,6 +49,7 @@ import {
 import type { SiteType } from "~/services/accountSiteDefinitions/identifiers"
 import { MODEL_LIST_ACCOUNT_SOURCE_ROUTES } from "~/services/modelList/accountSources/readiness"
 import { AuthTypeEnum } from "~/types"
+import { ACCOUNT_TODAY_METRIC_REASONS } from "~/types/accountTodayStats"
 
 type ExpectExact<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
@@ -481,6 +482,8 @@ describe("account site definition registry", () => {
     ;(sub2apiProfile!.identity!.storedUserIdentityFields as string[]).push(
       "mutated",
     )
+    aihubmixProfile!.metrics!.legacyTodayStatsAvailability!.consumption!.reason =
+      ACCOUNT_TODAY_METRIC_REASONS.NotCollected
 
     expect(
       getAccountSiteProductProfileOverride(SITE_TYPES.AIHUBMIX)?.urls
@@ -494,6 +497,10 @@ describe("account site definition registry", () => {
       getAccountSiteProductProfileOverride(SITE_TYPES.SUB2API)?.identity
         ?.storedUserIdentityFields,
     ).toEqual(["id"])
+    expect(
+      getAccountSiteProductProfileOverride(SITE_TYPES.AIHUBMIX)?.metrics
+        ?.legacyTodayStatsAvailability?.consumption?.reason,
+    ).toBe(ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod)
   })
 
   it("returns defensive readiness expectation copies", () => {

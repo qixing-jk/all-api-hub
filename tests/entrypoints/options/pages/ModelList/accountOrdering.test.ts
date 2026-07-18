@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { sortModelListAccounts } from "~/features/ModelList/accountOrdering"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 function createAccount(id: string, name: string): DisplaySiteData {
   return {
@@ -12,6 +13,7 @@ function createAccount(id: string, name: string): DisplaySiteData {
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     siteType: "new-api",
     baseUrl: `https://${id}.example.com`,

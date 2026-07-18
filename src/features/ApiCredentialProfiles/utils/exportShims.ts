@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import {
   API_CREDENTIAL_PROFILE_SYNTHETIC_ACCOUNT_ID_PREFIX,
   buildApiCredentialProfileSyntheticAccountId,
@@ -47,6 +48,7 @@ export function createExportAccount(
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
+    todayStatsAvailability: createUnsupportedTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     siteType: SITE_TYPES.UNKNOWN,
     baseUrl: profile.baseUrl,

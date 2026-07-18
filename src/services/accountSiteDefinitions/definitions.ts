@@ -11,6 +11,10 @@ import {
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
 } from "~/services/accounts/accountSiteProfile/contracts"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import { AuthTypeEnum } from "~/types/auth"
 
 import {
@@ -235,6 +239,26 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
     productProfile: {
+      metrics: {
+        legacyTodayStatsAvailability: {
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+          },
+          requests: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+          },
+          tokens: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+          income: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+        },
+      },
       auth: {
         allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,

@@ -2,7 +2,9 @@ import type { TFunction } from "i18next"
 import { Info } from "lucide-react"
 
 import { Badge, Button } from "~/components/ui"
-import type { SiteAccount } from "~/types"
+import { resolveAccountTodayStatsAvailability } from "~/services/accounts/accountStorage"
+import { isAccountTodayMetricAvailable } from "~/services/accounts/accountTodayStats"
+import type { AccountTodayStatsAvailability, SiteAccount } from "~/types"
 
 import { getHealthStatusDisplay } from "../../utils/healthStatusUtils"
 import type {
@@ -52,8 +54,16 @@ export function DedupeAccountCard({
   const healthDisplay = getHealthStatusDisplay(account.health?.status, t)
   const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled !== false
   const accountLabel = accountLabelById.get(account.id) ?? account.id
+  const todayStatsAvailability = resolveAccountTodayStatsAvailability(account)
 
   const resolveTimestamp = (timestamp?: number) => formatTimestamp(timestamp, t)
+  const resolveTodayMetricValue = (
+    metric: keyof AccountTodayStatsAvailability,
+    value: number | undefined,
+  ) =>
+    isAccountTodayMetricAvailable(todayStatsAvailability[metric])
+      ? value ?? t("common:labels.notAvailable")
+      : t("common:labels.notAvailable")
 
   return (
     <div
@@ -239,8 +249,10 @@ export function DedupeAccountCard({
                 {t("ui:dialog.dedupeAccounts.details.todayConsumption")}
               </dt>
               <dd className="dark:text-dark-text-secondary break-all text-gray-800">
-                {account.account_info?.today_quota_consumption ??
-                  t("common:labels.notAvailable")}
+                {resolveTodayMetricValue(
+                  "consumption",
+                  account.account_info?.today_quota_consumption,
+                )}
               </dd>
             </div>
 
@@ -249,8 +261,10 @@ export function DedupeAccountCard({
                 {t("ui:dialog.dedupeAccounts.details.todayRequests")}
               </dt>
               <dd className="dark:text-dark-text-secondary break-all text-gray-800">
-                {account.account_info?.today_requests_count ??
-                  t("common:labels.notAvailable")}
+                {resolveTodayMetricValue(
+                  "requests",
+                  account.account_info?.today_requests_count,
+                )}
               </dd>
             </div>
 
@@ -259,14 +273,22 @@ export function DedupeAccountCard({
                 {t("ui:dialog.dedupeAccounts.details.todayTokens")}
               </dt>
               <dd className="dark:text-dark-text-secondary break-all text-gray-800">
-                <span className="font-medium">
-                  {t("account:stats.prompt")}:
-                </span>{" "}
-                {account.account_info?.today_prompt_tokens ?? 0} ·{" "}
-                <span className="font-medium">
-                  {t("account:stats.completion")}:
-                </span>{" "}
-                {account.account_info?.today_completion_tokens ?? 0}
+                {isAccountTodayMetricAvailable(
+                  todayStatsAvailability.tokens,
+                ) ? (
+                  <>
+                    <span className="font-medium">
+                      {t("account:stats.prompt")}:
+                    </span>{" "}
+                    {account.account_info?.today_prompt_tokens ?? 0} ·{" "}
+                    <span className="font-medium">
+                      {t("account:stats.completion")}:
+                    </span>{" "}
+                    {account.account_info?.today_completion_tokens ?? 0}
+                  </>
+                ) : (
+                  t("common:labels.notAvailable")
+                )}
               </dd>
             </div>
 

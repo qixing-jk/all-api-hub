@@ -1,5 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { AuthTypeEnum } from "~/types"
+import type { AccountTodayStatsAvailability } from "~/types/accountTodayStats"
 
 export const ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS = {
   None: "none",
@@ -124,6 +125,11 @@ export type AccountSiteModelListProfile = {
   groupSemantics: AccountSiteModelListGroupSemantics
 }
 
+export type AccountSiteMetricProfile = {
+  deferredTodayStatsAvailability: AccountTodayStatsAvailability
+  legacyTodayStatsAvailability: AccountTodayStatsAvailability
+}
+
 export type AccountSiteProductProfile = {
   siteType: AccountSiteType
   auth: AccountSiteAuthProfile
@@ -131,6 +137,7 @@ export type AccountSiteProductProfile = {
   createdToken: AccountSiteCreatedTokenProfile
   identity: AccountSiteIdentityProfile
   modelList: AccountSiteModelListProfile
+  metrics: AccountSiteMetricProfile
   supplementalAuth: {
     kind: AccountSiteSupplementalAuthKind
   }

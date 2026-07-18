@@ -70,9 +70,7 @@ const BalanceDisplay: React.FC<{
 export default function AccountBalanceSummary() {
   const { t } = useTranslation(["account", "common"])
   const {
-    accounts,
     displayData,
-    stats,
     isInitialLoad,
     prevTotalConsumption,
     todayIncomeEstimateTotals,
@@ -83,8 +81,8 @@ export default function AccountBalanceSummary() {
     preferences.balanceHistory?.estimatedTodayIncome?.enabled === true
 
   const totalConsumption = useMemo(
-    () => calculateTotalConsumption(stats, accounts),
-    [stats, accounts],
+    () => calculateTotalConsumption(displayData),
+    [displayData],
   )
 
   const totalBalance = useMemo(
@@ -130,14 +128,14 @@ export default function AccountBalanceSummary() {
               {t("account:stats.todayConsumption")}
             </Caption>
             <BalanceDisplay
-              value={totalConsumption[currencyType]}
+              value={totalConsumption.amount[currencyType]}
               startValue={
                 isInitialLoad ? 0 : prevTotalConsumption[currencyType]
               }
               isInitialLoad={isInitialLoad}
               currencyType={currencyType}
               onCurrencyToggle={handleCurrencyToggle}
-              prefix={totalConsumption[currencyType] > 0 ? "-" : ""}
+              prefix={totalConsumption.amount[currencyType] > 0 ? "-" : ""}
               size="md"
             />
           </div>
@@ -149,12 +147,12 @@ export default function AccountBalanceSummary() {
                 : t("account:stats.todayIncome")}
             </Caption>
             <BalanceDisplay
-              value={totalIncome[currencyType]}
+              value={totalIncome.amount[currencyType]}
               startValue={0}
               isInitialLoad={isInitialLoad}
               currencyType={currencyType}
               onCurrencyToggle={handleCurrencyToggle}
-              prefix={totalIncome[currencyType] > 0 ? "+" : ""}
+              prefix={totalIncome.amount[currencyType] > 0 ? "+" : ""}
               size="md"
             />
           </div>

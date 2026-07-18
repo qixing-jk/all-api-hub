@@ -7,6 +7,7 @@ import {
   useChannelDialogContext,
 } from "~/components/dialogs/ChannelDialog"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const addTokenDialogPropsMock = vi.hoisted(() => vi.fn())
@@ -41,6 +42,7 @@ const buildDisplaySiteData = (): DisplaySiteData => ({
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType: "sub2api",
   baseUrl: "https://example.invalid",

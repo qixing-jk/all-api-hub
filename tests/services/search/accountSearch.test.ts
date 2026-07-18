@@ -8,6 +8,7 @@ import {
   searchAccountSearchIndex,
 } from "~/services/search/accountSearch"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 const mockAccounts: DisplaySiteData[] = [
   {
@@ -21,6 +22,7 @@ const mockAccounts: DisplaySiteData[] = [
     todayConsumption: { USD: 1, CNY: 7 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 100, download: 200 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     last_sync_time: Date.now(),
     siteType: "one-api",
@@ -46,6 +48,7 @@ const mockAccounts: DisplaySiteData[] = [
     todayConsumption: { USD: 2, CNY: 14 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 200, download: 400 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     last_sync_time: Date.now(),
     siteType: "one-api",

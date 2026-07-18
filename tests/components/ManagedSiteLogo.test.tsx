@@ -6,6 +6,7 @@ import { RuntimeKeyDetails } from "~/features/AccountManagement/components/CopyK
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
 import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
@@ -46,6 +47,7 @@ function createAccountStub(): DisplaySiteData {
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     siteType: "new-api",
     baseUrl: "https://example.com",

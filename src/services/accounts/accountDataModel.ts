@@ -5,6 +5,7 @@ import {
   TempWindowHealthStatusCode,
   type AccountIdentity,
   type AccountSubscriptionSummary,
+  type AccountTodayStatsAvailability,
   type AccountUsageRecord,
   type AccountUsageSummary,
   type Sub2ApiAuthConfig,
@@ -23,8 +24,20 @@ export interface TodayIncomeData {
 
 export type TodayStatsData = TodayUsageData & TodayIncomeData
 
+export type TodayUsageDataWithAvailability = TodayUsageData & {
+  todayStatsAvailability: Pick<
+    AccountTodayStatsAvailability,
+    "consumption" | "requests" | "tokens"
+  >
+}
+
+export type TodayIncomeDataWithAvailability = TodayIncomeData & {
+  todayStatsAvailability: Pick<AccountTodayStatsAvailability, "income">
+}
+
 export interface AccountData extends TodayStatsData {
   quota: number
+  todayStatsAvailability?: AccountTodayStatsAvailability
   usage?: AccountUsageSummary
   subscription?: AccountSubscriptionSummary
   recentUsageRecords?: AccountUsageRecord[]

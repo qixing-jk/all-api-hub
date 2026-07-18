@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
 import type {
   AccountStats,
   CurrencyAmount,
@@ -59,14 +60,7 @@ export const useAccountData = (): UseAccountDataResult => {
   // 数据状态
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [displayData, setDisplayData] = useState<DisplaySiteData[]>([])
-  const [stats, setStats] = useState<AccountStats>({
-    total_quota: 0,
-    today_total_consumption: 0,
-    today_total_requests: 0,
-    today_total_prompt_tokens: 0,
-    today_total_completion_tokens: 0,
-    today_total_income: 0,
-  })
+  const [stats, setStats] = useState<AccountStats>(createEmptyAccountStats)
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date())
 
   // 加载状态

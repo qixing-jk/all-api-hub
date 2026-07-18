@@ -9,6 +9,7 @@ import type {
   CreateChannelPayload,
   UpdateChannelPayload,
 } from "~/types/newApi"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 // ============================================================================
 // MOCKS
@@ -136,6 +137,7 @@ function createMockDisplaySiteData(
     todayConsumption: { USD: 10, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 1000, download: 2000 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     last_sync_time: Date.now(),
     siteType: SITE_TYPES.UNKNOWN,

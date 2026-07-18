@@ -34,15 +34,12 @@ import {
   SITE_ANNOUNCEMENT_PROVIDER_IDS,
 } from "~/types/siteAnnouncements"
 import type { UsageHistoryStore } from "~/types/usageHistory"
+import {
+  buildAccountStats,
+  buildCompleteTodayStatsAvailability,
+} from "~~/tests/test-utils/accountTodayStats"
 
-const emptyStats: AccountStats = {
-  total_quota: 0,
-  today_total_consumption: 0,
-  today_total_requests: 0,
-  today_total_prompt_tokens: 0,
-  today_total_completion_tokens: 0,
-  today_total_income: 0,
-}
+const emptyStats: AccountStats = buildAccountStats()
 
 const basePreferences: UserPreferences = {
   ...DEFAULT_PREFERENCES,
@@ -115,6 +112,7 @@ const healthyDisplayData: DisplaySiteData = {
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://relay.example.invalid",
@@ -134,14 +132,14 @@ const unhealthyDisplayData: DisplaySiteData = {
   },
 }
 
-const statsWithUsage: AccountStats = {
+const statsWithUsage: AccountStats = buildAccountStats({
   total_quota: 100_000,
   today_total_consumption: 1234,
   today_total_requests: 12,
   today_total_prompt_tokens: 300,
   today_total_completion_tokens: 700,
   today_total_income: 0,
-}
+})
 
 const profile: ApiCredentialProfile = {
   id: "profile-1",

@@ -578,14 +578,14 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const filteredConsumption = useMemo(
     () =>
       showTodayCashflow
-        ? calculateTotalConsumptionForSites(filteredSites)
+        ? calculateTotalConsumptionForSites(filteredSites).amount
         : { USD: 0, CNY: 0 },
     [filteredSites, showTodayCashflow],
   )
   const filteredIncome = useMemo(
     () =>
       showTodayCashflow
-        ? calculateTotalIncomeForSites(filteredSites)
+        ? calculateTotalIncomeForSites(filteredSites).amount
         : { USD: 0, CNY: 0 },
     [filteredSites, showTodayCashflow],
   )

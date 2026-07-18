@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { createLegacyTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { AuthTypeEnum } from "~/types"
 
 import {
@@ -47,6 +48,10 @@ export const DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE: AccountSiteProductProfile = {
       ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     groupSemantics:
       ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+  },
+  metrics: {
+    deferredTodayStatsAvailability: createLegacyTodayStatsAvailability(),
+    legacyTodayStatsAvailability: createLegacyTodayStatsAvailability(),
   },
   supplementalAuth: {
     kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,

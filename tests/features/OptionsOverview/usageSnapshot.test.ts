@@ -8,15 +8,9 @@ import type {
   UsageHistoryAggregate,
   UsageHistoryStore,
 } from "~/types/usageHistory"
+import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
 
-const emptyStats: AccountStats = {
-  total_quota: 0,
-  today_total_consumption: 0,
-  today_total_requests: 0,
-  today_total_prompt_tokens: 0,
-  today_total_completion_tokens: 0,
-  today_total_income: 0,
-}
+const emptyStats: AccountStats = buildAccountStats()
 
 const aggregate = (
   requests: number,

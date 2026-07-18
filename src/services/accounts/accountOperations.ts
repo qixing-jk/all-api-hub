@@ -707,6 +707,9 @@ export async function validateAndSaveAccount(
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
+        todayStatsAvailability:
+          getAccountSiteProductProfile(normalizedSiteType).metrics
+            .deferredTodayStatsAvailability,
       },
       last_sync_time: Date.now(),
     }
@@ -811,6 +814,7 @@ export async function validateAndSaveAccount(
         today_quota_consumption: freshAccountData.today_quota_consumption,
         today_requests_count: freshAccountData.today_requests_count,
         today_income: freshAccountData.today_income,
+        todayStatsAvailability: freshAccountData.todayStatsAvailability,
         usage: freshAccountData.usage,
         subscription: freshAccountData.subscription,
         recentUsageRecords: freshAccountData.recentUsageRecords,
@@ -877,6 +881,9 @@ export async function validateAndSaveAccount(
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
+        todayStatsAvailability:
+          getAccountSiteProductProfile(normalizedSiteType).metrics
+            .deferredTodayStatsAvailability,
       },
       last_sync_time: Date.now(),
     }
@@ -1115,6 +1122,7 @@ export async function validateAndUpdateAccount(
         today_quota_consumption: freshAccountData.today_quota_consumption,
         today_requests_count: freshAccountData.today_requests_count,
         today_income: freshAccountData.today_income,
+        todayStatsAvailability: freshAccountData.todayStatsAvailability,
         usage: freshAccountData.usage,
         subscription: freshAccountData.subscription,
         recentUsageRecords: freshAccountData.recentUsageRecords,

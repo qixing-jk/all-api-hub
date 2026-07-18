@@ -76,10 +76,10 @@ export default function ShareOverviewSnapshotButton() {
     const totalBalance =
       calculateTotalBalanceForSites(displayData)[currencyType]
     const todayIncome = includeToday
-      ? calculateTotalIncomeForSites(displayData)[currencyType]
+      ? calculateTotalIncomeForSites(displayData).amount[currencyType]
       : 0
     const todayOutcome = includeToday
-      ? calculateTotalConsumptionForSites(displayData)[currencyType]
+      ? calculateTotalConsumptionForSites(displayData).amount[currencyType]
       : 0
 
     // Overview snapshots are aggregate-only and must not include per-account identifiers.

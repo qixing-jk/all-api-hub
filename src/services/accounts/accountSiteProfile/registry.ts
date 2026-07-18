@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { getAccountSiteProductProfileOverride } from "~/services/accountSiteDefinitions"
 
 import type {
@@ -31,6 +32,14 @@ const cloneAccountSiteProductProfile = (
     storedUserIdentityFields: [...profile.identity.storedUserIdentityFields],
   },
   modelList: { ...profile.modelList },
+  metrics: {
+    deferredTodayStatsAvailability: normalizeAccountTodayStatsAvailability(
+      profile.metrics.deferredTodayStatsAvailability,
+    ),
+    legacyTodayStatsAvailability: normalizeAccountTodayStatsAvailability(
+      profile.metrics.legacyTodayStatsAvailability,
+    ),
+  },
   supplementalAuth: { ...profile.supplementalAuth },
   tokenForm: { ...profile.tokenForm },
   urls: {
@@ -81,6 +90,18 @@ const mergeAccountSiteProductProfile = (
     modelList: {
       ...DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE.modelList,
       ...override?.modelList,
+    },
+    metrics: {
+      deferredTodayStatsAvailability: normalizeAccountTodayStatsAvailability(
+        override?.metrics?.deferredTodayStatsAvailability,
+        DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE.metrics
+          .deferredTodayStatsAvailability,
+      ),
+      legacyTodayStatsAvailability: normalizeAccountTodayStatsAvailability(
+        override?.metrics?.legacyTodayStatsAvailability,
+        DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE.metrics
+          .legacyTodayStatsAvailability,
+      ),
     },
     supplementalAuth: {
       ...DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE.supplementalAuth,

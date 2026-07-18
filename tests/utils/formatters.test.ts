@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vitest"
 
 import type { CurrencyType } from "~/types"
 import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
+import {
   calculateTotalBalance,
   calculateTotalConsumption,
   calculateTotalIncomeForSites,
@@ -21,6 +25,8 @@ import {
   normalizeToDate,
   normalizeToMs,
 } from "~/utils/core/formatters"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 describe("formatters utilities", () => {
   describe("formatTokenCount", () => {
@@ -193,31 +199,42 @@ describe("formatters utilities", () => {
   })
 
   describe("calculateTotalConsumption", () => {
-    it("should calculate USD and CNY amounts from stats and accounts", () => {
-      const stats = {
-        today_total_consumption: 12345,
-      } as any
+    it("uses the same available contributors for USD and CNY totals", () => {
+      const result = calculateTotalConsumption([
+        buildDisplaySiteData({
+          todayConsumption: { USD: 10, CNY: 70 },
+        }),
+        buildDisplaySiteData({
+          id: "partial",
+          todayConsumption: { USD: 20, CNY: 140 },
+          todayStatsAvailability: buildCompleteTodayStatsAvailability({
+            consumption: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+            },
+          }),
+        }),
+        buildDisplaySiteData({
+          id: "unavailable",
+          todayConsumption: { USD: 999, CNY: 6993 },
+          todayStatsAvailability: buildCompleteTodayStatsAvailability({
+            consumption: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+            },
+          }),
+        }),
+      ])
 
-      const accounts = [
-        {
-          account_info: {
-            today_quota_consumption: 10000,
-          },
-          exchange_rate: 7,
+      expect(result).toEqual({
+        amount: { USD: 30, CNY: 210 },
+        coverage: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          completeCount: 1,
+          partialCount: 1,
+          eligibleCount: 3,
         },
-        {
-          account_info: {
-            today_quota_consumption: 20000,
-          },
-          exchange_rate: 7.5,
-        },
-      ]
-
-      const result = calculateTotalConsumption(stats, accounts)
-
-      expect(result.USD).toBeGreaterThan(0)
-      expect(result.CNY).toBeGreaterThan(0)
-      expect(result.CNY).toBeGreaterThanOrEqual(result.USD)
+      })
     })
   })
 
@@ -251,15 +268,40 @@ describe("formatters utilities", () => {
   describe("calculateTotalIncomeForSites", () => {
     it("excludes disabled accounts and accounts opted out of today income totals", () => {
       const data = [
-        { todayIncome: { USD: 10, CNY: 70 }, disabled: false },
-        { todayIncome: { USD: 1, CNY: 7 }, excludeFromTodayIncome: true },
-        { todayIncome: { USD: 5, CNY: 35 }, disabled: true },
-      ] as any
+        buildDisplaySiteData({ todayIncome: { USD: 10, CNY: 70 } }),
+        buildDisplaySiteData({
+          id: "excluded",
+          todayIncome: { USD: 1, CNY: 7 },
+          excludeFromTodayIncome: true,
+        }),
+        buildDisplaySiteData({
+          id: "disabled",
+          todayIncome: { USD: 5, CNY: 35 },
+          disabled: true,
+        }),
+      ]
 
       const result = calculateTotalIncomeForSites(data)
 
-      expect(result.USD).toBe(10)
-      expect(result.CNY).toBe(70)
+      expect(result.amount).toEqual({ USD: 10, CNY: 70 })
+      expect(result.coverage).toEqual({
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+        completeCount: 1,
+        partialCount: 0,
+        eligibleCount: 1,
+      })
+    })
+
+    it("reports an empty eligible subset as unavailable", () => {
+      expect(calculateTotalIncomeForSites([])).toEqual({
+        amount: { USD: 0, CNY: 0 },
+        coverage: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          completeCount: 0,
+          partialCount: 0,
+          eligibleCount: 0,
+        },
+      })
     })
   })
 

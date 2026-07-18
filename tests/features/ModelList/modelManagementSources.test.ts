@@ -12,6 +12,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
   id: `account-${siteType}`,
@@ -21,6 +22,7 @@ const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
   todayConsumption: { USD: 0, CNY: 0 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
   health: { status: SiteHealthStatus.Healthy },
   siteType,
   baseUrl: "https://account.example.invalid",

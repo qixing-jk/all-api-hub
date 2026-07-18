@@ -30,6 +30,7 @@ import {
 } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 /**
  * Build a dummy API key used by Web AI API Check tests.
@@ -99,6 +100,7 @@ export function buildDisplaySiteData(
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
+    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     created_at: 0,
     siteType: SITE_TYPES.UNKNOWN,

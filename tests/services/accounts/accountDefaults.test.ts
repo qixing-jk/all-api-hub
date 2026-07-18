@@ -13,6 +13,10 @@ import {
 } from "~/services/accounts/accountDefaults"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 
 describe("accountDefaults", () => {
   const createSiteAccount = (
@@ -154,6 +158,48 @@ describe("accountDefaults", () => {
   })
 
   describe("normalizeSiteAccount", () => {
+    it("preserves legacy numeric statistics without inventing availability", () => {
+      const legacy = createSiteAccount({
+        account_info: {
+          ...createSiteAccount().account_info,
+          today_quota_consumption: 123,
+        },
+      })
+
+      const normalized = normalizeSiteAccount(legacy)
+
+      expect(normalized.account_info.today_quota_consumption).toBe(123)
+      expect(normalized.account_info.todayStatsAvailability).toBeUndefined()
+    })
+
+    it("normalizes malformed explicit availability closed and preserves valid groups", () => {
+      const normalized = normalizeSiteAccount(
+        createSiteAccount({
+          account_info: {
+            ...createSiteAccount().account_info,
+            todayStatsAvailability: {
+              consumption: {
+                status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+                reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+              },
+              requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+              tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+              income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            },
+          },
+        }),
+      )
+
+      expect(normalized.account_info.todayStatsAvailability).toEqual({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        },
+        requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+      })
+    })
     it("applies backward-compatible defaults for missing additive fields", () => {
       const legacy = createSiteAccount()
       delete (legacy as any).disabled

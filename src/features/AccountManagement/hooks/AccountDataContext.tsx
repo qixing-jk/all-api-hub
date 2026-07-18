@@ -28,6 +28,7 @@ import {
   resolveAccountSiteContentSessionHintForOrigin,
 } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
 import { isSameAccountSiteOrigin } from "~/services/accounts/utils/siteUrlNormalization"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
@@ -235,14 +236,7 @@ export const AccountDataProvider = ({
   const [bookmarks, setBookmarks] = useState<SiteBookmark[]>([])
   const [displayData, setDisplayData] = useState<DisplaySiteData[]>([])
   const [orderedAccountIds, setOrderedAccountIds] = useState<string[]>([])
-  const [stats, setStats] = useState<AccountStats>({
-    total_quota: 0,
-    today_total_consumption: 0,
-    today_total_requests: 0,
-    today_total_prompt_tokens: 0,
-    today_total_completion_tokens: 0,
-    today_total_income: 0,
-  })
+  const [stats, setStats] = useState<AccountStats>(createEmptyAccountStats)
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>()
   const [hasLoadedAccountData, setHasLoadedAccountData] = useState(false)
   const [hasResolvedInitialCurrentTab, setHasResolvedInitialCurrentTab] =
