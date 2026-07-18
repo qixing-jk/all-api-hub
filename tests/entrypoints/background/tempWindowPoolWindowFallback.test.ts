@@ -2862,6 +2862,64 @@ describe("tempWindowPool window fallback", () => {
     expect(fetchCalls.at(-1)?.[0]).toBe(709)
   })
 
+  it("ignores a delayed release after stale-context replacement", async () => {
+    tempContextMode = "tab"
+    createTabMock
+      .mockResolvedValueOnce({ id: 710 })
+      .mockResolvedValueOnce({ id: 711 })
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstResponse = vi.fn()
+    const firstRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/delayed-release",
+        fetchOptions: { method: "GET" },
+        requestId: "req-delayed-release-1",
+      },
+      firstResponse,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    await firstRequest
+
+    const staleTabCheck = createDeferred<{ status: string }>()
+    tabsGetMock.mockImplementationOnce(() => staleTabCheck.promise)
+
+    const secondResponse = vi.fn()
+    const secondRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/stale-replacement",
+        fetchOptions: { method: "GET" },
+        requestId: "req-delayed-release-2",
+      },
+      secondResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(createTabMock).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(2000)
+    staleTabCheck.reject(new Error("tab disappeared during reuse"))
+    await vi.advanceTimersByTimeAsync(500)
+    await secondRequest
+
+    expect(createTabMock).toHaveBeenCalledTimes(2)
+    expect(sendMessageMock.mock.calls.at(-1)?.[0]).toBe(711)
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "ok",
+      },
+    })
+    expect(removeTabMock).not.toHaveBeenCalledWith(710)
+  })
+
   it("omits abort signals from content temp fetch messages", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 605 })
