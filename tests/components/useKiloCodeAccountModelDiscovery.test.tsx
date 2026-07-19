@@ -164,4 +164,48 @@ describe("useKiloCodeAccountModelDiscovery", () => {
     expect(consoleError).not.toHaveBeenCalled()
     consoleError.mockRestore()
   })
+
+  it("stores only custom provider and global-default models as manual catalog entries", async () => {
+    fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce([
+      "model-b",
+      "model-a",
+    ])
+    const selection = createSelection({
+      baseUrl: "https://api.example.invalid",
+      tokenKey: "runtime-key",
+      accountAccessToken: "account-token",
+    })
+
+    const { result } = renderHook(() =>
+      useKiloCodeAccountModelDiscovery({
+        isOpen: true,
+        selections: [selection],
+      }),
+    )
+    await waitFor(() => {
+      expect(result.current.preparedCatalog?.providers[0]?.modelIds).toEqual([
+        "model-a",
+        "model-b",
+      ])
+    })
+
+    act(() => {
+      result.current.selectV7ManualModel(selection.selectionId, "model-b")
+    })
+    expect(result.current.v7Selections[0]?.manualModelId).toBeUndefined()
+
+    act(() => {
+      result.current.selectV7ManualModel(selection.selectionId, "custom/row")
+    })
+    expect(result.current.v7Selections[0]?.manualModelId).toBe("custom/row")
+
+    act(() => {
+      result.current.selectV7DefaultModel("custom/default")
+    })
+    expect(result.current.v7DefaultModel).toEqual({
+      selectionId: selection.selectionId,
+      modelId: "custom/default",
+    })
+    expect(result.current.v7Selections[0]?.manualModelId).toBe("custom/default")
+  })
 })

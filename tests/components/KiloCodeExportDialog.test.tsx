@@ -27,7 +27,10 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
-import { expectKiloCodeUsageGuidance } from "~~/tests/test-utils/kiloCodeExportGuidance"
+import {
+  expectKiloCodeSettingsSizeGuidance,
+  expectKiloCodeUsageGuidance,
+} from "~~/tests/test-utils/kiloCodeExportGuidance"
 import {
   act,
   render,
@@ -670,7 +673,7 @@ describe("KiloCodeExportDialog", () => {
     const provider = await screen.findByRole("group", {
       name: "Site B - Default",
     })
-    const retry = within(provider).getByRole("button", {
+    const retry = await within(provider).findByRole("button", {
       name: "ui:dialog.kiloCode.actions.retryModels",
     })
     const recoveryControls = retry.parentElement
@@ -1378,6 +1381,533 @@ describe("KiloCodeExportDialog", () => {
     })
   })
 
+  it("keeps discovered provider choices out of manual state while retaining a global custom default", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined)
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["model-a"])
+
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+
+    const provider = await screen.findByRole("group", {
+      name: "Site A - Default",
+    })
+    await waitFor(() => {
+      expect(within(provider).getByText("common:status.success")).toBeVisible()
+    })
+    await chooseProviderModel(user, "Site A - Default", "modelId", "model-a")
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+      }),
+    )
+    expect(mockBuildKiloCodeExportOutput).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selections: [expect.objectContaining({ manualModelId: undefined })],
+        defaultModel: { selectionId: "account-a:1", modelId: "model-a" },
+      }),
+    )
+
+    await user.click(screen.getByTestId(KILO_CODE_EXPORT_TEST_IDS.defaultModel))
+    const search = screen.getByTestId(
+      KILO_CODE_EXPORT_TEST_IDS.defaultModelSearch,
+    )
+    await user.type(search, "custom/model")
+    await user.click(
+      screen.getByRole("option", {
+        name: "ui:searchableSelect.useValue",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+      }),
+    )
+
+    expect(mockBuildKiloCodeExportOutput).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selections: [
+          expect.objectContaining({ manualModelId: "custom/model" }),
+        ],
+        defaultModel: { selectionId: "account-a:1", modelId: "custom/model" },
+      }),
+    )
+  })
+
+  it("drops a delayed export action after the dialog closes", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    let resolveSecret: (value: string) => void = () => {}
+    const delayedSecret = new Promise<string>((resolve) => {
+      resolveSecret = resolve
+    })
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["model-a"])
+
+    const { rerender } = render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+    const copyButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+    mockResolveApiTokenKey.mockClear()
+    mockResolveApiTokenKey.mockReturnValueOnce(delayedSecret)
+
+    await user.click(copyButton)
+    await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(1))
+    rerender(
+      <KiloCodeExportDialog
+        isOpen={false}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+    resolveSecret("sk-full-secret")
+    await delayedSecret
+    await act(async () => {})
+
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
+  })
+
+  it("drops a delayed export action when runtime facts change for the same selection ID", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    let resolveSecret: (value: string) => void = () => {}
+    const delayedSecret = new Promise<string>((resolve) => {
+      resolveSecret = resolve
+    })
+    let currentDisplayData = [
+      createDisplayAccount({
+        id: "account-a",
+        name: "Site A",
+        baseUrl: "https://old.example.invalid",
+      }),
+    ]
+    mockUseAccountData.mockImplementation(() => ({
+      enabledAccounts: [],
+      enabledDisplayData: currentDisplayData,
+    }))
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["model-a"])
+
+    const { rerender } = render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+    const copyButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+    mockResolveApiTokenKey.mockClear()
+    mockResolveApiTokenKey.mockReturnValueOnce(delayedSecret)
+
+    await user.click(copyButton)
+    await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(1))
+    currentDisplayData = [
+      createDisplayAccount({
+        id: "account-a",
+        name: "Site A",
+        baseUrl: "https://new.example.invalid",
+      }),
+    ]
+    rerender(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://new.example.invalid",
+        }),
+      )
+    })
+    resolveSecret("sk-full-secret")
+    await delayedSecret
+    await act(async () => {})
+
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
+  })
+
+  it("drops a delayed export action when the selected token source changes", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    let resolveSecret: (value: string) => void = () => {}
+    const delayedSecret = new Promise<string>((resolve) => {
+      resolveSecret = resolve
+    })
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([
+        { id: 1, name: "Default", key: "sk-old********" },
+      ])
+      .mockResolvedValueOnce([
+        { id: 1, name: "Default", key: "sk-old********" },
+      ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["model-a"])
+
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+    const copyButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+    mockResolveApiTokenKey.mockClear()
+    mockResolveApiTokenKey.mockReturnValueOnce(delayedSecret)
+
+    await user.click(copyButton)
+    await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(1))
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.refresh" }),
+    )
+    await waitFor(() => expect(mockFetchAccountTokens).toHaveBeenCalledTimes(2))
+
+    resolveSecret("sk-old-full-secret")
+    await delayedSecret
+    await act(async () => {})
+
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
+  })
+
+  it("drops a delayed export action when the account authentication source is replaced", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    let resolveSecret: (value: string) => void = () => {}
+    const delayedSecret = new Promise<string>((resolve) => {
+      resolveSecret = resolve
+    })
+    let currentDisplayData = [
+      createDisplayAccount({
+        id: "account-a",
+        name: "Site A",
+        baseUrl: "https://a.example.invalid",
+        token: "old-account-token",
+      }),
+    ]
+    mockUseAccountData.mockImplementation(() => ({
+      enabledAccounts: [],
+      enabledDisplayData: currentDisplayData,
+    }))
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["model-a"])
+
+    const { rerender } = render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+    const copyButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+    mockResolveApiTokenKey.mockClear()
+    mockResolveApiTokenKey.mockReturnValueOnce(delayedSecret)
+
+    await user.click(copyButton)
+    await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(1))
+    currentDisplayData = [
+      createDisplayAccount({
+        id: "account-a",
+        name: "Site A",
+        baseUrl: "https://a.example.invalid",
+        token: "old-account-token",
+      }),
+    ]
+    rerender(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+
+    resolveSecret("sk-full-secret")
+    await delayedSecret
+    await act(async () => {})
+
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
+  })
+
+  it("drops a delayed export action when retry discovers a newer model catalog", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    let resolveSecret: (value: string) => void = () => {}
+    const delayedSecret = new Promise<string>((resolve) => {
+      resolveSecret = resolve
+    })
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+    mockFetchOpenAICompatibleModelIds
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(["discovered/model"])
+
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+
+    const providerName = "Site A - Default"
+    const provider = await screen.findByRole("group", { name: providerName })
+    const retry = await within(provider).findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.retryModels",
+    })
+    await chooseProviderModel(user, providerName, "modelId", "manual/model")
+    await chooseKiloCodeExportTarget(user, "legacy")
+    await chooseProviderModel(
+      user,
+      providerName,
+      "legacyModelId",
+      "legacy/manual",
+    )
+    await chooseKiloCodeExportTarget(user, "kiloV7")
+    const copyButton = screen.getByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+    mockResolveApiTokenKey.mockClear()
+    mockResolveApiTokenKey.mockReturnValueOnce(delayedSecret)
+
+    await user.click(copyButton)
+    await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(1))
+    await user.click(retry)
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(2)
+    })
+    await within(provider).findByText("common:status.success")
+
+    resolveSecret("sk-full-secret")
+    await delayedSecret
+    await act(async () => {})
+
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
+  })
+
+  it("drops a delayed legacy export action when the effective profile changes", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    let resolveSecret: (value: string) => void = () => {}
+    const delayedSecret = new Promise<string>((resolve) => {
+      resolveSecret = resolve
+    })
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "First", key: "sk-first********" },
+      { id: 2, name: "Second", key: "sk-second********" },
+    ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["model-a"])
+
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+        initialSelectedTokenIdsBySite={{ "account-a": ["1", "2"] }}
+      />,
+    )
+
+    await screen.findByRole("combobox", {
+      name: "ui:dialog.kiloCode.labels.exportTarget",
+    })
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(2)
+    })
+    await chooseKiloCodeExportTarget(user, "legacy")
+    const copyButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyLegacyApiConfigs",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+    mockResolveApiTokenKey.mockClear()
+    mockResolveApiTokenKey.mockReturnValue(delayedSecret)
+
+    await user.click(copyButton)
+    await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(2))
+    const currentProfileSelect = screen
+      .getAllByRole("combobox")
+      .find((element) => element.textContent === "Site A - First")
+    expect(currentProfileSelect).toBeDefined()
+    await user.click(currentProfileSelect!)
+    await user.click(
+      await screen.findByRole("option", { name: "Site A - Second" }),
+    )
+
+    resolveSecret("sk-full-secret")
+    await delayedSecret
+    await act(async () => {})
+
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
+  })
+
+  it("drops a delayed oversized download after the export target changes", async () => {
+    const user = userEvent.setup()
+    const createObjectUrl = vi.spyOn(URL, "createObjectURL")
+    let resolveSecret: (value: string) => void = () => {}
+    const delayedSecret = new Promise<string>((resolve) => {
+      resolveSecret = resolve
+    })
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["model-a"])
+    mockBuildKiloCodeExportOutput.mockReturnValueOnce({
+      filename: "kilo-settings.json",
+      copyPayload: {},
+      downloadPayload: {},
+      downloadJson: "{}",
+      isDownloadTooLarge: true,
+      itemCount: 1,
+      modelCount: 1,
+    })
+
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+    const downloadButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
+    })
+    await waitFor(() => expect(downloadButton).toBeEnabled())
+    mockResolveApiTokenKey.mockClear()
+    mockResolveApiTokenKey.mockReturnValueOnce(delayedSecret)
+
+    await user.click(downloadButton)
+    await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(1))
+    await chooseKiloCodeExportTarget(user, "legacy")
+    resolveSecret("sk-full-secret")
+    await delayedSecret
+    await act(async () => {})
+
+    expect(createObjectUrl).not.toHaveBeenCalled()
+    expect(
+      screen.queryByText(
+        "ui:dialog.kiloCode.messages.settingsFileTooLargeMultiple",
+      ),
+    ).not.toBeInTheDocument()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
+    createObjectUrl.mockRestore()
+  })
+
   it("unions a manual provider model across retry and repairs focus/default after Remove", async () => {
     const user = userEvent.setup()
     vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined)
@@ -1408,7 +1938,7 @@ describe("KiloCodeExportDialog", () => {
 
     const providerName = "Site B - Default"
     const provider = await screen.findByRole("group", { name: providerName })
-    const retry = within(provider).getByRole("button", {
+    const retry = await within(provider).findByRole("button", {
       name: "ui:dialog.kiloCode.actions.retryModels",
     })
     await chooseProviderModel(user, providerName, "modelId", "manual/model")
@@ -1821,11 +2351,10 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => expect(download).toBeEnabled())
     await user.click(download)
 
-    expect(
-      await screen.findByText(
-        "ui:dialog.kiloCode.messages.settingsFileTooLargeMultiple",
-      ),
-    ).toBeVisible()
+    await screen.findByText(
+      "ui:dialog.kiloCode.messages.settingsFileTooLargeMultiple",
+    )
+    expectKiloCodeSettingsSizeGuidance("multiple")
     expect(createObjectUrl).not.toHaveBeenCalled()
     expect(clickSpy).not.toHaveBeenCalled()
     expect(

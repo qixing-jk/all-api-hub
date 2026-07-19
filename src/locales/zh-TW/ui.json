@@ -303,13 +303,16 @@
         "selectedSites": "已選站點：{{sites}}，已選金鑰：{{keys}}。"
       },
       "help": {
-        "kiloV7CopyInstructions": "如需手動維護設定，可點擊「複製 provider 設定」，將複製的內容合併到設定 JSON 頂層的 provider 欄位。",
-        "kiloV7DownloadInstructions": "點擊「下載 Kilo 7.x 設定」。然後在 Kilo Code 中點擊齒輪開啟設定，進入 About Kilo Code → Import，選擇下載的 kilo-settings.json，確認匯入內容後儲存。",
+        "kiloV7ApiKeyEditorNote": "匯入後，Kilo Code 的 provider 編輯頁可能會將 API 金鑰欄位顯示為空白。這是已知的編輯器限制：匯入的內嵌金鑰與編輯器驗證狀態分開儲存，執行時仍可使用該金鑰。",
+        "kiloV7CatalogInstructions": "每個選取的 API 金鑰都會匯出為一個名稱易讀的 provider，其中包含從介面發現並正規化的全部模型 ID，以及為該 provider 手動輸入並保留的模型 ID。被包含在匯出內容中並不保證每個模型都適用於所有工作流程。請先選取預設 model；匯出多個 provider 時，還需選取預設 provider。",
+        "kiloV7CopyInstructions": "點擊「複製 provider 設定」可複製同時包含 provider 和 model 的頂層可合併片段。請將這兩個欄位合併到設定 JSON 中；複製的片段不是完整的匯入檔案。",
+        "kiloV7DownloadInstructions": "點擊「下載 Kilo 7.x 設定」，然後在 Kilo Code 的設定 → About Kilo Code → Import 中匯入下載的 kilo-settings.json，確認匯入內容後儲存。",
         "legacyCopyInstructions": "點擊「複製舊版 apiConfigs」，將內容貼到 Roo Code 或 Kilo Code 5.x 設定的 providerProfiles.apiConfigs 中。",
         "legacyDownloadInstructions": "如需完整設定檔，可點擊「下載舊版設定」取得 kilo-code-settings.json，並透過對應版本的設定匯入功能匯入。",
+        "legacySingleModelInstructions": "舊版 Roo Code 和 Kilo Code 5.x 匯出每個設定只支援一個模型。複製或下載前，請先選取要使用的模型。",
         "perSiteDescription": "選擇要匯出的站點後將自動載入金鑰，並預設選擇第一個金鑰（每個站點支援多選）。",
         "perSiteTitle": "按站點匯出",
-        "usageTitle": "使用方法"
+        "usageTitle": "使用匯出內容"
       },
       "labels": {
         "currentApiConfigName": "當前配置",

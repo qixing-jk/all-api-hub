@@ -10,14 +10,22 @@ import { screen, within } from "./render"
 
 const GUIDANCE_KEYS_BY_TARGET = {
   [KILO_CODE_EXPORT_TARGETS.KiloV7]: [
+    "ui:dialog.kiloCode.help.kiloV7CatalogInstructions",
     "ui:dialog.kiloCode.help.kiloV7DownloadInstructions",
     "ui:dialog.kiloCode.help.kiloV7CopyInstructions",
+    "ui:dialog.kiloCode.help.kiloV7ApiKeyEditorNote",
   ],
   [KILO_CODE_EXPORT_TARGETS.Legacy]: [
+    "ui:dialog.kiloCode.help.legacySingleModelInstructions",
     "ui:dialog.kiloCode.help.legacyDownloadInstructions",
     "ui:dialog.kiloCode.help.legacyCopyInstructions",
   ],
 } as const satisfies Record<KiloCodeExportTarget, readonly string[]>
+
+const SETTINGS_SIZE_GUIDANCE_KEYS = {
+  single: "ui:dialog.kiloCode.messages.settingsFileTooLargeSingle",
+  multiple: "ui:dialog.kiloCode.messages.settingsFileTooLargeMultiple",
+} as const
 
 /** Assert the visible Kilo export guidance and hide guidance for other targets. */
 export function expectKiloCodeUsageGuidance(target: KiloCodeExportTarget) {
@@ -62,4 +70,16 @@ export function expectKiloCodeUsageGuidance(target: KiloCodeExportTarget) {
   expect(
     screen.queryByText("ui:dialog.kiloCode.help.legacyTitle"),
   ).not.toBeInTheDocument()
+}
+
+/** Assert that oversized-export recovery matches the dialog's selection scope. */
+export function expectKiloCodeSettingsSizeGuidance(
+  scope: keyof typeof SETTINGS_SIZE_GUIDANCE_KEYS,
+) {
+  const expectedKey = SETTINGS_SIZE_GUIDANCE_KEYS[scope]
+  const oppositeKey =
+    SETTINGS_SIZE_GUIDANCE_KEYS[scope === "single" ? "multiple" : "single"]
+
+  expect(screen.getByText(expectedKey)).toBeVisible()
+  expect(screen.queryByText(oppositeKey)).not.toBeInTheDocument()
 }

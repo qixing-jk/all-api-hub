@@ -15,20 +15,47 @@ export function KiloCodeExportGuidance({
   target,
 }: KiloCodeExportGuidanceProps) {
   const { t } = useTranslation("ui")
-  const firstInstructions =
+  const instructions =
     target === KILO_CODE_EXPORT_TARGETS.KiloV7
-      ? t("dialog.kiloCode.help.kiloV7DownloadInstructions")
-      : t("dialog.kiloCode.help.legacyDownloadInstructions")
-  const secondInstructions =
-    target === KILO_CODE_EXPORT_TARGETS.KiloV7
-      ? t("dialog.kiloCode.help.kiloV7CopyInstructions")
-      : t("dialog.kiloCode.help.legacyCopyInstructions")
+      ? [
+          {
+            id: "catalog",
+            text: t("dialog.kiloCode.help.kiloV7CatalogInstructions"),
+          },
+          {
+            id: "download",
+            text: t("dialog.kiloCode.help.kiloV7DownloadInstructions"),
+          },
+          {
+            id: "copy",
+            text: t("dialog.kiloCode.help.kiloV7CopyInstructions"),
+          },
+          {
+            id: "api-key-editor",
+            text: t("dialog.kiloCode.help.kiloV7ApiKeyEditorNote"),
+          },
+        ]
+      : [
+          {
+            id: "single-model",
+            text: t("dialog.kiloCode.help.legacySingleModelInstructions"),
+          },
+          {
+            id: "download",
+            text: t("dialog.kiloCode.help.legacyDownloadInstructions"),
+          },
+          {
+            id: "copy",
+            text: t("dialog.kiloCode.help.legacyCopyInstructions"),
+          },
+        ]
 
   return (
     <Alert variant="info" title={t("dialog.kiloCode.help.usageTitle")}>
       <div className="space-y-2 text-sm">
-        <p>{firstInstructions}</p>
-        <p>{secondInstructions}</p>
+        {instructions.map(({ id, text }) => (
+          <p key={id}>{text}</p>
+        ))}
       </div>
     </Alert>
   )

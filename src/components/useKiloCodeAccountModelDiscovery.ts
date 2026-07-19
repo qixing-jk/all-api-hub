@@ -7,7 +7,10 @@ import type {
   KiloCodeV7ProviderSelection,
   PreparedKiloCodeV7Catalog,
 } from "~/services/integrations/kiloCodeExport"
-import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
+import {
+  normalizeKiloCodeModelIds,
+  prepareKiloCodeV7Catalog,
+} from "~/services/integrations/kiloCodeV7Catalog"
 import { reconcileKiloCodeV7DefaultSelection } from "~/services/integrations/kiloCodeV7Selection"
 import {
   coerceBaseUrlToPathSuffix,
@@ -38,17 +41,6 @@ export interface KiloCodeAccountModelInventory {
 interface PreparedAccountCatalog {
   catalog?: PreparedKiloCodeV7Catalog
   invalidSelection: boolean
-}
-
-/** Normalize upstream IDs once at the async inventory boundary. */
-function normalizeDiscoveredModelIds(modelIds: unknown[] | null | undefined) {
-  return Array.from(
-    new Set(
-      (modelIds ?? [])
-        .map((item) => (typeof item === "string" ? item.trim() : ""))
-        .filter(Boolean),
-    ),
-  ).sort((left, right) => (left === right ? 0 : left < right ? -1 : 1))
 }
 
 /** Validate persisted runtime facts before invoking the throwing catalog API. */
@@ -302,7 +294,7 @@ export function useKiloCodeAccountModelDiscovery({
           baseUrl: stripTrailingOpenAIV1(selection.runtimeKey.baseUrl),
           apiKey: resolvedToken.key,
         })
-        const modelIds = normalizeDiscoveredModelIds(upstreamModelIds)
+        const modelIds = normalizeKiloCodeModelIds(upstreamModelIds ?? [])
         if (
           !isMountedRef.current ||
           !isOpenRef.current ||
@@ -437,11 +429,28 @@ export function useKiloCodeAccountModelDiscovery({
     [preparedV7.catalog],
   )
 
-  const selectV7DefaultModel = useCallback((modelId: string) => {
-    setV7DefaultModel((current) =>
-      current ? { ...current, modelId } : undefined,
-    )
-  }, [])
+  const selectV7DefaultModel = useCallback(
+    (modelId: string) => {
+      const normalized = modelId.trim()
+      setV7DefaultModel((current) =>
+        current ? { ...current, modelId: normalized } : undefined,
+      )
+      if (!normalized) return
+      setV7ManualModelIdByToken((current) => {
+        const selection = v7Selections.find(
+          (candidate) => candidate.selectionId === v7DefaultModel?.selectionId,
+        )
+        if (!selection || selection.discoveredModelIds.includes(normalized)) {
+          return current
+        }
+        return {
+          ...current,
+          [selection.selectionId]: normalized,
+        }
+      })
+    },
+    [v7DefaultModel, v7Selections],
+  )
 
   const selectLegacyModel = useCallback(
     (selectionId: string, modelId: string) => {
@@ -455,12 +464,19 @@ export function useKiloCodeAccountModelDiscovery({
 
   const selectV7ManualModel = useCallback(
     (selectionId: string, modelId: string) => {
-      setV7ManualModelIdByToken((current) => ({
-        ...current,
-        [selectionId]: modelId.trim(),
-      }))
+      const normalized = modelId.trim()
+      const selection = v7Selections.find(
+        (candidate) => candidate.selectionId === selectionId,
+      )
+      setV7ManualModelIdByToken((current) => {
+        if (!normalized || selection?.discoveredModelIds.includes(normalized)) {
+          const { [selectionId]: _removed, ...remaining } = current
+          return remaining
+        }
+        return { ...current, [selectionId]: normalized }
+      })
     },
-    [],
+    [v7Selections],
   )
 
   const removeV7ManualModel = useCallback((selectionId: string) => {

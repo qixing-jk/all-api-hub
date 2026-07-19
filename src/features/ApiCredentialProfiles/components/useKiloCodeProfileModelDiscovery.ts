@@ -7,7 +7,10 @@ import type {
   KiloCodeV7ProviderSelection,
   PreparedKiloCodeV7Catalog,
 } from "~/services/integrations/kiloCodeExport"
-import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
+import {
+  normalizeKiloCodeModelIds,
+  prepareKiloCodeV7Catalog,
+} from "~/services/integrations/kiloCodeV7Catalog"
 import { reconcileKiloCodeV7DefaultSelection } from "~/services/integrations/kiloCodeV7Selection"
 import { createLogger } from "~/utils/core/logger"
 import {
@@ -40,16 +43,6 @@ interface UseKiloCodeProfileModelDiscoveryOptions {
 }
 
 /** Normalize upstream model IDs once at the discovery boundary. */
-function normalizeDiscoveredModelIds(modelIds: unknown[] | null | undefined) {
-  return Array.from(
-    new Set(
-      (modelIds ?? [])
-        .map((item) => (typeof item === "string" ? item.trim() : ""))
-        .filter(Boolean),
-    ),
-  ).sort((left, right) => (left === right ? 0 : left < right ? -1 : 1))
-}
-
 /** Validate persisted profile facts before invoking the throwing catalog API. */
 function hasInvalidRuntimeProfile(runtimeKey: KiloCodeRuntimeKeyExportInput) {
   if (!runtimeKey.tokenKey.trim()) return true
@@ -124,7 +117,7 @@ export function useKiloCodeProfileModelDiscovery({
         baseUrl: stripTrailingOpenAIV1(runtimeKey.baseUrl),
         apiKey: runtimeKey.tokenKey,
       })
-      const normalized = normalizeDiscoveredModelIds(upstreamModelIds)
+      const normalized = normalizeKiloCodeModelIds(upstreamModelIds ?? [])
       if (requestId !== requestIdRef.current) return
 
       setModelIds(normalized)

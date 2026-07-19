@@ -14,7 +14,10 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { expectKiloCodeUsageGuidance } from "~~/tests/test-utils/kiloCodeExportGuidance"
+import {
+  expectKiloCodeSettingsSizeGuidance,
+  expectKiloCodeUsageGuidance,
+} from "~~/tests/test-utils/kiloCodeExportGuidance"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
@@ -207,6 +210,7 @@ describe("KiloCodeProfileExportDialog", () => {
       name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
     })
     await waitFor(() => expect(copyButton).toBeEnabled())
+    expectKiloCodeUsageGuidance(KILO_CODE_EXPORT_TARGETS.KiloV7)
     expect(
       screen.getByRole("combobox", {
         name: "ui:dialog.kiloCode.labels.defaultModel",
@@ -764,11 +768,7 @@ describe("KiloCodeProfileExportDialog", () => {
 
     expect(createObjectURLSpy).not.toHaveBeenCalled()
     expect(clickSpy).not.toHaveBeenCalled()
-    expect(
-      screen.getByText(
-        "ui:dialog.kiloCode.messages.settingsFileTooLargeSingle",
-      ),
-    ).toBeVisible()
+    expectKiloCodeSettingsSizeGuidance("single")
     expect(
       screen.getByRole("button", {
         name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",

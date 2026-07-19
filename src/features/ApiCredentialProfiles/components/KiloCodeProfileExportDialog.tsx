@@ -20,7 +20,7 @@ import {
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
-  buildKiloCodeApiConfigs,
+  getKiloCodeApiConfigProfileNames,
   KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
@@ -124,7 +124,7 @@ export function KiloCodeProfileExportDialog({
     [legacyModelId, runtimeKey],
   )
   const currentLegacyProfileName = useMemo(() => {
-    const { profileNames } = buildKiloCodeApiConfigs({
+    const profileNames = getKiloCodeApiConfigProfileNames({
       selections: [legacySelection],
     })
     return profileNames[0] ?? ""

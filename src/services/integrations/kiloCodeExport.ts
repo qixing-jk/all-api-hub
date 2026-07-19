@@ -1,4 +1,7 @@
-import { buildUniqueKiloCodeProviderNames } from "~/services/integrations/kiloCodeV7Catalog"
+import {
+  buildUniqueKiloCodeProviderNames,
+  normalizeKiloCodeModelIds,
+} from "~/services/integrations/kiloCodeV7Catalog"
 import type {
   KiloCodeDefaultModelSelection,
   KiloCodeLegacySelection,
@@ -86,6 +89,92 @@ interface BuildPreparedKiloCodeV7SettingsOptions {
   now?: () => Date
 }
 
+/** Reject malformed prepared catalogs at the public schema boundary. */
+function validatePreparedKiloCodeV7Catalog(catalog: PreparedKiloCodeV7Catalog) {
+  if (!catalog.providers.length) {
+    throw new Error("Select at least one runtime key")
+  }
+  if (catalog.providerCount !== catalog.providers.length) {
+    throw new Error("Kilo Code catalog provider count is inconsistent")
+  }
+
+  const providerIds = new Set<string>()
+  const providerNames = new Set<string>()
+  const selectionIds = new Set<string>()
+  let modelCount = 0
+  for (const provider of catalog.providers) {
+    if (!provider.selectionId.trim()) {
+      throw new Error("Kilo Code provider selection ID cannot be blank")
+    }
+    if (selectionIds.has(provider.selectionId)) {
+      throw new Error("Kilo Code provider selection IDs must be unique")
+    }
+    selectionIds.add(provider.selectionId)
+    if (!provider.providerId.trim()) {
+      throw new Error("Kilo Code provider ID cannot be blank")
+    }
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(provider.providerId)) {
+      throw new Error("Kilo Code provider IDs must be settings-safe")
+    }
+    if (providerIds.has(provider.providerId)) {
+      throw new Error("Kilo Code provider IDs must be unique")
+    }
+    providerIds.add(provider.providerId)
+    if (!provider.providerName.trim()) {
+      throw new Error("Kilo Code provider name cannot be blank")
+    }
+    const providerName = provider.providerName.trim()
+    if (providerNames.has(providerName)) {
+      throw new Error("Kilo Code provider names must be unique")
+    }
+    providerNames.add(providerName)
+    if (!provider.tokenKey.trim()) {
+      throw new Error("Kilo Code provider token key cannot be blank")
+    }
+    let parsedBaseURL: URL
+    try {
+      parsedBaseURL = new URL(provider.baseURL)
+    } catch {
+      throw new Error(
+        "Kilo Code provider base URL must be a valid HTTP or HTTPS URL",
+      )
+    }
+    if (
+      parsedBaseURL.protocol !== "http:" &&
+      parsedBaseURL.protocol !== "https:"
+    ) {
+      throw new Error(
+        "Kilo Code provider base URL must be a valid HTTP or HTTPS URL",
+      )
+    }
+    if (!provider.modelIds.length) {
+      throw new Error("Kilo Code provider model catalog cannot be empty")
+    }
+    const modelIds = new Set<string>()
+    for (const modelId of provider.modelIds) {
+      if (!modelId.trim() || modelId !== modelId.trim()) {
+        throw new Error("Kilo Code provider model IDs must be normalized")
+      }
+      if (modelIds.has(modelId)) {
+        throw new Error("Kilo Code provider model IDs must be unique")
+      }
+      modelIds.add(modelId)
+    }
+    const normalizedModelIds = normalizeKiloCodeModelIds(provider.modelIds)
+    if (
+      provider.modelIds.some(
+        (modelId, index) => modelId !== normalizedModelIds[index],
+      )
+    ) {
+      throw new Error("Kilo Code provider model IDs must use canonical order")
+    }
+    modelCount += provider.modelIds.length
+  }
+  if (catalog.modelCount !== modelCount) {
+    throw new Error("Kilo Code catalog model count is inconsistent")
+  }
+}
+
 /**
  * Build the Kilo Code 7.x settings format.
  *
@@ -97,9 +186,7 @@ interface BuildPreparedKiloCodeV7SettingsOptions {
 function buildPreparedKiloCodeV7SettingsFile(
   options: BuildPreparedKiloCodeV7SettingsOptions,
 ): KiloCodeV7SettingsFile {
-  if (!options.catalog.providers.length) {
-    throw new Error("Select at least one runtime key")
-  }
+  validatePreparedKiloCodeV7Catalog(options.catalog)
   if (!options.defaultModel) {
     throw new Error("Kilo Code default model is required")
   }
@@ -179,6 +266,17 @@ function getLegacyModelId(selection: KiloCodeLegacySelection) {
   return selection.legacyModelId?.trim() || undefined
 }
 
+/** Derive deterministic legacy profile names without materializing API keys. */
+export function getKiloCodeApiConfigProfileNames(
+  options: Pick<BuildKiloCodeApiConfigsOptions, "selections">,
+) {
+  const names = buildUniqueKiloCodeProviderNames(
+    options.selections,
+    getBaseProfileName,
+  ).map(({ name }) => name)
+  return names.sort((left, right) => left.localeCompare(right))
+}
+
 /**
  * Build `providerProfiles.apiConfigs` entries for Kilo Code / Roo Code settings.
  *
@@ -207,9 +305,7 @@ export function buildKiloCodeApiConfigs(
     }
   }
 
-  const profileNames = Object.keys(apiConfigs).sort((a, b) =>
-    a.localeCompare(b),
-  )
+  const profileNames = getKiloCodeApiConfigProfileNames({ selections })
   return { apiConfigs, profileNames }
 }
 

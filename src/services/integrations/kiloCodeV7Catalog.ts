@@ -84,21 +84,45 @@ function defaultKiloCodeV7ProviderId(selection: NormalizedKiloCodeV7Selection) {
 }
 
 /** Compare model IDs using deterministic Unicode code-point order. */
-function compareCodePoints(left: string, right: string) {
+function compareKiloCodeModelIds(left: string, right: string) {
   if (left === right) return 0
-  return left < right ? -1 : 1
+  const leftCodePoints = Array.from(
+    left,
+    (character) => character.codePointAt(0)!,
+  )
+  const rightCodePoints = Array.from(
+    right,
+    (character) => character.codePointAt(0)!,
+  )
+  const length = Math.min(leftCodePoints.length, rightCodePoints.length)
+  for (let index = 0; index < length; index += 1) {
+    const leftCodePoint = leftCodePoints[index]!
+    const rightCodePoint = rightCodePoints[index]!
+    if (leftCodePoint !== rightCodePoint) {
+      return leftCodePoint < rightCodePoint ? -1 : 1
+    }
+  }
+  return leftCodePoints.length < rightCodePoints.length ? -1 : 1
 }
 
 /** Trim, deduplicate, and sort discovered and manually entered model IDs. */
-function normalizeModelIds(selection: KiloCodeV7ProviderSelection) {
+export function normalizeKiloCodeModelIds(modelIds: readonly unknown[]) {
   return Array.from(
     new Set(
-      [...selection.discoveredModelIds, selection.manualModelId]
+      modelIds
         .filter((value): value is string => typeof value === "string")
         .map((value) => value.trim())
         .filter(Boolean),
     ),
-  ).sort(compareCodePoints)
+  ).sort(compareKiloCodeModelIds)
+}
+
+/** Normalize the complete discovered and manual catalog for one provider. */
+function normalizeModelIds(selection: KiloCodeV7ProviderSelection) {
+  return normalizeKiloCodeModelIds([
+    ...selection.discoveredModelIds,
+    selection.manualModelId,
+  ])
 }
 
 /** Resolve a caller-provided provider name or the legacy site/token fallback. */

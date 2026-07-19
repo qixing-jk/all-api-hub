@@ -303,13 +303,16 @@
         "selectedSites": "Trang web đã chọn: {{sites}}, API Key đã chọn: {{keys}}."
       },
       "help": {
-        "kiloV7CopyInstructions": "Nếu cần tự duy trì cấu hình, hãy nhấp vào “Sao chép cấu hình nhà cung cấp” và hợp nhất nội dung đã sao chép vào trường provider ở cấp cao nhất của JSON cài đặt.",
-        "kiloV7DownloadInstructions": "Nhấp vào “Tải cài đặt Kilo 7.x”. Sau đó, trong Kilo Code, nhấp vào biểu tượng bánh răng để mở Cài đặt, vào About Kilo Code → Import, chọn tệp kilo-settings.json đã tải xuống, xem lại nội dung sẽ nhập rồi lưu.",
+        "kiloV7ApiKeyEditorNote": "Sau khi nhập, Kilo Code có thể hiển thị trống trường API key của provider. Đây là hạn chế đã biết của trình chỉnh sửa: khóa nội tuyến đã nhập được lưu riêng với trạng thái xác thực của trình chỉnh sửa và vẫn dùng được khi chạy.",
+        "kiloV7CatalogInstructions": "Mỗi API key đã chọn trở thành một provider có tên dễ đọc. Provider bao gồm tất cả ID mô hình đã chuẩn hóa được phát hiện từ API và mọi ID được nhập thủ công cho provider đó; việc có trong bản xuất không đảm bảo mọi mô hình hoạt động với mọi quy trình. Chọn model mặc định; khi xuất nhiều provider, hãy chọn cả provider mặc định.",
+        "kiloV7CopyInstructions": "Nhấp vào “Sao chép cấu hình nhà cung cấp” để sao chép một đoạn cấp cao nhất có thể hợp nhất, gồm cả provider và model. Hãy hợp nhất cả hai trường vào JSON cài đặt; đoạn đã sao chép không phải là tệp nhập hoàn chỉnh.",
+        "kiloV7DownloadInstructions": "Nhấp vào “Tải cài đặt Kilo 7.x”, rồi nhập tệp kilo-settings.json đã tải xuống trong Kilo Code tại Cài đặt → About Kilo Code → Import. Xem lại cài đặt đã nhập rồi lưu.",
         "legacyCopyInstructions": "Nhấp vào “Sao chép apiConfigs kiểu cũ”, rồi dán nội dung vào providerProfiles.apiConfigs trong cài đặt của Roo Code hoặc Kilo Code 5.x.",
         "legacyDownloadInstructions": "Nếu cần tệp cài đặt đầy đủ, hãy nhấp vào “Tải cài đặt kiểu cũ” để lấy kilo-code-settings.json rồi nhập tệp bằng tính năng nhập cài đặt của phiên bản tương ứng.",
+        "legacySingleModelInstructions": "Bản xuất cho Roo Code và Kilo Code 5.x kiểu cũ hỗ trợ một mô hình cho mỗi hồ sơ. Chọn mô hình cần dùng trước khi sao chép hoặc tải xuống.",
         "perSiteDescription": "Sau khi chọn trang web để xuất, các API Key sẽ tự động được tải, và API Key đầu tiên được chọn mặc định (hỗ trợ chọn nhiều cho mỗi trang web).",
         "perSiteTitle": "Xuất theo trang web",
-        "usageTitle": "Cách sử dụng"
+        "usageTitle": "Sử dụng bản xuất"
       },
       "labels": {
         "currentApiConfigName": "Cấu hình hiện tại",

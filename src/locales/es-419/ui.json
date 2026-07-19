@@ -318,13 +318,16 @@
         "selectedSites": "Sitios seleccionados: {{sites}}, claves seleccionadas: {{keys}}."
       },
       "help": {
-        "kiloV7CopyInstructions": "Si necesitas mantener la configuración manualmente, haz clic en “Copiar configuración del proveedor” y combina el contenido copiado con el campo provider de nivel superior del JSON de ajustes.",
-        "kiloV7DownloadInstructions": "Haz clic en “Descargar ajustes de Kilo 7.x”. Luego, en Kilo Code, haz clic en el engranaje para abrir Ajustes, ve a About Kilo Code → Import, selecciona el archivo kilo-settings.json descargado, revisa el contenido que se importará y guarda los cambios.",
+        "kiloV7ApiKeyEditorNote": "Después de importar, Kilo Code puede mostrar vacío el campo de API key del provider. Es una limitación conocida del editor: las claves integradas importadas se guardan por separado del estado de autenticación del editor y siguen disponibles durante la ejecución.",
+        "kiloV7CatalogInstructions": "Cada API key seleccionada se convierte en un provider con un nombre legible. Incluye todos los ID de modelo normalizados detectados mediante esa API y cualquier ID ingresado manualmente para el provider; incluirlos no garantiza que cada modelo funcione en todos los flujos. Elige el model predeterminado y, si exportas varios providers, también el provider predeterminado.",
+        "kiloV7CopyInstructions": "Haz clic en “Copiar configuración del proveedor” para copiar un fragmento combinable de nivel superior que contiene provider y model. Combina ambos campos con tu JSON de ajustes; el fragmento copiado no es un archivo de importación completo.",
+        "kiloV7DownloadInstructions": "Haz clic en “Descargar ajustes de Kilo 7.x” y, en Kilo Code, importa el archivo kilo-settings.json descargado desde Ajustes → About Kilo Code → Import. Revisa los ajustes importados y guárdalos.",
         "legacyCopyInstructions": "Haz clic en “Copiar apiConfigs heredado” y pega el contenido en providerProfiles.apiConfigs de los ajustes de Roo Code o Kilo Code 5.x.",
         "legacyDownloadInstructions": "Si necesitas un archivo de ajustes completo, haz clic en “Descargar ajustes heredados” para obtener kilo-code-settings.json e impórtalo mediante la función de importación de ajustes de la versión correspondiente.",
+        "legacySingleModelInstructions": "Las exportaciones para Roo Code y Kilo Code 5.x heredados admiten un modelo por perfil. Selecciona el modelo que se usará antes de copiar o descargar.",
         "perSiteDescription": "Selecciona sitios para cargar tokens automáticamente. El primer token queda preseleccionado y puedes seleccionar varios tokens por sitio.",
         "perSiteTitle": "Exportación por sitio",
-        "usageTitle": "Cómo usarlo"
+        "usageTitle": "Usar la exportación"
       },
       "labels": {
         "currentApiConfigName": "Perfil actual",

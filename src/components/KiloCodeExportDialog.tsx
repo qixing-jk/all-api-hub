@@ -33,7 +33,7 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import {
-  buildKiloCodeApiConfigs,
+  getKiloCodeApiConfigProfileNames,
   KILO_CODE_EXPORT_FILENAMES,
   KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
@@ -55,6 +55,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import {
   resolveKiloCodeAccountExportOutput,
   type KiloCodeAccountExportSelection,
+  type KiloCodeAccountSecretSource,
 } from "./kiloCodeAccountExport"
 import { KiloCodeDefaultModelSelect } from "./KiloCodeDefaultModelSelect"
 import { KiloCodeExportGuidance } from "./KiloCodeExportGuidance"
@@ -143,6 +144,27 @@ function getTokenSelectionKey(siteId: string, tokenId: number) {
   return `${siteId}:${tokenId}`
 }
 
+/** Compare resolver inputs by identity without serializing credential fields. */
+function haveMatchingSecretSourceIdentities(
+  previous: ReadonlyMap<string, KiloCodeAccountSecretSource>,
+  current: ReadonlyMap<string, KiloCodeAccountSecretSource>,
+) {
+  if (previous.size !== current.size) return false
+
+  for (const [selectionId, previousSource] of previous) {
+    const currentSource = current.get(selectionId)
+    if (
+      !currentSource ||
+      currentSource.site !== previousSource.site ||
+      currentSource.token !== previousSource.token
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
 /**
  * Modal for exporting selected accounts/tokens into Kilo Code / Roo Code settings JSON.
  *
@@ -183,9 +205,16 @@ export function KiloCodeExportDialog({
   const pendingRemoveSelectionIdRef = useRef<string | undefined>(undefined)
   const retryButtonRefs = useRef(new Map<string, HTMLButtonElement>())
   const modelSelectorRefs = useRef(new Map<string, HTMLButtonElement>())
+  const actionGenerationRef = useRef(0)
+  const actionContextRef = useRef({
+    isOpen,
+    exportTarget,
+    exportActionSignature: "",
+  })
 
   useEffect(() => {
     if (isOpen) return
+    actionGenerationRef.current += 1
     setSelectedSiteIds([])
     setSelectedTokenIdsBySite({})
     setCurrentApiConfigName("")
@@ -200,6 +229,11 @@ export function KiloCodeExportDialog({
     modelSelectorRefs.current.clear()
     initialSelectionAppliedRef.current = false
   }, [isOpen])
+
+  const invalidateAndClose = useCallback(() => {
+    actionGenerationRef.current += 1
+    onClose()
+  }, [onClose])
 
   useEffect(() => {
     if (!isOpen) return
@@ -555,20 +589,21 @@ export function KiloCodeExportDialog({
       ),
     [accountExportSelections],
   )
-  const exportSelectionSignature = useMemo(
-    () =>
-      accountExportSelections
-        .map((selection) => selection.selectionId)
-        .sort()
-        .join("\u0000"),
-    [accountExportSelections],
+  const previousSecretSourcesBySelectionIdRef = useRef(
+    secretSourcesBySelectionId,
   )
 
   useEffect(() => {
-    setIsDownloadTooLarge(false)
-  }, [exportSelectionSignature])
-  const { profileNames } = useMemo(
-    () => buildKiloCodeApiConfigs({ selections: legacySelections }),
+    const previous = previousSecretSourcesBySelectionIdRef.current
+    previousSecretSourcesBySelectionIdRef.current = secretSourcesBySelectionId
+    if (
+      !haveMatchingSecretSourceIdentities(previous, secretSourcesBySelectionId)
+    ) {
+      actionGenerationRef.current += 1
+    }
+  }, [secretSourcesBySelectionId])
+  const profileNames = useMemo(
+    () => getKiloCodeApiConfigProfileNames({ selections: legacySelections }),
     [legacySelections],
   )
 
@@ -585,6 +620,66 @@ export function KiloCodeExportDialog({
   const effectiveCurrentApiConfigName =
     currentApiConfigName || profileNames[0] || ""
   const isKiloV7Export = exportTarget === KILO_CODE_EXPORT_TARGETS.KiloV7
+  const exportActionSignature = useMemo(
+    () =>
+      JSON.stringify(
+        isKiloV7Export
+          ? {
+              defaultModel: v7DefaultModel,
+              selections: v7Selections.map((selection) => ({
+                selectionId: selection.selectionId,
+                accountId: selection.accountId,
+                siteName: selection.siteName,
+                baseUrl: selection.baseUrl,
+                tokenId: selection.tokenId,
+                tokenName: selection.tokenName,
+                providerName: selection.providerName ?? "",
+                discoveredModelIds: selection.discoveredModelIds,
+                manualModelId: selection.manualModelId ?? "",
+              })),
+            }
+          : {
+              currentLegacyProfileName: effectiveCurrentApiConfigName,
+              selections: legacySelections.map((selection) => ({
+                selectionId: selection.selectionId,
+                accountId: selection.accountId,
+                siteName: selection.siteName,
+                baseUrl: selection.baseUrl,
+                tokenId: selection.tokenId,
+                tokenName: selection.tokenName,
+                legacyModelId: selection.legacyModelId ?? "",
+              })),
+            },
+      ),
+    [
+      effectiveCurrentApiConfigName,
+      isKiloV7Export,
+      legacySelections,
+      v7DefaultModel,
+      v7Selections,
+    ],
+  )
+
+  actionContextRef.current = {
+    isOpen,
+    exportTarget,
+    exportActionSignature,
+  }
+
+  const isCurrentExportAction = useCallback(
+    (generation: number, signature: typeof actionContextRef.current) =>
+      generation === actionGenerationRef.current &&
+      actionContextRef.current.isOpen &&
+      actionContextRef.current.exportTarget === signature.exportTarget &&
+      actionContextRef.current.exportActionSignature ===
+        signature.exportActionSignature,
+    [],
+  )
+
+  useEffect(() => {
+    setIsDownloadTooLarge(false)
+    actionGenerationRef.current += 1
+  }, [exportActionSignature])
   const missingModelIdCount = isKiloV7Export
     ? v7Selections.filter(
         (selection) =>
@@ -712,6 +807,9 @@ export function KiloCodeExportDialog({
   const handleCopyApiConfigs = async () => {
     if (!canExport) return
 
+    const generation = ++actionGenerationRef.current
+    const signature = actionContextRef.current
+
     const tracker = startProductAnalyticsAction({
       ...kiloCodeAccountExportAnalyticsContext,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyKiloCodeAccountExportConfig,
@@ -724,6 +822,9 @@ export function KiloCodeExportDialog({
       }
 
       const output = await buildCurrentExportOutput()
+      if (!isCurrentExportAction(generation, signature)) {
+        return
+      }
       actionInsights = {
         ...exportInsights,
         itemCount: output.itemCount,
@@ -732,11 +833,17 @@ export function KiloCodeExportDialog({
       await navigator.clipboard.writeText(
         JSON.stringify(output.copyPayload, null, 2),
       )
+      if (!isCurrentExportAction(generation, signature)) {
+        return
+      }
       toast.success(t("ui:dialog.kiloCode.messages.copiedExportConfig"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: actionInsights,
       })
     } catch (error) {
+      if (!isCurrentExportAction(generation, signature)) {
+        return
+      }
       toast.error(
         getErrorMessage(error, t("ui:dialog.kiloCode.messages.copyFailed")),
       )
@@ -750,6 +857,9 @@ export function KiloCodeExportDialog({
   const handleDownloadSettings = async () => {
     if (!canExport) return
 
+    const generation = ++actionGenerationRef.current
+    const signature = actionContextRef.current
+
     const tracker = startProductAnalyticsAction({
       ...kiloCodeAccountExportAnalyticsContext,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportKiloCodeAccountSettingsFile,
@@ -762,6 +872,9 @@ export function KiloCodeExportDialog({
 
     try {
       const output = await buildCurrentExportOutput()
+      if (!isCurrentExportAction(generation, signature)) {
+        return
+      }
       actionInsights = {
         ...exportInsights,
         itemCount: output.itemCount,
@@ -769,6 +882,9 @@ export function KiloCodeExportDialog({
       }
 
       if (output.isDownloadTooLarge) {
+        if (!isCurrentExportAction(generation, signature)) {
+          return
+        }
         setIsDownloadTooLarge(true)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
@@ -780,18 +896,30 @@ export function KiloCodeExportDialog({
       const blob = new Blob([output.downloadJson], {
         type: "application/json",
       })
+      if (!isCurrentExportAction(generation, signature)) {
+        return
+      }
       url = URL.createObjectURL(blob)
       link = document.createElement("a")
       link.href = url
       link.download = output.filename
       document.body.appendChild(link)
+      if (!isCurrentExportAction(generation, signature)) {
+        return
+      }
       link.click()
 
+      if (!isCurrentExportAction(generation, signature)) {
+        return
+      }
       toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: actionInsights,
       })
     } catch (error) {
+      if (!isCurrentExportAction(generation, signature)) {
+        return
+      }
       toast.error(
         getErrorMessage(error, t("ui:dialog.kiloCode.messages.downloadFailed")),
       )
@@ -1177,7 +1305,7 @@ export function KiloCodeExportDialog({
     <>
       <Modal
         isOpen={isOpen}
-        onClose={onClose}
+        onClose={invalidateAndClose}
         size="lg"
         header={
           <div className="pr-8">
@@ -1196,7 +1324,7 @@ export function KiloCodeExportDialog({
                 {selectionSummary}
               </div>
             )}
-            <Button variant="ghost" type="button" onClick={onClose}>
+            <Button variant="ghost" type="button" onClick={invalidateAndClose}>
               {t("common:actions.cancel")}
             </Button>
             <Button
@@ -1305,6 +1433,7 @@ export function KiloCodeExportDialog({
                   setIsDownloadTooLarge(false)
                 }}
                 placeholder={t("ui:dialog.kiloCode.placeholders.modelId")}
+                allowCustomValue
                 disabled={!selectedDefaultProvider}
               />
             </FormField>

@@ -152,6 +152,10 @@
 - Claude Code Router
 - 当前自建托管站点
 
+导出到 Kilo Code 7.x 时，当前凭据会成为一个名称易读的 `provider`，其中包含从接口发现并规范化的全部模型 ID，以及为该 `provider` 手动输入并保留的模型 ID。被包含在导出中并不保证每个模型都适用于所有工作流；导出前只需选择默认 `model`。旧版 Roo Code / Kilo Code 5.x 格式仍是每个配置一个模型，并将复制内容合并到 `providerProfiles.apiConfigs`。
+
+Kilo Code 7.x 的文件导入、`{ provider, model }` 手动合并方式、文件大小恢复操作和 API 密钥编辑框显示限制，请参阅[支持的导出工具与集成目标](./supported-export-tools.md)。
+
 如果你主要是“管理一堆上游接口配置，然后分发到多个下游工具”，`API 凭据库` 会比完整账号管理更直接。
 
 ## 使用建议

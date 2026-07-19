@@ -48,6 +48,12 @@
 - Claude Code Router
 - 你配置的自建托管站点
 
+#### 导出到 Kilo Code / Roo Code
+
+选择 Kilo Code 7.x 时，每个账号密钥会导出为一个名称易读的 `provider`，其中包含从对应接口发现并规范化的全部模型 ID，以及为该 `provider` 手动输入并保留的模型 ID。被包含在导出中并不保证每个模型都适用于所有工作流。请分别选择默认 `model` 和默认 `provider`；这不会减少其他 `provider` 中导出的模型。
+
+旧版 Roo Code / Kilo Code 5.x 格式则是每个配置选择一个模型，复制内容需合并到 `providerProfiles.apiConfigs`。下载文件、手动合并、文件大小限制和导入后的 API 密钥显示说明，请参阅[支持的导出工具与集成目标](./supported-export-tools.md)。
+
 ## 管理联动
 
 如果你觉得某个 Token 非常常用，或者想给它加上更详细的备注和标签，可以点击 **`保存到 API 凭据库`**。这会将该 `URL + Key` 组合复制到 [API 凭据库](./api-credential-profiles.md) 中。

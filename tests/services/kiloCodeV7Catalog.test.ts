@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  normalizeKiloCodeModelIds,
   prepareKiloCodeV7Catalog,
   type KiloCodeV7ProviderSelection,
 } from "~/services/integrations/kiloCodeV7Catalog"
@@ -61,6 +62,16 @@ describe("prepareKiloCodeV7Catalog", () => {
       "a-model",
       "ä-model",
     ])
+  })
+
+  it("orders astral model IDs by Unicode code point", () => {
+    expect(
+      normalizeKiloCodeModelIds([
+        "\u{1f600}-model",
+        "z-model",
+        "\u{10000}-model",
+      ]),
+    ).toEqual(["z-model", "\u{10000}-model", "\u{1f600}-model"])
   })
 
   it("disambiguates duplicate display names without merging credentials", () => {
