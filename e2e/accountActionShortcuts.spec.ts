@@ -200,6 +200,56 @@ test("copies a stored account URL from the account list shortcut", async ({
   await expect(page.getByText("URL copied to clipboard")).toBeVisible()
 })
 
+test("copies a supported account invite link from the row menu", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const baseUrl = "https://invite-shortcut.example.invalid"
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "invite-shortcut-account",
+      site_name: "Invite Shortcut Account",
+      site_url: baseUrl,
+      site_type: SITE_TYPES.NEW_API,
+      account_info: {
+        id: "102",
+        username: "invite-shortcut-user",
+        access_token: "invite-shortcut-token",
+      },
+    }),
+  ])
+  await stubNewApiSiteRoutes(context, { baseUrl })
+  await context.route(`${baseUrl}/api/user/aff`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        success: true,
+        message: "ok",
+        data: "e2e-invite-code",
+      }),
+    })
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  await openAccountActionsMenu(page, "Invite Shortcut Account")
+  await page
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyInviteLinkMenuItem)
+    .click()
+
+  await expect
+    .poll(() => readClipboardWrites(page))
+    .toEqual([`${baseUrl}/register?aff=e2e-invite-code`])
+  await expect(page.getByText("Invite link copied to clipboard")).toBeVisible()
+})
+
 test("copies the only API key directly from the account list shortcut", async ({
   context,
   extensionId,

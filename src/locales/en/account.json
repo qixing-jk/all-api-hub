@@ -13,6 +13,12 @@
     "channelLocateSecondaryModelsSimilar": "Found a secondary match by model similarity. Filtered channels by URL for review.",
     "channelLocateSignalsConflict": "Key and model checks pointed to different channel candidates. Filtered channels by URL for review.",
     "channelLocateUnresolved": "No likely channel could be confirmed. Filtered channels by URL only.",
+    "copyingInviteLink": "Copying invite link...",
+    "copyInviteLink": "Copy invite link",
+    "copyInviteLinkClipboardFailed": "Clipboard access was blocked. Copy the invite link manually.",
+    "copyInviteLinkFailed": "Could not copy the invite link. Please try again.",
+    "copyInviteLinkUnsupported": "This account type does not provide an invite link.",
+    "copyInviteLinkUnsupportedHint": "Unsupported",
     "copyKey": "Copy Key",
     "copyUrl": "Copy URL",
     "delete": "Delete",
@@ -23,6 +29,7 @@
     "fetchKeyListFailed": "Failed to fetch key list: {{errorMessage}}",
     "importFromBookmarks": "Batch import from bookmarks",
     "importFromBookmarksHint": "Batch scan browser bookmarks for account sites instead of adding them one by one",
+    "inviteLinkCopied": "Invite link copied to clipboard",
     "keyCopied": "Key copied to clipboard",
     "keyList": "Key List",
     "keyManagement": "Key Management",
@@ -51,6 +58,7 @@
     "clearAll": "Clear all selection",
     "clearVisible": "Clear visible selection",
     "copyInviteLinks": "Copy invite links",
+    "copyInviteLinksClipboardFailed": "Clipboard access was blocked. Copy the generated invite links manually.",
     "copyInviteLinksFailed": "Failed to fetch invite links. Please try again later.",
     "copyInviteLinksPartialSuccess": "Copied {{successCount}} invite links. {{failureCount}} failed, {{unsupportedCount}} unsupported, {{skippedCount}} skipped.",
     "copyInviteLinksSuccess_one": "Copied {{count}} invite link.",
@@ -130,6 +138,11 @@
     "unknown": "Unknown",
     "unknownError": "Unknown error",
     "warning": "Warning"
+  },
+  "inviteLinkManualCopy": {
+    "description": "Your browser could not write to the clipboard. Select the generated content below and copy it manually.",
+    "label": "Invite link",
+    "title": "Copy invite link manually"
   },
   "list": {
     "balance": {

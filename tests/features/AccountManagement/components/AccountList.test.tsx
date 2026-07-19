@@ -4,11 +4,15 @@ import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import AccountList from "~/features/AccountManagement/components/AccountList"
-import { getAccountManagementSelectionCheckboxTestId } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementSelectionCheckboxTestId,
+} from "~/features/AccountManagement/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
@@ -1661,9 +1665,11 @@ describe("AccountList", () => {
       expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(2)
       expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledWith(
         expect.objectContaining({ id: "invite-a" }),
+        expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
       )
       expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledWith(
         expect.objectContaining({ id: "invite-b" }),
+        expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
       )
       expect(toastSuccessMock).toHaveBeenCalledWith(
         "account:bulk.copyInviteLinksSuccess",
@@ -1796,6 +1802,7 @@ describe("AccountList", () => {
     expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(1)
     expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledWith(
       expect.objectContaining({ id: "invite-supported" }),
+      expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
     )
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "account:bulk.copyInviteLinksPartialSuccess",
@@ -1813,6 +1820,7 @@ describe("AccountList", () => {
         successCount: 1,
         failureCount: 0,
         skippedCount: 1,
+        failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.PartialSuccess,
       },
     })
   })
@@ -1940,7 +1948,14 @@ describe("AccountList", () => {
         "Clipboard Fail: https://clipboard-fail.example.com/register?aff=clipboard-fail",
       )
       expect(toastErrorMock).toHaveBeenCalledWith(
-        "account:bulk.copyInviteLinksFailed",
+        "account:bulk.copyInviteLinksClipboardFailed",
+      )
+      expect(
+        screen.getByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.inviteLinkManualCopyTextarea,
+        ),
+      ).toHaveValue(
+        "Clipboard Fail: https://clipboard-fail.example.com/register?aff=clipboard-fail",
       )
       expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -1948,12 +1963,12 @@ describe("AccountList", () => {
         surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
         insights: {
           itemCount: 1,
           selectedCount: 1,
-          successCount: 0,
-          failureCount: 1,
+          successCount: 1,
+          failureCount: 0,
           skippedCount: 0,
         },
       })

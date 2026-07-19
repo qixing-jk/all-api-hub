@@ -46,6 +46,8 @@ const {
   mockHandleRefreshAccount,
   mockTogglePinAccount,
   fetchAccountTokensMock,
+  fetchDisplayAccountInviteLinkMock,
+  canFetchDisplayAccountInviteLinkMock,
   getManagedSiteServiceMock,
   openKeysPageMock,
   openManagedSiteChannelsForChannelMock,
@@ -76,6 +78,8 @@ const {
   mockHandleRefreshAccount: vi.fn(),
   mockTogglePinAccount: vi.fn(),
   fetchAccountTokensMock: vi.fn(),
+  fetchDisplayAccountInviteLinkMock: vi.fn(),
+  canFetchDisplayAccountInviteLinkMock: vi.fn(),
   getManagedSiteServiceMock: vi.fn(),
   openKeysPageMock: vi.fn(),
   openManagedSiteChannelsForChannelMock: vi.fn(),
@@ -264,6 +268,10 @@ vi.mock(
           responseType: typeof result,
         })
       },
+      fetchDisplayAccountInviteLink: (...args: unknown[]) =>
+        fetchDisplayAccountInviteLinkMock(...args),
+      canFetchDisplayAccountInviteLink: (...args: unknown[]) =>
+        canFetchDisplayAccountInviteLinkMock(...args),
       resolveDisplayAccountTokenForSecret: async () => {
         throw new Error(
           "resolveDisplayAccountTokenForSecret should not be used by account row actions",
@@ -295,6 +303,10 @@ describe("AccountActionButtons", () => {
     accountDataContextValue.isPinFeatureEnabled = false
     accountDataContextValue.loadAccountData = loadAccountDataMock
     clipboardWriteTextMock.mockResolvedValue(undefined)
+    canFetchDisplayAccountInviteLinkMock.mockReturnValue(true)
+    fetchDisplayAccountInviteLinkMock.mockResolvedValue(
+      "https://invite.example.invalid/register?aff=row",
+    )
     trackStartedMock.mockResolvedValue(undefined)
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
@@ -380,6 +392,181 @@ describe("AccountActionButtons", () => {
     expect(
       screen.getByRole("menuitem", { name: "account:actions.refresh" }),
     ).not.toHaveAttribute("aria-busy")
+  })
+
+  it("copies a supported account invite link from the row menu", async () => {
+    const user = userEvent.setup()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get: () => ({ writeText: clipboardWriteTextMock }),
+    })
+    const site = buildDisplaySiteData({
+      id: "invite-row",
+      disabled: false,
+      name: "Invite Row",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://invite.example.invalid",
+    })
+
+    render(
+      <AccountActionButtons
+        site={site}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    const copyInviteLinkItem = await screen.findByRole("menuitem", {
+      name: "account:actions.copyInviteLink",
+    })
+
+    await user.click(copyInviteLinkItem)
+
+    await waitFor(() => {
+      expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "invite-row" }),
+        expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
+      )
+      expect(clipboardWriteTextMock).toHaveBeenCalledWith(
+        "https://invite.example.invalid/register?aff=row",
+      )
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "account:actions.inviteLinkCopied",
+      )
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountInviteLink,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+          },
+        },
+      )
+    })
+  })
+
+  it("shows an unavailable invite-link action for unsupported enabled accounts", async () => {
+    const user = userEvent.setup()
+    canFetchDisplayAccountInviteLinkMock.mockReturnValue(false)
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "invite-unsupported",
+          disabled: false,
+          siteType: SITE_TYPES.ONE_API,
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const copyInviteLinkItem = await screen.findByRole("menuitem", {
+      name: "account:actions.copyInviteLink",
+    })
+    expect(copyInviteLinkItem).toBeDisabled()
+    expect(copyInviteLinkItem).toHaveAttribute(
+      "title",
+      "account:actions.copyInviteLinkUnsupported",
+    )
+  })
+
+  it("omits the invite-link action for disabled accounts", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "invite-disabled",
+          disabled: true,
+          siteType: SITE_TYPES.NEW_API,
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "account:actions.copyInviteLink",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps the fetched invite link available for manual copy when clipboard access fails", async () => {
+    const user = userEvent.setup()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get: () => ({ writeText: clipboardWriteTextMock }),
+    })
+    clipboardWriteTextMock.mockRejectedValueOnce(
+      new DOMException("Clipboard access denied", "NotAllowedError"),
+    )
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "invite-manual-copy",
+          disabled: false,
+          siteType: SITE_TYPES.NEW_API,
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "account:actions.copyInviteLink",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("dialog", {
+        name: "account:inviteLinkManualCopy.title",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.inviteLinkManualCopyTextarea,
+      ),
+    ).toHaveValue("https://invite.example.invalid/register?aff=row")
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "account:actions.copyInviteLinkClipboardFailed",
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+        insights: {
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+        },
+      },
+    )
   })
 
   it("locks externally refreshed accounts without announcing local menu work", async () => {

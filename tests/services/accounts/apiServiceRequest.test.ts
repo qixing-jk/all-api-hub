@@ -320,6 +320,24 @@ describe("fetchDisplayAccountTokens", () => {
     })
   })
 
+  it("forwards invite-link cancellation through the API request context", async () => {
+    const controller = new AbortController()
+    fetchInviteLink.mockResolvedValueOnce(
+      "https://example.com/register?aff=invite-code",
+    )
+
+    await fetchDisplayAccountInviteLink(ACCOUNT as any, {
+      abortSignal: controller.signal,
+    })
+
+    expect(fetchInviteLink).toHaveBeenCalledWith({
+      request: expect.objectContaining({
+        ...REQUEST,
+        abortSignal: controller.signal,
+      }),
+    })
+  })
+
   it("keeps cookie-auth sessions in request auth for display snapshots", () => {
     const context = createDisplayAccountRequestContext({
       ...ACCOUNT,

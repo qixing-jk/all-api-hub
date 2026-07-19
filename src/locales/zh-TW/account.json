@@ -13,6 +13,12 @@
     "channelLocateSecondaryModelsSimilar": "已找到一個按模型相似度命中的次級匹配，已按 URL 過濾渠道列表供你確認。",
     "channelLocateSignalsConflict": "key 和模型檢查分別指向了不同的候選渠道，已按 URL 過濾渠道列表供你確認。",
     "channelLocateUnresolved": "暫時無法確認最可能的渠道，已僅按 URL 過濾渠道列表。",
+    "copyingInviteLink": "正在複製邀請連結...",
+    "copyInviteLink": "複製邀請連結",
+    "copyInviteLinkClipboardFailed": "瀏覽器無法寫入剪貼簿，請手動複製邀請連結。",
+    "copyInviteLinkFailed": "複製邀請連結失敗，請再試一次。",
+    "copyInviteLinkUnsupported": "目前帳號類型不提供邀請連結。",
+    "copyInviteLinkUnsupportedHint": "不支援",
     "copyKey": "複製金鑰",
     "copyUrl": "複製網址",
     "delete": "刪除",
@@ -23,6 +29,7 @@
     "fetchKeyListFailed": "獲取金鑰列表失敗: {{errorMessage}}",
     "importFromBookmarks": "從書籤批量匯入",
     "importFromBookmarksHint": "批量掃描瀏覽器書籤中的帳號站點，避免逐個新增",
+    "inviteLinkCopied": "邀請連結已複製到剪貼簿",
     "keyCopied": "金鑰已複製到剪貼簿",
     "keyList": "金鑰列表",
     "keyManagement": "金鑰管理",
@@ -51,6 +58,7 @@
     "clearAll": "清空全部選擇",
     "clearVisible": "取消目前結果選擇",
     "copyInviteLinks": "複製邀請連結",
+    "copyInviteLinksClipboardFailed": "瀏覽器無法寫入剪貼簿，請手動複製已產生的邀請連結。",
     "copyInviteLinksFailed": "取得邀請連結失敗，請稍後再試。",
     "copyInviteLinksPartialSuccess": "已複製 {{successCount}} 個邀請連結，{{failureCount}} 個失敗，{{unsupportedCount}} 個不支援，{{skippedCount}} 個已跳過。",
     "copyInviteLinksSuccess_other": "已複製 {{count}} 個邀請連結。",
@@ -120,6 +128,11 @@
     "unknown": "未知",
     "unknownError": "未知錯誤",
     "warning": "警告"
+  },
+  "inviteLinkManualCopy": {
+    "description": "瀏覽器無法寫入剪貼簿。請選取下方已產生的內容並手動複製。",
+    "label": "邀請連結",
+    "title": "手動複製邀請連結"
   },
   "list": {
     "balance": {

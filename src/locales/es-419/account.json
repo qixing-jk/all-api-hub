@@ -13,6 +13,12 @@
     "channelLocateSecondaryModelsSimilar": "Se encontró una coincidencia secundaria por similitud de modelos. Se filtraron los canales por URL para revisión.",
     "channelLocateSignalsConflict": "Las comprobaciones de clave y modelo apuntaron a candidatos de canal distintos. Se filtraron los canales por URL para revisión.",
     "channelLocateUnresolved": "No se pudo confirmar ningún canal probable. Se filtraron los canales solo por URL.",
+    "copyingInviteLink": "Copiando enlace de invitación...",
+    "copyInviteLink": "Copiar enlace de invitación",
+    "copyInviteLinkClipboardFailed": "El navegador no pudo escribir en el portapapeles. Copia el enlace de invitación manualmente.",
+    "copyInviteLinkFailed": "No se pudo copiar el enlace de invitación. Inténtalo de nuevo.",
+    "copyInviteLinkUnsupported": "Este tipo de cuenta no ofrece un enlace de invitación.",
+    "copyInviteLinkUnsupportedHint": "No compatible",
     "copyKey": "Copiar clave",
     "copyUrl": "Copiar URL",
     "delete": "Eliminar",
@@ -23,6 +29,7 @@
     "fetchKeyListFailed": "No se pudo obtener la lista de claves: {{errorMessage}}",
     "importFromBookmarks": "Importación por lotes desde marcadores",
     "importFromBookmarksHint": "Escanea por lotes los marcadores del navegador para encontrar sitios de cuenta en lugar de agregarlos uno por uno",
+    "inviteLinkCopied": "Enlace de invitación copiado al portapapeles",
     "keyCopied": "Clave copiada al portapapeles",
     "keyList": "Lista de claves",
     "keyManagement": "Administración de claves",
@@ -51,6 +58,7 @@
     "clearAll": "Borrar toda la selección",
     "clearVisible": "Borrar selección visible",
     "copyInviteLinks": "Copiar enlaces de invitación",
+    "copyInviteLinksClipboardFailed": "El navegador no pudo escribir en el portapapeles. Copia manualmente los enlaces generados.",
     "copyInviteLinksFailed": "No se pudieron obtener los enlaces de invitación. Inténtalo de nuevo más tarde.",
     "copyInviteLinksPartialSuccess": "Se copiaron {{successCount}} enlaces de invitación. {{failureCount}} fallaron, {{unsupportedCount}} no son compatibles y {{skippedCount}} se omitieron.",
     "copyInviteLinksSuccess_one": "Se copió {{count}} enlace de invitación.",
@@ -140,6 +148,11 @@
     "unknown": "Desconocido",
     "unknownError": "Error desconocido",
     "warning": "Advertencia"
+  },
+  "inviteLinkManualCopy": {
+    "description": "El navegador no pudo escribir en el portapapeles. Selecciona el contenido generado y cópialo manualmente.",
+    "label": "Enlace de invitación",
+    "title": "Copiar enlace de invitación manualmente"
   },
   "list": {
     "balance": {

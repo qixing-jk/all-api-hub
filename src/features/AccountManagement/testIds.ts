@@ -39,6 +39,12 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
     "account-management-copy-key-dialog-export-to-cc-switch-button",
   rowEditButton: "account-management-row-edit-button",
   rowMoreActionsButton: "account-management-row-more-actions-button",
+  rowCopyInviteLinkMenuItem:
+    "account-management-row-copy-invite-link-menu-item",
+  inviteLinkManualCopyDialog:
+    "account-management-invite-link-manual-copy-dialog",
+  inviteLinkManualCopyTextarea:
+    "account-management-invite-link-manual-copy-textarea",
   rowKeyManagementMenuItem: "account-management-row-key-management-menu-item",
   rowModelManagementMenuItem:
     "account-management-row-model-management-menu-item",

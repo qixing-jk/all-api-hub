@@ -16,7 +16,7 @@ import {
 import type { TFunction } from "i18next"
 import { isPlainObject } from "lodash-es"
 import { CalendarCheck2, ChartPieIcon, PinIcon, PinOffIcon } from "lucide-react"
-import React, { useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -32,6 +32,10 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import {
+  INVITE_LINK_COPY_RESULTS,
+  runInviteLinkCopyWorkflow,
+} from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
@@ -40,6 +44,7 @@ import {
   collectAccountRuntimeKeySecrets,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
+  canFetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
   InvalidTokenPayloadError,
   resolveDisplayAccountRuntimeKeySecret,
@@ -97,6 +102,7 @@ import {
   openUsagePage,
 } from "~/utils/navigation"
 
+import { InviteLinkManualCopyDialog } from "../InviteLinkManualCopyDialog"
 import { AccountActionMenuItem } from "./AccountActionMenuItem"
 import { resolveLocateManagedSiteChannelToastMessage } from "./locateManagedSiteChannelToast"
 
@@ -275,8 +281,15 @@ export default function AccountActionButtons({
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
   const [isRefreshMenuPending, setIsRefreshMenuPending] = useState(false)
   const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false)
+  const [isCopyingInviteLink, setIsCopyingInviteLink] = useState(false)
+  const [manualInviteLinkPayload, setManualInviteLinkPayload] = useState<
+    string | null
+  >(null)
+  const inviteLinkAbortControllerRef = useRef<AbortController | null>(null)
+  const isMountedRef = useRef(true)
 
   const isAccountDisabled = site.disabled === true
+  const canCopyInviteLink = canFetchDisplayAccountInviteLink(site)
   const isQuickCheckinEligible =
     !isAccountDisabled &&
     site.checkIn?.enableDetection === true &&
@@ -289,6 +302,13 @@ export default function AccountActionButtons({
   const isPinned = isAccountPinned(site.id)
   const pinLabel = isPinned ? t("actions.unpin") : t("actions.pin")
   const PinToggleIcon = isPinned ? PinOffIcon : PinIcon
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      inviteLinkAbortControllerRef.current?.abort()
+    }
+  }, [])
 
   const handleTogglePin = async (e?: React.MouseEvent) => {
     e?.stopPropagation()
@@ -688,6 +708,79 @@ export default function AccountActionButtons({
     }
   }
 
+  const handleCopyInviteLink = async () => {
+    if (isCopyingInviteLink) return
+
+    const controller = new AbortController()
+    inviteLinkAbortControllerRef.current = controller
+    setIsCopyingInviteLink(true)
+    const toastId = toast.loading(t("actions.copyingInviteLink"))
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountInviteLink,
+      surfaceId: rowActionsSurface,
+      entrypoint: optionsEntrypoint,
+    })
+
+    try {
+      const result = await runInviteLinkCopyWorkflow({
+        accounts: [site],
+        format: "raw",
+        signal: controller.signal,
+      })
+
+      if (result.result === INVITE_LINK_COPY_RESULTS.Success) {
+        toast.success(t("actions.inviteLinkCopied"))
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: {
+            itemCount: result.itemCount,
+            successCount: result.successCount,
+            failureCount: result.failureCount,
+          },
+        })
+        return
+      }
+
+      if (result.result === INVITE_LINK_COPY_RESULTS.ClipboardFailure) {
+        setManualInviteLinkPayload(result.payload ?? null)
+        toast.error(t("actions.copyInviteLinkClipboardFailed"))
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+          insights: {
+            itemCount: result.itemCount,
+            successCount: result.successCount,
+            failureCount: result.failureCount,
+          },
+        })
+        return
+      }
+
+      if (result.result === INVITE_LINK_COPY_RESULTS.Cancelled) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+        return
+      }
+
+      toast.error(t("actions.copyInviteLinkFailed"))
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory:
+          result.result === INVITE_LINK_COPY_RESULTS.Unsupported
+            ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
+            : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+    } catch (error) {
+      toast.error(t("actions.copyInviteLinkFailed"))
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
+      })
+    } finally {
+      if (inviteLinkAbortControllerRef.current === controller) {
+        inviteLinkAbortControllerRef.current = null
+        toast.dismiss(toastId)
+        if (isMountedRef.current) setIsCopyingInviteLink(false)
+      }
+    }
+  }
+
   /**
    * Trigger a manual auto check-in run scoped to this account only.
    * Uses the shared background scheduler so provider/persistence behavior stays consistent.
@@ -1027,6 +1120,26 @@ export default function AccountActionButtons({
                 )}
 
                 <AccountActionMenuItem
+                  onClick={handleCopyInviteLink}
+                  icon={LinkIcon}
+                  label={t("actions.copyInviteLink")}
+                  hint={
+                    !canCopyInviteLink
+                      ? t("actions.copyInviteLinkUnsupportedHint")
+                      : undefined
+                  }
+                  description={
+                    !canCopyInviteLink
+                      ? t("actions.copyInviteLinkUnsupported")
+                      : undefined
+                  }
+                  disabled={!canCopyInviteLink}
+                  loading={isCopyingInviteLink}
+                  loadingLabel={t("actions.copyingInviteLink")}
+                  testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyInviteLinkMenuItem}
+                />
+
+                <AccountActionMenuItem
                   onClick={handleShareSnapshot}
                   icon={ArrowUpOnSquareIcon}
                   label={t("shareSnapshots:actions.shareAccountSnapshot")}
@@ -1055,6 +1168,12 @@ export default function AccountActionButtons({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {manualInviteLinkPayload !== null ? (
+        <InviteLinkManualCopyDialog
+          payload={manualInviteLinkPayload}
+          onClose={() => setManualInviteLinkPayload(null)}
+        />
+      ) : null}
     </ProductAnalyticsScope>
   )
 }

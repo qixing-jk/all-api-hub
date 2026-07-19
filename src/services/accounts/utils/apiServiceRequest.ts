@@ -348,11 +348,15 @@ export const createDisplayAccountApiContext = (
  */
 export async function fetchDisplayAccountInviteLink(
   account: DisplayAccountApiSnapshot,
+  options: { abortSignal?: AbortSignal } = {},
 ): Promise<string> {
   const { inviteLink, request } = createDisplayAccountApiContext(account)
+  const inviteLinkRequest = options.abortSignal
+    ? { ...request, abortSignal: options.abortSignal }
+    : request
 
   return requireDisplayAccountInviteLink(account, inviteLink).fetchInviteLink({
-    request,
+    request: inviteLinkRequest,
   })
 }
 

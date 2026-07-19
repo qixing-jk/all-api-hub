@@ -35,6 +35,10 @@ import {
   type SearchResultWithHighlight,
 } from "~/features/AccountManagement/hooks/useAccountSearch"
 import {
+  INVITE_LINK_COPY_RESULTS,
+  runInviteLinkCopyWorkflow,
+} from "~/features/AccountManagement/inviteLinkCopyWorkflow"
+import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
@@ -43,10 +47,6 @@ import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
 import {
-  canFetchDisplayAccountInviteLink,
-  fetchDisplayAccountInviteLink,
-} from "~/services/accounts/utils/apiServiceRequest"
-import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionStarted,
 } from "~/services/productAnalytics/actions"
@@ -54,6 +54,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
@@ -69,6 +70,7 @@ import { formatMoneyFixed } from "~/utils/core/money"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
+import { InviteLinkManualCopyDialog } from "../InviteLinkManualCopyDialog"
 import { NewcomerSupportCard } from "../NewcomerSupportCard"
 import AccountFilterBar from "./AccountFilterBar"
 import { NonSortableAccountListItem } from "./AccountListBaseItem"
@@ -105,21 +107,6 @@ function moveAccountId(ids: string[], fromIndex: number, toIndex: number) {
   const [movedId] = nextIds.splice(fromIndex, 1)
   nextIds.splice(toIndex, 0, movedId)
   return nextIds
-}
-
-/**
- * Formats one account invite link for the multi-line clipboard payload.
- */
-function formatInviteLinkClipboardLine(
-  account: Pick<DisplaySiteData, "name" | "baseUrl">,
-  inviteLink: string,
-) {
-  const label =
-    typeof account.name === "string" && account.name.trim().length > 0
-      ? account.name.trim()
-      : account.baseUrl
-
-  return `${label}: ${inviteLink}`
 }
 
 interface AccountListFilterState {
@@ -344,6 +331,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const [isBulkDisabling, setIsBulkDisabling] = useState(false)
   const [isBulkCopyingInviteLinks, setIsBulkCopyingInviteLinks] =
     useState(false)
+  const [manualInviteLinkPayload, setManualInviteLinkPayload] = useState<
+    string | null
+  >(null)
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [siteTypeFilter, setSiteTypeFilter] = useState<string | null>(null)
@@ -357,6 +347,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const dndLoadPromiseRef = useRef<Promise<AccountListDndRuntime> | null>(null)
   const dndRuntimeRef = useRef<AccountListDndRuntime | null>(null)
   const isMountedRef = useRef(true)
+  const inviteLinkCopyAbortControllerRef = useRef<AbortController | null>(null)
 
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(displayData, initialSearchQuery)
@@ -364,6 +355,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   useEffect(() => {
     return () => {
       isMountedRef.current = false
+      inviteLinkCopyAbortControllerRef.current?.abort()
     }
   }, [])
 
@@ -573,10 +565,6 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     () => selectedAccounts.filter((account) => account.disabled !== true),
     [selectedAccounts],
   )
-  const selectedInviteLinkAccounts = useMemo(
-    () => selectedEnabledAccounts.filter(canFetchDisplayAccountInviteLink),
-    [selectedEnabledAccounts],
-  )
   const bulkDeletePreviewAccounts = useMemo(
     () => selectedAccounts.slice(0, 6),
     [selectedAccounts],
@@ -755,118 +743,121 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   }
 
   const handleBulkCopyInviteLinks = async () => {
-    const itemCount = selectedInviteLinkAccounts.length
-    const selectedCount = selectedAccountIds.length
-    const unsupportedCount = Math.max(
-      0,
-      selectedEnabledAccounts.length - itemCount,
-    )
-    const skippedCount = Math.max(
-      0,
-      selectedAccounts.length - selectedEnabledAccounts.length,
-    )
+    if (isBulkCopyingInviteLinks) return
+
     const analyticsContext = {
       ...accountListAnalyticsBaseContext,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountInviteLinks,
     }
     const tracker = startProductAnalyticsAction(analyticsContext)
-
-    if (itemCount === 0) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
-        insights: {
-          itemCount,
-          selectedCount,
-          successCount: 0,
-          failureCount: 0,
-          skippedCount: skippedCount + unsupportedCount,
-        },
-      })
-      toast.error(t("account:bulk.copyInviteLinksUnsupported"))
-      return
-    }
+    const controller = new AbortController()
+    inviteLinkCopyAbortControllerRef.current = controller
 
     setIsBulkCopyingInviteLinks(true)
     try {
-      const results = await Promise.allSettled(
-        selectedInviteLinkAccounts.map(async (account) => ({
-          account,
-          inviteLink: await fetchDisplayAccountInviteLink(account),
-        })),
-      )
-      const fulfilledResults = results.filter(
-        (
-          result,
-        ): result is PromiseFulfilledResult<{
-          account: DisplaySiteData
-          inviteLink: string
-        }> => result.status === "fulfilled",
-      )
-      const successCount = fulfilledResults.length
-      const failureCount = itemCount - successCount
-
-      if (successCount > 0) {
-        await navigator.clipboard.writeText(
-          fulfilledResults
-            .map(({ value }) =>
-              formatInviteLinkClipboardLine(value.account, value.inviteLink),
-            )
-            .join("\n"),
-        )
+      const result = await runInviteLinkCopyWorkflow({
+        accounts: selectedAccounts,
+        format: "labeled",
+        signal: controller.signal,
+      })
+      const insights = {
+        itemCount: result.itemCount,
+        selectedCount: result.selectedCount,
+        successCount: result.successCount,
+        failureCount: result.failureCount,
+        skippedCount: result.skippedCount + result.unsupportedCount,
       }
 
+      if (result.result === INVITE_LINK_COPY_RESULTS.Cancelled) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, { insights })
+        return
+      }
+
+      if (result.result === INVITE_LINK_COPY_RESULTS.ClipboardFailure) {
+        setManualInviteLinkPayload(result.payload ?? null)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+          insights,
+        })
+        toast.error(t("account:bulk.copyInviteLinksClipboardFailed"))
+        return
+      }
+
+      if (result.result === INVITE_LINK_COPY_RESULTS.Unsupported) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+          insights,
+        })
+        toast.error(t("account:bulk.copyInviteLinksUnsupported"))
+        return
+      }
+
+      if (result.result === INVITE_LINK_COPY_RESULTS.Failure) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights,
+        })
+        toast.error(t("account:bulk.copyInviteLinksFailed"))
+        return
+      }
+
+      const isPartial =
+        result.result === INVITE_LINK_COPY_RESULTS.PartialSuccess
       tracker.complete(
-        successCount > 0 && failureCount === 0 && unsupportedCount === 0
-          ? PRODUCT_ANALYTICS_RESULTS.Success
-          : PRODUCT_ANALYTICS_RESULTS.Failure,
+        isPartial
+          ? PRODUCT_ANALYTICS_RESULTS.Failure
+          : PRODUCT_ANALYTICS_RESULTS.Success,
         {
-          ...(failureCount > 0 || unsupportedCount > 0
+          ...(isPartial
             ? {
                 errorCategory:
-                  failureCount > 0
+                  result.failureCount > 0
                     ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
                     : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
               }
             : {}),
           insights: {
-            itemCount,
-            selectedCount,
-            successCount,
-            failureCount,
-            skippedCount: skippedCount + unsupportedCount,
+            ...insights,
+            ...(isPartial
+              ? {
+                  failureReason:
+                    PRODUCT_ANALYTICS_FAILURE_REASONS.PartialSuccess,
+                }
+              : {}),
           },
         },
       )
 
-      if (successCount === 0) {
-        toast.error(t("account:bulk.copyInviteLinksFailed"))
-        return
-      }
-
       toast.success(
-        failureCount === 0 && unsupportedCount === 0 && skippedCount === 0
-          ? t("account:bulk.copyInviteLinksSuccess", { count: successCount })
+        !isPartial
+          ? t("account:bulk.copyInviteLinksSuccess", {
+              count: result.successCount,
+            })
           : t("account:bulk.copyInviteLinksPartialSuccess", {
-              successCount,
-              failureCount,
-              unsupportedCount,
-              skippedCount,
+              successCount: result.successCount,
+              failureCount: result.failureCount,
+              unsupportedCount: result.unsupportedCount,
+              skippedCount: result.skippedCount,
             }),
       )
     } catch {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
-          itemCount,
-          selectedCount,
+          itemCount: selectedEnabledAccounts.length,
+          selectedCount: selectedAccountIds.length,
           successCount: 0,
-          failureCount: itemCount,
-          skippedCount: skippedCount + unsupportedCount,
+          failureCount: selectedEnabledAccounts.length,
+          skippedCount:
+            selectedAccounts.length - selectedEnabledAccounts.length,
         },
       })
       toast.error(t("account:bulk.copyInviteLinksFailed"))
     } finally {
-      setIsBulkCopyingInviteLinks(false)
+      if (inviteLinkCopyAbortControllerRef.current === controller) {
+        inviteLinkCopyAbortControllerRef.current = null
+        if (isMountedRef.current) setIsBulkCopyingInviteLinks(false)
+      }
     }
   }
 
@@ -1478,6 +1469,11 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         isOpen={copyKeyDialogAccount !== null}
         onClose={() => setCopyKeyDialogAccount(null)}
         account={copyKeyDialogAccount}
+      />
+
+      <InviteLinkManualCopyDialog
+        payload={manualInviteLinkPayload}
+        onClose={() => setManualInviteLinkPayload(null)}
       />
 
       <DestructiveConfirmDialog

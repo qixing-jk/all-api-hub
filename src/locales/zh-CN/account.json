@@ -13,6 +13,12 @@
     "channelLocateSecondaryModelsSimilar": "已找到一个按模型相似度命中的次级匹配，已按 URL 过滤渠道列表供你确认。",
     "channelLocateSignalsConflict": "key 和模型检查分别指向了不同的候选渠道，已按 URL 过滤渠道列表供你确认。",
     "channelLocateUnresolved": "暂时无法确认最可能的渠道，已仅按 URL 过滤渠道列表。",
+    "copyingInviteLink": "正在复制邀请链接...",
+    "copyInviteLink": "复制邀请链接",
+    "copyInviteLinkClipboardFailed": "浏览器无法写入剪贴板，请手动复制邀请链接。",
+    "copyInviteLinkFailed": "复制邀请链接失败，请重试。",
+    "copyInviteLinkUnsupported": "当前账号类型不提供邀请链接。",
+    "copyInviteLinkUnsupportedHint": "不支持",
     "copyKey": "复制密钥",
     "copyUrl": "复制网址",
     "delete": "删除",
@@ -23,6 +29,7 @@
     "fetchKeyListFailed": "获取密钥列表失败: {{errorMessage}}",
     "importFromBookmarks": "从书签批量导入",
     "importFromBookmarksHint": "批量扫描浏览器书签中的账号站点，避免逐个添加",
+    "inviteLinkCopied": "邀请链接已复制到剪贴板",
     "keyCopied": "密钥已复制到剪贴板",
     "keyList": "密钥列表",
     "keyManagement": "密钥管理",
@@ -51,6 +58,7 @@
     "clearAll": "清空全部选择",
     "clearVisible": "取消当前结果选择",
     "copyInviteLinks": "复制邀请链接",
+    "copyInviteLinksClipboardFailed": "浏览器无法写入剪贴板，请手动复制已生成的邀请链接。",
     "copyInviteLinksFailed": "获取邀请链接失败，请稍后重试。",
     "copyInviteLinksPartialSuccess": "已复制 {{successCount}} 个邀请链接，{{failureCount}} 个失败，{{unsupportedCount}} 个不支持，{{skippedCount}} 个已跳过。",
     "copyInviteLinksSuccess": "已复制 {{count}} 个邀请链接。",
@@ -120,6 +128,11 @@
     "unknown": "未知",
     "unknownError": "未知错误",
     "warning": "警告"
+  },
+  "inviteLinkManualCopy": {
+    "description": "浏览器无法写入剪贴板。请选择下方已生成的内容并手动复制。",
+    "label": "邀请链接",
+    "title": "手动复制邀请链接"
   },
   "list": {
     "balance": {

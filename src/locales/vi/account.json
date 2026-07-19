@@ -13,6 +13,12 @@
     "channelLocateSecondaryModelsSimilar": "Đã tìm thấy một kết quả khớp phụ dựa trên độ tương đồng của mô hình, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
     "channelLocateSignalsConflict": "Kiểm tra key và mô hình lần lượt chỉ đến các kênh ứng viên khác nhau, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
     "channelLocateUnresolved": "Tạm thời không thể xác nhận kênh có khả năng nhất, danh sách kênh chỉ được lọc theo URL.",
+    "copyingInviteLink": "Đang sao chép liên kết mời...",
+    "copyInviteLink": "Sao chép liên kết mời",
+    "copyInviteLinkClipboardFailed": "Trình duyệt không thể ghi vào bộ nhớ tạm. Hãy sao chép liên kết mời theo cách thủ công.",
+    "copyInviteLinkFailed": "Không thể sao chép liên kết mời. Vui lòng thử lại.",
+    "copyInviteLinkUnsupported": "Loại tài khoản này không cung cấp liên kết mời.",
+    "copyInviteLinkUnsupportedHint": "Không hỗ trợ",
     "copyKey": "Sao chép API Key",
     "copyUrl": "Sao chép URL",
     "delete": "Xóa",
@@ -23,6 +29,7 @@
     "fetchKeyListFailed": "Lấy danh sách API Key thất bại: {{errorMessage}}",
     "importFromBookmarks": "Nhập hàng loạt từ dấu trang",
     "importFromBookmarksHint": "Quét hàng loạt dấu trang trình duyệt để tìm trang tài khoản, không cần thêm từng mục",
+    "inviteLinkCopied": "Đã sao chép liên kết mời vào bộ nhớ tạm",
     "keyCopied": "API Key đã được sao chép vào khay nhớ tạm",
     "keyList": "Danh sách API Key",
     "keyManagement": "Quản lý API Key",
@@ -51,6 +58,7 @@
     "clearAll": "Xóa tất cả lựa chọn",
     "clearVisible": "Hủy chọn kết quả hiện tại",
     "copyInviteLinks": "Sao chép liên kết mời",
+    "copyInviteLinksClipboardFailed": "Trình duyệt không thể ghi vào bộ nhớ tạm. Hãy sao chép thủ công các liên kết đã tạo.",
     "copyInviteLinksFailed": "Không thể lấy liên kết mời. Vui lòng thử lại sau.",
     "copyInviteLinksPartialSuccess": "Đã sao chép {{successCount}} liên kết mời. {{failureCount}} lỗi, {{unsupportedCount}} không hỗ trợ, {{skippedCount}} đã bỏ qua.",
     "copyInviteLinksSuccess_other": "Đã sao chép {{count}} liên kết mời.",
@@ -120,6 +128,11 @@
     "unknown": "Không rõ",
     "unknownError": "Lỗi không rõ",
     "warning": "Cảnh báo"
+  },
+  "inviteLinkManualCopy": {
+    "description": "Trình duyệt không thể ghi vào bộ nhớ tạm. Hãy chọn nội dung đã tạo bên dưới và sao chép thủ công.",
+    "label": "Liên kết mời",
+    "title": "Sao chép liên kết mời thủ công"
   },
   "list": {
     "balance": {

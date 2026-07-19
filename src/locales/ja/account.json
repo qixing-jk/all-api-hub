@@ -13,6 +13,12 @@
     "channelLocateSecondaryModelsSimilar": "モデル類似度による二次候補が見つかりました。確認用に URL でチャネルを絞り込みました。",
     "channelLocateSignalsConflict": "キー判定とモデル判定が異なるチャネル候補を指しました。確認用に URL でチャネルを絞り込みました。",
     "channelLocateUnresolved": "有力なチャネルを特定できませんでした。URL のみでチャネルを絞り込みました。",
+    "copyingInviteLink": "招待リンクをコピーしています...",
+    "copyInviteLink": "招待リンクをコピー",
+    "copyInviteLinkClipboardFailed": "クリップボードに書き込めませんでした。招待リンクを手動でコピーしてください。",
+    "copyInviteLinkFailed": "招待リンクをコピーできませんでした。もう一度お試しください。",
+    "copyInviteLinkUnsupported": "このアカウント種別では招待リンクを取得できません。",
+    "copyInviteLinkUnsupportedHint": "未対応",
     "copyKey": "キーをコピー",
     "copyUrl": "URL をコピー",
     "delete": "削除",
@@ -23,6 +29,7 @@
     "fetchKeyListFailed": "キー一覧の取得に失敗しました: {{errorMessage}}",
     "importFromBookmarks": "ブックマークから一括インポート",
     "importFromBookmarksHint": "ブラウザのブックマークからアカウントサイトを一括スキャンし、1件ずつ追加する手間を省きます",
+    "inviteLinkCopied": "招待リンクをクリップボードにコピーしました",
     "keyCopied": "キーをクリップボードにコピーしました",
     "keyList": "キー一覧",
     "keyManagement": "キー管理",
@@ -51,6 +58,7 @@
     "clearAll": "すべての選択を解除",
     "clearVisible": "表示中の選択を解除",
     "copyInviteLinks": "招待リンクをコピー",
+    "copyInviteLinksClipboardFailed": "クリップボードに書き込めませんでした。生成された招待リンクを手動でコピーしてください。",
     "copyInviteLinksFailed": "招待リンクの取得に失敗しました。後でもう一度お試しください。",
     "copyInviteLinksPartialSuccess": "{{successCount}} 件の招待リンクをコピーしました。{{failureCount}} 件失敗、{{unsupportedCount}} 件未対応、{{skippedCount}} 件スキップ。",
     "copyInviteLinksSuccess_other": "{{count}} 件の招待リンクをコピーしました。",
@@ -120,6 +128,11 @@
     "unknown": "不明",
     "unknownError": "不明なエラー",
     "warning": "警告"
+  },
+  "inviteLinkManualCopy": {
+    "description": "ブラウザーがクリップボードに書き込めませんでした。以下の内容を選択して手動でコピーしてください。",
+    "label": "招待リンク",
+    "title": "招待リンクを手動でコピー"
   },
   "list": {
     "balance": {
