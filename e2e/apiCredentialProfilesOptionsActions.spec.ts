@@ -359,7 +359,11 @@ test("downloads Kilo Code settings for an API credential profile", async ({
     KILO_CODE_EXPORT_TEST_IDS.defaultModelSearch,
   )
   await defaultModelSearch.fill(slashBearingModel)
-  await defaultModelSearch.press("ArrowDown")
+  const slashBearingModelOption = page.getByRole("option", {
+    name: slashBearingModel,
+    exact: true,
+  })
+  await expect(slashBearingModelOption).toHaveAttribute("aria-selected", "true")
   await defaultModelSearch.press("Enter")
   await expect(defaultModel).toContainText(slashBearingModel)
 
