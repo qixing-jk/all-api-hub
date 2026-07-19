@@ -205,6 +205,15 @@
     }
   },
   "title": "Tổng quan",
+  "todayMetricAvailability": {
+    "coverage": "Đầy đủ {{complete}} · một phần {{partial}} · đủ điều kiện {{eligible}}",
+    "coverageWithRefresh": "Đầy đủ {{complete}} · Một phần {{partial}} · Cần làm mới {{refresh}} · Đủ điều kiện {{eligible}}",
+    "includesPendingRefresh": "Có mục chờ làm mới",
+    "partial": "Thống kê ngày một phần",
+    "pendingRefresh": "Chờ làm mới",
+    "pendingRefreshHelp": "Số liệu thống kê hôm nay chưa được xác nhận. Hãy làm mới tài khoản liên quan trong danh sách tài khoản.",
+    "unavailable": "Không khả dụng"
+  },
   "usage": {
     "activityMix": "Xu hướng gần đây",
     "empty": {

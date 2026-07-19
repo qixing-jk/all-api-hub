@@ -205,6 +205,15 @@
     }
   },
   "title": "總覽",
+  "todayMetricAvailability": {
+    "coverage": "完整 {{complete}} · 部分 {{partial}} · 符合條件 {{eligible}}",
+    "coverageWithRefresh": "完整 {{complete}} · 部分 {{partial}} · 待重新整理 {{refresh}} · 符合條件 {{eligible}}",
+    "includesPendingRefresh": "含待重新整理",
+    "partial": "部分日級統計",
+    "pendingRefresh": "待重新整理",
+    "pendingRefreshHelp": "今日統計狀態尚未確認。請前往帳號清單重新整理相關帳號。",
+    "unavailable": "不可用"
+  },
   "usage": {
     "activityMix": "近期趨勢",
     "empty": {

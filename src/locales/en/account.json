@@ -233,5 +233,16 @@
     "usageRequests": "Period requests",
     "usageTokens": "Period tokens"
   },
-  "title": "Account Management"
+  "title": "Account Management",
+  "todayMetricAvailability": {
+    "clickToRefresh": "Click to refresh",
+    "coverage": "Complete {{complete}} · partial {{partial}} · eligible {{eligible}}",
+    "coverageWithRefresh": "Complete {{complete}} · Partial {{partial}} · Refresh needed {{refresh}} · Eligible {{eligible}}",
+    "includesPendingRefresh": "Includes pending refresh",
+    "partial": "Partial daily statistic",
+    "pendingRefresh": "Refresh pending",
+    "pendingRefreshHelp": "Today's statistics have not been confirmed. Refresh the relevant account from the Accounts list.",
+    "refreshActionHelp": "Today's statistics have not been confirmed. Click to refresh this account.",
+    "unavailable": "Unavailable"
+  }
 }

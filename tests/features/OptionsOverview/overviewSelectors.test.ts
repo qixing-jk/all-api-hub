@@ -20,6 +20,7 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import {
   AUTO_CHECKIN_RUN_RESULT,
@@ -39,7 +40,22 @@ import {
   buildCompleteTodayStatsAvailability,
 } from "~~/tests/test-utils/accountTodayStats"
 
-const emptyStats: AccountStats = buildAccountStats()
+const unavailableMetricCoverage = {
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+  completeCount: 0,
+  partialCount: 0,
+  eligibleCount: 0,
+  legacyUnclassifiedCount: 0,
+} as const
+
+const emptyStats: AccountStats = buildAccountStats({
+  todayStatsCoverage: {
+    consumption: unavailableMetricCoverage,
+    requests: unavailableMetricCoverage,
+    tokens: unavailableMetricCoverage,
+    income: unavailableMetricCoverage,
+  },
+})
 
 const basePreferences: UserPreferences = {
   ...DEFAULT_PREFERENCES,
@@ -260,6 +276,37 @@ describe("Options overview selectors", () => {
         .find((item) => item.id === "accountFoundation")
         ?.subItems.map((item) => item.target.menuItemId),
     ).toContain(MENU_ITEM_IDS.ACCOUNT)
+  })
+
+  it("keeps unavailable request coverage on the today-usage status card", () => {
+    const unavailableCoverage = {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      completeCount: 0,
+      partialCount: 0,
+      eligibleCount: 1,
+      legacyUnclassifiedCount: 0,
+    } as const
+    const view = buildOptionsOverviewViewModel({
+      accounts: [healthyAccount],
+      displayData: [healthyDisplayData],
+      accountStats: buildAccountStats({
+        today_total_requests: 999,
+        todayStatsCoverage: {
+          ...emptyStats.todayStatsCoverage,
+          requests: unavailableCoverage,
+        },
+      }),
+      apiCredentialProfiles: [],
+      usageStore: emptyUsageStore,
+      preferences: basePreferences,
+      managedSiteType: undefined,
+      autoCheckinStatus: null,
+      ...baseOverviewInput,
+    })
+
+    expect(
+      view.statusCards.find((item) => item.id === "todayUsage"),
+    ).toMatchObject({ value: "—", coverage: unavailableCoverage })
   })
 
   it("surfaces unhealthy enabled accounts before setup hints", () => {
@@ -605,6 +652,16 @@ describe("Options overview selectors", () => {
       accountStats: {
         ...emptyStats,
         today_total_requests: 3,
+        todayStatsCoverage: {
+          ...emptyStats.todayStatsCoverage,
+          requests: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+            completeCount: 1,
+            partialCount: 0,
+            eligibleCount: 1,
+            legacyUnclassifiedCount: 0,
+          },
+        },
       },
       apiCredentialProfiles: [profile],
       usageStore: emptyUsageStore,

@@ -3,9 +3,12 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { DedupeAccountCard } from "~/features/AccountManagement/components/DedupeAccountsDialog/DedupeAccountCard"
-import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, within } from "~~/tests/test-utils/render"
 
 const t = ((key: string) => key) as TFunction
 
@@ -106,5 +109,120 @@ describe("DedupeAccountCard today statistics", () => {
     ).parentElement
     expect(tokensDetail).toHaveTextContent("765432109")
     expect(tokensDetail).toHaveTextContent("654321098")
+  })
+
+  it("shows pending refresh for each legacy today metric", async () => {
+    const account = buildSiteAccount({
+      account_info: {
+        ...buildSiteAccount().account_info,
+        today_quota_consumption: 987654321,
+        today_requests_count: 876543210,
+        today_prompt_tokens: 765432109,
+        today_completion_tokens: 654321098,
+        todayStatsAvailability: {
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+          },
+          requests: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+          },
+          tokens: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+          },
+          income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        },
+      },
+    })
+
+    render(
+      <DedupeAccountCard
+        account={account}
+        group={{
+          groupId: "group-1",
+          keepAccountId: account.id,
+          recommendedKeepAccountId: account.id,
+          hasManualOverride: false,
+        }}
+        accountLabelById={new Map([[account.id, "Account"]])}
+        pinnedAccountIds={[]}
+        detailsOpenByAccountId={{ [account.id]: true }}
+        isWorking={false}
+        t={t}
+        onKeepChange={vi.fn()}
+        onToggleDetails={vi.fn()}
+      />,
+    )
+
+    for (const label of [
+      "ui:dialog.dedupeAccounts.details.todayConsumption",
+      "ui:dialog.dedupeAccounts.details.todayRequests",
+      "ui:dialog.dedupeAccounts.details.todayTokens",
+    ]) {
+      const detail = (await screen.findByText(label))
+        .parentElement as HTMLElement
+      const pendingValue = within(detail).getByLabelText(
+        "account:todayMetricAvailability.pendingRefreshHelp",
+      )
+      expect(pendingValue).toHaveTextContent(
+        "account:todayMetricAvailability.pendingRefresh",
+      )
+      expect(pendingValue).not.toHaveTextContent("—")
+    }
+
+    expect(
+      screen.queryByText(/987654321|876543210|765432109|654321098/),
+    ).toBeNull()
+  })
+
+  it("keeps non-legacy unavailable metrics as an accessible dash", async () => {
+    const account = buildSiteAccount({
+      account_info: {
+        ...buildSiteAccount().account_info,
+        today_quota_consumption: 987654321,
+        todayStatsAvailability: {
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+          requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        },
+      },
+    })
+
+    render(
+      <DedupeAccountCard
+        account={account}
+        group={{
+          groupId: "group-1",
+          keepAccountId: account.id,
+          recommendedKeepAccountId: account.id,
+          hasManualOverride: false,
+        }}
+        accountLabelById={new Map([[account.id, "Account"]])}
+        pinnedAccountIds={[]}
+        detailsOpenByAccountId={{ [account.id]: true }}
+        isWorking={false}
+        t={t}
+        onKeepChange={vi.fn()}
+        onToggleDetails={vi.fn()}
+      />,
+    )
+
+    const consumptionDetail = (
+      await screen.findByText(
+        "ui:dialog.dedupeAccounts.details.todayConsumption",
+      )
+    ).parentElement as HTMLElement
+    expect(
+      within(consumptionDetail).getByLabelText(
+        "account:todayMetricAvailability.unavailable",
+      ),
+    ).toHaveTextContent("—")
+    expect(within(consumptionDetail).queryByText("987654321")).toBeNull()
   })
 })

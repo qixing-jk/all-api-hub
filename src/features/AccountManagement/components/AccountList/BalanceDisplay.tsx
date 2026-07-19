@@ -2,13 +2,18 @@ import React, { useEffect, useRef, useState } from "react"
 import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
+import Tooltip from "~/components/Tooltip"
 import { Button } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import type { DisplaySiteData } from "~/types"
-import { getCurrencySymbol } from "~/utils/core/formatters"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import {
+  getCurrencySymbol,
+  getTodayMetricPresentation,
+} from "~/utils/core/formatters"
 import { getDisplayMoneyValue } from "~/utils/core/money"
 
 const formatCompactNumber = (value: number) =>
@@ -33,7 +38,7 @@ interface BalanceDisplayProps {
 
 // Reusable component for displaying monetary values with animation
 const AnimatedValue: React.FC<{
-  value: number
+  value: number | null
   startValue: number
   prefix?: string
   suffix?: string
@@ -43,6 +48,8 @@ const AnimatedValue: React.FC<{
   isRefreshing?: boolean
   loading?: boolean
   disabled?: boolean
+  availabilityLabel?: string
+  emptyContent?: React.ReactNode
 }> = React.memo(
   ({
     value,
@@ -55,6 +62,8 @@ const AnimatedValue: React.FC<{
     isRefreshing = false,
     loading = false,
     disabled = false,
+    availabilityLabel,
+    emptyContent,
   }) => {
     const { isInitialLoad } = useAccountDataContext()
     const { currencyType } = useUserPreferencesContext()
@@ -64,36 +73,71 @@ const AnimatedValue: React.FC<{
       hasCommittedRef.current = true
     }, [])
 
-    const displayEndValue = getDisplayMoneyValue(value)
+    const displayEndValue = value === null ? null : getDisplayMoneyValue(value)
     const displayStartValue = isInitialLoad
       ? 0
       : getDisplayMoneyValue(startValue)
     const shouldAnimate = hasCommittedRef.current
-    const content = (
-      <>
-        {prefix}
-        {getCurrencySymbol(currencyType)}
-        {shouldAnimate ? (
-          <CountUp
-            start={displayStartValue}
-            end={displayEndValue}
-            duration={
-              isInitialLoad
-                ? UI_CONSTANTS.ANIMATION.SLOW_DURATION
-                : UI_CONSTANTS.ANIMATION.FAST_DURATION
-            }
-            decimals={UI_CONSTANTS.MONEY.DECIMALS}
-            preserveValue
-          />
-        ) : (
-          displayEndValue.toFixed(UI_CONSTANTS.MONEY.DECIMALS)
-        )}
-        {suffix}
-      </>
-    )
+    const currencySymbol = getCurrencySymbol(currencyType)
+    const displayValueAccessibilityLabel =
+      displayEndValue === null
+        ? undefined
+        : `${prefix}${currencySymbol}${displayEndValue.toFixed(
+            UI_CONSTANTS.MONEY.DECIMALS,
+          )}${suffix}`
+    const content =
+      displayEndValue === null ? (
+        <span aria-hidden="true">{emptyContent ?? "—"}</span>
+      ) : (
+        <>
+          {prefix}
+          {currencySymbol}
+          {shouldAnimate ? (
+            <CountUp
+              start={displayStartValue}
+              end={displayEndValue}
+              duration={
+                isInitialLoad
+                  ? UI_CONSTANTS.ANIMATION.SLOW_DURATION
+                  : UI_CONSTANTS.ANIMATION.FAST_DURATION
+              }
+              decimals={UI_CONSTANTS.MONEY.DECIMALS}
+              preserveValue
+            />
+          ) : (
+            displayEndValue.toFixed(UI_CONSTANTS.MONEY.DECIMALS)
+          )}
+          {suffix}
+        </>
+      )
+
+    const statusAccessibleName = availabilityLabel
+      ? [displayValueAccessibilityLabel, availabilityLabel]
+          .filter(Boolean)
+          .join(". ")
+      : undefined
+    const accessibleName = statusAccessibleName
+      ? [title, statusAccessibleName].filter(Boolean).join(". ")
+      : title
+    const shouldShowAvailabilityTooltip =
+      Boolean(availabilityLabel) &&
+      (Boolean(onClick) ||
+        displayEndValue !== null ||
+        emptyContent !== undefined)
+    const withAvailabilityTooltip = (element: React.ReactElement) =>
+      shouldShowAvailabilityTooltip ? (
+        <Tooltip
+          content={availabilityLabel}
+          wrapperClassName="ml-auto min-w-0 max-w-full"
+        >
+          {element}
+        </Tooltip>
+      ) : (
+        element
+      )
 
     if (onClick) {
-      return (
+      const button = (
         <Button
           type="button"
           variant="ghost"
@@ -107,28 +151,33 @@ const AnimatedValue: React.FC<{
           } ${className}`}
           onClick={onClick}
           title={title}
-          aria-label={title}
+          aria-label={accessibleName}
         >
           {content}
         </Button>
       )
+
+      return withAvailabilityTooltip(button)
     }
 
-    return (
+    const staticValue = (
       <div
         className={`ml-auto max-w-full truncate text-right transition-all duration-200 ${
-          isRefreshing
-            ? "animate-pulse opacity-60"
-            : onClick
-              ? "cursor-pointer hover:scale-105 hover:opacity-80"
-              : ""
+          isRefreshing ? "animate-pulse opacity-60" : ""
+        } ${
+          shouldShowAvailabilityTooltip
+            ? "rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            : ""
         } ${className}`}
-        onClick={onClick}
         title={title}
+        aria-label={statusAccessibleName}
+        tabIndex={shouldShowAvailabilityTooltip ? 0 : undefined}
       >
         {content}
       </div>
     )
+
+    return withAvailabilityTooltip(staticValue)
   },
 )
 
@@ -148,6 +197,34 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   const estimatedTodayIncomeEnabled =
     preferences?.balanceHistory?.estimatedTodayIncome?.enabled === true
   const estimatedTodayIncome = site.estimatedTodayIncome?.[currencyType]
+  const consumptionPresentation = getTodayMetricPresentation(
+    site.todayConsumption[currencyType],
+    site.todayStatsAvailability.consumption,
+  )
+  const incomePresentation = getTodayMetricPresentation(
+    site.todayIncome[currencyType],
+    site.todayStatsAvailability.income,
+  )
+  const availabilityLabel = (presentation: typeof consumptionPresentation) =>
+    presentation.requiresRefresh
+      ? t(
+          isAccountDisabled
+            ? "todayMetricAvailability.pendingRefreshHelp"
+            : "todayMetricAvailability.refreshActionHelp",
+        )
+      : presentation.status === ACCOUNT_TODAY_METRIC_STATUSES.Partial
+        ? t("todayMetricAvailability.partial")
+        : presentation.status === ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
+          ? t("todayMetricAvailability.unavailable")
+          : undefined
+  const recoveryContent = (presentation: typeof consumptionPresentation) =>
+    presentation.requiresRefresh
+      ? t(
+          isAccountDisabled
+            ? "todayMetricAvailability.pendingRefresh"
+            : "todayMetricAvailability.clickToRefresh",
+        )
+      : undefined
 
   const isRefreshLocked = isRefreshing || activeRefreshTarget !== null
 
@@ -195,11 +272,11 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
         <div className="flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5">
           {/* Consumption */}
           <AnimatedValue
-            value={site.todayConsumption[currencyType]}
+            value={consumptionPresentation.value}
             startValue={0}
             prefix="-"
             className={`text-[10px] sm:text-xs ${
-              site.todayConsumption[currencyType] > 0
+              (consumptionPresentation.value ?? 0) > 0
                 ? "text-green-500"
                 : "dark:text-dark-text-tertiary text-gray-400"
             }`}
@@ -216,15 +293,17 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             isRefreshing={isRefreshing}
             loading={activeRefreshTarget === BALANCE_REFRESH_TARGETS.CASHFLOW}
             disabled={isRefreshLocked}
+            availabilityLabel={availabilityLabel(consumptionPresentation)}
+            emptyContent={recoveryContent(consumptionPresentation)}
           />
 
           {/* Income */}
           <AnimatedValue
-            value={site.todayIncome[currencyType]}
+            value={incomePresentation.value}
             startValue={0}
             prefix="+"
             className={`text-[10px] sm:text-xs ${
-              site.todayIncome[currencyType] > 0
+              (incomePresentation.value ?? 0) > 0
                 ? "text-blue-500"
                 : "dark:text-dark-text-tertiary text-gray-400"
             }`}
@@ -241,6 +320,8 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             isRefreshing={isRefreshing}
             loading={activeRefreshTarget === BALANCE_REFRESH_TARGETS.INCOME}
             disabled={isRefreshLocked}
+            availabilityLabel={availabilityLabel(incomePresentation)}
+            emptyContent={recoveryContent(incomePresentation)}
           />
 
           {estimatedTodayIncomeEnabled &&

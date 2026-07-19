@@ -153,6 +153,12 @@ export const isAccountTodayMetricComplete = (
   availability: AccountTodayMetricAvailability,
 ): boolean => availability.status === ACCOUNT_TODAY_METRIC_STATUSES.Complete
 
+export const isAccountTodayMetricLegacyUnclassified = (
+  availability: AccountTodayMetricAvailability,
+): boolean =>
+  availability.status === ACCOUNT_TODAY_METRIC_STATUSES.Unavailable &&
+  availability.reason === ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified
+
 export const collectAccountMetricContributors = <T>(
   items: readonly T[],
   getValue: (item: T) => number,
@@ -161,6 +167,7 @@ export const collectAccountMetricContributors = <T>(
   let value = 0
   let completeCount = 0
   let partialCount = 0
+  let legacyUnclassifiedCount = 0
 
   for (const item of items) {
     const availability = getAvailability(item)
@@ -170,6 +177,8 @@ export const collectAccountMetricContributors = <T>(
     } else if (isAccountTodayMetricAvailable(availability)) {
       value += getValue(item)
       partialCount += 1
+    } else if (isAccountTodayMetricLegacyUnclassified(availability)) {
+      legacyUnclassifiedCount += 1
     }
   }
 
@@ -183,7 +192,13 @@ export const collectAccountMetricContributors = <T>(
 
   return {
     value,
-    coverage: { status, completeCount, partialCount, eligibleCount },
+    coverage: {
+      status,
+      completeCount,
+      partialCount,
+      eligibleCount,
+      legacyUnclassifiedCount,
+    },
   }
 }
 
@@ -192,6 +207,7 @@ const createEmptyMetricCoverage = (): AccountMetricCoverage => ({
   completeCount: 0,
   partialCount: 0,
   eligibleCount: 0,
+  legacyUnclassifiedCount: 0,
 })
 
 export const createEmptyAccountTodayStatsCoverage =

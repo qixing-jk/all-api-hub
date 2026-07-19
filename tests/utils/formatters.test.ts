@@ -22,6 +22,7 @@ import {
   getGroupBadgeStyle,
   getOppositeCurrency,
   getStatusBadgeStyle,
+  getTodayMetricPresentation,
   normalizeToDate,
   normalizeToMs,
 } from "~/utils/core/formatters"
@@ -29,6 +30,66 @@ import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/account
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 describe("formatters utilities", () => {
+  describe("getTodayMetricPresentation", () => {
+    it("requires refresh for legacy-unclassified account availability", () => {
+      expect(
+        getTodayMetricPresentation(999, {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        }),
+      ).toEqual({
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        value: null,
+        requiresRefresh: true,
+      })
+    })
+
+    it("does not require refresh for unsupported account availability", () => {
+      expect(
+        getTodayMetricPresentation(999, {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        }),
+      ).toEqual({
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        value: null,
+        requiresRefresh: false,
+      })
+    })
+
+    it("requires refresh for aggregate coverage containing legacy metrics", () => {
+      expect(
+        getTodayMetricPresentation(30, {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          completeCount: 1,
+          partialCount: 1,
+          eligibleCount: 3,
+          legacyUnclassifiedCount: 1,
+        }),
+      ).toEqual({
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+        value: 30,
+        requiresRefresh: true,
+      })
+    })
+
+    it("does not require refresh for ordinary aggregate coverage", () => {
+      expect(
+        getTodayMetricPresentation(30, {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+          completeCount: 2,
+          partialCount: 0,
+          eligibleCount: 2,
+          legacyUnclassifiedCount: 0,
+        }),
+      ).toEqual({
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+        value: 30,
+        requiresRefresh: false,
+      })
+    })
+  })
+
   describe("formatTokenCount", () => {
     it("should format large numbers with M suffix", () => {
       expect(formatTokenCount(1500000)).toBe("1.5M")
@@ -233,8 +294,46 @@ describe("formatters utilities", () => {
           completeCount: 1,
           partialCount: 1,
           eligibleCount: 3,
+          legacyUnclassifiedCount: 0,
         },
       })
+    })
+
+    it("recalculates coverage for a filtered subset and excludes unavailable compatibility values", () => {
+      const partial = buildDisplaySiteData({
+        id: "partial",
+        todayConsumption: { USD: 20, CNY: 140 },
+        todayStatsAvailability: buildCompleteTodayStatsAvailability({
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.PageLimit,
+          },
+        }),
+      })
+      const unavailable = buildDisplaySiteData({
+        id: "unavailable",
+        todayConsumption: { USD: 999, CNY: 6993 },
+        todayStatsAvailability: buildCompleteTodayStatsAvailability({
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+          },
+        }),
+      })
+
+      expect(calculateTotalConsumption([partial, unavailable])).toEqual({
+        amount: { USD: 20, CNY: 140 },
+        coverage: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          completeCount: 0,
+          partialCount: 1,
+          eligibleCount: 2,
+          legacyUnclassifiedCount: 0,
+        },
+      })
+      expect(calculateTotalConsumption([]).coverage.status).toBe(
+        ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      )
     })
   })
 
@@ -289,6 +388,7 @@ describe("formatters utilities", () => {
         completeCount: 1,
         partialCount: 0,
         eligibleCount: 1,
+        legacyUnclassifiedCount: 0,
       })
     })
 
@@ -300,6 +400,7 @@ describe("formatters utilities", () => {
           completeCount: 0,
           partialCount: 0,
           eligibleCount: 0,
+          legacyUnclassifiedCount: 0,
         },
       })
     })

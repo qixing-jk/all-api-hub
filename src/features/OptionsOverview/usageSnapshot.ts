@@ -1,4 +1,5 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { isAccountTodayMetricAvailable } from "~/services/accounts/accountTodayStats"
 import type { AccountStats } from "~/types"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 
@@ -16,17 +17,24 @@ export function buildUsageSnapshot(
     accountStats.today_total_prompt_tokens +
     accountStats.today_total_completion_tokens
 
+  const hasTodayUsageData = [
+    accountStats.todayStatsCoverage.requests,
+    accountStats.todayStatsCoverage.tokens,
+    accountStats.todayStatsCoverage.consumption,
+  ].some(isAccountTodayMetricAvailable)
+
   return {
     todayRequests: accountStats.today_total_requests,
     todayTokens,
     todayCostText: formatQuotaCost(accountStats.today_total_consumption),
+    todayRequestsCoverage: accountStats.todayStatsCoverage.requests,
+    todayTokensCoverage: accountStats.todayStatsCoverage.tokens,
+    todayCostCoverage: accountStats.todayStatsCoverage.consumption,
     sevenDayRequests: sevenDay.requests,
     sevenDayTokens: sevenDay.tokens,
-    hasUsageData:
-      accountStats.today_total_requests > 0 ||
-      todayTokens > 0 ||
-      sevenDay.requests > 0 ||
-      sevenDay.tokens > 0,
+    hasTodayUsageData,
+    hasSevenDayUsageData: sevenDay.hasData,
+    hasUsageData: hasTodayUsageData || sevenDay.hasData,
     target: { menuItemId: MENU_ITEM_IDS.USAGE_ANALYTICS },
   }
 }
@@ -37,6 +45,7 @@ export function buildUsageSnapshot(
 function sumLatestUsageDays(usageStore: UsageHistoryStore): {
   requests: number
   tokens: number
+  hasData: boolean
 } {
   const dayKeys = new Set<string>()
 
@@ -59,14 +68,14 @@ function sumLatestUsageDays(usageStore: UsageHistoryStore): {
     }
   }
 
-  return { requests, tokens }
+  return { requests, tokens, hasData: latestDayKeys.length > 0 }
 }
 
 /**
  * Formats raw quota consumption into a compact local fallback string.
  */
 function formatQuotaCost(quota: number): string {
-  if (!Number.isFinite(quota) || quota <= 0) {
+  if (!Number.isFinite(quota) || quota < 0) {
     return "-"
   }
   return quota.toLocaleString(undefined, { maximumFractionDigits: 0 })

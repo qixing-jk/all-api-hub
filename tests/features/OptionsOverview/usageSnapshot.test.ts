@@ -4,6 +4,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { buildUsageSnapshot } from "~/features/OptionsOverview/usageSnapshot"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
 import type { AccountStats } from "~/types"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import type {
   UsageHistoryAggregate,
   UsageHistoryStore,
@@ -11,6 +12,13 @@ import type {
 import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
 
 const emptyStats: AccountStats = buildAccountStats()
+const unavailableCoverage = {
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+  completeCount: 0,
+  partialCount: 0,
+  eligibleCount: 1,
+  legacyUnclassifiedCount: 0,
+} as const
 
 const aggregate = (
   requests: number,
@@ -65,14 +73,19 @@ describe("overview usage snapshot", () => {
       todayRequests: 12,
       todayTokens: 1000,
       todayCostText: "1,234",
+      todayRequestsCoverage: emptyStats.todayStatsCoverage.requests,
+      todayTokensCoverage: emptyStats.todayStatsCoverage.tokens,
+      todayCostCoverage: emptyStats.todayStatsCoverage.consumption,
       sevenDayRequests: 35,
       sevenDayTokens: 350,
+      hasTodayUsageData: true,
+      hasSevenDayUsageData: true,
       hasUsageData: true,
       target: { menuItemId: MENU_ITEM_IDS.USAGE_ANALYTICS },
     })
   })
 
-  it("treats empty and non-positive usage as no usage data with a local cost fallback", () => {
+  it("distinguishes measured complete zeroes from unavailable today metrics", () => {
     expect(
       buildUsageSnapshot(emptyStats, {
         schemaVersion: 1,
@@ -81,10 +94,15 @@ describe("overview usage snapshot", () => {
     ).toEqual({
       todayRequests: 0,
       todayTokens: 0,
-      todayCostText: "-",
+      todayCostText: "0",
+      todayRequestsCoverage: emptyStats.todayStatsCoverage.requests,
+      todayTokensCoverage: emptyStats.todayStatsCoverage.tokens,
+      todayCostCoverage: emptyStats.todayStatsCoverage.consumption,
       sevenDayRequests: 0,
       sevenDayTokens: 0,
-      hasUsageData: false,
+      hasTodayUsageData: true,
+      hasSevenDayUsageData: false,
+      hasUsageData: true,
       target: { menuItemId: MENU_ITEM_IDS.USAGE_ANALYTICS },
     })
 
@@ -102,19 +120,98 @@ describe("overview usage snapshot", () => {
     ).toBe("-")
   })
 
-  it("marks history-only usage as available", () => {
-    expect(
-      buildUsageSnapshot(emptyStats, {
-        schemaVersion: 1,
-        accounts: {
-          primary: {
-            ...createEmptyUsageHistoryAccountStore(),
-            daily: {
-              "2026-06-01": aggregate(1, 25),
-            },
+  it("keeps seven-day history visible when today's metrics are unavailable", () => {
+    const unavailableStats = buildAccountStats({
+      today_total_consumption: 999,
+      today_total_requests: 888,
+      today_total_prompt_tokens: 777,
+      today_total_completion_tokens: 666,
+      todayStatsCoverage: {
+        consumption: unavailableCoverage,
+        requests: unavailableCoverage,
+        tokens: unavailableCoverage,
+        income: unavailableCoverage,
+      },
+    })
+    const snapshot = buildUsageSnapshot(unavailableStats, {
+      schemaVersion: 1,
+      accounts: {
+        primary: {
+          ...createEmptyUsageHistoryAccountStore(),
+          daily: {
+            "2026-06-01": aggregate(1, 25),
           },
         },
-      }).hasUsageData,
-    ).toBe(true)
+      },
+    })
+
+    expect(snapshot).toMatchObject({
+      todayRequests: 888,
+      todayTokens: 1443,
+      todayCostText: "999",
+      todayRequestsCoverage: unavailableCoverage,
+      sevenDayRequests: 1,
+      sevenDayTokens: 25,
+      hasTodayUsageData: false,
+      hasSevenDayUsageData: true,
+      hasUsageData: true,
+    })
+  })
+
+  it("treats the snapshot as truly empty only when today and history are both absent", () => {
+    const unavailableStats = buildAccountStats({
+      todayStatsCoverage: {
+        consumption: unavailableCoverage,
+        requests: unavailableCoverage,
+        tokens: unavailableCoverage,
+        income: unavailableCoverage,
+      },
+    })
+
+    expect(
+      buildUsageSnapshot(unavailableStats, {
+        schemaVersion: 1,
+        accounts: {},
+      }),
+    ).toMatchObject({
+      hasTodayUsageData: false,
+      hasSevenDayUsageData: false,
+      hasUsageData: false,
+    })
+  })
+
+  it("preserves partial coverage for today's requests, tokens, and cost", () => {
+    const partialCoverage = {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+      completeCount: 1,
+      partialCount: 1,
+      eligibleCount: 3,
+      legacyUnclassifiedCount: 0,
+    } as const
+    const snapshot = buildUsageSnapshot(
+      buildAccountStats({
+        today_total_consumption: 50,
+        today_total_requests: 5,
+        today_total_prompt_tokens: 10,
+        today_total_completion_tokens: 20,
+        todayStatsCoverage: {
+          ...emptyStats.todayStatsCoverage,
+          consumption: partialCoverage,
+          requests: partialCoverage,
+          tokens: partialCoverage,
+        },
+      }),
+      { schemaVersion: 1, accounts: {} },
+    )
+
+    expect(snapshot).toMatchObject({
+      todayRequests: 5,
+      todayTokens: 30,
+      todayCostText: "50",
+      todayRequestsCoverage: partialCoverage,
+      todayTokensCoverage: partialCoverage,
+      todayCostCoverage: partialCoverage,
+      hasTodayUsageData: true,
+    })
   })
 })

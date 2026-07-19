@@ -2,8 +2,15 @@ import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
 
 import { CURRENCY_SYMBOLS, UI_CONSTANTS } from "~/constants/ui"
-import { collectAccountMetricContributors } from "~/services/accounts/accountTodayStats"
+import {
+  collectAccountMetricContributors,
+  isAccountTodayMetricAvailable,
+  isAccountTodayMetricLegacyUnclassified,
+} from "~/services/accounts/accountTodayStats"
 import type {
+  AccountMetricCoverage,
+  AccountTodayMetricAvailability,
+  AccountTodayMetricStatus,
   ApiToken,
   CurrencyMetricTotal,
   CurrencyType,
@@ -15,6 +22,29 @@ import { t } from "~/utils/i18n/core"
 
 // 初始化 dayjs
 dayjs.extend(relativeTime)
+
+interface TodayMetricPresentation {
+  status: AccountTodayMetricStatus
+  value: number | null
+  requiresRefresh: boolean
+}
+
+/**
+ * Converts compatibility numeric fields into UI-safe today-metric data.
+ * Unavailable values are deliberately discarded so consumers cannot render or
+ * animate stale compatibility zeroes or nonzero placeholders.
+ */
+export const getTodayMetricPresentation = (
+  value: number,
+  availability: AccountTodayMetricAvailability | AccountMetricCoverage,
+): TodayMetricPresentation => ({
+  status: availability.status,
+  value: isAccountTodayMetricAvailable(availability) ? value : null,
+  requiresRefresh:
+    "legacyUnclassifiedCount" in availability
+      ? availability.legacyUnclassifiedCount > 0
+      : isAccountTodayMetricLegacyUnclassified(availability),
+})
 
 /**
  * 格式化 Token 数量

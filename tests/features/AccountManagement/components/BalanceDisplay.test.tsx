@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import BalanceDisplay from "~/features/AccountManagement/components/AccountList/BalanceDisplay"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import { getDisplayMoneyValue } from "~/utils/core/money"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -154,6 +159,124 @@ describe("BalanceDisplay", () => {
     await user.click(balanceNode)
 
     expect(handleRefreshAccount).toHaveBeenCalledWith(updatedSite, true)
+  })
+
+  it("qualifies partial daily values without hiding their refresh actions", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+    const site = buildDisplaySiteData({
+      todayConsumption: { USD: 3, CNY: 21 },
+      todayIncome: { USD: 2, CNY: 14 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.PageLimit,
+        },
+      }),
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    render(<BalanceDisplay site={site} />)
+
+    const partialValue = screen.getByRole("button", {
+      name: /account:todayMetricAvailability\.partial/,
+    })
+    expect(partialValue).toHaveTextContent("-$3.00")
+    expect(partialValue).toHaveAccessibleName(
+      /-\$3\.00.*account:todayMetricAvailability\.partial/,
+    )
+
+    await user.tab()
+    await user.tab()
+    expect(partialValue).toHaveFocus()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "account:todayMetricAvailability.partial",
+    )
+
+    await user.click(partialValue)
+    expect(handleRefreshAccount).toHaveBeenCalledWith(site, true)
+  })
+
+  it("renders unavailable daily values as em dashes without animating compatibility numbers", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+    const site = buildDisplaySiteData({
+      todayConsumption: { USD: 999, CNY: 6993 },
+      todayIncome: { USD: 888, CNY: 6216 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+      }),
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    render(<BalanceDisplay site={site} />)
+
+    const unavailableValues = screen.getAllByRole("button", {
+      name: /account:todayMetricAvailability\.unavailable/,
+    })
+    expect(unavailableValues).toHaveLength(2)
+    expect(unavailableValues[0]).toHaveTextContent("—")
+    expect(unavailableValues[1]).toHaveTextContent("—")
+    expect(screen.queryByText(/999|888/)).not.toBeInTheDocument()
+
+    await user.click(unavailableValues[0])
+    expect(handleRefreshAccount).toHaveBeenCalledWith(site, true)
+  })
+
+  it("shows a visible legacy refresh action with dedicated help copy", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+    const site = buildDisplaySiteData({
+      todayConsumption: { USD: 999, CNY: 6993 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        },
+      }),
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    render(<BalanceDisplay site={site} />)
+
+    const legacyValue = screen.getByRole("button", {
+      name: /account:todayMetricAvailability\.refreshActionHelp/,
+    })
+    expect(legacyValue).toHaveTextContent(
+      "account:todayMetricAvailability.clickToRefresh",
+    )
+    expect(legacyValue).not.toHaveTextContent("—")
+    expect(
+      screen.queryByRole("button", {
+        name: /account:todayMetricAvailability\.unavailable/,
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.tab()
+    await user.tab()
+    expect(legacyValue).toHaveFocus()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "account:todayMetricAvailability.refreshActionHelp",
+    )
+
+    await user.click(legacyValue)
+    expect(handleRefreshAccount).toHaveBeenCalledWith(site, true)
   })
 
   it("renders the account estimated income when enabled and available", async () => {
@@ -356,6 +479,131 @@ describe("BalanceDisplay", () => {
 
     await user.click(disabledValues[0])
 
+    expect(handleRefreshAccount).not.toHaveBeenCalled()
+  })
+
+  it("keeps disabled partial cashflow static while exposing each value and localized qualifier", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+    const site = buildDisplaySiteData({
+      disabled: true,
+      todayConsumption: { USD: 3, CNY: 21 },
+      todayIncome: { USD: 2, CNY: 14 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.PageLimit,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+        },
+      }),
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    render(<BalanceDisplay site={site} />)
+
+    const partialValues = screen.getAllByLabelText(
+      /account:todayMetricAvailability\.partial/,
+    )
+    expect(partialValues).toHaveLength(2)
+    expect(partialValues[0]).toHaveTextContent("-$3.00")
+    expect(partialValues[1]).toHaveTextContent("+$2.00")
+    partialValues.forEach((value) => {
+      expect(value).not.toHaveAttribute("role", "button")
+      expect(value).toHaveAttribute("tabindex", "0")
+      expect(value).toHaveAttribute("title", "account:list.site.disabled")
+    })
+
+    await user.click(partialValues[0])
+    expect(handleRefreshAccount).not.toHaveBeenCalled()
+  })
+
+  it("keeps disabled unavailable cashflow static and hides compatibility values behind an accessible status", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+    const site = buildDisplaySiteData({
+      disabled: true,
+      todayConsumption: { USD: 999, CNY: 6993 },
+      todayIncome: { USD: 888, CNY: 6216 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+      }),
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    render(<BalanceDisplay site={site} />)
+
+    const unavailableValues = screen.getAllByLabelText(
+      /account:todayMetricAvailability\.unavailable/,
+    )
+    expect(unavailableValues).toHaveLength(2)
+    unavailableValues.forEach((value) => {
+      expect(value).toHaveTextContent("—")
+      expect(value).not.toHaveAttribute("role", "button")
+      expect(value).not.toHaveAttribute("tabindex")
+    })
+    expect(screen.queryByText(/999|888/)).not.toBeInTheDocument()
+
+    await user.click(unavailableValues[0])
+    expect(handleRefreshAccount).not.toHaveBeenCalled()
+  })
+
+  it("shows disabled legacy cashflow as a focusable pending status instead of a refresh action", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+    const site = buildDisplaySiteData({
+      disabled: true,
+      todayConsumption: { USD: 999, CNY: 6993 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        },
+      }),
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    render(<BalanceDisplay site={site} />)
+
+    const pendingValue = screen.getByLabelText(
+      "account:todayMetricAvailability.pendingRefreshHelp",
+    )
+    expect(pendingValue).toHaveTextContent(
+      "account:todayMetricAvailability.pendingRefresh",
+    )
+    expect(pendingValue).not.toHaveTextContent(
+      "account:todayMetricAvailability.clickToRefresh",
+    )
+    expect(pendingValue).not.toHaveAttribute("role", "button")
+    expect(
+      screen.queryByRole("button", {
+        name: /account:todayMetricAvailability\.refreshActionHelp/,
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.tab()
+    expect(pendingValue).toHaveFocus()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "account:todayMetricAvailability.pendingRefreshHelp",
+    )
     expect(handleRefreshAccount).not.toHaveBeenCalled()
   })
 

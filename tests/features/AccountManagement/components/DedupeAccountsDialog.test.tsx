@@ -10,6 +10,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
@@ -36,9 +40,18 @@ const accounts = [
       quota: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
-      today_quota_consumption: 0,
-      today_requests_count: 0,
+      today_quota_consumption: 123,
+      today_requests_count: 456,
       today_income: 0,
+      todayStatsAvailability: {
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.PageLimit,
+        },
+        requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+      },
     },
     last_sync_time: 0,
   }),
@@ -88,11 +101,18 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    deleteAccounts: (...args: any[]) => deleteAccountsMock(...args),
-  },
-}))
+vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/accounts/accountStorage")>()
+
+  return {
+    ...actual,
+    accountStorage: {
+      ...actual.accountStorage,
+      deleteAccounts: (...args: any[]) => deleteAccountsMock(...args),
+    },
+  }
+})
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: (...args: any[]) =>
@@ -314,5 +334,30 @@ describe("DedupeAccountsDialog", () => {
         screen.queryByText("ui:dialog.dedupeAccounts.details.accountId"),
       ).not.toBeInTheDocument()
     })
+  })
+
+  it("qualifies partial profile-aware values and prompts refresh for legacy values", async () => {
+    const user = userEvent.setup()
+    render(<DedupeAccountsDialog isOpen={true} onClose={onCloseMock} />)
+
+    const detailButtons = await screen.findAllByRole("button", {
+      name: "ui:dialog.dedupeAccounts.detailsToggle.show",
+    })
+    await user.click(detailButtons[0])
+
+    const partialDetail = screen
+      .getByText("ui:dialog.dedupeAccounts.details.todayConsumption")
+      .closest("div")
+    expect(partialDetail).toHaveTextContent("123")
+    expect(partialDetail).toHaveTextContent(
+      "account:todayMetricAvailability.partial",
+    )
+
+    await user.click(detailButtons[1])
+    const refreshDetails = screen.getAllByText(
+      "account:todayMetricAvailability.pendingRefresh",
+    )
+    expect(refreshDetails.length).toBeGreaterThan(0)
+    expect(refreshDetails[0].parentElement).not.toHaveTextContent("—")
   })
 })

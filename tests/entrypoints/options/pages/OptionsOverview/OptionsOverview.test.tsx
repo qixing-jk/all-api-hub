@@ -1,14 +1,19 @@
 import userEvent from "@testing-library/user-event"
+import type { TFunction } from "i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "~/features/ImportExport/searchTargets"
+import { OverviewUsageSnapshot } from "~/features/OptionsOverview/components/OverviewUsageSnapshot"
 import OptionsOverview, {
   getPermissionsOnboardingReasonFromUrl,
 } from "~/features/OptionsOverview/OptionsOverview"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
-import type { OptionsOverviewViewModel } from "~/features/OptionsOverview/types"
+import type {
+  OptionsOverviewUsageSnapshot,
+  OptionsOverviewViewModel,
+} from "~/features/OptionsOverview/types"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -20,7 +25,8 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
-import { act, render, screen } from "~~/tests/test-utils/render"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import { act, render, screen, within } from "~~/tests/test-utils/render"
 
 const {
   pushWithinOptionsPageMock,
@@ -46,6 +52,22 @@ vi.mock(
     useProductAnnouncements: useProductAnnouncementsMock,
   }),
 )
+
+const completeCoverage = {
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+  completeCount: 1,
+  partialCount: 0,
+  eligibleCount: 1,
+  legacyUnclassifiedCount: 0,
+} as const
+
+const unavailableCoverage = {
+  status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+  completeCount: 0,
+  partialCount: 0,
+  eligibleCount: 1,
+  legacyUnclassifiedCount: 0,
+} as const
 
 vi.mock("~/services/permissions/optionalPermissionState", () => ({
   setLastSeenOptionalPermissions: setLastSeenOptionalPermissionsMock,
@@ -137,8 +159,13 @@ const setupViewModel: OptionsOverviewViewModel = {
     todayRequests: 0,
     todayTokens: 0,
     todayCostText: "-",
+    todayRequestsCoverage: unavailableCoverage,
+    todayTokensCoverage: unavailableCoverage,
+    todayCostCoverage: unavailableCoverage,
     sevenDayRequests: 0,
     sevenDayTokens: 0,
+    hasTodayUsageData: false,
+    hasSevenDayUsageData: false,
     hasUsageData: false,
     target: { menuItemId: MENU_ITEM_IDS.USAGE_ANALYTICS },
   },
@@ -594,6 +621,11 @@ describe("OptionsOverview", () => {
           todayCostText: "108,808,400",
           sevenDayRequests: 1089,
           sevenDayTokens: 514_500,
+          todayRequestsCoverage: completeCoverage,
+          todayTokensCoverage: completeCoverage,
+          todayCostCoverage: completeCoverage,
+          hasTodayUsageData: true,
+          hasSevenDayUsageData: true,
           hasUsageData: true,
         },
       },
@@ -612,6 +644,357 @@ describe("OptionsOverview", () => {
     expect(
       screen.getByText("optionsOverview:usage.todayShare"),
     ).toBeInTheDocument()
+  })
+
+  it("qualifies partial today values and never presents unavailable shares as zero percent", async () => {
+    const partialCoverage = {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+      completeCount: 1,
+      partialCount: 1,
+      eligibleCount: 3,
+      legacyUnclassifiedCount: 0,
+    } as const
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: {
+        ...setupViewModel,
+        usageSnapshot: {
+          ...setupViewModel.usageSnapshot,
+          todayRequests: 999,
+          todayTokens: 1500,
+          todayCostText: "25",
+          todayRequestsCoverage: unavailableCoverage,
+          todayTokensCoverage: partialCoverage,
+          todayCostCoverage: partialCoverage,
+          sevenDayRequests: 1000,
+          sevenDayTokens: 3000,
+          hasTodayUsageData: true,
+          hasSevenDayUsageData: true,
+          hasUsageData: true,
+        },
+      },
+      reload: vi.fn(),
+    })
+
+    renderOverview()
+
+    const partialValues = screen.getAllByLabelText(
+      /optionsOverview:todayMetricAvailability\.coverage/,
+    )
+    expect(partialValues).toHaveLength(2)
+    partialValues.forEach((value) => {
+      expect(value).toHaveAttribute("tabindex", "0")
+    })
+    expect(
+      partialValues.map((value) => value.getAttribute("aria-label")),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/25.*todayMetricAvailability\.coverage/),
+        expect.stringMatching(/1\.5K.*todayMetricAvailability\.coverage/),
+      ]),
+    )
+    act(() => partialValues[0].focus())
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "optionsOverview:todayMetricAvailability.coverage",
+    )
+    expect(
+      screen.getAllByLabelText(
+        "optionsOverview:todayMetricAvailability.unavailable",
+      ).length,
+    ).toBeGreaterThanOrEqual(2)
+    expect(screen.queryByText("999")).not.toBeInTheDocument()
+    expect(screen.queryByText("0%")).not.toBeInTheDocument()
+    expect(screen.getByText("1.5K")).toBeInTheDocument()
+    expect(screen.getByText("25")).toBeInTheDocument()
+  })
+
+  it("identifies legacy accounts in partial and unavailable overview usage", () => {
+    const legacyPartialCoverage = {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+      completeCount: 1,
+      partialCount: 1,
+      eligibleCount: 3,
+      legacyUnclassifiedCount: 1,
+    } as const
+    const legacyUnavailableCoverage = {
+      ...unavailableCoverage,
+      legacyUnclassifiedCount: 1,
+    } as const
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: {
+        ...setupViewModel,
+        usageSnapshot: {
+          ...setupViewModel.usageSnapshot,
+          todayRequests: 999,
+          todayTokens: 1500,
+          todayCostText: "25",
+          todayRequestsCoverage: legacyUnavailableCoverage,
+          todayTokensCoverage: legacyPartialCoverage,
+          todayCostCoverage: legacyPartialCoverage,
+          hasTodayUsageData: true,
+          hasSevenDayUsageData: true,
+          hasUsageData: true,
+        },
+      },
+      reload: vi.fn(),
+    })
+
+    renderOverview()
+
+    const partialValues = screen.getAllByLabelText(
+      /optionsOverview:todayMetricAvailability\.coverageWithRefresh/,
+    )
+    expect(partialValues).toHaveLength(2)
+    for (const partialValue of partialValues) {
+      expect(partialValue).toHaveTextContent(
+        "optionsOverview:todayMetricAvailability.includesPendingRefresh",
+      )
+    }
+    const todayRequestsTile = screen.getByText(
+      "optionsOverview:usage.todayRequests",
+    ).parentElement as HTMLElement
+    expect(
+      within(todayRequestsTile).getByLabelText(
+        "optionsOverview:todayMetricAvailability.pendingRefreshHelp",
+      ),
+    ).toHaveTextContent(
+      "optionsOverview:todayMetricAvailability.pendingRefresh",
+    )
+    expect(screen.queryByText("999")).not.toBeInTheDocument()
+  })
+
+  it("qualifies partial legacy request and token shares without hiding their percentages", () => {
+    const legacyPartialCoverage = {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+      completeCount: 1,
+      partialCount: 1,
+      eligibleCount: 3,
+      legacyUnclassifiedCount: 1,
+    } as const
+    const snapshot: OptionsOverviewUsageSnapshot = {
+      ...setupViewModel.usageSnapshot,
+      todayRequests: 250,
+      todayTokens: 500,
+      sevenDayRequests: 1000,
+      sevenDayTokens: 2000,
+      todayRequestsCoverage: legacyPartialCoverage,
+      todayTokensCoverage: legacyPartialCoverage,
+      hasTodayUsageData: true,
+      hasSevenDayUsageData: true,
+      hasUsageData: true,
+    }
+    const t = ((key: string) => key) as TFunction
+
+    render(
+      <OverviewUsageSnapshot snapshot={snapshot} t={t} onNavigate={vi.fn()} />,
+      { withThemeProvider: false, withUserPreferencesProvider: false },
+    )
+
+    for (const label of [
+      "optionsOverview:usage.requestShare",
+      "optionsOverview:usage.tokenShare",
+    ]) {
+      const shareRow = screen.getByText(label).parentElement as HTMLElement
+      const shareValue = within(shareRow).getByLabelText(
+        /25%.*optionsOverview:todayMetricAvailability\.includesPendingRefresh/,
+      )
+      expect(shareValue).toHaveTextContent("25%")
+      expect(shareValue).toHaveTextContent(
+        "optionsOverview:todayMetricAvailability.includesPendingRefresh",
+      )
+      expect(shareValue).not.toHaveAccessibleName(
+        /optionsOverview:todayMetricAvailability\.coverageWithRefresh/,
+      )
+      expect(shareValue).toHaveAccessibleDescription(
+        "optionsOverview:todayMetricAvailability.coverageWithRefresh",
+      )
+    }
+  })
+
+  it("preserves generic unavailable share labels when no legacy accounts are present", () => {
+    const snapshot: OptionsOverviewUsageSnapshot = {
+      ...setupViewModel.usageSnapshot,
+      todayRequests: 999,
+      todayTokens: 1500,
+      sevenDayRequests: 1000,
+      sevenDayTokens: 3000,
+      todayRequestsCoverage: unavailableCoverage,
+      todayTokensCoverage: unavailableCoverage,
+      hasTodayUsageData: true,
+      hasSevenDayUsageData: true,
+      hasUsageData: true,
+    }
+    const t = ((key: string) => key) as TFunction
+
+    render(
+      <OverviewUsageSnapshot snapshot={snapshot} t={t} onNavigate={vi.fn()} />,
+      { withThemeProvider: false, withUserPreferencesProvider: false },
+    )
+
+    for (const label of [
+      "optionsOverview:usage.requestShare",
+      "optionsOverview:usage.tokenShare",
+    ]) {
+      const shareLabel = screen.getByText(label)
+      expect(
+        within(shareLabel.parentElement as HTMLElement).getByLabelText(
+          "optionsOverview:todayMetricAvailability.unavailable",
+        ),
+      ).toHaveTextContent("—")
+    }
+  })
+
+  it("identifies legacy request and token shares and exposes refresh guidance on focus", async () => {
+    const user = userEvent.setup()
+    const legacyCoverage = {
+      ...unavailableCoverage,
+      legacyUnclassifiedCount: 1,
+    } as const
+    const snapshot: OptionsOverviewUsageSnapshot = {
+      ...setupViewModel.usageSnapshot,
+      todayRequests: 999,
+      todayTokens: 1500,
+      sevenDayRequests: 1000,
+      sevenDayTokens: 3000,
+      todayRequestsCoverage: legacyCoverage,
+      todayTokensCoverage: legacyCoverage,
+      hasTodayUsageData: true,
+      hasSevenDayUsageData: true,
+      hasUsageData: true,
+    }
+    const t = ((key: string) => key) as TFunction
+
+    render(
+      <OverviewUsageSnapshot snapshot={snapshot} t={t} onNavigate={vi.fn()} />,
+      { withThemeProvider: false, withUserPreferencesProvider: false },
+    )
+
+    let requestShareValue: HTMLElement | undefined
+    for (const label of [
+      "optionsOverview:usage.requestShare",
+      "optionsOverview:usage.tokenShare",
+    ]) {
+      const shareLabel = screen.getByText(label)
+      const shareRow = shareLabel.parentElement as HTMLElement
+      const shareValue = within(shareRow).getByLabelText(
+        "optionsOverview:todayMetricAvailability.pendingRefresh",
+      )
+      expect(shareValue).toHaveTextContent(
+        "optionsOverview:todayMetricAvailability.pendingRefresh",
+      )
+      expect(shareValue).toHaveAccessibleDescription(
+        "optionsOverview:todayMetricAvailability.pendingRefreshHelp",
+      )
+      if (label === "optionsOverview:usage.requestShare") {
+        requestShareValue = shareValue
+      }
+    }
+
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    expect(requestShareValue).toHaveFocus()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "optionsOverview:todayMetricAvailability.pendingRefreshHelp",
+    )
+  })
+
+  it("shows legacy today metric refresh guidance when its unavailable value receives focus", async () => {
+    const user = userEvent.setup()
+    const legacyCoverage = {
+      ...unavailableCoverage,
+      legacyUnclassifiedCount: 1,
+    } as const
+    const snapshot: OptionsOverviewUsageSnapshot = {
+      ...setupViewModel.usageSnapshot,
+      todayCostText: "25",
+      todayCostCoverage: legacyCoverage,
+      hasTodayUsageData: true,
+      hasSevenDayUsageData: true,
+      hasUsageData: true,
+    }
+    const t = ((key: string) => key) as TFunction
+
+    render(
+      <OverviewUsageSnapshot snapshot={snapshot} t={t} onNavigate={vi.fn()} />,
+      { withThemeProvider: false, withUserPreferencesProvider: false },
+    )
+
+    const legacyTodayCost = screen.getByLabelText(
+      "optionsOverview:todayMetricAvailability.pendingRefreshHelp",
+    )
+    expect(legacyTodayCost).toHaveTextContent(
+      "optionsOverview:todayMetricAvailability.pendingRefresh",
+    )
+    await user.tab()
+    expect(legacyTodayCost).toHaveFocus()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "optionsOverview:todayMetricAvailability.pendingRefreshHelp",
+    )
+  })
+
+  it("keeps history-only data visible without claiming there is no recent activity", () => {
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: {
+        ...setupViewModel,
+        usageSnapshot: {
+          ...setupViewModel.usageSnapshot,
+          sevenDayRequests: 12,
+          sevenDayTokens: 2400,
+          hasSevenDayUsageData: true,
+          hasUsageData: true,
+        },
+      },
+      reload: vi.fn(),
+    })
+
+    renderOverview()
+
+    expect(screen.getByText("12")).toBeInTheDocument()
+    expect(screen.getByText("2.4K")).toBeInTheDocument()
+    expect(
+      screen.getByText("optionsOverview:usage.todayShare"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("optionsOverview:usage.noRecentActivity"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not fabricate zero-percent shares when today exists without seven-day history", () => {
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: {
+        ...setupViewModel,
+        usageSnapshot: {
+          ...setupViewModel.usageSnapshot,
+          todayRequests: 10,
+          todayTokens: 100,
+          todayCostText: "5",
+          todayRequestsCoverage: completeCoverage,
+          todayTokensCoverage: completeCoverage,
+          todayCostCoverage: completeCoverage,
+          hasTodayUsageData: true,
+          hasUsageData: true,
+        },
+      },
+      reload: vi.fn(),
+    })
+
+    renderOverview()
+
+    expect(screen.queryByText("0%")).not.toBeInTheDocument()
+    expect(
+      screen.getAllByLabelText(
+        "optionsOverview:todayMetricAvailability.unavailable",
+      ),
+    ).toHaveLength(2)
   })
 
   it("presents no usage data as a quiet empty state instead of zero-heavy trends", () => {

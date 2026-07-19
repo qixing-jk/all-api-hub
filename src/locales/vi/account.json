@@ -223,5 +223,16 @@
     "usageRequests": "Yêu cầu trong kỳ",
     "usageTokens": "Token trong kỳ"
   },
-  "title": "Quản lý tài khoản"
+  "title": "Quản lý tài khoản",
+  "todayMetricAvailability": {
+    "clickToRefresh": "Nhấp để làm mới",
+    "coverage": "Đầy đủ {{complete}} · một phần {{partial}} · đủ điều kiện {{eligible}}",
+    "coverageWithRefresh": "Đầy đủ {{complete}} · Một phần {{partial}} · Cần làm mới {{refresh}} · Đủ điều kiện {{eligible}}",
+    "includesPendingRefresh": "Có mục chờ làm mới",
+    "partial": "Thống kê ngày một phần",
+    "pendingRefresh": "Chờ làm mới",
+    "pendingRefreshHelp": "Số liệu thống kê hôm nay chưa được xác nhận. Hãy làm mới tài khoản liên quan trong danh sách tài khoản.",
+    "refreshActionHelp": "Số liệu thống kê hôm nay chưa được xác nhận. Nhấp để làm mới tài khoản.",
+    "unavailable": "Không khả dụng"
+  }
 }

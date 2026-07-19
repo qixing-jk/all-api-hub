@@ -1295,24 +1295,28 @@ describe("accountStorage core behaviors", () => {
           completeCount: 2,
           partialCount: 0,
           eligibleCount: 2,
+          legacyUnclassifiedCount: 0,
         },
         requests: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
           completeCount: 2,
           partialCount: 0,
           eligibleCount: 2,
+          legacyUnclassifiedCount: 0,
         },
         tokens: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
           completeCount: 2,
           partialCount: 0,
           eligibleCount: 2,
+          legacyUnclassifiedCount: 0,
         },
         income: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
           completeCount: 2,
           partialCount: 0,
           eligibleCount: 2,
+          legacyUnclassifiedCount: 0,
         },
       },
     })
@@ -1367,27 +1371,117 @@ describe("accountStorage core behaviors", () => {
           completeCount: 1,
           partialCount: 0,
           eligibleCount: 1,
+          legacyUnclassifiedCount: 0,
         },
         requests: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
           completeCount: 1,
           partialCount: 0,
           eligibleCount: 1,
+          legacyUnclassifiedCount: 0,
         },
         tokens: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
           completeCount: 1,
           partialCount: 0,
           eligibleCount: 1,
+          legacyUnclassifiedCount: 0,
         },
         income: {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
           completeCount: 1,
           partialCount: 0,
           eligibleCount: 1,
+          legacyUnclassifiedCount: 0,
         },
       },
     })
+  })
+
+  it.each([
+    {
+      label: "prompt token count is non-finite",
+      promptTokens: Number.NaN,
+      completionTokens: 600,
+    },
+    {
+      label: "completion token count is non-finite",
+      promptTokens: 500,
+      completionTokens: Number.POSITIVE_INFINITY,
+    },
+  ])(
+    "uses one token contributor set when a runtime $label",
+    async ({ promptTokens, completionTokens }) => {
+      const validAccount = createAccount({
+        id: "stats-valid-tokens",
+        account_info: {
+          ...createAccount().account_info,
+          today_prompt_tokens: 100,
+          today_completion_tokens: 200,
+        },
+      })
+      const malformedAccount = createAccount({
+        id: "stats-malformed-tokens",
+        account_info: {
+          ...createAccount().account_info,
+          today_prompt_tokens: promptTokens,
+          today_completion_tokens: completionTokens,
+          todayStatsAvailability: buildCompleteTodayStatsAvailability(),
+        },
+      })
+      const enabledAccountsSpy = vi
+        .spyOn(accountStorage, "getEnabledAccounts")
+        .mockResolvedValue([validAccount, malformedAccount])
+
+      try {
+        const stats = await accountStorage.getAccountStats()
+
+        expect(stats.today_total_prompt_tokens).toBe(100)
+        expect(stats.today_total_completion_tokens).toBe(200)
+        expect(Number.isFinite(stats.today_total_prompt_tokens)).toBe(true)
+        expect(Number.isFinite(stats.today_total_completion_tokens)).toBe(true)
+        expect(stats.todayStatsCoverage.tokens).toEqual({
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          completeCount: 1,
+          partialCount: 0,
+          eligibleCount: 2,
+          legacyUnclassifiedCount: 0,
+        })
+      } finally {
+        enabledAccountsSpy.mockRestore()
+      }
+    },
+  )
+
+  it("reports token coverage unavailable when no runtime token pair is finite", async () => {
+    const malformedAccount = createAccount({
+      id: "stats-only-malformed-tokens",
+      account_info: {
+        ...createAccount().account_info,
+        today_prompt_tokens: Number.NaN,
+        today_completion_tokens: 200,
+        todayStatsAvailability: buildCompleteTodayStatsAvailability(),
+      },
+    })
+    const enabledAccountsSpy = vi
+      .spyOn(accountStorage, "getEnabledAccounts")
+      .mockResolvedValue([malformedAccount])
+
+    try {
+      const stats = await accountStorage.getAccountStats()
+
+      expect(stats.today_total_prompt_tokens).toBe(0)
+      expect(stats.today_total_completion_tokens).toBe(0)
+      expect(stats.todayStatsCoverage.tokens).toEqual({
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        completeCount: 0,
+        partialCount: 0,
+        eligibleCount: 1,
+        legacyUnclassifiedCount: 0,
+      })
+    } finally {
+      enabledAccountsSpy.mockRestore()
+    }
   })
 
   it("aggregates only available today metrics and reports partial coverage", async () => {
@@ -1447,6 +1541,7 @@ describe("accountStorage core behaviors", () => {
       completeCount: 1,
       partialCount: 1,
       eligibleCount: 3,
+      legacyUnclassifiedCount: 0,
     })
   })
 
@@ -1476,6 +1571,7 @@ describe("accountStorage core behaviors", () => {
       completeCount: 0,
       partialCount: 0,
       eligibleCount: 0,
+      legacyUnclassifiedCount: 0,
     })
   })
 

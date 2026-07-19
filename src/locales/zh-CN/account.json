@@ -223,5 +223,16 @@
     "usageRequests": "周期请求数",
     "usageTokens": "周期 Token 数"
   },
-  "title": "账户管理"
+  "title": "账户管理",
+  "todayMetricAvailability": {
+    "clickToRefresh": "点击刷新",
+    "coverage": "完整 {{complete}} · 部分 {{partial}} · 符合条件 {{eligible}}",
+    "coverageWithRefresh": "完整 {{complete}} · 部分 {{partial}} · 待刷新 {{refresh}} · 符合条件 {{eligible}}",
+    "includesPendingRefresh": "含待刷新",
+    "partial": "部分日级统计",
+    "pendingRefresh": "待刷新",
+    "pendingRefreshHelp": "今日统计状态尚未确认。请前往账号列表刷新相关账号。",
+    "refreshActionHelp": "今日统计状态尚未确认。点击刷新账号后即可更新。",
+    "unavailable": "不可用"
+  }
 }

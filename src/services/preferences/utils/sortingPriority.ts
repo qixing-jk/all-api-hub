@@ -4,8 +4,13 @@ import {
   DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
+import {
+  isAccountTodayMetricAvailable,
+  isAccountTodayMetricComplete,
+} from "~/services/accounts/accountTodayStats"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import type {
+  AccountTodayMetricAvailability,
   ActiveSortField,
   CurrencyType,
   DisplaySiteData,
@@ -89,6 +94,25 @@ export function createDefaultSortingPriorityConfig(): SortingPriorityConfig {
   }
 }
 
+/** Returns whether an account still needs site or custom check-in today. */
+function isNotCheckedIn(item: DisplaySiteData): boolean {
+  const checkIn = item?.checkIn
+  if (!checkIn) return false
+
+  const supportsSiteCheckIn = checkIn.enableDetection === true
+  const supportsCustomCheckIn =
+    typeof checkIn.customCheckIn?.url === "string" &&
+    checkIn.customCheckIn.url.trim() !== ""
+
+  const siteNotCheckedIn =
+    supportsSiteCheckIn && checkIn.siteStatus?.isCheckedInToday === false
+  const customNotCheckedIn =
+    supportsCustomCheckIn &&
+    (checkIn.customCheckIn?.isCheckedInToday ?? false) === false
+
+  return siteNotCheckedIn || customNotCheckedIn
+}
+
 /**
  * Compare two display records using the user-selected sort field.
  * Keeps currency-aware ordering logic in a single place so every criteria can
@@ -114,13 +138,21 @@ function compareByUserSortField(
         ? a.balance[currencyType] - b.balance[currencyType]
         : b.balance[currencyType] - a.balance[currencyType]
     case DATA_TYPE_CONSUMPTION:
-      return sortOrder === "asc"
-        ? a.todayConsumption[currencyType] - b.todayConsumption[currencyType]
-        : b.todayConsumption[currencyType] - a.todayConsumption[currencyType]
+      return compareTodayMetric(
+        a.todayConsumption[currencyType],
+        a.todayStatsAvailability.consumption,
+        b.todayConsumption[currencyType],
+        b.todayStatsAvailability.consumption,
+        sortOrder,
+      )
     case DATA_TYPE_INCOME:
-      return sortOrder === "asc"
-        ? a.todayIncome[currencyType] - b.todayIncome[currencyType]
-        : b.todayIncome[currencyType] - a.todayIncome[currencyType]
+      return compareTodayMetric(
+        a.todayIncome[currencyType],
+        a.todayStatsAvailability.income,
+        b.todayIncome[currencyType],
+        b.todayStatsAvailability.income,
+        sortOrder,
+      )
     case DATA_TYPE_CREATED_AT: {
       const aCreatedAt =
         typeof a.created_at === "number" && Number.isFinite(a.created_at)
@@ -137,6 +169,38 @@ function compareByUserSortField(
     default:
       return 0
   }
+}
+
+/**
+ * Sorts available today statistics numerically while keeping unavailable
+ * compatibility values at the end in either direction.
+ */
+function compareTodayMetric(
+  aValue: number,
+  aAvailability: AccountTodayMetricAvailability,
+  bValue: number,
+  bAvailability: AccountTodayMetricAvailability,
+  sortOrder: "asc" | "desc",
+): number {
+  const aAvailable = isAccountTodayMetricAvailable(aAvailability)
+  const bAvailable = isAccountTodayMetricAvailable(bAvailability)
+
+  if (aAvailable !== bAvailable) {
+    return aAvailable ? -1 : 1
+  }
+  if (!aAvailable) {
+    return 0
+  }
+
+  const numericComparison =
+    sortOrder === "asc" ? aValue - bValue : bValue - aValue
+  if (numericComparison !== 0) {
+    return numericComparison
+  }
+
+  const aComplete = isAccountTodayMetricComplete(aAvailability)
+  const bComplete = isAccountTodayMetricComplete(bAvailability)
+  return aComplete === bComplete ? 0 : aComplete ? -1 : 1
 }
 /**
  * Applies a specific sorting criteria to two display entries and returns the comparison result.
@@ -199,30 +263,6 @@ function applySortingCriteria(
     }
 
     case SortingCriteriaType.CHECK_IN_REQUIREMENT: {
-      /**
-       * Determines if the given item requires check-in and has not been checked in today.
-       * @param item The site data item to evaluate.
-       * @returns True if the item requires check-in and is not checked in today; otherwise, false.
-       */
-      function isNotCheckedIn(item: DisplaySiteData): boolean {
-        const checkIn = item?.checkIn
-        if (!checkIn) return false
-
-        const supportsSiteCheckIn = checkIn.enableDetection === true
-        const supportsCustomCheckIn =
-          typeof checkIn.customCheckIn?.url === "string" &&
-          checkIn.customCheckIn.url.trim() !== ""
-
-        const siteNotCheckedIn =
-          supportsSiteCheckIn && checkIn.siteStatus?.isCheckedInToday === false
-        const customNotCheckedIn =
-          supportsCustomCheckIn &&
-          (checkIn.customCheckIn?.isCheckedInToday ?? false) === false
-
-        // Prefer accounts that still need either site check-in or custom check-in today.
-        return siteNotCheckedIn || customNotCheckedIn
-      }
-
       const aNotCheckedIn = isNotCheckedIn(a) ? 1 : 0
       const bNotCheckedIn = isNotCheckedIn(b) ? 1 : 0
 

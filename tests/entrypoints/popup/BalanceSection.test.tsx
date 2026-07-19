@@ -1,10 +1,21 @@
 import { act, fireEvent } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import AccountBalanceSummary from "~/entrypoints/popup/components/BalanceSection/AccountBalanceSummary"
+import { TokenStats } from "~/entrypoints/popup/components/BalanceSection/TokenStats"
 import { UpdateTimeAndWarning } from "~/entrypoints/popup/components/BalanceSection/UpdateTimeAndWarning"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
+import {
+  buildAccountStats,
+  buildCompleteTodayStatsAvailability,
+} from "~~/tests/test-utils/accountTodayStats"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const {
@@ -101,26 +112,29 @@ const createAccountDataContextValue = (
     },
   ],
   displayData: [
-    {
+    buildDisplaySiteData({
       id: "acc-enabled",
       name: "Enabled Account",
-      site_name: "Enabled Site",
       balance: { USD: 10, CNY: 70 },
+      todayConsumption: { USD: 0.8, CNY: 5.6 },
       todayIncome: { USD: 1.25, CNY: 8.75 },
-    },
-    {
+    }),
+    buildDisplaySiteData({
       id: "acc-disabled",
       name: "Disabled Account",
-      site_name: "Disabled Site",
       disabled: true,
       balance: { USD: 20, CNY: 140 },
+      todayConsumption: { USD: 9, CNY: 63 },
       todayIncome: { USD: 2, CNY: 14 },
-    },
+    }),
   ],
-  stats: {
+  stats: buildAccountStats({
     today_total_consumption: 400_000,
     today_total_income: 250_000,
-  },
+    today_total_requests: 12,
+    today_total_prompt_tokens: 300,
+    today_total_completion_tokens: 700,
+  }),
   todayIncomeEstimateTotals: {
     trusted: { USD: 1.25, CNY: 8.75 },
     estimated: null,
@@ -187,12 +201,12 @@ describe("popup BalanceSection components", () => {
     )
     expect(
       screen.getAllByRole("button", {
-        name: "common:currency.clickToSwitch",
+        name: /common:currency\.clickToSwitch/,
       })[0],
     ).toHaveTextContent("$10.00")
     expect(
       screen.getAllByRole("button", {
-        name: "common:currency.clickToSwitch",
+        name: /common:currency\.clickToSwitch/,
       })[0],
     ).toHaveClass("text-3xl")
 
@@ -200,7 +214,7 @@ describe("popup BalanceSection components", () => {
     expect(consumptionValue).toHaveAttribute("data-end", "0.8")
     expect(
       screen.getAllByRole("button", {
-        name: "common:currency.clickToSwitch",
+        name: /common:currency\.clickToSwitch/,
       })[1],
     ).toHaveTextContent("-$0.80")
 
@@ -208,13 +222,13 @@ describe("popup BalanceSection components", () => {
     expect(incomeValue).toHaveAttribute("data-end", "1.25")
     expect(
       screen.getAllByRole("button", {
-        name: "common:currency.clickToSwitch",
+        name: /common:currency\.clickToSwitch/,
       })[2],
     ).toHaveTextContent("+$1.25")
 
     fireEvent.click(
       screen.getAllByRole("button", {
-        name: "common:currency.clickToSwitch",
+        name: /common:currency\.clickToSwitch/,
       })[0],
     )
 
@@ -225,26 +239,29 @@ describe("popup BalanceSection components", () => {
     mockUseAccountDataContext.mockReturnValue(
       createAccountDataContextValue({
         displayData: [
-          {
+          buildDisplaySiteData({
             id: "included",
             name: "Included Account",
             balance: { USD: 10, CNY: 70 },
+            todayConsumption: { USD: 0, CNY: 0 },
             todayIncome: { USD: 1.25, CNY: 8.75 },
-          },
-          {
+          }),
+          buildDisplaySiteData({
             id: "income-opt-out",
             name: "Income Opt Out",
             balance: { USD: 10, CNY: 70 },
+            todayConsumption: { USD: 0, CNY: 0 },
             todayIncome: { USD: 9, CNY: 63 },
             excludeFromTodayIncome: true,
-          },
-          {
+          }),
+          buildDisplaySiteData({
             id: "disabled",
             name: "Disabled",
             disabled: true,
             balance: { USD: 10, CNY: 70 },
+            todayConsumption: { USD: 0, CNY: 0 },
             todayIncome: { USD: 5, CNY: 35 },
-          },
+          }),
         ],
         stats: {
           today_total_consumption: 400_000,
@@ -258,6 +275,301 @@ describe("popup BalanceSection components", () => {
     const [, , incomeValue] = screen.getAllByTestId("countup")
 
     expect(incomeValue).toHaveAttribute("data-end", "1.25")
+  })
+
+  it("qualifies partial popup aggregates and renders unavailable aggregates as em dashes", () => {
+    const partial = buildDisplaySiteData({
+      id: "partial",
+      todayConsumption: { USD: 3, CNY: 21 },
+      todayIncome: { USD: 2, CNY: 14 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.PageLimit,
+        },
+      }),
+    })
+    const unavailable = buildDisplaySiteData({
+      id: "unavailable",
+      todayConsumption: { USD: 999, CNY: 6993 },
+      todayIncome: { USD: 888, CNY: 6216 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      }),
+    })
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({ displayData: [partial, unavailable] }),
+    )
+
+    const { rerender } = render(<AccountBalanceSummary />)
+
+    const partialButton = screen.getAllByRole("button", {
+      name: /account:todayMetricAvailability\.coverage/,
+    })[0]
+    expect(partialButton).toHaveTextContent("-$3.00")
+    expect(partialButton).toHaveAccessibleName(
+      /-\$3\.00.*account:todayMetricAvailability\.coverage/,
+    )
+    expect(screen.queryByText(/999|888/)).not.toBeInTheDocument()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({ displayData: [unavailable] }),
+    )
+    rerender(<AccountBalanceSummary />)
+
+    const unavailableButtons = screen.getAllByRole("button", {
+      name: /account:todayMetricAvailability\.unavailable/,
+    })
+    expect(unavailableButtons).toHaveLength(2)
+    expect(unavailableButtons[0]).toHaveTextContent("—")
+    expect(unavailableButtons[1]).toHaveTextContent("—")
+  })
+
+  it("identifies legacy accounts in partial and unavailable popup aggregates", () => {
+    const partial = buildDisplaySiteData({
+      id: "partial",
+      todayConsumption: { USD: 3, CNY: 21 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.PageLimit,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        },
+      }),
+    })
+    const legacy = buildDisplaySiteData({
+      id: "legacy",
+      todayConsumption: { USD: 999, CNY: 6993 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      }),
+    })
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({ displayData: [partial, legacy] }),
+    )
+
+    render(<AccountBalanceSummary />)
+
+    const partialValue = screen.getByRole("button", {
+      name: /account:todayMetricAvailability\.coverageWithRefresh/,
+    })
+    expect(partialValue).toHaveTextContent("-$3.00")
+    expect(partialValue).toHaveTextContent(
+      "account:todayMetricAvailability.includesPendingRefresh",
+    )
+    const pendingValue = screen.getByRole("button", {
+      name: /account:todayMetricAvailability\.pendingRefreshHelp/,
+    })
+    expect(pendingValue).toHaveTextContent(
+      "account:todayMetricAvailability.pendingRefresh",
+    )
+    expect(pendingValue).not.toHaveTextContent("—")
+    expect(screen.queryByText("999")).not.toBeInTheDocument()
+  })
+
+  it("renders complete token buckets, a combined partial total, and unavailable as an em dash", () => {
+    const completeStats = buildAccountStats({
+      today_total_prompt_tokens: 300,
+      today_total_completion_tokens: 700,
+    })
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({ stats: completeStats }),
+    )
+    const { rerender } = render(<TokenStats />)
+
+    expect(screen.getByText("300")).toBeInTheDocument()
+    expect(screen.getByText("700")).toBeInTheDocument()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        stats: buildAccountStats({
+          today_total_prompt_tokens: 300,
+          today_total_completion_tokens: 700,
+          todayStatsCoverage: {
+            ...completeStats.todayStatsCoverage,
+            tokens: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+              completeCount: 1,
+              partialCount: 1,
+              eligibleCount: 3,
+              legacyUnclassifiedCount: 0,
+            },
+          },
+        }),
+      }),
+    )
+    rerender(<TokenStats key="partial" />)
+
+    expect(screen.getByText("1.0K")).toHaveAttribute("tabindex", "0")
+    expect(screen.getByText("1.0K")).toHaveAccessibleName(
+      /1\.0K.*account:todayMetricAvailability\.coverage/,
+    )
+    expect(screen.queryByText("300")).not.toBeInTheDocument()
+    expect(screen.queryByText("700")).not.toBeInTheDocument()
+    expect(screen.getByTestId("tooltip")).toHaveAttribute(
+      "data-content",
+      "account:todayMetricAvailability.coverage",
+    )
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        stats: buildAccountStats({
+          today_total_prompt_tokens: 999,
+          today_total_completion_tokens: 888,
+          todayStatsCoverage: {
+            ...completeStats.todayStatsCoverage,
+            tokens: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              completeCount: 0,
+              partialCount: 0,
+              eligibleCount: 2,
+              legacyUnclassifiedCount: 0,
+            },
+          },
+        }),
+      }),
+    )
+    rerender(<TokenStats key="unavailable" />)
+
+    expect(
+      screen.getByLabelText("account:todayMetricAvailability.unavailable"),
+    ).toHaveTextContent("—")
+    expect(screen.queryByText(/999|888/)).not.toBeInTheDocument()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        stats: buildAccountStats({
+          today_total_prompt_tokens: 300,
+          today_total_completion_tokens: 700,
+          todayStatsCoverage: {
+            ...completeStats.todayStatsCoverage,
+            tokens: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+              completeCount: 1,
+              partialCount: 1,
+              eligibleCount: 3,
+              legacyUnclassifiedCount: 1,
+            },
+          },
+        }),
+      }),
+    )
+    rerender(<TokenStats key="partial-legacy" />)
+
+    const partialLegacyValue = screen.getByLabelText(
+      /account:todayMetricAvailability\.coverageWithRefresh/,
+    )
+    expect(partialLegacyValue).toHaveTextContent("1.0K")
+    expect(partialLegacyValue).toHaveTextContent(
+      "account:todayMetricAvailability.includesPendingRefresh",
+    )
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        stats: buildAccountStats({
+          today_total_prompt_tokens: 999,
+          today_total_completion_tokens: 888,
+          todayStatsCoverage: {
+            ...completeStats.todayStatsCoverage,
+            tokens: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              completeCount: 0,
+              partialCount: 0,
+              eligibleCount: 2,
+              legacyUnclassifiedCount: 1,
+            },
+          },
+        }),
+      }),
+    )
+    rerender(<TokenStats key="unavailable-legacy" />)
+
+    expect(
+      screen.getByLabelText(
+        "account:todayMetricAvailability.pendingRefreshHelp",
+      ),
+    ).toHaveTextContent("account:todayMetricAvailability.pendingRefresh")
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        stats: buildAccountStats({
+          today_total_prompt_tokens: 0,
+          today_total_completion_tokens: 0,
+        }),
+      }),
+    )
+    rerender(<TokenStats key="complete-zero" />)
+
+    expect(screen.getAllByText("0")).toHaveLength(2)
+    expect(
+      screen.queryByText("account:todayMetricAvailability.pendingRefresh"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows legacy token refresh guidance when the unavailable value receives keyboard focus", async () => {
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        stats: buildAccountStats({
+          todayStatsCoverage: {
+            ...buildAccountStats().todayStatsCoverage,
+            tokens: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              completeCount: 0,
+              partialCount: 0,
+              eligibleCount: 1,
+              legacyUnclassifiedCount: 1,
+            },
+          },
+        }),
+      }),
+    )
+
+    render(<TokenStats />)
+
+    const unavailableValue = screen.getByRole("status", {
+      name: "account:todayMetricAvailability.pendingRefreshHelp",
+    })
+    await user.tab()
+    expect(unavailableValue).toHaveFocus()
+    expect(screen.getByTestId("tooltip")).toHaveAttribute(
+      "data-content",
+      "account:todayMetricAvailability.pendingRefreshHelp",
+    )
+  })
+
+  it("exposes the complete token breakdown to keyboard users", async () => {
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    render(<TokenStats />)
+
+    const breakdown = screen.getByRole("group", {
+      name: /account:stats\.prompt.*account:stats\.completion/,
+    })
+    await user.tab()
+
+    expect(breakdown).toHaveFocus()
+    expect(breakdown).toHaveAccessibleName(
+      /account:stats\.prompt.*account:stats\.completion/,
+    )
   })
 
   it("keeps one income card when estimated income display is disabled", () => {
@@ -375,7 +687,7 @@ describe("popup BalanceSection components", () => {
     render(<AccountBalanceSummary />)
 
     const estimatedValue = screen.getAllByRole("button", {
-      name: "common:currency.clickToSwitch",
+      name: /common:currency\.clickToSwitch/,
     })[3]
     expect(estimatedValue).toHaveTextContent("$0.00")
     expect(estimatedValue).not.toHaveTextContent("+$0.00")
@@ -413,7 +725,9 @@ describe("popup BalanceSection components", () => {
       String(UI_CONSTANTS.ANIMATION.INITIAL_DURATION),
     )
     expect(
-      screen.getByRole("button", { name: "common:currency.clickToSwitch" }),
+      screen.getByRole("button", {
+        name: /common:currency\.clickToSwitch/,
+      }),
     ).toHaveTextContent("¥70.00")
     expect(
       screen.queryByText("account:stats.todayConsumption"),

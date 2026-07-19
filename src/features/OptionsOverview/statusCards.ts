@@ -1,4 +1,6 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import type { AccountMetricCoverage } from "~/types"
+import { getTodayMetricPresentation } from "~/utils/core/formatters"
 
 import { OPTIONS_OVERVIEW_STATUS_CARD_IDS } from "./ids"
 import { buildAccountNavigationTarget } from "./navigationTargets"
@@ -12,7 +14,12 @@ export function buildStatusCards(input: {
   profileCount: number
   attentionCount: number
   todayRequests: number
+  todayRequestsCoverage: AccountMetricCoverage
 }): OptionsOverviewStatusCard[] {
+  const todayRequestsPresentation = getTodayMetricPresentation(
+    input.todayRequests,
+    input.todayRequestsCoverage,
+  )
   return [
     {
       id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.accounts,
@@ -28,8 +35,15 @@ export function buildStatusCards(input: {
     },
     {
       id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.todayUsage,
-      value: String(input.todayRequests),
-      severity: input.todayRequests > 0 ? "success" : "info",
+      value:
+        todayRequestsPresentation.value === null
+          ? "—"
+          : String(todayRequestsPresentation.value),
+      severity:
+        todayRequestsPresentation.value !== null && input.todayRequests > 0
+          ? "success"
+          : "info",
+      coverage: input.todayRequestsCoverage,
       target: { menuItemId: MENU_ITEM_IDS.USAGE_ANALYTICS },
     },
     {

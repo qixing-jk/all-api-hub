@@ -5,10 +5,12 @@ import {
   InboxIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import Tooltip from "~/components/Tooltip"
 import {
   Button,
   Card,
@@ -60,11 +62,13 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { DisplaySiteData, SortField } from "~/types"
+import type { CurrencyMetricTotal, DisplaySiteData, SortField } from "~/types"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
   calculateTotalBalanceForSites,
-  calculateTotalConsumptionForSites,
+  calculateTotalConsumption,
   calculateTotalIncomeForSites,
+  getTodayMetricPresentation,
 } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
 
@@ -291,6 +295,113 @@ function aggregateAccountListFilters(
   }
 
   return aggregation
+}
+
+/** Renders a filtered today metric without leaking unavailable placeholders. */
+function FilteredTodayMetric({
+  total,
+  t,
+}: {
+  total: CurrencyMetricTotal
+  t: TFunction
+}) {
+  const presentation = getTodayMetricPresentation(
+    total.amount.USD,
+    total.coverage,
+  )
+
+  if (presentation.value === null) {
+    const visibleLabel = t(
+      presentation.requiresRefresh
+        ? "account:todayMetricAvailability.pendingRefresh"
+        : "account:todayMetricAvailability.unavailable",
+    )
+    const helpLabel = t(
+      presentation.requiresRefresh
+        ? "account:todayMetricAvailability.pendingRefreshHelp"
+        : "account:todayMetricAvailability.unavailable",
+    )
+    const value = (
+      <span
+        aria-label={visibleLabel}
+        className={
+          presentation.requiresRefresh
+            ? "cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            : undefined
+        }
+        tabIndex={presentation.requiresRefresh ? 0 : undefined}
+      >
+        <span aria-hidden="true">
+          {presentation.requiresRefresh ? visibleLabel : "—"}
+        </span>
+      </span>
+    )
+
+    return presentation.requiresRefresh ? (
+      <Tooltip content={helpLabel} anchorAsChild>
+        {value}
+      </Tooltip>
+    ) : (
+      value
+    )
+  }
+
+  const formattedValue = `USD ${formatMoneyFixed(total.amount.USD)} / CNY ${formatMoneyFixed(total.amount.CNY)}`
+
+  if (
+    presentation.status === ACCOUNT_TODAY_METRIC_STATUSES.Partial &&
+    total.coverage.legacyUnclassifiedCount > 0
+  ) {
+    const qualifier = t(
+      "account:todayMetricAvailability.includesPendingRefresh",
+    )
+    const coverageLabel = t(
+      "account:todayMetricAvailability.coverageWithRefresh",
+      {
+        complete: total.coverage.completeCount,
+        partial: total.coverage.partialCount,
+        refresh: total.coverage.legacyUnclassifiedCount,
+        eligible: total.coverage.eligibleCount,
+      },
+    )
+
+    return (
+      <Tooltip content={coverageLabel} anchorAsChild>
+        <span
+          aria-label={`${formattedValue}. ${qualifier}`}
+          className="cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          tabIndex={0}
+        >
+          <span aria-hidden="true">{formattedValue}</span>{" "}
+          <span
+            aria-hidden="true"
+            className="dark:text-dark-text-tertiary text-[10px] text-gray-500"
+          >
+            {qualifier}
+          </span>
+        </span>
+      </Tooltip>
+    )
+  }
+
+  return (
+    <>
+      {formattedValue}
+      {presentation.status === ACCOUNT_TODAY_METRIC_STATUSES.Partial ? (
+        <>
+          {" · "}
+          <span>
+            {t("account:todayMetricAvailability.coverage", {
+              complete: total.coverage.completeCount,
+              partial: total.coverage.partialCount,
+              refresh: total.coverage.legacyUnclassifiedCount,
+              eligible: total.coverage.eligibleCount,
+            })}
+          </span>
+        </>
+      ) : null}
+    </>
+  )
 }
 
 /**
@@ -576,18 +687,12 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   )
 
   const filteredConsumption = useMemo(
-    () =>
-      showTodayCashflow
-        ? calculateTotalConsumptionForSites(filteredSites).amount
-        : { USD: 0, CNY: 0 },
-    [filteredSites, showTodayCashflow],
+    () => calculateTotalConsumption(filteredSites),
+    [filteredSites],
   )
   const filteredIncome = useMemo(
-    () =>
-      showTodayCashflow
-        ? calculateTotalIncomeForSites(filteredSites).amount
-        : { USD: 0, CNY: 0 },
-    [filteredSites, showTodayCashflow],
+    () => calculateTotalIncomeForSites(filteredSites),
+    [filteredSites],
   )
 
   const hasAccounts = displayData.length > 0
@@ -1346,14 +1451,15 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
                   {showTodayCashflow && (
                     <>
                       <span>
-                        {t("account:filteredTotals.consumption")}: USD{" "}
-                        {formatMoneyFixed(filteredConsumption.USD)} / CNY{" "}
-                        {formatMoneyFixed(filteredConsumption.CNY)}
+                        {t("account:filteredTotals.consumption")}:{" "}
+                        <FilteredTodayMetric
+                          total={filteredConsumption}
+                          t={t}
+                        />
                       </span>
                       <span>
-                        {t("account:filteredTotals.income")}: USD{" "}
-                        {formatMoneyFixed(filteredIncome.USD)} / CNY{" "}
-                        {formatMoneyFixed(filteredIncome.CNY)}
+                        {t("account:filteredTotals.income")}:{" "}
+                        <FilteredTodayMetric total={filteredIncome} t={t} />
                       </span>
                     </>
                   )}

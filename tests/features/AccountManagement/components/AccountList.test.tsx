@@ -20,8 +20,19 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { SiteHealthStatus } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData, buildTag } from "~~/tests/test-utils/factories"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 type SortableMockState = {
   attributes: Record<string, unknown>
@@ -1237,6 +1248,93 @@ describe("AccountList", () => {
     expect(
       screen.getByText("account:filteredTotals.income: USD 2.00 / CNY 14.00"),
     ).toBeInTheDocument()
+  })
+
+  it("identifies legacy accounts in filtered partial and unavailable totals", async () => {
+    const user = userEvent.setup()
+    const partialAccount = buildDisplaySiteData({
+      id: "partial",
+      name: "Partial Account",
+      todayConsumption: { USD: 4, CNY: 28 },
+      todayIncome: { USD: 999, CNY: 6993 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.PageLimit,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        },
+      }),
+    })
+    const unavailableAccount = buildDisplaySiteData({
+      id: "unavailable",
+      name: "Unavailable Account",
+      todayConsumption: { USD: 999, CNY: 6993 },
+      todayIncome: { USD: 888, CNY: 6216 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      }),
+    })
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [partialAccount, unavailableAccount],
+        displayData: [partialAccount, unavailableAccount],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+    await user.click(
+      screen.getByRole("button", { name: "common:status.enabled" }),
+    )
+
+    const consumptionSummary = screen
+      .getByText("account:filteredTotals.consumption", { exact: false })
+      .closest("span")
+    const incomeSummary = screen
+      .getByText("account:filteredTotals.income", { exact: false })
+      .closest("span")
+    expect(consumptionSummary).toHaveTextContent("USD 4.00 / CNY 28.00")
+    const partialMetric = within(
+      consumptionSummary as HTMLElement,
+    ).getByLabelText(
+      /USD 4\.00.*account:todayMetricAvailability\.includesPendingRefresh/,
+    )
+    expect(partialMetric).toHaveTextContent(
+      "account:todayMetricAvailability.includesPendingRefresh",
+    )
+    expect(partialMetric).not.toHaveAccessibleName(
+      /account:todayMetricAvailability\.coverageWithRefresh/,
+    )
+    expect(partialMetric).toHaveAccessibleDescription(
+      "account:todayMetricAvailability.coverageWithRefresh",
+    )
+    await user.hover(partialMetric)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "account:todayMetricAvailability.coverageWithRefresh",
+    )
+    const pendingMetric = within(incomeSummary as HTMLElement).getByLabelText(
+      "account:todayMetricAvailability.pendingRefresh",
+    )
+    expect(pendingMetric).toHaveTextContent(
+      "account:todayMetricAvailability.pendingRefresh",
+    )
+    expect(pendingMetric).toHaveAccessibleDescription(
+      "account:todayMetricAvailability.pendingRefreshHelp",
+    )
+    expect(pendingMetric).not.toHaveTextContent("—")
+    expect(consumptionSummary).not.toHaveTextContent("999")
+    expect(incomeSummary).not.toHaveTextContent(/999|888/)
   })
 
   it("keeps site-type options visible when search narrows counts to zero", () => {

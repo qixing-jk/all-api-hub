@@ -243,5 +243,16 @@
     "usageRequests": "Solicitudes del periodo",
     "usageTokens": "Tokens del periodo"
   },
-  "title": "Administración de cuentas"
+  "title": "Administración de cuentas",
+  "todayMetricAvailability": {
+    "clickToRefresh": "Actualizar",
+    "coverage": "Completos {{complete}} · parciales {{partial}} · aptos {{eligible}}",
+    "coverageWithRefresh": "Completas {{complete}} · Parciales {{partial}} · Requieren actualización {{refresh}} · Elegibles {{eligible}}",
+    "includesPendingRefresh": "Incluye actualizaciones pendientes",
+    "partial": "Estadística diaria parcial",
+    "pendingRefresh": "Actualización pendiente",
+    "pendingRefreshHelp": "Las estadísticas de hoy aún no se han confirmado. Actualiza la cuenta correspondiente desde la lista de cuentas.",
+    "refreshActionHelp": "Las estadísticas de hoy aún no se han confirmado. Actualiza esta cuenta.",
+    "unavailable": "No disponible"
+  }
 }

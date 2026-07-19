@@ -205,6 +205,15 @@
     }
   },
   "title": "总览",
+  "todayMetricAvailability": {
+    "coverage": "完整 {{complete}} · 部分 {{partial}} · 符合条件 {{eligible}}",
+    "coverageWithRefresh": "完整 {{complete}} · 部分 {{partial}} · 待刷新 {{refresh}} · 符合条件 {{eligible}}",
+    "includesPendingRefresh": "含待刷新",
+    "partial": "部分日级统计",
+    "pendingRefresh": "待刷新",
+    "pendingRefreshHelp": "今日统计状态尚未确认。请前往账号列表刷新相关账号。",
+    "unavailable": "不可用"
+  },
   "usage": {
     "activityMix": "近期趋势",
     "empty": {

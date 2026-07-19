@@ -38,6 +38,7 @@ export interface AccountMetricCoverage {
   completeCount: number
   partialCount: number
   eligibleCount: number
+  legacyUnclassifiedCount: number
 }
 
 export interface AccountTodayStatsCoverage {

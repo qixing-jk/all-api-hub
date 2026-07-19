@@ -205,6 +205,15 @@
     }
   },
   "title": "Overview",
+  "todayMetricAvailability": {
+    "coverage": "Complete {{complete}} · partial {{partial}} · eligible {{eligible}}",
+    "coverageWithRefresh": "Complete {{complete}} · Partial {{partial}} · Refresh needed {{refresh}} · Eligible {{eligible}}",
+    "includesPendingRefresh": "Includes pending refresh",
+    "partial": "Partial daily statistic",
+    "pendingRefresh": "Refresh pending",
+    "pendingRefreshHelp": "Today's statistics have not been confirmed. Refresh the relevant account from the Accounts list.",
+    "unavailable": "Unavailable"
+  },
   "usage": {
     "activityMix": "Recent trend",
     "empty": {

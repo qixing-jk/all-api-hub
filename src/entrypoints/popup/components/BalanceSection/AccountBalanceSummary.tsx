@@ -2,26 +2,32 @@ import React, { useMemo } from "react"
 import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
+import Tooltip from "~/components/Tooltip"
 import { BodySmall, Caption } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
   calculateTotalBalance,
   calculateTotalConsumption,
   calculateTotalIncomeForSites,
   getCurrencySymbol,
   getOppositeCurrency,
+  getTodayMetricPresentation,
 } from "~/utils/core/formatters"
 
 const BalanceDisplay: React.FC<{
-  value: number
+  value: number | null
   startValue: number
   isInitialLoad: boolean
   currencyType: "USD" | "CNY"
   onCurrencyToggle: () => void
   prefix?: string
   size?: "md" | "lg"
+  availabilityLabel?: string
+  emptyValueText?: string
+  qualifier?: string
 }> = ({
   value,
   startValue,
@@ -30,36 +36,81 @@ const BalanceDisplay: React.FC<{
   onCurrencyToggle,
   prefix,
   size = "lg",
+  availabilityLabel,
+  emptyValueText,
+  qualifier,
 }) => {
   const { t } = useTranslation("common")
 
   const sizeClass = size === "md" ? "text-base" : "text-3xl"
+  const formattedValue =
+    value === null
+      ? undefined
+      : `${prefix ?? ""}${getCurrencySymbol(currencyType)}${value.toFixed(
+          UI_CONSTANTS.MONEY.DECIMALS,
+        )}`
 
-  return (
+  const button = (
     <div className="flex min-w-0 items-center space-x-1">
       <button
         onClick={onCurrencyToggle}
         className={`${sizeClass} dark:text-dark-text-primary min-w-0 p-0 text-left leading-tight font-bold tracking-tight break-words text-gray-900 tabular-nums transition-colors hover:text-blue-600`}
-        aria-label={t("currency.clickToSwitch", {
-          currency:
-            currencyType === "USD" ? t("currency.cny") : t("currency.usd"),
-        })}
+        aria-label={[
+          formattedValue ?? emptyValueText,
+          qualifier,
+          availabilityLabel,
+          t("currency.clickToSwitch", {
+            currency:
+              currencyType === "USD" ? t("currency.cny") : t("currency.usd"),
+          }),
+        ]
+          .filter(Boolean)
+          .join(". ")}
       >
-        {prefix}
-        {getCurrencySymbol(currencyType)}
-        <CountUp
-          start={startValue}
-          end={value}
-          duration={
-            isInitialLoad
-              ? UI_CONSTANTS.ANIMATION.INITIAL_DURATION
-              : UI_CONSTANTS.ANIMATION.UPDATE_DURATION
-          }
-          decimals={2}
-          preserveValue
-        />
+        <span className="inline-flex max-w-full flex-wrap items-baseline gap-1.5">
+          <span aria-hidden="true">
+            {value === null ? (
+              emptyValueText ?? "—"
+            ) : (
+              <>
+                {prefix}
+                {getCurrencySymbol(currencyType)}
+                <CountUp
+                  start={startValue}
+                  end={value}
+                  duration={
+                    isInitialLoad
+                      ? UI_CONSTANTS.ANIMATION.INITIAL_DURATION
+                      : UI_CONSTANTS.ANIMATION.UPDATE_DURATION
+                  }
+                  decimals={2}
+                  preserveValue
+                />
+              </>
+            )}
+          </span>
+          {qualifier ? (
+            <span
+              aria-hidden="true"
+              className="dark:text-dark-text-tertiary text-[10px] font-medium text-gray-500"
+            >
+              {qualifier}
+            </span>
+          ) : null}
+        </span>
       </button>
     </div>
+  )
+
+  return availabilityLabel ? (
+    <Tooltip
+      content={availabilityLabel}
+      wrapperClassName="min-w-0 justify-start"
+    >
+      {button}
+    </Tooltip>
+  ) : (
+    button
   )
 }
 
@@ -94,6 +145,51 @@ export default function AccountBalanceSummary() {
     () => calculateTotalIncomeForSites(displayData),
     [displayData],
   )
+  const consumptionPresentation = getTodayMetricPresentation(
+    totalConsumption.amount[currencyType],
+    totalConsumption.coverage,
+  )
+  const incomePresentation = getTodayMetricPresentation(
+    totalIncome.amount[currencyType],
+    totalIncome.coverage,
+  )
+  const getAggregateAvailabilityLabel = (
+    presentation: typeof consumptionPresentation,
+    coverage: typeof totalConsumption.coverage,
+  ) =>
+    presentation.status === ACCOUNT_TODAY_METRIC_STATUSES.Partial
+      ? t(
+          coverage.legacyUnclassifiedCount > 0
+            ? "account:todayMetricAvailability.coverageWithRefresh"
+            : "account:todayMetricAvailability.coverage",
+          {
+            complete: coverage.completeCount,
+            partial: coverage.partialCount,
+            refresh: coverage.legacyUnclassifiedCount,
+            eligible: coverage.eligibleCount,
+          },
+        )
+      : presentation.status === ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
+        ? t(
+            presentation.requiresRefresh
+              ? "account:todayMetricAvailability.pendingRefreshHelp"
+              : "account:todayMetricAvailability.unavailable",
+          )
+        : undefined
+  const getAggregateEmptyValueText = (
+    presentation: typeof consumptionPresentation,
+  ) =>
+    presentation.value === null && presentation.requiresRefresh
+      ? t("account:todayMetricAvailability.pendingRefresh")
+      : undefined
+  const getAggregateQualifier = (
+    presentation: typeof consumptionPresentation,
+    coverage: typeof totalConsumption.coverage,
+  ) =>
+    presentation.status === ACCOUNT_TODAY_METRIC_STATUSES.Partial &&
+    coverage.legacyUnclassifiedCount > 0
+      ? t("account:todayMetricAvailability.includesPendingRefresh")
+      : undefined
 
   const handleCurrencyToggle = () => {
     updateCurrencyType(getOppositeCurrency(currencyType))
@@ -128,15 +224,26 @@ export default function AccountBalanceSummary() {
               {t("account:stats.todayConsumption")}
             </Caption>
             <BalanceDisplay
-              value={totalConsumption.amount[currencyType]}
+              value={consumptionPresentation.value}
               startValue={
                 isInitialLoad ? 0 : prevTotalConsumption[currencyType]
               }
               isInitialLoad={isInitialLoad}
               currencyType={currencyType}
               onCurrencyToggle={handleCurrencyToggle}
-              prefix={totalConsumption.amount[currencyType] > 0 ? "-" : ""}
+              prefix={(consumptionPresentation.value ?? 0) > 0 ? "-" : ""}
               size="md"
+              availabilityLabel={getAggregateAvailabilityLabel(
+                consumptionPresentation,
+                totalConsumption.coverage,
+              )}
+              emptyValueText={getAggregateEmptyValueText(
+                consumptionPresentation,
+              )}
+              qualifier={getAggregateQualifier(
+                consumptionPresentation,
+                totalConsumption.coverage,
+              )}
             />
           </div>
 
@@ -147,13 +254,22 @@ export default function AccountBalanceSummary() {
                 : t("account:stats.todayIncome")}
             </Caption>
             <BalanceDisplay
-              value={totalIncome.amount[currencyType]}
+              value={incomePresentation.value}
               startValue={0}
               isInitialLoad={isInitialLoad}
               currencyType={currencyType}
               onCurrencyToggle={handleCurrencyToggle}
-              prefix={totalIncome.amount[currencyType] > 0 ? "+" : ""}
+              prefix={(incomePresentation.value ?? 0) > 0 ? "+" : ""}
               size="md"
+              availabilityLabel={getAggregateAvailabilityLabel(
+                incomePresentation,
+                totalIncome.coverage,
+              )}
+              emptyValueText={getAggregateEmptyValueText(incomePresentation)}
+              qualifier={getAggregateQualifier(
+                incomePresentation,
+                totalIncome.coverage,
+              )}
             />
           </div>
 

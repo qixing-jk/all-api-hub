@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   collectAccountMetricContributors,
+  createEmptyAccountTodayStatsCoverage,
   createUnavailableTodayStatsAvailability,
+  isAccountTodayMetricLegacyUnclassified,
   normalizeAccountTodayMetricAvailability,
   normalizeAccountTodayStatsAvailability,
 } from "~/services/accounts/accountTodayStats"
@@ -81,6 +83,28 @@ describe("accountTodayStats", () => {
     expect(first).not.toBe(second)
     expect(first.consumption).not.toBe(first.requests)
     expect(first.consumption).not.toBe(second.consumption)
+  })
+
+  it("creates fresh unavailable zero-count coverage for every today metric", () => {
+    const first = createEmptyAccountTodayStatsCoverage()
+    const second = createEmptyAccountTodayStatsCoverage()
+    const expectedMetric = {
+      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+      completeCount: 0,
+      partialCount: 0,
+      eligibleCount: 0,
+      legacyUnclassifiedCount: 0,
+    }
+
+    expect(first).toEqual({
+      consumption: expectedMetric,
+      requests: expectedMetric,
+      tokens: expectedMetric,
+      income: expectedMetric,
+    })
+    expect(first).not.toBe(second)
+    expect(first.consumption).not.toBe(second.consumption)
+    expect(first.consumption).not.toBe(first.requests)
   })
 
   describe("normalizeAccountTodayMetricAvailability", () => {
@@ -302,7 +326,7 @@ describe("accountTodayStats", () => {
       ).toMatchObject({ value: 10 })
     })
 
-    it("sums complete and partial contributors but excludes unavailable values", () => {
+    it("sums contributors and separately counts legacy-unclassified metrics", () => {
       const result = collectAccountMetricContributors(
         [
           {
@@ -322,7 +346,21 @@ describe("accountTodayStats", () => {
             value: 999,
             availability: {
               status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+            },
+          },
+          {
+            value: 999,
+            availability: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
               reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+            },
+          },
+          {
+            value: 999,
+            availability: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
             },
           },
         ],
@@ -336,7 +374,8 @@ describe("accountTodayStats", () => {
           status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
           completeCount: 1,
           partialCount: 1,
-          eligibleCount: 3,
+          eligibleCount: 5,
+          legacyUnclassifiedCount: 1,
         },
       })
     })
@@ -358,8 +397,29 @@ describe("accountTodayStats", () => {
           completeCount: 0,
           partialCount: 0,
           eligibleCount: 0,
+          legacyUnclassifiedCount: 0,
         },
       })
+    })
+  })
+
+  describe("isAccountTodayMetricLegacyUnclassified", () => {
+    it("matches only unavailable legacy-unclassified metrics", () => {
+      expect(isAccountTodayMetricLegacyUnclassified(LEGACY_UNAVAILABLE)).toBe(
+        true,
+      )
+      expect(
+        isAccountTodayMetricLegacyUnclassified({
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        }),
+      ).toBe(false)
+      expect(
+        isAccountTodayMetricLegacyUnclassified({
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+        }),
+      ).toBe(false)
     })
   })
 })

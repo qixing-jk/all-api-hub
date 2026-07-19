@@ -34,6 +34,10 @@ import {
   type SiteAccount,
   type SiteBookmark,
 } from "~/types"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { DeepPartial } from "~/types/utils"
@@ -1488,15 +1492,33 @@ class AccountStorageService {
         "requests",
         (account) => account.account_info.today_requests_count,
       )
-      const promptTokens = collect(
-        accounts,
-        "tokens",
-        (account) => account.account_info.today_prompt_tokens,
+      const tokenContributors = accounts.map((account) => {
+        const availability = availabilityById.get(account.id)!.tokens
+        const hasFiniteValues =
+          Number.isFinite(account.account_info.today_prompt_tokens) &&
+          Number.isFinite(account.account_info.today_completion_tokens)
+
+        return {
+          account,
+          availability:
+            hasFiniteValues ||
+            availability.status === ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
+              ? availability
+              : {
+                  status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+                  reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+                },
+        }
+      })
+      const promptTokens = collectAccountMetricContributors(
+        tokenContributors,
+        ({ account }) => account.account_info.today_prompt_tokens,
+        ({ availability }) => availability,
       )
-      const completionTokens = collect(
-        accounts,
-        "tokens",
-        (account) => account.account_info.today_completion_tokens,
+      const completionTokens = collectAccountMetricContributors(
+        tokenContributors,
+        ({ account }) => account.account_info.today_completion_tokens,
+        ({ availability }) => availability,
       )
       const income = collect(
         incomeAccounts,

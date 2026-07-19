@@ -67,6 +67,7 @@ export function buildOptionsOverviewViewModel(
       profileCount: input.apiCredentialProfiles.length,
       attentionCount: attentionItems.length,
       todayRequests: usageSnapshot.todayRequests,
+      todayRequestsCoverage: usageSnapshot.todayRequestsCoverage,
     }),
     attentionItems,
     autoCheckinPanel,

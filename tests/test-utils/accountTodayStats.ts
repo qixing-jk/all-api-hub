@@ -75,6 +75,7 @@ function buildCompleteAccountTodayStatsCoverage(): AccountTodayStatsCoverage {
     completeCount: 1,
     partialCount: 0,
     eligibleCount: 1,
+    legacyUnclassifiedCount: 0,
   } as const
   return {
     consumption: { ...complete },

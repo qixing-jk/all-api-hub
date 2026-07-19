@@ -1,4 +1,5 @@
 import type { OptionsMenuItemId } from "~/constants/optionsMenuIds"
+import type { AccountMetricCoverage } from "~/types"
 
 import type {
   OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS,
@@ -45,6 +46,7 @@ export interface OptionsOverviewStatusCard {
   value: string
   severity: OptionsOverviewSeverity
   target?: OptionsOverviewNavigationTarget
+  coverage?: AccountMetricCoverage
 }
 
 export type OptionsOverviewAttentionKind = ValueOf<
@@ -68,8 +70,13 @@ export interface OptionsOverviewUsageSnapshot {
   todayRequests: number
   todayTokens: number
   todayCostText: string
+  todayRequestsCoverage: AccountMetricCoverage
+  todayTokensCoverage: AccountMetricCoverage
+  todayCostCoverage: AccountMetricCoverage
   sevenDayRequests: number
   sevenDayTokens: number
+  hasTodayUsageData: boolean
+  hasSevenDayUsageData: boolean
   hasUsageData: boolean
   target: OptionsOverviewNavigationTarget
 }
