@@ -1,6 +1,6 @@
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import Tooltip from "~/components/Tooltip"
 
@@ -97,5 +97,104 @@ describe("Tooltip", () => {
     expect(button).not.toHaveAttribute("id")
     expect(button.parentElement?.id).toMatch(/^tooltip-/)
     expect(button.parentElement).not.toHaveAttribute("tabindex")
+  })
+
+  it("opens when keyboard focus enters a focusable descendant without adding a wrapper tab stop", async () => {
+    const user = userEvent.setup()
+    render(
+      <Tooltip content="Partial coverage">
+        <button type="button">Metric value</button>
+      </Tooltip>,
+    )
+
+    await user.tab()
+
+    expect(screen.getByRole("button", { name: "Metric value" })).toHaveFocus()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Partial coverage",
+    )
+  })
+
+  it("closes a focus-opened tooltip on Escape without moving focus", async () => {
+    const user = userEvent.setup()
+    render(
+      <Tooltip content="Partial coverage">
+        <button type="button">Metric value</button>
+      </Tooltip>,
+    )
+
+    await user.tab()
+
+    const anchor = screen.getByRole("button", { name: "Metric value" })
+    expect(anchor).toHaveFocus()
+    expect(await screen.findByRole("tooltip")).toBeVisible()
+
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+    })
+    expect(anchor).toHaveFocus()
+  })
+
+  it("closes the previous tooltip when focus moves to a sibling anchor", async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <Tooltip content="First details">
+          <button type="button">First metric</button>
+        </Tooltip>
+        <Tooltip content="Second details" anchorAsChild>
+          <button type="button">Second metric</button>
+        </Tooltip>
+      </>,
+    )
+
+    await user.tab()
+    expect(screen.getByRole("button", { name: "First metric" })).toHaveFocus()
+
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Second metric" })).toHaveFocus()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Second details",
+    )
+    expect(screen.getAllByRole("tooltip")).toHaveLength(1)
+  })
+
+  it("keeps a rich tooltip open while focus moves from its trigger to an action", async () => {
+    const user = userEvent.setup()
+    const onAction = vi.fn()
+    render(
+      <>
+        <Tooltip
+          content={
+            <button type="button" onClick={onAction}>
+              Open settings
+            </button>
+          }
+        >
+          <button type="button">Health status</button>
+        </Tooltip>
+        <button type="button">After tooltip</button>
+      </>,
+    )
+
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Health status" })).toHaveFocus()
+
+    const tooltip = await screen.findByRole("tooltip")
+    await user.tab()
+    const action = screen.getByRole("button", { name: "Open settings" })
+    expect(action).toHaveFocus()
+    expect(tooltip).toBeVisible()
+
+    await user.keyboard("{Enter}")
+    expect(onAction).toHaveBeenCalledTimes(1)
+
+    await user.tab()
+    expect(screen.getByRole("button", { name: "After tooltip" })).toHaveFocus()
+    await waitFor(() => {
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+    })
   })
 })

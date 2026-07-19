@@ -1,4 +1,14 @@
-import { cloneElement, useId, type ReactElement, type ReactNode } from "react"
+import {
+  cloneElement,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FocusEventHandler,
+  type ReactElement,
+  type ReactNode,
+} from "react"
 import { Tooltip as ReactTooltip } from "react-tooltip"
 
 import { Z_INDEX } from "~/constants/designTokens"
@@ -26,6 +36,13 @@ interface TooltipProps {
   anchorAsChild?: boolean
 }
 
+interface TooltipChildProps {
+  id?: string
+  "aria-describedby"?: string
+  onFocusCapture?: FocusEventHandler<HTMLElement>
+  onBlurCapture?: FocusEventHandler<HTMLElement>
+}
+
 /**
  * Tooltip renders rich or text content from a wrapper anchor by default, or from the child itself when requested.
  */
@@ -38,32 +55,106 @@ export default function Tooltip({
   wrapperClassName = "",
   anchorAsChild = false,
 }: TooltipProps) {
-  const generatedAnchorId = `tooltip-${useId()}`
+  const instanceId = useId()
+  const generatedAnchorId = `tooltip-${instanceId}`
+  const popupId = `${generatedAnchorId}-popup`
   const descriptionId = `${generatedAnchorId}-description`
+  const focusCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
+  const [isOpen, setIsOpen] = useState(false)
 
   const isString = typeof content === "string"
-  const childProps = children.props as {
-    id?: string
-    "aria-describedby"?: string
-  }
+  const tooltipId = anchorAsChild && isString ? undefined : popupId
+  const childProps = children.props as TooltipChildProps
   const anchorId =
     anchorAsChild && childProps.id ? childProps.id : generatedAnchorId
   const describedBy = Array.from(
     new Set(
-      [childProps["aria-describedby"], isString ? descriptionId : undefined]
+      [
+        childProps["aria-describedby"],
+        anchorAsChild ? (isString ? descriptionId : popupId) : undefined,
+      ]
         .flatMap((value) => value?.split(/\s+/) ?? [])
         .filter(Boolean),
     ),
   ).join(" ")
+
+  const cancelFocusCheck = useCallback(() => {
+    if (focusCheckTimeoutRef.current !== null) {
+      clearTimeout(focusCheckTimeoutRef.current)
+      focusCheckTimeoutRef.current = null
+    }
+  }, [])
+  const scheduleFocusCheck = useCallback(() => {
+    cancelFocusCheck()
+    // The popup is rendered outside the anchor; wait for focus to settle before checking both nodes.
+    focusCheckTimeoutRef.current = setTimeout(() => {
+      focusCheckTimeoutRef.current = null
+      const activeElement = document.activeElement
+      const anchor = document.getElementById(anchorId)
+      const popup = document.getElementById(popupId)
+      if (!anchor?.contains(activeElement) && !popup?.contains(activeElement)) {
+        setIsOpen(false)
+      }
+    }, 0)
+  }, [anchorId, cancelFocusCheck, popupId])
+  const handleFocusCapture = useCallback<FocusEventHandler<HTMLElement>>(
+    (event) => {
+      if (anchorAsChild) childProps.onFocusCapture?.(event)
+      cancelFocusCheck()
+      setIsOpen(true)
+    },
+    [anchorAsChild, cancelFocusCheck, childProps],
+  )
+  const handleBlurCapture = useCallback<FocusEventHandler<HTMLElement>>(
+    (event) => {
+      if (anchorAsChild) childProps.onBlurCapture?.(event)
+
+      const nextTarget = event.relatedTarget
+      const popup = document.getElementById(popupId)
+      if (nextTarget instanceof Node) {
+        if (
+          !event.currentTarget.contains(nextTarget) &&
+          !popup?.contains(nextTarget)
+        ) {
+          cancelFocusCheck()
+          setIsOpen(false)
+        }
+        return
+      }
+
+      scheduleFocusCheck()
+    },
+    [anchorAsChild, cancelFocusCheck, childProps, popupId, scheduleFocusCheck],
+  )
+
+  useEffect(() => cancelFocusCheck, [cancelFocusCheck])
+  useEffect(() => {
+    if (!isOpen) return
+
+    document.addEventListener("focusin", scheduleFocusCheck)
+    document.addEventListener("focusout", scheduleFocusCheck)
+    return () => {
+      document.removeEventListener("focusin", scheduleFocusCheck)
+      document.removeEventListener("focusout", scheduleFocusCheck)
+      cancelFocusCheck()
+    }
+  }, [cancelFocusCheck, isOpen, scheduleFocusCheck])
+
   const anchor = anchorAsChild ? (
     cloneElement(children as ReactElement<Record<string, unknown>>, {
       id: anchorId,
       ...(describedBy ? { "aria-describedby": describedBy } : {}),
+      onFocusCapture: handleFocusCapture,
+      onBlurCapture: handleBlurCapture,
     })
   ) : (
     <div
       id={anchorId}
       className={cn("flex items-center justify-center gap-2", wrapperClassName)}
+      onFocusCapture={handleFocusCapture}
+      onBlurCapture={handleBlurCapture}
     >
       {children}
     </div>
@@ -82,20 +173,31 @@ export default function Tooltip({
 
       {isString ? (
         <ReactTooltip
+          id={tooltipId}
           anchorId={anchorId}
           place={position}
           content={content}
           delayShow={delay}
           className={defaultClassName}
+          isOpen={isOpen}
+          setIsOpen={setIsOpen}
+          role={isOpen ? "tooltip" : "presentation"}
+          closeEvents={{ mouseout: true, blur: false }}
+          globalCloseEvents={{ escape: true }}
         />
       ) : (
         <ReactTooltip
-          id={descriptionId}
+          id={popupId}
           anchorId={anchorId}
           place={position}
           delayShow={delay}
           clickable
           className={defaultClassName}
+          isOpen={isOpen}
+          setIsOpen={setIsOpen}
+          role={isOpen ? "tooltip" : "presentation"}
+          closeEvents={{ mouseout: true, blur: false }}
+          globalCloseEvents={{ escape: true }}
         >
           {content}
         </ReactTooltip>
