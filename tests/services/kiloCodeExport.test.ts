@@ -206,6 +206,44 @@ describe("buildKiloCodeV7SettingsFile", () => {
       "Kilo Code provider protocol is unsupported",
     ],
     [
+      "blank selection IDs",
+      {
+        providers: [{ ...preparedCatalog.providers[0]!, selectionId: "   " }],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider selection ID cannot be blank",
+    ],
+    [
+      "blank provider IDs",
+      {
+        providers: [{ ...preparedCatalog.providers[0]!, providerId: "   " }],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider ID cannot be blank",
+    ],
+    [
+      "settings-unsafe provider IDs",
+      {
+        providers: [
+          { ...preparedCatalog.providers[0]!, providerId: "Unsafe ID" },
+        ],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider IDs must be settings-safe",
+    ],
+    [
+      "blank provider names",
+      {
+        providers: [{ ...preparedCatalog.providers[0]!, providerName: "   " }],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider name cannot be blank",
+    ],
+    [
       "empty models",
       {
         providers: [{ ...preparedCatalog.providers[0]!, modelIds: [] }],
@@ -231,6 +269,34 @@ describe("buildKiloCodeV7SettingsFile", () => {
         modelCount: 2,
       },
       "Kilo Code provider base URL must be a valid HTTP or HTTPS URL",
+    ],
+    [
+      "non-HTTP base URL",
+      {
+        providers: [
+          {
+            ...preparedCatalog.providers[0]!,
+            baseURL: "ftp://api.example.invalid/v1",
+          },
+        ],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider base URL must be a valid HTTP or HTTPS URL",
+    ],
+    [
+      "non-normalized model IDs",
+      {
+        providers: [
+          {
+            ...preparedCatalog.providers[0]!,
+            modelIds: ["model-a", " model-b"],
+          },
+        ],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider model IDs must be normalized",
     ],
     [
       "count mismatch",
@@ -400,6 +466,36 @@ describe("buildKiloCodeApiConfigs", () => {
       "Example - Default (a.test)",
       "Example - Default (b.test)",
     ])
+  })
+
+  it("returns profile names in locale order independently of config insertion order", () => {
+    const { apiConfigs, profileNames } = buildKiloCodeApiConfigs({
+      selections: [
+        {
+          accountId: "z",
+          siteName: "Zulu",
+          baseUrl: "https://z.example.invalid",
+          tokenId: 1,
+          tokenName: "Default",
+          tokenKey: "example-z-key",
+        },
+        {
+          accountId: "a",
+          siteName: "Alpha",
+          baseUrl: "https://a.example.invalid",
+          tokenId: 2,
+          tokenName: "Default",
+          tokenKey: "example-a-key",
+        },
+      ],
+      generateId: (name) => `id-${name}`,
+    })
+
+    expect(Object.keys(apiConfigs)).toEqual([
+      "Zulu - Default",
+      "Alpha - Default",
+    ])
+    expect(profileNames).toEqual(["Alpha - Default", "Zulu - Default"])
   })
 
   it("falls back to deterministic numbering when duplicates still collide after domain disambiguation", () => {

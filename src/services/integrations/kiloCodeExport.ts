@@ -186,7 +186,7 @@ function validatePreparedKiloCodeV7Catalog(catalog: PreparedKiloCodeV7Catalog) {
 /**
  * Build the Kilo Code 7.x settings format.
  *
- * Contract source: https://github.com/Kilo-Org/kilocode/blob/938919ab72e3977d1512e0363417270e3337c7b1/packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx
+ * Contract source: https://github.com/Kilo-Org/kilocode/blob/3cb82a0907f888749435c1d208e56d8365747df2/packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx
  * Custom providers require a display `name`, select one of Kilo's supported AI
  * SDK packages, expose a multi-model `models` map, and select the top-level
  * default `model` with a provider/model identifier.
@@ -313,7 +313,9 @@ export function buildKiloCodeApiConfigs(
     }
   }
 
-  const profileNames = getKiloCodeApiConfigProfileNames({ selections })
+  const profileNames = names
+    .map(({ name }) => name)
+    .sort((left, right) => left.localeCompare(right))
   return { apiConfigs, profileNames }
 }
 

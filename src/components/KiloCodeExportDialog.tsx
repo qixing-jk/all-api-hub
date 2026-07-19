@@ -680,12 +680,6 @@ export function KiloCodeExportDialog({
     ],
   )
 
-  actionContextRef.current = {
-    isOpen,
-    exportTarget,
-    exportActionSignature,
-  }
-
   const isCurrentExportAction = useCallback(
     (generation: number, signature: typeof actionContextRef.current) =>
       generation === actionGenerationRef.current &&
@@ -695,6 +689,14 @@ export function KiloCodeExportDialog({
         signature.exportActionSignature,
     [],
   )
+
+  useEffect(() => {
+    actionContextRef.current = {
+      isOpen,
+      exportTarget,
+      exportActionSignature,
+    }
+  }, [isOpen, exportTarget, exportActionSignature])
 
   useEffect(() => {
     setIsDownloadTooLarge(false)

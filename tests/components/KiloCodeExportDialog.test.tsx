@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event"
+import { Suspense, type ComponentProps } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -41,18 +42,35 @@ import {
 
 const mockUseAccountData = vi.fn()
 const {
+  modalRenderControl,
   toastSuccessMock,
   toastErrorMock,
   addTokenDialogPropsMock,
   completeProductAnalyticsActionMock,
   startProductAnalyticsActionMock,
 } = vi.hoisted(() => ({
+  modalRenderControl: {
+    pending: null as Promise<void> | null,
+  },
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   addTokenDialogPropsMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
 }))
+
+vi.mock("~/components/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/components/ui")>()
+
+  return {
+    ...actual,
+    Modal: (props: ComponentProps<typeof actual.Modal>) => {
+      if (modalRenderControl.pending) throw modalRenderControl.pending
+      const ActualModal = actual.Modal
+      return <ActualModal {...props} />
+    },
+  }
+})
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -290,6 +308,7 @@ async function chooseDefaultModel(
 
 describe("KiloCodeExportDialog", () => {
   beforeEach(() => {
+    modalRenderControl.pending = null
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     addTokenDialogPropsMock.mockReset()
@@ -911,13 +930,16 @@ describe("KiloCodeExportDialog", () => {
       />,
     )
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", {
-          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
-        }),
-      ).toBeEnabled()
-    })
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("button", {
+            name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+          }),
+        ).toBeEnabled()
+      },
+      { timeout: 5_000 },
+    )
 
     currentAccountData = {
       enabledAccounts: [],
@@ -1583,6 +1605,76 @@ describe("KiloCodeExportDialog", () => {
     expect(writeText).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
+  })
+
+  it("keeps a delayed export action current when a closing render is discarded", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    let resolveSecret: (value: string) => void = () => {}
+    const delayedSecret = new Promise<string>((resolve) => {
+      resolveSecret = resolve
+    })
+    let releaseDiscardedRender: () => void = () => {}
+    const discardedRender = new Promise<void>((resolve) => {
+      releaseDiscardedRender = resolve
+    })
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["model-a"])
+
+    const { rerender } = render(
+      <Suspense fallback={<div>discarded-render</div>}>
+        <KiloCodeExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          initialSelectedSiteIds={["account-a"]}
+        />
+      </Suspense>,
+    )
+    const copyButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+    mockResolveApiTokenKey.mockClear()
+    mockResolveApiTokenKey.mockReturnValueOnce(delayedSecret)
+
+    await user.click(copyButton)
+    await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(1))
+    modalRenderControl.pending = discardedRender
+    rerender(
+      <Suspense fallback={<div>discarded-render</div>}>
+        <KiloCodeExportDialog
+          isOpen={false}
+          onClose={() => {}}
+          initialSelectedSiteIds={["account-a"]}
+        />
+      </Suspense>,
+    )
+    resolveSecret("sk-full-secret")
+    await delayedSecret
+    await act(async () => {})
+
+    expect(writeText).toHaveBeenCalledTimes(1)
+    expect(toastSuccessMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      modalRenderControl.pending = null
+      releaseDiscardedRender()
+      await discardedRender
+    })
   })
 
   it("drops a delayed export action when runtime facts change for the same selection ID", async () => {

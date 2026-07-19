@@ -75,6 +75,26 @@ describe("prepareKiloCodeV7Catalog", () => {
     ).toEqual(["z-model", "\u{10000}-model", "\u{1f600}-model"])
   })
 
+  it("orders a model ID before a longer ID with the same prefix", () => {
+    expect(normalizeKiloCodeModelIds(["model-a", "model"])).toEqual([
+      "model",
+      "model-a",
+    ])
+  })
+
+  it("uses a settings-safe fallback when the provider label cannot be slugified", () => {
+    const result = prepareKiloCodeV7Catalog([
+      {
+        ...baseSelection,
+        siteName: "示例",
+        tokenName: "默认",
+        providerName: undefined,
+      },
+    ])
+
+    expect(result.providers[0]?.providerId).toMatch(/^provider-[a-f0-9]{8}$/)
+  })
+
   it("disambiguates duplicate display names without merging credentials", () => {
     const result = prepareKiloCodeV7Catalog([
       baseSelection,
@@ -220,9 +240,19 @@ describe("prepareKiloCodeV7Catalog", () => {
       { discoveredModelIds: ["", "  "] },
       "Select at least one model for each provider",
     ],
+    [
+      "unsupported protocols",
+      { protocol: "unsupported-protocol" },
+      "Kilo Code provider protocol is unsupported",
+    ],
   ])("rejects %s", (_name, overrides, message) => {
     expect(() =>
-      prepareKiloCodeV7Catalog([{ ...baseSelection, ...overrides }]),
+      prepareKiloCodeV7Catalog([
+        {
+          ...baseSelection,
+          ...(overrides as Partial<KiloCodeV7ProviderSelection>),
+        },
+      ]),
     ).toThrow(message)
   })
 

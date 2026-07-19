@@ -18,6 +18,26 @@ function addLimitedMessageResource() {
 }
 
 describe("KiloCodeDefaultModelSelect", () => {
+  it("shows the standard empty state when no models or custom values are available", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <KiloCodeDefaultModelSelect
+        value=""
+        modelIds={[]}
+        onChange={vi.fn()}
+        placeholder="Choose a model"
+      />,
+      { withThemeProvider: false, withUserPreferencesProvider: false },
+    )
+
+    await user.click(
+      await screen.findByRole("combobox", { name: "Choose a model" }),
+    )
+
+    expect(screen.getByText("ui:searchableSelect.noOptions")).toBeVisible()
+  })
+
   it("renders at most 100 rows, keeps the selected row visible, and searches all 5,000 models", async () => {
     const user = userEvent.setup()
     const models = Array.from(

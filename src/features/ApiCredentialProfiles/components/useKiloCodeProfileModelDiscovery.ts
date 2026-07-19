@@ -44,7 +44,6 @@ interface UseKiloCodeProfileModelDiscoveryOptions {
   selectionId: string
 }
 
-/** Normalize upstream model IDs once at the discovery boundary. */
 /** Validate persisted profile facts before invoking the throwing catalog API. */
 function hasInvalidRuntimeProfile(runtimeKey: KiloCodeRuntimeKeyExportInput) {
   if (!runtimeKey.tokenKey.trim()) return true

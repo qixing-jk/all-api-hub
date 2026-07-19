@@ -107,4 +107,34 @@ describe("resolveKiloCodeAccountExportOutput", () => {
       currentLegacyProfileName: "Prepared site - Prepared token",
     })
   })
+
+  it("rejects an export when its transient secret source is unavailable", async () => {
+    const selection: KiloCodeV7ProviderSelection = {
+      accountId: "account-a",
+      siteName: "Example",
+      baseUrl: "https://api.example.invalid",
+      tokenId: 7,
+      tokenName: "Default",
+      tokenKey: "masked-key",
+      selectionId: "missing-source",
+      providerName: "Example - Default",
+      discoveredModelIds: ["example-model"],
+    }
+    const resolveToken = vi.fn()
+
+    await expect(
+      resolveKiloCodeAccountExportOutput({
+        target: KILO_CODE_EXPORT_TARGETS.KiloV7,
+        selections: [selection],
+        secretSourcesBySelectionId: new Map(),
+        defaultModel: {
+          selectionId: selection.selectionId,
+          modelId: "example-model",
+        },
+        resolveToken,
+      }),
+    ).rejects.toThrow("Kilo Code export selection source is unavailable")
+    expect(resolveToken).not.toHaveBeenCalled()
+    expect(buildKiloCodeExportOutputMock).not.toHaveBeenCalled()
+  })
 })
