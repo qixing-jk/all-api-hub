@@ -160,11 +160,7 @@ describe("apiAdapters registry", () => {
       expectAccountDataCapability(capabilities)
       expectAccountBootstrapCapability(capabilities)
       expectAccountCompletionCapability(capabilities)
-      if (siteType === SITE_TYPES.NEW_API) {
-        expectInviteLinkCapability(capabilities)
-      } else {
-        expect(capabilities.account?.inviteLink).toBeUndefined()
-      }
+      expectInviteLinkCapability(capabilities)
       expectKeyManagementCapability(capabilities)
       expectTokenProvisioningCapability(capabilities)
       expectAccountRefreshCapability(capabilities)
