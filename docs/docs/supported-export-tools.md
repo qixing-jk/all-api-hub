@@ -13,6 +13,35 @@
 | CLIProxyAPI | 将 Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow 封装为兼容 OpenAI / Gemini / Claude / Codex 的 API 服务。 | [文档](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
 | Claude Code Router | 以 Claude Code 作为编码基础设施，让你在持续获得 Anthropic 更新的同时，自行决定如何与模型交互。 | [官网](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
 
+## Kilo Code / Roo Code 导出
+
+### Kilo Code 7.x
+
+选择 Kilo Code 7.x 后，每个账号密钥或 API 凭据会导出为一个名称易读的 `provider`。每个 `provider` 都包含从对应接口发现并规范化的全部模型 ID，以及为该 `provider` 手动输入并保留的模型 ID。无论模型 ID 来自接口还是手动输入，被包含在导出中都不代表 All API Hub 验证了该模型适用于所有工作流。请先选择默认 `model`；导出多个 `provider` 时，还需选择默认 `provider`。
+
+每个 `provider` 可选择以下 API 协议：
+
+- **OpenAI Compatible**（默认）：导出 `@ai-sdk/openai-compatible`。
+- **OpenAI Responses**：导出 `@ai-sdk/openai`。
+- **Anthropic Messages**：导出 `@ai-sdk/anthropic`。
+
+协议选择只改变 Kilo Code 的 AI SDK provider 包。All API Hub 仍沿用现有模型发现流程并导出完整加载结果，不会因为选择 Anthropic Messages 而跳过模型发现，也不会额外改写模型 ID 或补充未经验证的模型元数据。
+
+你可以按需要选择两种使用方式：
+
+- **下载设置文件**：点击“下载 Kilo 7.x 设置”，再到 Kilo Code 的设置 → About Kilo Code → Import 中选择下载的 `kilo-settings.json`，确认内容后保存。下载文件是可直接走当前 Kilo Code 导入流程的设置文件。
+- **复制配置**：点击“复制 provider 配置”会得到顶层 `{ provider, model }` 片段。请把这两个字段合并到现有设置 JSON 的同名顶层字段；这个片段本身不是完整的导入文件。
+
+Kilo Code 当前的设置导入大小上限为 1 MiB。文件超出限制时，单个 API 凭据导出需改用复制配置并手动合并；账号密钥批量导出可减少选中的 `provider`，或改用复制配置并手动合并。
+
+::: tip 导入后 API 密钥字段可能为空
+导入包含内联 API 密钥的设置后，Kilo Code 的 `provider` 编辑页可能仍将 API 密钥字段显示为空。这是 Kilo Code 当前的界面限制，不表示导出失败：导入的内联密钥与编辑器认证状态分开存储，运行时仍可使用该密钥。
+:::
+
+### 旧版 Roo Code / Kilo Code 5.x
+
+旧版格式每个配置只导出一个模型。点击“复制旧版 apiConfigs”后，请把复制内容合并到设置中的 `providerProfiles.apiConfigs`；如需完整设置文件，则下载 `kilo-code-settings.json`，再使用对应版本的设置导入功能。
+
 ## 自建后台 / 管理面板
 
 如果你自己也搭了 AI 中转或聚合后台，All API Hub 还可以把当前站点直接导入到你选中的后台目标里。

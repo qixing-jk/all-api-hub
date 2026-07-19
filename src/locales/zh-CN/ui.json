@@ -289,7 +289,9 @@
         "copyLegacyApiConfigs": "复制旧版 apiConfigs",
         "createDefaultToken": "创建默认密钥",
         "downloadKiloV7Settings": "下载 Kilo 7.x 设置",
-        "downloadLegacySettings": "下载旧版设置"
+        "downloadLegacySettings": "下载旧版设置",
+        "removeManualModel": "移除手动模型",
+        "retryModels": "重试获取模型"
       },
       "description": "根据选中的站点和密钥生成 Kilo Code / Roo Code 的 providerProfiles 配置。",
       "descriptions": {
@@ -298,18 +300,25 @@
         "selectedSites": "已选站点：{{sites}}，已选密钥：{{keys}}。"
       },
       "help": {
-        "kiloV7CopyInstructions": "如需手动维护配置，可点击“复制 provider 配置”，将复制的内容合并到设置 JSON 顶层的 provider 字段。",
-        "kiloV7DownloadInstructions": "点击“下载 Kilo 7.x 设置”。然后在 Kilo Code 中点击齿轮打开设置，进入 About Kilo Code → Import，选择下载的 kilo-settings.json，确认导入内容后保存。",
+        "kiloV7ApiKeyEditorNote": "导入后，Kilo Code 的 provider 编辑页可能会将 API 密钥字段显示为空。这是已知的编辑器限制：导入的内联密钥与编辑器认证状态分开存储，运行时仍可使用该密钥。",
+        "kiloV7CatalogInstructions": "每个选中的 API 密钥都会导出为一个名称易读的 provider，其中包含从接口发现并规范化的全部模型 ID，以及为该 provider 手动输入并保留的模型 ID。被包含在导出中并不保证每个模型都适用于所有工作流。请先选择默认 model；导出多个 provider 时，还需选择默认 provider。",
+        "kiloV7CopyInstructions": "点击“复制 provider 配置”可复制同时包含 provider 和 model 的顶层可合并片段。请将这两个字段合并到设置 JSON 中；复制的片段不是完整的导入文件。",
+        "kiloV7DownloadInstructions": "点击“下载 Kilo 7.x 设置”，然后在 Kilo Code 的设置 → About Kilo Code → Import 中导入下载的 kilo-settings.json，确认导入内容后保存。",
         "legacyCopyInstructions": "点击“复制旧版 apiConfigs”，将内容粘贴到 Roo Code 或 Kilo Code 5.x 设置的 providerProfiles.apiConfigs 中。",
         "legacyDownloadInstructions": "如需完整设置文件，可点击“下载旧版设置”获取 kilo-code-settings.json，并通过对应版本的设置导入功能导入。",
+        "legacySingleModelInstructions": "旧版 Roo Code 和 Kilo Code 5.x 导出每个配置只支持一个模型。复制或下载前，请先选择要使用的模型。",
         "perSiteDescription": "选择要导出的站点后将自动加载密钥，并默认选择第一个密钥（每个站点支持多选）。",
         "perSiteTitle": "按站点导出",
-        "usageTitle": "使用方法"
+        "usageTitle": "使用导出内容"
       },
       "labels": {
         "currentApiConfigName": "当前配置",
+        "defaultModel": "默认模型",
+        "defaultProvider": "默认供应商",
         "exportTarget": "导出目标",
+        "legacyModelId": "模型 ID",
         "modelId": "模型 ID",
+        "providerProtocol": "API 协议",
         "selectedSites": "已选择的站点",
         "selectedTokens": "已选择的密钥"
       },
@@ -321,24 +330,34 @@
         "createTokenFailed": "创建密钥失败。",
         "downloadedSettings": "已下载设置文件",
         "downloadFailed": "设置文件下载失败",
+        "invalidProfile": "此配置的基础 URL 无效或缺少 API 密钥。请先更新配置再导出。",
         "loadingTokens": "正在加载密钥列表…",
         "loadModelsFailed": "加载该密钥的模型列表失败。",
         "loadTokensFailed": "加载密钥失败。",
         "modelIdRequiredDescription": "请为所有已选择的密钥选择或输入模型 ID 后再导出（还缺 {{count}} 个）。",
         "modelIdRequiredTitle": "需要模型 ID",
+        "modelSearchLimited": "仅显示前 {{visible}} 个（共 {{count}} 个）模型，请继续输入以缩小范围。",
         "noModelsDescription": "该密钥未返回可用模型。Kilo Code 实际使用通常需要模型 ID，请手动输入。",
         "noModelsTitle": "无模型",
         "nothingToExportDescription": "请至少选择一个可导出的站点/密钥后再进行复制/下载。",
         "nothingToExportTitle": "无可导出的内容",
         "noTokensDescription": "该站点将被跳过，直到创建密钥。",
         "noTokensTitle": "暂无密钥",
-        "tokenCreated": "密钥创建成功"
+        "settingsFileTooLargeMultiple": "此文件超过 Kilo Code 的导入大小限制。请选择更少的供应商，或复制配置并手动合并。",
+        "settingsFileTooLargeSingle": "此文件超过 Kilo Code 的导入大小限制。请复制配置并手动合并。",
+        "tokenCreated": "密钥创建成功",
+        "v7ProviderModelsRequired": "请输入模型 ID、重试获取模型，或取消选择此供应商。"
       },
       "placeholders": {
         "currentApiConfigName": "请选择当前配置",
         "modelId": "搜索或输入模型 ID",
         "selectSites": "请选择站点",
         "selectTokens": "请选择密钥"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic Messages",
+        "openAICompatible": "OpenAI Compatible",
+        "openAIResponses": "OpenAI Responses"
       },
       "targets": {
         "kiloV7": "Kilo Code 7.x",

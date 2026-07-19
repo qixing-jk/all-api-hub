@@ -1,5 +1,27 @@
+import {
+  buildUniqueKiloCodeProviderNames,
+  KILO_CODE_PROVIDER_PROTOCOL_NPM,
+  normalizeKiloCodeModelIds,
+} from "~/services/integrations/kiloCodeV7Catalog"
+import type {
+  KiloCodeDefaultModelSelection,
+  KiloCodeLegacySelection,
+  KiloCodeProviderNpm,
+  PreparedKiloCodeV7Catalog,
+} from "~/services/integrations/kiloCodeV7Catalog"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
+
+export type {
+  KiloCodeDefaultModelSelection,
+  KiloCodeLegacySelection,
+  KiloCodeProviderProtocol,
+  KiloCodeRuntimeKeyExportInput,
+  KiloCodeV7ProviderSelection,
+  PreparedKiloCodeV7Catalog,
+} from "~/services/integrations/kiloCodeV7Catalog"
+
+export { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCodeV7Catalog"
 
 export const KILO_CODE_EXPORT_TARGETS = {
   KiloV7: "kilo-v7",
@@ -48,7 +70,8 @@ export interface KiloCodeSettingsFile {
 }
 
 interface KiloCodeV7Provider {
-  npm: "@ai-sdk/openai-compatible"
+  name: string
+  npm: KiloCodeProviderNpm
   models: Record<string, { name: string }>
   options: {
     apiKey: string
@@ -65,129 +88,146 @@ export interface KiloCodeV7SettingsFile {
   model: string
 }
 
-export interface KiloCodeExportTuple {
-  accountId: string
-  siteName: string
-  baseUrl: string
-  tokenId: number
-  tokenName: string
-  tokenKey: string
-  /**
-   * Upstream model id to export for this API key.
-   */
-  modelId?: string
+interface BuildPreparedKiloCodeV7SettingsOptions {
+  catalog: PreparedKiloCodeV7Catalog
+  defaultModel: KiloCodeDefaultModelSelection
+  now?: () => Date
 }
 
-interface NormalizedKiloCodeV7Selection {
-  tuple: KiloCodeExportTuple
-  baseURL: string
-  modelId: string
-}
-
-/** Convert a provider label to Kilo Code's settings-safe identifier format. */
-function slugifyProviderName(value: string) {
-  return (
-    value
-      .normalize("NFKD")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "provider"
-  )
-}
-
-/** Produce a deterministic FNV-1a digest for a provider identity. */
-function hashProviderIdentity(value: string) {
-  let hash = 0x811c9dc5
-  for (const character of value) {
-    hash ^= character.charCodeAt(0)
-    hash = Math.imul(hash, 16777619)
+/** Reject malformed prepared catalogs at the public schema boundary. */
+function validatePreparedKiloCodeV7Catalog(catalog: PreparedKiloCodeV7Catalog) {
+  if (!catalog.providers.length) {
+    throw new Error("Select at least one runtime key")
   }
-  return (hash >>> 0).toString(16).padStart(8, "0")
-}
-
-/** Combine a readable label with a stable identity digest. */
-function defaultKiloCodeV7ProviderId(selection: NormalizedKiloCodeV7Selection) {
-  const { tuple, baseURL } = selection
-  const identity = [
-    tuple.accountId,
-    baseURL,
-    `${tuple.tokenId}`,
-    tuple.tokenName.trim(),
-  ].join("\u0000")
-  const name = slugifyProviderName(
-    `${tuple.siteName.trim()}-${tuple.tokenName.trim()}`,
-  )
-  return `${name}-${hashProviderIdentity(identity)}`
-}
-
-/** Validate and normalize one selection before settings construction. */
-function normalizeKiloCodeV7Selection(
-  tuple: KiloCodeExportTuple,
-): NormalizedKiloCodeV7Selection {
-  if (!tuple.tokenKey.trim()) throw new Error("Runtime key cannot be blank")
-
-  const modelId = tuple.modelId?.trim()
-  if (!modelId) throw new Error("Model ID cannot be blank")
-
-  const baseURL = coerceBaseUrlToPathSuffix(tuple.baseUrl, "/v1")
-  let parsedUrl: URL
-  try {
-    parsedUrl = new URL(baseURL)
-  } catch {
-    throw new Error("Base URL must be a valid HTTP or HTTPS URL")
-  }
-  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-    throw new Error("Base URL must be a valid HTTP or HTTPS URL")
+  if (catalog.providerCount !== catalog.providers.length) {
+    throw new Error("Kilo Code catalog provider count is inconsistent")
   }
 
-  return { tuple, baseURL, modelId }
+  const providerIds = new Set<string>()
+  const providerNames = new Set<string>()
+  const selectionIds = new Set<string>()
+  let modelCount = 0
+  for (const provider of catalog.providers) {
+    if (!provider.selectionId.trim()) {
+      throw new Error("Kilo Code provider selection ID cannot be blank")
+    }
+    if (selectionIds.has(provider.selectionId)) {
+      throw new Error("Kilo Code provider selection IDs must be unique")
+    }
+    selectionIds.add(provider.selectionId)
+    if (!provider.providerId.trim()) {
+      throw new Error("Kilo Code provider ID cannot be blank")
+    }
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(provider.providerId)) {
+      throw new Error("Kilo Code provider IDs must be settings-safe")
+    }
+    if (providerIds.has(provider.providerId)) {
+      throw new Error("Kilo Code provider IDs must be unique")
+    }
+    providerIds.add(provider.providerId)
+    if (!provider.providerName.trim()) {
+      throw new Error("Kilo Code provider name cannot be blank")
+    }
+    const providerName = provider.providerName.trim()
+    if (providerNames.has(providerName)) {
+      throw new Error("Kilo Code provider names must be unique")
+    }
+    providerNames.add(providerName)
+    if (!Object.hasOwn(KILO_CODE_PROVIDER_PROTOCOL_NPM, provider.protocol)) {
+      throw new Error("Kilo Code provider protocol is unsupported")
+    }
+    if (!provider.tokenKey.trim()) {
+      throw new Error("Kilo Code provider token key cannot be blank")
+    }
+    let parsedBaseURL: URL
+    try {
+      parsedBaseURL = new URL(provider.baseURL)
+    } catch {
+      throw new Error(
+        "Kilo Code provider base URL must be a valid HTTP or HTTPS URL",
+      )
+    }
+    if (
+      parsedBaseURL.protocol !== "http:" &&
+      parsedBaseURL.protocol !== "https:"
+    ) {
+      throw new Error(
+        "Kilo Code provider base URL must be a valid HTTP or HTTPS URL",
+      )
+    }
+    if (!provider.modelIds.length) {
+      throw new Error("Kilo Code provider model catalog cannot be empty")
+    }
+    const modelIds = new Set<string>()
+    for (const modelId of provider.modelIds) {
+      if (!modelId.trim() || modelId !== modelId.trim()) {
+        throw new Error("Kilo Code provider model IDs must be normalized")
+      }
+      if (modelIds.has(modelId)) {
+        throw new Error("Kilo Code provider model IDs must be unique")
+      }
+      modelIds.add(modelId)
+    }
+    const normalizedModelIds = normalizeKiloCodeModelIds(provider.modelIds)
+    if (
+      provider.modelIds.some(
+        (modelId, index) => modelId !== normalizedModelIds[index],
+      )
+    ) {
+      throw new Error("Kilo Code provider model IDs must use canonical order")
+    }
+    modelCount += provider.modelIds.length
+  }
+  if (catalog.modelCount !== modelCount) {
+    throw new Error("Kilo Code catalog model count is inconsistent")
+  }
 }
 
 /**
  * Build the Kilo Code 7.x settings format.
  *
- * Contract source: https://github.com/Kilo-Org/kilocode/tree/3cb82a0907f888749435c1d208e56d8365747df2
- * Custom providers use the AI SDK OpenAI-compatible package and select models
- * with a provider/model identifier.
+ * Contract source: https://github.com/Kilo-Org/kilocode/blob/3cb82a0907f888749435c1d208e56d8365747df2/packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx
+ * Custom providers require a display `name`, select one of Kilo's supported AI
+ * SDK packages, expose a multi-model `models` map, and select the top-level
+ * default `model` with a provider/model identifier.
  */
-export function buildKiloCodeV7SettingsFile(options: {
-  selections: KiloCodeExportTuple[]
-  now?: () => Date
-  generateProviderId?: (selection: KiloCodeExportTuple) => string
-}): KiloCodeV7SettingsFile {
-  if (!options.selections.length) {
-    throw new Error("Select at least one runtime key")
+function buildPreparedKiloCodeV7SettingsFile(
+  options: BuildPreparedKiloCodeV7SettingsOptions,
+): KiloCodeV7SettingsFile {
+  validatePreparedKiloCodeV7Catalog(options.catalog)
+  if (!options.defaultModel) {
+    throw new Error("Kilo Code default model is required")
   }
 
-  const selections = options.selections.map(normalizeKiloCodeV7Selection)
-  const providerIds = selections.map((selection) =>
-    options.generateProviderId
-      ? options.generateProviderId(selection.tuple)
-      : defaultKiloCodeV7ProviderId(selection),
+  const defaultProvider = options.catalog.providers.find(
+    (provider) => provider.selectionId === options.defaultModel.selectionId,
   )
-  if (new Set(providerIds).size !== providerIds.length) {
-    throw new Error("Kilo Code provider IDs must be unique")
+  if (!defaultProvider) {
+    throw new Error("Kilo Code default provider must be exported")
   }
-  if (providerIds.some((id) => !/^[a-z0-9][a-z0-9-]*$/.test(id))) {
-    throw new Error("Kilo Code provider IDs must be settings-safe")
+  if (!defaultProvider.modelIds.includes(options.defaultModel.modelId)) {
+    throw new Error(
+      "Kilo Code default model must exist in its provider catalog",
+    )
   }
 
   const provider: Record<string, KiloCodeV7Provider> = {}
-  selections.forEach((selection, index) => {
-    provider[providerIds[index]] = {
-      npm: "@ai-sdk/openai-compatible",
-      models: {
-        [selection.modelId]: { name: selection.modelId },
-      },
+  for (const preparedProvider of options.catalog.providers) {
+    provider[preparedProvider.providerId] = {
+      name: preparedProvider.providerName,
+      npm: KILO_CODE_PROVIDER_PROTOCOL_NPM[preparedProvider.protocol],
+      models: Object.fromEntries(
+        preparedProvider.modelIds.map((modelId) => [
+          modelId,
+          { name: modelId },
+        ]),
+      ),
       options: {
-        apiKey: selection.tuple.tokenKey,
-        baseURL: selection.baseURL,
+        apiKey: preparedProvider.tokenKey,
+        baseURL: preparedProvider.baseURL,
       },
     }
-  })
-
-  const firstSelection = selections[0]
-  const firstProviderId = providerIds[0]
+  }
 
   return {
     _meta: {
@@ -195,12 +235,19 @@ export function buildKiloCodeV7SettingsFile(options: {
       exportedAt: (options.now ?? (() => new Date()))().toISOString(),
     },
     provider,
-    model: `${firstProviderId}/${firstSelection.modelId}`,
+    model: `${defaultProvider.providerId}/${options.defaultModel.modelId}`,
   }
 }
 
+/** Build a Kilo Code V7 settings file from a prepared provider catalog. */
+export function buildKiloCodeV7SettingsFile(
+  options: BuildPreparedKiloCodeV7SettingsOptions,
+): KiloCodeV7SettingsFile {
+  return buildPreparedKiloCodeV7SettingsFile(options)
+}
+
 interface BuildKiloCodeApiConfigsOptions {
-  selections: KiloCodeExportTuple[]
+  selections: KiloCodeLegacySelection[]
   generateId?: (profileName: string) => string
 }
 
@@ -216,92 +263,26 @@ interface BuildKiloCodeApiConfigsResult {
  * exporter we name profiles per API key so multiple keys can be exported from
  * the same site without collisions.
  */
-function getBaseProfileName(tuple: KiloCodeExportTuple) {
+function getBaseProfileName(tuple: KiloCodeLegacySelection) {
   const siteName = tuple.siteName.trim() || tuple.baseUrl.trim()
   const tokenLabel = tuple.tokenName.trim() || `Token ${tuple.tokenId}`
   return `${siteName} - ${tokenLabel}`
 }
 
-/**
- * Extract a stable domain label for disambiguation.
- */
-function getDomainLabel(baseUrl: string) {
-  try {
-    return new URL(baseUrl).host
-  } catch {
-    return baseUrl.trim()
-  }
+/** Read the target-specific legacy model. */
+function getLegacyModelId(selection: KiloCodeLegacySelection) {
+  return selection.legacyModelId?.trim() || undefined
 }
 
-/**
- * Build stable, collision-resistant profile names.
- *
- * Rules:
- * - Start with a human-readable `${site} - ${token}` base.
- * - If duplicates exist, append the domain.
- * - If duplicates still exist, append deterministic numbering.
- */
-function buildUniqueProfileNames(selections: KiloCodeExportTuple[]) {
-  const baseNames = selections.map((tuple) => ({
-    tuple,
-    baseName: getBaseProfileName(tuple),
-    domain: getDomainLabel(tuple.baseUrl),
-  }))
-
-  const byBaseName = new Map<string, typeof baseNames>()
-  for (const item of baseNames) {
-    const existing = byBaseName.get(item.baseName)
-    if (existing) {
-      existing.push(item)
-    } else {
-      byBaseName.set(item.baseName, [item])
-    }
-  }
-
-  const withDomainNames = baseNames.map((item) => {
-    const group = byBaseName.get(item.baseName) ?? []
-    if (group.length <= 1) {
-      return { ...item, name: item.baseName }
-    }
-    return { ...item, name: `${item.baseName} (${item.domain})` }
-  })
-
-  const byName = new Map<string, typeof withDomainNames>()
-  for (const item of withDomainNames) {
-    const existing = byName.get(item.name)
-    if (existing) {
-      existing.push(item)
-    } else {
-      byName.set(item.name, [item])
-    }
-  }
-
-  const stableSortKey = (tuple: KiloCodeExportTuple) => {
-    return [
-      tuple.siteName.trim(),
-      tuple.baseUrl.trim(),
-      tuple.tokenName.trim(),
-      `${tuple.tokenId}`,
-      tuple.accountId,
-    ].join("\u0000")
-  }
-
-  const finalNames = withDomainNames.map((item) => {
-    const group = byName.get(item.name) ?? []
-    if (group.length <= 1) {
-      return { tuple: item.tuple, name: item.name }
-    }
-
-    const sorted = [...group].sort((a, b) =>
-      stableSortKey(a.tuple).localeCompare(stableSortKey(b.tuple)),
-    )
-    const index = sorted.findIndex(
-      (candidate) => candidate.tuple === item.tuple,
-    )
-    return { tuple: item.tuple, name: `${item.name} #${index + 1}` }
-  })
-
-  return finalNames
+/** Derive deterministic legacy profile names without materializing API keys. */
+export function getKiloCodeApiConfigProfileNames(
+  options: Pick<BuildKiloCodeApiConfigsOptions, "selections">,
+) {
+  const names = buildUniqueKiloCodeProviderNames(
+    options.selections,
+    getBaseProfileName,
+  ).map(({ name }) => name)
+  return names.sort((left, right) => left.localeCompare(right))
 }
 
 /**
@@ -318,23 +299,23 @@ export function buildKiloCodeApiConfigs(
   if (!selections.length) return { apiConfigs: {}, profileNames: [] }
 
   const idFactory = generateId ?? (() => safeRandomUUID("kilocode-api-config"))
-  const names = buildUniqueProfileNames(selections)
+  const names = buildUniqueKiloCodeProviderNames(selections, getBaseProfileName)
 
   const apiConfigs: Record<string, KiloCodeApiConfig> = {}
-  for (const { tuple, name } of names) {
-    const normalizedModelId = tuple.modelId?.trim()
+  for (const { selection, name } of names) {
+    const normalizedModelId = getLegacyModelId(selection)
     apiConfigs[name] = {
       id: idFactory(name),
       apiProvider: "openai",
-      openAiBaseUrl: coerceBaseUrlToPathSuffix(tuple.baseUrl, "/v1"),
-      openAiApiKey: tuple.tokenKey,
+      openAiBaseUrl: coerceBaseUrlToPathSuffix(selection.baseUrl, "/v1"),
+      openAiApiKey: selection.tokenKey,
       ...(normalizedModelId ? { openAiModelId: normalizedModelId } : {}),
     }
   }
 
-  const profileNames = Object.keys(apiConfigs).sort((a, b) =>
-    a.localeCompare(b),
-  )
+  const profileNames = names
+    .map(({ name }) => name)
+    .sort((left, right) => left.localeCompare(right))
   return { apiConfigs, profileNames }
 }
 

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises"
 import type { BrowserContext, Page } from "@playwright/test"
 
+import { KILO_CODE_EXPORT_TEST_IDS } from "~/components/kiloCodeExportTestIds"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
@@ -313,19 +314,31 @@ test("downloads Kilo Code settings for an API credential profile", async ({
   extensionId,
   page,
 }) => {
+  const profileName = "Example Profile"
+  const profileBaseUrl = "https://kilo-export.example.invalid"
+  const modelIds = [
+    "example-model-a",
+    "example-model-b",
+    "vendor/example-model-c",
+  ] as const
   const serviceWorker = await getServiceWorker(context)
   await seedApiCredentialProfiles(serviceWorker, [
     createStoredApiCredentialProfile({
       id: "profile-kilo-export",
-      name: "Kilo Export Profile",
-      baseUrl: "https://kilo-export.example.com",
+      name: profileName,
+      baseUrl: profileBaseUrl,
       apiKey: "sk-kilo-export-profile",
     }),
   ])
 
-  await installOpenAiCompatibleModelsRoute(context, {
-    baseUrl: "https://kilo-export.example.com",
-    modelId: "gpt-kilo-export",
+  await context.route(`${profileBaseUrl}/v1/models`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: modelIds.map((id) => ({ id })),
+      }),
+    })
   })
 
   await openProfilesPage(page, extensionId)
@@ -338,7 +351,21 @@ test("downloads Kilo Code settings for an API credential profile", async ({
     .click()
 
   await expect(page.getByText("Export Kilo Code JSON")).toBeVisible()
-  await expect(page.getByText("gpt-kilo-export")).toBeVisible()
+  const slashBearingModel = modelIds[2]
+  const defaultModel = page.getByTestId(KILO_CODE_EXPORT_TEST_IDS.defaultModel)
+  await expect(defaultModel).toBeEnabled()
+  await defaultModel.click()
+  const defaultModelSearch = page.getByTestId(
+    KILO_CODE_EXPORT_TEST_IDS.defaultModelSearch,
+  )
+  await defaultModelSearch.fill(slashBearingModel)
+  const slashBearingModelOption = page.getByRole("option", {
+    name: slashBearingModel,
+    exact: true,
+  })
+  await expect(slashBearingModelOption).toBeVisible()
+  await slashBearingModelOption.click({ force: true })
+  await expect(defaultModel).toContainText(slashBearingModel)
 
   const v7DownloadPromise = page.waitForEvent("download")
   await page.getByRole("button", { name: "Download Kilo 7.x settings" }).click()
@@ -357,8 +384,9 @@ test("downloads Kilo Code settings for an API credential profile", async ({
     provider?: Record<
       string,
       {
+        name?: string
         npm?: string
-        models?: Record<string, unknown>
+        models?: Record<string, { name?: string }>
         options?: { apiKey?: string; baseURL?: string }
       }
     >
@@ -366,17 +394,28 @@ test("downloads Kilo Code settings for an API credential profile", async ({
   }
 
   expect(v7Settings._meta?.version).toBe(1)
-  expect(Object.keys(v7Settings.provider ?? {})).toHaveLength(1)
-  const [providerId, provider] = Object.entries(v7Settings.provider ?? {})[0]
+  const providerEntries = Object.entries(v7Settings.provider ?? {})
+  expect(providerEntries).toHaveLength(1)
+  const [providerId, provider] = providerEntries[0]
+  expect(provider.name).toBe(profileName)
+  expect(providerId).not.toBe(profileName)
   expect(provider).toMatchObject({
     npm: "@ai-sdk/openai-compatible",
+    models: {
+      [modelIds[0]]: { name: modelIds[0] },
+      [modelIds[1]]: { name: modelIds[1] },
+      [modelIds[2]]: { name: modelIds[2] },
+    },
     options: {
       apiKey: "sk-kilo-export-profile",
-      baseURL: "https://kilo-export.example.com/v1",
+      baseURL: `${profileBaseUrl}/v1`,
     },
   })
-  expect(Object.keys(provider.models ?? {})).toContain("gpt-kilo-export")
-  expect(v7Settings.model).toBe(`${providerId}/gpt-kilo-export`)
+
+  expect(v7Settings.model).toBe(`${providerId}/${slashBearingModel}`)
+  expect(
+    v7Settings.provider?.[providerId]?.models?.[slashBearingModel],
+  ).toEqual({ name: slashBearingModel })
 
   await page.getByRole("button", { name: "Cancel" }).click()
   await expect(page.getByText("Export Kilo Code JSON")).toHaveCount(0)
@@ -427,20 +466,20 @@ test("downloads Kilo Code settings for an API credential profile", async ({
     }
   }
 
-  const profileName = "Kilo Export Profile - API Key"
+  const legacyProfileName = `${profileName} - API Key`
   expect(legacySettings.providerProfiles?.currentApiConfigName).toBe(
-    profileName,
+    legacyProfileName,
   )
   expect(
-    legacySettings.providerProfiles?.apiConfigs?.[profileName],
+    legacySettings.providerProfiles?.apiConfigs?.[legacyProfileName],
   ).toMatchObject({
     apiProvider: "openai",
-    openAiBaseUrl: "https://kilo-export.example.com/v1",
+    openAiBaseUrl: `${profileBaseUrl}/v1`,
     openAiApiKey: "sk-kilo-export-profile",
-    openAiModelId: "gpt-kilo-export",
+    openAiModelId: modelIds[0],
   })
   expect(
-    legacySettings.providerProfiles?.apiConfigs?.[profileName]?.id,
+    legacySettings.providerProfiles?.apiConfigs?.[legacyProfileName]?.id,
   ).toEqual(expect.any(String))
 })
 

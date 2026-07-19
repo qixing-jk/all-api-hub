@@ -298,7 +298,9 @@
         "copyLegacyApiConfigs": "Copy legacy apiConfigs",
         "createDefaultToken": "Create default token",
         "downloadKiloV7Settings": "Download Kilo 7.x settings",
-        "downloadLegacySettings": "Download legacy settings"
+        "downloadLegacySettings": "Download legacy settings",
+        "removeManualModel": "Remove manual model",
+        "retryModels": "Retry model discovery"
       },
       "description": "Generate Kilo Code / Roo Code provider profiles from your selected sites and tokens.",
       "descriptions": {
@@ -307,18 +309,25 @@
         "selectedSites": "Selected sites: {{sites}}, selected keys: {{keys}}."
       },
       "help": {
-        "kiloV7CopyInstructions": "To maintain the configuration manually, click \"Copy provider config\" and merge the copied content into the top-level provider field in the settings JSON.",
-        "kiloV7DownloadInstructions": "Click \"Download Kilo 7.x settings\". Then, in Kilo Code, click the gear to open Settings, go to About Kilo Code → Import, select the downloaded kilo-settings.json, review the content to import, and save.",
+        "kiloV7ApiKeyEditorNote": "After import, Kilo Code may show the provider API key field as empty. This is a known editor limitation: imported inline keys are stored separately from the editor authentication state and remain available at runtime.",
+        "kiloV7CatalogInstructions": "Each selected API key becomes a provider with a readable name. It includes every normalized model ID discovered from that API plus any model ID entered manually for the provider; inclusion does not guarantee that every model works in every workflow. Choose the default model and, when exporting multiple providers, the default provider.",
+        "kiloV7CopyInstructions": "Click \"Copy provider config\" to copy a mergeable top-level fragment containing both provider and model. Merge both fields into your settings JSON; the copied fragment is not a complete import file.",
+        "kiloV7DownloadInstructions": "Click \"Download Kilo 7.x settings\", then import the downloaded kilo-settings.json from Kilo Code Settings → About Kilo Code → Import. Review the imported settings and save.",
         "legacyCopyInstructions": "Click \"Copy legacy apiConfigs\" and paste the content into providerProfiles.apiConfigs in the Roo Code or Kilo Code 5.x settings.",
         "legacyDownloadInstructions": "To get a complete settings file, click \"Download legacy settings\" to download kilo-code-settings.json, then import it using the settings import feature in the corresponding version.",
+        "legacySingleModelInstructions": "Legacy Roo Code and Kilo Code 5.x exports support one model per profile. Select the model to use before copying or downloading.",
         "perSiteDescription": "Select sites to load tokens automatically. The first token is preselected, and you can select multiple tokens per site.",
         "perSiteTitle": "Per-site export",
-        "usageTitle": "How to use"
+        "usageTitle": "Use the export"
       },
       "labels": {
         "currentApiConfigName": "Current profile",
+        "defaultModel": "Default model",
+        "defaultProvider": "Default provider",
         "exportTarget": "Export target",
+        "legacyModelId": "Model ID",
         "modelId": "Model ID",
+        "providerProtocol": "API protocol",
         "selectedSites": "Selected sites",
         "selectedTokens": "Selected tokens"
       },
@@ -330,25 +339,35 @@
         "createTokenFailed": "Failed to create token.",
         "downloadedSettings": "Settings file downloaded",
         "downloadFailed": "Failed to download settings file",
+        "invalidProfile": "This profile has an invalid base URL or missing API key. Update the profile before exporting.",
         "loadingTokens": "Loading token list…",
         "loadModelsFailed": "Failed to load upstream models for this API key.",
         "loadTokensFailed": "Failed to load tokens for this site.",
         "modelIdRequiredDescription_one": "Select or enter a model ID for all selected API keys to enable export (missing: {{count}}).",
         "modelIdRequiredDescription_other": "Select or enter a model ID for all selected API keys to enable export (missing: {{count}}).",
         "modelIdRequiredTitle": "Model ID required",
+        "modelSearchLimited": "Showing the first {{visible}} of {{count}} models. Keep typing to narrow the list.",
         "noModelsDescription": "No upstream models were returned for this API key. Kilo Code typically requires a model ID — please enter one manually.",
         "noModelsTitle": "No models",
         "nothingToExportDescription": "Select at least one exportable token/site to enable copy/download.",
         "nothingToExportTitle": "Nothing to export",
         "noTokensDescription": "This site will be skipped until a token is created.",
         "noTokensTitle": "No tokens available",
-        "tokenCreated": "Token created"
+        "settingsFileTooLargeMultiple": "This file is too large for Kilo Code import. Select fewer providers, or copy the configuration and merge it manually.",
+        "settingsFileTooLargeSingle": "This file is too large for Kilo Code import. Copy the configuration and merge it manually.",
+        "tokenCreated": "Token created",
+        "v7ProviderModelsRequired": "Enter a model ID, retry discovery, or deselect this provider."
       },
       "placeholders": {
         "currentApiConfigName": "Select current profile",
         "modelId": "Search or enter model ID",
         "selectSites": "Select sites",
         "selectTokens": "Select tokens"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic Messages",
+        "openAICompatible": "OpenAI Compatible",
+        "openAIResponses": "OpenAI Responses"
       },
       "targets": {
         "kiloV7": "Kilo Code 7.x",

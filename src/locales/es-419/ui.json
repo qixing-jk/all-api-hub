@@ -307,7 +307,9 @@
         "copyLegacyApiConfigs": "Copiar apiConfigs heredado",
         "createDefaultToken": "Crear token predeterminado",
         "downloadKiloV7Settings": "Descargar ajustes de Kilo 7.x",
-        "downloadLegacySettings": "Descargar ajustes heredados"
+        "downloadLegacySettings": "Descargar ajustes heredados",
+        "removeManualModel": "Quitar modelo manual",
+        "retryModels": "Reintentar detección de modelos"
       },
       "description": "Genera perfiles de proveedor de Kilo Code / Roo Code desde tus sitios y tokens seleccionados.",
       "descriptions": {
@@ -316,18 +318,25 @@
         "selectedSites": "Sitios seleccionados: {{sites}}, claves seleccionadas: {{keys}}."
       },
       "help": {
-        "kiloV7CopyInstructions": "Si necesitas mantener la configuración manualmente, haz clic en “Copiar configuración del proveedor” y combina el contenido copiado con el campo provider de nivel superior del JSON de ajustes.",
-        "kiloV7DownloadInstructions": "Haz clic en “Descargar ajustes de Kilo 7.x”. Luego, en Kilo Code, haz clic en el engranaje para abrir Ajustes, ve a About Kilo Code → Import, selecciona el archivo kilo-settings.json descargado, revisa el contenido que se importará y guarda los cambios.",
+        "kiloV7ApiKeyEditorNote": "Después de importar, Kilo Code puede mostrar vacío el campo de API key del provider. Es una limitación conocida del editor: las claves integradas importadas se guardan por separado del estado de autenticación del editor y siguen disponibles durante la ejecución.",
+        "kiloV7CatalogInstructions": "Cada API key seleccionada se convierte en un provider con un nombre legible. Incluye todos los ID de modelo normalizados detectados mediante esa API y cualquier ID ingresado manualmente para el provider; incluirlos no garantiza que cada modelo funcione en todos los flujos. Elige el model predeterminado y, si exportas varios providers, también el provider predeterminado.",
+        "kiloV7CopyInstructions": "Haz clic en “Copiar configuración del proveedor” para copiar un fragmento combinable de nivel superior que contiene provider y model. Combina ambos campos con tu JSON de ajustes; el fragmento copiado no es un archivo de importación completo.",
+        "kiloV7DownloadInstructions": "Haz clic en “Descargar ajustes de Kilo 7.x” y, en Kilo Code, importa el archivo kilo-settings.json descargado desde Ajustes → About Kilo Code → Import. Revisa los ajustes importados y guárdalos.",
         "legacyCopyInstructions": "Haz clic en “Copiar apiConfigs heredado” y pega el contenido en providerProfiles.apiConfigs de los ajustes de Roo Code o Kilo Code 5.x.",
         "legacyDownloadInstructions": "Si necesitas un archivo de ajustes completo, haz clic en “Descargar ajustes heredados” para obtener kilo-code-settings.json e impórtalo mediante la función de importación de ajustes de la versión correspondiente.",
+        "legacySingleModelInstructions": "Las exportaciones para Roo Code y Kilo Code 5.x heredados admiten un modelo por perfil. Selecciona el modelo que se usará antes de copiar o descargar.",
         "perSiteDescription": "Selecciona sitios para cargar tokens automáticamente. El primer token queda preseleccionado y puedes seleccionar varios tokens por sitio.",
         "perSiteTitle": "Exportación por sitio",
-        "usageTitle": "Cómo usarlo"
+        "usageTitle": "Usar la exportación"
       },
       "labels": {
         "currentApiConfigName": "Perfil actual",
+        "defaultModel": "Modelo predeterminado",
+        "defaultProvider": "Proveedor predeterminado",
         "exportTarget": "Destino de exportación",
+        "legacyModelId": "ID del modelo",
         "modelId": "Model ID",
+        "providerProtocol": "Protocolo de API",
         "selectedSites": "Sitios seleccionados",
         "selectedTokens": "Tokens seleccionados"
       },
@@ -339,6 +348,7 @@
         "createTokenFailed": "No se pudo crear el token.",
         "downloadedSettings": "Archivo de ajustes descargado",
         "downloadFailed": "No se pudo descargar el archivo de ajustes",
+        "invalidProfile": "Este perfil tiene una URL base no válida o no tiene clave de API. Actualiza el perfil antes de exportar.",
         "loadingTokens": "Cargando lista de tokens…",
         "loadModelsFailed": "No se pudieron cargar los modelos upstream para esta API key.",
         "loadTokensFailed": "No se pudieron cargar los tokens de este sitio.",
@@ -346,19 +356,28 @@
         "modelIdRequiredDescription_many": "Selecciona o ingresa un Model ID para todas las API keys seleccionadas para habilitar la exportación (faltan: {{count}}).",
         "modelIdRequiredDescription_other": "Selecciona o ingresa un Model ID para todas las API keys seleccionadas para habilitar la exportación (faltan: {{count}}).",
         "modelIdRequiredTitle": "Model ID obligatorio",
+        "modelSearchLimited": "Se muestran los primeros {{visible}} de {{count}} modelos. Sigue escribiendo para reducir la lista.",
         "noModelsDescription": "No se devolvieron modelos upstream para esta API key. Kilo Code normalmente requiere un Model ID; ingrésalo manualmente.",
         "noModelsTitle": "Sin modelos",
         "nothingToExportDescription": "Selecciona al menos un token/sitio exportable para habilitar copiar/descargar.",
         "nothingToExportTitle": "Nada para exportar",
         "noTokensDescription": "Este sitio se omitirá hasta que se cree un token.",
         "noTokensTitle": "No hay tokens disponibles",
-        "tokenCreated": "Token creado"
+        "settingsFileTooLargeMultiple": "Este archivo supera el límite de importación de Kilo Code. Selecciona menos proveedores o copia la configuración y combínala manualmente.",
+        "settingsFileTooLargeSingle": "Este archivo supera el límite de importación de Kilo Code. Copia la configuración y combínala manualmente.",
+        "tokenCreated": "Token creado",
+        "v7ProviderModelsRequired": "Ingresa un ID de modelo, reintenta la detección o deselecciona este proveedor."
       },
       "placeholders": {
         "currentApiConfigName": "Seleccionar perfil actual",
         "modelId": "Buscar o ingresar Model ID",
         "selectSites": "Seleccionar sitios",
         "selectTokens": "Seleccionar tokens"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic Messages",
+        "openAICompatible": "OpenAI Compatible",
+        "openAIResponses": "OpenAI Responses"
       },
       "targets": {
         "kiloV7": "Kilo Code 7.x",

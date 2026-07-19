@@ -3,38 +3,54 @@ import { describe, expect, it } from "vitest"
 import {
   buildKiloCodeApiConfigs,
   buildKiloCodeV7SettingsFile,
+  getKiloCodeApiConfigProfileNames,
   KILO_CODE_EXPORT_FILENAMES,
   KILO_CODE_EXPORT_TARGETS,
+  KILO_CODE_PROVIDER_PROTOCOLS,
+  type KiloCodeDefaultModelSelection,
 } from "~/services/integrations/kiloCodeExport"
+import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
 
-const v7Selection = {
-  accountId: "account-a",
-  siteName: "Example",
-  baseUrl: "https://api.example.invalid",
-  tokenId: 7,
-  tokenName: "Default",
-  tokenKey: "example-key",
-  modelId: "example-model",
+const preparedCatalog = prepareKiloCodeV7Catalog([
+  {
+    selectionId: "account-a:7",
+    accountId: "account-a",
+    siteName: "Example",
+    baseUrl: "https://api.example.invalid",
+    tokenId: 7,
+    tokenName: "Default",
+    tokenKey: "example-key",
+    providerName: "Example - Default",
+    discoveredModelIds: ["model-b", "model-a"],
+  },
+])
+
+const defaultModel: KiloCodeDefaultModelSelection = {
+  selectionId: "account-a:7",
+  modelId: "model-b",
 }
 
 describe("buildKiloCodeV7SettingsFile", () => {
-  it("builds a Kilo Code 7.x provider and selects its model", () => {
+  it("builds named multi-model providers and selects the explicit default", () => {
     const result = buildKiloCodeV7SettingsFile({
-      selections: [v7Selection],
-      now: () => new Date("2026-07-13T00:00:00.000Z"),
+      catalog: preparedCatalog,
+      defaultModel,
+      now: () => new Date("2026-07-17T00:00:00.000Z"),
     })
-    const providerId = Object.keys(result.provider)[0]
+    const providerId = preparedCatalog.providers[0]!.providerId
 
     expect(result).toEqual({
       _meta: {
         version: 1,
-        exportedAt: "2026-07-13T00:00:00.000Z",
+        exportedAt: "2026-07-17T00:00:00.000Z",
       },
       provider: {
         [providerId]: {
+          name: "Example - Default",
           npm: "@ai-sdk/openai-compatible",
           models: {
-            "example-model": { name: "example-model" },
+            "model-a": { name: "model-a" },
+            "model-b": { name: "model-b" },
           },
           options: {
             apiKey: "example-key",
@@ -42,8 +58,70 @@ describe("buildKiloCodeV7SettingsFile", () => {
           },
         },
       },
-      model: `${providerId}/example-model`,
+      model: `${providerId}/model-b`,
     })
+  })
+
+  it.each([
+    [
+      KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
+      "@ai-sdk/openai-compatible",
+    ],
+    [KILO_CODE_PROVIDER_PROTOCOLS.OpenAIResponses, "@ai-sdk/openai"],
+    [KILO_CODE_PROVIDER_PROTOCOLS.AnthropicMessages, "@ai-sdk/anthropic"],
+  ] as const)(
+    "maps %s to the corresponding AI SDK package",
+    (protocol, npm) => {
+      const catalog = {
+        ...preparedCatalog,
+        providers: [{ ...preparedCatalog.providers[0]!, protocol }],
+      }
+      const result = buildKiloCodeV7SettingsFile({
+        catalog,
+        defaultModel,
+      })
+
+      expect(Object.values(result.provider)[0]?.npm).toBe(npm)
+    },
+  )
+
+  it("selects a slash-containing model from a non-first provider", () => {
+    const catalog = prepareKiloCodeV7Catalog([
+      {
+        selectionId: "account-a:7",
+        accountId: "account-a",
+        siteName: "First Example",
+        baseUrl: "https://first.example.invalid",
+        tokenId: 7,
+        tokenName: "Default",
+        tokenKey: "first-example-key",
+        discoveredModelIds: ["model-a"],
+      },
+      {
+        selectionId: "account-b:8",
+        accountId: "account-b",
+        siteName: "Second Example",
+        baseUrl: "https://second.example.invalid",
+        tokenId: 8,
+        tokenName: "Default",
+        tokenKey: "second-example-key",
+        discoveredModelIds: ["other-model", "vendor/model-b"],
+      },
+    ])
+    const selectedProvider = catalog.providers[1]!
+
+    const result = buildKiloCodeV7SettingsFile({
+      catalog,
+      defaultModel: {
+        selectionId: selectedProvider.selectionId,
+        modelId: "vendor/model-b",
+      },
+    })
+
+    expect(result.provider[selectedProvider.providerId]?.models).toMatchObject({
+      "vendor/model-b": { name: "vendor/model-b" },
+    })
+    expect(result.model).toBe(`${selectedProvider.providerId}/vendor/model-b`)
   })
 
   it("exposes the supported export targets", () => {
@@ -57,102 +135,279 @@ describe("buildKiloCodeV7SettingsFile", () => {
     })
   })
 
-  it("keeps the provider ID stable when only the secret changes", () => {
-    const first = buildKiloCodeV7SettingsFile({ selections: [v7Selection] })
-    const second = buildKiloCodeV7SettingsFile({
-      selections: [{ ...v7Selection, tokenKey: "rotated-example-key" }],
-    })
-
-    expect(Object.keys(first.provider)[0]).toBe(Object.keys(second.provider)[0])
+  it("rejects an empty prepared catalog", () => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        catalog: { providers: [], providerCount: 0, modelCount: 0 },
+        defaultModel,
+      }),
+    ).toThrow("Select at least one runtime key")
   })
 
-  it("hashes non-BMP provider identities by Unicode character", () => {
-    const result = buildKiloCodeV7SettingsFile({
-      selections: [{ ...v7Selection, accountId: "account-😀" }],
-    })
-
-    expect(Object.keys(result.provider)).toEqual(["example-default-f58ad972"])
+  it("requires an explicit default model", () => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        catalog: preparedCatalog,
+        defaultModel: undefined as unknown as KiloCodeDefaultModelSelection,
+      }),
+    ).toThrow("Kilo Code default model is required")
   })
 
-  it("falls back to a settings-safe provider label for non-Latin names", () => {
-    const result = buildKiloCodeV7SettingsFile({
-      selections: [
-        {
-          ...v7Selection,
-          siteName: "示例",
-          tokenName: "默认",
-        },
-      ],
-    })
-
-    expect(Object.keys(result.provider)[0]).toMatch(/^provider-[a-f0-9]{8}$/)
+  it("requires the default provider to be present in the catalog", () => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        catalog: preparedCatalog,
+        defaultModel: { selectionId: "missing-selection", modelId: "model-b" },
+      }),
+    ).toThrow("Kilo Code default provider must be exported")
   })
 
-  it("creates unique, settings-safe provider IDs", () => {
-    const result = buildKiloCodeV7SettingsFile({
-      selections: [
-        v7Selection,
-        {
-          ...v7Selection,
-          accountId: "account-b",
-          siteName: "Second Example",
-          tokenId: 8,
-        },
-      ],
-    })
-    const providerIds = Object.keys(result.provider)
-
-    expect(new Set(providerIds)).toHaveLength(2)
-    expect(providerIds).toEqual(
-      expect.arrayContaining([
-        expect.stringMatching(/^[a-z0-9][a-z0-9-]*$/),
-        expect.stringMatching(/^[a-z0-9][a-z0-9-]*$/),
-      ]),
-    )
-  })
-
-  it("rejects an empty selection", () => {
-    expect(() => buildKiloCodeV7SettingsFile({ selections: [] })).toThrow(
-      "Select at least one runtime key",
-    )
+  it("requires the default model to be present in its provider catalog", () => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        catalog: preparedCatalog,
+        defaultModel: { selectionId: "account-a:7", modelId: "missing-model" },
+      }),
+    ).toThrow("Kilo Code default model must exist in its provider catalog")
   })
 
   it.each([
-    ["blank token key", { tokenKey: "  " }],
-    ["blank model ID", { modelId: "  " }],
-    ["invalid base URL", { baseUrl: "not-a-url" }],
-    ["non-HTTP base URL", { baseUrl: "ftp://api.example.invalid" }],
-  ])("rejects %s", (_name, overrides) => {
-    expect(() =>
-      buildKiloCodeV7SettingsFile({
-        selections: [{ ...v7Selection, ...overrides }],
-      }),
-    ).toThrow()
-  })
-
-  it("rejects duplicate generated provider IDs", () => {
-    expect(() =>
-      buildKiloCodeV7SettingsFile({
-        selections: [
-          v7Selection,
-          { ...v7Selection, accountId: "account-b", tokenId: 8 },
+    [
+      "duplicate provider IDs",
+      {
+        providers: [
+          {
+            ...preparedCatalog.providers[0]!,
+            providerId: preparedCatalog.providers[0]!.providerId,
+          },
+          {
+            ...preparedCatalog.providers[0]!,
+            selectionId: "second",
+            providerId: preparedCatalog.providers[0]!.providerId,
+          },
         ],
-        generateProviderId: () => "duplicate-provider",
-      }),
-    ).toThrow("Kilo Code provider IDs must be unique")
-  })
+        providerCount: 2,
+        modelCount: 2,
+      },
+      "Kilo Code provider IDs must be unique",
+    ],
+    [
+      "invalid provider protocols",
+      {
+        providers: [
+          {
+            ...preparedCatalog.providers[0]!,
+            protocol: "unknown-protocol",
+          },
+        ],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider protocol is unsupported",
+    ],
+    [
+      "blank selection IDs",
+      {
+        providers: [{ ...preparedCatalog.providers[0]!, selectionId: "   " }],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider selection ID cannot be blank",
+    ],
+    [
+      "blank provider IDs",
+      {
+        providers: [{ ...preparedCatalog.providers[0]!, providerId: "   " }],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider ID cannot be blank",
+    ],
+    [
+      "settings-unsafe provider IDs",
+      {
+        providers: [
+          { ...preparedCatalog.providers[0]!, providerId: "Unsafe ID" },
+        ],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider IDs must be settings-safe",
+    ],
+    [
+      "blank provider names",
+      {
+        providers: [{ ...preparedCatalog.providers[0]!, providerName: "   " }],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider name cannot be blank",
+    ],
+    [
+      "empty models",
+      {
+        providers: [{ ...preparedCatalog.providers[0]!, modelIds: [] }],
+        providerCount: 1,
+        modelCount: 0,
+      },
+      "Kilo Code provider model catalog cannot be empty",
+    ],
+    [
+      "blank token key",
+      {
+        providers: [{ ...preparedCatalog.providers[0]!, tokenKey: " " }],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider token key cannot be blank",
+    ],
+    [
+      "invalid base URL",
+      {
+        providers: [{ ...preparedCatalog.providers[0]!, baseURL: "not-a-url" }],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider base URL must be a valid HTTP or HTTPS URL",
+    ],
+    [
+      "non-HTTP base URL",
+      {
+        providers: [
+          {
+            ...preparedCatalog.providers[0]!,
+            baseURL: "ftp://api.example.invalid/v1",
+          },
+        ],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider base URL must be a valid HTTP or HTTPS URL",
+    ],
+    [
+      "non-normalized model IDs",
+      {
+        providers: [
+          {
+            ...preparedCatalog.providers[0]!,
+            modelIds: ["model-a", " model-b"],
+          },
+        ],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider model IDs must be normalized",
+    ],
+    [
+      "count mismatch",
+      { providers: preparedCatalog.providers, providerCount: 2, modelCount: 2 },
+      "Kilo Code catalog provider count is inconsistent",
+    ],
+    [
+      "model count mismatch",
+      { providers: preparedCatalog.providers, providerCount: 1, modelCount: 3 },
+      "Kilo Code catalog model count is inconsistent",
+    ],
+    [
+      "duplicate selection IDs",
+      {
+        providers: [
+          preparedCatalog.providers[0]!,
+          {
+            ...preparedCatalog.providers[0]!,
+            providerId: "second-provider-id",
+          },
+        ],
+        providerCount: 2,
+        modelCount: 4,
+      },
+      "Kilo Code provider selection IDs must be unique",
+    ],
+  ] as const)(
+    "rejects forged prepared catalogs with %s",
+    (_label, catalog, message) => {
+      expect(() =>
+        buildKiloCodeV7SettingsFile({
+          catalog: catalog as typeof preparedCatalog,
+          defaultModel,
+        }),
+      ).toThrow(message)
+    },
+  )
 
-  it("rejects generated provider IDs that are not settings-safe", () => {
+  it("rejects forged duplicate model IDs instead of silently overwriting the map", () => {
     expect(() =>
       buildKiloCodeV7SettingsFile({
-        selections: [v7Selection],
-        generateProviderId: () => "Unsafe Provider",
+        catalog: {
+          ...preparedCatalog,
+          providers: [
+            {
+              ...preparedCatalog.providers[0]!,
+              modelIds: ["model-a", "model-a"],
+            },
+          ],
+          modelCount: 2,
+        },
+        defaultModel,
       }),
-    ).toThrow("Kilo Code provider IDs must be settings-safe")
+    ).toThrow("Kilo Code provider model IDs must be unique")
+  })
+
+  it("rejects forged model catalogs that do not use canonical code-point order", () => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        catalog: {
+          ...preparedCatalog,
+          providers: [
+            {
+              ...preparedCatalog.providers[0]!,
+              modelIds: ["model-b", "model-a"],
+            },
+          ],
+        },
+        defaultModel,
+      }),
+    ).toThrow("Kilo Code provider model IDs must use canonical order")
+  })
+
+  it("rejects forged catalogs with duplicate provider display names", () => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        catalog: {
+          providers: [
+            preparedCatalog.providers[0]!,
+            {
+              ...preparedCatalog.providers[0]!,
+              selectionId: "account-b:8",
+              providerId: "second-provider-id",
+            },
+          ],
+          providerCount: 2,
+          modelCount: 4,
+        },
+        defaultModel,
+      }),
+    ).toThrow("Kilo Code provider names must be unique")
   })
 })
 
 describe("buildKiloCodeApiConfigs", () => {
+  it("derives legacy profile names without constructing secret-bearing configs", () => {
+    expect(
+      getKiloCodeApiConfigProfileNames({
+        selections: [
+          {
+            accountId: "a",
+            siteName: "Example",
+            baseUrl: "https://x.test",
+            tokenId: 1,
+            tokenName: "Default",
+            tokenKey: "secret",
+          },
+        ],
+      }),
+    ).toEqual(["Example - Default"])
+  })
   it("normalizes openAiBaseUrl to end with /v1 without duplicating segments", () => {
     const { apiConfigs } = buildKiloCodeApiConfigs({
       selections: [
@@ -213,6 +468,36 @@ describe("buildKiloCodeApiConfigs", () => {
     ])
   })
 
+  it("returns profile names in locale order independently of config insertion order", () => {
+    const { apiConfigs, profileNames } = buildKiloCodeApiConfigs({
+      selections: [
+        {
+          accountId: "z",
+          siteName: "Zulu",
+          baseUrl: "https://z.example.invalid",
+          tokenId: 1,
+          tokenName: "Default",
+          tokenKey: "example-z-key",
+        },
+        {
+          accountId: "a",
+          siteName: "Alpha",
+          baseUrl: "https://a.example.invalid",
+          tokenId: 2,
+          tokenName: "Default",
+          tokenKey: "example-a-key",
+        },
+      ],
+      generateId: (name) => `id-${name}`,
+    })
+
+    expect(Object.keys(apiConfigs)).toEqual([
+      "Zulu - Default",
+      "Alpha - Default",
+    ])
+    expect(profileNames).toEqual(["Alpha - Default", "Zulu - Default"])
+  })
+
   it("falls back to deterministic numbering when duplicates still collide after domain disambiguation", () => {
     const { profileNames } = buildKiloCodeApiConfigs({
       selections: [
@@ -262,7 +547,7 @@ describe("buildKiloCodeApiConfigs", () => {
           tokenId: 1,
           tokenName: "Default",
           tokenKey: "sk-test",
-          modelId: "gpt-4o-mini",
+          legacyModelId: "gpt-4o-mini",
         },
       ],
       generateId: (name) => `id-${name}`,

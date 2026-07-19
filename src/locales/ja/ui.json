@@ -292,7 +292,9 @@
         "copyLegacyApiConfigs": "旧形式の apiConfigs をコピー",
         "createDefaultToken": "既定トークンを作成",
         "downloadKiloV7Settings": "Kilo 7.x 設定をダウンロード",
-        "downloadLegacySettings": "旧形式の設定をダウンロード"
+        "downloadLegacySettings": "旧形式の設定をダウンロード",
+        "removeManualModel": "手動モデルを削除",
+        "retryModels": "モデル検出を再試行"
       },
       "description": "選択したサイトとトークンから Kilo Code / Roo Code のプロバイダープロファイルを生成します。",
       "descriptions": {
@@ -301,18 +303,25 @@
         "selectedSites": "選択したサイト: {{sites}}、選択したキー: {{keys}}。"
       },
       "help": {
-        "kiloV7CopyInstructions": "設定を手動で管理する場合は、「プロバイダー設定をコピー」をクリックし、コピーした内容を設定 JSON のトップレベルにある provider フィールドへマージします。",
-        "kiloV7DownloadInstructions": "「Kilo 7.x 設定をダウンロード」をクリックします。次に Kilo Code で歯車アイコンをクリックして設定を開き、About Kilo Code → Import に移動します。ダウンロードした kilo-settings.json を選択し、インポート内容を確認してから保存します。",
+        "kiloV7ApiKeyEditorNote": "インポート後、Kilo Code の provider 編集画面で API キーフィールドが空に見える場合があります。これは既知の制限です。インポートされたインラインキーと編集画面の認証状態は別に保存されるため、実行時にはそのキーを引き続き使用できます。",
+        "kiloV7CatalogInstructions": "選択した API キーごとに、読みやすい名前の provider を出力します。API から検出して正規化したすべてのモデル ID と、その provider に手動で入力したモデル ID が含まれます。含まれていても、すべてのモデルがあらゆるワークフローで動作するとは限りません。既定の model を選択し、複数の provider をエクスポートする場合は既定の provider も選択してください。",
+        "kiloV7CopyInstructions": "「プロバイダー設定をコピー」をクリックすると、provider と model を含む、マージ可能なトップレベルの断片をコピーできます。両方のフィールドを設定 JSON にマージしてください。コピーした断片だけでは完全なインポートファイルになりません。",
+        "kiloV7DownloadInstructions": "「Kilo 7.x 設定をダウンロード」をクリックし、Kilo Code の設定 → About Kilo Code → Import から、ダウンロードした kilo-settings.json をインポートします。インポート内容を確認して保存してください。",
         "legacyCopyInstructions": "「旧形式の apiConfigs をコピー」をクリックし、内容を Roo Code または Kilo Code 5.x の設定にある providerProfiles.apiConfigs へ貼り付けます。",
         "legacyDownloadInstructions": "完全な設定ファイルが必要な場合は、「旧形式の設定をダウンロード」をクリックして kilo-code-settings.json を取得し、該当バージョンの設定インポート機能からインポートします。",
+        "legacySingleModelInstructions": "旧形式の Roo Code と Kilo Code 5.x へのエクスポートでは、プロファイルごとに 1 つのモデルを使用します。コピーまたはダウンロードする前に使用するモデルを選択してください。",
         "perSiteDescription": "サイトを選択してトークンを自動読み込みします。最初のトークンが事前選択され、サイトごとに複数トークンを選択できます。",
         "perSiteTitle": "サイト別エクスポート",
-        "usageTitle": "使用方法"
+        "usageTitle": "エクスポートの使用方法"
       },
       "labels": {
         "currentApiConfigName": "現在のプロファイル",
+        "defaultModel": "既定のモデル",
+        "defaultProvider": "既定のプロバイダー",
         "exportTarget": "エクスポート先",
+        "legacyModelId": "モデル ID",
         "modelId": "モデル ID",
+        "providerProtocol": "API プロトコル",
         "selectedSites": "選択したサイト",
         "selectedTokens": "選択したトークン"
       },
@@ -324,24 +333,34 @@
         "createTokenFailed": "トークンの作成に失敗しました。",
         "downloadedSettings": "設定ファイルをダウンロードしました",
         "downloadFailed": "設定ファイルのダウンロードに失敗しました",
+        "invalidProfile": "このプロファイルのベース URL が無効か、API キーがありません。エクスポートする前にプロファイルを更新してください。",
         "loadingTokens": "トークン一覧を読み込み中…",
         "loadModelsFailed": "この API キーの上流モデル読み込みに失敗しました。",
         "loadTokensFailed": "このサイトのトークン読み込みに失敗しました。",
         "modelIdRequiredDescription_other": "エクスポートを有効にするには、選択したすべての API キーにモデル ID を選択または入力してください（不足: {{count}}）。",
         "modelIdRequiredTitle": "モデル ID が必要です",
+        "modelSearchLimited": "{{count}} 件中、最初の {{visible}} 件を表示しています。入力を続けて絞り込んでください。",
         "noModelsDescription": "この API キーでは上流モデルが返されませんでした。Kilo Code では通常モデル ID が必要なため、手動入力してください。",
         "noModelsTitle": "モデルがありません",
         "nothingToExportDescription": "コピー / ダウンロードを有効にするには、エクスポート可能なトークンまたはサイトを少なくとも 1 つ選択してください。",
         "nothingToExportTitle": "エクスポート対象がありません",
         "noTokensDescription": "トークンが作成されるまで、このサイトはスキップされます。",
         "noTokensTitle": "利用可能なトークンがありません",
-        "tokenCreated": "トークンを作成しました"
+        "settingsFileTooLargeMultiple": "このファイルは Kilo Code のインポート上限を超えています。プロバイダーを減らすか、設定をコピーして手動で統合してください。",
+        "settingsFileTooLargeSingle": "このファイルは Kilo Code のインポート上限を超えています。設定をコピーして手動で統合してください。",
+        "tokenCreated": "トークンを作成しました",
+        "v7ProviderModelsRequired": "モデル ID を入力するか、モデル検出を再試行するか、このプロバイダーの選択を解除してください。"
       },
       "placeholders": {
         "currentApiConfigName": "現在のプロファイルを選択",
         "modelId": "モデル ID を検索または入力",
         "selectSites": "サイトを選択",
         "selectTokens": "トークンを選択"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic Messages",
+        "openAICompatible": "OpenAI Compatible",
+        "openAIResponses": "OpenAI Responses"
       },
       "targets": {
         "kiloV7": "Kilo Code 7.x",

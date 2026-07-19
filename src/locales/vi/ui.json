@@ -292,7 +292,9 @@
         "copyLegacyApiConfigs": "Sao chép apiConfigs kiểu cũ",
         "createDefaultToken": "Tạo API Key mặc định",
         "downloadKiloV7Settings": "Tải cài đặt Kilo 7.x",
-        "downloadLegacySettings": "Tải cài đặt kiểu cũ"
+        "downloadLegacySettings": "Tải cài đặt kiểu cũ",
+        "removeManualModel": "Xóa mô hình nhập thủ công",
+        "retryModels": "Thử tìm mô hình lại"
       },
       "description": "Tạo cấu hình providerProfiles cho Kilo Code / Roo Code dựa trên các trang web và API Key đã chọn.",
       "descriptions": {
@@ -301,18 +303,25 @@
         "selectedSites": "Trang web đã chọn: {{sites}}, API Key đã chọn: {{keys}}."
       },
       "help": {
-        "kiloV7CopyInstructions": "Nếu cần tự duy trì cấu hình, hãy nhấp vào “Sao chép cấu hình nhà cung cấp” và hợp nhất nội dung đã sao chép vào trường provider ở cấp cao nhất của JSON cài đặt.",
-        "kiloV7DownloadInstructions": "Nhấp vào “Tải cài đặt Kilo 7.x”. Sau đó, trong Kilo Code, nhấp vào biểu tượng bánh răng để mở Cài đặt, vào About Kilo Code → Import, chọn tệp kilo-settings.json đã tải xuống, xem lại nội dung sẽ nhập rồi lưu.",
+        "kiloV7ApiKeyEditorNote": "Sau khi nhập, Kilo Code có thể hiển thị trống trường API key của provider. Đây là hạn chế đã biết của trình chỉnh sửa: khóa nội tuyến đã nhập được lưu riêng với trạng thái xác thực của trình chỉnh sửa và vẫn dùng được khi chạy.",
+        "kiloV7CatalogInstructions": "Mỗi API key đã chọn trở thành một provider có tên dễ đọc. Provider bao gồm tất cả ID mô hình đã chuẩn hóa được phát hiện từ API và mọi ID được nhập thủ công cho provider đó; việc có trong bản xuất không đảm bảo mọi mô hình hoạt động với mọi quy trình. Chọn model mặc định; khi xuất nhiều provider, hãy chọn cả provider mặc định.",
+        "kiloV7CopyInstructions": "Nhấp vào “Sao chép cấu hình nhà cung cấp” để sao chép một đoạn cấp cao nhất có thể hợp nhất, gồm cả provider và model. Hãy hợp nhất cả hai trường vào JSON cài đặt; đoạn đã sao chép không phải là tệp nhập hoàn chỉnh.",
+        "kiloV7DownloadInstructions": "Nhấp vào “Tải cài đặt Kilo 7.x”, rồi nhập tệp kilo-settings.json đã tải xuống trong Kilo Code tại Cài đặt → About Kilo Code → Import. Xem lại cài đặt đã nhập rồi lưu.",
         "legacyCopyInstructions": "Nhấp vào “Sao chép apiConfigs kiểu cũ”, rồi dán nội dung vào providerProfiles.apiConfigs trong cài đặt của Roo Code hoặc Kilo Code 5.x.",
         "legacyDownloadInstructions": "Nếu cần tệp cài đặt đầy đủ, hãy nhấp vào “Tải cài đặt kiểu cũ” để lấy kilo-code-settings.json rồi nhập tệp bằng tính năng nhập cài đặt của phiên bản tương ứng.",
+        "legacySingleModelInstructions": "Bản xuất cho Roo Code và Kilo Code 5.x kiểu cũ hỗ trợ một mô hình cho mỗi hồ sơ. Chọn mô hình cần dùng trước khi sao chép hoặc tải xuống.",
         "perSiteDescription": "Sau khi chọn trang web để xuất, các API Key sẽ tự động được tải, và API Key đầu tiên được chọn mặc định (hỗ trợ chọn nhiều cho mỗi trang web).",
         "perSiteTitle": "Xuất theo trang web",
-        "usageTitle": "Cách sử dụng"
+        "usageTitle": "Sử dụng bản xuất"
       },
       "labels": {
         "currentApiConfigName": "Cấu hình hiện tại",
+        "defaultModel": "Mô hình mặc định",
+        "defaultProvider": "Nhà cung cấp mặc định",
         "exportTarget": "Đích xuất",
+        "legacyModelId": "ID mô hình",
         "modelId": "ID mô hình",
+        "providerProtocol": "Giao thức API",
         "selectedSites": "Các trang web đã chọn",
         "selectedTokens": "Các API Key đã chọn"
       },
@@ -324,24 +333,34 @@
         "createTokenFailed": "Tạo API Key thất bại.",
         "downloadedSettings": "Đã tải xuống tệp cài đặt",
         "downloadFailed": "Tải tệp cài đặt thất bại",
+        "invalidProfile": "Hồ sơ này có URL cơ sở không hợp lệ hoặc thiếu khóa API. Hãy cập nhật hồ sơ trước khi xuất.",
         "loadingTokens": "Đang tải danh sách API Key...",
         "loadModelsFailed": "Tải danh sách mô hình của API Key này thất bại.",
         "loadTokensFailed": "Tải API Key thất bại.",
         "modelIdRequiredDescription_other": "Vui lòng chọn hoặc nhập model ID cho tất cả API Key đã chọn trước khi xuất (còn thiếu {{count}}).",
         "modelIdRequiredTitle": "Yêu cầu ID mô hình",
+        "modelSearchLimited": "Chỉ hiển thị {{visible}} mô hình đầu tiên trong tổng số {{count}}. Hãy tiếp tục nhập để thu hẹp danh sách.",
         "noModelsDescription": "API Key này không trả về mô hình khả dụng. Kilo Code thực tế sử dụng thường yêu cầu ID mô hình, vui lòng nhập thủ công.",
         "noModelsTitle": "Không có mô hình",
         "nothingToExportDescription": "Vui lòng chọn ít nhất một trang web/API Key có thể xuất trước khi sao chép/tải xuống.",
         "nothingToExportTitle": "Không có nội dung để xuất",
         "noTokensDescription": "Trang web này sẽ bị bỏ qua cho đến khi tạo API Key.",
         "noTokensTitle": "Chưa có API Key",
-        "tokenCreated": "Tạo API Key thành công"
+        "settingsFileTooLargeMultiple": "Tệp này vượt quá giới hạn nhập của Kilo Code. Hãy chọn ít nhà cung cấp hơn hoặc sao chép cấu hình và hợp nhất thủ công.",
+        "settingsFileTooLargeSingle": "Tệp này vượt quá giới hạn nhập của Kilo Code. Hãy sao chép cấu hình và hợp nhất thủ công.",
+        "tokenCreated": "Tạo API Key thành công",
+        "v7ProviderModelsRequired": "Hãy nhập ID mô hình, thử tìm mô hình lại hoặc bỏ chọn nhà cung cấp này."
       },
       "placeholders": {
         "currentApiConfigName": "Vui lòng chọn cấu hình hiện tại",
         "modelId": "Tìm kiếm hoặc nhập ID mô hình",
         "selectSites": "Vui lòng chọn trang web",
         "selectTokens": "Vui lòng chọn API Key"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic Messages",
+        "openAICompatible": "OpenAI Compatible",
+        "openAIResponses": "OpenAI Responses"
       },
       "targets": {
         "kiloV7": "Kilo Code 7.x",
