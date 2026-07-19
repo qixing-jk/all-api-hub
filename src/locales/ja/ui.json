@@ -329,6 +329,7 @@
         "loadTokensFailed": "このサイトのトークン読み込みに失敗しました。",
         "modelIdRequiredDescription_other": "エクスポートを有効にするには、選択したすべての API キーにモデル ID を選択または入力してください（不足: {{count}}）。",
         "modelIdRequiredTitle": "モデル ID が必要です",
+        "modelSearchLimited": "{{count}} 件中、最初の {{visible}} 件を表示しています。入力を続けて絞り込んでください。",
         "noModelsDescription": "この API キーでは上流モデルが返されませんでした。Kilo Code では通常モデル ID が必要なため、手動入力してください。",
         "noModelsTitle": "モデルがありません",
         "nothingToExportDescription": "コピー / ダウンロードを有効にするには、エクスポート可能なトークンまたはサイトを少なくとも 1 つ選択してください。",

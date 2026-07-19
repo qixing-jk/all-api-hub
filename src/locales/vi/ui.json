@@ -329,6 +329,7 @@
         "loadTokensFailed": "Tải API Key thất bại.",
         "modelIdRequiredDescription_other": "Vui lòng chọn hoặc nhập model ID cho tất cả API Key đã chọn trước khi xuất (còn thiếu {{count}}).",
         "modelIdRequiredTitle": "Yêu cầu ID mô hình",
+        "modelSearchLimited": "Chỉ hiển thị {{visible}} mô hình đầu tiên trong tổng số {{count}}. Hãy tiếp tục nhập để thu hẹp danh sách.",
         "noModelsDescription": "API Key này không trả về mô hình khả dụng. Kilo Code thực tế sử dụng thường yêu cầu ID mô hình, vui lòng nhập thủ công.",
         "noModelsTitle": "Không có mô hình",
         "nothingToExportDescription": "Vui lòng chọn ít nhất một trang web/API Key có thể xuất trước khi sao chép/tải xuống.",

@@ -329,6 +329,7 @@
         "loadTokensFailed": "載入金鑰失敗。",
         "modelIdRequiredDescription_other": "請為所有已選擇的金鑰選擇或輸入模型 ID 後再匯出（還缺 {{count}} 個）。",
         "modelIdRequiredTitle": "需要模型 ID",
+        "modelSearchLimited": "僅顯示前 {{visible}} 個（共 {{count}} 個）模型，請繼續輸入以縮小範圍。",
         "noModelsDescription": "該金鑰未返回可用模型。Kilo Code 實際使用通常需要模型 ID，請手動輸入。",
         "noModelsTitle": "無模型",
         "nothingToExportDescription": "請至少選擇一個可匯出的站點/金鑰後再進行複製/下載。",

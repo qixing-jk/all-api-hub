@@ -326,6 +326,7 @@
         "loadTokensFailed": "加载密钥失败。",
         "modelIdRequiredDescription": "请为所有已选择的密钥选择或输入模型 ID 后再导出（还缺 {{count}} 个）。",
         "modelIdRequiredTitle": "需要模型 ID",
+        "modelSearchLimited": "仅显示前 {{visible}} 个（共 {{count}} 个）模型，请继续输入以缩小范围。",
         "noModelsDescription": "该密钥未返回可用模型。Kilo Code 实际使用通常需要模型 ID，请手动输入。",
         "noModelsTitle": "无模型",
         "nothingToExportDescription": "请至少选择一个可导出的站点/密钥后再进行复制/下载。",

@@ -336,6 +336,7 @@
         "modelIdRequiredDescription_one": "Select or enter a model ID for all selected API keys to enable export (missing: {{count}}).",
         "modelIdRequiredDescription_other": "Select or enter a model ID for all selected API keys to enable export (missing: {{count}}).",
         "modelIdRequiredTitle": "Model ID required",
+        "modelSearchLimited": "Showing the first {{visible}} of {{count}} models. Keep typing to narrow the list.",
         "noModelsDescription": "No upstream models were returned for this API key. Kilo Code typically requires a model ID — please enter one manually.",
         "noModelsTitle": "No models",
         "nothingToExportDescription": "Select at least one exportable token/site to enable copy/download.",
