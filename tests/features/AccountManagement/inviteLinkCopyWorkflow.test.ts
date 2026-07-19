@@ -110,6 +110,23 @@ describe("runInviteLinkCopyWorkflow", () => {
     })
   })
 
+  it("uses the base URL as the label when the account name is blank", async () => {
+    const account = {
+      ...buildAccount("blank-name"),
+      name: "   ",
+      baseUrl: "https://example.invalid",
+    }
+
+    await runInviteLinkCopyWorkflow({
+      accounts: [account],
+      format: "labeled",
+    })
+
+    expect(clipboardWriteTextMock).toHaveBeenCalledWith(
+      "https://example.invalid: https://invite.example.invalid/blank-name",
+    )
+  })
+
   it("cancels pending requests and never writes stale clipboard data", async () => {
     const controller = new AbortController()
     fetchDisplayAccountInviteLinkMock.mockImplementation(

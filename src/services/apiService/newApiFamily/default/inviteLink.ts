@@ -10,6 +10,7 @@ interface InviteLinkImplementation {
   fetchInviteLink: (request: ApiServiceRequest) => Promise<string>
 }
 
+/** Builds a New API registration URL using the trimmed affiliate code. */
 export function buildInviteLink(baseUrl: string, inviteCode: string): string {
   const inviteUrl = new URL(INVITE_ROUTE_PATH, baseUrl)
   inviteUrl.searchParams.set("aff", inviteCode.trim())
