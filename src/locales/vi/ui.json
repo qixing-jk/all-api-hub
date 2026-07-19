@@ -292,7 +292,9 @@
         "copyLegacyApiConfigs": "Sao chép apiConfigs kiểu cũ",
         "createDefaultToken": "Tạo API Key mặc định",
         "downloadKiloV7Settings": "Tải cài đặt Kilo 7.x",
-        "downloadLegacySettings": "Tải cài đặt kiểu cũ"
+        "downloadLegacySettings": "Tải cài đặt kiểu cũ",
+        "removeManualModel": "Xóa mô hình nhập thủ công",
+        "retryModels": "Thử tìm mô hình lại"
       },
       "description": "Tạo cấu hình providerProfiles cho Kilo Code / Roo Code dựa trên các trang web và API Key đã chọn.",
       "descriptions": {
@@ -311,7 +313,9 @@
       },
       "labels": {
         "currentApiConfigName": "Cấu hình hiện tại",
+        "defaultModel": "Mô hình mặc định",
         "exportTarget": "Đích xuất",
+        "legacyModelId": "ID mô hình",
         "modelId": "ID mô hình",
         "selectedSites": "Các trang web đã chọn",
         "selectedTokens": "Các API Key đã chọn"
@@ -324,6 +328,7 @@
         "createTokenFailed": "Tạo API Key thất bại.",
         "downloadedSettings": "Đã tải xuống tệp cài đặt",
         "downloadFailed": "Tải tệp cài đặt thất bại",
+        "invalidProfile": "Hồ sơ này có URL cơ sở không hợp lệ hoặc thiếu khóa API. Hãy cập nhật hồ sơ trước khi xuất.",
         "loadingTokens": "Đang tải danh sách API Key...",
         "loadModelsFailed": "Tải danh sách mô hình của API Key này thất bại.",
         "loadTokensFailed": "Tải API Key thất bại.",
@@ -336,6 +341,7 @@
         "nothingToExportTitle": "Không có nội dung để xuất",
         "noTokensDescription": "Trang web này sẽ bị bỏ qua cho đến khi tạo API Key.",
         "noTokensTitle": "Chưa có API Key",
+        "settingsFileTooLargeSingle": "Tệp này vượt quá giới hạn nhập của Kilo Code. Hãy sao chép cấu hình và hợp nhất thủ công.",
         "tokenCreated": "Tạo API Key thành công"
       },
       "placeholders": {

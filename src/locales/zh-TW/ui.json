@@ -292,7 +292,9 @@
         "copyLegacyApiConfigs": "複製舊版 apiConfigs",
         "createDefaultToken": "建立預設金鑰",
         "downloadKiloV7Settings": "下載 Kilo 7.x 設定",
-        "downloadLegacySettings": "下載舊版設定"
+        "downloadLegacySettings": "下載舊版設定",
+        "removeManualModel": "移除手動模型",
+        "retryModels": "重試取得模型"
       },
       "description": "根據選中的站點和金鑰生成 Kilo Code / Roo Code 的 providerProfiles 配置。",
       "descriptions": {
@@ -311,7 +313,9 @@
       },
       "labels": {
         "currentApiConfigName": "當前配置",
+        "defaultModel": "預設模型",
         "exportTarget": "匯出目標",
+        "legacyModelId": "模型 ID",
         "modelId": "模型 ID",
         "selectedSites": "已選擇的站點",
         "selectedTokens": "已選擇的金鑰"
@@ -324,6 +328,7 @@
         "createTokenFailed": "建立金鑰失敗。",
         "downloadedSettings": "已下載設定檔案",
         "downloadFailed": "設定檔案下載失敗",
+        "invalidProfile": "此設定檔的基礎 URL 無效或缺少 API 金鑰。請先更新設定檔再匯出。",
         "loadingTokens": "正在載入金鑰列表…",
         "loadModelsFailed": "載入該金鑰的模型列表失敗。",
         "loadTokensFailed": "載入金鑰失敗。",
@@ -336,6 +341,7 @@
         "nothingToExportTitle": "無可匯出的內容",
         "noTokensDescription": "該站點將被跳過，直到建立金鑰。",
         "noTokensTitle": "暫無金鑰",
+        "settingsFileTooLargeSingle": "此檔案超過 Kilo Code 的匯入大小限制。請複製設定並手動合併。",
         "tokenCreated": "金鑰建立成功"
       },
       "placeholders": {

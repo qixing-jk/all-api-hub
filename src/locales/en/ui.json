@@ -298,7 +298,9 @@
         "copyLegacyApiConfigs": "Copy legacy apiConfigs",
         "createDefaultToken": "Create default token",
         "downloadKiloV7Settings": "Download Kilo 7.x settings",
-        "downloadLegacySettings": "Download legacy settings"
+        "downloadLegacySettings": "Download legacy settings",
+        "removeManualModel": "Remove manual model",
+        "retryModels": "Retry model discovery"
       },
       "description": "Generate Kilo Code / Roo Code provider profiles from your selected sites and tokens.",
       "descriptions": {
@@ -317,7 +319,9 @@
       },
       "labels": {
         "currentApiConfigName": "Current profile",
+        "defaultModel": "Default model",
         "exportTarget": "Export target",
+        "legacyModelId": "Model ID",
         "modelId": "Model ID",
         "selectedSites": "Selected sites",
         "selectedTokens": "Selected tokens"
@@ -330,6 +334,7 @@
         "createTokenFailed": "Failed to create token.",
         "downloadedSettings": "Settings file downloaded",
         "downloadFailed": "Failed to download settings file",
+        "invalidProfile": "This profile has an invalid base URL or missing API key. Update the profile before exporting.",
         "loadingTokens": "Loading token list…",
         "loadModelsFailed": "Failed to load upstream models for this API key.",
         "loadTokensFailed": "Failed to load tokens for this site.",
@@ -343,6 +348,7 @@
         "nothingToExportTitle": "Nothing to export",
         "noTokensDescription": "This site will be skipped until a token is created.",
         "noTokensTitle": "No tokens available",
+        "settingsFileTooLargeSingle": "This file is too large for Kilo Code import. Copy the configuration and merge it manually.",
         "tokenCreated": "Token created"
       },
       "placeholders": {

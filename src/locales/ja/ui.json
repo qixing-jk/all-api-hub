@@ -292,7 +292,9 @@
         "copyLegacyApiConfigs": "旧形式の apiConfigs をコピー",
         "createDefaultToken": "既定トークンを作成",
         "downloadKiloV7Settings": "Kilo 7.x 設定をダウンロード",
-        "downloadLegacySettings": "旧形式の設定をダウンロード"
+        "downloadLegacySettings": "旧形式の設定をダウンロード",
+        "removeManualModel": "手動モデルを削除",
+        "retryModels": "モデル検出を再試行"
       },
       "description": "選択したサイトとトークンから Kilo Code / Roo Code のプロバイダープロファイルを生成します。",
       "descriptions": {
@@ -311,7 +313,9 @@
       },
       "labels": {
         "currentApiConfigName": "現在のプロファイル",
+        "defaultModel": "既定のモデル",
         "exportTarget": "エクスポート先",
+        "legacyModelId": "モデル ID",
         "modelId": "モデル ID",
         "selectedSites": "選択したサイト",
         "selectedTokens": "選択したトークン"
@@ -324,6 +328,7 @@
         "createTokenFailed": "トークンの作成に失敗しました。",
         "downloadedSettings": "設定ファイルをダウンロードしました",
         "downloadFailed": "設定ファイルのダウンロードに失敗しました",
+        "invalidProfile": "このプロファイルのベース URL が無効か、API キーがありません。エクスポートする前にプロファイルを更新してください。",
         "loadingTokens": "トークン一覧を読み込み中…",
         "loadModelsFailed": "この API キーの上流モデル読み込みに失敗しました。",
         "loadTokensFailed": "このサイトのトークン読み込みに失敗しました。",
@@ -336,6 +341,7 @@
         "nothingToExportTitle": "エクスポート対象がありません",
         "noTokensDescription": "トークンが作成されるまで、このサイトはスキップされます。",
         "noTokensTitle": "利用可能なトークンがありません",
+        "settingsFileTooLargeSingle": "このファイルは Kilo Code のインポート上限を超えています。設定をコピーして手動で統合してください。",
         "tokenCreated": "トークンを作成しました"
       },
       "placeholders": {
