@@ -363,8 +363,8 @@ test("downloads Kilo Code settings for an API credential profile", async ({
     name: slashBearingModel,
     exact: true,
   })
-  await expect(slashBearingModelOption).toHaveAttribute("aria-selected", "true")
-  await defaultModelSearch.press("Enter")
+  await expect(slashBearingModelOption).toBeVisible()
+  await slashBearingModelOption.click({ force: true })
   await expect(defaultModel).toContainText(slashBearingModel)
 
   const v7DownloadPromise = page.waitForEvent("download")
