@@ -4,6 +4,7 @@ import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import AccountList from "~/features/AccountManagement/components/AccountList"
+import { getAccountManagementSelectionCheckboxTestId } from "~/features/AccountManagement/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -1642,8 +1643,16 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
-    await user.click(screen.getAllByRole("checkbox")[0])
-    await user.click(screen.getAllByRole("checkbox")[1])
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-a"),
+      ),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-b"),
+      ),
+    )
     await user.click(
       screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
     )
@@ -1682,6 +1691,63 @@ describe("AccountList", () => {
     })
   })
 
+  it("shows a copying state while invite-link requests are pending", async () => {
+    const user = userEvent.setup()
+    const pendingAccount = buildDisplaySiteData({
+      id: "invite-pending",
+      name: "Invite Pending",
+      disabled: false,
+      siteType: "new-api",
+      baseUrl: "https://invite-pending.example.com",
+    })
+    let resolveInviteLink: ((value: string) => void) | undefined
+    fetchDisplayAccountInviteLinkMock.mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveInviteLink = resolve
+        }),
+    )
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [pendingAccount],
+        displayData: [pendingAccount],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-pending"),
+      ),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
+    )
+
+    expect(
+      screen.getByRole("button", { name: "common:status.copying" }),
+    ).toBeDisabled()
+
+    await act(async () => {
+      resolveInviteLink?.(
+        "https://invite-pending.example.com/register?aff=invite-pending",
+      )
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
+      ).toBeEnabled()
+    })
+  })
+
   it("reports partial invite-link copy when the selection mixes supported and unsupported accounts", async () => {
     const user = userEvent.setup()
     const supported = buildDisplaySiteData({
@@ -1713,8 +1779,16 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
-    await user.click(screen.getAllByRole("checkbox")[0])
-    await user.click(screen.getAllByRole("checkbox")[1])
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-supported"),
+      ),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-unsupported"),
+      ),
+    )
     await user.click(
       screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
     )
@@ -1777,8 +1851,16 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
-    await user.click(screen.getAllByRole("checkbox")[0])
-    await user.click(screen.getAllByRole("checkbox")[1])
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-fail-a"),
+      ),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-fail-b"),
+      ),
+    )
     await user.click(
       screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
     )

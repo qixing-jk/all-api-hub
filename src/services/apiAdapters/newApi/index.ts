@@ -30,7 +30,9 @@ export const createNewApiCapabilities = (
     data: createNewApiAccountData(siteType),
     bootstrap: createNewApiAccountBootstrap(siteType),
     completion: newApiAccountCompletion,
-    inviteLink: createNewApiInviteLink(),
+    ...(siteType === SITE_TYPES.NEW_API
+      ? { inviteLink: createNewApiInviteLink() }
+      : {}),
     keyManagement: createNewApiKeyManagement(siteType),
     tokenProvisioning: createNewApiTokenProvisioning(),
     refresh: createNewApiAccountRefresh(siteType),

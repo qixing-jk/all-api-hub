@@ -186,9 +186,9 @@ describe("ModelMetadataService", () => {
   })
 
   it("uses bundled fallback metadata when the first refresh fails", async () => {
-    global.fetch = vi.fn().mockRejectedValue(
-      new Error("network down"),
-    ) as unknown as typeof fetch
+    global.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("network down")) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -239,7 +239,7 @@ describe("ModelMetadataService", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ models }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -278,7 +278,7 @@ describe("ModelMetadataService", () => {
               { id: "refreshed-model", providerId: "refreshed-provider" },
             ],
           }),
-        })
+        }) as unknown as typeof fetch
 
       try {
         const modelMetadataService = await loadService()
@@ -363,7 +363,7 @@ describe("ModelMetadataService", () => {
           },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -412,7 +412,7 @@ describe("ModelMetadataService", () => {
         malformed: null,
         array: [],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -476,7 +476,7 @@ describe("ModelMetadataService", () => {
           name: "Nested GPT-4o mini",
         },
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -579,7 +579,7 @@ describe("ModelMetadataService", () => {
       json: async () => ({
         models: "invalid models",
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()
@@ -702,7 +702,7 @@ describe("ModelMetadataService", () => {
           },
         ],
       }),
-    })
+    }) as unknown as typeof fetch
 
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()

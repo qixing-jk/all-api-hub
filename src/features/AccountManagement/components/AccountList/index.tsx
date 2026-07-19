@@ -34,7 +34,10 @@ import {
   useAccountSearch,
   type SearchResultWithHighlight,
 } from "~/features/AccountManagement/hooks/useAccountSearch"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementSelectionCheckboxTestId,
+} from "~/features/AccountManagement/testIds"
 import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healthStatusUtils"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
@@ -1113,6 +1116,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       {displayedResults.map((item) => {
         const selectionControl = isBulkMode ? (
           <Checkbox
+            data-testid={getAccountManagementSelectionCheckboxTestId(
+              item.account.id,
+            )}
             checked={selectedIdSet.has(item.account.id)}
             onCheckedChange={(checked) =>
               handleToggleAccountSelection(item.account.id, Boolean(checked))
@@ -1306,7 +1312,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
                     }
                     loading={isBulkCopyingInviteLinks}
                   >
-                    {t("account:bulk.copyInviteLinks")}
+                    {isBulkCopyingInviteLinks
+                      ? t("common:status.copying")
+                      : t("account:bulk.copyInviteLinks")}
                   </Button>
                   <Button
                     type="button"

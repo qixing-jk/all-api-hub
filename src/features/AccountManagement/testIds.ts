@@ -102,6 +102,13 @@ export function getAccountManagementListItemTestId(accountId: string) {
 }
 
 /**
+ * Returns a stable test id for an account selection checkbox in bulk mode.
+ */
+export function getAccountManagementSelectionCheckboxTestId(accountId: string) {
+  return `account-management-account-selection-checkbox-${accountId}`
+}
+
+/**
  * Returns a stable test id for a runtime key row inside the copy-key dialog.
  */
 export function getCopyKeyDialogRuntimeKeyItemTestId(runtimeKeyId: string) {

@@ -2,7 +2,7 @@ import type { InviteLinkCapability } from "~/services/apiAdapters/contracts/invi
 import { defaultInviteLinkImplementation } from "~/services/apiService/newApiFamily/default/inviteLink"
 
 /**
- * Create invite-link loading bound to the New API-family site type.
+ * Create invite-link loading for the canonical New API site type.
  */
 export function createNewApiInviteLink(): InviteLinkCapability {
   return {
