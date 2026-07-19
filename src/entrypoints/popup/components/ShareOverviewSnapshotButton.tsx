@@ -9,6 +9,7 @@ import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContex
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
+import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -21,7 +22,7 @@ import { buildOverviewShareSnapshotPayload } from "~/services/sharing/shareSnaps
 import { getErrorMessage } from "~/utils/core/error"
 import {
   calculateTotalBalanceForSites,
-  calculateTotalConsumptionForSites,
+  calculateTotalConsumption,
   calculateTotalIncomeForSites,
 } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
@@ -67,20 +68,16 @@ export default function ShareOverviewSnapshotButton() {
       0,
     )
 
-    const includeToday = showTodayCashflow !== false
-    const analyticsInsights = {
-      itemCount: enabledAccountCount,
-      usageDataPresent: includeToday,
-    }
-
     const totalBalance =
       calculateTotalBalanceForSites(displayData)[currencyType]
-    const todayIncome = includeToday
-      ? calculateTotalIncomeForSites(displayData).amount[currencyType]
-      : 0
-    const todayOutcome = includeToday
-      ? calculateTotalConsumptionForSites(displayData).amount[currencyType]
-      : 0
+    const todayIncomeTotal = calculateTotalIncomeForSites(displayData)
+    const todayConsumptionTotal = calculateTotalConsumption(displayData)
+    const includeToday =
+      showTodayCashflow !== false &&
+      isAccountTodayMetricComplete(todayIncomeTotal.coverage) &&
+      isAccountTodayMetricComplete(todayConsumptionTotal.coverage)
+    const todayIncome = todayIncomeTotal.amount[currencyType]
+    const todayOutcome = todayConsumptionTotal.amount[currencyType]
 
     // Overview snapshots are aggregate-only and must not include per-account identifiers.
     const payload = buildOverviewShareSnapshotPayload({
@@ -92,6 +89,13 @@ export default function ShareOverviewSnapshotButton() {
       todayOutcome: includeToday ? todayOutcome : undefined,
       asOf: latestSyncTime > 0 ? latestSyncTime : undefined,
     })
+    const analyticsInsights = {
+      itemCount: enabledAccountCount,
+      usageDataPresent:
+        Number.isFinite(payload.todayIncome) &&
+        Number.isFinite(payload.todayOutcome) &&
+        Number.isFinite(payload.todayNet),
+    }
 
     try {
       await exportShareSnapshotWithToast({ payload })

@@ -12,6 +12,11 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -124,11 +129,30 @@ describe("ShareOverviewSnapshotButton", () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    buildOverviewShareSnapshotPayloadMock.mockImplementation((input: any) => ({
-      kind: "overview",
-      backgroundSeed: 1,
-      ...input,
-    }))
+    buildOverviewShareSnapshotPayloadMock.mockImplementation((input: any) => {
+      const payload = {
+        kind: "overview",
+        backgroundSeed: 1,
+        ...input,
+      }
+      if (
+        input.includeTodayCashflow &&
+        Number.isFinite(input.todayIncome) &&
+        Number.isFinite(input.todayOutcome)
+      ) {
+        return {
+          ...payload,
+          todayNet: input.todayIncome - input.todayOutcome,
+        }
+      }
+
+      const {
+        todayIncome: _todayIncome,
+        todayOutcome: _todayOutcome,
+        ...balanceOnlyPayload
+      } = payload
+      return balanceOnlyPayload
+    })
     exportShareSnapshotWithToastMock.mockResolvedValue({ method: "clipboard" })
     startProductAnalyticsActionMock.mockReturnValue({
       complete: trackerCompleteMock,
@@ -299,6 +323,136 @@ describe("ShareOverviewSnapshotButton", () => {
       todayOutcome: undefined,
       asOf: undefined,
     })
+  })
+
+  it.each([
+    {
+      label: "consumption coverage is partial",
+      availability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+        },
+      }),
+    },
+    {
+      label: "income coverage is unavailable",
+      availability: buildCompleteTodayStatsAvailability({
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      }),
+    },
+  ])(
+    "falls back to balance-only sharing and reports no usage data when $label",
+    async ({ availability }) => {
+      const user = userEvent.setup()
+      const complete = buildDisplaySiteData({
+        id: "complete-account",
+        disabled: false,
+        todayIncome: { USD: 2, CNY: 14 },
+        todayConsumption: { USD: 1, CNY: 7 },
+      })
+      const partial = buildDisplaySiteData({
+        id: "partial-account",
+        disabled: false,
+        todayIncome: { USD: 4, CNY: 28 },
+        todayConsumption: { USD: 3, CNY: 21 },
+        todayStatsAvailability: availability,
+      })
+      mockUseAccountDataContext.mockReturnValue({
+        accounts: [complete, partial],
+        displayData: [complete, partial],
+      })
+
+      renderWithAnalyticsScope()
+      await user.click(
+        screen.getByRole("button", {
+          name: "shareSnapshots:actions.shareOverviewSnapshot",
+        }),
+      )
+
+      expect(buildOverviewShareSnapshotPayloadMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          includeTodayCashflow: false,
+          todayIncome: undefined,
+          todayOutcome: undefined,
+        }),
+      )
+      expect(trackerCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 2,
+            usageDataPresent: false,
+          },
+        },
+      )
+    },
+  )
+
+  it("derives usageDataPresent from the final payload instead of the preference", async () => {
+    const user = userEvent.setup()
+    buildOverviewShareSnapshotPayloadMock.mockReturnValueOnce({
+      kind: "overview",
+      currencyType: "USD",
+      enabledAccountCount: 1,
+      totalBalance: 10,
+      todayIncome: 2,
+      todayOutcome: 1,
+      asOf: 100,
+      backgroundSeed: 1,
+    })
+
+    renderWithAnalyticsScope()
+    await user.click(
+      screen.getByRole("button", {
+        name: "shareSnapshots:actions.shareOverviewSnapshot",
+      }),
+    )
+
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          usageDataPresent: false,
+        },
+      },
+    )
+  })
+
+  it("reports no usage data when the final payload contains a nonfinite cashflow field", async () => {
+    const user = userEvent.setup()
+    buildOverviewShareSnapshotPayloadMock.mockReturnValueOnce({
+      kind: "overview",
+      currencyType: "USD",
+      enabledAccountCount: 1,
+      totalBalance: 10,
+      todayIncome: Number.MAX_VALUE,
+      todayOutcome: -Number.MAX_VALUE,
+      todayNet: Number.POSITIVE_INFINITY,
+      asOf: 100,
+      backgroundSeed: 1,
+    })
+
+    renderWithAnalyticsScope()
+    await user.click(
+      screen.getByRole("button", {
+        name: "shareSnapshots:actions.shareOverviewSnapshot",
+      }),
+    )
+
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          usageDataPresent: false,
+        },
+      },
+    )
   })
 
   it("logs export failures and falls back to the shared unknown-error message when the error text is blank", async () => {

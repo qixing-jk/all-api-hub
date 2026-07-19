@@ -20,6 +20,10 @@ import {
   PRODUCT_ANALYTICS_TARGET_STATES,
 } from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import {
   MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
@@ -28,6 +32,7 @@ import {
   type ManagedUpstreamResourceSummary,
 } from "~/types/managedUpstreamResource"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
 
@@ -2234,6 +2239,106 @@ describe("AccountActionButtons", () => {
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
   })
+
+  it("includes the full cashflow bundle when the preference and both metrics are complete", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-share-complete",
+          disabled: false,
+          todayIncome: { USD: 8, CNY: 0 },
+          todayConsumption: { USD: 4, CNY: 0 },
+          todayStatsAvailability: buildCompleteTodayStatsAvailability(),
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    const menu = await screen.findByRole("menu")
+    await user.click(
+      within(menu)
+        .getByText("shareSnapshots:actions.shareAccountSnapshot")
+        .closest("button")!,
+    )
+
+    await waitFor(() => {
+      expect(exportShareSnapshotWithToastMock).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      exportShareSnapshotWithToastMock.mock.calls[0]?.[0]?.payload,
+    ).toEqual(
+      expect.objectContaining({
+        todayIncome: 8,
+        todayOutcome: 4,
+        todayNet: 4,
+      }),
+    )
+  })
+
+  it.each([
+    {
+      label: "partial consumption",
+      availability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+        },
+      }),
+    },
+    {
+      label: "unavailable income",
+      availability: buildCompleteTodayStatsAvailability({
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      }),
+    },
+  ])(
+    "falls back to a balance-only snapshot for $label",
+    async ({ availability }) => {
+      const user = userEvent.setup()
+
+      render(
+        <AccountActionButtons
+          site={buildDisplaySiteData({
+            id: "acc-share-incomplete",
+            disabled: false,
+            todayIncome: { USD: 8, CNY: 0 },
+            todayConsumption: { USD: 4, CNY: 0 },
+            todayStatsAvailability: availability,
+          })}
+          onCopyKey={vi.fn()}
+          onDeleteAccount={vi.fn()}
+        />,
+      )
+
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.more" }),
+      )
+      const menu = await screen.findByRole("menu")
+      await user.click(
+        within(menu)
+          .getByText("shareSnapshots:actions.shareAccountSnapshot")
+          .closest("button")!,
+      )
+
+      await waitFor(() => {
+        expect(exportShareSnapshotWithToastMock).toHaveBeenCalledTimes(1)
+      })
+      const payload =
+        exportShareSnapshotWithToastMock.mock.calls[0]?.[0]?.payload
+      expect(payload).not.toHaveProperty("todayIncome")
+      expect(payload).not.toHaveProperty("todayOutcome")
+      expect(payload).not.toHaveProperty("todayNet")
+    },
+  )
 
   it("tracks share snapshot failures with an unknown error category", async () => {
     exportShareSnapshotWithToastMock.mockRejectedValueOnce(

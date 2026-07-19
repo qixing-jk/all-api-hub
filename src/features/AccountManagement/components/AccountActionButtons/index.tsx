@@ -43,6 +43,7 @@ import {
   accountRuntimeKeyToLegacyAccountToken,
   collectAccountRuntimeKeySecrets,
 } from "~/services/accounts/accountRuntimeKeys"
+import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import {
   canFetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
@@ -662,7 +663,10 @@ export default function AccountActionButtons({
       return
     }
 
-    const includeToday = showTodayCashflow !== false
+    const includeToday =
+      showTodayCashflow !== false &&
+      isAccountTodayMetricComplete(site.todayStatsAvailability.consumption) &&
+      isAccountTodayMetricComplete(site.todayStatsAvailability.income)
 
     // Build an allowlisted, share-safe payload (origin-only URL; no secret-bearing fields).
     const payload = buildAccountShareSnapshotPayload({

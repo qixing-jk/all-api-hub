@@ -78,14 +78,22 @@ const applyCashflow = <TPayload extends ShareSnapshotCashflowPayload>(
   todayIncome: number | undefined,
   todayOutcome: number | undefined,
 ): TPayload => {
-  const income = Number.isFinite(todayIncome) ? (todayIncome as number) : 0
-  const outcome = Number.isFinite(todayOutcome) ? (todayOutcome as number) : 0
+  if (!Number.isFinite(todayIncome) || !Number.isFinite(todayOutcome)) {
+    return payload
+  }
+
+  const income = todayIncome as number
+  const outcome = todayOutcome as number
+  const net = income - outcome
+  if (!Number.isFinite(net)) {
+    return payload
+  }
 
   return {
     ...payload,
     todayIncome: income,
     todayOutcome: outcome,
-    todayNet: income - outcome,
+    todayNet: net,
   }
 }
 

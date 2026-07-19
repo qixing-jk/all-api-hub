@@ -215,14 +215,6 @@ export const calculateTotalBalanceForSites = (sites: DisplaySiteData[]) =>
   calculateTotalBalance(sites)
 
 /**
- * Sum per-site consumption metrics into global USD/CNY totals.
- * @param sites Display-ready site collection containing `todayConsumption`.
- */
-export const calculateTotalConsumptionForSites = (sites: DisplaySiteData[]) => {
-  return calculateTotalConsumption(sites)
-}
-
-/**
  * Sum per-site income metrics into global USD/CNY totals.
  *
  * Today Income excludes:

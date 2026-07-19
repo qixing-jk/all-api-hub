@@ -132,6 +132,21 @@ describe("shareSnapshots", () => {
       expect(payload.backgroundSeed).toBe(123)
     })
 
+    it("omits the entire cashflow bundle when finite inputs overflow the derived net", () => {
+      const payload = buildOverviewShareSnapshotPayload({
+        currencyType: "USD",
+        enabledAccountCount: 1,
+        totalBalance: 99,
+        includeTodayCashflow: true,
+        todayIncome: Number.MAX_VALUE,
+        todayOutcome: -Number.MAX_VALUE,
+      })
+
+      expect(payload.todayIncome).toBeUndefined()
+      expect(payload.todayOutcome).toBeUndefined()
+      expect(payload.todayNet).toBeUndefined()
+    })
+
     it("falls back to export time when asOf is missing", () => {
       vi.useFakeTimers()
       try {
@@ -168,9 +183,9 @@ describe("shareSnapshots", () => {
 
         expect(payload.enabledAccountCount).toBe(0)
         expect(payload.totalBalance).toBe(0)
-        expect(payload.todayIncome).toBe(0)
-        expect(payload.todayOutcome).toBe(0)
-        expect(payload.todayNet).toBe(0)
+        expect(payload.todayIncome).toBeUndefined()
+        expect(payload.todayOutcome).toBeUndefined()
+        expect(payload.todayNet).toBeUndefined()
         expect(payload.asOf).toBe(Date.now())
         expect(Number.isInteger(payload.backgroundSeed)).toBe(true)
       } finally {
@@ -203,6 +218,35 @@ describe("shareSnapshots", () => {
       } finally {
         vi.useRealTimers()
       }
+    })
+
+    it.each([
+      { todayIncome: undefined, todayOutcome: 2, label: "missing income" },
+      { todayIncome: 1, todayOutcome: undefined, label: "missing outcome" },
+      { todayIncome: Number.NaN, todayOutcome: 2, label: "nonfinite income" },
+      {
+        todayIncome: 1,
+        todayOutcome: Number.POSITIVE_INFINITY,
+        label: "nonfinite outcome",
+      },
+      {
+        todayIncome: Number.MAX_VALUE,
+        todayOutcome: -Number.MAX_VALUE,
+        label: "overflowing derived net",
+      },
+    ])("omits the entire cashflow bundle for $label", (cashflow) => {
+      const payload = buildAccountShareSnapshotPayload({
+        currencyType: "USD",
+        siteName: "Example Site",
+        balance: 10,
+        includeTodayCashflow: true,
+        todayIncome: cashflow.todayIncome,
+        todayOutcome: cashflow.todayOutcome,
+      })
+
+      expect(payload.todayIncome).toBeUndefined()
+      expect(payload.todayOutcome).toBeUndefined()
+      expect(payload.todayNet).toBeUndefined()
     })
   })
 
