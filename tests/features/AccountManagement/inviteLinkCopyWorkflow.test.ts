@@ -92,6 +92,94 @@ describe("runInviteLinkCopyWorkflow", () => {
     await copyPromise
   })
 
+  it("returns exact unsupported counts without touching the clipboard", async () => {
+    canFetchDisplayAccountInviteLinkMock.mockReturnValue(false)
+    const disabledAccount = {
+      ...buildAccount("disabled"),
+      disabled: true,
+    }
+
+    const result = await runInviteLinkCopyWorkflow({
+      accounts: [buildAccount("unsupported"), disabledAccount],
+      format: "raw",
+    })
+
+    expect(result).toEqual({
+      result: INVITE_LINK_COPY_RESULTS.Unsupported,
+      selectedCount: 2,
+      itemCount: 0,
+      successCount: 0,
+      failureCount: 0,
+      unsupportedCount: 1,
+      skippedCount: 1,
+    })
+    expect(clipboardWriteTextMock).not.toHaveBeenCalled()
+  })
+
+  it("returns exact failure counts when every supported fetch fails", async () => {
+    fetchDisplayAccountInviteLinkMock.mockRejectedValue(
+      new Error("Invite link unavailable"),
+    )
+
+    const result = await runInviteLinkCopyWorkflow({
+      accounts: [buildAccount("first"), buildAccount("second")],
+      format: "raw",
+    })
+
+    expect(result).toEqual({
+      result: INVITE_LINK_COPY_RESULTS.Failure,
+      selectedCount: 2,
+      itemCount: 2,
+      successCount: 0,
+      failureCount: 2,
+      unsupportedCount: 0,
+      skippedCount: 0,
+    })
+    expect(clipboardWriteTextMock).not.toHaveBeenCalled()
+  })
+
+  it("returns exact partial-success counts and copies only successful links", async () => {
+    canFetchDisplayAccountInviteLinkMock.mockImplementation(
+      (account: { id: string }) => account.id !== "unsupported",
+    )
+    fetchDisplayAccountInviteLinkMock.mockImplementation(
+      async (account: { id: string }) => {
+        if (account.id === "failed") {
+          throw new Error("Invite link unavailable")
+        }
+        return `https://invite.example.invalid/${account.id}`
+      },
+    )
+    const disabledAccount = {
+      ...buildAccount("disabled"),
+      disabled: true,
+    }
+
+    const result = await runInviteLinkCopyWorkflow({
+      accounts: [
+        buildAccount("successful"),
+        buildAccount("failed"),
+        buildAccount("unsupported"),
+        disabledAccount,
+      ],
+      format: "labeled",
+    })
+
+    expect(result).toEqual({
+      result: INVITE_LINK_COPY_RESULTS.PartialSuccess,
+      payload: "Account successful: https://invite.example.invalid/successful",
+      selectedCount: 4,
+      itemCount: 2,
+      successCount: 1,
+      failureCount: 1,
+      unsupportedCount: 1,
+      skippedCount: 1,
+    })
+    expect(clipboardWriteTextMock).toHaveBeenCalledWith(
+      "Account successful: https://invite.example.invalid/successful",
+    )
+  })
+
   it("preserves the generated payload when clipboard access fails", async () => {
     clipboardWriteTextMock.mockRejectedValueOnce(
       new DOMException("Clipboard access denied", "NotAllowedError"),
@@ -151,7 +239,7 @@ describe("runInviteLinkCopyWorkflow", () => {
     expect(clipboardWriteTextMock).not.toHaveBeenCalled()
   })
 
-  it("does not report success after cancellation during clipboard writing", async () => {
+  it("keeps the committed partial-success result after clipboard writing resolves", async () => {
     const controller = new AbortController()
     let finishClipboardWrite: (() => void) | undefined
     clipboardWriteTextMock.mockImplementationOnce(
@@ -162,7 +250,40 @@ describe("runInviteLinkCopyWorkflow", () => {
     )
 
     const copyPromise = runInviteLinkCopyWorkflow({
-      accounts: [buildAccount("clipboard-pending")],
+      accounts: [
+        buildAccount("clipboard-pending"),
+        { ...buildAccount("disabled"), disabled: true },
+      ],
+      format: "raw",
+      signal: controller.signal,
+    })
+    await vi.waitFor(() => {
+      expect(clipboardWriteTextMock).toHaveBeenCalledTimes(1)
+    })
+    finishClipboardWrite?.()
+    controller.abort()
+
+    await expect(copyPromise).resolves.toMatchObject({
+      result: INVITE_LINK_COPY_RESULTS.PartialSuccess,
+      successCount: 1,
+      failureCount: 0,
+      unsupportedCount: 0,
+      skippedCount: 1,
+    })
+  })
+
+  it("returns cancelled when the parent aborts before clipboard writing resolves", async () => {
+    const controller = new AbortController()
+    let finishClipboardWrite: (() => void) | undefined
+    clipboardWriteTextMock.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishClipboardWrite = resolve
+        }),
+    )
+
+    const copyPromise = runInviteLinkCopyWorkflow({
+      accounts: [buildAccount("clipboard-cancelled")],
       format: "raw",
       signal: controller.signal,
     })
@@ -172,8 +293,50 @@ describe("runInviteLinkCopyWorkflow", () => {
     controller.abort()
     finishClipboardWrite?.()
 
-    await expect(copyPromise).resolves.toMatchObject({
+    await expect(copyPromise).resolves.toEqual({
       result: INVITE_LINK_COPY_RESULTS.Cancelled,
+      payload: "https://invite.example.invalid/clipboard-cancelled",
+      selectedCount: 1,
+      itemCount: 1,
+      successCount: 1,
+      failureCount: 0,
+      unsupportedCount: 0,
+      skippedCount: 0,
+    })
+  })
+
+  it("returns cancelled when the parent aborts before clipboard writing rejects", async () => {
+    const controller = new AbortController()
+    let failClipboardWrite: ((reason?: unknown) => void) | undefined
+    clipboardWriteTextMock.mockImplementationOnce(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          failClipboardWrite = reject
+        }),
+    )
+
+    const copyPromise = runInviteLinkCopyWorkflow({
+      accounts: [buildAccount("clipboard-rejected-after-cancel")],
+      format: "raw",
+      signal: controller.signal,
+    })
+    await vi.waitFor(() => {
+      expect(clipboardWriteTextMock).toHaveBeenCalledTimes(1)
+    })
+    controller.abort()
+    failClipboardWrite?.(
+      new DOMException("Clipboard access denied", "NotAllowedError"),
+    )
+
+    await expect(copyPromise).resolves.toEqual({
+      result: INVITE_LINK_COPY_RESULTS.Cancelled,
+      payload: "https://invite.example.invalid/clipboard-rejected-after-cancel",
+      selectedCount: 1,
+      itemCount: 1,
+      successCount: 1,
+      failureCount: 0,
+      unsupportedCount: 0,
+      skippedCount: 0,
     })
   })
 

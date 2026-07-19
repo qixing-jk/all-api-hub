@@ -456,6 +456,52 @@ describe("AccountActionButtons", () => {
     })
   })
 
+  it("prevents rapid invite-link re-entry from leaking its loading toast", async () => {
+    const deferredInviteLink = createDeferred<string>()
+    fetchDisplayAccountInviteLinkMock.mockReturnValue(
+      deferredInviteLink.promise,
+    )
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "invite-row-rapid",
+          disabled: false,
+          name: "Invite Row Rapid",
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://invite.example.invalid",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    const copyInviteLinkItem = await screen.findByRole("menuitem", {
+      name: "account:actions.copyInviteLink",
+    })
+    toastLoadingMock
+      .mockImplementationOnce(() => {
+        copyInviteLinkItem.click()
+        return "toast-invite-link-first"
+      })
+      .mockReturnValueOnce("toast-invite-link-second")
+
+    await user.click(copyInviteLinkItem)
+    deferredInviteLink.resolve(
+      "https://invite.example.invalid/register?aff=rapid",
+    )
+
+    await waitFor(() => {
+      expect(toastDismissMock).toHaveBeenCalledWith("toast-invite-link-first")
+    })
+    expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(1)
+    expect(toastLoadingMock).toHaveBeenCalledTimes(1)
+  })
+
   it("shows an unavailable invite-link action for unsupported enabled accounts", async () => {
     const user = userEvent.setup()
     canFetchDisplayAccountInviteLinkMock.mockReturnValue(false)

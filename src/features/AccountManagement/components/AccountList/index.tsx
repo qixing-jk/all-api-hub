@@ -743,7 +743,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   }
 
   const handleBulkCopyInviteLinks = async () => {
-    if (isBulkCopyingInviteLinks) return
+    if (isBulkCopyingInviteLinks || inviteLinkCopyAbortControllerRef.current) {
+      return
+    }
 
     const analyticsContext = {
       ...accountListAnalyticsBaseContext,

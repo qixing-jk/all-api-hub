@@ -141,22 +141,42 @@ export async function runInviteLinkCopyWorkflow({
     }
   }
 
+  let clipboardWriteSettled = false
+  let clipboardWriteFailed = false
+  let abortedBeforeClipboardWriteSettled = false
+  const handleClipboardWriteAbort = () => {
+    queueMicrotask(() => {
+      if (!clipboardWriteSettled) {
+        abortedBeforeClipboardWriteSettled = true
+      }
+    })
+  }
+  signal?.addEventListener("abort", handleClipboardWriteAbort, { once: true })
+
   try {
-    await navigator.clipboard.writeText(payload)
+    await navigator.clipboard.writeText(payload).finally(() => {
+      clipboardWriteSettled = true
+    })
   } catch {
+    clipboardWriteFailed = true
+  } finally {
+    signal?.removeEventListener("abort", handleClipboardWriteAbort)
+  }
+
+  if (abortedBeforeClipboardWriteSettled) {
     return {
       ...baseResult,
-      result: INVITE_LINK_COPY_RESULTS.ClipboardFailure,
+      result: INVITE_LINK_COPY_RESULTS.Cancelled,
       payload,
       successCount,
       failureCount,
     }
   }
 
-  if (signal?.aborted) {
+  if (clipboardWriteFailed) {
     return {
       ...baseResult,
-      result: INVITE_LINK_COPY_RESULTS.Cancelled,
+      result: INVITE_LINK_COPY_RESULTS.ClipboardFailure,
       payload,
       successCount,
       failureCount,

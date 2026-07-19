@@ -709,7 +709,7 @@ export default function AccountActionButtons({
   }
 
   const handleCopyInviteLink = async () => {
-    if (isCopyingInviteLink) return
+    if (isCopyingInviteLink || inviteLinkAbortControllerRef.current) return
 
     const controller = new AbortController()
     inviteLinkAbortControllerRef.current = controller
@@ -773,9 +773,9 @@ export default function AccountActionButtons({
         errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
       })
     } finally {
+      toast.dismiss(toastId)
       if (inviteLinkAbortControllerRef.current === controller) {
         inviteLinkAbortControllerRef.current = null
-        toast.dismiss(toastId)
         if (isMountedRef.current) setIsCopyingInviteLink(false)
       }
     }

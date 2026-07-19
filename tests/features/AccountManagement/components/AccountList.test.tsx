@@ -1697,6 +1697,66 @@ describe("AccountList", () => {
     })
   })
 
+  it("prevents same-turn re-entry when bulk invite-link copy starts", async () => {
+    const user = userEvent.setup()
+    const pendingAccount = buildDisplaySiteData({
+      id: "invite-reentry",
+      name: "Invite Re-entry",
+      disabled: false,
+      siteType: "new-api",
+      baseUrl: "https://invite-reentry.example.invalid",
+    })
+    let resolveInviteLink: ((value: string) => void) | undefined
+    const pendingInviteLink = new Promise<string>((resolve) => {
+      resolveInviteLink = resolve
+    })
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [pendingAccount],
+        displayData: [pendingAccount],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-reentry"),
+      ),
+    )
+    const bulkCopyButton = screen.getByRole("button", {
+      name: "account:bulk.copyInviteLinks",
+    })
+    fetchDisplayAccountInviteLinkMock.mockImplementationOnce(() => {
+      bulkCopyButton.click()
+      return pendingInviteLink
+    })
+
+    await user.click(bulkCopyButton)
+    await act(async () => {
+      resolveInviteLink?.(
+        "https://invite-reentry.example.invalid/register?aff=invite-reentry",
+      )
+    })
+
+    await waitFor(() => {
+      expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      trackProductAnalyticsActionStartedMock.mock.calls.filter(
+        ([context]) =>
+          context.actionId ===
+          PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountInviteLinks,
+      ),
+    ).toHaveLength(1)
+  })
+
   it("shows a copying state while invite-link requests are pending", async () => {
     const user = userEvent.setup()
     const pendingAccount = buildDisplaySiteData({
