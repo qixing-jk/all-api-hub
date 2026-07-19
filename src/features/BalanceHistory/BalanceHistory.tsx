@@ -652,11 +652,12 @@ export default function BalanceHistory() {
     const totalAccounts = effectiveAccountIds.length
 
     const coverageCounts = perAccountSeries.coverageByDay.map((coverage) => {
-      return effectiveTrendMetric === "balance"
-        ? coverage.snapshotAccounts
-        : effectiveTrendMetric === "estimatedIncome"
-          ? coverage.estimatedIncomeAccounts
-          : coverage.cashflowAccounts
+      if (effectiveTrendMetric === "balance") return coverage.snapshotAccounts
+      if (effectiveTrendMetric === "estimatedIncome")
+        return coverage.estimatedIncomeAccounts
+      if (effectiveTrendMetric === "income") return coverage.incomeAccounts
+      if (effectiveTrendMetric === "outcome") return coverage.outcomeAccounts
+      return coverage.cashflowAccounts
     })
 
     const availableCoverage = coverageCounts.filter((count) => count > 0)
@@ -981,6 +982,20 @@ export default function BalanceHistory() {
     )
   }, [perAccountSeries.coverageByDay])
 
+  const incomeAvailableDays = useMemo(() => {
+    return perAccountSeries.coverageByDay.reduce(
+      (acc, item) => acc + (item.incomeAccounts > 0 ? 1 : 0),
+      0,
+    )
+  }, [perAccountSeries.coverageByDay])
+
+  const outcomeAvailableDays = useMemo(() => {
+    return perAccountSeries.coverageByDay.reduce(
+      (acc, item) => acc + (item.outcomeAccounts > 0 ? 1 : 0),
+      0,
+    )
+  }, [perAccountSeries.coverageByDay])
+
   const estimatedIncomeAvailableDays = useMemo(() => {
     return perAccountSeries.coverageByDay.reduce(
       (acc, item) => acc + (item.estimatedIncomeAccounts > 0 ? 1 : 0),
@@ -993,7 +1008,11 @@ export default function BalanceHistory() {
       ? snapshotAvailableDays > 0
       : effectiveTrendMetric === "estimatedIncome"
         ? estimatedIncomeAvailableDays > 0
-        : cashflowAvailableDays > 0
+        : effectiveTrendMetric === "income"
+          ? incomeAvailableDays > 0
+          : effectiveTrendMetric === "outcome"
+            ? outcomeAvailableDays > 0
+            : cashflowAvailableDays > 0
 
   const hasAnyTotalTrendMetricData = useMemo(() => {
     return totalTrendValues.some(

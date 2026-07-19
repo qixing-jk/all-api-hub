@@ -2922,6 +2922,12 @@ describe("accountStorage core behaviors", () => {
           today_quota_consumption: 7,
           today_requests_count: 0,
           today_income: 5,
+          todayStatsAvailability: buildCompleteTodayStatsAvailability({
+            income: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+            },
+          }),
           checkIn: {
             enableDetection: true,
             siteStatus: { isCheckedInToday: false },
@@ -2947,7 +2953,7 @@ describe("accountStorage core behaviors", () => {
       ).toEqual(
         expect.objectContaining({
           quota: 123,
-          today_income: 5,
+          today_income: null,
           today_quota_consumption: 7,
           source: "refresh",
           capturedAt: fixedNow.getTime(),
@@ -2986,6 +2992,16 @@ describe("accountStorage core behaviors", () => {
           today_quota_consumption: 0,
           today_requests_count: 0,
           today_income: 0,
+          todayStatsAvailability: buildCompleteTodayStatsAvailability({
+            consumption: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+            },
+            income: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+            },
+          }),
           checkIn: {
             enableDetection: true,
             siteStatus: { isCheckedInToday: false },

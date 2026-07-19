@@ -56,6 +56,8 @@ describe("dailyBalanceHistory selectors", () => {
         totalAccounts: 2,
         snapshotAccounts: 2,
         cashflowAccounts: 2,
+        incomeAccounts: 2,
+        outcomeAccounts: 2,
         estimatedIncomeAccounts: 0,
       },
     ])
@@ -166,6 +168,8 @@ describe("dailyBalanceHistory selectors", () => {
       totalAccounts: 2,
       snapshotAccounts: 1,
       cashflowAccounts: 1,
+      incomeAccounts: 1,
+      outcomeAccounts: 1,
       estimatedIncomeAccounts: 0,
     })
   })
@@ -206,9 +210,136 @@ describe("dailyBalanceHistory selectors", () => {
       totalAccounts: 2,
       snapshotAccounts: 2,
       cashflowAccounts: 1,
+      incomeAccounts: 1,
+      outcomeAccounts: 1,
       estimatedIncomeAccounts: 0,
     })
   })
+
+  it.each([
+    {
+      label: "income without outcome",
+      today_income: 3,
+      today_quota_consumption: null,
+      expectedIncome: 4,
+      expectedOutcome: null,
+      expectedIncomeAccounts: 2,
+      expectedOutcomeAccounts: 1,
+    },
+    {
+      label: "outcome without income",
+      today_income: null,
+      today_quota_consumption: 4,
+      expectedIncome: null,
+      expectedOutcome: 6,
+      expectedIncomeAccounts: 1,
+      expectedOutcomeAccounts: 2,
+    },
+  ])(
+    "keeps aggregate $label available independently",
+    ({
+      today_income,
+      today_quota_consumption,
+      expectedIncome,
+      expectedOutcome,
+      expectedIncomeAccounts,
+      expectedOutcomeAccounts,
+    }) => {
+      const result = buildAggregatedDailyBalanceSeries({
+        store: createStore({
+          a1: {
+            "2026-02-07": {
+              quota: 10,
+              today_income,
+              today_quota_consumption,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+          a2: {
+            "2026-02-07": {
+              quota: 20,
+              today_income: 1,
+              today_quota_consumption: 2,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+        }),
+        accountIds: ["a1", "a2"],
+        startDayKey: "2026-02-07",
+        endDayKey: "2026-02-07",
+      })
+
+      expect(result.incomeTotals).toEqual([expectedIncome])
+      expect(result.outcomeTotals).toEqual([expectedOutcome])
+      expect(result.coverage[0]).toMatchObject({
+        cashflowAccounts: 1,
+        incomeAccounts: expectedIncomeAccounts,
+        outcomeAccounts: expectedOutcomeAccounts,
+      })
+    },
+  )
+
+  it.each([
+    {
+      label: "income without outcome",
+      today_income: 3,
+      today_quota_consumption: null,
+      expectedIncome: 4,
+      expectedOutcome: null,
+    },
+    {
+      label: "outcome without income",
+      today_income: null,
+      today_quota_consumption: 4,
+      expectedIncome: null,
+      expectedOutcome: 6,
+    },
+  ])(
+    "keeps money aggregate $label available independently",
+    ({
+      today_income,
+      today_quota_consumption,
+      expectedIncome,
+      expectedOutcome,
+    }) => {
+      const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+      const result = buildAggregatedDailyBalanceMoneySeries({
+        store: createStore({
+          a1: {
+            "2026-02-07": {
+              quota: 10 * factor,
+              today_income:
+                today_income === null ? null : today_income * factor,
+              today_quota_consumption:
+                today_quota_consumption === null
+                  ? null
+                  : today_quota_consumption * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+          a2: {
+            "2026-02-07": {
+              quota: 20 * factor,
+              today_income: 1 * factor,
+              today_quota_consumption: 2 * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+        }),
+        accountIds: ["a1", "a2"],
+        startDayKey: "2026-02-07",
+        endDayKey: "2026-02-07",
+        currencyType: "USD",
+      })
+
+      expect(result.incomeTotals).toEqual([expectedIncome])
+      expect(result.outcomeTotals).toEqual([expectedOutcome])
+    },
+  )
 
   it("returns null aggregate totals with zero coverage when no store is available", () => {
     const result = buildAggregatedDailyBalanceSeries({
@@ -227,12 +358,16 @@ describe("dailyBalanceHistory selectors", () => {
         totalAccounts: 2,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        incomeAccounts: 0,
+        outcomeAccounts: 0,
         estimatedIncomeAccounts: 0,
       },
       {
         totalAccounts: 2,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        incomeAccounts: 0,
+        outcomeAccounts: 0,
         estimatedIncomeAccounts: 0,
       },
     ])
@@ -256,12 +391,16 @@ describe("dailyBalanceHistory selectors", () => {
         totalAccounts: 2,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        incomeAccounts: 0,
+        outcomeAccounts: 0,
         estimatedIncomeAccounts: 0,
       },
       {
         totalAccounts: 2,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        incomeAccounts: 0,
+        outcomeAccounts: 0,
         estimatedIncomeAccounts: 0,
       },
     ])
@@ -337,6 +476,8 @@ describe("dailyBalanceHistory selectors", () => {
         totalAccounts: 2,
         snapshotAccounts: 1,
         cashflowAccounts: 1,
+        incomeAccounts: 1,
+        outcomeAccounts: 1,
         estimatedIncomeAccounts: 0,
       },
     ])
@@ -346,6 +487,69 @@ describe("dailyBalanceHistory selectors", () => {
     expect(result.seriesByAccountId.a1.outcome).toEqual([2])
     expect(result.seriesByAccountId.a1.net).toEqual([-1])
   })
+
+  it.each([
+    {
+      label: "income without outcome",
+      today_income: 3,
+      today_quota_consumption: null,
+      expectedIncome: 3,
+      expectedOutcome: null,
+      expectedIncomeAccounts: 1,
+      expectedOutcomeAccounts: 0,
+    },
+    {
+      label: "outcome without income",
+      today_income: null,
+      today_quota_consumption: 4,
+      expectedIncome: null,
+      expectedOutcome: 4,
+      expectedIncomeAccounts: 0,
+      expectedOutcomeAccounts: 1,
+    },
+  ])(
+    "keeps per-account $label available without manufacturing net",
+    ({
+      today_income,
+      today_quota_consumption,
+      expectedIncome,
+      expectedOutcome,
+      expectedIncomeAccounts,
+      expectedOutcomeAccounts,
+    }) => {
+      const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+      const result = buildPerAccountDailyBalanceMoneySeries({
+        store: createStore({
+          a1: {
+            "2026-02-07": {
+              quota: 10 * factor,
+              today_income:
+                today_income === null ? null : today_income * factor,
+              today_quota_consumption:
+                today_quota_consumption === null
+                  ? null
+                  : today_quota_consumption * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+        }),
+        accountIds: ["a1"],
+        startDayKey: "2026-02-07",
+        endDayKey: "2026-02-07",
+        currencyType: "USD",
+      })
+
+      expect(result.seriesByAccountId.a1.income).toEqual([expectedIncome])
+      expect(result.seriesByAccountId.a1.outcome).toEqual([expectedOutcome])
+      expect(result.seriesByAccountId.a1.net).toEqual([null])
+      expect(result.coverageByDay[0]).toMatchObject({
+        cashflowAccounts: 0,
+        incomeAccounts: expectedIncomeAccounts,
+        outcomeAccounts: expectedOutcomeAccounts,
+      })
+    },
+  )
 
   it("builds estimated income per-account series without changing trusted income", () => {
     const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
@@ -518,12 +722,16 @@ describe("dailyBalanceHistory selectors", () => {
         totalAccounts: 0,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        incomeAccounts: 0,
+        outcomeAccounts: 0,
         estimatedIncomeAccounts: 0,
       },
       {
         totalAccounts: 0,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        incomeAccounts: 0,
+        outcomeAccounts: 0,
         estimatedIncomeAccounts: 0,
       },
     ])
@@ -579,6 +787,8 @@ describe("dailyBalanceHistory selectors", () => {
         netTotal: 0.5,
         snapshotDays: 2,
         cashflowDays: 1,
+        incomeDays: 1,
+        outcomeDays: 1,
         estimatedIncomeDays: 0,
         totalDays: 2,
       },
@@ -592,10 +802,119 @@ describe("dailyBalanceHistory selectors", () => {
         netTotal: 1,
         snapshotDays: 1,
         cashflowDays: 1,
+        incomeDays: 1,
+        outcomeDays: 1,
         estimatedIncomeDays: 0,
         totalDays: 2,
       },
     ])
+  })
+
+  it.each([
+    {
+      label: "income without outcome",
+      today_income: 3,
+      today_quota_consumption: null,
+      expectedIncome: 3,
+      expectedOutcome: null,
+      expectedIncomeDays: 1,
+      expectedOutcomeDays: 0,
+    },
+    {
+      label: "outcome without income",
+      today_income: null,
+      today_quota_consumption: 4,
+      expectedIncome: null,
+      expectedOutcome: 4,
+      expectedIncomeDays: 0,
+      expectedOutcomeDays: 1,
+    },
+  ])(
+    "summarizes $label independently without manufacturing net",
+    ({
+      today_income,
+      today_quota_consumption,
+      expectedIncome,
+      expectedOutcome,
+      expectedIncomeDays,
+      expectedOutcomeDays,
+    }) => {
+      const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+      const result = buildAccountRangeSummaries({
+        store: createStore({
+          a1: {
+            "2026-02-07": {
+              quota: 10 * factor,
+              today_income:
+                today_income === null ? null : today_income * factor,
+              today_quota_consumption:
+                today_quota_consumption === null
+                  ? null
+                  : today_quota_consumption * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+        }),
+        accountIds: ["a1"],
+        startDayKey: "2026-02-07",
+        endDayKey: "2026-02-07",
+        currencyType: "USD",
+      })
+
+      expect(result.summaries[0]).toMatchObject({
+        incomeTotal: expectedIncome,
+        outcomeTotal: expectedOutcome,
+        netTotal: null,
+        incomeDays: expectedIncomeDays,
+        outcomeDays: expectedOutcomeDays,
+        cashflowDays: 0,
+      })
+    },
+  )
+
+  it("sums range net only from days with paired income and outcome", () => {
+    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const result = buildAccountRangeSummaries({
+      store: createStore({
+        a1: {
+          "2026-02-07": {
+            quota: 10 * factor,
+            today_income: 1 * factor,
+            today_quota_consumption: 2 * factor,
+            capturedAt: 0,
+            source: "refresh",
+          },
+          "2026-02-08": {
+            quota: 11 * factor,
+            today_income: 3 * factor,
+            today_quota_consumption: null,
+            capturedAt: 0,
+            source: "refresh",
+          },
+          "2026-02-09": {
+            quota: 12 * factor,
+            today_income: null,
+            today_quota_consumption: 4 * factor,
+            capturedAt: 0,
+            source: "refresh",
+          },
+        },
+      }),
+      accountIds: ["a1"],
+      startDayKey: "2026-02-07",
+      endDayKey: "2026-02-09",
+      currencyType: "USD",
+    })
+
+    expect(result.summaries[0]).toMatchObject({
+      incomeTotal: 4,
+      outcomeTotal: 6,
+      netTotal: -1,
+      incomeDays: 2,
+      outcomeDays: 2,
+      cashflowDays: 1,
+    })
   })
 
   it("summarizes estimated income separately from trusted income", () => {
@@ -692,6 +1011,8 @@ describe("dailyBalanceHistory selectors", () => {
         netTotal: null,
         snapshotDays: 0,
         cashflowDays: 0,
+        incomeDays: 0,
+        outcomeDays: 0,
         estimatedIncomeDays: 0,
         totalDays: 2,
       },

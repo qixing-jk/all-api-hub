@@ -1,5 +1,9 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  accountStorage,
+  resolveAccountTodayStatsAvailability,
+} from "~/services/accounts/accountStorage"
+import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -273,22 +277,31 @@ class DailyBalanceHistoryScheduler {
       }
 
       const info = account.account_info
+      const todayStatsAvailability =
+        resolveAccountTodayStatsAvailability(account)
       const quota = Number(info?.quota)
       if (!Number.isFinite(quota) || quota <= 0) {
         skipped += 1
         continue
       }
 
-      const todayConsumption = Number.isFinite(info?.today_quota_consumption)
-        ? Math.max(0, Number(info.today_quota_consumption))
-        : 1_000_000
-      const trustedIncome = Number.isFinite(info?.today_income)
-        ? Math.max(0, Number(info.today_income))
-        : 0
-      const estimatedIncome = Math.max(trustedIncome + 1_000_000, 1_000_000)
+      const todayConsumption =
+        isAccountTodayMetricComplete(todayStatsAvailability.consumption) &&
+        Number.isFinite(info?.today_quota_consumption)
+          ? Math.max(0, Number(info.today_quota_consumption))
+          : null
+      const trustedIncome =
+        isAccountTodayMetricComplete(todayStatsAvailability.income) &&
+        Number.isFinite(info?.today_income)
+          ? Math.max(0, Number(info.today_income))
+          : null
+      const estimatedIncome = Math.max(
+        (trustedIncome ?? 0) + 1_000_000,
+        1_000_000,
+      )
       const baselineQuota = Math.max(
         0,
-        quota + todayConsumption - estimatedIncome,
+        quota + (todayConsumption ?? 1_000_000) - estimatedIncome,
       )
       const yesterdayCapturedAt = nowMs - 24 * 60 * 60 * 1000
 

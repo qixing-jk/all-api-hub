@@ -1,3 +1,5 @@
+import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
+import type { AccountTodayStatsAvailability } from "~/types"
 import type {
   BalanceHistoryPreferences,
   DailyBalanceHistoryCaptureSource,
@@ -15,8 +17,8 @@ const logger = createLogger("DailyBalanceHistoryCapture")
 /**
  * Best-effort snapshot upsert used by refresh-driven and alarm-driven capture.
  *
- * When `includeTodayCashflow` is false, cashflow fields are stored as `null`
- * to avoid persisting placeholder zeros that do not represent real values.
+ * Cashflow fields are stored independently only when their refreshed metric is
+ * complete, avoiding placeholder or partial values in historical estimates.
  */
 export async function maybeCaptureDailyBalanceSnapshot(params: {
   config?: BalanceHistoryPreferences
@@ -24,7 +26,7 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
   quota: number
   today_income: number
   today_quota_consumption: number
-  includeTodayCashflow: boolean
+  todayStatsAvailability: AccountTodayStatsAvailability
   source: DailyBalanceHistoryCaptureSource
   capturedAtMs?: number
   timeZone?: string
@@ -47,8 +49,14 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
 
   const snapshot: DailyBalanceSnapshot = {
     quota: params.quota,
-    today_income: params.includeTodayCashflow ? params.today_income : null,
-    today_quota_consumption: params.includeTodayCashflow
+    today_income: isAccountTodayMetricComplete(
+      params.todayStatsAvailability.income,
+    )
+      ? params.today_income
+      : null,
+    today_quota_consumption: isAccountTodayMetricComplete(
+      params.todayStatsAvailability.consumption,
+    )
       ? params.today_quota_consumption
       : null,
     capturedAt: capturedAtMs,

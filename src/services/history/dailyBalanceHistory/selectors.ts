@@ -11,10 +11,19 @@ interface DailyBalanceHistoryCoverage {
   totalAccounts: number
   snapshotAccounts: number
   cashflowAccounts: number
+  incomeAccounts: number
+  outcomeAccounts: number
   estimatedIncomeAccounts: number
 }
 
 type ExchangeRateLookup = Record<string, number> | Map<string, number>
+
+/**
+ * Checks whether a nullable history metric is a trustworthy numeric value.
+ */
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value)
+}
 
 export type DailyBalanceHistoryMetric =
   | "balance"
@@ -41,6 +50,8 @@ interface AccountRangeSummary {
   netTotal: number | null
   snapshotDays: number
   cashflowDays: number
+  incomeDays: number
+  outcomeDays: number
   estimatedIncomeDays: number
   totalDays: number
 }
@@ -134,6 +145,8 @@ export function buildAggregatedDailyBalanceSeries(params: {
         totalAccounts,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        incomeAccounts: 0,
+        outcomeAccounts: 0,
         estimatedIncomeAccounts: 0,
       })),
     }
@@ -147,6 +160,8 @@ export function buildAggregatedDailyBalanceSeries(params: {
   for (const dayKey of dayKeys) {
     let snapshotAccounts = 0
     let cashflowAccounts = 0
+    let incomeAccounts = 0
+    let outcomeAccounts = 0
     let quotaSum = 0
     let incomeSum = 0
     let outcomeSum = 0
@@ -160,13 +175,21 @@ export function buildAggregatedDailyBalanceSeries(params: {
       snapshotAccounts += 1
       quotaSum += snapshot.quota
 
-      if (
-        typeof snapshot.today_income === "number" &&
-        typeof snapshot.today_quota_consumption === "number"
-      ) {
+      const incomeValue = snapshot.today_income
+      const outcomeValue = snapshot.today_quota_consumption
+      const hasIncome = isFiniteNumber(incomeValue)
+      const hasOutcome = isFiniteNumber(outcomeValue)
+
+      if (hasIncome) {
+        incomeAccounts += 1
+        incomeSum += incomeValue
+      }
+      if (hasOutcome) {
+        outcomeAccounts += 1
+        outcomeSum += outcomeValue
+      }
+      if (hasIncome && hasOutcome) {
         cashflowAccounts += 1
-        incomeSum += snapshot.today_income
-        outcomeSum += snapshot.today_quota_consumption
       }
     }
 
@@ -174,12 +197,14 @@ export function buildAggregatedDailyBalanceSeries(params: {
       totalAccounts,
       snapshotAccounts,
       cashflowAccounts,
+      incomeAccounts,
+      outcomeAccounts,
       estimatedIncomeAccounts: 0,
     })
 
     quotaTotals.push(snapshotAccounts === totalAccounts ? quotaSum : null)
-    incomeTotals.push(cashflowAccounts === totalAccounts ? incomeSum : null)
-    outcomeTotals.push(cashflowAccounts === totalAccounts ? outcomeSum : null)
+    incomeTotals.push(incomeAccounts === totalAccounts ? incomeSum : null)
+    outcomeTotals.push(outcomeAccounts === totalAccounts ? outcomeSum : null)
   }
 
   return { dayKeys, quotaTotals, incomeTotals, outcomeTotals, coverage }
@@ -233,6 +258,8 @@ export function buildAggregatedDailyBalanceMoneySeries(params: {
         totalAccounts,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        incomeAccounts: 0,
+        outcomeAccounts: 0,
         estimatedIncomeAccounts: 0,
       })),
     }
@@ -248,6 +275,8 @@ export function buildAggregatedDailyBalanceMoneySeries(params: {
   for (const dayKey of dayKeys) {
     let snapshotAccounts = 0
     let cashflowAccounts = 0
+    let incomeAccounts = 0
+    let outcomeAccounts = 0
     let balanceSum = 0
     let incomeSum = 0
     let outcomeSum = 0
@@ -267,14 +296,21 @@ export function buildAggregatedDailyBalanceMoneySeries(params: {
       snapshotAccounts += 1
       balanceSum += (snapshot.quota / conversionFactor) * exchangeRate
 
-      if (
-        typeof snapshot.today_income === "number" &&
-        typeof snapshot.today_quota_consumption === "number"
-      ) {
+      const incomeValue = snapshot.today_income
+      const outcomeValue = snapshot.today_quota_consumption
+      const hasIncome = isFiniteNumber(incomeValue)
+      const hasOutcome = isFiniteNumber(outcomeValue)
+
+      if (hasIncome) {
+        incomeAccounts += 1
+        incomeSum += (incomeValue / conversionFactor) * exchangeRate
+      }
+      if (hasOutcome) {
+        outcomeAccounts += 1
+        outcomeSum += (outcomeValue / conversionFactor) * exchangeRate
+      }
+      if (hasIncome && hasOutcome) {
         cashflowAccounts += 1
-        incomeSum += (snapshot.today_income / conversionFactor) * exchangeRate
-        outcomeSum +=
-          (snapshot.today_quota_consumption / conversionFactor) * exchangeRate
       }
     }
 
@@ -282,12 +318,14 @@ export function buildAggregatedDailyBalanceMoneySeries(params: {
       totalAccounts,
       snapshotAccounts,
       cashflowAccounts,
+      incomeAccounts,
+      outcomeAccounts,
       estimatedIncomeAccounts: 0,
     })
 
     balanceTotals.push(snapshotAccounts === totalAccounts ? balanceSum : null)
-    incomeTotals.push(cashflowAccounts === totalAccounts ? incomeSum : null)
-    outcomeTotals.push(cashflowAccounts === totalAccounts ? outcomeSum : null)
+    incomeTotals.push(incomeAccounts === totalAccounts ? incomeSum : null)
+    outcomeTotals.push(outcomeAccounts === totalAccounts ? outcomeSum : null)
   }
 
   return { dayKeys, balanceTotals, incomeTotals, outcomeTotals, coverage }
@@ -331,6 +369,8 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
     totalAccounts,
     snapshotAccounts: 0,
     cashflowAccounts: 0,
+    incomeAccounts: 0,
+    outcomeAccounts: 0,
     estimatedIncomeAccounts: 0,
   }))
 
@@ -366,20 +406,24 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
         coverageByDay[index].snapshotAccounts += 1
         balance[index] = (snapshot.quota / conversionFactor) * exchangeRate
 
-        if (
-          typeof snapshot.today_income === "number" &&
-          typeof snapshot.today_quota_consumption === "number"
-        ) {
+        const reportedIncome = snapshot.today_income
+        const reportedOutcome = snapshot.today_quota_consumption
+        const hasIncome = isFiniteNumber(reportedIncome)
+        const hasOutcome = isFiniteNumber(reportedOutcome)
+
+        if (hasIncome) {
+          coverageByDay[index].incomeAccounts += 1
+          income[index] = (reportedIncome / conversionFactor) * exchangeRate
+        }
+        if (hasOutcome) {
+          coverageByDay[index].outcomeAccounts += 1
+          outcome[index] = (reportedOutcome / conversionFactor) * exchangeRate
+        }
+        if (hasIncome && hasOutcome) {
           coverageByDay[index].cashflowAccounts += 1
-
-          const incomeValue =
-            (snapshot.today_income / conversionFactor) * exchangeRate
-          const outcomeValue =
-            (snapshot.today_quota_consumption / conversionFactor) * exchangeRate
-
-          income[index] = incomeValue
-          outcome[index] = outcomeValue
-          net[index] = incomeValue - outcomeValue
+          net[index] =
+            ((reportedIncome - reportedOutcome) / conversionFactor) *
+            exchangeRate
         }
       }
     }
@@ -484,10 +528,13 @@ export function buildAccountRangeSummaries(params: {
 
     let snapshotDays = 0
     let cashflowDays = 0
+    let incomeDays = 0
+    let outcomeDays = 0
     let estimatedIncomeDays = 0
     let incomeSum = 0
     let estimatedIncomeSum = 0
     let outcomeSum = 0
+    let netSum = 0
 
     for (const dayKey of dayKeys) {
       if (perDay) {
@@ -495,16 +542,23 @@ export function buildAccountRangeSummaries(params: {
         if (snapshot) {
           snapshotDays += 1
 
-          if (
-            typeof snapshot.today_income === "number" &&
-            typeof snapshot.today_quota_consumption === "number"
-          ) {
+          const incomeValue = snapshot.today_income
+          const outcomeValue = snapshot.today_quota_consumption
+          const hasIncome = isFiniteNumber(incomeValue)
+          const hasOutcome = isFiniteNumber(outcomeValue)
+
+          if (hasIncome) {
+            incomeDays += 1
+            incomeSum += (incomeValue / conversionFactor) * exchangeRate
+          }
+          if (hasOutcome) {
+            outcomeDays += 1
+            outcomeSum += (outcomeValue / conversionFactor) * exchangeRate
+          }
+          if (hasIncome && hasOutcome) {
             cashflowDays += 1
-            incomeSum +=
-              (snapshot.today_income / conversionFactor) * exchangeRate
-            outcomeSum +=
-              (snapshot.today_quota_consumption / conversionFactor) *
-              exchangeRate
+            netSum +=
+              ((incomeValue - outcomeValue) / conversionFactor) * exchangeRate
           }
         }
       }
@@ -533,14 +587,11 @@ export function buildAccountRangeSummaries(params: {
       }
     }
 
-    const incomeTotal = cashflowDays > 0 ? incomeSum : null
+    const incomeTotal = incomeDays > 0 ? incomeSum : null
     const estimatedIncomeTotal =
       estimatedIncomeDays > 0 ? estimatedIncomeSum : null
-    const outcomeTotal = cashflowDays > 0 ? outcomeSum : null
-    const netTotal =
-      cashflowDays > 0 && incomeTotal !== null && outcomeTotal !== null
-        ? incomeTotal - outcomeTotal
-        : null
+    const outcomeTotal = outcomeDays > 0 ? outcomeSum : null
+    const netTotal = cashflowDays > 0 ? netSum : null
 
     summaries.push({
       accountId,
@@ -552,6 +603,8 @@ export function buildAccountRangeSummaries(params: {
       netTotal,
       snapshotDays,
       cashflowDays,
+      incomeDays,
+      outcomeDays,
       estimatedIncomeDays,
       totalDays,
     })

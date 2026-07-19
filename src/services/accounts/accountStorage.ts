@@ -1265,7 +1265,9 @@ class AccountStorageService {
             quota: manualQuota ?? result.data.quota,
             today_income: result.data.today_income,
             today_quota_consumption: result.data.today_quota_consumption,
-            includeTodayCashflow,
+            todayStatsAvailability: normalizeAccountTodayStatsAvailability(
+              result.data.todayStatsAvailability,
+            ),
             source: options?.balanceHistoryCaptureSource ?? "refresh",
           })
         } catch (error) {

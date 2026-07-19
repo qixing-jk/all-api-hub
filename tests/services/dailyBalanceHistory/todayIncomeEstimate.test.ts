@@ -131,6 +131,25 @@ describe("today income estimate", () => {
     })
   })
 
+  it("estimates income when reported income is unavailable and leaves compensation null", () => {
+    const missingIncomeStore = createStore({
+      account: {
+        ...store.snapshotsByAccountId.account,
+        "2026-05-23": {
+          ...store.snapshotsByAccountId.account["2026-05-23"],
+          today_income: null,
+        },
+      },
+    })
+
+    expect(estimate({ store: missingIncomeStore })).toEqual({
+      reportedTodayIncome: null,
+      estimatedTodayIncome: 800_000,
+      compensation: null,
+      status: "available",
+    })
+  })
+
   it("returns manual_balance when the account has a non-empty manual balance", () => {
     expect(hasManualBalance({ manualBalanceUsd: " 1.23 " })).toBe(true)
     expect(hasManualBalance({ manualBalanceUsd: "   " })).toBe(false)

@@ -9,6 +9,10 @@ import {
   resolveBalanceHistoryRefreshNowMessage,
   resolveBalanceHistoryUpdateSettingsMessage,
 } from "~/services/history/dailyBalanceHistory/scheduler"
+import {
+  ACCOUNT_TODAY_METRIC_REASONS,
+  ACCOUNT_TODAY_METRIC_STATUSES,
+} from "~/types/accountTodayStats"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import {
   TASK_NOTIFICATION_STATUSES,
@@ -19,6 +23,7 @@ const {
   mockGetPreferences,
   mockSavePreferences,
   mockGetEnabledAccounts,
+  mockResolveAccountTodayStatsAvailability,
   mockRefreshAccount,
   mockRefreshAllAccounts,
   mockUpsertSnapshot,
@@ -33,6 +38,7 @@ const {
   mockGetPreferences: vi.fn(),
   mockSavePreferences: vi.fn(),
   mockGetEnabledAccounts: vi.fn(),
+  mockResolveAccountTodayStatsAvailability: vi.fn(),
   mockRefreshAccount: vi.fn(),
   mockRefreshAllAccounts: vi.fn(),
   mockUpsertSnapshot: vi.fn(),
@@ -58,6 +64,8 @@ vi.mock("~/services/accounts/accountStorage", () => ({
     refreshAccount: mockRefreshAccount,
     refreshAllAccounts: mockRefreshAllAccounts,
   },
+  resolveAccountTodayStatsAvailability: (...args: unknown[]) =>
+    mockResolveAccountTodayStatsAvailability(...args),
 }))
 
 vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
@@ -109,6 +117,15 @@ describe("dailyBalanceHistoryScheduler", () => {
     })
     mockSavePreferences.mockResolvedValue(true)
     mockGetEnabledAccounts.mockResolvedValue([])
+    mockResolveAccountTodayStatsAvailability.mockImplementation(
+      (account: any) =>
+        account.account_info?.todayStatsAvailability ?? {
+          consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        },
+    )
     mockRefreshAllAccounts.mockResolvedValue({
       success: 2,
       failed: 1,
@@ -481,7 +498,7 @@ describe("dailyBalanceHistoryScheduler", () => {
     })
   })
 
-  it("uses default seed cashflow values and skips invalid quotas", async () => {
+  it("does not synthesize complete seed cashflow from invalid values and skips invalid quotas", async () => {
     mockGetEnabledAccounts.mockResolvedValue([
       {
         id: "defaulted",
@@ -524,8 +541,8 @@ describe("dailyBalanceHistoryScheduler", () => {
         accountId: "defaulted",
         snapshot: expect.objectContaining({
           quota: 12_000_000,
-          today_income: 0,
-          today_quota_consumption: 1_000_000,
+          today_income: null,
+          today_quota_consumption: null,
         }),
       }),
     )
@@ -535,6 +552,71 @@ describe("dailyBalanceHistoryScheduler", () => {
       todayKey: "2026-03-28",
       yesterdayKey: "2026-03-27",
     })
+  })
+
+  it("preserves income and consumption coverage independently when seeding development snapshots", async () => {
+    mockGetEnabledAccounts.mockResolvedValue([
+      {
+        id: "income-unavailable",
+        account_info: {
+          quota: 12_000_000,
+          today_income: 500_000,
+          today_quota_consumption: 1_000_000,
+          todayStatsAvailability: {
+            consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            income: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+            },
+          },
+        },
+        exchange_rate: 7,
+      },
+      {
+        id: "consumption-partial",
+        account_info: {
+          quota: 12_000_000,
+          today_income: 500_000,
+          today_quota_consumption: 1_000_000,
+          todayStatsAvailability: {
+            consumption: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+            },
+            requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          },
+        },
+        exchange_rate: 7,
+      },
+    ])
+
+    await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
+
+    expect(mockUpsertSnapshot).toHaveBeenCalledTimes(4)
+    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        accountId: "income-unavailable",
+        snapshot: expect.objectContaining({
+          today_income: null,
+          today_quota_consumption: 1_000_000,
+        }),
+      }),
+    )
+    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
+      4,
+      expect.objectContaining({
+        accountId: "consumption-partial",
+        snapshot: expect.objectContaining({
+          today_income: 500_000,
+          today_quota_consumption: null,
+        }),
+      }),
+    )
   })
 
   it("counts failed snapshot writes as skipped during development seeding", async () => {
