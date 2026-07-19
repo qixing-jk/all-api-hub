@@ -2188,6 +2188,9 @@ describe("KiloCodeExportDialog", () => {
 
     const providerName = "Site B - Default"
     const provider = await screen.findByRole("group", { name: providerName })
+    await within(provider).findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.retryModels",
+    })
     await chooseProviderModel(user, providerName, "modelId", "manual/model")
     await user.click(
       within(provider).getByRole("button", {
