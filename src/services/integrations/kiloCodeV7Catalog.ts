@@ -1,5 +1,23 @@
 import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
+export const KILO_CODE_PROVIDER_PROTOCOLS = {
+  OpenAICompatible: "openai-compatible",
+  OpenAIResponses: "openai-responses",
+  AnthropicMessages: "anthropic-messages",
+} as const
+
+export type KiloCodeProviderProtocol =
+  (typeof KILO_CODE_PROVIDER_PROTOCOLS)[keyof typeof KILO_CODE_PROVIDER_PROTOCOLS]
+
+export const KILO_CODE_PROVIDER_PROTOCOL_NPM = {
+  [KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible]: "@ai-sdk/openai-compatible",
+  [KILO_CODE_PROVIDER_PROTOCOLS.OpenAIResponses]: "@ai-sdk/openai",
+  [KILO_CODE_PROVIDER_PROTOCOLS.AnthropicMessages]: "@ai-sdk/anthropic",
+} as const satisfies Record<KiloCodeProviderProtocol, string>
+
+export type KiloCodeProviderNpm =
+  (typeof KILO_CODE_PROVIDER_PROTOCOL_NPM)[KiloCodeProviderProtocol]
+
 export interface KiloCodeRuntimeKeyExportInput {
   accountId: string
   siteName: string
@@ -17,6 +35,7 @@ export interface KiloCodeV7ProviderSelection
   extends KiloCodeRuntimeKeyExportInput {
   selectionId: string
   providerName?: string
+  protocol?: KiloCodeProviderProtocol
   discoveredModelIds: string[]
   manualModelId?: string
 }
@@ -32,6 +51,7 @@ export interface PreparedKiloCodeV7Provider {
   providerName: string
   baseURL: string
   tokenKey: string
+  protocol: KiloCodeProviderProtocol
   modelIds: string[]
 }
 
@@ -44,6 +64,7 @@ export interface PreparedKiloCodeV7Catalog {
 interface NormalizedKiloCodeV7Selection {
   tuple: KiloCodeV7ProviderSelection
   baseURL: string
+  protocol: KiloCodeProviderProtocol
   modelIds: string[]
 }
 
@@ -232,7 +253,13 @@ function normalizeSelection(
     throw new Error("Base URL must be a valid HTTP or HTTPS URL")
   }
 
-  return { tuple: selection, baseURL, modelIds }
+  const protocol =
+    selection.protocol ?? KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible
+  if (!Object.hasOwn(KILO_CODE_PROVIDER_PROTOCOL_NPM, protocol)) {
+    throw new Error("Kilo Code provider protocol is unsupported")
+  }
+
+  return { tuple: selection, baseURL, protocol, modelIds }
 }
 
 /** Prepare normalized provider facts shared by Kilo Code V7 UI and export. */
@@ -263,6 +290,7 @@ export function prepareKiloCodeV7Catalog(
     providerName: providerNames[index].name,
     baseURL: normalized.baseURL,
     tokenKey: normalized.tuple.tokenKey,
+    protocol: normalized.protocol,
     modelIds: normalized.modelIds,
   }))
 

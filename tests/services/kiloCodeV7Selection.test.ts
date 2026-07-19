@@ -11,6 +11,7 @@ const catalog: PreparedKiloCodeV7Catalog = {
       providerName: "Provider A",
       baseURL: "https://api.example.invalid/v1",
       tokenKey: "example-key",
+      protocol: "openai-compatible",
       modelIds: ["model-a", "model-b"],
     },
     {
@@ -19,6 +20,7 @@ const catalog: PreparedKiloCodeV7Catalog = {
       providerName: "Provider B",
       baseURL: "https://other.example.invalid/v1",
       tokenKey: "other-example-key",
+      protocol: "openai-compatible",
       modelIds: ["model-c"],
     },
   ],

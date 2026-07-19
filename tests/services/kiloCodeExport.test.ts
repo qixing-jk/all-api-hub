@@ -6,6 +6,7 @@ import {
   getKiloCodeApiConfigProfileNames,
   KILO_CODE_EXPORT_FILENAMES,
   KILO_CODE_EXPORT_TARGETS,
+  KILO_CODE_PROVIDER_PROTOCOLS,
   type KiloCodeDefaultModelSelection,
 } from "~/services/integrations/kiloCodeExport"
 import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
@@ -60,6 +61,29 @@ describe("buildKiloCodeV7SettingsFile", () => {
       model: `${providerId}/model-b`,
     })
   })
+
+  it.each([
+    [
+      KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
+      "@ai-sdk/openai-compatible",
+    ],
+    [KILO_CODE_PROVIDER_PROTOCOLS.OpenAIResponses, "@ai-sdk/openai"],
+    [KILO_CODE_PROVIDER_PROTOCOLS.AnthropicMessages, "@ai-sdk/anthropic"],
+  ] as const)(
+    "maps %s to the corresponding AI SDK package",
+    (protocol, npm) => {
+      const catalog = {
+        ...preparedCatalog,
+        providers: [{ ...preparedCatalog.providers[0]!, protocol }],
+      }
+      const result = buildKiloCodeV7SettingsFile({
+        catalog,
+        defaultModel,
+      })
+
+      expect(Object.values(result.provider)[0]?.npm).toBe(npm)
+    },
+  )
 
   it("selects a slash-containing model from a non-first provider", () => {
     const catalog = prepareKiloCodeV7Catalog([
@@ -166,6 +190,20 @@ describe("buildKiloCodeV7SettingsFile", () => {
         modelCount: 2,
       },
       "Kilo Code provider IDs must be unique",
+    ],
+    [
+      "invalid provider protocols",
+      {
+        providers: [
+          {
+            ...preparedCatalog.providers[0]!,
+            protocol: "unknown-protocol",
+          },
+        ],
+        providerCount: 1,
+        modelCount: 2,
+      },
+      "Kilo Code provider protocol is unsupported",
     ],
     [
       "empty models",

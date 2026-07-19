@@ -254,6 +254,40 @@ async function chooseProviderModel(
   )
 }
 
+async function chooseProviderProtocol(
+  user: ReturnType<typeof userEvent.setup>,
+  providerName: string,
+  protocolKey: "openAICompatible" | "openAIResponses" | "anthropicMessages",
+) {
+  const provider = screen.getByRole("group", { name: providerName })
+  await user.click(
+    within(provider).getByRole("combobox", {
+      name: `${providerName} ui:dialog.kiloCode.labels.providerProtocol`,
+    }),
+  )
+  await user.click(
+    await screen.findByRole("option", {
+      name: `ui:dialog.kiloCode.protocols.${protocolKey}`,
+    }),
+  )
+}
+
+async function chooseDefaultModel(
+  user: ReturnType<typeof userEvent.setup>,
+  modelId: string,
+) {
+  await user.click(screen.getByTestId(KILO_CODE_EXPORT_TEST_IDS.defaultModel))
+  const search = screen.getByTestId(
+    KILO_CODE_EXPORT_TEST_IDS.defaultModelSearch,
+  )
+  await user.clear(search)
+  await user.type(search, modelId)
+  await user.click(
+    screen.queryByRole("option", { name: modelId }) ??
+      screen.getByRole("option", { name: "ui:searchableSelect.useValue" }),
+  )
+}
+
 describe("KiloCodeExportDialog", () => {
   beforeEach(() => {
     toastSuccessMock.mockReset()
@@ -690,6 +724,50 @@ describe("KiloCodeExportDialog", () => {
     }).parentElement
     expect(modelSelector).toHaveClass("min-w-0", "w-full", "sm:w-[280px]")
     expect(modelSelector).not.toHaveClass("min-w-[220px]")
+  })
+
+  it("uses the global default selector after V7 model discovery succeeds", async () => {
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "b",
+          name: "Site B",
+          baseUrl: "https://b.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "masked-key" },
+    ])
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
+      "model-a",
+      "model-b",
+    ])
+
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
+    )
+
+    const provider = await screen.findByRole("group", {
+      name: "Site B - Default",
+    })
+    await waitFor(() => {
+      expect(within(provider).getByText("common:status.success")).toBeVisible()
+    })
+
+    expect(
+      within(provider).queryByRole("combobox", {
+        name: "Site B - Default ui:dialog.kiloCode.labels.modelId",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId(KILO_CODE_EXPORT_TEST_IDS.defaultModel),
+    ).toHaveTextContent("model-a")
   })
 
   it("preselects sites/tokens when initial selections are provided", async () => {
@@ -1413,7 +1491,6 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(within(provider).getByText("common:status.success")).toBeVisible()
     })
-    await chooseProviderModel(user, "Site A - Default", "modelId", "model-a")
     await user.click(
       screen.getByRole("button", {
         name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
@@ -1953,7 +2030,7 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         within(provider).getByRole("combobox", {
-          name: `${providerName} ui:dialog.kiloCode.labels.modelId`,
+          name: `${providerName} ui:dialog.kiloCode.labels.providerProtocol`,
         }),
       ).toHaveFocus()
     })
@@ -1981,7 +2058,7 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         within(provider).getByRole("combobox", {
-          name: `${providerName} ui:dialog.kiloCode.labels.modelId`,
+          name: `${providerName} ui:dialog.kiloCode.labels.providerProtocol`,
         }),
       ).toHaveFocus()
     })
@@ -2039,6 +2116,17 @@ describe("KiloCodeExportDialog", () => {
         name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
       }),
     ).toBeEnabled()
+
+    await user.click(
+      within(provider).getByTestId(KILO_CODE_EXPORT_TEST_IDS.removeManualModel),
+    )
+    await waitFor(() => {
+      expect(
+        within(provider).getByRole("combobox", {
+          name: `${providerName} ui:dialog.kiloCode.labels.modelId`,
+        }),
+      ).toHaveFocus()
+    })
   })
 
   it("removes a non-default provider manual model without changing the default provider", async () => {
@@ -2090,6 +2178,9 @@ describe("KiloCodeExportDialog", () => {
     const providerB = await screen.findByRole("group", {
       name: providerBName,
     })
+    await within(providerB).findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.retryModels",
+    })
     await chooseProviderModel(
       user,
       providerBName,
@@ -2134,7 +2225,7 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         within(providerB).getByRole("combobox", {
-          name: `${providerBName} ui:dialog.kiloCode.labels.modelId`,
+          name: `${providerBName} ui:dialog.kiloCode.labels.providerProtocol`,
         }),
       ).toHaveFocus()
     })
@@ -2278,9 +2369,7 @@ describe("KiloCodeExportDialog", () => {
         screen.getByTestId(KILO_CODE_EXPORT_TEST_IDS.defaultModel),
       ).toHaveTextContent("model-a")
     })
-    await chooseProviderModel(user, "Site B - Default", "modelId", "manual/v7")
-    await user.click(screen.getByTestId(KILO_CODE_EXPORT_TEST_IDS.defaultModel))
-    await user.click(await screen.findByRole("option", { name: "manual/v7" }))
+    await chooseDefaultModel(user, "manual/v7")
 
     const modelLoadCount = mockFetchOpenAICompatibleModelIds.mock.calls.length
     mockResolveApiTokenKey.mockClear()
@@ -2796,6 +2885,283 @@ describe("KiloCodeExportDialog", () => {
     clickSpy.mockRestore()
     revokeObjectUrl.mockRestore()
     createObjectUrl.mockRestore()
+  })
+
+  it("lets each V7 account provider choose a protocol without refetching models", async () => {
+    const user = userEvent.setup()
+
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "b",
+          name: "Site B",
+          baseUrl: "https://b.test",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-test" },
+    ])
+    mockBuildKiloCodeExportOutput.mockReturnValueOnce({
+      filename: "kilo-settings.json",
+      copyPayload: { format: "v7-copy" },
+      downloadPayload: { format: "v7-download" },
+      downloadJson: JSON.stringify({ format: "v7-download" }, null, 2),
+      isDownloadTooLarge: false,
+      itemCount: 1,
+      modelCount: 1,
+    })
+
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["b"]}
+      />,
+    )
+
+    const copyButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+
+    const provider = screen.getByRole("group", {
+      name: "Site B - Default",
+    })
+    const protocol = within(provider).getByRole("combobox", {
+      name: "Site B - Default ui:dialog.kiloCode.labels.providerProtocol",
+    })
+    expect(protocol).toHaveTextContent(
+      "ui:dialog.kiloCode.protocols.openAICompatible",
+    )
+
+    const modelFetchCount = mockFetchOpenAICompatibleModelIds.mock.calls.length
+    await user.click(protocol)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.kiloCode.protocols.anthropicMessages",
+      }),
+    )
+
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(
+      modelFetchCount,
+    )
+    expect(protocol).toHaveTextContent(
+      "ui:dialog.kiloCode.protocols.anthropicMessages",
+    )
+
+    await user.click(copyButton)
+    await waitFor(() =>
+      expect(mockBuildKiloCodeExportOutput).toHaveBeenCalled(),
+    )
+    expect(mockBuildKiloCodeExportOutput).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selections: [
+          expect.objectContaining({ protocol: "anthropic-messages" }),
+        ],
+      }),
+    )
+  })
+
+  it("keeps protocol changes isolated across V7 account providers", async () => {
+    const user = userEvent.setup()
+
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "First", key: "sk-first" },
+      { id: 2, name: "Second", key: "sk-second" },
+    ])
+
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+        initialSelectedTokenIdsBySite={{ "account-a": ["1", "2"] }}
+      />,
+    )
+
+    const firstProviderName = "Site A - First"
+    const secondProviderName = "Site A - Second"
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(2)
+    })
+
+    await chooseProviderProtocol(user, firstProviderName, "anthropicMessages")
+
+    expect(
+      within(screen.getByRole("group", { name: firstProviderName })).getByRole(
+        "combobox",
+        {
+          name: `${firstProviderName} ui:dialog.kiloCode.labels.providerProtocol`,
+        },
+      ),
+    ).toHaveTextContent("ui:dialog.kiloCode.protocols.anthropicMessages")
+    expect(
+      within(screen.getByRole("group", { name: secondProviderName })).getByRole(
+        "combobox",
+        {
+          name: `${secondProviderName} ui:dialog.kiloCode.labels.providerProtocol`,
+        },
+      ),
+    ).toHaveTextContent("ui:dialog.kiloCode.protocols.openAICompatible")
+
+    await chooseProviderProtocol(user, secondProviderName, "openAIResponses")
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockBuildKiloCodeExportOutput).toHaveBeenCalled(),
+    )
+    expect(mockBuildKiloCodeExportOutput).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selections: expect.arrayContaining([
+          expect.objectContaining({
+            selectionId: "account-a:1",
+            protocol: "anthropic-messages",
+          }),
+          expect.objectContaining({
+            selectionId: "account-a:2",
+            protocol: "openai-responses",
+          }),
+        ]),
+      }),
+    )
+  })
+
+  it("preserves V7 protocols across target changes and resets them after reopening", async () => {
+    const user = userEvent.setup()
+
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    const token = { id: 1, name: "Default", key: "sk-test" }
+    mockFetchAccountTokens.mockResolvedValueOnce([token])
+
+    const { rerender } = render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+
+    const providerName = "Site A - Default"
+    const protocolName = `${providerName} ui:dialog.kiloCode.labels.providerProtocol`
+    const protocol = await within(
+      await screen.findByRole("group", { name: providerName }),
+    ).findByRole("combobox", { name: protocolName })
+    await chooseProviderProtocol(user, providerName, "anthropicMessages")
+    expect(protocol).toHaveTextContent(
+      "ui:dialog.kiloCode.protocols.anthropicMessages",
+    )
+
+    await chooseKiloCodeExportTarget(user, "legacy")
+    expect(
+      screen.queryByRole("combobox", { name: protocolName }),
+    ).not.toBeInTheDocument()
+    await chooseKiloCodeExportTarget(user, "kiloV7")
+    expect(
+      screen.getByRole("combobox", { name: protocolName }),
+    ).toHaveTextContent("ui:dialog.kiloCode.protocols.anthropicMessages")
+
+    rerender(
+      <KiloCodeExportDialog
+        isOpen={false}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("combobox", { name: protocolName }),
+      ).not.toBeInTheDocument()
+    })
+
+    mockFetchAccountTokens.mockResolvedValueOnce([token])
+    rerender(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("combobox", { name: protocolName }),
+    ).toHaveTextContent("ui:dialog.kiloCode.protocols.openAICompatible")
+  })
+
+  it("drops a delayed account export when its provider protocol changes", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    let resolveSecret: (value: string) => void = () => {}
+    const delayedSecret = new Promise<string>((resolve) => {
+      resolveSecret = resolve
+    })
+
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "account-a",
+          name: "Site A",
+          baseUrl: "https://a.example.invalid",
+        }),
+      ],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-masked********" },
+    ])
+
+    render(
+      <KiloCodeExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialSelectedSiteIds={["account-a"]}
+      />,
+    )
+
+    const copyButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+    mockResolveApiTokenKey.mockClear()
+    mockResolveApiTokenKey.mockReturnValueOnce(delayedSecret)
+
+    await user.click(copyButton)
+    await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(1))
+    await chooseProviderProtocol(user, "Site A - Default", "anthropicMessages")
+
+    resolveSecret("sk-full-secret")
+    await delayedSecret
+    await act(async () => {})
+
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
   it("switches to legacy policy output without refetching or resolving another secret", async () => {

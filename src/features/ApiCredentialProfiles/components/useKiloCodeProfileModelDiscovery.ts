@@ -3,10 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import type {
   KiloCodeDefaultModelSelection,
+  KiloCodeProviderProtocol,
   KiloCodeRuntimeKeyExportInput,
   KiloCodeV7ProviderSelection,
   PreparedKiloCodeV7Catalog,
 } from "~/services/integrations/kiloCodeExport"
+import { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCodeExport"
 import {
   normalizeKiloCodeModelIds,
   prepareKiloCodeV7Catalog,
@@ -89,19 +91,30 @@ export function useKiloCodeProfileModelDiscovery({
   const [legacyModelId, setLegacyModelId] = useState("")
   const [v7DefaultModelId, setV7DefaultModelId] = useState("")
   const [v7ManualModelId, setV7ManualModelId] = useState("")
+  const [v7Protocol, setV7Protocol] = useState<KiloCodeProviderProtocol>(
+    KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
+  )
   const [modelIds, setModelIds] = useState<string[]>([])
   const [modelStatus, setModelStatus] = useState<KiloCodeModelStatus>(
     KILO_CODE_MODEL_STATUSES.Idle,
   )
   const requestIdRef = useRef(0)
   const v7ManualModelIdRef = useRef("")
+  const v7ProtocolRef = useRef<KiloCodeProviderProtocol>(
+    KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
+  )
   const invalidRuntimeProfile = hasInvalidRuntimeProfile(runtimeKey)
 
   const buildV7Selection = useCallback(
-    (discoveredModelIds: string[], manualModelId?: string) => ({
+    (
+      discoveredModelIds: string[],
+      manualModelId: string | undefined,
+      protocol: KiloCodeProviderProtocol,
+    ) => ({
       ...runtimeKey,
       selectionId,
       providerName: profileName,
+      protocol,
       discoveredModelIds,
       manualModelId: manualModelId?.trim() || undefined,
     }),
@@ -126,7 +139,11 @@ export function useKiloCodeProfileModelDiscovery({
       )
       setV7DefaultModelId((current) => {
         const prepared = prepareSingleProfileCatalog(
-          buildV7Selection(normalized, v7ManualModelIdRef.current),
+          buildV7Selection(
+            normalized,
+            v7ManualModelIdRef.current,
+            v7ProtocolRef.current,
+          ),
         )
         if (!prepared.catalog) return ""
         return (
@@ -154,6 +171,8 @@ export function useKiloCodeProfileModelDiscovery({
     setV7DefaultModelId("")
     setV7ManualModelId("")
     v7ManualModelIdRef.current = ""
+    setV7Protocol(KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible)
+    v7ProtocolRef.current = KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible
     setModelIds([])
     setModelStatus(KILO_CODE_MODEL_STATUSES.Idle)
     if (invalidRuntimeProfile) {
@@ -170,8 +189,8 @@ export function useKiloCodeProfileModelDiscovery({
   }, [invalidRuntimeProfile, isOpen, loadModels])
 
   const v7Selection = useMemo<KiloCodeV7ProviderSelection>(
-    () => buildV7Selection(modelIds, v7ManualModelId),
-    [buildV7Selection, modelIds, v7ManualModelId],
+    () => buildV7Selection(modelIds, v7ManualModelId, v7Protocol),
+    [buildV7Selection, modelIds, v7ManualModelId, v7Protocol],
   )
   const preparedV7 = useMemo(
     () => prepareSingleProfileCatalog(v7Selection),
@@ -202,11 +221,17 @@ export function useKiloCodeProfileModelDiscovery({
   const selectLegacyModel = useCallback((value: string) => {
     setLegacyModelId(value)
   }, [])
+  const selectV7Protocol = useCallback((protocol: KiloCodeProviderProtocol) => {
+    v7ProtocolRef.current = protocol
+    setV7Protocol(protocol)
+  }, [])
   const removeManualModel = useCallback(() => {
     v7ManualModelIdRef.current = ""
     setV7ManualModelId("")
     setV7DefaultModelId((current) => {
-      const prepared = prepareSingleProfileCatalog(buildV7Selection(modelIds))
+      const prepared = prepareSingleProfileCatalog(
+        buildV7Selection(modelIds, undefined, v7ProtocolRef.current),
+      )
       if (!prepared.catalog) return ""
       return (
         reconcileKiloCodeV7DefaultSelection(prepared.catalog, {
@@ -226,9 +251,11 @@ export function useKiloCodeProfileModelDiscovery({
     preparedV7ModelIds: preparedV7.catalog?.providers[0]?.modelIds ?? modelIds,
     removeManualModel,
     selectLegacyModel,
+    selectV7Protocol,
     selectV7Model,
     v7DefaultModelId,
     v7ManualModelId,
+    v7Protocol,
     v7Selection,
     validV7Default,
   }

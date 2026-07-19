@@ -87,6 +87,22 @@ async function chooseExportTarget(
   )
 }
 
+async function chooseV7ProviderProtocol(
+  user: ReturnType<typeof userEvent.setup>,
+  protocol: "openAICompatible" | "openAIResponses" | "anthropicMessages",
+) {
+  await user.click(
+    screen.getByRole("combobox", {
+      name: "ui:dialog.kiloCode.labels.providerProtocol",
+    }),
+  )
+  await user.click(
+    await screen.findByRole("option", {
+      name: `ui:dialog.kiloCode.protocols.${protocol}`,
+    }),
+  )
+}
+
 async function chooseV7Model(
   user: ReturnType<typeof userEvent.setup>,
   modelId: string,
@@ -235,6 +251,7 @@ describe("KiloCodeProfileExportDialog", () => {
           tokenKey: "sk-secret",
           selectionId: "profile:profile-1",
           providerName: "Reusable Key",
+          protocol: "openai-compatible",
           discoveredModelIds: ["a-model", "z-model"],
           manualModelId: undefined,
         },
@@ -269,6 +286,44 @@ describe("KiloCodeProfileExportDialog", () => {
         },
       },
     )
+  })
+
+  it("selects the V7 provider protocol without reloading the adapter model catalog", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined)
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["model-a"])
+
+    renderDialog()
+
+    const protocolSelect = await screen.findByRole("combobox", {
+      name: "ui:dialog.kiloCode.labels.providerProtocol",
+    })
+    expect(protocolSelect).toHaveTextContent(
+      "ui:dialog.kiloCode.protocols.openAICompatible",
+    )
+    await screen.findByText("model-a")
+
+    await chooseV7ProviderProtocol(user, "openAIResponses")
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+      }),
+    )
+
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(1)
+    expect(mockBuildKiloCodeExportOutput).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        target: KILO_CODE_EXPORT_TARGETS.KiloV7,
+        selections: [expect.objectContaining({ protocol: "openai-responses" })],
+      }),
+    )
+
+    await chooseExportTarget(user, "legacy")
+    expect(
+      screen.queryByRole("combobox", {
+        name: "ui:dialog.kiloCode.labels.providerProtocol",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("uses target-specific model labels", async () => {

@@ -208,4 +208,44 @@ describe("useKiloCodeAccountModelDiscovery", () => {
     })
     expect(result.current.v7Selections[0]?.manualModelId).toBe("custom/default")
   })
+
+  it("keeps the discovered catalog when changing the V7 provider protocol", async () => {
+    fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce([
+      "model-b",
+      "model-a",
+    ])
+    const selection = createSelection({
+      baseUrl: "https://api.example.invalid",
+      tokenKey: "runtime-key",
+      accountAccessToken: "account-token",
+    })
+
+    const { result } = renderHook(() =>
+      useKiloCodeAccountModelDiscovery({
+        isOpen: true,
+        selections: [selection],
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.v7Selections[0]?.discoveredModelIds).toEqual([
+        "model-a",
+        "model-b",
+      ])
+    })
+    expect(result.current.v7Selections[0]?.protocol).toBe("openai-compatible")
+
+    act(() => {
+      result.current.selectV7Protocol(
+        selection.selectionId,
+        "anthropic-messages",
+      )
+    })
+
+    expect(result.current.v7Selections[0]).toMatchObject({
+      protocol: "anthropic-messages",
+      discoveredModelIds: ["model-a", "model-b"],
+    })
+    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledTimes(1)
+  })
 })

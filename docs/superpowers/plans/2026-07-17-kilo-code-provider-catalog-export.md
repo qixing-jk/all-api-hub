@@ -1292,6 +1292,52 @@ git commit -m "test(kilocode): cover provider catalog downloads"
 
 Skip this commit only if the files are already clean because their changes were committed with the owning implementation slice.
 
+## Task 9: Add Per-provider V7 Protocol Selection
+
+**Files:**
+
+- Modify: `src/services/integrations/kiloCodeV7Catalog.ts`
+- Modify: `src/services/integrations/kiloCodeExport.ts`
+- Modify: `src/components/useKiloCodeAccountModelDiscovery.ts`
+- Modify: `src/components/KiloCodeExportDialog.tsx`
+- Modify: `src/features/ApiCredentialProfiles/components/useKiloCodeProfileModelDiscovery.ts`
+- Modify: `src/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog.tsx`
+- Modify: the focused service, hook, and dialog tests plus all app locales.
+
+- [ ] **Step 1: Add failing protocol contract tests**
+
+Cover the three runtime protocol values, their AI SDK `npm` mappings, the
+OpenAI-compatible default, and stable provider IDs when only protocol changes.
+
+- [ ] **Step 2: Normalize protocol at the V7 catalog boundary**
+
+Carry a provider protocol through the prepared catalog and serialize:
+
+- `openai-compatible` -> `@ai-sdk/openai-compatible`
+- `openai-responses` -> `@ai-sdk/openai`
+- `anthropic-messages` -> `@ai-sdk/anthropic`
+
+Reject unknown prepared values. Keep the Legacy schema unchanged.
+
+- [ ] **Step 3: Add target-local dialog controls**
+
+Add one protocol selector per account provider and one selector for a profile
+provider. Default to OpenAI Compatible, preserve the choice while switching
+targets, and reset it for a fresh dialog context. Include account protocol state
+in the async export action signature.
+
+- [ ] **Step 4: Preserve model discovery capabilities**
+
+Changing protocol must not refetch, clear, disable, or filter the existing model
+inventory. Keep the current model-discovery path for all three choices,
+including Anthropic Messages.
+
+- [ ] **Step 5: Synchronize copy, docs, and validation**
+
+Add the protocol labels and choices to all app locales, update the Chinese
+source docs, run focused related tests, `pnpm run i18n:extract:ci`,
+`pnpm run validate:staged`, and the compile/knip push gate.
+
 ## Implementation Review Gates
 
 After each implementation task:

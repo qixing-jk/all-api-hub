@@ -1,10 +1,12 @@
 import {
   buildUniqueKiloCodeProviderNames,
+  KILO_CODE_PROVIDER_PROTOCOL_NPM,
   normalizeKiloCodeModelIds,
 } from "~/services/integrations/kiloCodeV7Catalog"
 import type {
   KiloCodeDefaultModelSelection,
   KiloCodeLegacySelection,
+  KiloCodeProviderNpm,
   PreparedKiloCodeV7Catalog,
 } from "~/services/integrations/kiloCodeV7Catalog"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -13,10 +15,13 @@ import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 export type {
   KiloCodeDefaultModelSelection,
   KiloCodeLegacySelection,
+  KiloCodeProviderProtocol,
   KiloCodeRuntimeKeyExportInput,
   KiloCodeV7ProviderSelection,
   PreparedKiloCodeV7Catalog,
 } from "~/services/integrations/kiloCodeV7Catalog"
+
+export { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCodeV7Catalog"
 
 export const KILO_CODE_EXPORT_TARGETS = {
   KiloV7: "kilo-v7",
@@ -66,7 +71,7 @@ export interface KiloCodeSettingsFile {
 
 interface KiloCodeV7Provider {
   name: string
-  npm: "@ai-sdk/openai-compatible"
+  npm: KiloCodeProviderNpm
   models: Record<string, { name: string }>
   options: {
     apiKey: string
@@ -128,6 +133,9 @@ function validatePreparedKiloCodeV7Catalog(catalog: PreparedKiloCodeV7Catalog) {
       throw new Error("Kilo Code provider names must be unique")
     }
     providerNames.add(providerName)
+    if (!Object.hasOwn(KILO_CODE_PROVIDER_PROTOCOL_NPM, provider.protocol)) {
+      throw new Error("Kilo Code provider protocol is unsupported")
+    }
     if (!provider.tokenKey.trim()) {
       throw new Error("Kilo Code provider token key cannot be blank")
     }
@@ -178,10 +186,10 @@ function validatePreparedKiloCodeV7Catalog(catalog: PreparedKiloCodeV7Catalog) {
 /**
  * Build the Kilo Code 7.x settings format.
  *
- * Contract source: https://github.com/Kilo-Org/kilocode/tree/3cb82a0907f888749435c1d208e56d8365747df2
- * Custom providers require a display `name`, use the AI SDK OpenAI-compatible
- * package, expose a multi-model `models` map, and select the top-level default
- * `model` with a provider/model identifier.
+ * Contract source: https://github.com/Kilo-Org/kilocode/blob/938919ab72e3977d1512e0363417270e3337c7b1/packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx
+ * Custom providers require a display `name`, select one of Kilo's supported AI
+ * SDK packages, expose a multi-model `models` map, and select the top-level
+ * default `model` with a provider/model identifier.
  */
 function buildPreparedKiloCodeV7SettingsFile(
   options: BuildPreparedKiloCodeV7SettingsOptions,
@@ -207,7 +215,7 @@ function buildPreparedKiloCodeV7SettingsFile(
   for (const preparedProvider of options.catalog.providers) {
     provider[preparedProvider.providerId] = {
       name: preparedProvider.providerName,
-      npm: "@ai-sdk/openai-compatible",
+      npm: KILO_CODE_PROVIDER_PROTOCOL_NPM[preparedProvider.protocol],
       models: Object.fromEntries(
         preparedProvider.modelIds.map((modelId) => [
           modelId,

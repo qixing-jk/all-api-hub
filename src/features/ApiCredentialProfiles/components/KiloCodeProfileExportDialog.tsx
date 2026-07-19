@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -23,8 +24,10 @@ import {
   getKiloCodeApiConfigProfileNames,
   KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
+  KILO_CODE_PROVIDER_PROTOCOLS,
   type KiloCodeExportTarget,
   type KiloCodeLegacySelection,
+  type KiloCodeProviderProtocol,
   type KiloCodeRuntimeKeyExportInput,
 } from "~/services/integrations/kiloCodeExport"
 import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCodeExportAnalytics"
@@ -48,6 +51,28 @@ import {
 
 /** Unified logger scoped to the Kilo Code export dialog for API credential profiles. */
 const logger = createLogger("KiloCodeProfileExportDialog")
+const KILO_CODE_PROVIDER_PROTOCOL_OPTIONS: ReadonlyArray<{
+  value: KiloCodeProviderProtocol
+}> = [
+  { value: KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible },
+  { value: KILO_CODE_PROVIDER_PROTOCOLS.OpenAIResponses },
+  { value: KILO_CODE_PROVIDER_PROTOCOLS.AnthropicMessages },
+]
+
+/** Translate a normalized Kilo Code provider protocol with extractable keys. */
+function translateProviderProtocol(
+  t: TFunction,
+  protocol: KiloCodeProviderProtocol,
+) {
+  switch (protocol) {
+    case KILO_CODE_PROVIDER_PROTOCOLS.OpenAIResponses:
+      return t("ui:dialog.kiloCode.protocols.openAIResponses")
+    case KILO_CODE_PROVIDER_PROTOCOLS.AnthropicMessages:
+      return t("ui:dialog.kiloCode.protocols.anthropicMessages")
+    default:
+      return t("ui:dialog.kiloCode.protocols.openAICompatible")
+  }
+}
 const exportDialogSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesExportDialog
 const exportDialogAnalyticsContext = {
@@ -90,9 +115,11 @@ export function KiloCodeProfileExportDialog({
     preparedV7ModelIds,
     removeManualModel,
     selectLegacyModel,
+    selectV7Protocol,
     selectV7Model,
     v7DefaultModelId,
     v7ManualModelId,
+    v7Protocol,
     v7Selection,
     validV7Default,
   } = useKiloCodeProfileModelDiscovery({
@@ -448,25 +475,54 @@ export function KiloCodeProfileExportDialog({
         </FormField>
 
         {isKiloV7Target ? (
-          <FormField
-            label={t("ui:dialog.kiloCode.labels.defaultModel")}
-            description={t("ui:dialog.kiloCode.descriptions.modelId")}
-          >
-            <KiloCodeDefaultModelSelect
-              ref={v7ModelSelectorRef}
-              aria-label={t("ui:dialog.kiloCode.labels.defaultModel")}
-              value={validV7Default?.modelId ?? v7DefaultModelId}
-              modelIds={preparedV7ModelIds}
-              onChange={handleV7ModelChange}
-              placeholder={
-                isLoadingModels
-                  ? t("common:status.loading")
-                  : t("ui:dialog.kiloCode.placeholders.modelId")
-              }
-              allowCustomValue
-              disabled={isLoadingModels}
-            />
-          </FormField>
+          <>
+            <FormField
+              label={t("ui:dialog.kiloCode.labels.providerProtocol")}
+              htmlFor="kilo-code-provider-protocol"
+            >
+              <Select
+                value={v7Protocol}
+                onValueChange={(value) => {
+                  const option = KILO_CODE_PROVIDER_PROTOCOL_OPTIONS.find(
+                    (candidate) => candidate.value === value,
+                  )
+                  if (!option) return
+                  selectV7Protocol(option.value)
+                  setIsDownloadTooLarge(false)
+                }}
+              >
+                <SelectTrigger id="kilo-code-provider-protocol">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {KILO_CODE_PROVIDER_PROTOCOL_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {translateProviderProtocol(t, option.value)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField
+              label={t("ui:dialog.kiloCode.labels.defaultModel")}
+              description={t("ui:dialog.kiloCode.descriptions.modelId")}
+            >
+              <KiloCodeDefaultModelSelect
+                ref={v7ModelSelectorRef}
+                aria-label={t("ui:dialog.kiloCode.labels.defaultModel")}
+                value={validV7Default?.modelId ?? v7DefaultModelId}
+                modelIds={preparedV7ModelIds}
+                onChange={handleV7ModelChange}
+                placeholder={
+                  isLoadingModels
+                    ? t("common:status.loading")
+                    : t("ui:dialog.kiloCode.placeholders.modelId")
+                }
+                allowCustomValue
+                disabled={isLoadingModels}
+              />
+            </FormField>
+          </>
         ) : (
           <FormField
             label={t("ui:dialog.kiloCode.labels.legacyModelId")}

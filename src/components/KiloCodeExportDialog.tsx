@@ -37,6 +37,7 @@ import {
   KILO_CODE_EXPORT_FILENAMES,
   KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
+  KILO_CODE_PROVIDER_PROTOCOLS,
   type KiloCodeExportTarget,
 } from "~/services/integrations/kiloCodeExport"
 import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCodeExportAnalytics"
@@ -79,6 +80,21 @@ const KILO_CODE_INVENTORY_STATUSES = {
   Loaded: "loaded",
   Error: "error",
 } as const
+
+const KILO_CODE_PROTOCOL_OPTIONS = [
+  {
+    value: KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
+    label: "ui:dialog.kiloCode.protocols.openAICompatible",
+  },
+  {
+    value: KILO_CODE_PROVIDER_PROTOCOLS.OpenAIResponses,
+    label: "ui:dialog.kiloCode.protocols.openAIResponses",
+  },
+  {
+    value: KILO_CODE_PROVIDER_PROTOCOLS.AnthropicMessages,
+    label: "ui:dialog.kiloCode.protocols.anthropicMessages",
+  },
+] as const
 
 /**
  * Builds the stable toast id used while Kilo Code export creates a missing token.
@@ -204,6 +220,7 @@ export function KiloCodeExportDialog({
   const pendingRetrySelectionIdRef = useRef<string | undefined>(undefined)
   const pendingRemoveSelectionIdRef = useRef<string | undefined>(undefined)
   const retryButtonRefs = useRef(new Map<string, HTMLButtonElement>())
+  const protocolSelectorRefs = useRef(new Map<string, HTMLButtonElement>())
   const modelSelectorRefs = useRef(new Map<string, HTMLButtonElement>())
   const actionGenerationRef = useRef(0)
   const actionContextRef = useRef({
@@ -226,6 +243,7 @@ export function KiloCodeExportDialog({
     pendingRetrySelectionIdRef.current = undefined
     pendingRemoveSelectionIdRef.current = undefined
     retryButtonRefs.current.clear()
+    protocolSelectorRefs.current.clear()
     modelSelectorRefs.current.clear()
     initialSelectionAppliedRef.current = false
   }, [isOpen])
@@ -558,6 +576,7 @@ export function KiloCodeExportDialog({
     selectV7DefaultModel,
     selectV7DefaultProvider,
     selectV7ManualModel,
+    selectV7Protocol,
     v7DefaultModel,
     v7Selections,
   } = useKiloCodeAccountModelDiscovery({
@@ -634,6 +653,7 @@ export function KiloCodeExportDialog({
                 tokenId: selection.tokenId,
                 tokenName: selection.tokenName,
                 providerName: selection.providerName ?? "",
+                protocol: selection.protocol,
                 discoveredModelIds: selection.discoveredModelIds,
                 manualModelId: selection.manualModelId ?? "",
               })),
@@ -751,15 +771,24 @@ export function KiloCodeExportDialog({
       retryButtonRefs.current.get(selectionId)?.focus()
       return
     }
+    if (isKiloV7Export) {
+      protocolSelectorRefs.current.get(selectionId)?.focus()
+      return
+    }
     modelSelectorRefs.current.get(selectionId)?.focus()
-  }, [getModelInventory, modelStatusSignature])
+  }, [getModelInventory, isKiloV7Export, modelStatusSignature])
 
   useEffect(() => {
     const selectionId = pendingRemoveSelectionIdRef.current
     if (!selectionId || v7SelectionById.get(selectionId)?.manualModelId?.trim())
       return
     pendingRemoveSelectionIdRef.current = undefined
-    modelSelectorRefs.current.get(selectionId)?.focus()
+    const recoverySelector = modelSelectorRefs.current.get(selectionId)
+    if (recoverySelector) {
+      recoverySelector.focus()
+      return
+    }
+    protocolSelectorRefs.current.get(selectionId)?.focus()
   }, [v7SelectionById])
 
   const buildCurrentExportOutput = useCallback(() => {
@@ -1099,8 +1128,16 @@ export function KiloCodeExportDialog({
 
             {selectedTokenIds.length > 0 && (
               <FormField
-                label={t("ui:dialog.kiloCode.labels.modelId")}
-                description={t("ui:dialog.kiloCode.descriptions.modelId")}
+                label={
+                  isKiloV7Export
+                    ? undefined
+                    : t("ui:dialog.kiloCode.labels.legacyModelId")
+                }
+                description={
+                  isKiloV7Export
+                    ? undefined
+                    : t("ui:dialog.kiloCode.descriptions.modelId")
+                }
               >
                 <div className="space-y-2">
                   {inventory.tokens
@@ -1129,6 +1166,8 @@ export function KiloCodeExportDialog({
                         isModelInventoryError ||
                         (isModelInventoryLoaded &&
                           modelInventory.modelIds.length === 0)
+                      const showV7ManualRecovery =
+                        showRetry && modelInventory.modelIds.length === 0
                       const modelOptions = modelInventory.modelIds.map(
                         (id) => ({
                           value: id,
@@ -1208,46 +1247,120 @@ export function KiloCodeExportDialog({
                                   {t("ui:dialog.kiloCode.actions.retryModels")}
                                 </Button>
                               )}
-                              <div className="w-full min-w-0 sm:w-[280px]">
-                                <SearchableSelect
-                                  ref={(element) => {
-                                    if (element) {
-                                      modelSelectorRefs.current.set(
-                                        selectionId,
-                                        element,
-                                      )
-                                    } else {
-                                      modelSelectorRefs.current.delete(
-                                        selectionId,
-                                      )
+                              {isKiloV7Export && (
+                                <FormField
+                                  className="w-full min-w-0 sm:w-[220px]"
+                                  label={t(
+                                    "ui:dialog.kiloCode.labels.providerProtocol",
+                                  )}
+                                >
+                                  <Select
+                                    value={
+                                      v7SelectionById.get(selectionId)
+                                        ?.protocol ??
+                                      KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible
                                     }
-                                  }}
-                                  aria-label={`${selection.providerName} ${t(
-                                    isKiloV7Export
-                                      ? "ui:dialog.kiloCode.labels.modelId"
-                                      : "ui:dialog.kiloCode.labels.legacyModelId",
-                                  )}`}
-                                  value={selectedModelId}
-                                  onChange={(value) => {
-                                    if (isKiloV7Export) {
-                                      selectV7ManualModel(selectionId, value)
-                                    } else {
-                                      selectLegacyModel(selectionId, value)
-                                    }
-                                    setIsDownloadTooLarge(false)
-                                  }}
-                                  placeholder={
-                                    isModelInventoryLoading ||
-                                    isModelInventoryIdle
-                                      ? t("common:status.loading")
-                                      : t(
-                                          "ui:dialog.kiloCode.placeholders.modelId",
+                                    onValueChange={(value) => {
+                                      const option =
+                                        KILO_CODE_PROTOCOL_OPTIONS.find(
+                                          (candidate) =>
+                                            candidate.value === value,
                                         )
+                                      if (!option) return
+                                      selectV7Protocol(
+                                        selectionId,
+                                        option.value,
+                                      )
+                                      setIsDownloadTooLarge(false)
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      ref={(element) => {
+                                        if (element) {
+                                          protocolSelectorRefs.current.set(
+                                            selectionId,
+                                            element,
+                                          )
+                                        } else {
+                                          protocolSelectorRefs.current.delete(
+                                            selectionId,
+                                          )
+                                        }
+                                      }}
+                                      aria-label={`${selection.providerName} ${t(
+                                        "ui:dialog.kiloCode.labels.providerProtocol",
+                                      )}`}
+                                    >
+                                      <SelectValue
+                                        placeholder={t(
+                                          "ui:dialog.kiloCode.labels.providerProtocol",
+                                        )}
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {KILO_CODE_PROTOCOL_OPTIONS.map(
+                                        (option) => (
+                                          <SelectItem
+                                            key={option.value}
+                                            value={option.value}
+                                          >
+                                            {t(option.label)}
+                                          </SelectItem>
+                                        ),
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                </FormField>
+                              )}
+                              {(!isKiloV7Export || showV7ManualRecovery) && (
+                                <FormField
+                                  className="w-full min-w-0 sm:w-[280px]"
+                                  label={
+                                    isKiloV7Export
+                                      ? t("ui:dialog.kiloCode.labels.modelId")
+                                      : undefined
                                   }
-                                  options={modelOptions}
-                                  allowCustomValue
-                                />
-                              </div>
+                                >
+                                  <SearchableSelect
+                                    ref={(element) => {
+                                      if (element) {
+                                        modelSelectorRefs.current.set(
+                                          selectionId,
+                                          element,
+                                        )
+                                      } else {
+                                        modelSelectorRefs.current.delete(
+                                          selectionId,
+                                        )
+                                      }
+                                    }}
+                                    aria-label={`${selection.providerName} ${t(
+                                      isKiloV7Export
+                                        ? "ui:dialog.kiloCode.labels.modelId"
+                                        : "ui:dialog.kiloCode.labels.legacyModelId",
+                                    )}`}
+                                    value={selectedModelId}
+                                    onChange={(value) => {
+                                      if (isKiloV7Export) {
+                                        selectV7ManualModel(selectionId, value)
+                                      } else {
+                                        selectLegacyModel(selectionId, value)
+                                      }
+                                      setIsDownloadTooLarge(false)
+                                    }}
+                                    placeholder={
+                                      isModelInventoryLoading ||
+                                      isModelInventoryIdle
+                                        ? t("common:status.loading")
+                                        : t(
+                                            "ui:dialog.kiloCode.placeholders.modelId",
+                                          )
+                                    }
+                                    options={modelOptions}
+                                    allowCustomValue
+                                  />
+                                </FormField>
+                              )}
                             </div>
                           </div>
 
@@ -1259,7 +1372,7 @@ export function KiloCodeExportDialog({
                             </div>
                           )}
 
-                          {showRetry && isKiloV7Export && (
+                          {showV7ManualRecovery && isKiloV7Export && (
                             <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
                               {t(
                                 "ui:dialog.kiloCode.messages.v7ProviderModelsRequired",

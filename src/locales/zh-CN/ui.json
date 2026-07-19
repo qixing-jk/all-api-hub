@@ -318,6 +318,7 @@
         "exportTarget": "导出目标",
         "legacyModelId": "模型 ID",
         "modelId": "模型 ID",
+        "providerProtocol": "API 协议",
         "selectedSites": "已选择的站点",
         "selectedTokens": "已选择的密钥"
       },
@@ -352,6 +353,11 @@
         "modelId": "搜索或输入模型 ID",
         "selectSites": "请选择站点",
         "selectTokens": "请选择密钥"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic Messages",
+        "openAICompatible": "OpenAI Compatible",
+        "openAIResponses": "OpenAI Responses"
       },
       "targets": {
         "kiloV7": "Kilo Code 7.x",

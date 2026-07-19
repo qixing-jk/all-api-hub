@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  KILO_CODE_PROVIDER_PROTOCOLS,
   normalizeKiloCodeModelIds,
   prepareKiloCodeV7Catalog,
   type KiloCodeV7ProviderSelection,
@@ -107,6 +108,41 @@ describe("prepareKiloCodeV7Catalog", () => {
         ...baseSelection,
         tokenKey: "rotated-example-key",
         discoveredModelIds: ["different-model"],
+      },
+    ])
+
+    expect(second.providers[0]?.providerId).toBe(first.providers[0]?.providerId)
+  })
+
+  it("defaults missing protocols to OpenAI Compatible", () => {
+    const result = prepareKiloCodeV7Catalog([baseSelection])
+
+    expect(result.providers[0]?.protocol).toBe(
+      KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
+    )
+  })
+
+  it.each([
+    KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
+    KILO_CODE_PROVIDER_PROTOCOLS.OpenAIResponses,
+    KILO_CODE_PROVIDER_PROTOCOLS.AnthropicMessages,
+  ])("preserves the selected %s protocol", (protocol) => {
+    const result = prepareKiloCodeV7Catalog([{ ...baseSelection, protocol }])
+
+    expect(result.providers[0]?.protocol).toBe(protocol)
+  })
+
+  it("keeps the provider ID stable when only its protocol changes", () => {
+    const first = prepareKiloCodeV7Catalog([
+      {
+        ...baseSelection,
+        protocol: KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
+      },
+    ])
+    const second = prepareKiloCodeV7Catalog([
+      {
+        ...baseSelection,
+        protocol: KILO_CODE_PROVIDER_PROTOCOLS.AnthropicMessages,
       },
     ])
 

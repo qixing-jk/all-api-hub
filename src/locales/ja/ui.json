@@ -321,6 +321,7 @@
         "exportTarget": "エクスポート先",
         "legacyModelId": "モデル ID",
         "modelId": "モデル ID",
+        "providerProtocol": "API プロトコル",
         "selectedSites": "選択したサイト",
         "selectedTokens": "選択したトークン"
       },
@@ -355,6 +356,11 @@
         "modelId": "モデル ID を検索または入力",
         "selectSites": "サイトを選択",
         "selectTokens": "トークンを選択"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic Messages",
+        "openAICompatible": "OpenAI Compatible",
+        "openAIResponses": "OpenAI Responses"
       },
       "targets": {
         "kiloV7": "Kilo Code 7.x",

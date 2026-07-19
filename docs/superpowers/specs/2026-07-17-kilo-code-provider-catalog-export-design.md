@@ -35,6 +35,11 @@ legacy format.
   model behavior unchanged.
 - Reuse the model inventories already loaded by the dialogs without additional
   requests when switching export targets.
+- Let each Kilo Code 7.x provider choose its AI SDK protocol package: OpenAI
+  Compatible (default), OpenAI Responses, or Anthropic Messages.
+- Keep the existing model discovery path for every protocol,
+  including Anthropic, so protocol selection never removes models from the
+  exported catalog.
 
 ## Non-goals
 
@@ -49,6 +54,8 @@ legacy format.
 - Changing the legacy `providerProfiles` schema or its filenames.
 - Refactoring unrelated account runtime key, token provisioning, or model
   discovery services.
+- Adding protocol-specific discovery fallbacks, `/models` requests, headers, or
+  model metadata that the existing adapters do not already provide.
 
 ## Verified Kilo Code Contract
 
@@ -183,6 +190,36 @@ and the V7 global default in separate target-local state. Switching targets
 preserves those values without refetching models or resolving secrets again.
 
 ## Export Contract
+
+### Protocol selection
+
+Each V7 provider carries a normalized protocol choice in the dialog-owned
+selection input. The default is `openai-compatible` for backward-compatible
+exports. The choice maps to Kilo Code's provider package as follows:
+
+| UI choice | Runtime value | Exported `npm` |
+| --- | --- | --- |
+| OpenAI Compatible | `openai-compatible` | `@ai-sdk/openai-compatible` |
+| OpenAI Responses | `openai-responses` | `@ai-sdk/openai` |
+| Anthropic Messages | `anthropic-messages` | `@ai-sdk/anthropic` |
+
+The account dialog stores this value per selected runtime-key provider. The
+profile dialog stores one value for its single provider. Switching between V7
+and Legacy preserves the V7 choice but does not add a protocol control to the
+Legacy flow. Closing and reopening a dialog starts a fresh V7 context with the
+default protocol, matching the existing transient export state.
+
+Changing the protocol does not refetch models, clear manual models, resolve
+secrets, or change provider IDs. It is included in the async export action
+signature so a copy/download that began under one protocol cannot complete with
+another protocol's payload. The builder validates the normalized value and
+serializes only the mapped `npm` field; all other provider fields remain
+unchanged.
+
+Model discovery remains independent of this choice. In particular, selecting
+Anthropic Messages keeps the repository's existing loaded inventory instead of
+adopting Kilo Code's UI-level rule that skips its generic OpenAI-compatible
+`/models` discovery helper for Anthropic providers.
 
 The Kilo Code 7.x payload becomes:
 

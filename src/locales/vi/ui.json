@@ -321,6 +321,7 @@
         "exportTarget": "Đích xuất",
         "legacyModelId": "ID mô hình",
         "modelId": "ID mô hình",
+        "providerProtocol": "Giao thức API",
         "selectedSites": "Các trang web đã chọn",
         "selectedTokens": "Các API Key đã chọn"
       },
@@ -355,6 +356,11 @@
         "modelId": "Tìm kiếm hoặc nhập ID mô hình",
         "selectSites": "Vui lòng chọn trang web",
         "selectTokens": "Vui lòng chọn API Key"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic Messages",
+        "openAICompatible": "OpenAI Compatible",
+        "openAIResponses": "OpenAI Responses"
       },
       "targets": {
         "kiloV7": "Kilo Code 7.x",

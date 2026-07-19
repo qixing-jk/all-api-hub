@@ -327,6 +327,7 @@
         "exportTarget": "Export target",
         "legacyModelId": "Model ID",
         "modelId": "Model ID",
+        "providerProtocol": "API protocol",
         "selectedSites": "Selected sites",
         "selectedTokens": "Selected tokens"
       },
@@ -362,6 +363,11 @@
         "modelId": "Search or enter model ID",
         "selectSites": "Select sites",
         "selectTokens": "Select tokens"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic Messages",
+        "openAICompatible": "OpenAI Compatible",
+        "openAIResponses": "OpenAI Responses"
       },
       "targets": {
         "kiloV7": "Kilo Code 7.x",

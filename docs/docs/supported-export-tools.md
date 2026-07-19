@@ -19,6 +19,14 @@
 
 选择 Kilo Code 7.x 后，每个账号密钥或 API 凭据会导出为一个名称易读的 `provider`。每个 `provider` 都包含从对应接口发现并规范化的全部模型 ID，以及为该 `provider` 手动输入并保留的模型 ID。无论模型 ID 来自接口还是手动输入，被包含在导出中都不代表 All API Hub 验证了该模型适用于所有工作流。请先选择默认 `model`；导出多个 `provider` 时，还需选择默认 `provider`。
 
+每个 `provider` 可选择以下 API 协议：
+
+- **OpenAI Compatible**（默认）：导出 `@ai-sdk/openai-compatible`。
+- **OpenAI Responses**：导出 `@ai-sdk/openai`。
+- **Anthropic Messages**：导出 `@ai-sdk/anthropic`。
+
+协议选择只改变 Kilo Code 的 AI SDK provider 包。All API Hub 仍沿用现有模型发现流程并导出完整加载结果，不会因为选择 Anthropic Messages 而跳过模型发现，也不会额外改写模型 ID 或补充未经验证的模型元数据。
+
 你可以按需要选择两种使用方式：
 
 - **下载设置文件**：点击“下载 Kilo 7.x 设置”，再到 Kilo Code 的设置 → About Kilo Code → Import 中选择下载的 `kilo-settings.json`，确认内容后保存。下载文件是可直接走当前 Kilo Code 导入流程的设置文件。

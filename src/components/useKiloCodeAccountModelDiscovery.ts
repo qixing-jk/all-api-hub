@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import {
+  KILO_CODE_PROVIDER_PROTOCOLS,
+  type KiloCodeProviderProtocol,
+} from "~/services/integrations/kiloCodeExport"
 import type {
   KiloCodeDefaultModelSelection,
   KiloCodeV7ProviderSelection,
@@ -139,6 +143,9 @@ export function useKiloCodeAccountModelDiscovery({
   const [v7ManualModelIdByToken, setV7ManualModelIdByToken] = useState<
     Record<string, string>
   >({})
+  const [v7ProtocolBySelectionId, setV7ProtocolBySelectionId] = useState<
+    Record<string, KiloCodeProviderProtocol>
+  >({})
   const [v7DefaultModel, setV7DefaultModel] = useState<
     KiloCodeDefaultModelSelection | undefined
   >()
@@ -245,6 +252,19 @@ export function useKiloCodeAccountModelDiscovery({
     })
     setLegacyModelIdByToken(prune)
     setV7ManualModelIdByToken(prune)
+    setV7ProtocolBySelectionId((current) => {
+      const next: Record<string, KiloCodeProviderProtocol> = {}
+      for (const selectionId of nextIds) {
+        next[selectionId] =
+          current[selectionId] ?? KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible
+      }
+      return Object.keys(current).length === nextIds.size &&
+        Object.keys(next).every(
+          (selectionId) => next[selectionId] === current[selectionId],
+        )
+        ? current
+        : next
+    })
   }, [selections, sourceFingerprintById])
 
   useEffect(() => {
@@ -259,6 +279,7 @@ export function useKiloCodeAccountModelDiscovery({
     setModelInventories({})
     setLegacyModelIdByToken({})
     setV7ManualModelIdByToken({})
+    setV7ProtocolBySelectionId({})
     setV7DefaultModel(undefined)
   }, [isOpen])
 
@@ -375,12 +396,20 @@ export function useKiloCodeAccountModelDiscovery({
         ...selection.runtimeKey,
         selectionId: selection.selectionId,
         providerName: selection.providerName,
+        protocol:
+          v7ProtocolBySelectionId[selection.selectionId] ??
+          KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
         discoveredModelIds:
           discoveredModelIdsByToken[selection.selectionId] ?? [],
         manualModelId:
           v7ManualModelIdByToken[selection.selectionId]?.trim() || undefined,
       })),
-    [discoveredModelIdsByToken, selections, v7ManualModelIdByToken],
+    [
+      discoveredModelIdsByToken,
+      selections,
+      v7ManualModelIdByToken,
+      v7ProtocolBySelectionId,
+    ],
   )
   const legacySelections = useMemo<KiloCodeAccountLegacySelection[]>(
     () =>
@@ -479,6 +508,16 @@ export function useKiloCodeAccountModelDiscovery({
     [v7Selections],
   )
 
+  const selectV7Protocol = useCallback(
+    (selectionId: string, protocol: KiloCodeProviderProtocol) => {
+      setV7ProtocolBySelectionId((current) => ({
+        ...current,
+        [selectionId]: protocol,
+      }))
+    },
+    [],
+  )
+
   const removeV7ManualModel = useCallback((selectionId: string) => {
     setV7ManualModelIdByToken((current) => {
       const { [selectionId]: _removed, ...remaining } = current
@@ -498,6 +537,7 @@ export function useKiloCodeAccountModelDiscovery({
     selectV7DefaultModel,
     selectV7DefaultProvider,
     selectV7ManualModel,
+    selectV7Protocol,
     v7DefaultModel: validV7Default,
     v7Selections,
   }
