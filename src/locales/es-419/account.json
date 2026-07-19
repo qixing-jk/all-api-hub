@@ -56,6 +56,7 @@
     "copyInviteLinksSuccess_one": "Se copió {{count}} enlace de invitación.",
     "copyInviteLinksSuccess_many": "Se copiaron {{count}} enlaces de invitación.",
     "copyInviteLinksSuccess_other": "Se copiaron {{count}} enlaces de invitación.",
+    "copyInviteLinksUnsupported": "La selección actual no admite enlaces de invitación.",
     "deleteConfirmAction": "Eliminar seleccionadas",
     "deleteConfirmDescription_one": "Estás por eliminar {{count}} cuenta seleccionada. Revisa la selección con cuidado antes de confirmar.",
     "deleteConfirmDescription_many": "Estás por eliminar {{count}} cuentas seleccionadas. Revisa la selección con cuidado antes de confirmar.",

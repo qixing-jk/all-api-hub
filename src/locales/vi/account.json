@@ -54,6 +54,7 @@
     "copyInviteLinksFailed": "Không thể lấy liên kết mời. Vui lòng thử lại sau.",
     "copyInviteLinksPartialSuccess": "Đã sao chép {{successCount}} liên kết mời. {{failureCount}} lỗi, {{unsupportedCount}} không hỗ trợ, {{skippedCount}} đã bỏ qua.",
     "copyInviteLinksSuccess_other": "Đã sao chép {{count}} liên kết mời.",
+    "copyInviteLinksUnsupported": "Các tài khoản đã chọn hiện không hỗ trợ liên kết mời.",
     "deleteConfirmAction": "Xóa các tài khoản đã chọn",
     "deleteConfirmDescription_other": "Bạn sẽ xóa {{count}} tài khoản đã chọn. Vui lòng kiểm tra kỹ các lựa chọn này trước khi xác nhận.",
     "deleteConfirmTitle": "Xóa tài khoản đã chọn",

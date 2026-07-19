@@ -768,6 +768,21 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     }
     const tracker = startProductAnalyticsAction(analyticsContext)
 
+    if (itemCount === 0) {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+        insights: {
+          itemCount,
+          selectedCount,
+          successCount: 0,
+          failureCount: 0,
+          skippedCount: skippedCount + unsupportedCount,
+        },
+      })
+      toast.error(t("account:bulk.copyInviteLinksUnsupported"))
+      return
+    }
+
     setIsBulkCopyingInviteLinks(true)
     try {
       const results = await Promise.allSettled(
@@ -1285,7 +1300,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
                     size="sm"
                     onClick={() => void handleBulkCopyInviteLinks()}
                     disabled={
-                      selectedInviteLinkAccounts.length === 0 || isBulkBusy
+                      selectedEnabledAccounts.length === 0 || isBulkBusy
                     }
                     loading={isBulkCopyingInviteLinks}
                   >

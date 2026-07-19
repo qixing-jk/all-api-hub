@@ -1570,7 +1570,7 @@ describe("AccountList", () => {
     expect(completionPayload).not.toHaveProperty("accountIds")
   })
 
-  it("disables bulk invite-link copy when no selected account supports it", async () => {
+  it("reports unsupported invite-link copy when no selected account supports it", async () => {
     const user = userEvent.setup()
 
     render(<AccountList />)
@@ -1582,7 +1582,33 @@ describe("AccountList", () => {
 
     expect(
       screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
-    ).toBeDisabled()
+    ).toBeEnabled()
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
+    )
+
+    await waitFor(() => {
+      expect(fetchDisplayAccountInviteLinkMock).not.toHaveBeenCalled()
+      expect(clipboardWriteTextMock).not.toHaveBeenCalled()
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "account:bulk.copyInviteLinksUnsupported",
+      )
+      expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountInviteLinks,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+        insights: {
+          itemCount: 0,
+          selectedCount: 1,
+          successCount: 0,
+          failureCount: 0,
+          skippedCount: 1,
+        },
+      })
+    })
   })
 
   it("copies invite links for supported selected accounts", async () => {
